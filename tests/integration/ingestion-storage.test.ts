@@ -156,6 +156,16 @@ storageDescribe('historical ingestion storage integration', () => {
         { hash: `0x${'a'.repeat(64)}`, from: `0x${'1'.repeat(40)}`, value: '1' },
         { hash: `0x${'b'.repeat(64)}`, from: `0x${'2'.repeat(40)}`, value: '2' },
       ],
+      logs: [
+        {
+          transactionHash: `0x${'a'.repeat(64)}`,
+          transactionIndex: 0,
+          logIndex: 0,
+          address: `0x${'3'.repeat(40)}`,
+          topics: [],
+          data: '0x',
+        },
+      ],
     };
     const source: SqdFinalizedSource = {
       dataset: testDataset,
@@ -197,13 +207,20 @@ storageDescribe('historical ingestion storage integration', () => {
 
     const request = createSqdProfileRequest({
       dataset: testDataset,
-      profile: 'transactions',
+      profile: 'ledger-records',
       fromBlock: pipelineBlockNumber,
       toBlock: pipelineBlockNumber,
     });
     const completed = await pipeline.run(request);
     expect(completed).toMatchObject({
       processedBlocks: 1,
+      recordCoverage: {
+        transactions: { state: 'MATERIALIZED', processed: 2 },
+        logs: { state: 'MATERIALIZED', processed: 1 },
+        inputs: { state: 'NOT_APPLICABLE', processed: null },
+        outputs: { state: 'NOT_APPLICABLE', processed: null },
+        instructions: { state: 'NOT_APPLICABLE', processed: null },
+      },
       transactionCoverage: 'MATERIALIZED',
       processedTransactions: 2,
       alreadyTerminal: false,
@@ -215,9 +232,10 @@ storageDescribe('historical ingestion storage integration', () => {
       fromBlock: pipelineBlockNumber,
       toBlock: pipelineBlockNumber,
     });
-    expect(storedFacts).toHaveLength(3);
+    expect(storedFacts).toHaveLength(4);
     expect(storedFacts.map((fact) => fact.factType).sort()).toEqual([
       'BLOCK',
+      'LOG',
       'TRANSACTION',
       'TRANSACTION',
     ]);
@@ -233,6 +251,13 @@ storageDescribe('historical ingestion storage integration', () => {
 
     await expect(pipeline.run(request)).resolves.toMatchObject({
       processedBlocks: 0,
+      recordCoverage: {
+        transactions: { state: 'MATERIALIZED', processed: 0 },
+        logs: { state: 'MATERIALIZED', processed: 0 },
+        inputs: { state: 'NOT_APPLICABLE', processed: null },
+        outputs: { state: 'NOT_APPLICABLE', processed: null },
+        instructions: { state: 'NOT_APPLICABLE', processed: null },
+      },
       transactionCoverage: 'MATERIALIZED',
       processedTransactions: 0,
       alreadyTerminal: true,

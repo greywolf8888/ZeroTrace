@@ -541,7 +541,7 @@ describe('ZeroTrace API contract', () => {
       expect.objectContaining({
         id: 'finalized-historical-ingestion',
         status: 'IMPLEMENTED_DURABLE',
-        detail: expect.stringContaining('raw-transaction'),
+        detail: expect.stringContaining('EVM logs'),
       }),
     );
   });

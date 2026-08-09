@@ -18,7 +18,9 @@ test('renders capability truth and unknown values without fake market data', asy
   await expect(page.getByText('0 transaction write methods')).toBeVisible();
   await expect(page.getByText('Unknown · select an asset')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Capability ledger' })).toBeVisible();
-  await expect(page.getByText(/raw-transaction ingestion is implemented/)).toBeVisible();
+  await expect(
+    page.getByText(/EVM logs, Bitcoin inputs\/outputs, and Solana instructions are implemented/),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Platform adapter boundaries' })).toBeVisible();
   await expect(page.getByText('API unavailable')).toHaveCount(0);
 

@@ -1,6 +1,6 @@
 import type { SqdDataset, SqdFinalizedRangeRequest } from '@zerotrace/chain-adapters';
 
-export const SQD_INGESTION_PROFILES = ['block-headers', 'transactions'] as const;
+export const SQD_INGESTION_PROFILES = ['block-headers', 'transactions', 'ledger-records'] as const;
 export type SqdIngestionProfile = (typeof SQD_INGESTION_PROFILES)[number];
 
 const EVM_TRANSACTION_FIELDS = {
@@ -30,6 +30,7 @@ const EVM_TRANSACTION_FIELDS = {
 } as const;
 
 const BITCOIN_TRANSACTION_FIELDS = {
+  transactionIndex: true,
   txid: true,
   hash: true,
   size: true,
@@ -37,6 +38,45 @@ const BITCOIN_TRANSACTION_FIELDS = {
   weight: true,
   version: true,
   locktime: true,
+} as const;
+
+const EVM_LOG_FIELDS = {
+  logIndex: true,
+  transactionIndex: true,
+  transactionHash: true,
+  address: true,
+  topics: true,
+  data: true,
+} as const;
+
+const BITCOIN_INPUT_FIELDS = {
+  transactionIndex: true,
+  inputIndex: true,
+  txid: true,
+  vout: true,
+  scriptSigHex: true,
+  prevoutValue: true,
+  prevoutScriptPubKeyType: true,
+  prevoutScriptPubKeyAddress: true,
+} as const;
+
+const BITCOIN_OUTPUT_FIELDS = {
+  transactionIndex: true,
+  outputIndex: true,
+  value: true,
+  scriptPubKeyHex: true,
+  scriptPubKeyType: true,
+  scriptPubKeyAddress: true,
+} as const;
+
+const SOLANA_INSTRUCTION_FIELDS = {
+  programId: true,
+  accounts: true,
+  data: true,
+  transactionIndex: true,
+  instructionAddress: true,
+  isCommitted: true,
+  error: true,
 } as const;
 
 const SOLANA_TRANSACTION_FIELDS = {
@@ -70,7 +110,7 @@ export function createSqdProfileRequest(input: {
   assertRange(input.fromBlock, input.toBlock);
   const range = { fromBlock: input.fromBlock, toBlock: input.toBlock };
   if (input.profile === 'block-headers') return range;
-  if (input.profile !== 'transactions') {
+  if (input.profile !== 'transactions' && input.profile !== 'ledger-records') {
     throw new RangeError('Unsupported SQD ingestion profile.');
   }
 
@@ -80,9 +120,34 @@ export function createSqdProfileRequest(input: {
       : input.dataset === 'solana-mainnet'
         ? SOLANA_TRANSACTION_FIELDS
         : EVM_TRANSACTION_FIELDS;
-  return {
+  const transactionRequest: SqdFinalizedRangeRequest = {
     ...range,
     fields: { transaction: fields },
     requests: { transactions: [{}] },
+  };
+  if (input.profile === 'transactions') return transactionRequest;
+
+  if (input.dataset === 'bitcoin-mainnet') {
+    return {
+      ...range,
+      fields: {
+        transaction: fields,
+        input: BITCOIN_INPUT_FIELDS,
+        output: BITCOIN_OUTPUT_FIELDS,
+      },
+      requests: { transactions: [{}], inputs: [{}], outputs: [{}] },
+    };
+  }
+  if (input.dataset === 'solana-mainnet') {
+    return {
+      ...range,
+      fields: { transaction: fields, instruction: SOLANA_INSTRUCTION_FIELDS },
+      requests: { transactions: [{}], instructions: [{}] },
+    };
+  }
+  return {
+    ...range,
+    fields: { transaction: fields, log: EVM_LOG_FIELDS },
+    requests: { transactions: [{}], logs: [{}] },
   };
 }

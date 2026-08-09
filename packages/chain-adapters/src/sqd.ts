@@ -63,6 +63,12 @@ export interface SqdTransactionItem {
   payload: Readonly<Record<string, JsonValue>>;
 }
 
+export interface SqdLedgerRecordItem {
+  sourceIndex: number;
+  identity: string;
+  payload: Readonly<Record<string, JsonValue>>;
+}
+
 export interface SqdFinalizedRangeRequest {
   fromBlock: number;
   toBlock: number;
@@ -140,8 +146,11 @@ const FIELD_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
 const EVM_TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/;
 const BITCOIN_TRANSACTION_ID = /^[0-9a-fA-F]{64}$/;
 const SOLANA_SIGNATURE = /^[1-9A-HJ-NP-Za-km-z]{64,96}$/;
+const SOLANA_BLOCK_HASH = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const MAX_QUERY_BYTES = 262_144;
 const MAX_TRANSACTIONS_PER_BLOCK = 100_000;
+const MAX_LEDGER_RECORDS_PER_BLOCK = 1_000_000;
+const MAX_INSTRUCTION_ADDRESS_DEPTH = 64;
 
 const ALLOWED_FIELD_GROUPS: Record<SqdQueryType, ReadonlySet<string>> = {
   evm: new Set(['block', 'transaction', 'log', 'trace', 'stateDiff']),
@@ -411,6 +420,144 @@ export function sqdTransactionsFromBlock(
     }
     identities.add(identity);
     return { sourceIndex, identity, payload };
+  });
+}
+
+function sourcePosition(value: JsonValue | undefined, field: string): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${field} is invalid.`);
+  }
+  return value;
+}
+
+function ledgerRecordsFromTable(
+  block: SqdFinalizedBlock,
+  tableName: 'logs' | 'inputs' | 'outputs' | 'instructions',
+  identityFor: (payload: Readonly<Record<string, JsonValue>>) => string,
+): readonly SqdLedgerRecordItem[] {
+  const table = block[tableName];
+  if (table === undefined) return [];
+  if (!Array.isArray(table) || table.length > MAX_LEDGER_RECORDS_PER_BLOCK) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${tableName} table is invalid or too large.`);
+  }
+  const identities = new Set<string>();
+  return table.map((record, sourceIndex) => {
+    if (typeof record !== 'object' || record === null || Array.isArray(record)) {
+      throw new ProviderError('INVALID_RESPONSE', `SQD ${tableName} item must be a JSON object.`);
+    }
+    const payload = record as Readonly<Record<string, JsonValue>>;
+    const identity = identityFor(payload);
+    if (identities.has(identity)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        `SQD ${tableName} table contains a duplicate identity.`,
+      );
+    }
+    identities.add(identity);
+    return { sourceIndex, identity, payload };
+  });
+}
+
+function requireDatasetType(dataset: SqdDataset, expected: SqdQueryType, tableName: string): void {
+  if (SQD_DATASETS[dataset].queryType !== expected) {
+    throw new RangeError(`SQD ${tableName} records are not applicable to ${dataset}.`);
+  }
+}
+
+export function sqdEvmLogsFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'evm', 'EVM log');
+  return ledgerRecordsFromTable(block, 'logs', (payload) => {
+    const transactionHash = payload.transactionHash;
+    if (typeof transactionHash !== 'string' || !EVM_TRANSACTION_HASH.test(transactionHash)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM log transaction hash is invalid.');
+    }
+    const logIndex = sourcePosition(payload.logIndex, 'EVM log index');
+    sourcePosition(payload.transactionIndex, 'EVM log transaction index');
+    return `${transactionHash.toLowerCase()}:${logIndex}`;
+  });
+}
+
+function bitcoinRecordIdentity(
+  block: SqdFinalizedBlock,
+  payload: Readonly<Record<string, JsonValue>>,
+  itemIndexField: 'inputIndex' | 'outputIndex',
+): string {
+  if (!BITCOIN_TRANSACTION_ID.test(block.header.hash)) {
+    throw new ProviderError('INVALID_RESPONSE', 'SQD Bitcoin block hash is invalid.');
+  }
+  const transactionIndex = sourcePosition(
+    payload.transactionIndex,
+    'Bitcoin parent transaction index',
+  );
+  const itemIndex = sourcePosition(payload[itemIndexField], `Bitcoin ${itemIndexField}`);
+  return `${block.header.hash.toLowerCase()}:${transactionIndex}:${itemIndex}`;
+}
+
+export function sqdBitcoinInputsFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'bitcoin', 'Bitcoin input');
+  return ledgerRecordsFromTable(block, 'inputs', (payload) => {
+    const txid = payload.txid;
+    const vout = payload.vout;
+    if (txid !== undefined && txid !== null) {
+      if (typeof txid !== 'string' || !BITCOIN_TRANSACTION_ID.test(txid)) {
+        throw new ProviderError('INVALID_RESPONSE', 'SQD Bitcoin input outpoint txid is invalid.');
+      }
+    }
+    if (vout !== undefined && vout !== null) {
+      sourcePosition(vout, 'Bitcoin input outpoint index');
+    }
+    if ((txid === null) !== (vout === null)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'SQD Bitcoin input outpoint must be fully known or explicitly null for coinbase.',
+      );
+    }
+    return bitcoinRecordIdentity(block, payload, 'inputIndex');
+  });
+}
+
+export function sqdBitcoinOutputsFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'bitcoin', 'Bitcoin output');
+  return ledgerRecordsFromTable(block, 'outputs', (payload) =>
+    bitcoinRecordIdentity(block, payload, 'outputIndex'),
+  );
+}
+
+export function sqdSolanaInstructionsFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'solana', 'Solana instruction');
+  if (!SOLANA_BLOCK_HASH.test(block.header.hash)) {
+    throw new ProviderError('INVALID_RESPONSE', 'SQD Solana block hash is invalid.');
+  }
+  return ledgerRecordsFromTable(block, 'instructions', (payload) => {
+    const transactionIndex = sourcePosition(
+      payload.transactionIndex,
+      'Solana instruction transaction index',
+    );
+    const address = payload.instructionAddress;
+    if (
+      !Array.isArray(address) ||
+      address.length === 0 ||
+      address.length > MAX_INSTRUCTION_ADDRESS_DEPTH ||
+      !address.every(
+        (position) =>
+          typeof position === 'number' && Number.isSafeInteger(position) && position >= 0,
+      )
+    ) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD Solana instruction address is invalid.');
+    }
+    return `${block.header.hash}:${transactionIndex}:${address.join('.')}`;
   });
 }
 

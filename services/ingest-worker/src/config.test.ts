@@ -40,6 +40,21 @@ describe('ingest worker config', () => {
     ).toMatchObject({ dataset: 'solana-mainnet', profile: 'transactions' });
   });
 
+  it('accepts the explicit ledger-record profile', () => {
+    expect(
+      loadIngestWorkerConfig(env, [
+        '--dataset',
+        'bitcoin-mainnet',
+        '--profile',
+        'ledger-records',
+        '--from',
+        '170',
+        '--to',
+        '170',
+      ]),
+    ).toMatchObject({ dataset: 'bitcoin-mainnet', profile: 'ledger-records' });
+  });
+
   it('rejects unsupported datasets, unknown arguments, unsafe ranges, and missing durable stores', () => {
     expect(() =>
       loadIngestWorkerConfig(env, ['--dataset', 'unknown-mainnet', '--from', '0', '--to', '1']),

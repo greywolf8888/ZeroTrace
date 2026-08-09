@@ -1,13 +1,27 @@
-import { SQD_DATASETS, sqdTransactionsFromBlock } from '@zerotrace/chain-adapters';
+import {
+  SQD_DATASETS,
+  sqdBitcoinInputsFromBlock,
+  sqdBitcoinOutputsFromBlock,
+  sqdEvmLogsFromBlock,
+  sqdSolanaInstructionsFromBlock,
+  sqdTransactionsFromBlock,
+} from '@zerotrace/chain-adapters';
 import type {
   SqdDataset,
   SqdDatasetMetadata,
   SqdFinalizedBlock,
   SqdFinalizedRangeRequest,
+  SqdLedgerRecordItem,
   SqdStreamSummary,
 } from '@zerotrace/chain-adapters';
 import { createEvidence, hashPayload, type EvidenceNode } from '@zerotrace/evidence';
-import type { AnalysisSnapshot, Evidence, Ledger, RawChainFact } from '@zerotrace/schemas';
+import type {
+  AnalysisSnapshot,
+  Evidence,
+  EvidenceKind,
+  Ledger,
+  RawChainFact,
+} from '@zerotrace/schemas';
 import {
   createRawChainFact,
   type IngestionRun,
@@ -16,7 +30,7 @@ import {
 
 export * from './profiles.js';
 
-export const SQD_INGESTION_VERSION = 'sqd-finalized-ingestion-v2';
+export const SQD_INGESTION_VERSION = 'sqd-finalized-ingestion-v3';
 
 export type IngestionPipelineErrorCode =
   | 'INGESTION_SOURCE_MISMATCH'
@@ -111,10 +125,74 @@ export interface SqdIngestionResult {
   run: IngestionRun;
   resumedFrom: number;
   processedBlocks: number;
+  recordCoverage: SqdRecordCoverage;
   transactionCoverage: 'NOT_QUERIED' | 'MATERIALIZED';
   processedTransactions: number | null;
   alreadyTerminal: boolean;
   sourceSummary: SqdStreamSummary | null;
+}
+
+export type SqdRecordTable = 'transactions' | 'logs' | 'inputs' | 'outputs' | 'instructions';
+
+export type SqdRecordMaterialization =
+  | { state: 'MATERIALIZED'; processed: number }
+  | { state: 'NOT_QUERIED' | 'NOT_APPLICABLE'; processed: null };
+
+export type SqdRecordCoverage = Readonly<Record<SqdRecordTable, SqdRecordMaterialization>>;
+
+type RequestedMaterialization = Readonly<Record<SqdRecordTable, boolean>>;
+type ProcessedRecordCounts = Record<SqdRecordTable, number>;
+
+function requestGroupSelected(request: SqdFinalizedRangeRequest, group: SqdRecordTable): boolean {
+  const selected = request.requests?.[group];
+  return Array.isArray(selected) && selected.length > 0;
+}
+
+function requestedMaterialization(
+  dataset: SqdDataset,
+  request: SqdFinalizedRangeRequest,
+): RequestedMaterialization {
+  const queryType = SQD_DATASETS[dataset].queryType;
+  return {
+    transactions: requestGroupSelected(request, 'transactions'),
+    logs: queryType === 'evm' && requestGroupSelected(request, 'logs'),
+    inputs: queryType === 'bitcoin' && requestGroupSelected(request, 'inputs'),
+    outputs: queryType === 'bitcoin' && requestGroupSelected(request, 'outputs'),
+    instructions: queryType === 'solana' && requestGroupSelected(request, 'instructions'),
+  };
+}
+
+function materializationState(
+  applicable: boolean,
+  requested: boolean,
+  processed: number,
+): SqdRecordMaterialization {
+  if (!applicable) return { state: 'NOT_APPLICABLE', processed: null };
+  if (!requested) return { state: 'NOT_QUERIED', processed: null };
+  return { state: 'MATERIALIZED', processed };
+}
+
+function recordCoverage(
+  dataset: SqdDataset,
+  requested: RequestedMaterialization,
+  counts: ProcessedRecordCounts,
+): SqdRecordCoverage {
+  const queryType = SQD_DATASETS[dataset].queryType;
+  return {
+    transactions: materializationState(true, requested.transactions, counts.transactions),
+    logs: materializationState(queryType === 'evm', requested.logs, counts.logs),
+    inputs: materializationState(queryType === 'bitcoin', requested.inputs, counts.inputs),
+    outputs: materializationState(queryType === 'bitcoin', requested.outputs, counts.outputs),
+    instructions: materializationState(
+      queryType === 'solana',
+      requested.instructions,
+      counts.instructions,
+    ),
+  };
+}
+
+function emptyProcessedCounts(): ProcessedRecordCounts {
+  return { transactions: 0, logs: 0, inputs: 0, outputs: 0, instructions: 0 };
 }
 
 function timestampFromSeconds(seconds: number | null): string | undefined {
@@ -221,12 +299,61 @@ function retryableFrom(error: unknown): boolean {
   return (error as Record<string, unknown>).retryable === true;
 }
 
+async function materializeLedgerRecord(options: {
+  item: SqdLedgerRecordItem;
+  ledger: Ledger;
+  chainId: string;
+  dataset: SqdDataset;
+  position: string;
+  blockHash: string;
+  sourceId: string;
+  observedAt: string;
+  rawArtifactRef: string;
+  snapshot: AnalysisSnapshot;
+  evidenceKind: EvidenceKind;
+  factType: 'LOG' | 'UTXO_INPUT' | 'UTXO_OUTPUT' | 'INSTRUCTION';
+  locatorPrefix: 'evm-log' | 'bitcoin-input' | 'bitcoin-output' | 'solana-instruction';
+  summaryNoun: 'log' | 'input' | 'output' | 'instruction';
+  evidence: EvidenceWriter;
+  facts: RawFactWriter;
+}): Promise<void> {
+  const recordEvidence = createEvidence({
+    ledger: options.ledger,
+    chainId: options.chainId,
+    kind: options.evidenceKind,
+    source: options.sourceId,
+    locator: `${options.locatorPrefix}:${options.item.identity}`,
+    payload: options.item.payload,
+    observedAt: options.observedAt,
+    blockOrSlot: options.position,
+    finality: 'finalized',
+    rawArtifactRef: options.rawArtifactRef,
+    summary: `SQD finalized ${options.dataset} ${options.summaryNoun} ${options.item.identity}.`,
+  });
+  await options.evidence.put(recordEvidence, [], options.snapshot);
+  await options.facts.put(
+    createRawChainFact({
+      ledger: options.ledger,
+      chainId: options.chainId,
+      blockOrSlot: options.position,
+      blockHash: options.blockHash,
+      factType: options.factType,
+      subject: options.item.identity,
+      provider: options.sourceId,
+      finality: 'finalized',
+      payload: options.item.payload,
+      evidenceId: recordEvidence.id,
+      rawArtifactRef: options.rawArtifactRef,
+      observedAt: options.observedAt,
+    }),
+  );
+}
+
 export function sqdIngestionQuery(
   dataset: SqdDataset,
   request: SqdFinalizedRangeRequest,
 ): Readonly<Record<string, unknown>> {
-  const materializeTransactions =
-    Array.isArray(request.requests?.transactions) && request.requests.transactions.length > 0;
+  const materialize = requestedMaterialization(dataset, request);
   return {
     schema: SQD_INGESTION_VERSION,
     dataset,
@@ -234,7 +361,7 @@ export function sqdIngestionQuery(
     fromBlock: request.fromBlock,
     toBlock: request.toBlock,
     includeAllBlocks: true,
-    materialize: { blocks: true, transactions: materializeTransactions },
+    materialize: { blocks: true, ...materialize },
     fields: request.fields ?? {},
     requests: request.requests ?? {},
   };
@@ -266,9 +393,9 @@ export class SqdFinalizedIngestionPipeline {
   async run(request: SqdFinalizedRangeRequest): Promise<SqdIngestionResult> {
     const sourceId = `sqd:${this.#source.dataset}`;
     const query = sqdIngestionQuery(this.#source.dataset, request);
-    const materializeTransactions =
-      Array.isArray(request.requests?.transactions) && request.requests.transactions.length > 0;
-    const transactionCoverage = materializeTransactions ? 'MATERIALIZED' : 'NOT_QUERIED';
+    const materialize = requestedMaterialization(this.#source.dataset, request);
+    const processedRecords = emptyProcessedCounts();
+    const transactionCoverage = materialize.transactions ? 'MATERIALIZED' : 'NOT_QUERIED';
     let run = await this.#checkpoints.begin({
       source: sourceId,
       dataset: this.#source.dataset,
@@ -285,8 +412,9 @@ export class SqdFinalizedIngestionPipeline {
         run,
         resumedFrom,
         processedBlocks: 0,
+        recordCoverage: recordCoverage(this.#source.dataset, materialize, processedRecords),
         transactionCoverage,
-        processedTransactions: materializeTransactions ? 0 : null,
+        processedTransactions: materialize.transactions ? 0 : null,
         alreadyTerminal: true,
         sourceSummary: null,
       };
@@ -299,8 +427,9 @@ export class SqdFinalizedIngestionPipeline {
           run,
           resumedFrom,
           processedBlocks: 0,
+          recordCoverage: recordCoverage(this.#source.dataset, materialize, processedRecords),
           transactionCoverage,
-          processedTransactions: materializeTransactions ? 0 : null,
+          processedTransactions: materialize.transactions ? 0 : null,
           alreadyTerminal: false,
           sourceSummary: null,
         };
@@ -326,7 +455,6 @@ export class SqdFinalizedIngestionPipeline {
       }
 
       let processedBlocks = 0;
-      let processedTransactions = 0;
       const sourceSummary = await this.#source.readFinalizedRange(
         { ...request, fromBlock: run.nextBlock, toBlock: run.toBlock },
         async (block) => {
@@ -379,7 +507,7 @@ export class SqdFinalizedIngestionPipeline {
             observedAt: run.startedAt,
           });
           await this.#facts.put(fact);
-          const transactions = materializeTransactions
+          const transactions = materialize.transactions
             ? sqdTransactionsFromBlock(this.#source.dataset, block)
             : [];
           for (const transaction of transactions) {
@@ -414,9 +542,76 @@ export class SqdFinalizedIngestionPipeline {
               }),
             );
           }
+          const commonRecord = {
+            ledger: this.#source.ledger,
+            chainId: this.#source.chainId,
+            dataset: this.#source.dataset,
+            position,
+            blockHash: block.header.hash,
+            sourceId,
+            observedAt: run.startedAt,
+            rawArtifactRef: artifact.ref,
+            snapshot,
+            evidence: this.#evidence,
+            facts: this.#facts,
+          } as const;
+          const logs = materialize.logs ? sqdEvmLogsFromBlock(this.#source.dataset, block) : [];
+          for (const item of logs) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'LOG',
+              factType: 'LOG',
+              locatorPrefix: 'evm-log',
+              summaryNoun: 'log',
+            });
+          }
+          const inputs = materialize.inputs
+            ? sqdBitcoinInputsFromBlock(this.#source.dataset, block)
+            : [];
+          for (const item of inputs) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'UTXO',
+              factType: 'UTXO_INPUT',
+              locatorPrefix: 'bitcoin-input',
+              summaryNoun: 'input',
+            });
+          }
+          const outputs = materialize.outputs
+            ? sqdBitcoinOutputsFromBlock(this.#source.dataset, block)
+            : [];
+          for (const item of outputs) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'UTXO',
+              factType: 'UTXO_OUTPUT',
+              locatorPrefix: 'bitcoin-output',
+              summaryNoun: 'output',
+            });
+          }
+          const instructions = materialize.instructions
+            ? sqdSolanaInstructionsFromBlock(this.#source.dataset, block)
+            : [];
+          for (const item of instructions) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'INSTRUCTION',
+              factType: 'INSTRUCTION',
+              locatorPrefix: 'solana-instruction',
+              summaryNoun: 'instruction',
+            });
+          }
           run = await this.#checkpoints.advance(run.id, block.header.number);
           processedBlocks += 1;
-          processedTransactions += transactions.length;
+          processedRecords.transactions += transactions.length;
+          processedRecords.logs += logs.length;
+          processedRecords.inputs += inputs.length;
+          processedRecords.outputs += outputs.length;
+          processedRecords.instructions += instructions.length;
         },
       );
       run = await this.#checkpoints.finish(
@@ -428,8 +623,9 @@ export class SqdFinalizedIngestionPipeline {
         run,
         resumedFrom,
         processedBlocks,
+        recordCoverage: recordCoverage(this.#source.dataset, materialize, processedRecords),
         transactionCoverage,
-        processedTransactions: materializeTransactions ? processedTransactions : null,
+        processedTransactions: materialize.transactions ? processedRecords.transactions : null,
         alreadyTerminal: false,
         sourceSummary,
       };

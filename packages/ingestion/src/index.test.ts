@@ -240,6 +240,13 @@ describe('SqdFinalizedIngestionPipeline', () => {
     ]);
     expect(result).toMatchObject({
       processedBlocks: 2,
+      recordCoverage: {
+        transactions: { state: 'NOT_QUERIED', processed: null },
+        logs: { state: 'NOT_QUERIED', processed: null },
+        inputs: { state: 'NOT_APPLICABLE', processed: null },
+        outputs: { state: 'NOT_APPLICABLE', processed: null },
+        instructions: { state: 'NOT_APPLICABLE', processed: null },
+      },
       transactionCoverage: 'NOT_QUERIED',
       processedTransactions: null,
       resumedFrom: 0,
@@ -312,6 +319,139 @@ describe('SqdFinalizedIngestionPipeline', () => {
     expect(checkpoints.run?.query).toMatchObject({
       materialize: { blocks: true, transactions: true },
     });
+  });
+
+  it('materializes ledger-specific records before the checkpoint with explicit applicability', async () => {
+    const runFixture = async (input: {
+      dataset: SqdDataset;
+      ledger: Ledger;
+      chainId: string;
+      block: SqdFinalizedBlock;
+    }) => {
+      const events: string[] = [];
+      const checkpoints = new FakeCheckpoints(events);
+      const stores = createStores(events);
+      const pipeline = new SqdFinalizedIngestionPipeline({
+        source: new FakeSource(input.dataset, input.ledger, input.chainId, [input.block]),
+        checkpoints,
+        artifacts: stores.artifacts,
+        evidence: stores.evidence,
+        facts: stores.factWriter,
+        nowImplementation: () => new Date('2026-08-09T13:00:00.000Z'),
+      });
+      const result = await pipeline.run(
+        createSqdProfileRequest({
+          dataset: input.dataset,
+          profile: 'ledger-records',
+          fromBlock: input.block.header.number,
+          toBlock: input.block.header.number,
+        }),
+      );
+      expect(events.at(-2)).toBe(`checkpoint:${input.block.header.number}`);
+      expect(events.at(-1)).toBe('finish:REQUESTED_RANGE_COMPLETE');
+      return { result, facts: stores.facts, ledger: stores.ledger };
+    };
+
+    const evmTransaction = { hash: `0x${'a'.repeat(64)}` };
+    const evm = await runFixture({
+      dataset: 'ethereum-mainnet',
+      ledger: 'EVM',
+      chainId: '1',
+      block: {
+        ...evmBlocks[0]!,
+        transactions: [evmTransaction],
+        logs: [
+          {
+            transactionHash: evmTransaction.hash,
+            transactionIndex: 0,
+            logIndex: 0,
+            address: `0x${'1'.repeat(40)}`,
+            topics: [],
+            data: '0x',
+          },
+        ],
+      },
+    });
+    expect(evm.result.recordCoverage).toEqual({
+      transactions: { state: 'MATERIALIZED', processed: 1 },
+      logs: { state: 'MATERIALIZED', processed: 1 },
+      inputs: { state: 'NOT_APPLICABLE', processed: null },
+      outputs: { state: 'NOT_APPLICABLE', processed: null },
+      instructions: { state: 'NOT_APPLICABLE', processed: null },
+    });
+    expect(evm.facts.map((fact) => fact.factType)).toEqual(['BLOCK', 'TRANSACTION', 'LOG']);
+
+    const bitcoin = await runFixture({
+      dataset: 'bitcoin-mainnet',
+      ledger: 'BITCOIN',
+      chainId: 'bitcoin-mainnet',
+      block: {
+        header: {
+          number: 170,
+          hash: 'a'.repeat(64),
+          parentHash: 'b'.repeat(64),
+          timestamp: 1_234_567_890,
+        },
+        transactions: [{ transactionIndex: 0, txid: 'c'.repeat(64) }],
+        inputs: [
+          { transactionIndex: 0, inputIndex: 0, txid: null, vout: null },
+          { transactionIndex: 1, inputIndex: 0, txid: 'd'.repeat(64), vout: 0 },
+        ],
+        outputs: [{ transactionIndex: 0, outputIndex: 0, value: 50 }],
+      },
+    });
+    expect(bitcoin.result.recordCoverage).toMatchObject({
+      transactions: { state: 'MATERIALIZED', processed: 1 },
+      logs: { state: 'NOT_APPLICABLE', processed: null },
+      inputs: { state: 'MATERIALIZED', processed: 2 },
+      outputs: { state: 'MATERIALIZED', processed: 1 },
+      instructions: { state: 'NOT_APPLICABLE', processed: null },
+    });
+    expect(bitcoin.facts.map((fact) => fact.factType)).toEqual([
+      'BLOCK',
+      'TRANSACTION',
+      'UTXO_INPUT',
+      'UTXO_INPUT',
+      'UTXO_OUTPUT',
+    ]);
+
+    const solana = await runFixture({
+      dataset: 'solana-mainnet',
+      ledger: 'SOLANA',
+      chainId: 'solana-mainnet',
+      block: {
+        header: {
+          number: 105_368,
+          hash: '1'.repeat(44),
+          parentHash: '2'.repeat(44),
+          timestamp: 1_234_567_890,
+        },
+        transactions: [{ signatures: ['3'.repeat(88)] }],
+        instructions: [
+          { transactionIndex: 2, instructionAddress: [0], programId: '4'.repeat(44) },
+          { transactionIndex: 2, instructionAddress: [0, 1], programId: '5'.repeat(44) },
+        ],
+      },
+    });
+    expect(solana.result.recordCoverage).toMatchObject({
+      transactions: { state: 'MATERIALIZED', processed: 1 },
+      logs: { state: 'NOT_APPLICABLE', processed: null },
+      inputs: { state: 'NOT_APPLICABLE', processed: null },
+      outputs: { state: 'NOT_APPLICABLE', processed: null },
+      instructions: { state: 'MATERIALIZED', processed: 2 },
+    });
+    expect(solana.facts.map((fact) => fact.factType)).toEqual([
+      'BLOCK',
+      'TRANSACTION',
+      'INSTRUCTION',
+      'INSTRUCTION',
+    ]);
+    expect(solana.ledger.values().map((node) => node.evidence.kind)).toEqual([
+      'BLOCK',
+      'TRANSACTION',
+      'INSTRUCTION',
+      'INSTRUCTION',
+    ]);
   });
 
   it('records provider-defined empty transaction coverage without inventing a count', async () => {
@@ -448,6 +588,45 @@ describe('SqdFinalizedIngestionPipeline', () => {
     await pipeline.run({ fromBlock: 0, toBlock: 0 });
 
     expect(stores.ledger.values()[0]?.snapshot).toMatchObject(fixture.expected);
+  });
+
+  it('fails closed on a malformed ledger record without advancing the checkpoint', async () => {
+    const events: string[] = [];
+    const checkpoints = new FakeCheckpoints(events);
+    const stores = createStores(events);
+    const transactionHash = `0x${'a'.repeat(64)}`;
+    const pipeline = new SqdFinalizedIngestionPipeline({
+      source: new FakeSource('ethereum-mainnet', 'EVM', '1', [
+        {
+          ...evmBlocks[0]!,
+          transactions: [{ hash: transactionHash }],
+          logs: [
+            {
+              transactionHash,
+              transactionIndex: 0,
+              logIndex: -1,
+            },
+          ],
+        },
+      ]),
+      checkpoints,
+      artifacts: stores.artifacts,
+      evidence: stores.evidence,
+      facts: stores.factWriter,
+    });
+
+    await expect(
+      pipeline.run(
+        createSqdProfileRequest({
+          dataset: 'ethereum-mainnet',
+          profile: 'ledger-records',
+          fromBlock: 0,
+          toBlock: 0,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'INGESTION_FAILED', retryable: false });
+    expect(events).not.toContain('checkpoint:0');
+    expect(checkpoints.failures).toEqual(['INVALID_RESPONSE']);
   });
 
   it('records a safe failure code and never advances before the Raw Fact is durable', async () => {

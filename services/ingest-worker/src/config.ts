@@ -115,7 +115,7 @@ export function loadIngestWorkerConfig(
   const dataset = parsed.dataset as SqdDataset;
   const profile = parsed.profile ?? 'block-headers';
   if (!SQD_INGESTION_PROFILES.includes(profile as SqdIngestionProfile)) {
-    throw new Error('--profile must be block-headers or transactions.');
+    throw new Error('--profile must be block-headers, transactions, or ledger-records.');
   }
   const fromBlock = integer(parsed.fromBlock, '--from', undefined, 0, Number.MAX_SAFE_INTEGER);
   const toBlock = integer(parsed.toBlock, '--to', undefined, 0, Number.MAX_SAFE_INTEGER);

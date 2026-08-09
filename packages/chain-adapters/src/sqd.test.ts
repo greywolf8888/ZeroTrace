@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { ProviderError } from './errors.js';
-import { SqdPortalClient, sqdTransactionsFromBlock, type SqdFinalizedBlock } from './sqd.js';
+import {
+  SqdPortalClient,
+  sqdBitcoinInputsFromBlock,
+  sqdBitcoinOutputsFromBlock,
+  sqdEvmLogsFromBlock,
+  sqdSolanaInstructionsFromBlock,
+  sqdTransactionsFromBlock,
+  type SqdFinalizedBlock,
+} from './sqd.js';
 
 const policy = { allowedHosts: ['portal.sqd.dev'], allowPrivateNetworks: true } as const;
 
@@ -384,5 +392,116 @@ describe('sqdTransactionsFromBlock', () => {
         transactions: null,
       }),
     ).toThrow(/table/);
+  });
+});
+
+describe('SQD ledger-specific record extraction', () => {
+  it('extracts EVM logs by transaction hash and log index', () => {
+    const payload = {
+      transactionHash: `0x${'A'.repeat(64)}`,
+      transactionIndex: 7,
+      logIndex: 9,
+      address: `0x${'1'.repeat(40)}`,
+      topics: [],
+      data: '0x',
+    };
+    expect(sqdEvmLogsFromBlock('ethereum-mainnet', { ...block(1), logs: [payload] })).toEqual([
+      {
+        sourceIndex: 0,
+        identity: `0x${'a'.repeat(64)}:9`,
+        payload,
+      },
+    ]);
+    expect(sqdEvmLogsFromBlock('binance-mainnet', block(1))).toEqual([]);
+  });
+
+  it('preserves coinbase nulls while identifying Bitcoin inputs and outputs by source position', () => {
+    const bitcoinBlock: SqdFinalizedBlock = {
+      header: {
+        number: 170,
+        hash: 'a'.repeat(64),
+        parentHash: 'b'.repeat(64),
+        timestamp: 1_234_567_890,
+      },
+      inputs: [
+        { transactionIndex: 0, inputIndex: 0, txid: null, vout: null },
+        { transactionIndex: 1, inputIndex: 0, txid: 'c'.repeat(64), vout: 0 },
+      ],
+      outputs: [{ transactionIndex: 0, outputIndex: 0, value: 50 }],
+    };
+
+    expect(
+      sqdBitcoinInputsFromBlock('bitcoin-mainnet', bitcoinBlock).map((item) => item.identity),
+    ).toEqual([`${'a'.repeat(64)}:0:0`, `${'a'.repeat(64)}:1:0`]);
+    expect(sqdBitcoinInputsFromBlock('bitcoin-mainnet', bitcoinBlock)[0]?.payload).toMatchObject({
+      txid: null,
+      vout: null,
+    });
+    expect(sqdBitcoinOutputsFromBlock('bitcoin-mainnet', bitcoinBlock)[0]?.identity).toBe(
+      `${'a'.repeat(64)}:0:0`,
+    );
+  });
+
+  it('keeps Solana instruction paths independent from the returned transaction array order', () => {
+    const solanaBlock: SqdFinalizedBlock = {
+      header: {
+        number: 105_368,
+        hash: '1'.repeat(44),
+        parentHash: '2'.repeat(44),
+        timestamp: 1_234_567_890,
+      },
+      transactions: [{ signatures: ['3'.repeat(88)] }],
+      instructions: [
+        { transactionIndex: 2, instructionAddress: [0], programId: '4'.repeat(44) },
+        { transactionIndex: 2, instructionAddress: [0, 1], programId: '5'.repeat(44) },
+      ],
+    };
+
+    expect(
+      sqdSolanaInstructionsFromBlock('solana-mainnet', solanaBlock).map((item) => item.identity),
+    ).toEqual([`${'1'.repeat(44)}:2:0`, `${'1'.repeat(44)}:2:0.1`]);
+  });
+
+  it('rejects malformed, duplicate, and non-applicable ledger records', () => {
+    expect(() =>
+      sqdEvmLogsFromBlock('ethereum-mainnet', {
+        ...block(1),
+        logs: [{ transactionHash: `0x${'a'.repeat(64)}`, transactionIndex: 0, logIndex: -1 }],
+      }),
+    ).toThrow(/index/);
+    expect(() =>
+      sqdEvmLogsFromBlock('ethereum-mainnet', {
+        ...block(1),
+        logs: [
+          { transactionHash: `0x${'a'.repeat(64)}`, transactionIndex: 0, logIndex: 0 },
+          { transactionHash: `0x${'A'.repeat(64)}`, transactionIndex: 0, logIndex: 0 },
+        ],
+      }),
+    ).toThrow(/duplicate/);
+    expect(() =>
+      sqdBitcoinInputsFromBlock('bitcoin-mainnet', {
+        header: {
+          number: 1,
+          hash: 'a'.repeat(64),
+          parentHash: 'b'.repeat(64),
+          timestamp: null,
+        },
+        inputs: [{ transactionIndex: 0, inputIndex: 0, txid: null, vout: 0 }],
+      }),
+    ).toThrow(/fully known/);
+    expect(() =>
+      sqdSolanaInstructionsFromBlock('solana-mainnet', {
+        header: {
+          number: 1,
+          hash: '1'.repeat(44),
+          parentHash: '2'.repeat(44),
+          timestamp: null,
+        },
+        instructions: [{ transactionIndex: 0, instructionAddress: [] }],
+      }),
+    ).toThrow(/address/);
+    expect(() => sqdBitcoinOutputsFromBlock('ethereum-mainnet', block(1))).toThrow(
+      /not applicable/,
+    );
   });
 });

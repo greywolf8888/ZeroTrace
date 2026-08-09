@@ -21,7 +21,7 @@ Datasets:
   ethereum-mainnet | binance-mainnet | bitcoin-mainnet | solana-mainnet
 
 Profiles:
-  block-headers (default) | transactions
+  block-headers (default) | transactions | ledger-records
 
 This worker is read-only with respect to chains. It never signs or broadcasts transactions.`;
 
@@ -103,6 +103,7 @@ async function main(): Promise<void> {
         requestedTo: result.run.toBlock,
         nextBlock: result.run.nextBlock,
         processedBlocks: result.processedBlocks,
+        recordCoverage: result.recordCoverage,
         transactionCoverage: result.transactionCoverage,
         processedTransactions: result.processedTransactions,
         alreadyTerminal: result.alreadyTerminal,
