@@ -3,6 +3,26 @@
 ZeroTrace uses Semantic Versioning tags of the form `vMAJOR.MINOR.PATCH`. Pre-1.0 releases may
 change interfaces but must still document migrations and known limitations.
 
+## Continuous delivery and branch policy
+
+- `main` is the only long-lived branch and is protected by required PR checks, linear history,
+  resolved review conversations, and force-push/deletion denial.
+- Keep one short-lived `agent/*` development branch for the active delivery batch. Do not create
+  GitFlow, environment, version, or permanent release branches.
+- Squash-merge accepted work and delete the head branch automatically.
+- Routine code, dependency, documentation, and data-source updates accumulate continuously under
+  `CHANGELOG.md` → `Unreleased`; they do not create a tag or GitHub Release.
+- Create a GitHub Release only for a planned product milestone (for example `v0.2.0` or `v1.0.0`)
+  that passes the complete release gate. A patch Release is reserved for an urgent correction to an
+  already published milestone.
+- Review routine dependency major versions manually as milestone work. Dependabot groups weekly
+  minor/patch updates and security updates by ecosystem and does not open routine automatic
+  major-version PRs. Security remediation remains eligible even when the minimum safe fix crosses a
+  version boundary.
+
+Tags are created only from protected `main`; the project does not cut a release from a development
+branch.
+
 ## Release gate
 
 1. Freeze the intended commit and ensure the worktree is clean.
@@ -27,7 +47,7 @@ change interfaces but must still document migrations and known limitations.
 
 ## Tag and notes
 
-Create an annotated immutable tag only after the gate passes:
+Create an annotated immutable tag from protected `main` only after the gate passes:
 
 ```bash
 git tag -s v0.1.0 -m "ZeroTrace v0.1.0"
