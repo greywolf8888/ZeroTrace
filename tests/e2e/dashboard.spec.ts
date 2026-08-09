@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 const checksummedEvmAddress = '0x52908400098527886E0F7030069857D2E4169EE7';
 const solanaSignature =
   '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
+const bscTokenAddress = `0x${'a'.repeat(40)}`;
 
 test('renders capability truth and unknown values without fake market data', async ({ page }) => {
   const browserErrors: string[] = [];
@@ -128,6 +129,145 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
   await expect(page.getByRole('heading', { name: 'Evidence ledger' })).toBeVisible();
   await expect(
     page.getByText('Solana transaction bound to its committed slot Snapshot.'),
+  ).toBeVisible();
+});
+
+test('shows versioned Flap state and preserves unqueried values as Unknown', async ({ page }) => {
+  await page.route('**/api/v1/subjects/EVM/**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        subject: {
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          type: 'ADDRESS',
+          id: bscTokenAddress,
+          normalizedId: bscTokenAddress,
+          validation: 'STRUCTURALLY_VALID',
+          confidence: 1,
+        },
+        facts: {
+          nativeBalanceWei: { state: 'known', value: '1000000000000000' },
+          bytecodePresent: { state: 'known', value: true },
+        },
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '50000000',
+            blockHash: `0x${'1'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 1,
+          sourceCoverage: 0.5,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: '2026-08-10T00:00:00.000Z',
+          sourceSet: ['bsc-rpc-fixture'],
+          modelVersion: 'evm-subject-query-v0.1.0',
+          confidence: 1,
+          evidenceIds: [],
+        },
+        evidence: [],
+      }),
+    });
+  });
+  await page.route('**/api/v1/launches/EVM/**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        deployment: {
+          portal: '0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0',
+          documentedVersion: '5.8.6',
+          sourceRevision: 'flap-sh/FlapVaultExample@0a6ad1b',
+        },
+        platformMatch: { state: 'known', value: true },
+        launch: {
+          platform: 'flap',
+          platformVersion: { state: 'known', value: '5.8.6' },
+          deploymentId: { state: 'known', value: 'eip155:56:portal' },
+          factoryOrProgram: {
+            state: 'known',
+            value: '0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0',
+          },
+          lifecycle: 'PRIMARY_MARKET',
+          quoteAsset: { state: 'known', value: 'eip155:56:native' },
+          curveType: { state: 'known', value: 'FLAP_VIRTUAL_CONSTANT_PRODUCT' },
+          realQuoteReserve: { state: 'known', value: '1250000000000000000' },
+          virtualBaseReserve: { state: 'known', value: '100000000000000000000' },
+          virtualQuoteReserve: { state: 'known', value: '2500000000000000000' },
+          circulatingSupply: { state: 'known', value: '500000000000000000000' },
+          remainingSupply: { state: 'known', value: '500000000000000000000' },
+          progress: { state: 'known', value: '0.5' },
+          graduationThreshold: { state: 'known', value: '1000000000000000000000' },
+          currentSellCapacity: {
+            state: 'unknown',
+            reason: 'NOT_QUERIED',
+            detail: 'Sell capacity requires a bounded curve quote.',
+          },
+          taxModel: { state: 'known', value: 'SYMMETRIC_TOKEN_TAX' },
+          buyTaxBps: { state: 'known', value: '500' },
+          sellTaxBps: { state: 'known', value: '500' },
+          migrationPool: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+          lpLocked: { state: 'unknown', reason: 'NOT_QUERIED' },
+          lpBurned: { state: 'unknown', reason: 'NOT_QUERIED' },
+          sourceBlockOrSlot: '50000000',
+          sourceVersion: 'flap:getTokenV6:flap-sh/FlapVaultExample@0a6ad1b',
+          evidenceIds: ['ev_flap_derived'],
+        },
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '50000000',
+            blockHash: `0x${'1'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 0.7,
+          sourceCoverage: 1,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: '2026-08-10T00:00:00.000Z',
+          sourceSet: ['flap-official-docs', 'bsc-rpc-fixture'],
+          modelVersion: 'flap-inspector-getTokenV6-v0.1.0',
+          confidence: 0.95,
+          evidenceIds: ['ev_flap_derived'],
+        },
+        evidence: [
+          {
+            id: 'ev_flap_derived',
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:flap-inspector',
+            locator: `flap:${bscTokenAddress}@50000000`,
+            payloadHash: '2'.repeat(64),
+            observedAt: '2026-08-10T00:00:00.000Z',
+            blockOrSlot: '50000000',
+            finality: 'finalized',
+            summary: 'Flap launch mechanism normalized from versioned Portal state.',
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
+  await page.getByLabel('Network').selectOption('bsc');
+  await page.getByRole('button', { name: 'Trace' }).click();
+  await page.getByRole('button', { name: 'Inspect' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Flap launch mechanism' })).toBeVisible();
+  await expect(page.getByText('Primary Market')).toBeVisible();
+  await expect(page.getByText('Current Sell Capacity')).toBeVisible();
+  await expect(page.getByText('Not Queried').first()).toBeVisible();
+  await expect(page.getByText('Snapshot block')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap evidence ledger' })).toBeVisible();
+  await expect(
+    page.getByText('Flap launch mechanism normalized from versioned Portal state.'),
   ).toBeVisible();
 });
 

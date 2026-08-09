@@ -434,13 +434,29 @@ are not implemented. The specification uses zero tolerance for exact chain state
 budgets for derived values, Brier/ECE gates for entity probabilities, and excludes Unknown from
 numeric error denominators.
 
+### Deterministic Flap Portal inspection slice
+
+The repository now contains a clean read-only Flap BSC inspector bound to the officially documented
+Portal v5.8.6 deployment and an explicit official interface revision. At one fixed Snapshot block it
+checks Portal/token bytecode, decodes V6 with an RPC-error-only V5 fallback, rejects malformed
+successful output, preserves future enum codes as Unknown, and source-links the normalized launch
+Evidence to deployment, bytecode and call observations. No-code input produces negative Evidence.
+
+Local verification passed 210 unit tests and 23 API integration tests; 15 durable-store tests were
+explicitly skipped because local Docker Desktop remained unavailable. The Windows-owned browser run
+passed 10 Chromium flows across desktop and Pixel 7, including Flap lifecycle, replay block,
+Evidence, and Unknown sell-capacity rendering. This is deterministic adapter/UI validation only.
+No FFT request or named real-chain Flap conclusion was made, and event history, migration, market
+reconstruction, entity calibration, executable sell capacity and full RV remain pending.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                             |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| local non-browser gates  | pass: format, lint, typecheck, 203 unit, 22 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
+| local non-browser gates  | pass: format, lint, typecheck, 210 unit, 23 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
+| local `test:coverage`    | pass: 233 tests, 15 durable skips; 83.56% statements, 75.15% branches, 90.75% functions, 84.48% lines                                                              |
 | branch `test:coverage`   | pass: 240 tests; 86.93% statements, 78.44% branches, 95.05% functions, 87.91% lines                                                                                |
-| `test:e2e:windows` / CI  | pass: 8 Chromium tests across desktop and Pixel 7                                                                                                                  |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap Evidence/Unknown                                                                                |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                             |
 | `docker compose config`  | pass                                                                                                                                                               |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                 |

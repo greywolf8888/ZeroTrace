@@ -19,6 +19,7 @@ import {
 import { createEvidence, EvidenceLedger, hashPayload } from '@zerotrace/evidence';
 import type { ChainAnchorRead } from '@zerotrace/schemas';
 import { StorageError, type EvidenceRepository } from '@zerotrace/storage';
+import { encodeAbiParameters } from 'viem';
 
 import { createApp } from '../../apps/api/src/app.js';
 import type { AppConfig } from '../../apps/api/src/config.js';
@@ -191,6 +192,53 @@ const fixtureEvmTransactionHash = `0x${'1'.repeat(64)}`;
 const fixtureBitcoinTransactionId = 'c'.repeat(64);
 const fixtureSolanaSignature =
   '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
+const fixtureFlapToken = `0x${'a'.repeat(40)}`;
+
+function fixtureFlapV6Result() {
+  return encodeAbiParameters(
+    [
+      {
+        type: 'tuple',
+        components: [
+          { name: 'status', type: 'uint8' },
+          { name: 'reserve', type: 'uint256' },
+          { name: 'circulatingSupply', type: 'uint256' },
+          { name: 'price', type: 'uint256' },
+          { name: 'tokenVersion', type: 'uint8' },
+          { name: 'r', type: 'uint256' },
+          { name: 'h', type: 'uint256' },
+          { name: 'k', type: 'uint256' },
+          { name: 'dexSupplyThresh', type: 'uint256' },
+          { name: 'quoteTokenAddress', type: 'address' },
+          { name: 'nativeToQuoteSwapEnabled', type: 'bool' },
+          { name: 'extensionID', type: 'bytes32' },
+          { name: 'taxRate', type: 'uint256' },
+          { name: 'pool', type: 'address' },
+          { name: 'progress', type: 'uint256' },
+        ],
+      },
+    ],
+    [
+      {
+        status: 1,
+        reserve: 1_000n,
+        circulatingSupply: 750n,
+        price: 2_000n,
+        tokenVersion: 5,
+        r: 100n,
+        h: 200n,
+        k: 300n,
+        dexSupplyThresh: 1_000n,
+        quoteTokenAddress: `0x${'0'.repeat(40)}`,
+        nativeToQuoteSwapEnabled: true,
+        extensionID: `0x${'0'.repeat(64)}`,
+        taxRate: 500n,
+        pool: `0x${'0'.repeat(40)}`,
+        progress: 750_000_000_000_000_000n,
+      },
+    ],
+  );
+}
 
 function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccount): AppRuntime {
   const evm = new EvmLedgerAdapter(
@@ -1230,6 +1278,83 @@ describe('ZeroTrace API contract', () => {
     }
   });
 
+  it('inspects a Flap BSC token through versioned Portal state and replayable Evidence', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new FakeTransport(
+          {
+            eth_getBlockByNumber: {
+              number: '0x10',
+              hash: `0x${'6'.repeat(64)}`,
+              parentHash: `0x${'5'.repeat(64)}`,
+              timestamp: '0x65',
+            },
+            eth_getCode: '0x6000',
+            eth_call: fixtureFlapV6Result(),
+          },
+          {
+            eth_getBlockByNumber: 'bsc-anchor',
+            eth_getCode: 'bsc-code',
+            eth_call: 'bsc-call',
+          },
+        ),
+      ),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}?chainId=eip155:56&platform=flap`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      platform: 'flap',
+      token: fixtureFlapToken,
+      platformMatch: { state: 'known', value: true },
+      state: {
+        inspectionMethod: 'getTokenV6',
+        status: { state: 'known', value: 'TRADABLE' },
+        tokenVersion: { state: 'known', value: 'TOKEN_TAXED_V2' },
+      },
+      launch: {
+        lifecycle: 'PRIMARY_MARKET',
+        circulatingSupply: { state: 'known', value: '750' },
+        remainingSupply: { state: 'known', value: '250' },
+        progress: { state: 'known', value: '0.75' },
+        taxModel: { state: 'known', value: 'FLAP_TAX_V2' },
+        currentSellCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
+      },
+      metadata: {
+        snapshot: { chainId: 'eip155:56', blockNumber: '16' },
+        sourceSet: expect.arrayContaining(['bsc-anchor', 'bsc-call', 'bsc-code']),
+      },
+    });
+    expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'PROVIDER_OBSERVATION',
+      'CONTRACT_STATE',
+      'CONTRACT_STATE',
+      'CONTRACT_STATE',
+      'DERIVED_FEATURE',
+    ]);
+    const derivedId = response.json().evidence.at(-1).id;
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${derivedId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes).toHaveLength(5);
+  });
+
   it('keeps Solana account absence known without coercing unavailable fields to zero', async () => {
     const app = await createApp({ config, runtime: runtimeWithAllLedgers(null), logger: false });
     apps.push(app);
@@ -1331,6 +1456,15 @@ describe('ZeroTrace API contract', () => {
     });
     expect(unavailableLedgerRecord.statusCode).toBe(503);
     expect(unavailableLedgerRecord.json().facts).toMatchObject({
+      state: 'unavailable',
+      reason: 'PROVIDER_UNCONFIGURED',
+    });
+    const unavailableLaunch = await degraded.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}?chainId=eip155:56`,
+    });
+    expect(unavailableLaunch.statusCode).toBe(503);
+    expect(unavailableLaunch.json().platformMatch).toMatchObject({
       state: 'unavailable',
       reason: 'PROVIDER_UNCONFIGURED',
     });

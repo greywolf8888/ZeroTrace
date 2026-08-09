@@ -256,6 +256,7 @@ describe('capability probes and snapshots', () => {
         },
         eth_getBalance: '0x2a',
         eth_getCode: '0x6000',
+        eth_call: `0x${'0'.repeat(63)}1`,
       },
       {
         eth_getBlockByNumber: 'evm-anchor',
@@ -285,9 +286,22 @@ describe('capability probes and snapshots', () => {
       value: '0x6000',
       endpointId: 'evm-code',
     });
+    await expect(
+      adapter.callObservation(`0x${'1'.repeat(40)}`, '0x1234', '0x10'),
+    ).resolves.toMatchObject({ value: `0x${'0'.repeat(63)}1` });
     expect(transport.calls.at(-1)).toEqual({
-      method: 'eth_getCode',
-      params: ['0xabc', '0x10'],
+      method: 'eth_call',
+      params: [{ to: `0x${'1'.repeat(40)}`, data: '0x1234' }, '0x10'],
+    });
+    await expect(adapter.call(`0x${'1'.repeat(40)}`, '1234', '0x10')).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+    await expect(adapter.call(`0x${'1'.repeat(40)}`, '0x1234', 'pending')).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+    expect(transport.calls.at(-1)).toEqual({
+      method: 'eth_call',
+      params: [{ to: `0x${'1'.repeat(40)}`, data: '0x1234' }, '0x10'],
     });
     expect(transport.calls[0]).toEqual({
       method: 'eth_getBlockByNumber',

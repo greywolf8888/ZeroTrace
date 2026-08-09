@@ -197,6 +197,47 @@ export interface SubjectResponse {
 
 export type IntelligenceResponse = SubjectResponse;
 
+export interface LaunchMechanismSnapshot {
+  platform: string;
+  platformVersion: KnowledgeValue<string>;
+  deploymentId: KnowledgeValue<string>;
+  factoryOrProgram: KnowledgeValue<string>;
+  lifecycle: string;
+  quoteAsset: KnowledgeValue<string>;
+  curveType: KnowledgeValue<string>;
+  realQuoteReserve: KnowledgeValue<string>;
+  virtualBaseReserve: KnowledgeValue<string>;
+  virtualQuoteReserve: KnowledgeValue<string>;
+  circulatingSupply: KnowledgeValue<string>;
+  remainingSupply: KnowledgeValue<string>;
+  progress: KnowledgeValue<string>;
+  graduationThreshold: KnowledgeValue<string>;
+  currentSellCapacity: KnowledgeValue<string>;
+  taxModel: KnowledgeValue<string>;
+  buyTaxBps: KnowledgeValue<string>;
+  sellTaxBps: KnowledgeValue<string>;
+  migrationPool: KnowledgeValue<string>;
+  lpLocked: KnowledgeValue<boolean>;
+  lpBurned: KnowledgeValue<boolean>;
+  sourceBlockOrSlot: string;
+  sourceVersion: string;
+  evidenceIds: string[];
+}
+
+export interface FlapInspectionResponse {
+  platform: 'flap';
+  token: string;
+  deployment: {
+    portal: string;
+    documentedVersion: string;
+    sourceRevision: string;
+  };
+  platformMatch: KnowledgeValue<boolean>;
+  launch: LaunchMechanismSnapshot | null;
+  metadata: AnalysisMetadata;
+  evidence: EvidenceRecord[];
+}
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -277,6 +318,18 @@ export const api = {
         '/' +
         encodeURIComponent(candidate.normalizedId) +
         suffix,
+    );
+  },
+  flapLaunch: (candidate: SubjectCandidate) => {
+    const parameters = new URLSearchParams({
+      chainId: candidate.chainId,
+      platform: 'flap',
+    });
+    return requestJson<FlapInspectionResponse>(
+      '/api/v1/launches/EVM/' +
+        encodeURIComponent(candidate.normalizedId) +
+        '?' +
+        parameters.toString(),
     );
   },
   exitRace: (payload: unknown) =>

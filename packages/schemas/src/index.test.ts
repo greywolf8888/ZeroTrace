@@ -5,6 +5,7 @@ import {
   AnalysisSnapshotSchema,
   AnchorReconciliationResultSchema,
   ChainAnchorReadSchema,
+  LaunchMechanismSnapshotSchema,
   ProviderHealthSchema,
   knownValue,
   unavailableValue,
@@ -102,6 +103,62 @@ describe('analysis metadata', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe('launch mechanism snapshots', () => {
+  it('requires terminal mechanism fields to preserve explicit Unknown values', () => {
+    const unknown = unknownValue('NOT_QUERIED');
+    const snapshot = LaunchMechanismSnapshotSchema.parse({
+      platform: 'flap',
+      platformVersion: knownValue('v5.8.6'),
+      deploymentId: knownValue('eip155:56:portal'),
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      factoryOrProgram: knownValue(`0x${'1'.repeat(40)}`),
+      creator: unknown,
+      lifecycle: 'PRIMARY_MARKET',
+      quoteAsset: knownValue('eip155:56:native'),
+      curveType: knownValue('FLAP_VIRTUAL_CONSTANT_PRODUCT'),
+      realBaseReserve: unknown,
+      realQuoteReserve: knownValue('10'),
+      virtualBaseReserve: knownValue('20'),
+      virtualQuoteReserve: knownValue('30'),
+      totalSupply: unknown,
+      curveSupply: unknown,
+      circulatingSupply: knownValue('40'),
+      remainingSupply: unknown,
+      progress: knownValue('0.5'),
+      graduationCondition: knownValue('circulatingSupply >= dexSupplyThresh'),
+      graduationThreshold: knownValue('100'),
+      currentSellCapacity: unknown,
+      buyFeeBps: unknown,
+      sellFeeBps: unknown,
+      creatorFeeBps: unknown,
+      protocolFeeBps: unknown,
+      taxModel: knownValue('NONE'),
+      buyTaxBps: knownValue('0'),
+      sellTaxBps: knownValue('0'),
+      taxAllocations: unknown,
+      fundRecipient: unknown,
+      taxProcessor: unknown,
+      dividendContract: unknown,
+      vault: unknown,
+      migrationTarget: unknown,
+      migrationPool: knownValue(`0x${'0'.repeat(40)}`),
+      lpOwner: unknown,
+      lpLocked: unknown,
+      lpBurned: unknown,
+      lpClaimRight: unknown,
+      antiSniperOrFarmerSettings: unknown,
+      rawConfigHash: 'a'.repeat(64),
+      sourceBlockOrSlot: '100',
+      sourceVersion: 'flap-getTokenV6-v1',
+      evidenceIds: ['ev_fixture'],
+    });
+
+    expect(snapshot.currentSellCapacity).toEqual(unknown);
+    expect(snapshot.buyTaxBps).toEqual({ state: 'known', value: '0' });
   });
 });
 

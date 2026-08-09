@@ -352,6 +352,15 @@ Protocol-specific adapters live behind the canonical launch/market interfaces:
 - never copy proprietary schemas or code into the Apache-2.0 core;
 - validate each decoder against named real transactions/accounts and retain the evidence fixture.
 
+The first concrete slice is Flap BSC current-state inspection. It binds the documented Portal
+deployment and interface revision to source metadata, verifies Portal/token bytecode and executes
+versioned read-only Portal calls at one numeric Snapshot block. Raw deployment, bytecode and call
+observations are distinct Evidence nodes; the normalized launch record is a derived node linked to
+all of them. V6-to-V5 fallback occurs only for an explicit RPC method failure. Unknown enum values,
+unqueried rights/configuration and negative contract-code observations remain typed and cannot be
+converted into lifecycle, ownership or numeric facts. Event/configuration history, migration proof,
+market reconstruction and sell capacity remain separate later stages.
+
 The evaluated repositories, revisions, licenses, and intended boundaries are recorded in
 [THIRD_PARTY_DEPENDENCIES.md](../research/THIRD_PARTY_DEPENDENCIES.md).
 

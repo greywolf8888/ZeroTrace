@@ -613,6 +613,7 @@ export const LaunchLifecycleSchema = z.enum([
 
 const OptionalDecimalKnowledgeSchema = knowledgeValueSchema(DecimalStringSchema);
 const OptionalStringKnowledgeSchema = knowledgeValueSchema(z.string());
+const OptionalJsonKnowledgeSchema = knowledgeValueSchema(JsonValueSchema);
 
 export const LaunchMechanismSnapshotSchema = z.object({
   platform: z.string().min(1),
@@ -620,6 +621,7 @@ export const LaunchMechanismSnapshotSchema = z.object({
   deploymentId: OptionalStringKnowledgeSchema,
   ledger: LedgerSchema,
   chainId: z.string().min(1),
+  factoryOrProgram: OptionalStringKnowledgeSchema,
   creator: OptionalStringKnowledgeSchema,
   lifecycle: LaunchLifecycleSchema,
   quoteAsset: OptionalStringKnowledgeSchema,
@@ -629,17 +631,32 @@ export const LaunchMechanismSnapshotSchema = z.object({
   virtualBaseReserve: OptionalDecimalKnowledgeSchema,
   virtualQuoteReserve: OptionalDecimalKnowledgeSchema,
   totalSupply: OptionalDecimalKnowledgeSchema,
+  curveSupply: OptionalDecimalKnowledgeSchema,
+  circulatingSupply: OptionalDecimalKnowledgeSchema,
   remainingSupply: OptionalDecimalKnowledgeSchema,
   progress: OptionalDecimalKnowledgeSchema,
   graduationCondition: OptionalStringKnowledgeSchema,
+  graduationThreshold: OptionalDecimalKnowledgeSchema,
+  currentSellCapacity: OptionalDecimalKnowledgeSchema,
   buyFeeBps: OptionalDecimalKnowledgeSchema,
   sellFeeBps: OptionalDecimalKnowledgeSchema,
+  creatorFeeBps: OptionalDecimalKnowledgeSchema,
+  protocolFeeBps: OptionalDecimalKnowledgeSchema,
   taxModel: OptionalStringKnowledgeSchema,
+  buyTaxBps: OptionalDecimalKnowledgeSchema,
+  sellTaxBps: OptionalDecimalKnowledgeSchema,
+  taxAllocations: OptionalJsonKnowledgeSchema,
+  fundRecipient: OptionalStringKnowledgeSchema,
+  taxProcessor: OptionalStringKnowledgeSchema,
+  dividendContract: OptionalStringKnowledgeSchema,
+  vault: OptionalStringKnowledgeSchema,
   migrationTarget: OptionalStringKnowledgeSchema,
   migrationPool: OptionalStringKnowledgeSchema,
   lpOwner: OptionalStringKnowledgeSchema,
   lpLocked: knowledgeValueSchema(z.boolean()),
   lpBurned: knowledgeValueSchema(z.boolean()),
+  lpClaimRight: OptionalStringKnowledgeSchema,
+  antiSniperOrFarmerSettings: OptionalJsonKnowledgeSchema,
   rawConfigHash: Hash256Schema,
   sourceBlockOrSlot: z.string().min(1),
   sourceVersion: z.string().min(1),

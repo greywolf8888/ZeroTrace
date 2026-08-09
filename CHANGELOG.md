@@ -38,6 +38,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - Snapshot/Evidence-backed ledger query API with pending, mempool, null, and unavailable observations
   kept distinct from confirmed facts;
 - responsive React analyst workspace with typed ledger results and explicit Unknown states;
+- version-pinned, fixed-block Flap BSC Portal inspection with V6/V5 decoding, bytecode provenance,
+  negative Evidence for non-contract subjects, forward-compatible enum Unknown states, and a
+  read-only launch-mechanism UI;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,
@@ -80,9 +83,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 ### Known limitations
 
 - finalized provider-shaped EVM execution/state, Bitcoin UTXO, and Solana execution/balance records
-  are persisted and strict raw ledger queries are exposed, but semantic transaction/event
-  normalization and protocol-specific
-  launchpad/market decoding are not implemented;
+  are persisted and strict raw ledger queries are exposed; Flap BSC current Portal state is decoded,
+  but semantic event history, configuration, migration, other launchpads, and market reconstruction
+  are not implemented;
 - common-position endpoint reconciliation and reorg detection are implemented, but continuous
   scheduling, automatic rollback/replay, and independently operated provider acceptance are not;
 - entity resolution is an uncalibrated baseline;

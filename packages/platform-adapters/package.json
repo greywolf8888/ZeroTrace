@@ -12,6 +12,9 @@
     }
   },
   "dependencies": {
-    "@zerotrace/schemas": "*"
+    "@zerotrace/chain-adapters": "*",
+    "@zerotrace/evidence": "*",
+    "@zerotrace/schemas": "*",
+    "viem": "2.55.11"
   }
 }

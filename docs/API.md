@@ -25,6 +25,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/search?q=...`             | local identifier classification; optional `ledger` and `chainId` |
 | GET    | `/api/v1/subjects/:ledger/:id`     | snapshot-pinned current-state read when provider exists          |
 | GET    | `/api/v1/ledger/:ledger/:type/:id` | typed block, transaction, or Bitcoin outpoint query              |
+| GET    | `/api/v1/launches/EVM/:token`      | version-pinned Flap BSC current Portal-state inspection          |
 | GET    | `/api/v1/evidence/:id`             | Evidence node, source edges, and bound Snapshot                  |
 | GET    | `/api/v1/evidence/:id/drilldown`   | restart-safe derived/source Evidence traversal                   |
 | POST   | `/api/v1/entities/resolve`         | deterministic evidence-feature baseline                          |
@@ -62,6 +63,24 @@ The response contains `subject`, typed `facts`, `metadata`, and `evidence`. `met
 the Snapshot, coverage, freshness, source set, model version, confidence, and Evidence IDs. These
 records validate provider shape and placement but do not claim semantic transfer, protocol-event,
 controller, launchpad, or RV decoding.
+
+### Flap BSC launch inspection
+
+`GET /api/v1/launches/EVM/:token?chainId=eip155:56&platform=flap` requires a configured BSC
+read-only adapter. An optional canonical-hex `blockNumber` pins replay to a historical block;
+otherwise the adapter captures its configured Snapshot anchor and converts it to a numeric block
+tag before any bytecode or `eth_call` read.
+
+The inspector verifies Portal and token bytecode, attempts the officially documented BSC
+`getTokenV6` interface, and falls back to documented `getTokenV5` only when the RPC reports that the
+newer method is unavailable. A malformed successful response is rejected rather than reinterpreted
+as another version. Returned fields include deployment/interface revision, lifecycle, quote and
+virtual reserves, circulating/remaining supply, graduation threshold, progress, tax state, pool,
+Snapshot, coverage, confidence, and source-linked Evidence. Fields not exposed by that interface,
+including current sell capacity and LP rights, remain typed Unknown.
+
+No token bytecode yields negative Evidence and `platformMatch=false`; it does not produce a
+plausible launch record. This endpoint performs no approval, signing, swap, or broadcast operation.
 
 Each successful transport response carries its own safe hostname-based endpoint ID. Snapshot
 `providerVersions` lists every endpoint used to establish the anchor; Evidence names the endpoint or
@@ -103,7 +122,7 @@ restart; without it, capability and health output explicitly report process-loca
 
 ## Explicitly incomplete endpoints
 
-`/assets`, `/labels`, `/control-rights`, `/launches`, `/markets`, `/claims`, and
+`/assets`, `/labels`, `/control-rights`, `/markets`, `/claims`, and
 `/timeline` return HTTP 501 with:
 
 - `CAPABILITY_NOT_IMPLEMENTED`;
@@ -112,6 +131,10 @@ restart; without it, capability and health output explicitly report process-loca
 - a model-version marker.
 
 This is deliberate contract preservation, not an implementation.
+
+The implemented Flap route above is the only current `/launches` exception. Other ledgers,
+platforms, historical event reconstruction, and launch queries remain unavailable rather than
+falling back to generic data.
 
 ## Knowledge values
 

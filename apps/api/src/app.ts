@@ -9,7 +9,11 @@ import { ProviderError } from '@zerotrace/chain-adapters';
 import { resolveEntityRelationship } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
-import { PLATFORM_REGISTRY } from '@zerotrace/platform-adapters';
+import {
+  FLAP_BSC_MAINNET_DEPLOYMENT,
+  PLATFORM_REGISTRY,
+  inspectFlapToken,
+} from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
   StorageError,
@@ -60,6 +64,23 @@ const LedgerRecordParamsSchema = z.object({
 
 const LedgerRecordQuerySchema = z.object({
   chainId: z.string().trim().min(1).max(128).optional(),
+});
+
+const LaunchInspectionParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  token: z.string().trim().min(1).max(128),
+});
+
+const LaunchInspectionQuerySchema = z.object({
+  chainId: z.literal('eip155:56'),
+  platform: z.literal('flap').optional(),
+  blockNumber: z
+    .string()
+    .regex(/^(?:0|[1-9]\d*)$/)
+    .optional(),
 });
 
 const EntityFeatureSchema = z.object({
@@ -723,6 +744,14 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'Read-only EVM transaction/block, Bitcoin transaction/block/outpoint, and Solana transaction/slot queries use strict provider-response validation and bind observations to Evidence plus replayable Snapshots. Null, pending, mempool, and provider failures remain distinct.',
       },
       {
+        id: 'flap-bsc-inspection',
+        status: runtime.evmAdapters.has(56)
+          ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
+          : 'BSC_PROVIDER_REQUIRED',
+        detail:
+          'Versioned read-only Flap Portal V8Safe/V6/V5 decoding binds deployment metadata, bytecode, raw state, normalized launch fields, Snapshot, and Evidence. TokenCreated history, tax/vault internals, migration/LP control, and complete realizable value remain pending.',
+      },
+      {
         id: 'cross-source-anchor-reconciliation',
         status: dataQualityReady
           ? runtime.dataQuality.durable
@@ -1184,6 +1213,33 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           .code(404)
           .send(errorResponse(request, 'EVIDENCE_NOT_FOUND', 'Evidence was not found.', false));
       return node;
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LaunchInspectionParamsSchema.parse(request.params);
+      const query = LaunchInspectionQuerySchema.parse(request.query);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        return reply.code(503).send({
+          platform: 'flap',
+          token: params.token,
+          platformMatch: unavailableValue('PROVIDER_UNCONFIGURED'),
+          launch: null,
+          metadata: emptyMetadata('flap-inspector-v0.1.0'),
+        });
+      }
+      return inspectFlapToken({
+        adapter,
+        token: params.token,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(query.blockNumber === undefined ? {} : { blockNumber: query.blockNumber }),
+      });
     },
   );
 

@@ -4,6 +4,7 @@ import {
   api,
   type Capability,
   type EvidenceRecord,
+  type FlapInspectionResponse,
   type HealthResponse,
   type KnowledgeValue,
   type PlatformDescriptor,
@@ -447,13 +448,21 @@ function Overview({
   );
 }
 
-function EvidencePanel({ evidence }: { evidence: EvidenceRecord[] }) {
+function EvidencePanel({
+  evidence,
+  eyebrow = 'Metric → raw observation',
+  title = 'Evidence ledger',
+}: {
+  evidence: EvidenceRecord[];
+  eyebrow?: string;
+  title?: string;
+}) {
   return (
     <section className="panel evidence-panel">
       <div className="panel-header">
         <div>
-          <span className="eyebrow">Metric → raw observation</span>
-          <h3>Evidence ledger</h3>
+          <span className="eyebrow">{eyebrow}</span>
+          <h3>{title}</h3>
         </div>
         <span className="snapshot-badge">
           {evidence.length} observation{evidence.length === 1 ? '' : 's'}
@@ -502,9 +511,93 @@ function EvidencePanel({ evidence }: { evidence: EvidenceRecord[] }) {
   );
 }
 
+function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse }) {
+  const launch = inspection.launch;
+  return (
+    <>
+      <section className="panel subject-panel launch-panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Versioned BSC Portal inspection</span>
+            <h3>Flap launch mechanism</h3>
+          </div>
+          <StatusPill
+            status={
+              inspection.platformMatch.state === 'known' && inspection.platformMatch.value
+                ? (launch?.lifecycle ?? 'MATCHED')
+                : (inspection.platformMatch.reason ?? inspection.platformMatch.state)
+            }
+          />
+        </div>
+        {launch === null ? (
+          <div className="alert alert-warning">
+            <strong>No evidenced Flap launch</strong>
+            <KnowledgeDisplay data={inspection.platformMatch} />
+          </div>
+        ) : (
+          <>
+            <div className="fact-grid">
+              {[
+                ['Platform match', inspection.platformMatch],
+                ['Platform version', launch.platformVersion],
+                ['Portal', launch.factoryOrProgram],
+                ['Quote asset', launch.quoteAsset],
+                ['Curve type', launch.curveType],
+                ['Real quote reserve', launch.realQuoteReserve],
+                ['Virtual base reserve', launch.virtualBaseReserve],
+                ['Virtual quote reserve', launch.virtualQuoteReserve],
+                ['Circulating supply', launch.circulatingSupply],
+                ['Remaining supply', launch.remainingSupply],
+                ['Progress', launch.progress],
+                ['Graduation threshold', launch.graduationThreshold],
+                ['Current sell capacity', launch.currentSellCapacity],
+                ['Tax model', launch.taxModel],
+                ['Buy tax bps', launch.buyTaxBps],
+                ['Sell tax bps', launch.sellTaxBps],
+                ['Migration pool', launch.migrationPool],
+                ['LP locked', launch.lpLocked],
+                ['LP burned', launch.lpBurned],
+              ].map(([label, value]) => (
+                <div className="fact-row" key={label as string}>
+                  <span>{label as string}</span>
+                  <KnowledgeDisplay data={value as KnowledgeValue<unknown>} />
+                </div>
+              ))}
+            </div>
+            <div className="snapshot-strip">
+              <span>
+                <b>Snapshot block</b> {launch.sourceBlockOrSlot}
+              </span>
+              <span>
+                <b>Decoder</b> {launch.sourceVersion}
+              </span>
+              <span>
+                <b>Confidence</b> {Math.round(inspection.metadata.confidence * 100)}%
+              </span>
+            </div>
+            <details className="raw-details">
+              <summary>View Flap replay metadata</summary>
+              <pre>{JSON.stringify(inspection.metadata.snapshot, null, 2)}</pre>
+            </details>
+          </>
+        )}
+      </section>
+      {inspection.evidence.length === 0 ? null : (
+        <EvidencePanel
+          evidence={inspection.evidence}
+          eyebrow="Portal state → normalized mechanism"
+          title="Flap evidence ledger"
+        />
+      )}
+    </>
+  );
+}
+
 function SearchWorkspace({
   result,
   subject,
+  launchInspection,
+  launchError,
   busy,
   error,
   onSearch,
@@ -512,6 +605,8 @@ function SearchWorkspace({
 }: {
   result?: SearchResponse | undefined;
   subject?: SubjectResponse | undefined;
+  launchInspection?: FlapInspectionResponse | undefined;
+  launchError?: string | undefined;
   busy: boolean;
   error?: string | undefined;
   onSearch: (query: string, network: string) => Promise<void>;
@@ -643,6 +738,13 @@ function SearchWorkspace({
           <EvidencePanel evidence={subject.evidence ?? []} />
         </>
       )}
+      {launchError === undefined ? null : (
+        <div className="alert alert-warning">
+          <strong>Flap inspection unavailable</strong>
+          {launchError}
+        </div>
+      )}
+      {launchInspection === undefined ? null : <FlapLaunchPanel inspection={launchInspection} />}
     </>
   );
 }
@@ -1002,6 +1104,8 @@ export function App() {
   const [searchError, setSearchError] = useState<string>();
   const [searchResult, setSearchResult] = useState<SearchResponse>();
   const [subject, setSubject] = useState<SubjectResponse>();
+  const [launchInspection, setLaunchInspection] = useState<FlapInspectionResponse>();
+  const [launchError, setLaunchError] = useState<string>();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -1048,6 +1152,8 @@ export function App() {
     setSearchBusy(true);
     setSearchError(undefined);
     setSubject(undefined);
+    setLaunchInspection(undefined);
+    setLaunchError(undefined);
     setView('search');
     try {
       setSearchResult(await api.search(query, selection.ledger, selection.chainId));
@@ -1061,12 +1167,27 @@ export function App() {
   const inspect = useCallback(async (candidate: SubjectCandidate) => {
     setSearchBusy(true);
     setSearchError(undefined);
+    setLaunchInspection(undefined);
+    setLaunchError(undefined);
     try {
-      setSubject(
+      const nextSubject =
         candidate.type === 'ADDRESS'
           ? await api.subject(candidate)
-          : await api.ledgerRecord(candidate),
-      );
+          : await api.ledgerRecord(candidate);
+      setSubject(nextSubject);
+      if (
+        candidate.type === 'ADDRESS' &&
+        candidate.ledger === 'EVM' &&
+        candidate.chainId === 'eip155:56'
+      ) {
+        try {
+          setLaunchInspection(await api.flapLaunch(candidate));
+        } catch (error) {
+          setLaunchError(
+            error instanceof Error ? error.message : 'The Flap Portal inspection failed.',
+          );
+        }
+      }
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : 'Subject inspection failed.');
     } finally {
@@ -1080,6 +1201,8 @@ export function App() {
         <SearchWorkspace
           result={searchResult}
           subject={subject}
+          launchInspection={launchInspection}
+          launchError={launchError}
           busy={searchBusy}
           error={searchError}
           onSearch={search}
@@ -1104,6 +1227,8 @@ export function App() {
     view,
     searchResult,
     subject,
+    launchInspection,
+    launchError,
     searchBusy,
     searchError,
     search,

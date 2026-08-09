@@ -225,6 +225,16 @@ function requireDecimalPosition(value: string): bigint {
   return BigInt(value);
 }
 
+function requireBlockTag(value: string): string {
+  if (
+    !['latest', 'safe', 'finalized', 'earliest'].includes(value) &&
+    !/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/.test(value)
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', 'EVM block tag must be canonical and read-only.');
+  }
+  return value;
+}
+
 export interface EvmAdapterConfig {
   id: string;
   chainId: number;
@@ -357,6 +367,26 @@ export class EvmLedgerAdapter {
   ): Promise<TransportObservation<string>> {
     const observation = await this.readSourced<unknown>('eth_getCode', [address, blockTag]);
     return { ...observation, value: requireHexData(observation.value, 'bytecode') };
+  }
+
+  async call(to: string, data: string, blockTag: string): Promise<string> {
+    return (await this.callObservation(to, data, blockTag)).value;
+  }
+
+  async callObservation(
+    to: string,
+    data: string,
+    blockTag: string,
+  ): Promise<TransportObservation<string>> {
+    const request = {
+      to: requireAddress(to, 'call target'),
+      data: requireHexData(data, 'call data'),
+    };
+    const observation = await this.readSourced<unknown>('eth_call', [
+      request,
+      requireBlockTag(blockTag),
+    ]);
+    return { ...observation, value: requireHexData(observation.value, 'call result') };
   }
 
   async getTransaction(hash: string): Promise<EvmTransactionRecord | null> {

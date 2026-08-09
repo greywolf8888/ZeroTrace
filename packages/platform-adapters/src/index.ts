@@ -1,8 +1,14 @@
 import { unknownValue, type Ledger } from '@zerotrace/schemas';
 
+export * from './flap.js';
+
 export type PlatformRole = 'LAUNCH_MECHANISM' | 'EXECUTION_PLATFORM' | 'LABEL_PROVIDER';
 export type AdapterImplementationStatus =
-  'INTERFACE_READY' | 'IMPLEMENTED' | 'EXTERNAL_VALIDATION_REQUIRED' | 'LICENSE_ISOLATION_REQUIRED';
+  | 'INTERFACE_READY'
+  | 'PARTIALLY_IMPLEMENTED'
+  | 'IMPLEMENTED'
+  | 'EXTERNAL_VALIDATION_REQUIRED'
+  | 'LICENSE_ISOLATION_REQUIRED';
 
 export interface PlatformDescriptor {
   id: string;
@@ -20,13 +26,13 @@ export const PLATFORM_REGISTRY: readonly PlatformDescriptor[] = Object.freeze([
     name: 'Flap',
     roles: ['LAUNCH_MECHANISM'],
     ledgers: ['EVM'],
-    implementationStatus: 'EXTERNAL_VALIDATION_REQUIRED',
+    implementationStatus: 'PARTIALLY_IMPLEMENTED',
     officialSources: [
       'https://docs.flap.sh/flap/developers/inspect-a-token',
       'https://docs.flap.sh/flap/developers/basic-and-mechanism/bonding-curve',
     ],
     integrationBoundary:
-      'Read Portal/VaultPortal token state dynamically; never hard-code curve deployments.',
+      'Versioned Portal V8Safe/V6/V5 inspection is wired; event history, tax/vault, migration, LP ownership, and RV remain pending.',
   },
   {
     id: 'pump',
