@@ -40,7 +40,7 @@ EXPOSE 80
 HEALTHCHECK --interval=15s --timeout=4s --start-period=5s --retries=4 \
   CMD wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1
 
-FROM postgres:17.10-alpine AS postgres
+FROM postgres:18.4-alpine AS postgres
 COPY infra/postgres/init/*.sql /docker-entrypoint-initdb.d/
 
 FROM clickhouse/clickhouse-server:26.7.3.19-alpine AS clickhouse
