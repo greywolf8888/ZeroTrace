@@ -25,6 +25,7 @@
       "@zerotrace/schemas": ["./packages/schemas/src/index.ts"],
       "@zerotrace/identifiers": ["./packages/identifiers/src/index.ts"],
       "@zerotrace/evidence": ["./packages/evidence/src/index.ts"],
+      "@zerotrace/data-quality": ["./packages/data-quality/src/index.ts"],
       "@zerotrace/storage": ["./packages/storage/src/index.ts"],
       "@zerotrace/ingestion": ["./packages/ingestion/src/index.ts"],
       "@zerotrace/chain-adapters": ["./packages/chain-adapters/src/index.ts"],

@@ -135,6 +135,7 @@ Important values:
 | `PROVIDER_RETRY_BASE_MS/MAX_MS`       | exponential retry-delay bounds; provider `Retry-After` is capped by the maximum  |
 | `PROVIDER_CIRCUIT_*`                  | consecutive-failure threshold and half-open reset delay                          |
 | `PROVIDER_CACHE_TTL_MS/MAX_ENTRIES`   | process-local TTL/LRU response cache; zero TTL disables stored responses         |
+| `DATA_QUALITY_MIN_SOURCES`            | minimum matching endpoint observations; integer 2-20, default 2                  |
 | `ALCHEMY_API_KEY` / `ETH_RPC_URL`     | optional Ethereum key and read-only URL/template                                 |
 | `EVM_*_RPC_URLS`                      | ordered, comma-separated EVM provider pools                                      |
 | `EVM_*_SNAPSHOT_TAG`                  | `finalized`, `safe`, or `latest`; defaults to `finalized` per configured network |
@@ -166,6 +167,11 @@ visible as `cacheBypasses` in provider diagnostics. Fixed block/slot reads may u
 Keep EVM snapshot tags at `finalized` for normal analysis. Selecting `safe` or `latest` is an
 explicit freshness/finality tradeoff; the chosen value remains in the persisted Snapshot and
 Evidence metadata.
+
+Each comma-separated provider URL creates a separate anchor observation source. The data-quality
+service compares those sources at a common block/slot and requires at least
+`DATA_QUALITY_MIN_SOURCES` matches. URL or hostname diversity does not prove operator independence,
+so `sourceIndependence` remains Unknown until an audited source-ownership registry is implemented.
 
 Never commit `.env` or API keys. ZeroTrace records safe source IDs such as
 `ethereum-rpc@eth-mainnet.g.alchemy.com`; provider URL paths and credentials are not exposed in
@@ -242,7 +248,8 @@ configured Evidence repository is unavailable. The no-provider state is valid fo
 `readOnly` must still be true. Inspect `storage` for the request-serving Evidence repository and
 `ingestionStorage` for ClickHouse Raw Facts, PostgreSQL checkpoints, and raw artifacts. Each
 historical component reports `UP`, `DOWN`, or `UNCONFIGURED`; the aggregate also distinguishes
-`PARTIAL`.
+`PARTIAL`. Inspect `dataQuality` or `GET /api/v1/data-quality/anchors` for common-position anchor
+agreement, continuity, source coverage, Evidence, alerts, and its independent storage health.
 
 ## Web-only development
 

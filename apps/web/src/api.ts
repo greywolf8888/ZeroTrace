@@ -63,7 +63,76 @@ export interface HealthResponse {
     checkpoints: IngestionStorageComponentHealth;
     artifacts: IngestionStorageComponentHealth & { bucket?: string };
   };
+  dataQuality: DataQualityHealth;
   checkedAt: string;
+}
+
+export interface ChainAnchorObservation {
+  id: string;
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  position: string;
+  hash: string;
+  parentPosition?: string;
+  parentHash?: string;
+  finality: string;
+  source: string;
+  observedAt: string;
+  role: 'HEAD' | 'COMPARISON' | 'CONTINUITY_CHECK';
+  evidenceId: string;
+}
+
+export interface DataQualityAlert {
+  id: string;
+  kind: 'CROSS_SOURCE_DISAGREEMENT' | 'REORG_DETECTED' | 'SOURCE_REGRESSION';
+  severity: 'INFO' | 'WARNING' | 'CRITICAL';
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  position?: string;
+  summary: string;
+  evidenceIds: string[];
+  observedAt: string;
+}
+
+export interface AnchorReconciliationResult {
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  status: 'AGREEMENT' | 'DISAGREEMENT' | 'INSUFFICIENT_SOURCES' | 'UNAVAILABLE';
+  requiredSources: number;
+  configuredSources: number;
+  observedSources: number;
+  comparisonPosition: KnowledgeValue<string>;
+  canonicalAnchor: KnowledgeValue<{
+    position: string;
+    hash: string;
+    parentPosition?: string;
+    parentHash?: string;
+    finality: string;
+  }>;
+  sourceIndependence: KnowledgeValue<boolean>;
+  sources: Array<{
+    source: string;
+    head: KnowledgeValue<ChainAnchorObservation>;
+    comparison: KnowledgeValue<ChainAnchorObservation>;
+    continuity?: {
+      status: string;
+      continuous: KnowledgeValue<boolean>;
+      evidenceIds: string[];
+      alertIds: string[];
+    };
+  }>;
+  alerts: DataQualityAlert[];
+  metadata: AnalysisMetadata;
+}
+
+export interface DataQualityHealth {
+  status: 'UP' | 'PARTIAL' | 'INSUFFICIENT_SOURCES' | 'UNCONFIGURED' | 'DEGRADED' | 'DOWN';
+  durable: boolean;
+  checkedAt: string;
+  configuredSources: Record<string, number>;
+  results: AnchorReconciliationResult[];
+  storage: StorageHealth;
+  errorCode?: string;
 }
 
 export interface IngestionStorageComponentHealth {

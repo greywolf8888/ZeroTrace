@@ -298,6 +298,7 @@ function createSnapshot(options: {
       chainId: options.chainId,
       blockNumber: String(header.number),
       blockHash: header.hash,
+      parentBlockHash: header.parentHash,
       finality: 'finalized',
       ...(blockTimestamp === undefined ? {} : { blockTimestamp }),
     };
@@ -315,6 +316,7 @@ function createSnapshot(options: {
       chainId: 'bitcoin-mainnet',
       height: String(header.number),
       blockHash: header.hash,
+      previousBlockHash: header.parentHash,
       finality: 'best-chain',
     };
   }

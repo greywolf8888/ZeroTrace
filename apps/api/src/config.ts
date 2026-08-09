@@ -22,6 +22,7 @@ const EnvironmentSchema = z.object({
   PROVIDER_CIRCUIT_RESET_MS: z.coerce.number().int().min(1).max(3_600_000).default(30_000),
   PROVIDER_CACHE_TTL_MS: z.coerce.number().int().min(0).max(3_600_000).default(1_000),
   PROVIDER_CACHE_MAX_ENTRIES: z.coerce.number().int().min(1).max(100_000).default(500),
+  DATA_QUALITY_MIN_SOURCES: z.coerce.number().int().min(2).max(20).default(2),
   ALCHEMY_API_KEY: optionalString,
   ETH_RPC_URL: optionalString,
   EVM_ETHEREUM_RPC_URL: optionalString,
@@ -86,6 +87,7 @@ export interface AppConfig {
   providerAllowedHosts: string[];
   allowPrivateProviderUrls: boolean;
   providerResilience: ProviderResilienceConfig;
+  dataQualityMinSources: number;
   ethereumRpcUrl?: string;
   ethereumRpcUrls: string[];
   ethereumChainId: number;
@@ -277,6 +279,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
       cacheTtlMs: parsed.PROVIDER_CACHE_TTL_MS,
       cacheMaxEntries: parsed.PROVIDER_CACHE_MAX_ENTRIES,
     },
+    dataQualityMinSources: parsed.DATA_QUALITY_MIN_SOURCES,
     ethereumRpcUrls,
     ethereumChainId: parsed.EVM_ETHEREUM_CHAIN_ID,
     ethereumSnapshotTag: parsed.EVM_ETHEREUM_SNAPSHOT_TAG,

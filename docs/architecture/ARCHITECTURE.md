@@ -56,6 +56,7 @@ flowchart TB
     NORMALIZE["Canonical fact normalization"]
     EVIDENCE["Immutable evidence graph"]
     SNAPSHOT["Snapshot coordinator"]
+    QUALITY["Anchor reconciliation and continuity"]
   end
 
   subgraph Providers["Read-only providers"]
@@ -80,12 +81,16 @@ flowchart TB
   SNAPSHOT --> EVM
   SNAPSHOT --> BTC
   SNAPSHOT --> SOL
+  EVM --> QUALITY
+  BTC --> QUALITY
+  SOL --> QUALITY
   EVM --> INGEST
   BTC --> INGEST
   SOL --> INGEST
   LABELS --> NORMALIZE
   INGEST --> NORMALIZE
   NORMALIZE --> EVIDENCE
+  QUALITY --> EVIDENCE
   EVIDENCE --> ENTITY
   EVIDENCE --> RIGHTS
   EVIDENCE --> LAUNCH
@@ -99,9 +104,11 @@ flowchart TB
   MARKET --> API
   RV --> API
   SCENARIO --> API
+  QUALITY --> API
   API --> EXPORT
   NORMALIZE --> CH
   EVIDENCE --> PG
+  QUALITY --> PG
   EVIDENCE --> OBJ
   ENTITY --> GRAPH
   API --> CACHE
@@ -113,9 +120,11 @@ canonical facts, a process-local Evidence cache backed by durable PostgreSQL Sna
 and a separate finalized raw-ledger worker backed by versioned artifacts, ClickHouse Raw Facts, and
 PostgreSQL checkpoints. Blocks, transactions, EVM logs, Bitcoin inputs/outputs, and Solana
 instructions are wired. Baseline entity inference, two deterministic RV algorithms, API, and UI are
-also wired. Provider-shaped records are not transaction-level semantic normalization; graph
-projection and workflow behavior must not be inferred as complete. Consult the
-progress ledger.
+also wired. Query-time endpoint anchors are compared at a common position, parent continuity is
+checked against prior observations, and Evidence-linked alerts are stored when sources conflict or
+history changes. Provider-shaped records are not transaction-level semantic normalization;
+operator independence, graph projection, rollback/replay, and workflow behavior must not be
+inferred as complete. Consult the progress ledger.
 
 ## Canonical concepts
 
@@ -123,10 +132,11 @@ progress ledger.
 
 Each analysis is anchored independently:
 
-- EVM: chain ID, block number, block hash, explicit `latest`/`safe`/`finalized` selection, captured
-  time;
-- Bitcoin: network, height, height-resolved best-chain hash, captured time;
-- Solana: cluster, slot, that slot's `getBlock` blockhash, commitment, captured time.
+- EVM: chain ID, block number, block hash, parent hash, explicit
+  `latest`/`safe`/`finalized` selection, captured time;
+- Bitcoin: network, height, height-resolved best-chain hash, previous block hash, captured time;
+- Solana: cluster, slot, that slot's `getBlock` blockhash, parent slot, previous blockhash,
+  commitment, captured time.
 
 Cross-chain results are a snapshot set, not a fictional global block. The set records capture skew
 and the finality policy used for each ledger.
@@ -157,6 +167,32 @@ runtime cache; the PostgreSQL repository transactionally persists complete Snaps
 and edges and supports drilldown after restart. Implemented ingestion observations bind a
 content-addressed, read-after-write-verified raw artifact; query-time provider observations do not yet
 persist their raw response bodies.
+
+### Anchor reconciliation and continuity
+
+The query-time data-quality service treats each configured endpoint as an observation source, not
+as proof of an independent operator:
+
+1. read every endpoint head with stored response caching bypassed;
+2. persist each successful `HEAD` anchor and raw block Evidence;
+3. choose the minimum successful block/slot as the common comparison position;
+4. re-read faster endpoints at that exact historical position and persist `COMPARISON` anchors;
+5. compare ledger, chain, position, hash, parent identity, and finality as one identity;
+6. return `AGREEMENT` only when at least the configured minimum (two by default) all match;
+7. return `DISAGREEMENT` with no canonical winner and a CRITICAL Evidence-linked alert when any
+   identity differs; fewer observations remain `INSUFFICIENT_SOURCES` or `UNAVAILABLE`.
+
+The service never uses majority voting to turn a conflict into canonical truth. `sourceIndependence`
+remains `Unknown(NOT_QUERIED)` until ownership and infrastructure independence are explicitly
+configured and verified.
+
+For continuity, the service compares each new head with that source's latest stored head. It records
+unchanged and direct-parent extensions as Known continuous. When observations skip positions, it
+re-reads the former position: the same historical hash is `HISTORICAL_MATCH`; a replacement is
+`REORG_DETECTED`; a lower reported head is `SOURCE_REGRESSION`; and a failed check is explicitly
+unavailable. Reorg/regression alerts link the prior, current, optional historical-check, and derived
+Evidence. This detects and records a change; automatic chain-state rollback/replay is not yet
+implemented.
 
 ### Entity relationship
 
@@ -256,6 +292,8 @@ connections:
   caching, per-endpoint circuit breakers, and ordered sticky failover;
 - request-scoped endpoint provenance so concurrent/failover observations cannot inherit another
   request's mutable active endpoint, plus explicit stored-cache bypass for dynamic ledger anchors;
+- endpoint-by-endpoint anchor readers that lower heads to a common position before comparing the
+  complete parent-linked identity;
 - hostname-based source identifiers and transport diagnostics that exclude credentials and URL
   paths;
 - lossless handling of integers beyond JavaScript's safe range;
@@ -267,20 +305,21 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                     | Current state                                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot and ingestion checkpoints wired; other repositories pending                                            |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending |
-| Object storage   | raw provider payloads and large artifacts by content hash                                              | versioned content-addressed artifacts wired for finalized ingestion                                                      |
-| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only                                                                                         |
-| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                                                                                                     |
-| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only                                                                                            |
+| Store            | Intended authority                                                                                                           | Current state                                                                                                            |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert and ingestion-checkpoint repositories wired; other repositories pending                  |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending |
+| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                      |
+| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                         |
+| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                     |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                            |
 
-PostgreSQL Evidence, derivation-edge, Snapshot, and ingestion-run tables include append-only or
-monotonic guards. Deferred database constraints reject inferred Evidence without a source edge,
-while repositories verify canonical IDs, Snapshot identity, idempotent conflicts, and transactional
-writes. ClickHouse Raw Facts bind Evidence and artifact references and use explicit logical
-deduplication; metric tables enforce a knowledge-state/value consistency constraint.
+PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, and
+ingestion-run tables include append-only or monotonic guards. Deferred database constraints reject
+inferred Evidence without a source edge and Data Quality Alerts without Evidence. Repositories
+verify canonical IDs, Snapshot identity, idempotent conflicts, and transactional writes. ClickHouse
+Raw Facts bind Evidence and artifact references and use explicit logical deduplication; metric
+tables enforce a knowledge-state/value consistency constraint.
 
 The worker exposes explicit `block-headers`, `transactions`, and `ledger-records` profiles. The last
 profile materializes transactions plus EVM logs/traces/state diffs, Bitcoin inputs/outputs, or Solana

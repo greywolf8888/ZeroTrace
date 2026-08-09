@@ -6,5 +6,5 @@
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../schemas" }, { "path": "../evidence" }]
+  "references": [{ "path": "../schemas" }, { "path": "../evidence" }, { "path": "../data-quality" }]
 }

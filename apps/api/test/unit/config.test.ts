@@ -14,6 +14,7 @@ describe('API configuration', () => {
     expect(config.solanaRpcUrls).toEqual([]);
     expect(config.ethereumSnapshotTag).toBe('finalized');
     expect(config.bscSnapshotTag).toBe('finalized');
+    expect(config.dataQualityMinSources).toBe(2);
   });
 
   it('allows an explicit EVM snapshot finality without accepting pending state', () => {

@@ -69,6 +69,16 @@ test('keeps scenario execution gated and exposes provider availability', async (
       'A failed or unconfigured provider becomes an availability state—never a business value of zero.',
     ),
   ).toBeVisible();
+  const anchorPanel = page.locator('.anchor-quality-panel');
+  await expect(
+    anchorPanel.getByRole('heading', { name: 'Anchor reconciliation and continuity' }),
+  ).toBeVisible();
+  await expect(anchorPanel).toContainText(
+    'Endpoint operator independence remains Unknown until explicitly configured and verified.',
+  );
+  await expect(anchorPanel.locator('.anchor-quality-card')).toHaveCount(4);
+  await expect(anchorPanel.getByText('0/0 observed · 2 required')).toHaveCount(4);
+  await expect(anchorPanel).toContainText('Memory · process-local');
   const evidenceStorageCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: 'Evidence storage' }),
   });

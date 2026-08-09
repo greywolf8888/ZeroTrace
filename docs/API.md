@@ -7,15 +7,16 @@ The initial API has no authentication and is suitable only for local/staging use
 
 ## System endpoints
 
-| Method | Path                   | Behavior                                                   |
-| ------ | ---------------------- | ---------------------------------------------------------- |
-| GET    | `/health/live`         | process liveness and read-only invariant                   |
-| GET    | `/health/ready`        | provider- and configured-storage-aware readiness           |
-| GET    | `/health`              | full provider, Evidence, and ingestion-storage state       |
-| GET    | `/metrics`             | Prometheus text exposition                                 |
-| GET    | `/api/v1/capabilities` | implemented, provider-required, and forbidden capabilities |
-| GET    | `/api/v1/chains`       | configured chain adapters                                  |
-| GET    | `/api/v1/platforms`    | platform role and implementation truth                     |
+| Method | Path                           | Behavior                                                             |
+| ------ | ------------------------------ | -------------------------------------------------------------------- |
+| GET    | `/health/live`                 | process liveness and read-only invariant                             |
+| GET    | `/health/ready`                | provider- and configured-request-storage-aware readiness             |
+| GET    | `/health`                      | full provider, Evidence, ingestion-store, and data-quality state     |
+| GET    | `/metrics`                     | Prometheus text exposition                                           |
+| GET    | `/api/v1/capabilities`         | implemented, provider-required, and forbidden capabilities           |
+| GET    | `/api/v1/chains`               | configured chain adapters                                            |
+| GET    | `/api/v1/platforms`            | platform role and implementation truth                               |
+| GET    | `/api/v1/data-quality/anchors` | endpoint anchor reconciliation, continuity, coverage, and alert data |
 
 ## Implemented intelligence endpoints
 
@@ -46,6 +47,31 @@ Each successful transport response carries its own safe hostname-based endpoint 
 `providerVersions` lists every endpoint used to establish the anchor; Evidence names the endpoint or
 deterministic endpoint set used for the observed state; response metadata `sourceSet` is their sorted
 union. This remains correct when concurrent calls complete out of order or a failover occurs.
+
+## Anchor reconciliation and continuity
+
+`GET /api/v1/data-quality/anchors` reads each configured endpoint separately. It lowers healthy
+heads to the minimum observed block/slot, re-reads faster endpoints at that exact position, and
+compares hash, parent identity, finality, ledger, and chain. The result is one of:
+
+- `AGREEMENT`: at least `DATA_QUALITY_MIN_SOURCES` observations match at the common position;
+- `DISAGREEMENT`: observations differ; `canonicalAnchor` is
+  `unknown/CONFLICTING_SOURCES`, never a majority-selected winner;
+- `INSUFFICIENT_SOURCES`: at least one observation exists but fewer than the required minimum;
+- `UNAVAILABLE`: no endpoint produced a valid observation.
+
+Every successful head/comparison is an append-only observation backed by block Evidence. A
+reconciliation Evidence node links the common-position observations. Disagreement creates a
+CRITICAL `CROSS_SOURCE_DISAGREEMENT` alert with Evidence edges. Each source also reports continuity
+against its prior head as `FIRST_OBSERVATION`, `UNCHANGED`, `DIRECT_EXTENSION`, `HISTORICAL_MATCH`,
+`REORG_DETECTED`, `SOURCE_REGRESSION`, or `CHECK_UNAVAILABLE`. Reorg/regression alerts retain prior,
+current, and optional historical-check Evidence.
+
+`configuredSources` counts endpoints, not independently operated providers. The API deliberately
+returns `sourceIndependence: unknown/NOT_QUERIED`; hostname differences do not prove organizational
+or infrastructure independence. `snapshotSet` preserves every comparison Snapshot. A single
+canonical `metadata.snapshot` exists only for agreement; it is `null` for conflicts and insufficient
+data.
 
 Entity, RV, and scenario analysis is accepted only when every supplied source evidence ID already
 exists in the evidence ledger and matches the request ledger, chain, and snapshot block/slot. A
@@ -119,6 +145,13 @@ Health responses also contain `storage`: `POSTGRES`/`UP`/`durable: true` for an 
 repository, `POSTGRES`/`DOWN` with a safe error code when configured storage is unavailable, or
 `MEMORY`/`EPHEMERAL` for an intentional no-`POSTGRES_URL` development runtime. Configured storage
 failure makes `/health/ready` return HTTP 503.
+
+`dataQuality` reports aggregate anchor state, safe per-chain results, configured/observed source
+counts, continuity coverage, Evidence IDs, alerts, and its own `POSTGRES` or `MEMORY` storage state.
+A source disagreement, reorg/regression alert, or failed data-quality repository degrades full
+`/health`. `INSUFFICIENT_SOURCES` and `UNCONFIGURED` remain truthful non-production states without
+making current request readiness fail. The endpoint performs read-only chain calls but may append
+new Evidence, anchor observations, and alerts to the configured internal repository.
 
 `ingestionStorage` reports the independent historical backends:
 

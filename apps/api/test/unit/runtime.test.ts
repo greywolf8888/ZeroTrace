@@ -24,6 +24,7 @@ function baseConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       cacheTtlMs: 0,
       cacheMaxEntries: 100,
     },
+    dataQualityMinSources: 2,
     ethereumRpcUrls: [],
     ethereumChainId: 1,
     ethereumSnapshotTag: 'finalized',
@@ -54,6 +55,13 @@ describe('application runtime wiring', () => {
     expect(runtime.bitcoinAdapter).toBeUndefined();
     expect(runtime.solanaAdapter).toBeUndefined();
     expect(runtime.evidenceLedger.values()).toEqual([]);
+    expect(runtime.dataQuality.durable).toBe(false);
+    expect(runtime.dataQuality.configuredSources()).toEqual({
+      'eip155:1': 0,
+      'eip155:56': 0,
+      'bitcoin-mainnet': 0,
+      'solana-mainnet': 0,
+    });
 
     const health = await runtime.providerRegistry.health();
     expect(health.map((provider) => [provider.id, provider.status])).toEqual([
@@ -84,6 +92,12 @@ describe('application runtime wiring', () => {
     expect([...runtime.evmAdapters.keys()]).toEqual([1, 56]);
     expect(runtime.bitcoinAdapter?.config.id).toBe('bitcoin-esplora');
     expect(runtime.solanaAdapter?.config.commitment).toBe('finalized');
+    expect(runtime.dataQuality.configuredSources()).toEqual({
+      'eip155:1': 2,
+      'eip155:56': 1,
+      'bitcoin-mainnet': 1,
+      'solana-mainnet': 1,
+    });
   });
 
   it('uses hostname-based source identifiers without exposing provider URL paths', async () => {
@@ -114,6 +128,8 @@ describe('application runtime wiring', () => {
       baseConfig({ postgresUrl: 'postgresql://zerotrace:secret@postgres.example/zerotrace' }),
     );
     expect(runtime.evidenceRepository).toBeDefined();
+    expect(runtime.dataQualityStorage).toBeDefined();
+    expect(runtime.dataQuality.durable).toBe(true);
     await runtime.close?.();
   });
 

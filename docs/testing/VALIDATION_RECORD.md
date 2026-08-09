@@ -342,12 +342,67 @@ height `961757` with `4` height/hash bypasses; Solana moved from slot `438242571
 changing BSC/Solana positions and exact bypass counters confirm that the stored TTL entry was not
 served. No credential was used in this probe.
 
+## Anchor reconciliation and continuity follow-up
+
+The anchor contract was reconciled against primary sources: Ethereum JSON-RPC block tags and
+`parentHash`, Esplora block identity/height/`previousblockhash`, Bitcoin Core's off-main-chain
+confirmation signal and previous-block identity, and Solana's confirmed-block `parentSlot` plus
+`previousBlockhash`. No new third-party runtime package or copied upstream implementation was added.
+
+Deterministic tests prove:
+
+- faster heads are re-read at the minimum common position before comparison;
+- agreement requires at least two matching complete identities;
+- same-position conflicts retain an Unknown canonical anchor and create an Evidence-linked CRITICAL
+  alert without majority selection;
+- one failed/rate-limited source remains insufficient/unavailable rather than agreement or zero;
+- unchanged, direct extension, gap/history match, same-position replacement, source regression, and
+  unavailable continuity states preserve prior/current/check Evidence;
+- EVM, Bitcoin, and Solana parent identity must match the replay Snapshot;
+- concurrent inspections share one in-flight reconciliation operation.
+
+A fresh `zerotrace-dq-test` stack used non-default host ports and isolated PostgreSQL, ClickHouse,
+and MinIO volumes. The complete 32-test integration suite passed. PostgreSQL coverage verified
+migrations `005_data_quality` and `006_snapshot_observation_identity`, append-only
+anchors/alerts/alert edges, idempotent anchor writes, latest-head recovery after repository restart,
+atomic alert Evidence edges, same-anchor recapture at a later time, and rejection of an alert whose
+Evidence does not exist.
+
+The production API image was also exercised against a fresh Compose database, then restarted without
+removing its volume. Before and after restart the response retained all four chain targets, Data
+Quality storage remained `UP`, and `SNAPSHOT_CONFLICT` was absent. Public endpoints were temporarily
+unavailable during this final restart probe, so both responses correctly reported
+`INSUFFICIENT_SOURCES` and overall `DEGRADED` rather than inventing agreement or zero values.
+
+The first public-chain probe kept default DNS/IP SSRF protection and correctly returned all sources
+unavailable because this workstation's interception proxy resolves approved public hostnames through
+a reserved address range. No result from that attempt was counted as chain validation. The retry
+used the documented local-proxy exception while retaining HTTPS, exact hostname allowlists,
+read-only method allowlists, response bounds, and safe source IDs. A locally supplied Ethereum key
+was injected only into that process and was not written or printed.
+
+| Chain           | First comparison position | Sources | Result               | Independence |
+| --------------- | ------------------------: | ------: | -------------------- | ------------ |
+| Ethereum        |                  25719261 |     1/1 | insufficient sources | Unknown      |
+| BNB Smart Chain |                 114979794 |     2/2 | endpoint agreement   | Unknown      |
+| Bitcoin mainnet |                    961762 |     1/1 | insufficient sources | Unknown      |
+| Solana mainnet  |                 438251403 |     1/1 | insufficient sources | Unknown      |
+
+In a separate same-process two-observation probe, Ethereum and Bitcoin were `UNCHANGED`; both BSC
+endpoints advanced and returned `HISTORICAL_MATCH` when the service re-read their earlier positions,
+then agreed at common position `114979862`. The second Solana observation was unavailable and
+remained explicit with zero continuity coverage. No alert was raised in the live probe.
+
+This is real endpoint-level agreement and continuity-path evidence. The two BSC hostnames are not
+claimed to be independently operated, no real reorg was forced or observed, and automatic
+rollback/replay is not implemented. Those remain release gates.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                          |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run verify:full`    | pass: format, lint, typecheck, 182 unit, 26 integration, build, license, audit, coverage, 6 E2E, SBOM                                                           |
-| `npm run test:coverage`  | pass: 208 tests; 87.65% statements, 79.66% branches, 96.10% functions, 88.84% lines                                                                             |
+| `npm run verify:full`    | pass: format, lint, typecheck, 197 unit, 32 integration, build, license, audit, coverage, 6 E2E, SBOM                                                           |
+| `npm run test:coverage`  | pass: 229 tests; 87.05% statements, 78.24% branches, 95.07% functions, 88.10% lines                                                                             |
 | `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                                                                               |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                          |
 | `docker compose config`  | pass                                                                                                                                                            |
@@ -355,10 +410,10 @@ served. No credential was used in this probe.
 | branch GitHub Actions CI | [pass on `6c0b7f4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31327702718): quality/contracts, Chromium E2E, and five production container targets |
 | branch CodeQL            | [pass on `6c0b7f4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31327702700): JavaScript and TypeScript analysis                                     |
 
-The latest full run used the isolated `zerotrace-provenance-test` project on alternate ports with
-fresh PostgreSQL, ClickHouse, and MinIO volumes. After all 26 integration tests passed, exactly its
-three containers, three named volumes, and network were removed; unrelated local containers were
-left running.
+The latest full run used the isolated `zerotrace-dq-test` project on alternate ports with separate
+PostgreSQL, ClickHouse, and MinIO volumes. All 32 integration tests passed. The dedicated local test
+projects are removed after the final repository/remote checks; unrelated local containers are left
+untouched.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

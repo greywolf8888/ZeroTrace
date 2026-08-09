@@ -1,9 +1,11 @@
 import { hashPayload } from '@zerotrace/evidence';
 import {
+  ChainAnchorReadSchema,
   knownValue,
   unavailableValue,
   unknownValue,
   type BitcoinSnapshotSchema,
+  type ChainAnchorRead,
   type ProviderCapability,
   type ProviderHealth,
 } from '@zerotrace/schemas';
@@ -64,6 +66,24 @@ function requireBlockHash(value: string): string {
     throw new ProviderError('INVALID_RESPONSE', 'Esplora returned an invalid block hash.');
   }
   return trimmed.toLowerCase();
+}
+
+function requirePosition(value: string): string {
+  if (!/^(?:0|[1-9]\d*)$/.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Bitcoin block position must be unsigned decimal.');
+  }
+  return value;
+}
+
+function requireSafeBlockHeight(value: unknown): string {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new ProviderError('INVALID_RESPONSE', 'Esplora returned an invalid block height.');
+  }
+  return String(value);
+}
+
+function sourceSet(ids: readonly string[]): string[] {
+  return [...new Set(ids)].sort();
 }
 
 export class BitcoinUtxoLedgerAdapter {
@@ -167,27 +187,67 @@ export class BitcoinUtxoLedgerAdapter {
     }
   }
 
-  async createSnapshot(): Promise<BitcoinSnapshot> {
-    const heightObservation = await getRestTextSourced(this.#transport, '/blocks/tip/height', {
-      cacheMode: 'bypass',
-    });
-    const height = requireHeight(heightObservation.value);
+  async #readAnchorAt(
+    height: string,
+    initialSourceIds: readonly string[] = [],
+  ): Promise<ChainAnchorRead> {
+    requirePosition(height);
     const hashObservation = await getRestTextSourced(
       this.#transport,
       `/block-height/${encodeURIComponent(height)}`,
       { cacheMode: 'bypass' },
     );
     const blockHash = requireBlockHash(hashObservation.value);
-    const sourceIds = [
-      ...new Set([heightObservation.endpointId, hashObservation.endpointId]),
-    ].sort();
-    return {
+    const blockObservation = await getRestJsonSourced<unknown>(
+      this.#transport,
+      `/block/${encodeURIComponent(blockHash)}`,
+      { cacheMode: 'bypass' },
+    );
+    if (
+      typeof blockObservation.value !== 'object' ||
+      blockObservation.value === null ||
+      Array.isArray(blockObservation.value)
+    ) {
+      throw new ProviderError('INVALID_RESPONSE', 'Esplora returned an invalid block record.');
+    }
+    const block = blockObservation.value as Record<string, unknown>;
+    if (typeof block.id !== 'string' || requireBlockHash(block.id) !== blockHash) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Esplora block identity does not match its hash.',
+      );
+    }
+    if (requireSafeBlockHeight(block.height) !== height) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Esplora block record does not match the requested height.',
+      );
+    }
+    const numericHeight = BigInt(height);
+    let previousBlockHash: string | undefined;
+    if (numericHeight > 0n) {
+      if (typeof block.previousblockhash !== 'string') {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'Esplora block record is missing its previous block hash.',
+        );
+      }
+      previousBlockHash = requireBlockHash(block.previousblockhash);
+    }
+    const sourceIds = sourceSet([
+      ...initialSourceIds,
+      hashObservation.endpointId,
+      blockObservation.endpointId,
+    ]);
+    const observedAt = new Date().toISOString();
+    const snapshot: BitcoinSnapshot = {
       ledger: 'BITCOIN',
       chainId: 'bitcoin-mainnet',
       height,
       blockHash,
+      ...(previousBlockHash === undefined ? {} : { previousBlockHash }),
       finality: 'best-chain',
-      capturedAt: new Date().toISOString(),
+      capturedAt: observedAt,
       providerVersions: Object.fromEntries(sourceIds.map((sourceId) => [sourceId, 'esplora-http'])),
       adapterVersions: { bitcoin: this.config.adapterVersion ?? '0.1.0' },
       configHash: hashPayload({
@@ -198,5 +258,40 @@ export class BitcoinUtxoLedgerAdapter {
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',
     };
+    return ChainAnchorReadSchema.parse({
+      anchor: {
+        ledger: 'BITCOIN',
+        chainId: 'bitcoin-mainnet',
+        position: height,
+        hash: blockHash,
+        ...(previousBlockHash === undefined
+          ? {}
+          : {
+              parentPosition: (numericHeight - 1n).toString(),
+              parentHash: previousBlockHash,
+            }),
+        finality: 'best-chain',
+        source: sourceIds.join('|'),
+        observedAt,
+      },
+      snapshot,
+      payload: { height, resolvedHash: blockHash, block },
+    });
+  }
+
+  async readHeadAnchor(): Promise<ChainAnchorRead> {
+    const heightObservation = await getRestTextSourced(this.#transport, '/blocks/tip/height', {
+      cacheMode: 'bypass',
+    });
+    const height = requireHeight(heightObservation.value);
+    return this.#readAnchorAt(height, [heightObservation.endpointId]);
+  }
+
+  async readAnchorAt(position: string): Promise<ChainAnchorRead> {
+    return this.#readAnchorAt(requirePosition(position));
+  }
+
+  async createSnapshot(): Promise<BitcoinSnapshot> {
+    return (await this.readHeadAnchor()).snapshot as BitcoinSnapshot;
   }
 }

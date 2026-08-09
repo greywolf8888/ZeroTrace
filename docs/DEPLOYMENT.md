@@ -5,8 +5,9 @@
 The repository supports a reproducible local/staging topology. It is **not production-approved**:
 Evidence/Snapshot persistence and bounded finalized raw-ledger ingestion are wired;
 authentication/authorization, remaining durable repositories, semantic transaction/event history,
-multi-provider reconciliation, backup recovery, load testing, and terminal real-chain acceptance
-remain incomplete.
+independent-provider acceptance, automatic reorg rollback/replay, backup recovery, load testing, and
+terminal real-chain acceptance remain incomplete. Common-position endpoint reconciliation,
+parent-history continuity detection, and Evidence-linked Data Quality Alerts are implemented.
 
 ## Build
 
@@ -67,6 +68,7 @@ chain-write operation. Scheduling and continuous-head following are not yet supp
 docker compose ps
 npm run health
 curl http://localhost:8080/api/v1/capabilities
+curl http://localhost:8080/api/v1/data-quality/anchors
 curl http://localhost:8080/metrics
 ```
 
@@ -76,6 +78,10 @@ Expected invariants:
 - readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
 - `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
+- `/health` and `/api/v1/data-quality/anchors` distinguish agreement, disagreement, insufficient
+  sources, provider unavailability, continuity state, and data-quality storage health;
+- disagreement or a reorg/regression alert degrades full health, retains Evidence, and never chooses
+  a majority winner; one source cannot report agreement;
 - provider diagnostics expose request cache hits/misses/bypasses and a safe active endpoint ID;
 - a configured historical backend failure degrades aggregate health, while API readiness continues
   to describe whether current API requests can be served;
@@ -91,7 +97,7 @@ Before internet-facing deployment, add and verify:
 - SSO or equivalent authentication, role-based authorization, tenancy isolation, and audit logging;
 - a managed secret store and credential rotation;
 - provider egress allowlists and per-provider quotas;
-- redundant archive-grade providers with consistency checks;
+- redundant, independently operated archive-grade providers with common-position consistency checks;
 - explicit per-network EVM finality policy (`EVM_*_SNAPSHOT_TAG`, default `finalized`) and alerts
   for unsupported or regressed provider finality;
 - encrypted persistent volumes, backups, restore drills, retention, and deletion policy;
@@ -134,6 +140,28 @@ databases. It is not a substitute for production migrations. Before the first pe
 3. verify upgrade and rollback/roll-forward on a restored production-sized copy;
 4. monitor schema and ingestion version compatibility;
 5. test point-in-time restore and evidence-hash reconciliation.
+
+An existing local PostgreSQL volume does not rerun image entrypoint scripts. After backing it up,
+apply the append-only anchor/alert and Snapshot-observation identity migrations explicitly:
+
+```bash
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/005_data_quality.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/006_snapshot_observation_identity.sql
+```
+
+PowerShell equivalent:
+
+```powershell
+Get-Content -Raw infra/postgres/init/005_data_quality.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/006_snapshot_observation_identity.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+```
+
+Then confirm `dataQuality.storage.status` is `UP`. Never delete a persistent volume as a migration
+strategy.
 
 ## Shutdown
 

@@ -28,15 +28,31 @@ work must refresh them.
 
 - [Ethereum JSON-RPC](https://ethereum.org/developers/docs/apis/json-rpc/) defines named block tags,
   canonical hex quantity/data encoding, and the block, balance, and code methods used by the EVM
-  adapter. ZeroTrace defaults named EVM networks to `finalized` and records the selected tag.
+  adapter. `eth_getBlockByNumber` returns the block hash and `parentHash`. ZeroTrace defaults named
+  EVM networks to `finalized`, records the selected tag, and binds the parent hash to the Snapshot.
 - [Esplora's API contract](https://github.com/Blockstream/esplora/blob/master/API.md) exposes
-  `/blocks/tip/height` and `/block-height/:height`; ZeroTrace resolves the best-chain hash from the
-  observed height instead of independently sampling tip height and tip hash.
+  `/blocks/tip/height`, `/block-height/:height`, and `/block/:hash`; the block record includes its
+  identity, height, and `previousblockhash`. ZeroTrace validates all three instead of independently
+  sampling tip height and tip hash.
+- [Bitcoin Core `getblockheader`](https://bitcoincore.org/en/doc/30.0.0/rpc/blockchain/getblockheader/)
+  exposes `previousblockhash` and reports `confirmations: -1` when a block is not on the main chain.
+  This is the authoritative target for future Core/Esplora reorg reconciliation; the current adapter
+  implements Esplora parent-history continuity but does not yet call Core.
 - Solana's official [`getSlot`](https://solana.com/docs/rpc/http/getslot),
   [`getBlock`](https://solana.com/docs/rpc/http/getblock), and
   [`getAccountInfo`](https://solana.com/docs/rpc/http/getaccountinfo) contracts distinguish a
   slot-specific blockhash from a recent transaction blockhash and provide the account context slot.
-  ZeroTrace enforces that distinction and preserves explicit null account state.
+  The official [confirmed-block JSON structure](https://solana.com/docs/rpc/json-structures)
+  includes `parentSlot` and `previousBlockhash`. ZeroTrace binds those fields to the anchor, enforces
+  the account-context distinction, and preserves explicit null account state.
+
+### Anchor reconciliation source policy
+
+The sources above define block and parent identity, not provider organizational independence.
+ZeroTrace may compare multiple configured endpoints at one common position, but it does not infer
+independence from different URLs or hostnames. A production independence claim requires an audited
+operator/infrastructure registry plus named real-chain validation. The current BSC example endpoints
+therefore support endpoint-level consistency testing only.
 
 ## Durable storage clients
 

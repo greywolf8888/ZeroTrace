@@ -55,12 +55,17 @@ The current foundation includes:
   reads;
 - request-scoped provider provenance across failover pools, with dynamic head/tip/slot anchors
   explicitly bypassing stored TTL responses;
+- common-position chain-anchor reconciliation across configured endpoints, with explicit
+  agreement/disagreement/insufficient-source states, parent-link continuity checks, reorg/source
+  regression alerts, and operator independence retained as Unknown until verified;
 - content-addressed evidence nodes and deterministic evidence drilldown;
 - baseline evidence fusion with explicit service-hub, CoinJoin, and independence suppression;
 - exact-integer constant-product exit quoting and seeded, reproducible shared-liquidity exit races;
 - a Fastify API with OpenAPI, health, readiness, capability truth, and Prometheus metrics;
 - a responsive React intelligence workspace that renders missing knowledge as Unknown rather than 0;
 - append-only PostgreSQL Evidence/Snapshot persistence with restart-safe derivation drilldown;
+- append-only PostgreSQL chain-anchor observations and Data Quality Alerts whose Evidence links are
+  enforced transactionally;
 - restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs, Bitcoin
   inputs/outputs, and Solana instructions/logs/balances/token balances/rewards;
 - content-addressed, versioned raw artifacts, append-only Evidence/Snapshots, monotonic ingestion
@@ -81,11 +86,13 @@ flowchart LR
   C --> EVM["EVM JSON-RPC"]
   C --> BTC["Bitcoin Esplora / Core"]
   C --> SOL["Solana JSON-RPC"]
+  C --> DQ["Common-position anchor reconciliation"]
   SQD["SQD finalized streams"] --> W["Read-only ingest worker"]
   EVM --> F["Canonical facts"]
   BTC --> F
   SOL --> F
   F --> EV["Evidence ledger"]
+  DQ --> EV
   EV --> ER["Entity resolution"]
   EV --> LM["Launch and market adapters"]
   ER --> RV["Realizable-value engine"]
@@ -102,27 +109,31 @@ flowchart LR
   W -->|"Evidence and checkpoints"| DB
   W -->|"content-addressed raw artifacts"| OBJ
   EV -->|"snapshots, nodes, edges"| DB
+  DQ -->|"anchors and alerts"| DB
+  DQ --> UI
 ```
 
 The finalized raw-ledger path is wired end to end for blocks, transactions, EVM logs/traces/state
 diffs, Bitcoin inputs/outputs, and Solana instructions/logs/native balances/token balances/rewards.
-These remain provider-shaped observations, not semantic transfers or protocol events. Continuous
-scheduling, reorg/reconciliation, semantic normalization, graph projection, protocol-specific
-decoders, and distributed workflows remain open work. Read
+These remain provider-shaped observations, not semantic transfers or protocol events. A
+common-position anchor/continuity foundation now detects deterministic source conflicts and parent
+history changes without choosing a majority winner. Continuous scheduling, rollback/replay,
+independent-provider and forced-reorg validation, semantic normalization, graph projection,
+protocol-specific decoders, and distributed workflows remain open work. Read
 [Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
 [Master Prompt](docs/architecture/ZEROTRACE_MASTER_PROMPT.md).
 
 ## Chain and platform scope
 
-| Domain            | Terminal scope                                                                                | Current repository state                                                                                                                                       |
-| ----------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EVM               | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Finality-explicit current-state RPC plus finalized Ethereum/BSC blocks, transactions, logs, traces and state diffs; semantic/protocol decoding pending         |
-| Bitcoin           | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Height-pinned best-chain anchor plus Esplora current state and finalized blocks, transactions, inputs, and outputs; spend semantics pending                    |
-| Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Finalized slot/block anchor plus minimum-context account state and finalized transactions, instruction/CPI paths, logs, balances and rewards; decoding pending |
-| Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                                                     |
-| Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Registry and generic detector only; official decoders require real-chain validation                                                                            |
-| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product and exit-race kernel implemented; routing/tax/gas adapters pending                                                                            |
-| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                           |
+| Domain            | Terminal scope                                                                                | Current repository state                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EVM               | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Parent-linked, finality-explicit anchors and endpoint reconciliation plus finalized raw execution/state; independent/archive and semantic validation pending |
+| Bitcoin           | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Parent-linked Esplora best-chain anchors and continuity checks plus finalized raw transactions/I/O; Core reconciliation and spend semantics pending          |
+| Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Parent-slot/blockhash anchors and continuity checks plus finalized raw execution/balances; dedicated/archive reconciliation and semantic decoding pending    |
+| Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                                                   |
+| Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Registry and generic detector only; official decoders require real-chain validation                                                                          |
+| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product and exit-race kernel implemented; routing/tax/gas adapters pending                                                                          |
+| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                         |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
 execution/label observation source; it is not a launchpad and can never merge entities by itself.
@@ -168,7 +179,9 @@ Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE i
 
 Public BNB Smart Chain, Bitcoin, and Solana endpoints are development fallbacks and can be
 rate-limited. Ethereum remains unconfigured until a local Alchemy key or another read-only RPC is
-provided. Configure dedicated, redundant endpoints before production validation.
+provided. The example config supplies two BSC endpoints for endpoint-level comparison; ZeroTrace
+does not infer operator independence from hostnames. Configure dedicated, independently operated
+archive-grade endpoints before production validation.
 
 ### Local development
 
@@ -226,6 +239,8 @@ Copy [`.env.example`](.env.example) and edit only the providers you trust. The a
 - returns the safe endpoint ID that produced each observation; Snapshot anchors bypass stored TTL
   cache entries while immutable/pinned reads may still use bounded caching;
 - exposes safe hostname-based route and resilience diagnostics without exposing URL paths or keys;
+- lowers healthy provider heads to their common block/slot before comparison; `*_URLS` entries are
+  counted as endpoint observations, while source/operator independence remains explicitly Unknown;
 - imposes timeout and response-size limits;
 - preserves unsafe JSON integer tokens as strings;
 - allows only audited read methods and rejects transaction broadcasting.
@@ -235,6 +250,8 @@ Never commit API keys. Provider absence is a supported degraded state, not a sta
 persists Evidence, Snapshots, and derivation edges in PostgreSQL.
 EVM snapshot tags default to `finalized`; reducing either network to `safe` or `latest` is an
 explicit per-network configuration choice and remains visible in Snapshot and Evidence metadata.
+`DATA_QUALITY_MIN_SOURCES` defaults to `2` and cannot be reduced below two. One healthy endpoint is
+useful for observation, but it can only produce `INSUFFICIENT_SOURCES`, never agreement.
 
 ## Repository layout
 
@@ -244,6 +261,7 @@ apps/
   web/                  React analyst workspace
 packages/
   chain-adapters/       Hardened EVM, Bitcoin and Solana reads
+  data-quality/         Anchor reconciliation, continuity and Evidence-linked alerts
   entity-engine/        Evidence-weighted relationship inference
   evidence/             Content-addressed evidence graph
   identifiers/          Chain-aware identifier parsing
@@ -274,7 +292,8 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add finalized EVM logs, Bitcoin inputs/outputs, and Solana instruction/CPI raw records
 - [x] Add EVM trace/state-diff and Solana log/balance/token-balance/reward raw records
 - [x] Make current-state EVM/BTC/Solana snapshot anchors finality-explicit and ledger-canonical
-- [ ] Add continuous scheduling, live/unfinalized handling, reorg rollback and cross-provider reconciliation
+- [x] Add common-position endpoint anchor reconciliation and parent-history continuity detection
+- [ ] Add continuous scheduling, live/unfinalized handling, rollback/replay and independent-provider validation
 - [ ] Add versioned Flap, Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs

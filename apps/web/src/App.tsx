@@ -729,6 +729,110 @@ function DataHealth({
       <section className="panel">
         <ProviderTable health={health} />
       </section>
+      <section className="panel anchor-quality-panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Common-position verification</span>
+            <h3>Anchor reconciliation and continuity</h3>
+          </div>
+          <StatusPill status={health?.dataQuality.status ?? 'CHECKING'} />
+        </div>
+        <p className="panel-copy">
+          Provider heads are lowered to a shared block or slot before comparison. Endpoint operator
+          independence remains Unknown until explicitly configured and verified.
+        </p>
+        {(health?.dataQuality.results.length ?? 0) === 0 ? (
+          <div className="inline-empty">
+            {health?.dataQuality.errorCode === undefined
+              ? 'No anchor observations are available.'
+              : titleCase(health.dataQuality.errorCode)}
+          </div>
+        ) : (
+          <div className="anchor-quality-grid">
+            {health?.dataQuality.results.map((result) => {
+              const canonicalHash =
+                result.canonicalAnchor.state === 'known'
+                  ? result.canonicalAnchor.value?.hash
+                  : undefined;
+              const continuityKnown = result.sources.filter(
+                (source) => source.continuity?.continuous.state === 'known',
+              ).length;
+              return (
+                <article className="anchor-quality-card" key={result.chainId}>
+                  <div className="provider-card-top">
+                    <div>
+                      <span className={'chain-tag chain-' + result.ledger.toLowerCase()}>
+                        {result.ledger}
+                      </span>
+                      <h3>{result.chainId}</h3>
+                    </div>
+                    <StatusPill status={result.status} />
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Sources</dt>
+                      <dd>
+                        {result.observedSources}/{result.configuredSources} observed ·{' '}
+                        {result.requiredSources} required
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Common position</dt>
+                      <dd>
+                        <KnowledgeDisplay data={result.comparisonPosition} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Canonical hash</dt>
+                      <dd>
+                        {canonicalHash === undefined ? (
+                          <KnowledgeDisplay data={result.canonicalAnchor} />
+                        ) : (
+                          <code title={canonicalHash}>{shortId(canonicalHash, 8)}</code>
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Continuity</dt>
+                      <dd>
+                        {continuityKnown}/{result.sources.length} source checks known
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Independence</dt>
+                      <dd>
+                        <KnowledgeDisplay data={result.sourceIndependence} />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Evidence</dt>
+                      <dd>{result.metadata.evidenceIds.length}</dd>
+                    </div>
+                  </dl>
+                  {result.alerts.map((alert) => (
+                    <div className="provider-error" key={alert.id}>
+                      {titleCase(alert.severity)} · {alert.summary}
+                    </div>
+                  ))}
+                </article>
+              );
+            })}
+          </div>
+        )}
+        <div className="snapshot-strip anchor-quality-footer">
+          <span>
+            <b>Storage</b>{' '}
+            {health === undefined
+              ? 'Not available'
+              : `${titleCase(health.dataQuality.storage.backend)} · ${
+                  health.dataQuality.durable ? 'durable' : 'process-local'
+                }`}
+          </span>
+          <span>
+            <b>Checked</b> {formatTime(health?.dataQuality.checkedAt)}
+          </span>
+        </div>
+      </section>
       <section className="health-grid">
         <article className="panel provider-card storage-card">
           <div className="provider-card-top">

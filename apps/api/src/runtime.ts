@@ -11,13 +11,22 @@ import {
   type RestTransport,
   type JsonRpcTransport,
 } from '@zerotrace/chain-adapters';
-import { EvidenceLedger } from '@zerotrace/evidence';
+import {
+  AnchorDataQualityService,
+  MemoryDataQualityRepository,
+  type ChainAnchorReader,
+  type DataQualityEvidenceWriter,
+} from '@zerotrace/data-quality';
+import { EvidenceLedger, hashPayload } from '@zerotrace/evidence';
 import {
   ClickHouseRawFactRepository,
+  DataQualityStorageError,
+  PostgresDataQualityRepository,
   PostgresEvidenceRepository,
   PostgresIngestionCheckpointRepository,
   RawArtifactStore,
   type EvidenceRepository,
+  type DataQualityStorageHealth,
   type ObjectStoreHealth,
   type RawFactStorageHealth,
 } from '@zerotrace/storage';
@@ -31,6 +40,8 @@ export interface AppRuntime {
   solanaAdapter?: SolanaLedgerAdapter;
   evidenceLedger: EvidenceLedger;
   evidenceRepository?: EvidenceRepository;
+  dataQuality: AnchorDataQualityService;
+  dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
     rawFacts?: { health(): Promise<RawFactStorageHealth> };
     checkpoints?: {
@@ -71,13 +82,13 @@ function sourceIdFor(id: string, url: string, index: number, total: number): str
   return `${id}@${host}${total === 1 ? '' : `#${index + 1}`}`;
 }
 
-function jsonRpcTransport(
+function jsonRpcTransports(
   urls: readonly string[],
   id: string,
   config: AppConfig,
   requestsPerSecond: number,
-): JsonRpcTransport {
-  const transports = urls.map(
+): JsonRpcTransport[] {
+  return urls.map(
     (url, index) =>
       new SafeJsonRpcTransport({
         endpointId: sourceIdFor(id, url, index, urls.length),
@@ -87,18 +98,24 @@ function jsonRpcTransport(
         resilience: resilienceFor(config, requestsPerSecond),
       }),
   );
-  const first = transports[0];
-  if (first === undefined) throw new Error(`Provider pool ${id} requires at least one URL.`);
-  return transports.length === 1 ? first : new FailoverJsonRpcTransport(id, transports);
 }
 
-function restTransport(
+function pooledJsonRpcTransport(
+  id: string,
+  transports: readonly JsonRpcTransport[],
+): JsonRpcTransport {
+  const first = transports[0];
+  if (first === undefined) throw new Error(`Provider pool ${id} requires at least one URL.`);
+  return transports.length === 1 ? first : new FailoverJsonRpcTransport(id, [...transports]);
+}
+
+function restTransports(
   urls: readonly string[],
   id: string,
   config: AppConfig,
   requestsPerSecond: number,
-): RestTransport {
-  const transports = urls.map(
+): RestTransport[] {
+  return urls.map(
     (url, index) =>
       new SafeRestTransport({
         endpointId: sourceIdFor(id, url, index, urls.length),
@@ -108,15 +125,22 @@ function restTransport(
         resilience: resilienceFor(config, requestsPerSecond),
       }),
   );
+}
+
+function pooledRestTransport(id: string, transports: readonly RestTransport[]): RestTransport {
   const first = transports[0];
   if (first === undefined) throw new Error(`Provider pool ${id} requires at least one URL.`);
-  return transports.length === 1 ? first : new FailoverRestTransport(id, transports);
+  return transports.length === 1 ? first : new FailoverRestTransport(id, [...transports]);
 }
 
 export function createRuntime(config: AppConfig): AppRuntime {
   const providers: Array<EvmLedgerAdapter | BitcoinUtxoLedgerAdapter | SolanaLedgerAdapter> = [];
   const unconfigured = [];
   const evmAdapters = new Map<number, EvmLedgerAdapter>();
+  const ethereumAnchorReaders: ChainAnchorReader[] = [];
+  const bscAnchorReaders: ChainAnchorReader[] = [];
+  const bitcoinAnchorReaders: ChainAnchorReader[] = [];
+  const solanaAnchorReaders: ChainAnchorReader[] = [];
 
   const addEvm = (
     urls: readonly string[],
@@ -125,6 +149,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     chainName: string,
     snapshotBlockTag: 'latest' | 'safe' | 'finalized',
     requestsPerSecond: number,
+    anchorReaders: ChainAnchorReader[],
   ) => {
     if (urls.length === 0) {
       unconfigured.push({
@@ -141,12 +166,26 @@ export function createRuntime(config: AppConfig): AppRuntime {
       });
       return;
     }
+    const transports = jsonRpcTransports(urls, id, config, requestsPerSecond);
     const adapter = new EvmLedgerAdapter(
       { id, chainId, chainName, snapshotBlockTag },
-      jsonRpcTransport(urls, id, config, requestsPerSecond),
+      pooledJsonRpcTransport(id, transports),
     );
     providers.push(adapter);
     evmAdapters.set(chainId, adapter);
+    for (const transport of transports) {
+      const anchorAdapter = new EvmLedgerAdapter(
+        { id, chainId, chainName, snapshotBlockTag },
+        transport,
+      );
+      anchorReaders.push({
+        sourceId: transport.endpointId,
+        ledger: 'EVM',
+        chainId: `eip155:${chainId}`,
+        readHead: () => anchorAdapter.readHeadAnchor(),
+        readAt: (position) => anchorAdapter.readAnchorAt(position),
+      });
+    }
   };
 
   addEvm(
@@ -156,6 +195,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     'Ethereum',
     config.ethereumSnapshotTag,
     config.ethereumRequestsPerSecond,
+    ethereumAnchorReaders,
   );
   addEvm(
     configuredUrls(config.bscRpcUrls, config.bscRpcUrl),
@@ -164,6 +204,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     'BNB Smart Chain',
     config.bscSnapshotTag,
     config.bscRequestsPerSecond,
+    bscAnchorReaders,
   );
 
   let bitcoinAdapter: BitcoinUtxoLedgerAdapter | undefined;
@@ -175,11 +216,27 @@ export function createRuntime(config: AppConfig): AppRuntime {
       capabilities: ['CURRENT_STATE', 'BLOCK', 'TRANSACTION', 'MEMPOOL', 'UTXO'] as const,
     });
   } else {
+    const transports = restTransports(
+      bitcoinUrls,
+      'bitcoin-esplora',
+      config,
+      config.bitcoinEsploraRequestsPerSecond,
+    );
     bitcoinAdapter = new BitcoinUtxoLedgerAdapter(
       { id: 'bitcoin-esplora' },
-      restTransport(bitcoinUrls, 'bitcoin-esplora', config, config.bitcoinEsploraRequestsPerSecond),
+      pooledRestTransport('bitcoin-esplora', transports),
     );
     providers.push(bitcoinAdapter);
+    for (const transport of transports) {
+      const anchorAdapter = new BitcoinUtxoLedgerAdapter({ id: 'bitcoin-esplora' }, transport);
+      bitcoinAnchorReaders.push({
+        sourceId: transport.endpointId,
+        ledger: 'BITCOIN',
+        chainId: 'bitcoin-mainnet',
+        readHead: () => anchorAdapter.readHeadAnchor(),
+        readAt: (position) => anchorAdapter.readAnchorAt(position),
+      });
+    }
   }
 
   let solanaAdapter: SolanaLedgerAdapter | undefined;
@@ -198,13 +255,33 @@ export function createRuntime(config: AppConfig): AppRuntime {
       ] as const,
     });
   } else {
+    const transports = jsonRpcTransports(
+      solanaUrls,
+      'solana-rpc',
+      config,
+      config.solanaRequestsPerSecond,
+    );
     solanaAdapter = new SolanaLedgerAdapter(
       { id: 'solana-rpc', commitment: config.solanaCommitment },
-      jsonRpcTransport(solanaUrls, 'solana-rpc', config, config.solanaRequestsPerSecond),
+      pooledJsonRpcTransport('solana-rpc', transports),
     );
     providers.push(solanaAdapter);
+    for (const transport of transports) {
+      const anchorAdapter = new SolanaLedgerAdapter(
+        { id: 'solana-rpc', commitment: config.solanaCommitment },
+        transport,
+      );
+      solanaAnchorReaders.push({
+        sourceId: transport.endpointId,
+        ledger: 'SOLANA',
+        chainId: 'solana-mainnet',
+        readHead: () => anchorAdapter.readHeadAnchor(),
+        readAt: (position) => anchorAdapter.readAnchorAt(position),
+      });
+    }
   }
 
+  const evidenceLedger = new EvidenceLedger();
   const evidenceRepository =
     config.postgresUrl === undefined
       ? undefined
@@ -214,6 +291,61 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 10,
         });
+
+  const dataQualityRepository =
+    config.postgresUrl === undefined
+      ? new MemoryDataQualityRepository()
+      : new PostgresDataQualityRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const evidenceWriter: DataQualityEvidenceWriter = {
+    put: async (evidence, sourceEvidenceIds = [], snapshot) => {
+      if (evidenceRepository !== undefined) {
+        const stored = await evidenceRepository.put(evidence, sourceEvidenceIds, snapshot);
+        if (
+          sourceEvidenceIds.every((id) => evidenceLedger.get(id) !== undefined) &&
+          evidenceLedger.get(evidence.id) === undefined
+        ) {
+          evidenceLedger.add(evidence, sourceEvidenceIds, snapshot);
+        }
+        return stored;
+      }
+      const existing = evidenceLedger.get(evidence.id);
+      if (existing !== undefined) {
+        if (
+          hashPayload(existing.evidence) !== hashPayload(evidence) ||
+          hashPayload(existing.sourceEvidenceIds) !==
+            hashPayload([...new Set(sourceEvidenceIds)].sort()) ||
+          hashPayload(existing.snapshot ?? null) !== hashPayload(snapshot ?? null)
+        ) {
+          throw new DataQualityStorageError(
+            'DATA_QUALITY_STORAGE_CONFLICT',
+            'Process-local Data Quality Evidence conflicts with an existing observation.',
+          );
+        }
+        return existing;
+      }
+      return evidenceLedger.add(evidence, sourceEvidenceIds, snapshot);
+    },
+  };
+  const dataQuality = new AnchorDataQualityService({
+    targets: [
+      {
+        ledger: 'EVM',
+        chainId: `eip155:${config.ethereumChainId}`,
+        readers: ethereumAnchorReaders,
+      },
+      { ledger: 'EVM', chainId: `eip155:${config.bscChainId}`, readers: bscAnchorReaders },
+      { ledger: 'BITCOIN', chainId: 'bitcoin-mainnet', readers: bitcoinAnchorReaders },
+      { ledger: 'SOLANA', chainId: 'solana-mainnet', readers: solanaAnchorReaders },
+    ],
+    repository: dataQualityRepository,
+    evidence: evidenceWriter,
+    requiredSources: config.dataQualityMinSources,
+  });
 
   const rawFacts =
     config.clickhouseUrl === undefined
@@ -251,7 +383,14 @@ export function createRuntime(config: AppConfig): AppRuntime {
         });
 
   const close = async () => {
-    await Promise.all([evidenceRepository?.close(), checkpoints?.close(), rawFacts?.close()]);
+    await Promise.all([
+      evidenceRepository?.close(),
+      dataQualityRepository instanceof PostgresDataQualityRepository
+        ? dataQualityRepository.close()
+        : undefined,
+      checkpoints?.close(),
+      rawFacts?.close(),
+    ]);
   };
 
   return {
@@ -260,7 +399,8 @@ export function createRuntime(config: AppConfig): AppRuntime {
       unconfigured.map((item) => ({ ...item, capabilities: [...item.capabilities] })),
     ),
     evmAdapters,
-    evidenceLedger: new EvidenceLedger(),
+    evidenceLedger,
+    dataQuality,
     ingestionStorage: {
       ...(rawFacts === undefined ? {} : { rawFacts }),
       ...(checkpoints === undefined ? {} : { checkpoints }),
@@ -268,6 +408,9 @@ export function createRuntime(config: AppConfig): AppRuntime {
     },
     close,
     ...(evidenceRepository === undefined ? {} : { evidenceRepository }),
+    ...(dataQualityRepository instanceof PostgresDataQualityRepository
+      ? { dataQualityStorage: dataQualityRepository }
+      : {}),
     ...(bitcoinAdapter === undefined ? {} : { bitcoinAdapter }),
     ...(solanaAdapter === undefined ? {} : { solanaAdapter }),
   };

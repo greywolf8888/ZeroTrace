@@ -145,24 +145,37 @@ describe('capability probes and snapshots', () => {
   });
 
   it('creates a replayable Bitcoin snapshot from a height-pinned hash endpoint', async () => {
+    const blockHash = 'a'.repeat(64);
+    const previousBlockHash = 'c'.repeat(64);
     const transport = new FakeRestTransport(
       {
         '/blocks/tip/height': '840000',
-        '/block-height/840000': 'a'.repeat(64),
+        '/block-height/840000': blockHash,
+        [`/block/${blockHash}`]: {
+          id: blockHash,
+          height: 840000,
+          previousblockhash: previousBlockHash,
+        },
         '/blocks/tip/hash': 'b'.repeat(64),
       },
       {
         '/blocks/tip/height': 'esplora-a',
         '/block-height/840000': 'esplora-b',
+        [`/block/${blockHash}`]: 'esplora-c',
       },
     );
     const adapter = new BitcoinUtxoLedgerAdapter({ id: 'esplora' }, transport);
     await expect(adapter.createSnapshot()).resolves.toMatchObject({
       ledger: 'BITCOIN',
       height: '840000',
-      blockHash: 'a'.repeat(64),
+      blockHash,
+      previousBlockHash,
       finality: 'best-chain',
-      providerVersions: { 'esplora-a': 'esplora-http', 'esplora-b': 'esplora-http' },
+      providerVersions: {
+        'esplora-a': 'esplora-http',
+        'esplora-b': 'esplora-http',
+        'esplora-c': 'esplora-http',
+      },
     });
     expect(transport.calls).toEqual([
       {
@@ -173,6 +186,11 @@ describe('capability probes and snapshots', () => {
       {
         kind: 'text',
         path: '/block-height/840000',
+        options: { cacheMode: 'bypass' },
+      },
+      {
+        kind: 'json',
+        path: `/block/${blockHash}`,
         options: { cacheMode: 'bypass' },
       },
     ]);
@@ -197,6 +215,8 @@ describe('capability probes and snapshots', () => {
       slot: '300000000',
       commitment: 'finalized',
       blockhash: '11111111111111111111111111111111',
+      parentSlot: '299999999',
+      previousBlockhash: '22222222222222222222222222222222',
       blockTimestamp: '2023-11-14T22:13:20.000Z',
       providerVersions: {
         'solana-a': 'solana-json-rpc',
@@ -231,6 +251,7 @@ describe('capability probes and snapshots', () => {
         eth_getBlockByNumber: {
           number: '0x10',
           hash: '0x' + 'a'.repeat(64),
+          parentHash: '0x' + 'b'.repeat(64),
           timestamp: '0x65',
         },
         eth_getBalance: '0x2a',
@@ -251,6 +272,7 @@ describe('capability probes and snapshots', () => {
       chainId: 'eip155:1',
       blockNumber: '16',
       blockHash: '0x' + 'a'.repeat(64),
+      parentBlockHash: '0x' + 'b'.repeat(64),
       finality: 'finalized',
       adapterVersions: { evm: 'fixture' },
       providerVersions: { 'evm-anchor': 'json-rpc' },
@@ -272,6 +294,72 @@ describe('capability probes and snapshots', () => {
       params: ['finalized', false],
       options: { cacheMode: 'bypass' },
     });
+  });
+
+  it('reads ledger anchors at explicit historical positions', async () => {
+    const evmTransport = new FakeJsonRpcTransport({
+      eth_getBlockByNumber: {
+        number: '0xf',
+        hash: `0x${'a'.repeat(64)}`,
+        parentHash: `0x${'b'.repeat(64)}`,
+        timestamp: '0x65',
+      },
+    });
+    const evm = new EvmLedgerAdapter(
+      { id: 'ethereum', chainId: 1, chainName: 'Ethereum' },
+      evmTransport,
+    );
+    await expect(evm.readAnchorAt('15')).resolves.toMatchObject({
+      anchor: {
+        position: '15',
+        parentPosition: '14',
+        hash: `0x${'a'.repeat(64)}`,
+      },
+    });
+    expect(evmTransport.calls[0]).toMatchObject({
+      method: 'eth_getBlockByNumber',
+      params: ['0xf', false],
+      options: { cacheMode: 'bypass' },
+    });
+
+    const bitcoinHash = 'c'.repeat(64);
+    const bitcoinTransport = new FakeRestTransport({
+      '/block-height/42': bitcoinHash,
+      [`/block/${bitcoinHash}`]: {
+        id: bitcoinHash,
+        height: 42,
+        previousblockhash: 'd'.repeat(64),
+      },
+    });
+    const bitcoin = new BitcoinUtxoLedgerAdapter({ id: 'esplora' }, bitcoinTransport);
+    await expect(bitcoin.readAnchorAt('42')).resolves.toMatchObject({
+      anchor: { position: '42', parentPosition: '41', hash: bitcoinHash },
+    });
+
+    const solanaTransport = new FakeJsonRpcTransport({
+      getBlock: {
+        blockhash: '1'.repeat(32),
+        previousBlockhash: '2'.repeat(32),
+        parentSlot: 40,
+        blockTime: null,
+      },
+    });
+    const solana = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      solanaTransport,
+    );
+    await expect(solana.readAnchorAt('42')).resolves.toMatchObject({
+      anchor: { position: '42', parentPosition: '40', hash: '1'.repeat(32) },
+    });
+    expect(solanaTransport.calls[0]).toMatchObject({
+      method: 'getBlock',
+      params: [42, expect.objectContaining({ commitment: 'finalized' })],
+      options: { cacheMode: 'bypass' },
+    });
+
+    await expect(evm.readAnchorAt('-1')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    await expect(bitcoin.readAnchorAt('-1')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    await expect(solana.readAnchorAt('-1')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 
   it('rejects non-canonical EVM quantities and malformed bytecode', async () => {

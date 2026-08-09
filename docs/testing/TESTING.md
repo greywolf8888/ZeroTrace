@@ -39,10 +39,20 @@
 - EVM Snapshot tags are explicit and provider quantities/data must be canonical; Bitcoin resolves
   the best-chain hash from the observed height; Solana uses `getBlock` for the selected slot and
   rejects missing blocks or account contexts older than that slot.
+- EVM, Bitcoin, and Solana anchor parent identities must match their replay Snapshots; malformed or
+  cross-linked parent data is rejected before reconciliation.
+- endpoint heads are lowered to one common position before comparison, so ordinary head skew cannot
+  become disagreement; two matching endpoints are required and source independence remains Unknown.
+- conflicting same-position anchors produce no canonical winner and create an Evidence-linked
+  `CROSS_SOURCE_DISAGREEMENT` alert; a failed source remains unavailable, not a zero or agreement.
+- continuity tests cover first observation, unchanged/direct extension, historical gap verification,
+  same-position replacement, source regression, unavailable checks, and in-flight deduplication.
 - Solana account quantities remain lossless decimal strings. Only explicit `value: null` means a
   Known non-existent account; missing or malformed values never become zero.
 - PostgreSQL writes are transactional and idempotent; Evidence, Snapshot, and derivation edges remain
   immutable and drill down after a repository restart.
+- PostgreSQL anchor observations and Data Quality Alerts are append-only, restart-readable, and
+  idempotent; an alert without an existing Evidence edge is rejected transactionally.
 - finalized ingestion stores the raw artifact before Evidence/Raw Fact, advances checkpoints only
   after durable writes, resumes monotonically, and makes terminal replay a no-op;
 - transaction-profile ingestion validates EVM hash, Bitcoin txid, and Solana signature identities,
@@ -98,6 +108,8 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - valid EVM identifier classification without a provider;
 - scenario gating;
 - data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
+- anchor-reconciliation status, common-position/operator-independence explanation, four configured
+  chain targets, and process-local data-quality storage truth;
 - mobile viewport layout.
 - containment of primary panels within the mobile viewport.
 

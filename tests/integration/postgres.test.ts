@@ -2,8 +2,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
 import { randomUUID } from 'node:crypto';
 
+import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
 import { createEvidence } from '@zerotrace/evidence';
 import {
+  PostgresDataQualityRepository,
   PostgresEvidenceRepository,
   PostgresIngestionCheckpointRepository,
 } from '@zerotrace/storage';
@@ -17,6 +19,7 @@ const snapshot = {
   chainId: 'eip155:1',
   blockNumber: '25717412',
   blockHash: '0x' + 'a'.repeat(64),
+  parentBlockHash: '0x' + 'd'.repeat(64),
   finality: 'finalized' as const,
   capturedAt: '2026-08-09T00:00:00.000Z',
   providerVersions: { 'ethereum-rpc@test.example': 'json-rpc' },
@@ -86,6 +89,41 @@ postgresDescribe('PostgreSQL durable Evidence integration', () => {
         capturedAt: '2026-08-09T00:00:01.000Z',
       }),
     ).rejects.toMatchObject({ code: 'SNAPSHOT_CONFLICT' });
+  });
+
+  it('persists a later re-observation of the same anchor after repository restart', async () => {
+    await repository.put(raw, [], snapshot);
+    await repository.close();
+    repository = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+
+    const recapturedSnapshot = {
+      ...snapshot,
+      capturedAt: '2026-08-09T00:01:00.000Z',
+    };
+    const recaptured = createEvidence({
+      ledger: raw.ledger,
+      chainId: raw.chainId,
+      kind: raw.kind,
+      source: raw.source,
+      locator: raw.locator,
+      payload: { balanceHex: '0x1', blockHash: snapshot.blockHash },
+      observedAt: recapturedSnapshot.capturedAt,
+      blockOrSlot: snapshot.blockNumber,
+      finality: raw.finality,
+      summary: 'PostgreSQL integration source Evidence recaptured after restart.',
+    });
+
+    const stored = await repository.put(recaptured, [], recapturedSnapshot);
+    expect(stored).toMatchObject({
+      evidence: recaptured,
+      sourceEvidenceIds: [],
+      snapshot: recapturedSnapshot,
+    });
+    await expect(repository.get(raw.id)).resolves.toMatchObject({ snapshot });
+    await expect(repository.get(recaptured.id)).resolves.toEqual(stored);
   });
 
   it('persists derivation edges and replays the complete graph after restart', async () => {
@@ -273,6 +311,139 @@ postgresDescribe('PostgreSQL ingestion checkpoint integration', () => {
       await expect(
         pool.query('DELETE FROM ingestion_runs WHERE id = $1', [run.id]),
       ).rejects.toThrow(/deletion is forbidden/);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL Data Quality integration', () => {
+  let evidence: PostgresEvidenceRepository;
+  let dataQuality: PostgresDataQualityRepository;
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    dataQuality = new PostgresDataQualityRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), dataQuality.close()]);
+  });
+
+  it('reports the migration-backed anchor and alert store as durable', async () => {
+    await expect(dataQuality.health()).resolves.toMatchObject({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+    });
+  });
+
+  it('persists replayable anchors and returns the latest exact-source head after restart', async () => {
+    const anchorEvidence = createEvidence({
+      ledger: 'EVM',
+      chainId: snapshot.chainId,
+      kind: 'BLOCK',
+      source: 'ethereum-rpc@test.example',
+      locator: `anchor:${snapshot.blockNumber}:${snapshot.blockHash}`,
+      payload: {
+        number: snapshot.blockNumber,
+        hash: snapshot.blockHash,
+        parentHash: snapshot.parentBlockHash,
+      },
+      observedAt: '2026-08-09T00:00:04.000Z',
+      blockOrSlot: snapshot.blockNumber,
+      finality: snapshot.finality,
+      summary: 'PostgreSQL integration chain anchor.',
+    });
+    await evidence.put(anchorEvidence, [], snapshot);
+    const observation = persistChainAnchorObservation(
+      {
+        anchor: {
+          ledger: 'EVM',
+          chainId: snapshot.chainId,
+          position: snapshot.blockNumber,
+          hash: snapshot.blockHash,
+          parentPosition: String(BigInt(snapshot.blockNumber) - 1n),
+          parentHash: snapshot.parentBlockHash,
+          finality: snapshot.finality,
+          source: 'ethereum-rpc@test.example',
+          observedAt: anchorEvidence.observedAt,
+        },
+        snapshot,
+        payload: {
+          number: snapshot.blockNumber,
+          hash: snapshot.blockHash,
+          parentHash: snapshot.parentBlockHash,
+        },
+      },
+      'HEAD',
+      anchorEvidence.id,
+    );
+
+    await expect(dataQuality.putAnchor(observation)).resolves.toEqual(observation);
+    await expect(dataQuality.putAnchor(observation)).resolves.toEqual(observation);
+    await dataQuality.close();
+    dataQuality = new PostgresDataQualityRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(
+      dataQuality.latestHead('EVM', snapshot.chainId, 'ethereum-rpc@test.example'),
+    ).resolves.toEqual(observation);
+  });
+
+  it('stores Evidence-linked alerts atomically and rejects missing Evidence', async () => {
+    await evidence.put(raw, [], snapshot);
+    const alert = createDataQualityAlert({
+      kind: 'SOURCE_REGRESSION',
+      severity: 'WARNING',
+      ledger: 'EVM',
+      chainId: snapshot.chainId,
+      position: snapshot.blockNumber,
+      summary: 'Integration source regression.',
+      details: { source: raw.source },
+      evidenceIds: [raw.id],
+      observedAt: '2026-08-09T00:00:05.000Z',
+      modelVersion: 'anchor-reconciliation-v1',
+    });
+    await expect(dataQuality.putAlert(alert)).resolves.toEqual(alert);
+    await expect(dataQuality.putAlert(alert)).resolves.toEqual(alert);
+
+    const ungrounded = createDataQualityAlert({
+      kind: alert.kind,
+      severity: alert.severity,
+      ledger: alert.ledger,
+      chainId: alert.chainId,
+      position: alert.position,
+      summary: alert.summary,
+      details: alert.details,
+      evidenceIds: [`ev_${'f'.repeat(24)}`],
+      observedAt: '2026-08-09T00:00:06.000Z',
+      modelVersion: alert.modelVersion,
+    });
+    await expect(dataQuality.putAlert(ungrounded)).rejects.toMatchObject({
+      code: 'DATA_QUALITY_STORAGE_WRITE_FAILED',
+    });
+  });
+
+  it('enforces append-only guards for anchors, alerts, and alert Evidence edges', async () => {
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE chain_anchor_observations SET block_hash = block_hash'),
+      ).rejects.toThrow(/append-only/);
+      await expect(pool.query('UPDATE data_quality_alerts SET summary = summary')).rejects.toThrow(
+        /append-only/,
+      );
+      await expect(pool.query('DELETE FROM data_quality_alert_evidence')).rejects.toThrow(
+        /append-only/,
+      );
     } finally {
       await pool.end();
     }

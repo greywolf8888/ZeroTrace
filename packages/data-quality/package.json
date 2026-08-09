@@ -1,5 +1,5 @@
 {
-  "name": "@zerotrace/storage",
+  "name": "@zerotrace/data-quality",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,14 +12,7 @@
     }
   },
   "dependencies": {
-    "@clickhouse/client": "1.23.1",
-    "@zerotrace/data-quality": "*",
     "@zerotrace/evidence": "*",
-    "@zerotrace/schemas": "*",
-    "minio": "8.0.7",
-    "pg": "8.23.0"
-  },
-  "devDependencies": {
-    "@types/pg": "8.21.0"
+    "@zerotrace/schemas": "*"
   }
 }

@@ -11,6 +11,7 @@ COPY packages/evidence/package.json packages/evidence/package.json
 COPY packages/storage/package.json packages/storage/package.json
 COPY packages/ingestion/package.json packages/ingestion/package.json
 COPY packages/chain-adapters/package.json packages/chain-adapters/package.json
+COPY packages/data-quality/package.json packages/data-quality/package.json
 COPY packages/platform-adapters/package.json packages/platform-adapters/package.json
 COPY packages/entity-engine/package.json packages/entity-engine/package.json
 COPY packages/rv/package.json packages/rv/package.json

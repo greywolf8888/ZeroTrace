@@ -10,7 +10,14 @@ import {
   type TransportObservation,
   type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
-import { createEvidence, EvidenceLedger } from '@zerotrace/evidence';
+import {
+  AnchorDataQualityService,
+  MemoryDataQualityRepository,
+  type AnchorReconciliationTarget,
+  type ChainAnchorReader,
+} from '@zerotrace/data-quality';
+import { createEvidence, EvidenceLedger, hashPayload } from '@zerotrace/evidence';
+import type { ChainAnchorRead } from '@zerotrace/schemas';
 import { StorageError, type EvidenceRepository } from '@zerotrace/storage';
 
 import { createApp } from '../../apps/api/src/app.js';
@@ -25,6 +32,7 @@ const config: AppConfig = {
   logLevel: 'silent',
   requestTimeoutMs: 1_000,
   healthCacheTtlMs: 0,
+  dataQualityMinSources: 2,
   providerAllowedHosts: [],
   allowPrivateProviderUrls: false,
   providerResilience: {
@@ -56,6 +64,27 @@ const config: AppConfig = {
   nansenConfigured: false,
   arkhamConfigured: false,
 };
+
+function testDataQuality(
+  evidenceLedger: EvidenceLedger,
+  targets: readonly AnchorReconciliationTarget[] = [
+    { ledger: 'EVM', chainId: 'eip155:1', readers: [] },
+    { ledger: 'EVM', chainId: 'eip155:56', readers: [] },
+    { ledger: 'BITCOIN', chainId: 'bitcoin-mainnet', readers: [] },
+    { ledger: 'SOLANA', chainId: 'solana-mainnet', readers: [] },
+  ],
+): AnchorDataQualityService {
+  return new AnchorDataQualityService({
+    targets,
+    repository: new MemoryDataQualityRepository(),
+    evidence: {
+      put: async (evidence, sourceEvidenceIds = [], snapshot) =>
+        evidenceLedger.get(evidence.id) ??
+        evidenceLedger.add(evidence, sourceEvidenceIds, snapshot),
+    },
+    requiredSources: config.dataQualityMinSources,
+  });
+}
 
 class FakeTransport implements JsonRpcTransport {
   readonly endpointId = 'ethereum-rpc';
@@ -126,6 +155,7 @@ function runtimeWithEvm(): AppRuntime {
         eth_getBlockByNumber: {
           number: '0x10',
           hash: '0x' + 'a'.repeat(64),
+          parentHash: '0x' + '9'.repeat(64),
           timestamp: '0x65',
         },
         eth_getBalance: '0x0',
@@ -138,10 +168,12 @@ function runtimeWithEvm(): AppRuntime {
       },
     ),
   );
+  const evidenceLedger = new EvidenceLedger();
   return {
     providerRegistry: new ProviderRegistry([evm]),
     evmAdapters: new Map([[1, evm]]),
-    evidenceLedger: new EvidenceLedger(),
+    evidenceLedger,
+    dataQuality: testDataQuality(evidenceLedger),
     ingestionStorage: {},
   };
 }
@@ -164,6 +196,7 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
       eth_getBlockByNumber: {
         number: '0x10',
         hash: '0x' + 'a'.repeat(64),
+        parentHash: '0x' + '9'.repeat(64),
         timestamp: '0x65',
       },
       eth_getBalance: '0x0',
@@ -176,6 +209,11 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
       {
         '/blocks/tip/height': '840000',
         '/block-height/840000': 'b'.repeat(64),
+        [`/block/${'b'.repeat(64)}`]: {
+          id: 'b'.repeat(64),
+          height: 840000,
+          previousblockhash: 'a'.repeat(64),
+        },
         '/address/bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4': {
           address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
           chain_stats: {
@@ -197,6 +235,7 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
       {
         '/blocks/tip/height': 'bitcoin-anchor-a',
         '/block-height/840000': 'bitcoin-anchor-b',
+        [`/block/${'b'.repeat(64)}`]: 'bitcoin-anchor-b',
         '/address/bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4': 'bitcoin-state',
       },
     ),
@@ -225,12 +264,14 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
       },
     ),
   );
+  const evidenceLedger = new EvidenceLedger();
   return {
     providerRegistry: new ProviderRegistry([evm, bitcoin, solana]),
     evmAdapters: new Map([[1, evm]]),
     bitcoinAdapter: bitcoin,
     solanaAdapter: solana,
-    evidenceLedger: new EvidenceLedger(),
+    evidenceLedger,
+    dataQuality: testDataQuality(evidenceLedger),
     ingestionStorage: {},
   };
 }
@@ -281,6 +322,41 @@ function fixtureMetadata(evidenceId: string) {
     modelVersion: 'fixture-v0.1.0',
     confidence: 1,
     evidenceIds: [evidenceId],
+  };
+}
+
+function evmAnchorReader(source: string, blockHash: string): ChainAnchorReader {
+  const observedAt = '2026-08-10T01:00:00.000Z';
+  const parentHash = '0x' + '9'.repeat(64);
+  const read: ChainAnchorRead = {
+    anchor: {
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      position: '100',
+      hash: blockHash,
+      parentPosition: '99',
+      parentHash,
+      finality: 'finalized',
+      source,
+      observedAt,
+    },
+    snapshot: {
+      ...fixtureSnapshot,
+      blockNumber: '100',
+      blockHash,
+      parentBlockHash: parentHash,
+      capturedAt: observedAt,
+      providerVersions: { [source]: 'json-rpc' },
+      configHash: hashPayload({ source }),
+    },
+    payload: { number: '0x64', hash: blockHash, parentHash },
+  };
+  return {
+    sourceId: source,
+    ledger: 'EVM',
+    chainId: 'eip155:1',
+    readHead: async () => read,
+    readAt: async () => read,
   };
 }
 
@@ -558,6 +634,61 @@ describe('ZeroTrace API contract', () => {
     expect(metrics.body).toContain('zerotrace_http_requests_total');
   });
 
+  it('surfaces cross-source anchor disagreement as Unknown with Evidence-linked alerts', async () => {
+    const runtime = runtimeWithEvm();
+    runtime.dataQuality = testDataQuality(runtime.evidenceLedger, [
+      {
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        readers: [
+          evmAnchorReader('ethereum-a', '0x' + 'a'.repeat(64)),
+          evmAnchorReader('ethereum-b', '0x' + 'b'.repeat(64)),
+        ],
+      },
+    ]);
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/data-quality/anchors' });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: 'DEGRADED',
+      durable: false,
+      configuredSources: { 'eip155:1': 2 },
+      storage: { status: 'EPHEMERAL', backend: 'MEMORY', durable: false },
+      results: [
+        {
+          status: 'DISAGREEMENT',
+          comparisonPosition: { state: 'known', value: '100' },
+          canonicalAnchor: { state: 'unknown', reason: 'CONFLICTING_SOURCES' },
+          sourceIndependence: { state: 'unknown', reason: 'NOT_QUERIED' },
+          metadata: { snapshot: null, sourceCoverage: 1, confidence: 1 },
+          alerts: [{ kind: 'CROSS_SOURCE_DISAGREEMENT', severity: 'CRITICAL' }],
+        },
+      ],
+    });
+    const result = response.json().results[0];
+    expect(result.metadata.evidenceIds.length).toBeGreaterThanOrEqual(3);
+    expect(
+      result.metadata.evidenceIds.every(
+        (evidenceId: string) => runtime.evidenceLedger.get(evidenceId) !== undefined,
+      ),
+    ).toBe(true);
+
+    const health = await app.inject({ method: 'GET', url: '/health' });
+    expect(health.json()).toMatchObject({
+      status: 'DEGRADED',
+      dataQuality: { status: 'DEGRADED' },
+    });
+    const capabilities = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
+        id: 'cross-source-anchor-reconciliation',
+        status: 'IMPLEMENTED_EPHEMERAL_PENDING_INDEPENDENT_VALIDATION',
+      }),
+    );
+  });
+
   it('reports each durable ingestion backend and degrades aggregate health on failure', async () => {
     const runtime = runtimeWithAllLedgers();
     runtime.ingestionStorage = {
@@ -786,10 +917,12 @@ describe('ZeroTrace API contract', () => {
     });
     expect(missingDrilldown.statusCode).toBe(404);
 
+    const evidenceLedger = new EvidenceLedger();
     const noProviders: AppRuntime = {
       providerRegistry: new ProviderRegistry([]),
       evmAdapters: new Map(),
-      evidenceLedger: new EvidenceLedger(),
+      evidenceLedger,
+      dataQuality: testDataQuality(evidenceLedger),
       ingestionStorage: {},
     };
     const degraded = await createApp({ config, runtime: noProviders, logger: false });

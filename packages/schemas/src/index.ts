@@ -5,6 +5,7 @@ export const Hash256Schema = z.string().regex(/^[a-fA-F0-9]{64}$/);
 export const ConfidenceSchema = z.number().min(0).max(1);
 export const CoverageRatioSchema = z.number().min(0).max(1);
 export const QuantityStringSchema = z.string().regex(/^-?\d+$/);
+export const UnsignedQuantityStringSchema = z.string().regex(/^(?:0|[1-9]\d*)$/);
 export const DecimalStringSchema = z.string().regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/);
 export const JsonValueSchema = z.json();
 export type JsonValue = z.infer<typeof JsonValueSchema>;
@@ -159,6 +160,10 @@ export const EvmSnapshotSchema = SnapshotBaseSchema.extend({
   chainId: z.string().min(1),
   blockNumber: QuantityStringSchema,
   blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  parentBlockHash: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{64}$/)
+    .optional(),
   finality: z.enum(['latest', 'safe', 'finalized']),
   blockTimestamp: IsoDateTimeSchema.optional(),
 });
@@ -168,6 +173,7 @@ export const BitcoinSnapshotSchema = SnapshotBaseSchema.extend({
   chainId: z.literal('bitcoin-mainnet'),
   height: QuantityStringSchema,
   blockHash: Hash256Schema,
+  previousBlockHash: Hash256Schema.optional(),
   finality: z.literal('best-chain'),
   mempoolSnapshot: z.string().min(1).optional(),
 });
@@ -177,6 +183,8 @@ export const SolanaSnapshotSchema = SnapshotBaseSchema.extend({
   chainId: z.literal('solana-mainnet'),
   slot: QuantityStringSchema,
   blockhash: z.string().min(32),
+  parentSlot: UnsignedQuantityStringSchema.optional(),
+  previousBlockhash: z.string().min(32).optional(),
   commitment: z.enum(['processed', 'confirmed', 'finalized']),
   blockTimestamp: IsoDateTimeSchema.optional(),
 });
@@ -187,6 +195,259 @@ export const AnalysisSnapshotSchema = z.discriminatedUnion('ledger', [
   SolanaSnapshotSchema,
 ]);
 export type AnalysisSnapshot = z.infer<typeof AnalysisSnapshotSchema>;
+
+const EvmHashSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
+const BitcoinHashSchema = Hash256Schema;
+const SolanaHashSchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,64}$/);
+
+const ChainAnchorCommonShape = {
+  position: UnsignedQuantityStringSchema,
+  source: z.string().min(1),
+  observedAt: IsoDateTimeSchema,
+};
+
+export const EvmChainAnchorSchema = z.object({
+  ...ChainAnchorCommonShape,
+  ledger: z.literal('EVM'),
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  hash: EvmHashSchema,
+  parentPosition: UnsignedQuantityStringSchema.optional(),
+  parentHash: EvmHashSchema.optional(),
+  finality: z.enum(['latest', 'safe', 'finalized']),
+});
+
+export const BitcoinChainAnchorSchema = z.object({
+  ...ChainAnchorCommonShape,
+  ledger: z.literal('BITCOIN'),
+  chainId: z.literal('bitcoin-mainnet'),
+  hash: BitcoinHashSchema,
+  parentPosition: UnsignedQuantityStringSchema.optional(),
+  parentHash: BitcoinHashSchema.optional(),
+  finality: z.literal('best-chain'),
+});
+
+export const SolanaChainAnchorSchema = z.object({
+  ...ChainAnchorCommonShape,
+  ledger: z.literal('SOLANA'),
+  chainId: z.literal('solana-mainnet'),
+  hash: SolanaHashSchema,
+  parentPosition: UnsignedQuantityStringSchema,
+  parentHash: SolanaHashSchema,
+  finality: z.enum(['processed', 'confirmed', 'finalized']),
+});
+
+export const ChainAnchorSchema = z.discriminatedUnion('ledger', [
+  EvmChainAnchorSchema,
+  BitcoinChainAnchorSchema,
+  SolanaChainAnchorSchema,
+]);
+export type ChainAnchor = z.infer<typeof ChainAnchorSchema>;
+
+export const ReconciledChainAnchorSchema = z.discriminatedUnion('ledger', [
+  EvmChainAnchorSchema.omit({ source: true, observedAt: true }),
+  BitcoinChainAnchorSchema.omit({ source: true, observedAt: true }),
+  SolanaChainAnchorSchema.omit({ source: true, observedAt: true }),
+]);
+export type ReconciledChainAnchor = z.infer<typeof ReconciledChainAnchorSchema>;
+
+export const ChainAnchorReadSchema = z
+  .object({
+    anchor: ChainAnchorSchema,
+    snapshot: AnalysisSnapshotSchema,
+    payload: JsonValueSchema,
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.snapshot;
+    const position =
+      snapshot.ledger === 'EVM'
+        ? snapshot.blockNumber
+        : snapshot.ledger === 'BITCOIN'
+          ? snapshot.height
+          : snapshot.slot;
+    const hash = snapshot.ledger === 'SOLANA' ? snapshot.blockhash : snapshot.blockHash;
+    const finality =
+      snapshot.ledger === 'EVM'
+        ? snapshot.finality
+        : snapshot.ledger === 'BITCOIN'
+          ? snapshot.finality
+          : snapshot.commitment;
+    if (
+      snapshot.ledger !== value.anchor.ledger ||
+      snapshot.chainId !== value.anchor.chainId ||
+      position !== value.anchor.position ||
+      hash !== value.anchor.hash ||
+      finality !== value.anchor.finality
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Chain anchor and Snapshot identities must match.',
+      });
+    }
+    if (value.anchor.ledger === 'EVM') {
+      const isGenesis = value.anchor.position === '0';
+      const parentPosition = value.anchor.parentPosition;
+      const parentHash = value.anchor.parentHash;
+      const snapshotParentHash = snapshot.ledger === 'EVM' ? snapshot.parentBlockHash : undefined;
+      if (
+        isGenesis
+          ? parentPosition !== undefined ||
+            parentHash !== undefined ||
+            snapshotParentHash !== undefined
+          : parentPosition !== (BigInt(value.anchor.position) - 1n).toString() ||
+            parentHash === undefined ||
+            snapshotParentHash !== parentHash
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['anchor', 'parentHash'],
+          message: 'EVM anchor parent identity must match its replay Snapshot.',
+        });
+      }
+    } else if (value.anchor.ledger === 'BITCOIN') {
+      const isGenesis = value.anchor.position === '0';
+      const parentPosition = value.anchor.parentPosition;
+      const parentHash = value.anchor.parentHash;
+      const snapshotParentHash =
+        snapshot.ledger === 'BITCOIN' ? snapshot.previousBlockHash : undefined;
+      if (
+        isGenesis
+          ? parentPosition !== undefined ||
+            parentHash !== undefined ||
+            snapshotParentHash !== undefined
+          : parentPosition !== (BigInt(value.anchor.position) - 1n).toString() ||
+            parentHash === undefined ||
+            snapshotParentHash !== parentHash
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['anchor', 'parentHash'],
+          message: 'Bitcoin anchor parent identity must match its replay Snapshot.',
+        });
+      }
+    } else if (
+      snapshot.ledger !== 'SOLANA' ||
+      snapshot.parentSlot !== value.anchor.parentPosition ||
+      snapshot.previousBlockhash !== value.anchor.parentHash
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['anchor', 'parentHash'],
+        message: 'Solana anchor parent identity must match its replay Snapshot.',
+      });
+    }
+    const anchorSources = value.anchor.source.split('|');
+    if (
+      anchorSources.length === 0 ||
+      anchorSources.some((source) => !Object.hasOwn(snapshot.providerVersions, source))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['anchor', 'source'],
+        message: 'Chain anchor source must be represented in Snapshot provider versions.',
+      });
+    }
+  });
+export type ChainAnchorRead = z.infer<typeof ChainAnchorReadSchema>;
+
+export const ChainAnchorObservationRoleSchema = z.enum(['HEAD', 'COMPARISON', 'CONTINUITY_CHECK']);
+export type ChainAnchorObservationRole = z.infer<typeof ChainAnchorObservationRoleSchema>;
+
+const PersistedAnchorShape = {
+  id: z.string().regex(/^anchor_[0-9a-f]{24}$/),
+  role: ChainAnchorObservationRoleSchema,
+  evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+};
+
+export const PersistedChainAnchorObservationSchema = z.discriminatedUnion('ledger', [
+  EvmChainAnchorSchema.extend(PersistedAnchorShape),
+  BitcoinChainAnchorSchema.extend(PersistedAnchorShape),
+  SolanaChainAnchorSchema.extend(PersistedAnchorShape),
+]);
+export type PersistedChainAnchorObservation = z.infer<typeof PersistedChainAnchorObservationSchema>;
+
+export const AnchorContinuityStatusSchema = z.enum([
+  'FIRST_OBSERVATION',
+  'UNCHANGED',
+  'DIRECT_EXTENSION',
+  'HISTORICAL_MATCH',
+  'REORG_DETECTED',
+  'SOURCE_REGRESSION',
+  'CHECK_UNAVAILABLE',
+]);
+export type AnchorContinuityStatus = z.infer<typeof AnchorContinuityStatusSchema>;
+
+export const AnchorContinuityAssessmentSchema = z.object({
+  source: z.string().min(1),
+  status: AnchorContinuityStatusSchema,
+  continuous: knowledgeValueSchema(z.boolean()),
+  previousAnchorId: z
+    .string()
+    .regex(/^anchor_[0-9a-f]{24}$/)
+    .optional(),
+  currentAnchorId: z.string().regex(/^anchor_[0-9a-f]{24}$/),
+  checkAnchorId: z
+    .string()
+    .regex(/^anchor_[0-9a-f]{24}$/)
+    .optional(),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+  alertIds: z.array(z.string().regex(/^dqa_[0-9a-f]{24}$/)),
+});
+export type AnchorContinuityAssessment = z.infer<typeof AnchorContinuityAssessmentSchema>;
+
+export const DataQualityAlertKindSchema = z.enum([
+  'CROSS_SOURCE_DISAGREEMENT',
+  'REORG_DETECTED',
+  'SOURCE_REGRESSION',
+]);
+export const DataQualityAlertSeveritySchema = z.enum(['INFO', 'WARNING', 'CRITICAL']);
+export const DataQualityAlertSchema = z.object({
+  id: z.string().regex(/^dqa_[0-9a-f]{24}$/),
+  kind: DataQualityAlertKindSchema,
+  severity: DataQualityAlertSeveritySchema,
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  position: UnsignedQuantityStringSchema.optional(),
+  summary: z.string().min(1),
+  details: JsonValueSchema,
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+  observedAt: IsoDateTimeSchema,
+  modelVersion: z.string().min(1),
+});
+export type DataQualityAlert = z.infer<typeof DataQualityAlertSchema>;
+
+export const AnchorSourceAssessmentSchema = z.object({
+  source: z.string().min(1),
+  head: knowledgeValueSchema(PersistedChainAnchorObservationSchema),
+  comparison: knowledgeValueSchema(PersistedChainAnchorObservationSchema),
+  continuity: AnchorContinuityAssessmentSchema.optional(),
+});
+export type AnchorSourceAssessment = z.infer<typeof AnchorSourceAssessmentSchema>;
+
+export const AnchorReconciliationStatusSchema = z.enum([
+  'AGREEMENT',
+  'DISAGREEMENT',
+  'INSUFFICIENT_SOURCES',
+  'UNAVAILABLE',
+]);
+export type AnchorReconciliationStatus = z.infer<typeof AnchorReconciliationStatusSchema>;
+
+export const AnchorReconciliationResultSchema = z.object({
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  status: AnchorReconciliationStatusSchema,
+  requiredSources: z.number().int().min(2),
+  configuredSources: z.number().int().nonnegative(),
+  observedSources: z.number().int().nonnegative(),
+  comparisonPosition: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  canonicalAnchor: knowledgeValueSchema(ReconciledChainAnchorSchema),
+  sourceIndependence: knowledgeValueSchema(z.boolean()),
+  snapshotSet: z.array(AnalysisSnapshotSchema),
+  sources: z.array(AnchorSourceAssessmentSchema),
+  alerts: z.array(DataQualityAlertSchema),
+  metadata: z.lazy(() => AnalysisMetadataSchema),
+});
+export type AnchorReconciliationResult = z.infer<typeof AnchorReconciliationResultSchema>;
 
 export const AnalysisMetadataSchema = z.object({
   snapshot: AnalysisSnapshotSchema.nullable(),

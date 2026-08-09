@@ -466,6 +466,103 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     };
     return value;
   };
+  type EphemeralDataQualityStorageHealth = {
+    status: 'EPHEMERAL';
+    backend: 'MEMORY';
+    durable: false;
+    checkedAt: string;
+  };
+  type RuntimeDataQualityHealth = {
+    status: 'UP' | 'PARTIAL' | 'INSUFFICIENT_SOURCES' | 'UNCONFIGURED' | 'DEGRADED' | 'DOWN';
+    durable: boolean;
+    checkedAt: string;
+    configuredSources: Readonly<Record<string, number>>;
+    results: Awaited<ReturnType<AppRuntime['dataQuality']['inspectAll']>>;
+    storage:
+      | Awaited<ReturnType<NonNullable<AppRuntime['dataQualityStorage']>['health']>>
+      | EphemeralDataQualityStorageHealth;
+    errorCode?: string;
+  };
+  let dataQualityCache: { expiresAt: number; value: RuntimeDataQualityHealth } | undefined;
+  const dataQualityHealth = async (): Promise<RuntimeDataQualityHealth> => {
+    if (dataQualityCache !== undefined && dataQualityCache.expiresAt > Date.now()) {
+      return dataQualityCache.value;
+    }
+    const checkedAt = new Date().toISOString();
+    const configuredSources = runtime.dataQuality.configuredSources();
+    const storage =
+      runtime.dataQualityStorage === undefined
+        ? ({
+            status: 'EPHEMERAL',
+            backend: 'MEMORY',
+            durable: false,
+            checkedAt,
+          } as const)
+        : await runtime.dataQualityStorage.health();
+    let value: RuntimeDataQualityHealth;
+    try {
+      if (storage.status === 'DOWN') {
+        value = {
+          status: 'DOWN',
+          durable: storage.durable,
+          checkedAt,
+          configuredSources,
+          results: [],
+          storage,
+          ...(storage.errorCode === undefined ? {} : { errorCode: storage.errorCode }),
+        };
+      } else {
+        const results = await runtime.dataQuality.inspectAll();
+        const configuredTotal = Object.values(configuredSources).reduce(
+          (total, count) => total + count,
+          0,
+        );
+        const disagreement = results.some(
+          (result) => result.status === 'DISAGREEMENT' || result.alerts.length > 0,
+        );
+        const agreementCount = results.filter((result) => result.status === 'AGREEMENT').length;
+        const status = disagreement
+          ? 'DEGRADED'
+          : configuredTotal === 0
+            ? 'UNCONFIGURED'
+            : agreementCount === results.length
+              ? 'UP'
+              : agreementCount > 0
+                ? 'PARTIAL'
+                : 'INSUFFICIENT_SOURCES';
+        value = {
+          status,
+          durable: runtime.dataQuality.durable,
+          checkedAt,
+          configuredSources,
+          results,
+          storage,
+        };
+      }
+    } catch (error) {
+      const code =
+        typeof error === 'object' &&
+        error !== null &&
+        typeof (error as Record<string, unknown>).code === 'string' &&
+        /^[A-Z0-9_:-]{1,160}$/.test((error as Record<string, unknown>).code as string)
+          ? ((error as Record<string, unknown>).code as string)
+          : 'DATA_QUALITY_CHECK_FAILED';
+      value = {
+        status: 'DOWN',
+        durable: runtime.dataQuality.durable,
+        checkedAt,
+        configuredSources,
+        results: [],
+        storage,
+        errorCode: code,
+      };
+    }
+    dataQualityCache = {
+      expiresAt: Date.now() + options.config.healthCacheTtlMs,
+      value,
+    };
+    return value;
+  };
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof ZodError) {
@@ -524,16 +621,18 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   });
 
   app.get('/health', { schema: { tags: ['system'] } }, async () => {
-    const [providers, storage, ingestionStorage] = await Promise.all([
+    const [providers, storage, ingestionStorage, dataQuality] = await Promise.all([
       providerHealth(),
       storageHealth(),
       ingestionStorageHealth(),
+      dataQualityHealth(),
     ]);
     return {
       status:
         providers.some((provider) => provider.status === 'UP') &&
         storage.status !== 'DOWN' &&
-        ingestionStorage.status !== 'DOWN'
+        ingestionStorage.status !== 'DOWN' &&
+        !['DOWN', 'DEGRADED'].includes(dataQuality.status)
           ? 'UP'
           : 'DEGRADED',
       service: 'zerotrace-api',
@@ -541,6 +640,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       providers,
       storage,
       ingestionStorage,
+      dataQuality,
       checkedAt: new Date().toISOString(),
     };
   });
@@ -549,6 +649,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     reply.header('content-type', metricsRegistry.contentType);
     return metricsRegistry.metrics();
   });
+
+  app.get('/api/v1/data-quality/anchors', { schema: { tags: ['system'] } }, async () =>
+    dataQualityHealth(),
+  );
+
+  const dataQualityConfiguredSources = runtime.dataQuality.configuredSources();
+  const dataQualityReady = Object.values(dataQualityConfiguredSources).some(
+    (count) => count >= options.config.dataQualityMinSources,
+  );
 
   app.get('/api/v1/capabilities', { schema: { tags: ['system'] } }, async () => ({
     readOnly: true,
@@ -578,6 +687,16 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         status: runtime.solanaAdapter === undefined ? 'PROVIDER_REQUIRED' : 'IMPLEMENTED',
       },
       {
+        id: 'cross-source-anchor-reconciliation',
+        status: dataQualityReady
+          ? runtime.dataQuality.durable
+            ? 'IMPLEMENTED_DURABLE_PENDING_INDEPENDENT_VALIDATION'
+            : 'IMPLEMENTED_EPHEMERAL_PENDING_INDEPENDENT_VALIDATION'
+          : 'INDEPENDENT_PROVIDERS_REQUIRED',
+        detail:
+          'Common-position anchor comparison, continuity checks, reorg alerts, and explicit disagreement states are wired. Endpoint operator independence is not inferred from hostnames.',
+      },
+      {
         id: 'finalized-historical-ingestion',
         status:
           runtime.ingestionStorage.rawFacts !== undefined &&
@@ -588,7 +707,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               ? 'STORAGE_PARTIALLY_CONFIGURED'
               : 'STORAGE_REQUIRED',
         detail:
-          'Restart-safe SQD finalized blocks, transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards are implemented with durable provenance. Semantic transfers, protocol decoding, continuous scheduling, and reorg reconciliation remain pending.',
+          'Restart-safe SQD finalized blocks, transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards are implemented with durable provenance. Anchor continuity/reorg detection is wired separately; semantic transfers, protocol decoding, continuous scheduling, and historical replay policy remain pending.',
       },
       { id: 'entity-evidence-fusion', status: 'IMPLEMENTED_BASELINE' },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },

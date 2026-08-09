@@ -1,8 +1,10 @@
 import { hashPayload } from '@zerotrace/evidence';
 import {
+  ChainAnchorReadSchema,
   knownValue,
   unavailableValue,
   unknownValue,
+  type ChainAnchorRead,
   type EvmSnapshotSchema,
   type ProviderCapability,
   type ProviderHealth,
@@ -77,6 +79,13 @@ function timestampFromHex(value: unknown): string {
     throw new ProviderError('INVALID_RESPONSE', 'EVM block timestamp is invalid.');
   }
   return date.toISOString();
+}
+
+function requireDecimalPosition(value: string): bigint {
+  if (!/^(?:0|[1-9]\d*)$/.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', 'EVM block position must be unsigned decimal.');
+  }
+  return BigInt(value);
 }
 
 export interface EvmAdapterConfig {
@@ -213,9 +222,9 @@ export class EvmLedgerAdapter {
     return { ...observation, value: requireHexData(observation.value, 'bytecode') };
   }
 
-  async createSnapshot(): Promise<EvmSnapshot> {
+  async #readAnchor(blockTag: string, expectedPosition?: string): Promise<ChainAnchorRead> {
     const finality = this.config.snapshotBlockTag ?? 'finalized';
-    const observation = await this.readSourced<unknown>('eth_getBlockByNumber', [finality, false], {
+    const observation = await this.readSourced<unknown>('eth_getBlockByNumber', [blockTag, false], {
       cacheMode: 'bypass',
     });
     const rawBlock = observation.value;
@@ -224,18 +233,34 @@ export class EvmLedgerAdapter {
     }
     const block = rawBlock as Record<string, unknown>;
     const blockNumber = hexQuantity(block.number, 'block number').toString();
+    if (expectedPosition !== undefined && blockNumber !== expectedPosition) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'EVM provider returned a block at a different position.',
+      );
+    }
     const blockHash = block.hash;
     if (typeof blockHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(blockHash)) {
       throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned an invalid block hash.');
     }
-    return {
+    const parentBlockHash = block.parentHash;
+    if (typeof parentBlockHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(parentBlockHash)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'EVM provider returned an invalid parent block hash.',
+      );
+    }
+    const observedAt = new Date().toISOString();
+    const numericPosition = BigInt(blockNumber);
+    const snapshot: EvmSnapshot = {
       ledger: 'EVM',
       chainId: `eip155:${this.config.chainId}`,
       blockNumber,
       blockHash,
+      ...(numericPosition === 0n ? {} : { parentBlockHash }),
       finality,
       blockTimestamp: timestampFromHex(block.timestamp),
-      capturedAt: new Date().toISOString(),
+      capturedAt: observedAt,
       providerVersions: { [observation.endpointId]: 'json-rpc' },
       adapterVersions: { evm: this.config.adapterVersion ?? '0.1.0' },
       configHash: hashPayload({
@@ -247,5 +272,34 @@ export class EvmLedgerAdapter {
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',
     };
+    return ChainAnchorReadSchema.parse({
+      anchor: {
+        ledger: 'EVM',
+        chainId: snapshot.chainId,
+        position: blockNumber,
+        hash: blockHash,
+        ...(numericPosition === 0n
+          ? {}
+          : { parentPosition: (numericPosition - 1n).toString(), parentHash: parentBlockHash }),
+        finality,
+        source: observation.endpointId,
+        observedAt,
+      },
+      snapshot,
+      payload: block,
+    });
+  }
+
+  readHeadAnchor(): Promise<ChainAnchorRead> {
+    return this.#readAnchor(this.config.snapshotBlockTag ?? 'finalized');
+  }
+
+  async readAnchorAt(position: string): Promise<ChainAnchorRead> {
+    const numericPosition = requireDecimalPosition(position);
+    return this.#readAnchor(`0x${numericPosition.toString(16)}`, position);
+  }
+
+  async createSnapshot(): Promise<EvmSnapshot> {
+    return (await this.readHeadAnchor()).snapshot as EvmSnapshot;
   }
 }

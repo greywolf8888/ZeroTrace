@@ -1,8 +1,10 @@
 import { hashPayload } from '@zerotrace/evidence';
 import {
+  ChainAnchorReadSchema,
   knownValue,
   unavailableValue,
   unknownValue,
+  type ChainAnchorRead,
   type ProviderCapability,
   type ProviderHealth,
   type SolanaSnapshotSchema,
@@ -97,6 +99,21 @@ function requireSafeQuantityNumber(value: unknown, field: string): number {
     throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an unsafe ${field}.`);
   }
   return parsed;
+}
+
+function requirePosition(value: string): number {
+  if (!UNSIGNED_QUANTITY.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana slot must be unsigned decimal.');
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana slot exceeds safe JSON-RPC precision.');
+  }
+  return parsed;
+}
+
+function sourceSet(ids: readonly string[]): string[] {
+  return [...new Set(ids)].sort();
 }
 
 function requireBase58(value: unknown, field: string): string {
@@ -304,13 +321,11 @@ export class SolanaLedgerAdapter {
     }
   }
 
-  async createSnapshot(): Promise<SolanaSnapshot> {
-    const slotObservation = await this.readSourced<unknown>(
-      'getSlot',
-      [{ commitment: this.config.commitment }],
-      { cacheMode: 'bypass' },
-    );
-    const slotNumber = requireSafeQuantityNumber(slotObservation.value, 'slot');
+  async #readAnchorAt(
+    slotNumber: number,
+    initialSourceIds: readonly string[] = [],
+  ): Promise<ChainAnchorRead> {
+    requireSafeInteger(slotNumber, 'slot');
     const blockObservation = await this.readSourced<unknown>(
       'getBlock',
       [
@@ -333,23 +348,24 @@ export class SolanaLedgerAdapter {
     }
     const block = rawBlock as Record<string, unknown>;
     const blockhash = requireBase58(block.blockhash, 'blockhash');
-    requireBase58(block.previousBlockhash, 'previous blockhash');
+    const previousBlockhash = requireBase58(block.previousBlockhash, 'previous blockhash');
     const parentSlot = requireSafeQuantityNumber(block.parentSlot, 'parent slot');
     if (parentSlot > slotNumber) {
       throw new ProviderError('INVALID_RESPONSE', 'Solana parent slot exceeds the snapshot slot.');
     }
     const blockTimestamp = optionalBlockTimestamp(block.blockTime);
-    const sourceIds = [
-      ...new Set([slotObservation.endpointId, blockObservation.endpointId]),
-    ].sort();
-    return {
+    const sourceIds = sourceSet([...initialSourceIds, blockObservation.endpointId]);
+    const observedAt = new Date().toISOString();
+    const snapshot: SolanaSnapshot = {
       ledger: 'SOLANA',
       chainId: 'solana-mainnet',
       slot: String(slotNumber),
       blockhash,
+      parentSlot: String(parentSlot),
+      previousBlockhash,
       commitment: this.config.commitment,
       ...(blockTimestamp === undefined ? {} : { blockTimestamp }),
-      capturedAt: new Date().toISOString(),
+      capturedAt: observedAt,
       providerVersions: Object.fromEntries(
         sourceIds.map((sourceId) => [sourceId, 'solana-json-rpc']),
       ),
@@ -362,5 +378,38 @@ export class SolanaLedgerAdapter {
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',
     };
+    return ChainAnchorReadSchema.parse({
+      anchor: {
+        ledger: 'SOLANA',
+        chainId: 'solana-mainnet',
+        position: String(slotNumber),
+        hash: blockhash,
+        parentPosition: String(parentSlot),
+        parentHash: previousBlockhash,
+        finality: this.config.commitment,
+        source: sourceIds.join('|'),
+        observedAt,
+      },
+      snapshot,
+      payload: block,
+    });
+  }
+
+  async readHeadAnchor(): Promise<ChainAnchorRead> {
+    const slotObservation = await this.readSourced<unknown>(
+      'getSlot',
+      [{ commitment: this.config.commitment }],
+      { cacheMode: 'bypass' },
+    );
+    const slotNumber = requireSafeQuantityNumber(slotObservation.value, 'slot');
+    return this.#readAnchorAt(slotNumber, [slotObservation.endpointId]);
+  }
+
+  async readAnchorAt(position: string): Promise<ChainAnchorRead> {
+    return this.#readAnchorAt(requirePosition(position));
+  }
+
+  async createSnapshot(): Promise<SolanaSnapshot> {
+    return (await this.readHeadAnchor()).snapshot as SolanaSnapshot;
   }
 }

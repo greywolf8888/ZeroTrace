@@ -4,6 +4,7 @@ import { defineConfig } from 'vitest/config';
 
 const workspacePackages = [
   'chain-adapters',
+  'data-quality',
   'entity-engine',
   'evidence',
   'identifiers',

@@ -11,6 +11,7 @@ import {
 export * from './raw-artifacts.js';
 export * from './clickhouse.js';
 export * from './ingestion-checkpoints.js';
+export * from './data-quality.js';
 
 type DatabaseRow = Record<string, unknown>;
 
@@ -416,13 +417,15 @@ export class PostgresEvidenceRepository implements EvidenceRepository {
       }
       if (
         hashPayload(stored.evidence) !== hashPayload(parsedEvidence) ||
-        hashPayload(stored.sourceEvidenceIds) !== hashPayload(normalizedSources) ||
-        hashPayload(stored.snapshot ?? null) !== hashPayload(parsedSnapshot ?? null)
+        hashPayload(stored.sourceEvidenceIds) !== hashPayload(normalizedSources)
       ) {
         throw new StorageError(
           'EVIDENCE_CONFLICT',
           'Stored Evidence conflicts with the canonical observation.',
         );
+      }
+      if (hashPayload(stored.snapshot ?? null) !== hashPayload(parsedSnapshot ?? null)) {
+        throw new StorageError('SNAPSHOT_CONFLICT', 'Stored Evidence uses a different Snapshot.');
       }
       await client.query('COMMIT');
       return stored;
@@ -493,7 +496,7 @@ export class PostgresEvidenceRepository implements EvidenceRepository {
         `SELECT EXISTS (
           SELECT 1 FROM schema_migrations WHERE version = $1
         ) AS migration_applied`,
-        ['003_evidence_integrity'],
+        ['006_snapshot_observation_identity'],
       );
       if (migration.rows[0]?.migration_applied !== true) {
         return {
@@ -543,7 +546,9 @@ export class PostgresEvidenceRepository implements EvidenceRepository {
           $1::ledger_kind, $2, $3::numeric, $4, $5, $6::timestamptz,
           $7::jsonb, $8::jsonb, $9, $10, $11, $12::jsonb
         )
-        ON CONFLICT (ledger, chain_id, block_or_slot, block_hash, config_hash) DO NOTHING
+        ON CONFLICT (
+          ledger, chain_id, block_or_slot, block_hash, config_hash, captured_at
+        ) DO NOTHING
         RETURNING id::text, payload
       `,
       [
@@ -573,8 +578,16 @@ export class PostgresEvidenceRepository implements EvidenceRepository {
               AND block_or_slot = $3::numeric
               AND block_hash = $4
               AND config_hash = $5
+              AND captured_at = $6::timestamptz
           `,
-          [snapshot.ledger, snapshot.chainId, position, blockHash, snapshot.configHash],
+          [
+            snapshot.ledger,
+            snapshot.chainId,
+            position,
+            blockHash,
+            snapshot.configHash,
+            snapshot.capturedAt,
+          ],
         )
       ).rows[0];
     if (existing === undefined) {

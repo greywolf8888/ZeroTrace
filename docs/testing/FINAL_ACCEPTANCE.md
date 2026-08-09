@@ -11,6 +11,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       and slot-specific Solana blockhashes with minimum-context account reads
 - [x] Dynamic anchors bypass stored response caches and query-time Evidence retains request-scoped
       endpoint provenance across concurrent failover pools
+- [x] Parent-linked EVM/Bitcoin/Solana anchors, common-position endpoint reconciliation, typed
+      disagreement/insufficient states, and Evidence-linked continuity alerts are implemented and
+      deterministically tested
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
 - [x] API, UI, infrastructure schema, health, and test foundation exist
 - [x] Clean Docker build, database initialization, and runtime smoke check recorded
@@ -35,13 +38,16 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Content-addressed evidence primitive and derivation traversal
 - [x] Durable append-only Snapshot, Evidence-node, and derivation-edge repository
 - [x] Restart-safe Evidence drilldown and real PostgreSQL constraint tests
+- [x] Same-anchor Snapshot recapture across repository and production API restart without identity
+      collision
 - [x] Content-addressed, versioned raw payload repository for implemented ingestion records
 - [x] Finalized block-header ingestion on EVM, Bitcoin, and Solana with restart-safe checkpoints
 - [x] Finalized provider-shaped raw-transaction ingestion on EVM, Bitcoin, and Solana
 - [x] Finalized EVM logs, Bitcoin inputs/outputs, and Solana instruction/CPI raw records
 - [x] Finalized EVM trace/state-diff and Solana log/balance/token-balance/reward raw records
 - [ ] Finality-aware historical ingestion on all three ledgers
-- [ ] Reorg/replay and cross-provider reconciliation tests
+- [x] Deterministic common-position disagreement, source-failure, continuity, and reorg-detection tests
+- [ ] Forced real reorg, automatic rollback/replay, and independently operated provider acceptance
 - [ ] Temporal graph projection and rebuild
 
 ## Intelligence
