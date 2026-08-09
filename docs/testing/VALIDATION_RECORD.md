@@ -219,8 +219,8 @@ named volumes were removed after the reverse-read assertions.
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                |
 | `docker compose config`  | pass                                                                                                  |
 | production Compose smoke | pass with the port overrides documented above                                                         |
-| branch GitHub Actions CI | pass on `dea2133`: quality/contracts, Chromium E2E, and five production container targets             |
-| branch CodeQL            | pass on `dea2133`: JavaScript and TypeScript analysis                                                 |
+| branch GitHub Actions CI | pass on `235fad6`: quality/contracts, Chromium E2E, and five production container targets             |
+| branch CodeQL            | pass on `235fad6`: JavaScript and TypeScript analysis                                                 |
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion
