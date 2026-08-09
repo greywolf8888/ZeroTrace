@@ -21,6 +21,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31325135812) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31325135794) pass on immutable
       execution/state development commit `83b5194`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31326491651) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31326491643) pass on immutable
+      current-state Snapshot development commit `73a1cae`
 
 ## Evidence and data
 

@@ -318,16 +318,16 @@ provider reconciliation, and archive-scale backfill remain open.
 
 ## Automated verification
 
-| Command                  | Result                                                                                                |
-| ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `npm run verify:full`    | pass: format, lint, typecheck, 180 unit, 26 integration, build, license, audit, coverage, 6 E2E, SBOM |
-| `npm run test:coverage`  | pass: 206 tests; 87.61% statements, 79.66% branches, 97.09% functions, 88.83% lines                   |
-| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                     |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                |
-| `docker compose config`  | pass                                                                                                  |
-| production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                    |
-| branch GitHub Actions CI | pass on `83b5194`: quality/contracts, Chromium E2E, and five production container targets             |
-| branch CodeQL            | pass on `83b5194`: JavaScript and TypeScript analysis                                                 |
+| Command                  | Result                                                                                                                                                          |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run verify:full`    | pass: format, lint, typecheck, 180 unit, 26 integration, build, license, audit, coverage, 6 E2E, SBOM                                                           |
+| `npm run test:coverage`  | pass: 206 tests; 87.61% statements, 79.66% branches, 97.09% functions, 88.83% lines                                                                             |
+| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                                                                               |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                          |
+| `docker compose config`  | pass                                                                                                                                                            |
+| production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                              |
+| branch GitHub Actions CI | [pass on `73a1cae`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31326491651): quality/contracts, Chromium E2E, and five production container targets |
+| branch CodeQL            | [pass on `73a1cae`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31326491643): JavaScript and TypeScript analysis                                     |
 
 The latest full run used the isolated `zerotrace-snapshot-test` project on alternate ports with
 fresh PostgreSQL, ClickHouse, and MinIO volumes. After all 26 integration tests passed, exactly its
