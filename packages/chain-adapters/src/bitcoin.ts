@@ -21,6 +21,42 @@ import {
 
 export type BitcoinSnapshot = z.infer<typeof BitcoinSnapshotSchema>;
 
+export interface BitcoinTransactionStatus {
+  confirmed: boolean;
+  blockHeight?: string;
+  blockHash?: string;
+  blockTime?: string;
+}
+
+export interface BitcoinTransactionOutput {
+  valueSats: string;
+  scriptPubKey: string;
+  scriptType: string;
+  address?: string;
+  raw: Readonly<Record<string, unknown>>;
+}
+
+export interface BitcoinTransactionRecord {
+  txid: string;
+  version: number;
+  locktime: string;
+  size: string;
+  weight: string;
+  feeSats: string;
+  inputCount: number;
+  outputs: readonly BitcoinTransactionOutput[];
+  status: BitcoinTransactionStatus;
+  raw: Readonly<Record<string, unknown>>;
+}
+
+export interface BitcoinOutspendRecord {
+  spent: boolean;
+  spendingTxid?: string;
+  spendingVin?: string;
+  status?: BitcoinTransactionStatus;
+  raw: Readonly<Record<string, unknown>>;
+}
+
 const BITCOIN_CAPABILITIES: ProviderCapability[] = [
   'CURRENT_STATE',
   'BLOCK',
@@ -82,6 +118,146 @@ function requireSafeBlockHeight(value: unknown): string {
   return String(value);
 }
 
+function requireSafeUnsignedInteger(value: unknown, field: string): string {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new ProviderError('INVALID_RESPONSE', `Esplora returned an invalid ${field}.`);
+  }
+  return String(value);
+}
+
+function requireSafeInteger(value: unknown, field: string): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `Esplora returned an invalid ${field}.`);
+  }
+  return value;
+}
+
+function requireRecord(value: unknown, field: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `Esplora returned an invalid ${field}.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function requireTxid(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new ProviderError('INVALID_RESPONSE', `Esplora returned an invalid ${field}.`);
+  }
+  return requireBlockHash(value);
+}
+
+function parseTransactionStatus(value: unknown): BitcoinTransactionStatus {
+  const status = requireRecord(value, 'transaction status');
+  if (typeof status.confirmed !== 'boolean') {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Esplora transaction status is missing confirmed state.',
+    );
+  }
+  if (!status.confirmed) return { confirmed: false };
+  const blockTime = requireSafeUnsignedInteger(status.block_time, 'transaction block time');
+  return {
+    confirmed: true,
+    blockHeight: requireSafeBlockHeight(status.block_height),
+    blockHash: requireTxid(status.block_hash, 'transaction block hash'),
+    blockTime,
+  };
+}
+
+function parseTransactionOutput(value: unknown): BitcoinTransactionOutput {
+  const output = requireRecord(value, 'transaction output');
+  if (typeof output.scriptpubkey !== 'string' || !/^[0-9a-fA-F]*$/.test(output.scriptpubkey)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Esplora returned an invalid output script.');
+  }
+  if (typeof output.scriptpubkey_type !== 'string' || output.scriptpubkey_type.length === 0) {
+    throw new ProviderError('INVALID_RESPONSE', 'Esplora returned an invalid output script type.');
+  }
+  if (
+    output.scriptpubkey_address !== undefined &&
+    typeof output.scriptpubkey_address !== 'string'
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', 'Esplora returned an invalid output address.');
+  }
+  return {
+    valueSats: requireSafeUnsignedInteger(output.value, 'output value'),
+    scriptPubKey: output.scriptpubkey.toLowerCase(),
+    scriptType: output.scriptpubkey_type,
+    ...(output.scriptpubkey_address === undefined ? {} : { address: output.scriptpubkey_address }),
+    raw: output,
+  };
+}
+
+function parseTransaction(value: unknown, expectedTxid: string): BitcoinTransactionRecord {
+  const transaction = requireRecord(value, 'transaction');
+  const txid = requireTxid(transaction.txid, 'transaction id');
+  if (txid !== expectedTxid.toLowerCase()) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Esplora transaction identity does not match the requested txid.',
+    );
+  }
+  if (!Array.isArray(transaction.vin) || !Array.isArray(transaction.vout)) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Esplora transaction inputs or outputs are invalid.',
+    );
+  }
+  return {
+    txid,
+    version: requireSafeInteger(transaction.version, 'transaction version'),
+    locktime: requireSafeUnsignedInteger(transaction.locktime, 'transaction locktime'),
+    size: requireSafeUnsignedInteger(transaction.size, 'transaction size'),
+    weight: requireSafeUnsignedInteger(transaction.weight, 'transaction weight'),
+    feeSats: requireSafeUnsignedInteger(transaction.fee, 'transaction fee'),
+    inputCount: transaction.vin.length,
+    outputs: transaction.vout.map(parseTransactionOutput),
+    status: parseTransactionStatus(transaction.status),
+    raw: transaction,
+  };
+}
+
+function parseOutspend(value: unknown): BitcoinOutspendRecord {
+  const outspend = requireRecord(value, 'output spend status');
+  if (typeof outspend.spent !== 'boolean') {
+    throw new ProviderError('INVALID_RESPONSE', 'Esplora output spend state is invalid.');
+  }
+  if (!outspend.spent) return { spent: false, raw: outspend };
+  return {
+    spent: true,
+    spendingTxid: requireTxid(outspend.txid, 'spending transaction id'),
+    spendingVin: requireSafeUnsignedInteger(outspend.vin, 'spending input index'),
+    status: parseTransactionStatus(outspend.status),
+    raw: outspend,
+  };
+}
+
+function parseAddressStats(value: unknown, expectedAddress: string): EsploraAddressStats {
+  const response = requireRecord(value, 'address statistics');
+  if (response.address !== expectedAddress) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Esplora address identity does not match the requested address.',
+    );
+  }
+  const parseStats = (raw: unknown, field: string): EsploraAddressStats['chain_stats'] => {
+    const stats = requireRecord(raw, field);
+    const numeric = (name: keyof EsploraAddressStats['chain_stats']) =>
+      Number(requireSafeUnsignedInteger(stats[name], `${field} ${name}`));
+    return {
+      funded_txo_count: numeric('funded_txo_count'),
+      funded_txo_sum: numeric('funded_txo_sum'),
+      spent_txo_count: numeric('spent_txo_count'),
+      spent_txo_sum: numeric('spent_txo_sum'),
+      tx_count: numeric('tx_count'),
+    };
+  };
+  return {
+    address: expectedAddress,
+    chain_stats: parseStats(response.chain_stats, 'chain statistics'),
+    mempool_stats: parseStats(response.mempool_stats, 'mempool statistics'),
+  };
+}
+
 function sourceSet(ids: readonly string[]): string[] {
   return [...new Set(ids)].sort();
 }
@@ -104,42 +280,49 @@ export class BitcoinUtxoLedgerAdapter {
     return (await this.getAddressObservation(address)).value;
   }
 
-  getAddressObservation(address: string): Promise<TransportObservation<EsploraAddressStats>> {
-    return getRestJsonSourced<EsploraAddressStats>(
+  async getAddressObservation(address: string): Promise<TransportObservation<EsploraAddressStats>> {
+    const observation = await getRestJsonSourced<unknown>(
       this.#transport,
       `/address/${encodeURIComponent(address)}`,
     );
+    return { ...observation, value: parseAddressStats(observation.value, address) };
   }
 
-  async getTransaction(txid: string): Promise<Record<string, unknown>> {
+  async getTransaction(txid: string): Promise<BitcoinTransactionRecord> {
     return (await this.getTransactionObservation(txid)).value;
   }
 
-  getTransactionObservation(txid: string): Promise<TransportObservation<Record<string, unknown>>> {
-    return getRestJsonSourced<Record<string, unknown>>(
+  async getTransactionObservation(
+    txid: string,
+  ): Promise<TransportObservation<BitcoinTransactionRecord>> {
+    const normalizedTxid = requireTxid(txid, 'requested transaction id');
+    const observation = await getRestJsonSourced<unknown>(
       this.#transport,
-      `/tx/${encodeURIComponent(txid)}`,
+      `/tx/${encodeURIComponent(normalizedTxid)}`,
     );
+    return { ...observation, value: parseTransaction(observation.value, normalizedTxid) };
   }
 
-  getOutspend(txid: string, vout: number): Promise<Record<string, unknown>> {
+  getOutspend(txid: string, vout: number): Promise<BitcoinOutspendRecord> {
     return this.getOutspendObservation(txid, vout).then((observation) => observation.value);
   }
 
-  getOutspendObservation(
+  async getOutspendObservation(
     txid: string,
     vout: number,
-  ): Promise<TransportObservation<Record<string, unknown>>> {
+  ): Promise<TransportObservation<BitcoinOutspendRecord>> {
+    const normalizedTxid = requireTxid(txid, 'requested transaction id');
     if (!Number.isSafeInteger(vout) || vout < 0) {
       throw new ProviderError(
         'INVALID_RESPONSE',
         'Bitcoin vout must be a non-negative safe integer.',
       );
     }
-    return getRestJsonSourced<Record<string, unknown>>(
+    const observation = await getRestJsonSourced<unknown>(
       this.#transport,
-      `/tx/${encodeURIComponent(txid)}/outspend/${vout}`,
+      `/tx/${encodeURIComponent(normalizedTxid)}/outspend/${vout}`,
     );
+    return { ...observation, value: parseOutspend(observation.value) };
   }
 
   async probe(): Promise<ProviderHealth> {
@@ -289,6 +472,31 @@ export class BitcoinUtxoLedgerAdapter {
 
   async readAnchorAt(position: string): Promise<ChainAnchorRead> {
     return this.#readAnchorAt(requirePosition(position));
+  }
+
+  async readAnchorByHash(hash: string): Promise<ChainAnchorRead> {
+    const normalizedHash = requireBlockHash(hash);
+    const blockObservation = await getRestJsonSourced<unknown>(
+      this.#transport,
+      `/block/${encodeURIComponent(normalizedHash)}`,
+      { cacheMode: 'bypass' },
+    );
+    const block = requireRecord(blockObservation.value, 'block record');
+    if (requireBlockHash(String(block.id)) !== normalizedHash) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Esplora block identity does not match its hash.',
+      );
+    }
+    const height = requireSafeBlockHeight(block.height);
+    const anchor = await this.#readAnchorAt(height, [blockObservation.endpointId]);
+    if (anchor.anchor.hash !== normalizedHash) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Requested Bitcoin block is not the best-chain block at its reported height.',
+      );
+    }
+    return anchor;
   }
 
   async createSnapshot(): Promise<BitcoinSnapshot> {

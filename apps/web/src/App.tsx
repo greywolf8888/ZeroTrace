@@ -44,8 +44,9 @@ function formatTime(value: string | null | undefined): string {
 
 function titleCase(value: string): string {
   return value
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .toLowerCase()
-    .split(/[_-]/)
+    .split(/[_\s-]+/)
     .map((item) => item.charAt(0).toUpperCase() + item.slice(1))
     .join(' ');
 }
@@ -523,8 +524,8 @@ function SearchWorkspace({
           <span className="eyebrow">Global Intelligence Search</span>
           <h1>Trace an on-chain subject</h1>
           <p>
-            Checksum and structure classification happens locally; inspection uses configured
-            read-only providers.
+            Checksum and structure classification happens locally; address, transaction, block, and
+            Bitcoin outpoint inspection uses configured read-only providers.
           </p>
         </div>
       </div>
@@ -538,8 +539,8 @@ function SearchWorkspace({
       {result === undefined ? (
         <section className="empty-state">
           <span>⌁</span>
-          <h2>No subject loaded</h2>
-          <p>Choose a network for an EVM address so the resulting snapshot is chain-specific.</p>
+          <h2>No ledger record loaded</h2>
+          <p>Choose a network for an EVM identifier so the resulting snapshot is chain-specific.</p>
         </section>
       ) : (
         <section className="search-results">
@@ -559,8 +560,12 @@ function SearchWorkspace({
           )}
           <div className="candidate-grid">
             {result.candidates.map((candidate) => {
+              const supportedType = ['ADDRESS', 'TRANSACTION', 'BLOCK', 'OUTPOINT'].includes(
+                candidate.type,
+              );
               const inspectable =
-                candidate.type === 'ADDRESS' && candidate.chainId !== 'eip155:unknown';
+                supportedType &&
+                (candidate.ledger !== 'EVM' || candidate.chainId !== 'eip155:unknown');
               return (
                 <article
                   className="candidate-card"
@@ -586,7 +591,7 @@ function SearchWorkspace({
                       onClick={() => void onInspect(candidate)}
                       title={
                         inspectable
-                          ? 'Query current state'
+                          ? 'Query a snapshot-bound read-only record'
                           : 'Choose an explicit network before inspection'
                       }
                     >
@@ -604,7 +609,7 @@ function SearchWorkspace({
           <section className="panel subject-panel">
             <div className="panel-header">
               <div>
-                <span className="eyebrow">Snapshot-bound subject</span>
+                <span className="eyebrow">Snapshot-bound ledger record</span>
                 <h3>{shortId(subject.subject.normalizedId, 18)}</h3>
               </div>
               <span className="snapshot-badge">
@@ -1057,7 +1062,11 @@ export function App() {
     setSearchBusy(true);
     setSearchError(undefined);
     try {
-      setSubject(await api.subject(candidate));
+      setSubject(
+        candidate.type === 'ADDRESS'
+          ? await api.subject(candidate)
+          : await api.ledgerRecord(candidate),
+      );
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : 'Subject inspection failed.');
     } finally {

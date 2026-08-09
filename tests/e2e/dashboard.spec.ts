@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 const checksummedEvmAddress = '0x52908400098527886E0F7030069857D2E4169EE7';
+const solanaSignature =
+  '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
 
 test('renders capability truth and unknown values without fake market data', async ({ page }) => {
   const browserErrors: string[] = [];
@@ -53,6 +55,80 @@ test('classifies a checksummed EVM address without claiming provider facts', asy
   await expect(page.getByText('eip155:1')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Inspect' })).toBeEnabled();
   await expect(page.getByRole('heading', { name: 'Evidence ledger' })).toHaveCount(0);
+});
+
+test('opens a typed Solana transaction result with Snapshot and Evidence', async ({ page }) => {
+  await page.route('**/api/v1/ledger/SOLANA/TRANSACTION/**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        subject: {
+          ledger: 'SOLANA',
+          chainId: 'solana-mainnet',
+          type: 'TRANSACTION',
+          id: solanaSignature,
+          normalizedId: solanaSignature,
+          validation: 'STRUCTURALLY_VALID',
+          confidence: 1,
+        },
+        facts: {
+          status: { state: 'known', value: 'CONFIRMED' },
+          slot: { state: 'known', value: '300000000' },
+          feeLamports: { state: 'known', value: '5000' },
+          execution: { state: 'known', value: 'SUCCESS' },
+        },
+        metadata: {
+          snapshot: {
+            ledger: 'SOLANA',
+            chainId: 'solana-mainnet',
+            slot: '300000000',
+            blockhash: '11111111111111111111111111111111',
+            commitment: 'finalized',
+          },
+          dataCoverage: 1,
+          sourceCoverage: 0.5,
+          historyCoverage: 1,
+          simulationCoverage: 0,
+          freshness: '2026-08-10T00:00:00.000Z',
+          sourceSet: ['solana-rpc'],
+          modelVersion: 'solana-transaction-query-v0.1.0',
+          confidence: 1,
+          evidenceIds: ['ev_111111111111111111111111'],
+        },
+        evidence: [
+          {
+            id: 'ev_111111111111111111111111',
+            ledger: 'SOLANA',
+            chainId: 'solana-mainnet',
+            kind: 'TRANSACTION',
+            source: 'solana-rpc',
+            locator: `transaction:${solanaSignature}@300000000`,
+            payloadHash: '1'.repeat(64),
+            observedAt: '2026-08-10T00:00:00.000Z',
+            blockOrSlot: '300000000',
+            finality: 'finalized',
+            summary: 'Solana transaction bound to its committed slot Snapshot.',
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Address or transaction identifier').fill(solanaSignature);
+  await page.getByLabel('Network').selectOption('solana');
+  await page.getByRole('button', { name: 'Trace' }).click();
+  await expect(page.getByRole('heading', { name: '1 candidate' })).toBeVisible();
+  await expect(page.getByText('TRANSACTION', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Inspect' }).click();
+
+  await expect(page.getByText('Snapshot-bound ledger record')).toBeVisible();
+  await expect(page.getByText('Fee Lamports')).toBeVisible();
+  await expect(page.getByText('5000', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Evidence ledger' })).toBeVisible();
+  await expect(
+    page.getByText('Solana transaction bound to its committed slot Snapshot.'),
+  ).toBeVisible();
 });
 
 test('keeps scenario execution gated and exposes provider availability', async ({ page }) => {

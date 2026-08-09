@@ -29,12 +29,37 @@ import {
 } from '@zerotrace/schemas';
 
 import type { AppConfig } from './config.js';
+import {
+  queryBitcoinBlock,
+  queryBitcoinOutpoint,
+  queryBitcoinTransaction,
+  queryEvmBlock,
+  queryEvmTransaction,
+  querySolanaBlock,
+  querySolanaTransaction,
+} from './ledger-query.js';
 import { createRuntime, type AppRuntime } from './runtime.js';
 
 const SearchQuerySchema = z.object({
   q: z.string().trim().min(1).max(512),
   ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']).optional(),
   chainId: z.string().min(1).max(128).optional(),
+});
+
+const LedgerRecordParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.enum(['EVM', 'BITCOIN', 'SOLANA'])),
+  type: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.enum(['TRANSACTION', 'BLOCK', 'OUTPOINT'])),
+  id: z.string().trim().min(1).max(512),
+});
+
+const LedgerRecordQuerySchema = z.object({
+  chainId: z.string().trim().min(1).max(128).optional(),
 });
 
 const EntityFeatureSchema = z.object({
@@ -576,7 +601,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof ProviderError) {
       const status =
-        error.code === 'METHOD_NOT_ALLOWED' || error.code === 'INVALID_RESPONSE' ? 400 : 503;
+        error.code === 'METHOD_NOT_ALLOWED' ? 400 : error.code === 'INVALID_RESPONSE' ? 502 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -685,6 +710,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       {
         id: 'solana-current-state',
         status: runtime.solanaAdapter === undefined ? 'PROVIDER_REQUIRED' : 'IMPLEMENTED',
+      },
+      {
+        id: 'typed-ledger-query',
+        status:
+          runtime.evmAdapters.size > 0 &&
+          runtime.bitcoinAdapter !== undefined &&
+          runtime.solanaAdapter !== undefined
+            ? 'IMPLEMENTED'
+            : 'PROVIDERS_PARTIALLY_CONFIGURED',
+        detail:
+          'Read-only EVM transaction/block, Bitcoin transaction/block/outpoint, and Solana transaction/slot queries use strict provider-response validation and bind observations to Evidence plus replayable Snapshots. Null, pending, mempool, and provider failures remain distinct.',
       },
       {
         id: 'cross-source-anchor-reconciliation',
@@ -984,7 +1020,10 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         subject,
         facts: {
           exists: knownValue(account !== undefined),
-          lamports: knownValue(account?.lamports ?? '0'),
+          lamports:
+            account === undefined
+              ? unknownValue('INSUFFICIENT_DATA', 'The account does not exist at this Snapshot.')
+              : knownValue(account.lamports),
           owner:
             account === undefined || typeof account.owner !== 'string'
               ? unknownValue('INSUFFICIENT_DATA')
@@ -1008,6 +1047,129 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         },
         evidence: [evidence],
       };
+    },
+  );
+
+  app.get(
+    '/api/v1/ledger/:ledger/:type/:id',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LedgerRecordParamsSchema.parse(request.params);
+      const query = LedgerRecordQuerySchema.parse(request.query);
+      if (params.type === 'OUTPOINT' && params.ledger !== 'BITCOIN') {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'UNSUPPORTED_IDENTIFIER_TYPE',
+              'Outpoints are only supported on Bitcoin.',
+              false,
+            ),
+          );
+      }
+      const canonicalNonEvmChainId =
+        params.ledger === 'BITCOIN'
+          ? 'bitcoin-mainnet'
+          : params.ledger === 'SOLANA'
+            ? 'solana-mainnet'
+            : undefined;
+      if (
+        query.chainId !== undefined &&
+        canonicalNonEvmChainId !== undefined &&
+        query.chainId !== canonicalNonEvmChainId
+      ) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_CHAIN_ID',
+              `${params.ledger} queries require chainId=${canonicalNonEvmChainId}.`,
+              false,
+            ),
+          );
+      }
+      const requestedChainId =
+        params.ledger === 'EVM'
+          ? (query.chainId ?? `eip155:${options.config.ethereumChainId}`)
+          : params.ledger === 'BITCOIN'
+            ? 'bitcoin-mainnet'
+            : 'solana-mainnet';
+      const classification = classifyIdentifier(params.id, {
+        ledger: params.ledger,
+        type: params.type,
+        chainId: requestedChainId,
+      });
+      const subject = classification.candidates.find(
+        (candidate) => candidate.ledger === params.ledger && candidate.type === params.type,
+      );
+      if (subject === undefined) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_IDENTIFIER',
+              `A structurally valid ${params.ledger} ${params.type.toLowerCase()} identifier is required.`,
+              false,
+            ),
+          );
+      }
+      const writeEvidence = (
+        evidence: Evidence,
+        sourceEvidenceIds: readonly string[] = [],
+        snapshot?: AnalysisSnapshot,
+      ) => addEvidence(runtime, evidence, sourceEvidenceIds, snapshot);
+
+      if (params.ledger === 'EVM') {
+        const match = /^eip155:([1-9]\d*)$/.exec(requestedChainId);
+        const numericChainId = match === null ? Number.NaN : Number(match[1]);
+        if (!Number.isSafeInteger(numericChainId)) {
+          return reply
+            .code(400)
+            .send(errorResponse(request, 'INVALID_CHAIN_ID', 'Invalid EIP-155 chain ID.', false));
+        }
+        const adapter = runtime.evmAdapters.get(numericChainId);
+        if (adapter === undefined) {
+          return reply.code(503).send({
+            subject,
+            facts: unavailableValue('PROVIDER_UNCONFIGURED'),
+            metadata: emptyMetadata(`evm-${params.type.toLowerCase()}-query-v0.1.0`),
+          });
+        }
+        return params.type === 'BLOCK'
+          ? queryEvmBlock(adapter, subject, writeEvidence)
+          : queryEvmTransaction(adapter, subject, writeEvidence);
+      }
+
+      if (params.ledger === 'BITCOIN') {
+        const adapter = runtime.bitcoinAdapter;
+        if (adapter === undefined) {
+          return reply.code(503).send({
+            subject,
+            facts: unavailableValue('PROVIDER_UNCONFIGURED'),
+            metadata: emptyMetadata(`bitcoin-${params.type.toLowerCase()}-query-v0.1.0`),
+          });
+        }
+        if (params.type === 'BLOCK') return queryBitcoinBlock(adapter, subject, writeEvidence);
+        if (params.type === 'OUTPOINT') {
+          return queryBitcoinOutpoint(adapter, subject, writeEvidence);
+        }
+        return queryBitcoinTransaction(adapter, subject, writeEvidence);
+      }
+
+      const adapter = runtime.solanaAdapter;
+      if (adapter === undefined) {
+        return reply.code(503).send({
+          subject,
+          facts: unavailableValue('PROVIDER_UNCONFIGURED'),
+          metadata: emptyMetadata(`solana-${params.type.toLowerCase()}-query-v0.1.0`),
+        });
+      }
+      return params.type === 'BLOCK'
+        ? querySolanaBlock(adapter, subject, writeEvidence)
+        : querySolanaTransaction(adapter, subject, writeEvidence);
     },
   );
 

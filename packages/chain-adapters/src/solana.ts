@@ -10,6 +10,7 @@ import {
   type SolanaSnapshotSchema,
 } from '@zerotrace/schemas';
 import type { z } from 'zod';
+import bs58 from 'bs58';
 
 import { ProviderError, toProviderError } from './errors.js';
 import {
@@ -20,6 +21,16 @@ import {
 } from './transport.js';
 
 export type SolanaSnapshot = z.infer<typeof SolanaSnapshotSchema>;
+
+export interface SolanaTransactionRecord {
+  signature: string;
+  slot: string;
+  blockTime?: string;
+  version: 'legacy' | string;
+  feeLamports?: string;
+  success?: boolean;
+  raw: Readonly<Record<string, unknown>>;
+}
 
 export interface SolanaAccountState {
   data: readonly [string, 'base64'];
@@ -121,6 +132,73 @@ function requireBase58(value: unknown, field: string): string {
     throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
   }
   return value;
+}
+
+function requireSignature(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
+  }
+  try {
+    if (bs58.decode(value).length !== 64) throw new Error('invalid signature length');
+  } catch {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
+  }
+  return value;
+}
+
+function requireRecord(value: unknown, field: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function parseTransaction(
+  value: unknown,
+  expectedSignature: string,
+): SolanaTransactionRecord | null {
+  if (value === null) return null;
+  const response = requireRecord(value, 'transaction response');
+  const slot = requireSafeQuantityNumber(response.slot, 'transaction slot');
+  const transaction = requireRecord(response.transaction, 'transaction');
+  if (!Array.isArray(transaction.signatures) || transaction.signatures.length === 0) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana transaction signatures are invalid.');
+  }
+  const primarySignature = requireSignature(transaction.signatures[0], 'transaction signature');
+  if (primarySignature !== expectedSignature) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana transaction identity does not match the requested signature.',
+    );
+  }
+  requireRecord(transaction.message, 'transaction message');
+  const version = response.version;
+  if (
+    version !== 'legacy' &&
+    (typeof version !== 'number' || !Number.isSafeInteger(version) || version < 0)
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana transaction version is invalid.');
+  }
+  const blockTime = optionalBlockTimestamp(response.blockTime);
+  let feeLamports: string | undefined;
+  let success: boolean | undefined;
+  if (response.meta !== null) {
+    const meta = requireRecord(response.meta, 'transaction metadata');
+    if (!Object.hasOwn(meta, 'err')) {
+      throw new ProviderError('INVALID_RESPONSE', 'Solana transaction metadata is missing err.');
+    }
+    feeLamports = requireUnsignedQuantity(meta.fee, 'transaction fee');
+    success = meta.err === null;
+  }
+  return {
+    signature: primarySignature,
+    slot: String(slot),
+    ...(blockTime === undefined ? {} : { blockTime }),
+    version: version === 'legacy' ? version : String(version),
+    ...(feeLamports === undefined ? {} : { feeLamports }),
+    ...(success === undefined ? {} : { success }),
+    raw: response,
+  };
 }
 
 function optionalBlockTimestamp(value: unknown): string | undefined {
@@ -267,6 +345,28 @@ export class SolanaLedgerAdapter {
       },
     ]);
     return { ...observation, value: parseAccountInfo(observation.value, minimumContextSlot) };
+  }
+
+  async getTransaction(signature: string): Promise<SolanaTransactionRecord | null> {
+    return (await this.getTransactionObservation(signature)).value;
+  }
+
+  async getTransactionObservation(
+    signature: string,
+  ): Promise<TransportObservation<SolanaTransactionRecord | null>> {
+    const normalizedSignature = requireSignature(signature, 'requested transaction signature');
+    const observation = await this.readSourced<unknown>('getTransaction', [
+      normalizedSignature,
+      {
+        encoding: 'json',
+        commitment: this.config.commitment,
+        maxSupportedTransactionVersion: 0,
+      },
+    ]);
+    return {
+      ...observation,
+      value: parseTransaction(observation.value, normalizedSignature),
+    };
   }
 
   async probe(): Promise<ProviderHealth> {

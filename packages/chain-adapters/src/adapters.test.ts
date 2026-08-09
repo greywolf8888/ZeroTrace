@@ -296,6 +296,99 @@ describe('capability probes and snapshots', () => {
     });
   });
 
+  it('validates EVM transaction and receipt identity before exposing ledger records', async () => {
+    const transactionHash = `0x${'1'.repeat(64)}`;
+    const blockHash = `0x${'2'.repeat(64)}`;
+    const transport = new FakeJsonRpcTransport(
+      {
+        eth_getTransactionByHash: {
+          hash: transactionHash,
+          blockHash,
+          blockNumber: '0x10',
+          transactionIndex: '0x2',
+          from: `0x${'3'.repeat(40)}`,
+          to: `0x${'4'.repeat(40)}`,
+          value: '0x2a',
+          nonce: '0x1',
+          gas: '0x5208',
+          input: '0x',
+        },
+        eth_getTransactionReceipt: {
+          transactionHash,
+          blockHash,
+          blockNumber: '0x10',
+          transactionIndex: '0x2',
+          from: `0x${'3'.repeat(40)}`,
+          to: `0x${'4'.repeat(40)}`,
+          contractAddress: null,
+          cumulativeGasUsed: '0x5208',
+          gasUsed: '0x5208',
+          status: '0x1',
+          logs: [{ address: `0x${'5'.repeat(40)}` }],
+        },
+      },
+      {
+        eth_getTransactionByHash: 'evm-transaction',
+        eth_getTransactionReceipt: 'evm-receipt',
+      },
+    );
+    const adapter = new EvmLedgerAdapter(
+      { id: 'ethereum', chainId: 1, chainName: 'Ethereum' },
+      transport,
+    );
+
+    await expect(adapter.getTransactionObservation(transactionHash)).resolves.toMatchObject({
+      endpointId: 'evm-transaction',
+      value: {
+        hash: transactionHash,
+        blockHash,
+        blockNumber: '0x10',
+        value: '0x2a',
+      },
+    });
+    await expect(adapter.getTransactionReceiptObservation(transactionHash)).resolves.toMatchObject({
+      endpointId: 'evm-receipt',
+      value: { transactionHash, status: '0x1', logCount: 1 },
+    });
+  });
+
+  it('rejects mismatched or internally inconsistent EVM transaction placement', async () => {
+    const requestedHash = `0x${'1'.repeat(64)}`;
+    const baseTransaction = {
+      hash: `0x${'2'.repeat(64)}`,
+      blockHash: null,
+      blockNumber: null,
+      transactionIndex: null,
+      from: `0x${'3'.repeat(40)}`,
+      to: null,
+      value: '0x0',
+      nonce: '0x0',
+      gas: '0x5208',
+      input: '0x',
+    };
+    const mismatched = new EvmLedgerAdapter(
+      { id: 'ethereum', chainId: 1, chainName: 'Ethereum' },
+      new FakeJsonRpcTransport({ eth_getTransactionByHash: baseTransaction }),
+    );
+    await expect(mismatched.getTransaction(requestedHash)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+
+    const inconsistent = new EvmLedgerAdapter(
+      { id: 'ethereum', chainId: 1, chainName: 'Ethereum' },
+      new FakeJsonRpcTransport({
+        eth_getTransactionByHash: {
+          ...baseTransaction,
+          hash: requestedHash,
+          blockNumber: '0x10',
+        },
+      }),
+    );
+    await expect(inconsistent.getTransaction(requestedHash)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+  });
+
   it('reads ledger anchors at explicit historical positions', async () => {
     const evmTransport = new FakeJsonRpcTransport({
       eth_getBlockByNumber: {
@@ -414,20 +507,89 @@ describe('capability probes and snapshots', () => {
   });
 
   it('reads Bitcoin address, transaction, and output-spend resources safely', async () => {
-    const address = { address: 'bc1qtest', chain_stats: {}, mempool_stats: {} };
-    const transaction = { txid: 'abc' };
+    const txid = 'a'.repeat(64);
+    const address = {
+      address: 'bc1qtest',
+      chain_stats: {
+        funded_txo_count: 1,
+        funded_txo_sum: 100,
+        spent_txo_count: 0,
+        spent_txo_sum: 0,
+        tx_count: 1,
+      },
+      mempool_stats: {
+        funded_txo_count: 0,
+        funded_txo_sum: 0,
+        spent_txo_count: 0,
+        spent_txo_sum: 0,
+        tx_count: 0,
+      },
+    };
+    const transaction = {
+      txid,
+      version: 2,
+      locktime: 0,
+      size: 120,
+      weight: 480,
+      fee: 200,
+      vin: [{}],
+      vout: [
+        {
+          scriptpubkey: '0014' + '1'.repeat(40),
+          scriptpubkey_type: 'v0_p2wpkh',
+          scriptpubkey_address: 'bc1qtest',
+          value: 100,
+        },
+      ],
+      status: { confirmed: false },
+    };
     const outspend = { spent: false };
     const transport = new FakeRestTransport({
       '/address/bc1qtest': address,
-      '/tx/abc': transaction,
-      '/tx/abc/outspend/0': outspend,
+      [`/tx/${txid}`]: transaction,
+      [`/tx/${txid}/outspend/0`]: outspend,
     });
     const adapter = new BitcoinUtxoLedgerAdapter({ id: 'esplora' }, transport);
-    await expect(adapter.getAddress('bc1qtest')).resolves.toBe(address);
-    await expect(adapter.getTransaction('abc')).resolves.toBe(transaction);
-    await expect(adapter.getOutspend('abc', 0)).resolves.toBe(outspend);
-    expect(() => adapter.getOutspend('abc', -1)).toThrow(ProviderError);
-    expect(() => adapter.getOutspend('abc', Number.MAX_SAFE_INTEGER + 1)).toThrow(ProviderError);
+    await expect(adapter.getAddress('bc1qtest')).resolves.toEqual(address);
+    await expect(adapter.getTransaction(txid)).resolves.toMatchObject({
+      txid,
+      feeSats: '200',
+      outputs: [{ valueSats: '100', scriptType: 'v0_p2wpkh' }],
+      status: { confirmed: false },
+    });
+    await expect(adapter.getOutspend(txid, 0)).resolves.toMatchObject({ spent: false });
+    await expect(adapter.getOutspend(txid, -1)).rejects.toBeInstanceOf(ProviderError);
+    await expect(adapter.getOutspend(txid, Number.MAX_SAFE_INTEGER + 1)).rejects.toBeInstanceOf(
+      ProviderError,
+    );
+  });
+
+  it('rejects mismatched Bitcoin transactions and incomplete spent-output records', async () => {
+    const txid = 'a'.repeat(64);
+    const transaction = {
+      txid: 'b'.repeat(64),
+      version: 2,
+      locktime: 0,
+      size: 100,
+      weight: 400,
+      fee: 100,
+      vin: [],
+      vout: [],
+      status: { confirmed: false },
+    };
+    const adapter = new BitcoinUtxoLedgerAdapter(
+      { id: 'esplora' },
+      new FakeRestTransport({
+        [`/tx/${txid}`]: transaction,
+        [`/tx/${txid}/outspend/0`]: { spent: true },
+      }),
+    );
+    await expect(adapter.getTransaction(txid)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+    await expect(adapter.getOutspend(txid, 0)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
   });
 
   it('reports Bitcoin provider health and malformed tip data', async () => {
@@ -490,6 +652,74 @@ describe('capability probes and snapshots', () => {
     await expect(unhealthy.probe()).resolves.toMatchObject({
       status: 'DOWN',
       head: { state: 'unavailable', reason: 'PROVIDER_DOWN' },
+    });
+  });
+
+  it('validates finalized Solana transactions and preserves lossless fee quantities', async () => {
+    const signature =
+      '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
+    const transport = new FakeJsonRpcTransport(
+      {
+        getTransaction: {
+          slot: 300_000_000,
+          blockTime: 1_700_000_000,
+          version: 0,
+          transaction: {
+            signatures: [signature],
+            message: { accountKeys: [], instructions: [], recentBlockhash: '1'.repeat(32) },
+          },
+          meta: { err: null, fee: '18446744073709551615' },
+        },
+      },
+      { getTransaction: 'solana-transaction' },
+    );
+    const adapter = new SolanaLedgerAdapter({ id: 'solana', commitment: 'finalized' }, transport);
+
+    await expect(adapter.getTransactionObservation(signature)).resolves.toMatchObject({
+      endpointId: 'solana-transaction',
+      value: {
+        signature,
+        slot: '300000000',
+        blockTime: '2023-11-14T22:13:20.000Z',
+        version: '0',
+        feeLamports: '18446744073709551615',
+        success: true,
+      },
+    });
+    expect(transport.calls[0]).toEqual({
+      method: 'getTransaction',
+      params: [
+        signature,
+        { encoding: 'json', commitment: 'finalized', maxSupportedTransactionVersion: 0 },
+      ],
+    });
+  });
+
+  it('returns null for an unavailable Solana transaction and rejects mismatched identity', async () => {
+    const signature =
+      '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
+    const absent = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({ getTransaction: null }),
+    );
+    await expect(absent.getTransaction(signature)).resolves.toBeNull();
+
+    const otherSignature =
+      '5ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A8';
+    const mismatched = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({
+        getTransaction: {
+          slot: 1,
+          blockTime: null,
+          version: 'legacy',
+          transaction: { signatures: [otherSignature], message: {} },
+          meta: { err: null, fee: 5000 },
+        },
+      }),
+    );
+    await expect(mismatched.getTransaction(signature)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
     });
   });
 

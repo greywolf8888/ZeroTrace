@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@zerotrace/evidence": "*",
-    "@zerotrace/schemas": "*"
+    "@zerotrace/schemas": "*",
+    "bs58": "6.0.0"
   }
 }

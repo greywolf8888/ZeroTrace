@@ -187,6 +187,11 @@ const defaultSolanaAccount = {
   space: 0,
 };
 
+const fixtureEvmTransactionHash = `0x${'1'.repeat(64)}`;
+const fixtureBitcoinTransactionId = 'c'.repeat(64);
+const fixtureSolanaSignature =
+  '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
+
 function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccount): AppRuntime {
   const evm = new EvmLedgerAdapter(
     { id: 'ethereum-rpc', chainId: 1, chainName: 'Ethereum' },
@@ -201,6 +206,31 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
       },
       eth_getBalance: '0x0',
       eth_getCode: '0x6000',
+      eth_getTransactionByHash: {
+        hash: fixtureEvmTransactionHash,
+        blockHash: '0x' + 'a'.repeat(64),
+        blockNumber: '0x10',
+        transactionIndex: '0x2',
+        from: `0x${'3'.repeat(40)}`,
+        to: `0x${'4'.repeat(40)}`,
+        value: '0x2a',
+        nonce: '0x1',
+        gas: '0x5208',
+        input: '0x',
+      },
+      eth_getTransactionReceipt: {
+        transactionHash: fixtureEvmTransactionHash,
+        blockHash: '0x' + 'a'.repeat(64),
+        blockNumber: '0x10',
+        transactionIndex: '0x2',
+        from: `0x${'3'.repeat(40)}`,
+        to: `0x${'4'.repeat(40)}`,
+        contractAddress: null,
+        cumulativeGasUsed: '0x5208',
+        gasUsed: '0x5208',
+        status: '0x1',
+        logs: [],
+      },
     }),
   );
   const bitcoin = new BitcoinUtxoLedgerAdapter(
@@ -231,6 +261,35 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
             tx_count: 2,
           },
         },
+        [`/tx/${fixtureBitcoinTransactionId}`]: {
+          txid: fixtureBitcoinTransactionId,
+          version: 2,
+          locktime: 0,
+          size: 120,
+          weight: 480,
+          fee: 200,
+          vin: [{}],
+          vout: [
+            {
+              scriptpubkey: '0014' + '1'.repeat(40),
+              scriptpubkey_type: 'v0_p2wpkh',
+              scriptpubkey_address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+              value: 100,
+            },
+          ],
+          status: {
+            confirmed: true,
+            block_height: 840000,
+            block_hash: 'b'.repeat(64),
+            block_time: 1_700_000_000,
+          },
+        },
+        [`/tx/${fixtureBitcoinTransactionId}/outspend/0`]: {
+          spent: true,
+          txid: 'd'.repeat(64),
+          vin: 0,
+          status: { confirmed: false },
+        },
       },
       {
         '/blocks/tip/height': 'bitcoin-anchor-a',
@@ -255,6 +314,16 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
         getAccountInfo: {
           context: { slot: 300_000_000 },
           value: solanaAccountValue,
+        },
+        getTransaction: {
+          slot: 300_000_000,
+          blockTime: 1_700_000_000,
+          version: 0,
+          transaction: {
+            signatures: [fixtureSolanaSignature],
+            message: { accountKeys: [], instructions: [], recentBlockhash: '1'.repeat(32) },
+          },
+          meta: { err: null, fee: 5000 },
         },
       },
       {
@@ -386,7 +455,7 @@ describe('ZeroTrace API contract', () => {
     const app = await createApp({ config, runtime: runtimeWithEvm(), logger: false });
     apps.push(app);
     const response = await app.inject({ method: 'GET', url: '/health/live' });
-    expect(response.statusCode).toBe(200);
+    expect(response.statusCode, response.body).toBe(200);
     expect(response.json()).toMatchObject({ status: 'UP', readOnly: true });
   });
 
@@ -866,7 +935,302 @@ describe('ZeroTrace API contract', () => {
     expect(solana.json().evidence[0].source).toBe('solana-state');
   });
 
-  it('treats an explicit null Solana account as known absence rather than Unknown', async () => {
+  it('queries confirmed EVM, Bitcoin, and Solana transactions with replayable Evidence', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const evm = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/EVM/TRANSACTION/${fixtureEvmTransactionHash}?chainId=eip155:1`,
+    });
+    expect(evm.statusCode).toBe(200);
+    expect(evm.json().facts).toMatchObject({
+      status: { state: 'known', value: 'CONFIRMED' },
+      blockNumber: { state: 'known', value: '16' },
+      valueAtomic: { state: 'known', value: '42' },
+      execution: { state: 'known', value: 'SUCCESS' },
+    });
+    expect(evm.json().metadata.snapshot).toMatchObject({
+      ledger: 'EVM',
+      blockNumber: '16',
+      blockHash: `0x${'a'.repeat(64)}`,
+    });
+    expect(evm.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'TRANSACTION',
+      'RECEIPT',
+    ]);
+
+    const bitcoin = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/BITCOIN/TRANSACTION/${fixtureBitcoinTransactionId}`,
+    });
+    expect(bitcoin.statusCode).toBe(200);
+    expect(bitcoin.json().facts).toMatchObject({
+      status: { state: 'known', value: 'CONFIRMED' },
+      blockHeight: { state: 'known', value: '840000' },
+      feeSats: { state: 'known', value: '200' },
+      outputCount: { state: 'known', value: '1' },
+    });
+    expect(bitcoin.json().metadata.snapshot).toMatchObject({
+      ledger: 'BITCOIN',
+      height: '840000',
+      blockHash: 'b'.repeat(64),
+    });
+    expect(bitcoin.json().evidence).toEqual([
+      expect.objectContaining({ kind: 'TRANSACTION', blockOrSlot: '840000' }),
+    ]);
+
+    const solana = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/SOLANA/TRANSACTION/${fixtureSolanaSignature}`,
+    });
+    expect(solana.statusCode).toBe(200);
+    expect(solana.json().facts).toMatchObject({
+      status: { state: 'known', value: 'CONFIRMED' },
+      slot: { state: 'known', value: '300000000' },
+      feeLamports: { state: 'known', value: '5000' },
+      execution: { state: 'known', value: 'SUCCESS' },
+    });
+    expect(solana.json().metadata.snapshot).toMatchObject({
+      ledger: 'SOLANA',
+      slot: '300000000',
+      commitment: 'finalized',
+    });
+    expect(solana.json().evidence).toEqual([
+      expect.objectContaining({ kind: 'TRANSACTION', blockOrSlot: '300000000' }),
+    ]);
+  });
+
+  it('keeps a confirmed EVM transaction known when its receipt remains unavailable', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      1,
+      new EvmLedgerAdapter(
+        { id: 'ethereum-rpc', chainId: 1, chainName: 'Ethereum' },
+        new FakeTransport({
+          eth_getBlockByNumber: {
+            number: '0x10',
+            hash: `0x${'a'.repeat(64)}`,
+            parentHash: `0x${'9'.repeat(64)}`,
+            timestamp: '0x65',
+          },
+          eth_getTransactionByHash: {
+            hash: fixtureEvmTransactionHash,
+            blockHash: `0x${'a'.repeat(64)}`,
+            blockNumber: '0x10',
+            transactionIndex: '0x2',
+            from: `0x${'3'.repeat(40)}`,
+            to: `0x${'4'.repeat(40)}`,
+            value: '0x2a',
+            nonce: '0x1',
+            gas: '0x5208',
+            input: '0x',
+          },
+          eth_getTransactionReceipt: null,
+        }),
+      ),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/EVM/TRANSACTION/${fixtureEvmTransactionHash}?chainId=eip155:1`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().facts).toMatchObject({
+      status: { state: 'known', value: 'CONFIRMED' },
+      execution: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      gasUsed: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      logCount: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+    });
+    expect(response.json().evidence).toEqual([expect.objectContaining({ kind: 'TRANSACTION' })]);
+  });
+
+  it('keeps pending, mempool, and null transaction observations distinct from confirmed facts', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      1,
+      new EvmLedgerAdapter(
+        { id: 'ethereum-rpc', chainId: 1, chainName: 'Ethereum' },
+        new FakeTransport({
+          eth_getBlockByNumber: {
+            number: '0x10',
+            hash: `0x${'a'.repeat(64)}`,
+            parentHash: `0x${'9'.repeat(64)}`,
+            timestamp: '0x65',
+          },
+          eth_getTransactionByHash: {
+            hash: fixtureEvmTransactionHash,
+            blockHash: null,
+            blockNumber: null,
+            transactionIndex: null,
+            from: `0x${'3'.repeat(40)}`,
+            to: null,
+            value: '0x0',
+            nonce: '0x1',
+            gas: '0x5208',
+            input: '0x',
+          },
+        }),
+      ),
+    );
+    runtime.bitcoinAdapter = new BitcoinUtxoLedgerAdapter(
+      { id: 'bitcoin-esplora' },
+      new FakeRestTransport({
+        '/blocks/tip/height': '840000',
+        '/block-height/840000': 'b'.repeat(64),
+        [`/block/${'b'.repeat(64)}`]: {
+          id: 'b'.repeat(64),
+          height: 840000,
+          previousblockhash: 'a'.repeat(64),
+        },
+        [`/tx/${fixtureBitcoinTransactionId}`]: {
+          txid: fixtureBitcoinTransactionId,
+          version: 2,
+          locktime: 0,
+          size: 120,
+          weight: 480,
+          fee: 200,
+          vin: [{}],
+          vout: [
+            {
+              scriptpubkey: '0014' + '1'.repeat(40),
+              scriptpubkey_type: 'v0_p2wpkh',
+              value: 100,
+            },
+          ],
+          status: { confirmed: false },
+        },
+      }),
+    );
+    runtime.solanaAdapter = new SolanaLedgerAdapter(
+      { id: 'solana-rpc', commitment: 'finalized' },
+      new FakeTransport({
+        getTransaction: null,
+        getSlot: 300_000_000,
+        getBlock: {
+          blockhash: '11111111111111111111111111111111',
+          previousBlockhash: '22222222222222222222222222222222',
+          parentSlot: 299_999_999,
+          blockTime: 1_700_000_000,
+        },
+      }),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const evm = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/EVM/TRANSACTION/${fixtureEvmTransactionHash}?chainId=eip155:1`,
+    });
+    expect(evm.statusCode).toBe(200);
+    expect(evm.json().facts).toMatchObject({
+      status: { state: 'known', value: 'PENDING' },
+      blockNumber: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      execution: { state: 'unknown', reason: 'NOT_QUERIED' },
+    });
+    expect(evm.json().consistency).toBe('PENDING_OBSERVATION_AT_FINALIZED_HEAD');
+
+    const bitcoin = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/BITCOIN/TRANSACTION/${fixtureBitcoinTransactionId}`,
+    });
+    expect(bitcoin.statusCode).toBe(200);
+    expect(bitcoin.json().facts).toMatchObject({
+      status: { state: 'known', value: 'MEMPOOL' },
+      blockHeight: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+    });
+    expect(bitcoin.json().metadata.snapshot.mempoolSnapshot).toMatch(/^sha256:[0-9a-f]{64}$/);
+
+    const solana = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/SOLANA/TRANSACTION/${fixtureSolanaSignature}`,
+    });
+    expect(solana.statusCode).toBe(200);
+    expect(solana.json().facts.status).toMatchObject({
+      state: 'unknown',
+      reason: 'INSUFFICIENT_DATA',
+    });
+    expect(solana.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'PROVIDER_OBSERVATION',
+      'NEGATIVE_EVIDENCE',
+    ]);
+    expect(runtime.evidenceLedger.get(solana.json().evidence[1].id)?.sourceEvidenceIds).toEqual([
+      solana.json().evidence[0].id,
+    ]);
+  });
+
+  it('queries Bitcoin outpoints at a tip plus mempool digest without coercing missing fields', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/BITCOIN/OUTPOINT/${fixtureBitcoinTransactionId}:0`,
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().facts).toMatchObject({
+      valueSats: { state: 'known', value: '100' },
+      spent: { state: 'known', value: true },
+      spendingTxid: { state: 'known', value: 'd'.repeat(64) },
+      spendingVin: { state: 'known', value: '0' },
+      spendingStatus: { state: 'known', value: 'MEMPOOL' },
+    });
+    expect(response.json().metadata.snapshot).toMatchObject({
+      ledger: 'BITCOIN',
+      height: '840000',
+      mempoolSnapshot: expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
+    });
+    expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'TRANSACTION',
+      'UTXO',
+    ]);
+    expect(runtime.evidenceLedger.get(response.json().evidence[0].id)).toBeDefined();
+    expect(runtime.evidenceLedger.get(response.json().evidence[1].id)).toBeDefined();
+  });
+
+  it('queries EVM, Bitcoin, and Solana blocks through position or hash identifiers', async () => {
+    const app = await createApp({ config, runtime: runtimeWithAllLedgers(), logger: false });
+    apps.push(app);
+
+    const fixtures = [
+      {
+        url: '/api/v1/ledger/EVM/BLOCK/16?chainId=eip155:1',
+        expected: { ledger: 'EVM', position: '16', hash: `0x${'a'.repeat(64)}` },
+      },
+      {
+        url: `/api/v1/ledger/BITCOIN/BLOCK/${'b'.repeat(64)}`,
+        expected: { ledger: 'BITCOIN', position: '840000', hash: 'b'.repeat(64) },
+      },
+      {
+        url: '/api/v1/ledger/SOLANA/BLOCK/300000000',
+        expected: {
+          ledger: 'SOLANA',
+          position: '300000000',
+          hash: '11111111111111111111111111111111',
+        },
+      },
+    ];
+    for (const fixture of fixtures) {
+      const response = await app.inject({ method: 'GET', url: fixture.url });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().subject).toMatchObject({
+        ledger: fixture.expected.ledger,
+        type: 'BLOCK',
+      });
+      expect(response.json().facts).toMatchObject({
+        position: { state: 'known', value: fixture.expected.position },
+        hash: { state: 'known', value: fixture.expected.hash },
+      });
+      expect(response.json().evidence).toEqual([expect.objectContaining({ kind: 'BLOCK' })]);
+    }
+  });
+
+  it('keeps Solana account absence known without coercing unavailable fields to zero', async () => {
     const app = await createApp({ config, runtime: runtimeWithAllLedgers(null), logger: false });
     apps.push(app);
     const response = await app.inject({
@@ -877,7 +1241,11 @@ describe('ZeroTrace API contract', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().facts).toEqual({
       exists: { state: 'known', value: false },
-      lamports: { state: 'known', value: '0' },
+      lamports: {
+        state: 'unknown',
+        reason: 'INSUFFICIENT_DATA',
+        detail: 'The account does not exist at this Snapshot.',
+      },
       owner: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
       executable: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
     });
@@ -906,6 +1274,27 @@ describe('ZeroTrace API contract', () => {
     expect(invalidIdentifier.statusCode).toBe(400);
     expect(invalidIdentifier.json().error.code).toBe('INVALID_IDENTIFIER');
 
+    const unsupportedOutpoint = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/EVM/OUTPOINT/${fixtureBitcoinTransactionId}:0`,
+    });
+    expect(unsupportedOutpoint.statusCode).toBe(400);
+    expect(unsupportedOutpoint.json().error.code).toBe('UNSUPPORTED_IDENTIFIER_TYPE');
+
+    const wrongChain = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/BITCOIN/TRANSACTION/${fixtureBitcoinTransactionId}?chainId=eip155:1`,
+    });
+    expect(wrongChain.statusCode).toBe(400);
+    expect(wrongChain.json().error.code).toBe('INVALID_CHAIN_ID');
+
+    const malformedProviderResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/EVM/TRANSACTION/${fixtureEvmTransactionHash}?chainId=eip155:1`,
+    });
+    expect(malformedProviderResponse.statusCode).toBe(502);
+    expect(malformedProviderResponse.json().error.code).toBe('INVALID_RESPONSE');
+
     const missingEvidence = await app.inject({
       method: 'GET',
       url: '/api/v1/evidence/ev_missing',
@@ -933,6 +1322,15 @@ describe('ZeroTrace API contract', () => {
     });
     expect(unavailable.statusCode).toBe(503);
     expect(unavailable.json().facts).toMatchObject({
+      state: 'unavailable',
+      reason: 'PROVIDER_UNCONFIGURED',
+    });
+    const unavailableLedgerRecord = await degraded.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/EVM/TRANSACTION/${fixtureEvmTransactionHash}?chainId=eip155:1`,
+    });
+    expect(unavailableLedgerRecord.statusCode).toBe(503);
+    expect(unavailableLedgerRecord.json().facts).toMatchObject({
       state: 'unavailable',
       reason: 'PROVIDER_UNCONFIGURED',
     });

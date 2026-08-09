@@ -195,6 +195,8 @@ export interface SubjectResponse {
   consistency?: string;
 }
 
+export type IntelligenceResponse = SubjectResponse;
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -261,6 +263,20 @@ export const api = {
         encodeURIComponent(candidate.normalizedId) +
         '?' +
         parameters.toString(),
+    );
+  },
+  ledgerRecord: (candidate: SubjectCandidate) => {
+    const parameters = new URLSearchParams();
+    if (candidate.ledger === 'EVM') parameters.set('chainId', candidate.chainId);
+    const suffix = parameters.size === 0 ? '' : '?' + parameters.toString();
+    return requestJson<IntelligenceResponse>(
+      '/api/v1/ledger/' +
+        candidate.ledger +
+        '/' +
+        candidate.type +
+        '/' +
+        encodeURIComponent(candidate.normalizedId) +
+        suffix,
     );
   },
   exitRace: (payload: unknown) =>

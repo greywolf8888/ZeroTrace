@@ -49,17 +49,17 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'npm run start -w @zerotrace/api',
+      command: 'node apps/api/dist/src/server.js',
       url: `${e2eApiUrl}/health/live`,
       env: { ...isolatedApiEnv, API_PORT: '18081' },
-      reuseExistingServer: false,
+      reuseExistingServer: !inCi,
       timeout: 60_000,
     },
     {
-      command: 'npm run preview -w @zerotrace/web',
+      command: 'node node_modules/vite/bin/vite.js preview apps/web --host 127.0.0.1 --port 4173',
       url: 'http://127.0.0.1:4173',
       env: { ...inheritedEnv, ZEROTRACE_API_PROXY_TARGET: e2eApiUrl },
-      reuseExistingServer: false,
+      reuseExistingServer: !inCi,
       timeout: 60_000,
     },
   ],

@@ -21,6 +21,35 @@ import {
 
 export type EvmSnapshot = z.infer<typeof EvmSnapshotSchema>;
 
+export interface EvmTransactionRecord {
+  hash: string;
+  blockHash: string | null;
+  blockNumber: string | null;
+  transactionIndex: string | null;
+  from: string;
+  to: string | null;
+  value: string;
+  nonce: string;
+  gas: string;
+  input: string;
+  raw: Readonly<Record<string, unknown>>;
+}
+
+export interface EvmTransactionReceiptRecord {
+  transactionHash: string;
+  blockHash: string;
+  blockNumber: string;
+  transactionIndex: string;
+  from: string;
+  to: string | null;
+  contractAddress: string | null;
+  cumulativeGasUsed: string;
+  gasUsed: string;
+  status: '0x0' | '0x1' | null;
+  logCount: number;
+  raw: Readonly<Record<string, unknown>>;
+}
+
 const ALLOWED_EVM_METHODS = new Set([
   'eth_chainId',
   'eth_blockNumber',
@@ -67,6 +96,114 @@ function requireHexData(value: unknown, field: string): string {
     throw new ProviderError('INVALID_RESPONSE', `EVM provider returned invalid ${field}.`);
   }
   return value;
+}
+
+function requireHash(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `EVM provider returned an invalid ${field}.`);
+  }
+  return value.toLowerCase();
+}
+
+function requireAddress(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `EVM provider returned an invalid ${field}.`);
+  }
+  return value;
+}
+
+function nullableAddress(value: unknown, field: string): string | null {
+  return value === null ? null : requireAddress(value, field);
+}
+
+function nullableHash(value: unknown, field: string): string | null {
+  return value === null ? null : requireHash(value, field);
+}
+
+function nullableHexQuantity(value: unknown, field: string): string | null {
+  return value === null ? null : requireHexQuantity(value, field);
+}
+
+function requireRecord(value: unknown, field: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `EVM provider returned an invalid ${field}.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function parseTransaction(value: unknown, expectedHash: string): EvmTransactionRecord | null {
+  if (value === null) return null;
+  const raw = requireRecord(value, 'transaction');
+  const hash = requireHash(raw.hash, 'transaction hash');
+  if (hash !== expectedHash.toLowerCase()) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'EVM transaction identity does not match the requested hash.',
+    );
+  }
+  const blockHash = nullableHash(raw.blockHash, 'transaction block hash');
+  const blockNumber = nullableHexQuantity(raw.blockNumber, 'transaction block number');
+  const transactionIndex = nullableHexQuantity(raw.transactionIndex, 'transaction index');
+  const placementFields = [blockHash, blockNumber, transactionIndex];
+  if (
+    placementFields.some((item) => item === null) &&
+    placementFields.some((item) => item !== null)
+  ) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'EVM transaction placement fields disagree about pending state.',
+    );
+  }
+  return {
+    hash,
+    blockHash,
+    blockNumber,
+    transactionIndex,
+    from: requireAddress(raw.from, 'transaction sender'),
+    to: nullableAddress(raw.to, 'transaction recipient'),
+    value: requireHexQuantity(raw.value, 'transaction value'),
+    nonce: requireHexQuantity(raw.nonce, 'transaction nonce'),
+    gas: requireHexQuantity(raw.gas, 'transaction gas limit'),
+    input: requireHexData(raw.input, 'transaction input'),
+    raw,
+  };
+}
+
+function parseReceipt(value: unknown, expectedHash: string): EvmTransactionReceiptRecord | null {
+  if (value === null) return null;
+  const raw = requireRecord(value, 'transaction receipt');
+  const transactionHash = requireHash(raw.transactionHash, 'receipt transaction hash');
+  if (transactionHash !== expectedHash.toLowerCase()) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'EVM receipt identity does not match the requested transaction.',
+    );
+  }
+  const statusValue = raw.status;
+  const status =
+    statusValue === undefined || statusValue === null
+      ? null
+      : requireHexQuantity(statusValue, 'receipt status');
+  if (status !== null && status !== '0x0' && status !== '0x1') {
+    throw new ProviderError('INVALID_RESPONSE', 'EVM receipt status must be 0x0 or 0x1.');
+  }
+  if (!Array.isArray(raw.logs)) {
+    throw new ProviderError('INVALID_RESPONSE', 'EVM receipt logs must be an array.');
+  }
+  return {
+    transactionHash,
+    blockHash: requireHash(raw.blockHash, 'receipt block hash'),
+    blockNumber: requireHexQuantity(raw.blockNumber, 'receipt block number'),
+    transactionIndex: requireHexQuantity(raw.transactionIndex, 'receipt transaction index'),
+    from: requireAddress(raw.from, 'receipt sender'),
+    to: nullableAddress(raw.to, 'receipt recipient'),
+    contractAddress: nullableAddress(raw.contractAddress, 'receipt contract address'),
+    cumulativeGasUsed: requireHexQuantity(raw.cumulativeGasUsed, 'receipt cumulative gas used'),
+    gasUsed: requireHexQuantity(raw.gasUsed, 'receipt gas used'),
+    status: status as '0x0' | '0x1' | null,
+    logCount: raw.logs.length,
+    raw,
+  };
 }
 
 function timestampFromHex(value: unknown): string {
@@ -222,16 +359,41 @@ export class EvmLedgerAdapter {
     return { ...observation, value: requireHexData(observation.value, 'bytecode') };
   }
 
-  async #readAnchor(blockTag: string, expectedPosition?: string): Promise<ChainAnchorRead> {
+  async getTransaction(hash: string): Promise<EvmTransactionRecord | null> {
+    return (await this.getTransactionObservation(hash)).value;
+  }
+
+  async getTransactionObservation(
+    hash: string,
+  ): Promise<TransportObservation<EvmTransactionRecord | null>> {
+    const normalizedHash = requireHash(hash, 'requested transaction hash');
+    const observation = await this.readSourced<unknown>('eth_getTransactionByHash', [
+      normalizedHash,
+    ]);
+    return { ...observation, value: parseTransaction(observation.value, normalizedHash) };
+  }
+
+  async getTransactionReceipt(hash: string): Promise<EvmTransactionReceiptRecord | null> {
+    return (await this.getTransactionReceiptObservation(hash)).value;
+  }
+
+  async getTransactionReceiptObservation(
+    hash: string,
+  ): Promise<TransportObservation<EvmTransactionReceiptRecord | null>> {
+    const normalizedHash = requireHash(hash, 'requested transaction hash');
+    const observation = await this.readSourced<unknown>('eth_getTransactionReceipt', [
+      normalizedHash,
+    ]);
+    return { ...observation, value: parseReceipt(observation.value, normalizedHash) };
+  }
+
+  #anchorFromBlock(
+    observation: TransportObservation<unknown>,
+    expectedPosition?: string,
+    expectedHash?: string,
+  ): ChainAnchorRead {
     const finality = this.config.snapshotBlockTag ?? 'finalized';
-    const observation = await this.readSourced<unknown>('eth_getBlockByNumber', [blockTag, false], {
-      cacheMode: 'bypass',
-    });
-    const rawBlock = observation.value;
-    if (typeof rawBlock !== 'object' || rawBlock === null || Array.isArray(rawBlock)) {
-      throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned an invalid block.');
-    }
-    const block = rawBlock as Record<string, unknown>;
+    const block = requireRecord(observation.value, 'block');
     const blockNumber = hexQuantity(block.number, 'block number').toString();
     if (expectedPosition !== undefined && blockNumber !== expectedPosition) {
       throw new ProviderError(
@@ -239,17 +401,14 @@ export class EvmLedgerAdapter {
         'EVM provider returned a block at a different position.',
       );
     }
-    const blockHash = block.hash;
-    if (typeof blockHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(blockHash)) {
-      throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned an invalid block hash.');
-    }
-    const parentBlockHash = block.parentHash;
-    if (typeof parentBlockHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(parentBlockHash)) {
+    const blockHash = requireHash(block.hash, 'block hash');
+    if (expectedHash !== undefined && blockHash !== expectedHash.toLowerCase()) {
       throw new ProviderError(
         'INVALID_RESPONSE',
-        'EVM provider returned an invalid parent block hash.',
+        'EVM provider returned a block with a different hash.',
       );
     }
+    const parentBlockHash = requireHash(block.parentHash, 'parent block hash');
     const observedAt = new Date().toISOString();
     const numericPosition = BigInt(blockNumber);
     const snapshot: EvmSnapshot = {
@@ -290,6 +449,13 @@ export class EvmLedgerAdapter {
     });
   }
 
+  async #readAnchor(blockTag: string, expectedPosition?: string): Promise<ChainAnchorRead> {
+    const observation = await this.readSourced<unknown>('eth_getBlockByNumber', [blockTag, false], {
+      cacheMode: 'bypass',
+    });
+    return this.#anchorFromBlock(observation, expectedPosition);
+  }
+
   readHeadAnchor(): Promise<ChainAnchorRead> {
     return this.#readAnchor(this.config.snapshotBlockTag ?? 'finalized');
   }
@@ -297,6 +463,16 @@ export class EvmLedgerAdapter {
   async readAnchorAt(position: string): Promise<ChainAnchorRead> {
     const numericPosition = requireDecimalPosition(position);
     return this.#readAnchor(`0x${numericPosition.toString(16)}`, position);
+  }
+
+  async readAnchorByHash(hash: string): Promise<ChainAnchorRead> {
+    const normalizedHash = requireHash(hash, 'requested block hash');
+    const observation = await this.readSourced<unknown>(
+      'eth_getBlockByHash',
+      [normalizedHash, false],
+      { cacheMode: 'bypass' },
+    );
+    return this.#anchorFromBlock(observation, undefined, normalizedHash);
   }
 
   async createSnapshot(): Promise<EvmSnapshot> {
