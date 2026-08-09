@@ -102,6 +102,7 @@ function runtimeWithEvm(): AppRuntime {
     providerRegistry: new ProviderRegistry([evm]),
     evmAdapters: new Map([[1, evm]]),
     evidenceLedger: new EvidenceLedger(),
+    ingestionStorage: {},
   };
 }
 
@@ -166,6 +167,7 @@ function runtimeWithAllLedgers(): AppRuntime {
     bitcoinAdapter: bitcoin,
     solanaAdapter: solana,
     evidenceLedger: new EvidenceLedger(),
+    ingestionStorage: {},
   };
 }
 
@@ -438,7 +440,11 @@ describe('ZeroTrace API contract', () => {
     expect(ready.json().providers).toHaveLength(3);
 
     const health = await app.inject({ method: 'GET', url: '/health' });
-    expect(health.json()).toMatchObject({ status: 'UP', readOnly: true });
+    expect(health.json()).toMatchObject({
+      status: 'UP',
+      readOnly: true,
+      ingestionStorage: { status: 'UNCONFIGURED', configured: 0, required: 3 },
+    });
 
     const capabilities = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
     expect(capabilities.json().boundaries).toEqual({
@@ -446,6 +452,12 @@ describe('ZeroTrace API contract', () => {
       transactionBroadcasting: 'FORBIDDEN',
       privateKeyStorage: 'FORBIDDEN',
     });
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
+        id: 'finalized-historical-ingestion',
+        status: 'STORAGE_REQUIRED',
+      }),
+    );
 
     const chains = await app.inject({ method: 'GET', url: '/api/v1/chains' });
     expect(chains.json().chains).toEqual(
@@ -464,6 +476,73 @@ describe('ZeroTrace API contract', () => {
     expect(metrics.statusCode).toBe(200);
     expect(metrics.headers['content-type']).toContain('text/plain');
     expect(metrics.body).toContain('zerotrace_http_requests_total');
+  });
+
+  it('reports each durable ingestion backend and degrades aggregate health on failure', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.ingestionStorage = {
+      rawFacts: {
+        health: vi.fn(async () => ({
+          status: 'UP' as const,
+          backend: 'CLICKHOUSE' as const,
+          durable: true as const,
+          checkedAt: new Date().toISOString(),
+          table: 'zerotrace.raw_chain_facts' as const,
+          logicalDeduplication: 'REPLACING_MERGE_TREE' as const,
+        })),
+      },
+      checkpoints: {
+        health: vi.fn(async () => ({
+          status: 'UP' as const,
+          backend: 'POSTGRES' as const,
+          durable: true as const,
+          checkedAt: new Date().toISOString(),
+        })),
+      },
+      artifacts: {
+        health: vi.fn(async () => ({
+          status: 'DOWN' as const,
+          backend: 'S3_COMPATIBLE' as const,
+          durable: true as const,
+          checkedAt: new Date().toISOString(),
+          bucket: 'zerotrace-raw',
+          versioning: true as const,
+          errorCode: 'OBJECT_STORE_UNAVAILABLE' as const,
+        })),
+      },
+    };
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const ready = await app.inject({ method: 'GET', url: '/health/ready' });
+    expect(ready.statusCode).toBe(200);
+    expect(ready.json()).toMatchObject({ status: 'UP' });
+    expect(ready.json()).not.toHaveProperty('ingestionStorage');
+
+    const health = await app.inject({ method: 'GET', url: '/health' });
+    expect(health.json()).toMatchObject({
+      status: 'DEGRADED',
+      ingestionStorage: {
+        status: 'DOWN',
+        configured: 3,
+        required: 3,
+        rawFacts: { status: 'UP', backend: 'CLICKHOUSE' },
+        checkpoints: { status: 'UP', backend: 'POSTGRES' },
+        artifacts: {
+          status: 'DOWN',
+          backend: 'S3_COMPATIBLE',
+          errorCode: 'OBJECT_STORE_UNAVAILABLE',
+        },
+      },
+    });
+
+    const capabilities = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
+        id: 'finalized-historical-ingestion',
+        status: 'IMPLEMENTED_DURABLE',
+      }),
+    );
   });
 
   it('fails readiness explicitly when configured durable storage is down', async () => {
@@ -583,6 +662,7 @@ describe('ZeroTrace API contract', () => {
       providerRegistry: new ProviderRegistry([]),
       evmAdapters: new Map(),
       evidenceLedger: new EvidenceLedger(),
+      ingestionStorage: {},
     };
     const degraded = await createApp({ config, runtime: noProviders, logger: false });
     apps.push(degraded);

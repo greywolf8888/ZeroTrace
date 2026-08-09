@@ -783,8 +783,11 @@ tbody tr:hover {
 }
 
 .status-degraded,
+.status-partial,
 .status-rate-limited,
 .status-provider-required,
+.status-storage-partially-configured,
+.status-storage-required,
 .status-external-validation-required,
 .status-license-isolation-required,
 .status-snapshot-required {

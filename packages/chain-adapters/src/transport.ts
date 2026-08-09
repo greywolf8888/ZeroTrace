@@ -147,7 +147,7 @@ function parseRetryAfter(response: Response, now: number): number | undefined {
   return Number.isFinite(date) ? Math.max(0, date - now) : undefined;
 }
 
-function parseProviderJson(body: string): unknown {
+export function parseProviderJson(body: string): unknown {
   type ReviverContext = { source?: string };
   const reviver = (_key: string, value: unknown, context?: ReviverContext): unknown => {
     if (typeof value === 'number' && Number.isInteger(value) && !Number.isSafeInteger(value)) {

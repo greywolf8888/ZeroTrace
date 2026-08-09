@@ -45,9 +45,14 @@ services:
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
       POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
       CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
       VALKEY_URL: redis://valkey:6379
       NATS_URL: nats://nats:4222
       OBJECT_STORE_ENDPOINT: http://minio:9000
+      OBJECT_STORE_ACCESS_KEY: ${OBJECT_STORE_ACCESS_KEY:-zerotrace}
+      OBJECT_STORE_SECRET_KEY: ${OBJECT_STORE_SECRET_KEY:-change-me-in-non-local-environments}
+      OBJECT_STORE_BUCKET: ${OBJECT_STORE_BUCKET:-zerotrace-raw}
       GMGN_API_KEY: ${GMGN_API_KEY:-}
       JUPITER_API_KEY: ${JUPITER_API_KEY:-}
       ETHERSCAN_API_KEY: ${ETHERSCAN_API_KEY:-}
@@ -60,6 +65,8 @@ services:
       postgres:
         condition: service_healthy
       clickhouse:
+        condition: service_healthy
+      minio:
         condition: service_healthy
       valkey:
         condition: service_healthy
@@ -74,6 +81,36 @@ services:
       - '${WEB_PORT:-5173}:80'
     depends_on:
       api:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  ingest-worker:
+    profiles: [ingest]
+    build:
+      context: .
+      target: ingest-worker
+    environment:
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      SQD_MAX_RANGE_BLOCKS: ${SQD_MAX_RANGE_BLOCKS:-50000}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+      CLICKHOUSE_URL: http://clickhouse:8123
+      OBJECT_STORE_ENDPOINT: http://minio:9000
+      OBJECT_STORE_ACCESS_KEY: ${OBJECT_STORE_ACCESS_KEY:-zerotrace}
+      OBJECT_STORE_SECRET_KEY: ${OBJECT_STORE_SECRET_KEY:-change-me-in-non-local-environments}
+      OBJECT_STORE_BUCKET: ${OBJECT_STORE_BUCKET:-zerotrace-raw}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     networks: [zerotrace]
 
@@ -156,6 +193,11 @@ services:
       - '${MINIO_CONSOLE_PORT:-9001}:9001'
     volumes:
       - minio-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null']
+      interval: 5s
+      timeout: 4s
+      retries: 20
     networks: [zerotrace]
 
   temporal:

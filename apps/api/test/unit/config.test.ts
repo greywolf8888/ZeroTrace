@@ -89,4 +89,48 @@ describe('API configuration', () => {
       expect(String(error)).not.toContain('sensitive-database-value');
     }
   });
+
+  it('loads durable ingestion origins while redacting storage secrets', () => {
+    const config = loadConfig({
+      NODE_ENV: 'test',
+      CLICKHOUSE_URL: 'https://clickhouse.example',
+      CLICKHOUSE_USERNAME: 'reader',
+      CLICKHOUSE_PASSWORD: 'clickhouse-secret',
+      OBJECT_STORE_ENDPOINT: 'https://objects.example',
+      OBJECT_STORE_ACCESS_KEY: 'access-key',
+      OBJECT_STORE_SECRET_KEY: 'object-secret',
+      OBJECT_STORE_BUCKET: 'zerotrace-raw-test',
+    });
+
+    expect(config.clickhouseUrl).toBe('https://clickhouse.example');
+    expect(config.objectStoreEndpoint).toBe('https://objects.example');
+    expect(config.objectStoreBucket).toBe('zerotrace-raw-test');
+    expect(config.clickhousePassword?.reveal()).toBe('clickhouse-secret');
+    expect(config.objectStoreSecretKey?.reveal()).toBe('object-secret');
+    expect(JSON.stringify(config)).not.toContain('clickhouse-secret');
+    expect(JSON.stringify(config)).not.toContain('object-secret');
+    expect(JSON.stringify(config)).toContain('[REDACTED]');
+  });
+
+  it('rejects partial or credential-bearing ingestion endpoints without echoing values', () => {
+    expect(() =>
+      loadConfig({ NODE_ENV: 'test', OBJECT_STORE_ENDPOINT: 'https://objects.example' }),
+    ).toThrow(
+      'OBJECT_STORE_ENDPOINT, OBJECT_STORE_ACCESS_KEY, and OBJECT_STORE_SECRET_KEY must be configured together.',
+    );
+    expect(() =>
+      loadConfig({
+        NODE_ENV: 'test',
+        CLICKHOUSE_URL: 'https://reader:sensitive@clickhouse.example',
+      }),
+    ).toThrow('CLICKHOUSE_URL must be a valid HTTP(S) origin without embedded credentials.');
+    try {
+      loadConfig({
+        NODE_ENV: 'test',
+        CLICKHOUSE_URL: 'https://reader:sensitive@clickhouse.example',
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain('sensitive');
+    }
+  });
 });

@@ -7,6 +7,7 @@ const workspacePackages = [
   'entity-engine',
   'evidence',
   'identifiers',
+  'ingestion',
   'platform-adapters',
   'rv',
   'schemas',
@@ -29,8 +30,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],
-      include: ['packages/*/src/**/*.ts', 'apps/api/src/**/*.ts'],
-      exclude: ['**/*.test.ts', 'packages/chain-adapters/src/index.ts', 'apps/api/src/server.ts'],
+      include: ['packages/*/src/**/*.ts', 'services/*/src/**/*.ts', 'apps/api/src/**/*.ts'],
+      exclude: [
+        '**/*.test.ts',
+        'packages/chain-adapters/src/index.ts',
+        'apps/api/src/server.ts',
+        'services/ingest-worker/src/cli.ts',
+      ],
       thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
     },
   },

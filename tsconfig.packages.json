@@ -5,6 +5,7 @@
     { "path": "./packages/identifiers" },
     { "path": "./packages/evidence" },
     { "path": "./packages/storage" },
+    { "path": "./packages/ingestion" },
     { "path": "./packages/chain-adapters" },
     { "path": "./packages/platform-adapters" },
     { "path": "./packages/entity-engine" },

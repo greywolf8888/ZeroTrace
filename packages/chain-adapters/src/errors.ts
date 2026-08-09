@@ -39,7 +39,10 @@ export class ProviderError extends Error {
 
 export function toProviderError(error: unknown): ProviderError {
   if (error instanceof ProviderError) return error;
-  if (error instanceof DOMException && error.name === 'AbortError') {
+  if (
+    error instanceof DOMException &&
+    (error.name === 'AbortError' || error.name === 'TimeoutError')
+  ) {
     return new ProviderError('TIMEOUT', 'Provider request timed out.', {
       retryable: true,
       cause: error,

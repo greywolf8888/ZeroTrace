@@ -12,8 +12,10 @@
     }
   },
   "dependencies": {
+    "@clickhouse/client": "1.23.1",
     "@zerotrace/evidence": "*",
     "@zerotrace/schemas": "*",
+    "minio": "8.0.7",
     "pg": "8.23.0"
   },
   "devDependencies": {

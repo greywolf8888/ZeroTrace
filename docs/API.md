@@ -11,7 +11,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | ------ | ---------------------- | ---------------------------------------------------------- |
 | GET    | `/health/live`         | process liveness and read-only invariant                   |
 | GET    | `/health/ready`        | provider- and configured-storage-aware readiness           |
-| GET    | `/health`              | full provider and Evidence-storage state                   |
+| GET    | `/health`              | full provider, Evidence, and ingestion-storage state       |
 | GET    | `/metrics`             | Prometheus text exposition                                 |
 | GET    | `/api/v1/capabilities` | implemented, provider-required, and forbidden capabilities |
 | GET    | `/api/v1/chains`       | configured chain adapters                                  |
@@ -102,6 +102,18 @@ repository, `POSTGRES`/`DOWN` with a safe error code when configured storage is 
 `MEMORY`/`EPHEMERAL` for an intentional no-`POSTGRES_URL` development runtime. Configured storage
 failure makes `/health/ready` return HTTP 503.
 
+`ingestionStorage` reports the independent historical backends:
+
+- `rawFacts`: ClickHouse `zerotrace.raw_chain_facts` schema and migration health;
+- `checkpoints`: PostgreSQL `ingestion_runs` schema and migration health;
+- `artifacts`: S3-compatible bucket reachability and versioning.
+
+Each component is `UP`, `DOWN`, or `UNCONFIGURED`; the aggregate additionally uses `PARTIAL` when
+only some components are configured. A historical backend failure degrades `/health`, but does not
+make `/health/ready` fail because current API request paths do not depend on the worker stores. The
+worker itself performs a fail-closed preflight across all stores before ingestion. Health output
+never returns storage passwords or provider URL paths.
+
 ## Numeric representation
 
 Atomic ledger quantities and reserves use decimal strings. JSON numbers are used only for bounded
@@ -119,5 +131,7 @@ Production conclusions must return:
 
 Current search classification is local structural evidence. Provider-backed subject reads and
 derived entity/RV/scenario results write their Evidence, derivation edges, and complete Snapshot to
-PostgreSQL when configured. Raw provider payload artifacts and historical facts are not yet written
-to object storage or ClickHouse.
+PostgreSQL when configured. The separate finalized worker stores each ingested block header as a
+content-addressed versioned raw artifact, binds it to durable Evidence/Snapshot provenance, stores an
+idempotent ClickHouse Raw Fact, and only then advances its PostgreSQL checkpoint. Transaction, log,
+trace, input/output, and instruction payloads are not yet normalized by that path.

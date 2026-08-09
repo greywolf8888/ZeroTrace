@@ -766,6 +766,48 @@ function DataHealth({
             <div className="provider-error">{titleCase(health.storage.errorCode)}</div>
           )}
         </article>
+        <article className="panel provider-card storage-card">
+          <div className="provider-card-top">
+            <div>
+              <span className="chain-tag storage-tag">HISTORY</span>
+              <h3>Finalized ingestion stores</h3>
+            </div>
+            <StatusPill status={health?.ingestionStorage.status ?? 'CHECKING'} />
+          </div>
+          <dl>
+            <div>
+              <dt>Raw facts</dt>
+              <dd>{titleCase(health?.ingestionStorage.rawFacts.status ?? 'checking')}</dd>
+            </div>
+            <div>
+              <dt>Checkpoints</dt>
+              <dd>{titleCase(health?.ingestionStorage.checkpoints.status ?? 'checking')}</dd>
+            </div>
+            <div>
+              <dt>Raw artifacts</dt>
+              <dd>{titleCase(health?.ingestionStorage.artifacts.status ?? 'checking')}</dd>
+            </div>
+            <div>
+              <dt>Configured</dt>
+              <dd>
+                {health === undefined
+                  ? 'Not available'
+                  : `${health.ingestionStorage.configured}/${health.ingestionStorage.required}`}
+              </dd>
+            </div>
+          </dl>
+          {[
+            health?.ingestionStorage.rawFacts,
+            health?.ingestionStorage.checkpoints,
+            health?.ingestionStorage.artifacts,
+          ].map((component, index) =>
+            component?.errorCode === undefined ? null : (
+              <div className="provider-error" key={`${component.backend}-${index}`}>
+                {titleCase(component.backend)}: {titleCase(component.errorCode)}
+              </div>
+            ),
+          )}
+        </article>
         {(health?.providers ?? []).map((provider) => (
           <article className="panel provider-card" key={provider.id}>
             <div className="provider-card-top">

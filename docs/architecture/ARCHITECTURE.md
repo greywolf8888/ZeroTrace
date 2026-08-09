@@ -110,8 +110,10 @@ flowchart TB
 
 Solid paths describe the terminal design. The current runtime wires query-time provider reads,
 canonical facts, a process-local Evidence cache backed by durable PostgreSQL Snapshots/nodes/edges,
-baseline entity inference, two deterministic RV algorithms, API, and UI. Dashed or absent raw-fact,
-artifact, graph, and workflow behavior must not be inferred as complete; consult the progress ledger.
+and a separate finalized block-header worker backed by versioned artifacts, ClickHouse Raw Facts, and
+PostgreSQL checkpoints. Baseline entity inference, two deterministic RV algorithms, API, and UI are
+also wired. Transaction-level normalization, graph projection, and workflow behavior must not be
+inferred as complete; consult the progress ledger.
 
 ## Canonical concepts
 
@@ -149,7 +151,9 @@ Evidence IDs hash canonical observation content plus the sorted derivation-edge 
 ledger, chain, source, locator, snapshot position, finality, payload hash, capture time, and summary.
 Derived and negative evidence must list source Evidence IDs. The in-memory ledger is an immutable
 runtime cache; the PostgreSQL repository transactionally persists complete Snapshots, Evidence nodes,
-and edges and supports drilldown after restart. Raw payload artifact storage remains pending.
+and edges and supports drilldown after restart. Implemented ingestion observations bind a
+content-addressed, read-after-write-verified raw artifact; query-time provider observations do not yet
+persist their raw response bodies.
 
 ### Entity relationship
 
@@ -197,6 +201,34 @@ sequenceDiagram
 No request path falls back to a send method. If a provider lacks the necessary historical or
 snapshot-consistent read, the operation returns unavailable.
 
+## Finalized ingestion commit sequence
+
+```mermaid
+sequenceDiagram
+  participant Worker
+  participant Checkpoint as PostgreSQL checkpoint
+  participant SQD as SQD finalized stream
+  participant Object as Versioned object store
+  participant Evidence as PostgreSQL Evidence
+  participant Facts as ClickHouse Raw Facts
+
+  Worker->>Checkpoint: begin or resume stable range identity
+  Checkpoint-->>Worker: next uncommitted block or terminal state
+  Worker->>SQD: bounded finalized range from next block
+  SQD-->>Worker: streamed JSONL block and finalized head
+  Worker->>Object: put canonical content-addressed artifact
+  Object-->>Worker: verified immutable reference
+  Worker->>Evidence: append Snapshot and raw Evidence
+  Evidence-->>Worker: canonical Evidence ID
+  Worker->>Facts: put Evidence-linked canonical Raw Fact
+  Facts-->>Worker: verified idempotent fact
+  Worker->>Checkpoint: advance monotonically
+```
+
+Checkpoint advancement is last. A crash before it causes replay of content-addressed/idempotent
+writes; a terminal checkpoint prevents any provider or storage call on rerun. Source-head reach is a
+distinct terminal state and never becomes an invented empty range.
+
 ## Provider boundary and transport security
 
 The shared provider transport is defensive because provider URLs are privileged server-side
@@ -220,19 +252,20 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                     | Current state                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot repository wired; other repositories pending |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | Schema initialized; ingestion not wired                        |
-| Object storage   | raw provider payloads and large artifacts by content hash                                              | Compose service only                                           |
-| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only                               |
-| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                                           |
-| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only                                  |
+| Store            | Intended authority                                                                                     | Current state                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot and ingestion checkpoints wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | finalized block-header Raw Facts wired; other facts/series pending            |
+| Object storage   | raw provider payloads and large artifacts by content hash                                              | versioned content-addressed artifacts wired for finalized ingestion           |
+| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only                                              |
+| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                                                          |
+| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only                                                 |
 
-PostgreSQL Evidence, derivation-edge, and Snapshot tables include append-only guards. Deferred
-database constraints reject inferred Evidence without a source edge, while the repository verifies
-canonical IDs, Snapshot identity, idempotent conflicts, and transactional writes. ClickHouse tables
-enforce a knowledge-state/value consistency constraint.
+PostgreSQL Evidence, derivation-edge, Snapshot, and ingestion-run tables include append-only or
+monotonic guards. Deferred database constraints reject inferred Evidence without a source edge,
+while repositories verify canonical IDs, Snapshot identity, idempotent conflicts, and transactional
+writes. ClickHouse Raw Facts bind Evidence and artifact references and use explicit logical
+deduplication; metric tables enforce a knowledge-state/value consistency constraint.
 
 ## Platform-adapter policy
 
@@ -250,10 +283,10 @@ The evaluated repositories, revisions, licenses, and intended boundaries are rec
 ## Deployment topology
 
 The default local topology is a single API and static web container plus PostgreSQL, ClickHouse,
-Valkey, NATS, and MinIO. Temporal and a graph database are profiles so the foundation remains
-startable while preserving the terminal seams. Production deployments must add TLS termination,
-secret management, provider-specific quotas, persistent backups, network policy, observability,
-horizontal worker scaling, and disaster recovery.
+Valkey, NATS, and MinIO. The bounded finalized-range worker, Temporal, and a graph database are
+profiles so the foundation remains startable while preserving terminal seams. Production
+deployments must add TLS termination, secret management, provider-specific quotas, persistent
+backups, network policy, observability, scheduling/horizontal worker scaling, and disaster recovery.
 
 ## Definition of production acceptance
 

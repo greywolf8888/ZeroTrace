@@ -21,6 +21,11 @@ jobs:
     env:
       POSTGRES_PASSWORD: zerotrace-ci
       POSTGRES_PORT: 55432
+      CLICKHOUSE_HTTP_PORT: 58123
+      MINIO_PORT: 59000
+      MINIO_CONSOLE_PORT: 59001
+      OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+      OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -46,15 +51,21 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Start disposable PostgreSQL
+      - name: Start disposable durable stores
         run: |
-          docker compose -p zerotrace-ci up -d --build postgres
+          docker compose -p zerotrace-ci up -d --build postgres clickhouse minio
           timeout 90 bash -c 'until docker compose -p zerotrace-ci exec -T postgres pg_isready -U zerotrace -d zerotrace; do sleep 2; done'
+          timeout 90 bash -c 'until curl -fsS http://127.0.0.1:58123/ping | grep -q Ok; do sleep 2; done'
+          timeout 90 bash -c 'until curl -fsS http://127.0.0.1:59000/minio/health/live >/dev/null; do sleep 2; done'
 
       - name: Unit and integration coverage
         run: npm run test:coverage
         env:
           TEST_POSTGRES_URL: postgresql://zerotrace:zerotrace-ci@127.0.0.1:55432/zerotrace
+          TEST_CLICKHOUSE_URL: http://127.0.0.1:58123
+          TEST_OBJECT_STORE_ENDPOINT: http://127.0.0.1:59000
+          TEST_OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+          TEST_OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
 
       - name: Production build
         run: npm run build
@@ -70,7 +81,7 @@ jobs:
           mkdir -p reports
           npm run sbom
 
-      - name: Stop disposable PostgreSQL
+      - name: Stop disposable durable stores
         if: always()
         run: docker compose -p zerotrace-ci down --volumes
 
@@ -145,6 +156,15 @@ jobs:
           push: false
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+
+      - name: Build ingestion worker image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          target: ingest-worker
+          push: false
+          cache-from: type=gha,scope=ingest-worker
+          cache-to: type=gha,mode=max,scope=ingest-worker
 
       - name: Build PostgreSQL initialization image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7

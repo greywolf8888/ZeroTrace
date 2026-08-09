@@ -11,7 +11,12 @@ import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
 import { PLATFORM_REGISTRY } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
-import { StorageError, type StorageHealth } from '@zerotrace/storage';
+import {
+  StorageError,
+  type ObjectStoreHealth,
+  type RawFactStorageHealth,
+  type StorageHealth,
+} from '@zerotrace/storage';
 import {
   AnalysisMetadataSchema,
   knownValue,
@@ -350,8 +355,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     });
     done();
   });
-  if (ownsRuntime && runtime.evidenceRepository !== undefined) {
-    app.addHook('onClose', async () => runtime.evidenceRepository?.close());
+  if (ownsRuntime && runtime.close !== undefined) {
+    app.addHook('onClose', runtime.close);
   }
 
   let healthCache:
@@ -386,6 +391,67 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           }
         : await runtime.evidenceRepository.health();
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
+    return value;
+  };
+  type UnconfiguredStorageHealth = {
+    status: 'UNCONFIGURED';
+    backend: 'CLICKHOUSE' | 'POSTGRES' | 'S3_COMPATIBLE';
+    durable: true;
+    checkedAt: string;
+  };
+  type IngestionStorageHealth = {
+    status: 'UP' | 'DOWN' | 'PARTIAL' | 'UNCONFIGURED';
+    configured: number;
+    required: 3;
+    checkedAt: string;
+    rawFacts: RawFactStorageHealth | UnconfiguredStorageHealth;
+    checkpoints:
+      | Awaited<ReturnType<NonNullable<AppRuntime['ingestionStorage']['checkpoints']>['health']>>
+      | UnconfiguredStorageHealth;
+    artifacts: ObjectStoreHealth | UnconfiguredStorageHealth;
+  };
+  let ingestionStorageCache: { expiresAt: number; value: IngestionStorageHealth } | undefined;
+  const ingestionStorageHealth = async (): Promise<IngestionStorageHealth> => {
+    if (ingestionStorageCache !== undefined && ingestionStorageCache.expiresAt > Date.now()) {
+      return ingestionStorageCache.value;
+    }
+    const checkedAt = new Date().toISOString();
+    const unconfigured = (
+      backend: UnconfiguredStorageHealth['backend'],
+    ): UnconfiguredStorageHealth => ({
+      status: 'UNCONFIGURED',
+      backend,
+      durable: true,
+      checkedAt,
+    });
+    const [rawFacts, checkpoints, artifacts] = await Promise.all([
+      runtime.ingestionStorage.rawFacts?.health() ?? unconfigured('CLICKHOUSE'),
+      runtime.ingestionStorage.checkpoints?.health() ?? unconfigured('POSTGRES'),
+      runtime.ingestionStorage.artifacts?.health() ?? unconfigured('S3_COMPATIBLE'),
+    ]);
+    const components = [rawFacts, checkpoints, artifacts];
+    const configured = components.filter((component) => component.status !== 'UNCONFIGURED').length;
+    const status =
+      configured === 0
+        ? 'UNCONFIGURED'
+        : components.some((component) => component.status === 'DOWN')
+          ? 'DOWN'
+          : configured === components.length
+            ? 'UP'
+            : 'PARTIAL';
+    const value: IngestionStorageHealth = {
+      status,
+      configured,
+      required: 3,
+      checkedAt,
+      rawFacts,
+      checkpoints,
+      artifacts,
+    };
+    ingestionStorageCache = {
+      expiresAt: Date.now() + options.config.healthCacheTtlMs,
+      value,
+    };
     return value;
   };
 
@@ -446,16 +512,23 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   });
 
   app.get('/health', { schema: { tags: ['system'] } }, async () => {
-    const [providers, storage] = await Promise.all([providerHealth(), storageHealth()]);
+    const [providers, storage, ingestionStorage] = await Promise.all([
+      providerHealth(),
+      storageHealth(),
+      ingestionStorageHealth(),
+    ]);
     return {
       status:
-        providers.some((provider) => provider.status === 'UP') && storage.status !== 'DOWN'
+        providers.some((provider) => provider.status === 'UP') &&
+        storage.status !== 'DOWN' &&
+        ingestionStorage.status !== 'DOWN'
           ? 'UP'
           : 'DEGRADED',
       service: 'zerotrace-api',
       readOnly: true,
       providers,
       storage,
+      ingestionStorage,
       checkedAt: new Date().toISOString(),
     };
   });
@@ -491,6 +564,19 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       {
         id: 'solana-current-state',
         status: runtime.solanaAdapter === undefined ? 'PROVIDER_REQUIRED' : 'IMPLEMENTED',
+      },
+      {
+        id: 'finalized-historical-ingestion',
+        status:
+          runtime.ingestionStorage.rawFacts !== undefined &&
+          runtime.ingestionStorage.checkpoints !== undefined &&
+          runtime.ingestionStorage.artifacts !== undefined
+            ? 'IMPLEMENTED_DURABLE'
+            : Object.values(runtime.ingestionStorage).some((value) => value !== undefined)
+              ? 'STORAGE_PARTIALLY_CONFIGURED'
+              : 'STORAGE_REQUIRED',
+        detail:
+          'Restart-safe SQD finalized block-header ingestion is implemented for Ethereum, BNB Smart Chain, Bitcoin, and Solana. Transaction, log, trace, input/output, and instruction normalization remains pending.',
       },
       { id: 'entity-evidence-fusion', status: 'IMPLEMENTED_BASELINE' },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },

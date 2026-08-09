@@ -56,7 +56,12 @@ The current foundation includes:
 - a Fastify API with OpenAPI, health, readiness, capability truth, and Prometheus metrics;
 - a responsive React intelligence workspace that renders missing knowledge as Unknown rather than 0;
 - append-only PostgreSQL Evidence/Snapshot persistence with restart-safe derivation drilldown;
-- PostgreSQL and ClickHouse initialization, plus Docker Compose for the local platform.
+- restart-safe SQD finalized block-header ingestion for Ethereum, BNB Smart Chain, Bitcoin, and
+  Solana;
+- content-addressed, versioned raw artifacts, append-only Evidence/Snapshots, monotonic ingestion
+  checkpoints, and idempotent ClickHouse Raw Facts;
+- PostgreSQL, ClickHouse, and object-store initialization, plus Docker Compose for the local
+  platform.
 
 Unimplemented API domains return `501 CAPABILITY_NOT_IMPLEMENTED` with typed Unknown metadata.
 They never return plausible-looking placeholder facts.
@@ -71,6 +76,7 @@ flowchart LR
   C --> EVM["EVM JSON-RPC"]
   C --> BTC["Bitcoin Esplora / Core"]
   C --> SOL["Solana JSON-RPC"]
+  SQD["SQD finalized streams"] --> W["Read-only ingest worker"]
   EVM --> F["Canonical facts"]
   BTC --> F
   SOL --> F
@@ -87,27 +93,29 @@ flowchart LR
   DB[("PostgreSQL")]
   CH[("ClickHouse")]
   OBJ[("Object storage")]
-  F -. "planned persistence" .-> CH
+  W -->|"canonical raw facts"| CH
+  W -->|"Evidence and checkpoints"| DB
+  W -->|"content-addressed raw artifacts"| OBJ
   EV -->|"snapshots, nodes, edges"| DB
-  EV -. "raw payloads" .-> OBJ
 ```
 
-The logical architecture is intentionally larger than the currently wired runtime. Raw-fact and
-artifact persistence, historical indexing, graph projection, protocol-specific decoders, and
-distributed workflows remain open work. Read [Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
+The finalized block-header path is wired end to end; it does not yet normalize transactions, logs,
+traces, Bitcoin inputs/outputs, or Solana instructions. Continuous scheduling, reorg/reconciliation,
+graph projection, protocol-specific decoders, and distributed workflows remain open work. Read
+[Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
 [Master Prompt](docs/architecture/ZEROTRACE_MASTER_PROMPT.md).
 
 ## Chain and platform scope
 
-| Domain            | Terminal scope                                                                                | Current repository state                                                            |
-| ----------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| EVM               | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Current-state RPC adapter; historical and protocol decoding pending                 |
-| Bitcoin           | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Esplora tip/address/transaction primitives; full history pipeline pending           |
-| Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Current account snapshot adapter; transaction/program decoding pending              |
-| Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending          |
-| Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Registry and generic detector only; official decoders require real-chain validation |
-| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product and exit-race kernel implemented; routing/tax/gas adapters pending |
-| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | PostgreSQL Snapshot/node/edge repository and restart-safe drilldown implemented     |
+| Domain            | Terminal scope                                                                                | Current repository state                                                                           |
+| ----------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| EVM               | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Current-state RPC plus finalized Ethereum/BSC block headers; transaction/protocol decoding pending |
+| Bitcoin           | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Esplora current state plus finalized block headers; input/output history pending                   |
+| Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Current account snapshots plus finalized slot headers; instruction decoding pending                |
+| Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                         |
+| Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Registry and generic detector only; official decoders require real-chain validation                |
+| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product and exit-race kernel implemented; routing/tax/gas adapters pending                |
+| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for ingested headers                 |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
 execution/label observation source; it is not a launchpad and can never merge entities by itself.
@@ -134,7 +142,16 @@ Open:
 
 The default Compose stack starts PostgreSQL, ClickHouse, Valkey, NATS, MinIO, API, and web UI. The
 API requires PostgreSQL for durable Evidence/Snapshot writes and exposes that state in readiness and
-the Data Health screen.
+the Data Health screen. Historical ingestion is an explicit read-only worker invocation:
+
+```bash
+docker compose --profile ingest run --rm ingest-worker \
+  --dataset ethereum-mainnet --from 0 --to 100
+```
+
+Supported dataset names are `ethereum-mainnet`, `binance-mainnet`, `bitcoin-mainnet`, and
+`solana-mainnet`. The worker accepts bounded finalized ranges only; it has no signing or broadcast
+interface.
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
 
@@ -156,6 +173,12 @@ The web application runs on port `5173` and the API on `8080`. With the example'
 `POSTGRES_URL`, Evidence is explicitly process-local. For durable host-side development, start
 PostgreSQL and set `POSTGRES_URL=postgresql://zerotrace:zerotrace@localhost:5432/zerotrace` before
 starting the API. Production/Compose paths do not silently fall back when configured storage fails.
+
+After starting PostgreSQL, ClickHouse, and MinIO, a host-side finalized range can be ingested with:
+
+```bash
+npm run ingest -- --dataset bitcoin-mainnet --from 0 --to 100
+```
 
 ## Verification
 
@@ -209,10 +232,13 @@ packages/
   entity-engine/        Evidence-weighted relationship inference
   evidence/             Content-addressed evidence graph
   identifiers/          Chain-aware identifier parsing
+  ingestion/            Restart-safe finalized ingestion pipeline
   platform-adapters/    Platform registry and detection boundary
   rv/                   Realizable-value and exit-race kernels
   schemas/              Canonical contracts and knowledge states
-  storage/              PostgreSQL Evidence and Snapshot repository
+  storage/              PostgreSQL, ClickHouse and object-artifact repositories
+services/
+  ingest-worker/        Bounded finalized-range worker CLI
 infra/
   postgres/init/        Relational/evidence schema
   clickhouse/init/      Raw fact and metric schema
@@ -227,8 +253,10 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Monorepo, canonical contracts, read-only transports, API/UI shell, local infrastructure
 - [x] Evidence primitives, identifier validation, baseline entity fusion, deterministic RV kernel
 - [x] Wire append-only PostgreSQL Evidence/Snapshot persistence and restart-safe drilldown
-- [ ] Wire ClickHouse raw-fact ingestion and immutable object payload storage
-- [ ] Implement finalized historical ingestion and reorg/finality handling for all three ledgers
+- [x] Wire ClickHouse Raw Facts and content-addressed, versioned object payload storage
+- [x] Implement restart-safe SQD finalized block-header ingestion across all three ledger families
+- [ ] Expand ingestion to transactions/logs/traces/inputs/outputs/instructions and add continuous,
+      reorg-aware reconciliation
 - [ ] Add versioned Flap, Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs

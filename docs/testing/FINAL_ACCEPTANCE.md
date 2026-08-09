@@ -19,7 +19,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Content-addressed evidence primitive and derivation traversal
 - [x] Durable append-only Snapshot, Evidence-node, and derivation-edge repository
 - [x] Restart-safe Evidence drilldown and real PostgreSQL constraint tests
-- [ ] Content-addressed raw payload repository
+- [x] Content-addressed, versioned raw payload repository for implemented ingestion records
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [ ] Reorg/replay and cross-provider reconciliation tests
 - [ ] Temporal graph projection and rebuild
@@ -44,6 +44,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 ## Operations and security
 
 - [x] Environment example, Compose, initialization schemas and health checks
+- [x] Restart-safe bounded worker with PostgreSQL/ClickHouse/object-store preflight
 - [x] Dependency/source/license ledger
 - [ ] Managed secrets, TLS, network policy and least privilege
 - [ ] Backups, restore drill, retention and disaster recovery
@@ -61,3 +62,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 
 Until every applicable item for a release claim is checked with attached evidence, ZeroTrace must not
 be described as terminal-complete or production-approved.
+
+The unchecked historical-ingestion item is intentionally broader than the completed finalized
+block-header path: transaction/log/trace/input/output/instruction ingestion, continuous operation,
+reorg policy, and independent-provider reconciliation remain required.

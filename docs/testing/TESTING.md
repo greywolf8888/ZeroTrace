@@ -2,21 +2,21 @@
 
 ## Test layers
 
-| Layer       | Command                         | Purpose                                                 |
-| ----------- | ------------------------------- | ------------------------------------------------------- |
-| Format      | `npm run format:check`          | deterministic repository formatting                     |
-| Lint        | `npm run lint`                  | static correctness and hook rules                       |
-| Type        | `npm run typecheck`             | strict project-reference compilation                    |
-| Unit        | `npm run test:unit`             | canonical contracts and deterministic domain logic      |
-| Integration | `npm run test:integration`      | API contracts plus opt-in real PostgreSQL repository    |
-| Coverage    | `npm run test:coverage`         | line/function/statement 80%, branch 75% gate            |
-| Build       | `npm run build`                 | production package/API/web output                       |
-| E2E         | `npm run test:e2e`              | built app in real Chromium at desktop and mobile widths |
-| License     | `npm run license:check`         | production npm allowlist                                |
-| Audit       | `npm run audit`                 | high-severity full dependency graph gate                |
-| SBOM        | `npm run sbom`                  | CycloneDX dependency inventory                          |
-| Compose     | `docker compose config --quiet` | resolved topology validation                            |
-| Runtime     | `npm run health`                | live/ready HTTP and read-only invariant                 |
+| Layer       | Command                         | Purpose                                                       |
+| ----------- | ------------------------------- | ------------------------------------------------------------- |
+| Format      | `npm run format:check`          | deterministic repository formatting                           |
+| Lint        | `npm run lint`                  | static correctness and hook rules                             |
+| Type        | `npm run typecheck`             | strict project-reference compilation                          |
+| Unit        | `npm run test:unit`             | canonical contracts and deterministic domain logic            |
+| Integration | `npm run test:integration`      | API contracts plus opt-in PostgreSQL/ClickHouse/object stores |
+| Coverage    | `npm run test:coverage`         | line/function/statement 80%, branch 75% gate                  |
+| Build       | `npm run build`                 | production package/API/web output                             |
+| E2E         | `npm run test:e2e`              | built app in real Chromium at desktop and mobile widths       |
+| License     | `npm run license:check`         | production npm allowlist                                      |
+| Audit       | `npm run audit`                 | high-severity full dependency graph gate                      |
+| SBOM        | `npm run sbom`                  | CycloneDX dependency inventory                                |
+| Compose     | `docker compose config --quiet` | resolved topology validation                                  |
+| Runtime     | `npm run health`                | live/ready HTTP and read-only invariant                       |
 
 ## Required safety cases
 
@@ -34,6 +34,10 @@
   block/slot.
 - PostgreSQL writes are transactional and idempotent; Evidence, Snapshot, and derivation edges remain
   immutable and drill down after a repository restart.
+- finalized ingestion stores the raw artifact before Evidence/Raw Fact, advances checkpoints only
+  after durable writes, resumes monotonically, and makes terminal replay a no-op;
+- raw artifacts are content-addressed, read-after-write verified, and kept in a versioned bucket;
+- ClickHouse Raw Fact writes are idempotent and preserve Evidence/artifact provenance;
 - integers above `Number.MAX_SAFE_INTEGER` remain exact strings.
 - invalid EVM/Bitcoin/Solana checksums or structure do not become a valid address.
 - no-evidence entity input remains Unknown.
@@ -59,9 +63,13 @@ Do not make public tests depend on a floating chain head. Capture immutable evid
 terms permit it. Credentialed smoke tests must be opt-in and skip with a visible reason when secrets
 are absent.
 
-`tests/integration/postgres.test.ts` also requires explicit `TEST_POSTGRES_URL`. Use only a fresh,
-initialized disposable database. CI builds the repository's PostgreSQL target, waits for readiness,
-runs this suite under the coverage gate, and destroys its named test volume afterward.
+`tests/integration/postgres.test.ts` requires explicit `TEST_POSTGRES_URL`.
+`tests/integration/ingestion-storage.test.ts` additionally requires `TEST_CLICKHOUSE_URL`,
+`TEST_OBJECT_STORE_ENDPOINT`, `TEST_OBJECT_STORE_ACCESS_KEY`, and
+`TEST_OBJECT_STORE_SECRET_KEY`. Use only initialized disposable services. CI builds the repository's
+database targets, waits for PostgreSQL/ClickHouse/MinIO readiness, runs the suites under the coverage
+gate, and destroys the named test volumes afterward. Per-run identities make repeated execution
+against the same disposable stack safe; production targets remain forbidden.
 
 ## Browser tests
 
@@ -71,9 +79,13 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - explicit Unknown metric rendering;
 - valid EVM identifier classification without a provider;
 - scenario gating;
-- data-health navigation and explicit Evidence-storage durability state;
+- data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
 - mobile viewport layout.
 - containment of primary panels within the mobile viewport.
+
+The Playwright configuration never reuses an already-listening local server. It also clears
+provider and durable-storage runtime variables for its API process, so a developer's provider key,
+database, or unrelated process cannot silently contaminate browser acceptance.
 
 Install Chromium once with `npx playwright install chromium`. Test artifacts stay under
 `output/playwright` and are not production fixtures.

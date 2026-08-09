@@ -8,6 +8,10 @@ import {
   type Evidence,
 } from '@zerotrace/schemas';
 
+export * from './raw-artifacts.js';
+export * from './clickhouse.js';
+export * from './ingestion-checkpoints.js';
+
 type DatabaseRow = Record<string, unknown>;
 
 export interface DatabaseQueryResult {

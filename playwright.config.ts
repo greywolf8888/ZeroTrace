@@ -5,6 +5,31 @@ const e2eApiUrl = 'http://127.0.0.1:18081';
 const inheritedEnv = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
 );
+const isolatedApiEnv = {
+  ...inheritedEnv,
+  NODE_ENV: 'test',
+  LOG_LEVEL: 'silent',
+  ALCHEMY_API_KEY: '',
+  ETH_RPC_URL: '',
+  EVM_ETHEREUM_RPC_URL: '',
+  EVM_ETHEREUM_RPC_URLS: '',
+  BSC_RPC_URL: '',
+  EVM_BSC_RPC_URL: '',
+  EVM_BSC_RPC_URLS: '',
+  BTC_ESPLORA_URL: '',
+  BITCOIN_ESPLORA_URL: '',
+  BITCOIN_ESPLORA_URLS: '',
+  SOLANA_RPC_URL: '',
+  SOLANA_RPC_URLS: '',
+  POSTGRES_URL: '',
+  CLICKHOUSE_URL: '',
+  CLICKHOUSE_USERNAME: '',
+  CLICKHOUSE_PASSWORD: '',
+  OBJECT_STORE_ENDPOINT: '',
+  OBJECT_STORE_ACCESS_KEY: '',
+  OBJECT_STORE_SECRET_KEY: '',
+  OBJECT_STORE_BUCKET: '',
+};
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -26,15 +51,15 @@ export default defineConfig({
     {
       command: 'npm run start -w @zerotrace/api',
       url: `${e2eApiUrl}/health/live`,
-      env: { ...inheritedEnv, API_PORT: '18081' },
-      reuseExistingServer: !inCi,
+      env: { ...isolatedApiEnv, API_PORT: '18081' },
+      reuseExistingServer: false,
       timeout: 60_000,
     },
     {
       command: 'npm run preview -w @zerotrace/web',
       url: 'http://127.0.0.1:4173',
       env: { ...inheritedEnv, ZEROTRACE_API_PROXY_TARGET: e2eApiUrl },
-      reuseExistingServer: !inCi,
+      reuseExistingServer: false,
       timeout: 60_000,
     },
   ],

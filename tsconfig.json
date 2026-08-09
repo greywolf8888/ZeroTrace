@@ -3,6 +3,7 @@
   "references": [
     { "path": "./tsconfig.packages.json" },
     { "path": "./apps/api" },
-    { "path": "./apps/web" }
+    { "path": "./apps/web" },
+    { "path": "./services/ingest-worker" }
   ]
 }

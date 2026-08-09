@@ -3,15 +3,16 @@
 ## Current deployment classification
 
 The repository supports a reproducible local/staging topology. It is **not production-approved**:
-only Evidence/Snapshot persistence is wired; authentication/authorization, remaining durable
-repositories, multi-provider reconciliation, historical ingestion, backup recovery, load testing,
-and real-chain acceptance remain incomplete.
+Evidence/Snapshot persistence and bounded finalized block-header ingestion are wired;
+authentication/authorization, remaining durable repositories, transaction-level history,
+multi-provider reconciliation, backup recovery, load testing, and terminal real-chain acceptance
+remain incomplete.
 
 ## Build
 
 ```bash
 docker compose config --quiet
-docker compose build api web postgres clickhouse
+docker compose build api web ingest-worker postgres clickhouse
 ```
 
 The API image runs as the unprivileged Node user and is pruned of test, build, and development-log
@@ -40,8 +41,21 @@ Add the optional graph projection store:
 docker compose --profile graph up -d
 ```
 
-Profiles expose architecture seams; starting them does not mean their application repositories or
-workers are implemented.
+Profiles expose architecture seams. The `ingest` worker is implemented for bounded finalized block
+headers; the `full` workflow and `graph` profiles do not imply their application projections or
+orchestration are implemented.
+
+Run one bounded finalized range through the implemented worker profile:
+
+```bash
+docker compose --profile ingest run --rm ingest-worker \
+  --dataset binance-mainnet --from 0 --to 100
+```
+
+The worker checks PostgreSQL Evidence/checkpoint schemas, ClickHouse Raw Facts, and the versioned
+object bucket before reading SQD. It is restart-safe for the same dataset/range/query identity and
+does not contain any chain-write operation. Scheduling and continuous-head following are not yet
+supplied.
 
 ## Health and smoke checks
 
@@ -57,6 +71,9 @@ Expected invariants:
 - `/health/live` returns HTTP 200, `status: UP`, and `readOnly: true`;
 - readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
+- `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
+- a configured historical backend failure degrades aggregate health, while API readiness continues
+  to describe whether current API requests can be served;
 - capability output marks signing, broadcasting, and key storage as `FORBIDDEN`;
 - missing capabilities return 501 rather than fabricated data;
 - the UI renders provider failures and Unknown values visibly.
@@ -72,7 +89,8 @@ Before internet-facing deployment, add and verify:
 - redundant archive-grade providers with consistency checks;
 - encrypted persistent volumes, backups, restore drills, retention, and deletion policy;
 - migration automation plus remaining PostgreSQL and ClickHouse application repositories;
-- object-store immutability/versioning;
+- managed object retention/object-lock policy beyond the implemented versioned content-addressed
+  bucket;
 - metrics, logs, traces, alerts, SLOs, and incident response;
 - worker scaling and replay-safe workflow semantics;
 - image digest pinning, signature/provenance, vulnerability scan, and SBOM archival;

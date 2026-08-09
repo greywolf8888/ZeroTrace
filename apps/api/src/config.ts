@@ -43,6 +43,13 @@ const EnvironmentSchema = z.object({
   SOLANA_COMMITMENT: z.enum(['processed', 'confirmed', 'finalized']).default('finalized'),
   SQD_PORTAL_URL: optionalString,
   POSTGRES_URL: optionalString,
+  CLICKHOUSE_URL: optionalString,
+  CLICKHOUSE_USERNAME: optionalString,
+  CLICKHOUSE_PASSWORD: optionalString,
+  OBJECT_STORE_ENDPOINT: optionalString,
+  OBJECT_STORE_ACCESS_KEY: optionalString,
+  OBJECT_STORE_SECRET_KEY: optionalString,
+  OBJECT_STORE_BUCKET: optionalString,
   GMGN_API_KEY: optionalString,
   JUPITER_API_KEY: optionalString,
   ETHERSCAN_API_KEY: optionalString,
@@ -59,6 +66,11 @@ export interface ProviderResilienceConfig {
   circuitResetMs: number;
   cacheTtlMs: number;
   cacheMaxEntries: number;
+}
+
+export interface ConfigSecret {
+  reveal(): string;
+  toJSON(): '[REDACTED]';
 }
 
 export interface AppConfig {
@@ -89,6 +101,13 @@ export interface AppConfig {
   solanaCommitment: 'processed' | 'confirmed' | 'finalized';
   sqdPortalUrl?: string;
   postgresUrl?: string;
+  clickhouseUrl?: string;
+  clickhouseUsername?: string;
+  clickhousePassword?: ConfigSecret;
+  objectStoreEndpoint?: string;
+  objectStoreAccessKey?: string;
+  objectStoreSecretKey?: ConfigSecret;
+  objectStoreBucket?: string;
   gmgnConfigured: boolean;
   jupiterConfigured: boolean;
   etherscanConfigured: boolean;
@@ -137,6 +156,33 @@ function optionalUrl(rawUrl: string | undefined, field: string): string | undefi
   return rawUrl === undefined ? undefined : validateUrl(rawUrl, field);
 }
 
+function optionalOrigin(rawUrl: string | undefined, field: string): string | undefined {
+  if (rawUrl === undefined) return undefined;
+  try {
+    const url = new URL(rawUrl);
+    if (
+      !['https:', 'http:'].includes(url.protocol) ||
+      url.username !== '' ||
+      url.password !== '' ||
+      (url.pathname !== '' && url.pathname !== '/') ||
+      url.search !== '' ||
+      url.hash !== ''
+    ) {
+      throw new Error('invalid origin');
+    }
+    return url.origin;
+  } catch {
+    throw new Error(`${field} must be a valid HTTP(S) origin without embedded credentials.`);
+  }
+}
+
+function secret(value: string): ConfigSecret {
+  return Object.freeze({
+    reveal: () => value,
+    toJSON: () => '[REDACTED]' as const,
+  });
+}
+
 function optionalPostgresUrl(rawUrl: string | undefined): string | undefined {
   if (rawUrl === undefined) return undefined;
   try {
@@ -182,6 +228,27 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
   const solanaPrimary = firstUrl(solanaRpcUrls).primary;
   const sqdPortalUrl = optionalUrl(parsed.SQD_PORTAL_URL, 'SQD Portal URL');
   const postgresUrl = optionalPostgresUrl(parsed.POSTGRES_URL);
+  const clickhouseUrl = optionalOrigin(parsed.CLICKHOUSE_URL, 'CLICKHOUSE_URL');
+  const objectStoreEndpoint = optionalOrigin(parsed.OBJECT_STORE_ENDPOINT, 'OBJECT_STORE_ENDPOINT');
+  if (
+    clickhouseUrl === undefined &&
+    (parsed.CLICKHOUSE_USERNAME !== undefined || parsed.CLICKHOUSE_PASSWORD !== undefined)
+  ) {
+    throw new Error('CLICKHOUSE_URL is required when ClickHouse credentials are configured.');
+  }
+  const objectStoreValues = [
+    objectStoreEndpoint,
+    parsed.OBJECT_STORE_ACCESS_KEY,
+    parsed.OBJECT_STORE_SECRET_KEY,
+  ];
+  const configuredObjectStoreValues = objectStoreValues.filter(
+    (value): value is string => value !== undefined,
+  );
+  if (configuredObjectStoreValues.length > 0 && configuredObjectStoreValues.length !== 3) {
+    throw new Error(
+      'OBJECT_STORE_ENDPOINT, OBJECT_STORE_ACCESS_KEY, and OBJECT_STORE_SECRET_KEY must be configured together.',
+    );
+  }
 
   return {
     environment: parsed.NODE_ENV,
@@ -229,5 +296,20 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     ...(solanaPrimary === undefined ? {} : { solanaRpcUrl: solanaPrimary }),
     ...(sqdPortalUrl === undefined ? {} : { sqdPortalUrl }),
     ...(postgresUrl === undefined ? {} : { postgresUrl }),
+    ...(clickhouseUrl === undefined ? {} : { clickhouseUrl }),
+    ...(parsed.CLICKHOUSE_USERNAME === undefined
+      ? {}
+      : { clickhouseUsername: parsed.CLICKHOUSE_USERNAME }),
+    ...(parsed.CLICKHOUSE_PASSWORD === undefined
+      ? {}
+      : { clickhousePassword: secret(parsed.CLICKHOUSE_PASSWORD) }),
+    ...(objectStoreEndpoint === undefined
+      ? {}
+      : {
+          objectStoreEndpoint,
+          objectStoreAccessKey: parsed.OBJECT_STORE_ACCESS_KEY as string,
+          objectStoreSecretKey: secret(parsed.OBJECT_STORE_SECRET_KEY as string),
+          objectStoreBucket: parsed.OBJECT_STORE_BUCKET ?? 'zerotrace-raw',
+        }),
   };
 }

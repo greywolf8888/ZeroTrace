@@ -53,7 +53,24 @@ export interface HealthResponse {
   readOnly: boolean;
   providers: ProviderHealth[];
   storage: StorageHealth;
+  ingestionStorage: {
+    status: 'UP' | 'DOWN' | 'PARTIAL' | 'UNCONFIGURED';
+    configured: number;
+    required: number;
+    checkedAt: string;
+    rawFacts: IngestionStorageComponentHealth;
+    checkpoints: IngestionStorageComponentHealth;
+    artifacts: IngestionStorageComponentHealth & { bucket?: string };
+  };
   checkedAt: string;
+}
+
+export interface IngestionStorageComponentHealth {
+  status: 'UP' | 'DOWN' | 'UNCONFIGURED';
+  backend: 'CLICKHOUSE' | 'POSTGRES' | 'S3_COMPATIBLE';
+  durable: true;
+  checkedAt: string;
+  errorCode?: string;
 }
 
 export interface SubjectCandidate {

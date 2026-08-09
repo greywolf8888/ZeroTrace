@@ -12,7 +12,15 @@ import {
   type JsonRpcTransport,
 } from '@zerotrace/chain-adapters';
 import { EvidenceLedger } from '@zerotrace/evidence';
-import { PostgresEvidenceRepository, type EvidenceRepository } from '@zerotrace/storage';
+import {
+  ClickHouseRawFactRepository,
+  PostgresEvidenceRepository,
+  PostgresIngestionCheckpointRepository,
+  RawArtifactStore,
+  type EvidenceRepository,
+  type ObjectStoreHealth,
+  type RawFactStorageHealth,
+} from '@zerotrace/storage';
 
 import type { AppConfig } from './config.js';
 
@@ -23,6 +31,20 @@ export interface AppRuntime {
   solanaAdapter?: SolanaLedgerAdapter;
   evidenceLedger: EvidenceLedger;
   evidenceRepository?: EvidenceRepository;
+  ingestionStorage: {
+    rawFacts?: { health(): Promise<RawFactStorageHealth> };
+    checkpoints?: {
+      health(): Promise<{
+        status: 'UP' | 'DOWN';
+        backend: 'POSTGRES';
+        durable: true;
+        checkedAt: string;
+        errorCode?: string;
+      }>;
+    };
+    artifacts?: { health(): Promise<ObjectStoreHealth> };
+  };
+  close?: () => Promise<void>;
 }
 
 function policyFor(url: string, config: AppConfig): ProviderUrlPolicy {
@@ -190,6 +212,45 @@ export function createRuntime(config: AppConfig): AppRuntime {
           maxConnections: 10,
         });
 
+  const rawFacts =
+    config.clickhouseUrl === undefined
+      ? undefined
+      : new ClickHouseRawFactRepository({
+          url: config.clickhouseUrl,
+          requestTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+          ...(config.clickhouseUsername === undefined
+            ? {}
+            : { username: config.clickhouseUsername }),
+          ...(config.clickhousePassword === undefined
+            ? {}
+            : { password: config.clickhousePassword.reveal() }),
+        });
+  const checkpoints =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresIngestionCheckpointRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const artifacts =
+    config.objectStoreEndpoint === undefined ||
+    config.objectStoreAccessKey === undefined ||
+    config.objectStoreSecretKey === undefined
+      ? undefined
+      : new RawArtifactStore({
+          endpoint: config.objectStoreEndpoint,
+          accessKey: config.objectStoreAccessKey,
+          secretKey: config.objectStoreSecretKey.reveal(),
+          ...(config.objectStoreBucket === undefined ? {} : { bucket: config.objectStoreBucket }),
+        });
+
+  const close = async () => {
+    await Promise.all([evidenceRepository?.close(), checkpoints?.close(), rawFacts?.close()]);
+  };
+
   return {
     providerRegistry: new ProviderRegistry(
       providers,
@@ -197,6 +258,12 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ),
     evmAdapters,
     evidenceLedger: new EvidenceLedger(),
+    ingestionStorage: {
+      ...(rawFacts === undefined ? {} : { rawFacts }),
+      ...(checkpoints === undefined ? {} : { checkpoints }),
+      ...(artifacts === undefined ? {} : { artifacts }),
+    },
+    close,
     ...(evidenceRepository === undefined ? {} : { evidenceRepository }),
     ...(bitcoinAdapter === undefined ? {} : { bitcoinAdapter }),
     ...(solanaAdapter === undefined ? {} : { solanaAdapter }),

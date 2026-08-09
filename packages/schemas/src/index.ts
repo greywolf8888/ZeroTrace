@@ -6,6 +6,8 @@ export const ConfidenceSchema = z.number().min(0).max(1);
 export const CoverageRatioSchema = z.number().min(0).max(1);
 export const QuantityStringSchema = z.string().regex(/^-?\d+$/);
 export const DecimalStringSchema = z.string().regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/);
+export const JsonValueSchema = z.json();
+export type JsonValue = z.infer<typeof JsonValueSchema>;
 
 export const LedgerSchema = z.enum(['EVM', 'BITCOIN', 'SOLANA']);
 export type Ledger = z.infer<typeof LedgerSchema>;
@@ -112,6 +114,36 @@ export const EvidenceSchema = z.object({
   rawArtifactRef: z.string().optional(),
 });
 export type Evidence = z.infer<typeof EvidenceSchema>;
+
+export const RawArtifactEnvelopeSchema = z.object({
+  schema: z.literal('zerotrace-raw-artifact-v1'),
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  blockOrSlot: z.string().regex(/^\d+$/),
+  provider: z.string().min(1),
+  capturedAt: IsoDateTimeSchema,
+  payload: JsonValueSchema,
+});
+export type RawArtifactEnvelope = z.infer<typeof RawArtifactEnvelopeSchema>;
+
+export const RawChainFactSchema = z.object({
+  id: Hash256Schema,
+  schemaVersion: z.literal('zerotrace-raw-fact-v1'),
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  blockOrSlot: z.string().regex(/^\d+$/),
+  blockHash: z.string().min(1),
+  factType: z.string().min(1),
+  subject: z.string().min(1),
+  provider: z.string().min(1),
+  finality: z.string().min(1),
+  payload: JsonValueSchema,
+  payloadHash: Hash256Schema,
+  evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  rawArtifactRef: z.string().regex(/^s3:\/\/[a-z0-9][a-z0-9.-]+\/.+#sha256=[0-9a-f]{64}$/),
+  observedAt: IsoDateTimeSchema,
+});
+export type RawChainFact = z.infer<typeof RawChainFactSchema>;
 
 const SnapshotBaseSchema = z.object({
   capturedAt: IsoDateTimeSchema,

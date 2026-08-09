@@ -138,16 +138,55 @@ Snapshot content differs even when its block number matches. These tests validat
 and integrity behavior, not managed-database failover, backup/restore, encryption, retention, or
 production migration operations.
 
+## Finalized ingestion and three-store follow-up
+
+A fresh disposable `zerotrace-ingestion-test` Compose project applied PostgreSQL migration
+`004_ingestion_checkpoints`, initialized the ClickHouse Raw Fact migration, and enabled object-bucket
+versioning. The storage integration suite verified the required commit order (artifact → Evidence and
+Snapshot → Raw Fact → checkpoint), exact artifact replay, idempotent Raw Facts, monotonic resume, and
+terminal-run immutability. The complete integration suite then passed twice consecutively against
+the same disposable services, confirming stale rows do not create false pass/fail results.
+
+The clean HTTP SQD adapter read finalized data for each supported dataset and the complete pipeline
+persisted and replayed one canonical block/slot through real PostgreSQL, ClickHouse, and MinIO:
+
+| Dataset            | Position | Evidence ID                   | Raw Fact ID                                                        |
+| ------------------ | -------: | ----------------------------- | ------------------------------------------------------------------ |
+| `ethereum-mainnet` |        0 | `ev_2267648e57999ea5a34df53a` | `05c0c4f8a0688a64b5052470798de63fa06aa62b88091eb3060268ae3312ee8f` |
+| `binance-mainnet`  |        1 | `ev_a5d8c4c02c5f292b2eef7926` | `5b3c754a65f91ecbf3f360f6054ad014599acce232e30d6748b4e58790afd437` |
+| `bitcoin-mainnet`  |        0 | `ev_3d617ebc4c473fa6c71f1974` | `94d446e51370d70553aa6d36a30fe1c06692ba16704ec2bb81166f503438ce5c` |
+| `solana-mainnet`   |        0 | `ev_99e18dce14176c7e3aecd758` | `6ab508234b037cd58f819096d286f013bbba7421e6bde2231405202ad2a963cb` |
+
+The immediate replay reported `processedBlocks: 0` and `alreadyTerminal: true` for all four run
+identities. A host worker invocation ingested an Ethereum range, and the production container target
+ingested a BNB Smart Chain range through `docker compose --profile ingest run`; replay was a no-op.
+The worker image also built from `npm ci`, proving the workspace/link graph works from a clean image.
+
+A second completely fresh `zerotrace-acceptance` project started the full default seven-service
+topology on isolated ports. API, web, PostgreSQL, ClickHouse, Valkey, and MinIO health checks passed;
+NATS was running. `/health` reported Evidence storage plus Raw Facts, checkpoints, and artifacts as
+`UP`, while signing and broadcasting remained `FORBIDDEN`. Overall health was `DEGRADED` solely
+because public chain providers were unavailable from that isolated container network. With the
+secure default, the worker returned the safe code `PRIVATE_NETWORK_BLOCKED`; enabling the documented
+local interception-proxy exception then ingested a BNB Smart Chain finalized block, and an immediate
+replay returned `processedBlocks: 0` and `alreadyTerminal: true`.
+
+These observations validate finalized block-header transport, provenance, storage ordering, and
+restart behavior. They do **not** validate transaction/log/trace/input/output/instruction decoding,
+continuous scheduling, unfinalized forks/reorgs, cross-provider reconciliation, or protocol
+semantics. The interception-proxy exception documented above was still necessary on this host; the
+secure default remains `ALLOW_PRIVATE_PROVIDER_URLS=false`.
+
 ## Automated verification
 
-| Command                  | Result                                                                         |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| `npm run verify`         | pass: format, lint, typecheck, 113 unit, 18 integration, build, license, audit |
-| `npm run test:coverage`  | pass: 92.80% statements, 81.47% branches, 97.55% functions, 93.94% lines       |
-| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                              |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                         |
-| `docker compose config`  | pass                                                                           |
-| production Compose smoke | pass with the port overrides documented above                                  |
+| Command                  | Result                                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `npm run verify:full`    | pass: format, lint, typecheck, 146 unit, 25 integration, build, license, audit, coverage, 6 E2E, SBOM |
+| `npm run test:coverage`  | pass: 171 tests; 87.24% statements, 78.15% branches, 96.65% functions, 88.70% lines                   |
+| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                     |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                |
+| `docker compose config`  | pass                                                                                                  |
+| production Compose smoke | pass with the port overrides documented above                                                         |
 
 Remote CI for this branch, archive history, load, forced real-provider failover, reorg,
 backup/restore, and production security controls remain acceptance gates.

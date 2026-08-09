@@ -60,7 +60,8 @@ docker compose up --build
 
 Database initialization is automatic on a new Compose volume:
 
-- the PostgreSQL image contains and executes `infra/postgres/init/*.sql`;
+- the PostgreSQL image contains and executes `infra/postgres/init/*.sql`, including append-only
+  Evidence and restart-safe ingestion checkpoints;
 - the ClickHouse image contains and executes `infra/clickhouse/init/*.sql`.
 
 The SQL is copied into small project image stages instead of bind-mounted. This keeps initialization
@@ -76,6 +77,34 @@ POSTGRES_URL=postgresql://zerotrace:zerotrace@localhost:5432/zerotrace
 
 When that variable is present, database failure closes writes and readiness; the API does not fall
 back to process memory.
+
+## Finalized historical ingestion
+
+Start the three durable worker backends:
+
+```bash
+docker compose up -d postgres clickhouse minio
+```
+
+For a host-side worker, set `POSTGRES_URL` to the host port and use the object/ClickHouse defaults in
+`.env`:
+
+```bash
+npm run ingest -- --dataset ethereum-mainnet --from 0 --to 100
+```
+
+Or let Compose inject the internal service URLs:
+
+```bash
+docker compose --profile ingest run --rm ingest-worker \
+  --dataset solana-mainnet --from 0 --to 100
+```
+
+Valid datasets are `ethereum-mainnet`, `binance-mainnet`, `bitcoin-mainnet`, and
+`solana-mainnet`. Ranges are inclusive and capped by `SQD_MAX_RANGE_BLOCKS`. The worker streams only
+finalized data, writes raw artifact → Evidence/Snapshot → Raw Fact → checkpoint in that order, and
+resumes the same range identity after failure. A completed identity is a no-op on replay. It is a
+chain-read worker and contains no private-key, signing, swap, or broadcast interface.
 
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
@@ -108,9 +137,16 @@ Important values:
 | `SOLANA_RPC_URLS`                     | ordered Solana read-only RPC pool                                               |
 | `SOLANA_REQUESTS_PER_SECOND`          | per-endpoint Solana pacing                                                      |
 | `SOLANA_COMMITMENT`                   | processed, confirmed, or finalized; production analysis should use finalized    |
-| `SQD_PORTAL_URL`                      | reserved clean HTTP/sidecar boundary; historical ingestion is not wired yet     |
+| `SQD_PORTAL_URL`                      | clean HTTP origin used by the finalized ingestion worker                        |
+| `SQD_PROVIDER_ALLOW_HOSTS`            | worker-only exact hostname allowlist; defaults to `portal.sqd.dev`              |
+| `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                       |
+| `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                       |
 | `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present  |
 | `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests |
+| `CLICKHOUSE_URL` / credentials        | Raw Fact HTTP origin and optional separately supplied credentials               |
+| `OBJECT_STORE_*`                      | S3-compatible origin, credentials, and versioned raw-artifact bucket            |
+| `TEST_CLICKHOUSE_URL`                 | disposable initialized ClickHouse used by storage integration tests             |
+| `TEST_OBJECT_STORE_*`                 | disposable object store endpoint and credentials used by integration tests      |
 
 `PROVIDER_ALLOW_HOSTS` does not authorize transaction methods. Method allowlists remain enforced
 inside each adapter.
@@ -134,8 +170,8 @@ npm run test:integration
 npm run typecheck
 ```
 
-The PostgreSQL integration suite skips unless a disposable initialized database is explicitly
-provided. Example after starting a fresh test database:
+Durable-store integration tests skip unless all disposable backends are explicitly provided. A
+PostgreSQL-only run is still available:
 
 ```powershell
 $env:TEST_POSTGRES_URL = 'postgresql://zerotrace:zerotrace@127.0.0.1:5432/zerotrace'
@@ -145,6 +181,12 @@ Remove-Item Env:TEST_POSTGRES_URL
 
 Do not point `TEST_POSTGRES_URL` at production. Required CI creates and removes a dedicated Compose
 project and volume for this suite.
+
+The complete storage suite additionally uses `TEST_CLICKHOUSE_URL`,
+`TEST_OBJECT_STORE_ENDPOINT`, `TEST_OBJECT_STORE_ACCESS_KEY`, and
+`TEST_OBJECT_STORE_SECRET_KEY`. These tests create canonical test records and a versioned test
+bucket; point them only at disposable initialized services. Test identities are unique per run, so
+the same disposable stack can be tested repeatedly without stale rows producing false results.
 
 Run the complete non-browser gate:
 
@@ -179,10 +221,12 @@ The API starts on `http://localhost:8080`. Check:
 npm run health
 ```
 
-The readiness endpoint may report `DEGRADED` when no provider is configured, or HTTP 503 when a
-configured durable repository is unavailable. The no-provider state is valid for development;
-`readOnly` must still be true. Inspect the separate `storage` field rather than inferring database
-state from provider health.
+The readiness endpoint may report `DEGRADED` when no provider is configured, or HTTP 503 when the
+configured Evidence repository is unavailable. The no-provider state is valid for development;
+`readOnly` must still be true. Inspect `storage` for the request-serving Evidence repository and
+`ingestionStorage` for ClickHouse Raw Facts, PostgreSQL checkpoints, and raw artifacts. Each
+historical component reports `UP`, `DOWN`, or `UNCONFIGURED`; the aggregate also distinguishes
+`PARTIAL`.
 
 ## Web-only development
 

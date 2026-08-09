@@ -1,11 +1,16 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
+import { randomUUID } from 'node:crypto';
 
 import { createEvidence } from '@zerotrace/evidence';
-import { PostgresEvidenceRepository } from '@zerotrace/storage';
+import {
+  PostgresEvidenceRepository,
+  PostgresIngestionCheckpointRepository,
+} from '@zerotrace/storage';
 
 const connectionString = process.env.TEST_POSTGRES_URL;
 const postgresDescribe = connectionString === undefined ? describe.skip : describe;
+const checkpointTestRunId = randomUUID();
 
 const snapshot = {
   ledger: 'EVM' as const,
@@ -170,6 +175,103 @@ postgresDescribe('PostgreSQL durable Evidence integration', () => {
           ],
         ),
       ).rejects.toThrow(/source observation/);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL ingestion checkpoint integration', () => {
+  let checkpoints: PostgresIngestionCheckpointRepository;
+
+  beforeAll(() => {
+    checkpoints = new PostgresIngestionCheckpointRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => checkpoints.close());
+
+  it('reports the migration-backed checkpoint store as durable', async () => {
+    await expect(checkpoints.health()).resolves.toMatchObject({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+    });
+  });
+
+  it('resumes the same run identity and advances monotonically to a terminal state', async () => {
+    const input = {
+      source: 'sqd:ethereum-mainnet',
+      dataset: 'ethereum-mainnet',
+      ledger: 'EVM' as const,
+      chainId: '1',
+      fromBlock: 100,
+      toBlock: 102,
+      query: {
+        profile: 'BLOCK_HEADERS',
+        includeAllBlocks: true,
+        testRunId: checkpointTestRunId,
+      },
+      startedAt: '2026-08-09T13:00:00.000Z',
+    };
+    const started = await checkpoints.begin(input);
+    const resumed = await checkpoints.begin({
+      ...input,
+      startedAt: '2026-08-09T14:00:00.000Z',
+    });
+    expect(resumed).toEqual(started);
+
+    const advanced = await checkpoints.advance(started.id, 101);
+    expect(advanced).toMatchObject({ nextBlock: 102, lastBlock: 101, status: 'RUNNING' });
+    await expect(checkpoints.recordFailure(started.id, 'PROVIDER_DOWN')).resolves.toMatchObject({
+      lastErrorCode: 'PROVIDER_DOWN',
+    });
+    await expect(checkpoints.advance(started.id, 100)).resolves.toMatchObject({
+      nextBlock: 102,
+      lastBlock: 101,
+      lastErrorCode: null,
+    });
+    await checkpoints.advance(started.id, 102);
+    const completed = await checkpoints.finish(started.id, 'REQUESTED_RANGE_COMPLETE', 103);
+    expect(completed).toMatchObject({
+      status: 'REQUESTED_RANGE_COMPLETE',
+      nextBlock: 103,
+      lastBlock: 102,
+      completedAt: expect.any(String),
+    });
+    await expect(checkpoints.advance(started.id, 102)).resolves.toEqual(completed);
+  });
+
+  it('prevents mutation or deletion of terminal ingestion history', async () => {
+    const run = await checkpoints.begin({
+      source: 'sqd:bitcoin-mainnet',
+      dataset: 'bitcoin-mainnet',
+      ledger: 'BITCOIN',
+      chainId: 'bitcoin-mainnet',
+      fromBlock: 200,
+      toBlock: 200,
+      query: {
+        profile: 'BLOCK_HEADERS',
+        includeAllBlocks: true,
+        testRunId: checkpointTestRunId,
+      },
+      startedAt: '2026-08-09T13:00:00.000Z',
+    });
+    await checkpoints.advance(run.id, 200);
+    await checkpoints.finish(run.id, 'REQUESTED_RANGE_COMPLETE', 201);
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE ingestion_runs SET last_error_code = $2 WHERE id = $1', [
+          run.id,
+          'tampered',
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM ingestion_runs WHERE id = $1', [run.id]),
+      ).rejects.toThrow(/deletion is forbidden/);
     } finally {
       await pool.end();
     }

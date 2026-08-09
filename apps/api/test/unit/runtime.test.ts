@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AppConfig } from '../../src/config.js';
+import { loadConfig } from '../../src/config.js';
 import { createRuntime } from '../../src/runtime.js';
 
 function baseConfig(overrides: Partial<AppConfig> = {}): AppConfig {
@@ -111,6 +112,24 @@ describe('application runtime wiring', () => {
       baseConfig({ postgresUrl: 'postgresql://zerotrace:secret@postgres.example/zerotrace' }),
     );
     expect(runtime.evidenceRepository).toBeDefined();
-    await runtime.evidenceRepository?.close();
+    await runtime.close?.();
+  });
+
+  it('wires each finalized-ingestion store without startup I/O', async () => {
+    const runtime = createRuntime(
+      loadConfig({
+        NODE_ENV: 'test',
+        POSTGRES_URL: 'postgresql://zerotrace:secret@postgres.example/zerotrace',
+        CLICKHOUSE_URL: 'https://clickhouse.example',
+        OBJECT_STORE_ENDPOINT: 'https://objects.example',
+        OBJECT_STORE_ACCESS_KEY: 'access-key',
+        OBJECT_STORE_SECRET_KEY: 'object-secret',
+      }),
+    );
+
+    expect(runtime.ingestionStorage.rawFacts).toBeDefined();
+    expect(runtime.ingestionStorage.checkpoints).toBeDefined();
+    expect(runtime.ingestionStorage.artifacts).toBeDefined();
+    await runtime.close?.();
   });
 });
