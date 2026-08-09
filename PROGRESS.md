@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                          |
 | Production acceptance            | **No**                                                                              |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                      |
-| Unit tests                       | **175 passing across 20 files**                                                     |
-| Integration tests                | **25 passing across API and three real durable stores**                             |
+| Unit tests                       | **180 passing across 20 files**                                                     |
+| Integration tests                | **26 passing across API and three real durable stores**                             |
 | Real-browser E2E                 | **6 passing: Chromium desktop and Pixel 7**                                         |
 | Remote CI                        | **Pass on immutable development commit `83b5194`; protected main `3372a5a`**        |
-| Coverage                         | **87.93% statements / 79.44% branches / 97.02% functions / 89.19% lines**           |
+| Coverage                         | **87.61% statements / 79.66% branches / 97.09% functions / 88.83% lines**           |
 | Real-chain validation            | Four-chain current state plus finalized raw-ledger ingestion passed                 |
 | Durable evidence/history         | Cross-ledger raw execution/state provenance wired; semantics and continuity pending |
 
@@ -36,9 +36,9 @@ The only allowed status vocabulary in this ledger is:
 | ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed             |
 | Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | retries/cache/pacing/circuit/failover tested; real outage/failover drill pending           |
-| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | Ethereum and BSC snapshot-pinned read-only smoke passed                                    |
-| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | Esplora snapshot-pinned read-only smoke passed                                             |
-| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | finalized snapshot-pinned account smoke passed                                             |
+| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | explicit finalized/safe/latest anchor; Ethereum and BSC finalized smoke passed             |
+| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | height-pinned best-chain hash; public Esplora smoke passed                                 |
+| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | finalized `getBlock` anchor and minimum-context account smoke passed                       |
 | Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | finalized raw execution/state records are restart-safe; live/reorg/reconciliation remain   |
 | Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/edges plus raw-ledger artifacts work; terminal graph is incomplete |
 | Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline engine only; calibration and temporal graph are absent               |
@@ -71,9 +71,12 @@ The only allowed status vocabulary in this ledger is:
 
 ### Read-only chain foundation
 
-- EVM JSON-RPC adapter with snapshot, native balance, code, and audited method allowlist;
-- Bitcoin Esplora adapter with tip, address, transaction, output-spend, and snapshot primitives;
-- Solana JSON-RPC adapter with finalized slot/blockhash and minimum-context account reads;
+- EVM JSON-RPC adapter with configurable `finalized`/`safe`/`latest` snapshot tags, canonical hex
+  validation, pinned native balance/code reads, and an audited method allowlist;
+- Bitcoin Esplora adapter whose best-chain hash is resolved from the exact observed height, plus
+  address, transaction, and output-spend primitives;
+- Solana JSON-RPC adapter with finalized slot-specific `getBlock` blockhash/time and strict,
+  lossless minimum-context account reads, including explicit non-existent accounts;
 - shared provider transport with hostname allowlist, DNS/IP SSRF checks, redirect denial, timeout,
   bounded exponential retries, `Retry-After`, request pacing, in-flight deduplication, TTL/LRU
   caching, circuit breaking, ordered failover, response-size bounds, and unsafe-integer
@@ -81,8 +84,8 @@ The only allowed status vocabulary in this ledger is:
 - safe hostname-based active-source diagnostics in health, Snapshot and Evidence metadata;
 - regression tests that reject EVM and Solana broadcast methods before network access;
 - Ethereum via Alchemy plus public BSC, Bitcoin, and Solana current-state smoke reads with
-  snapshot-pinned Evidence. These are smoke checks, not archive-grade or cross-provider semantic
-  acceptance.
+  ledger-canonical Snapshot anchors and snapshot-pinned Evidence. These are smoke checks, not
+  archive-grade, forced-reorg, or cross-provider semantic acceptance.
 
 ### Evidence and analysis foundation
 
@@ -193,18 +196,18 @@ The only allowed status vocabulary in this ledger is:
 
 ## Pending real-chain validation
 
-| Validation             | Requirement                                                                             | Status                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                              | Alchemy/public BSC smoke passed; archive validation pending              |
-| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                | Public Esplora live smoke passed; reconciliation pending                 |
-| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history               | Public finalized account smoke passed; archive pending                   |
-| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                    | Pending                                                                  |
-| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform              | Not implemented                                                          |
-| RV                     | Historic pool snapshots and executable quote reconciliation                             | Kernel only; pending                                                     |
-| Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement             | Unit coverage plus four-chain happy path; outage/failover drill pending  |
-| Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores    | Four SQD datasets passed; archive reconciliation pending                 |
-| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores        | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; semantic decoding pending |
-| Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed   |
+| Validation             | Requirement                                                                             | Status                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                              | Explicit finalized-tag Alchemy/public BSC smoke passed; archive validation pending |
+| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                | Height-pinned public Esplora best-chain smoke passed; reconciliation pending       |
+| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history               | Finalized slot/block and minimum-context account smoke passed; archive pending     |
+| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                    | Pending                                                                            |
+| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform              | Not implemented                                                                    |
+| RV                     | Historic pool snapshots and executable quote reconciliation                             | Kernel only; pending                                                               |
+| Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement             | Unit coverage plus four-chain happy path; outage/failover drill pending            |
+| Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores    | Four SQD datasets passed; archive reconciliation pending                           |
+| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores        | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; semantic decoding pending           |
+| Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed             |
 
 Public BSC, Bitcoin, and Solana endpoints in `.env.example` are development fallbacks. Rate-limited responses do not count
 as chain-validation failures, and a successful health probe alone does not validate semantic
@@ -216,10 +219,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                             | Scope                                                                                            |
 | ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Reproducible install/build     | Pass                                      | locked npm install in production container; all packages/API/web                                 |
-| Unit tests                     | 175 pass                                  | 20 files across schemas, adapters, ingestion, storage, worker and API runtime                    |
-| Integration tests              | 25 pass                                   | API plus real PostgreSQL, ClickHouse, and versioned object storage                               |
+| Unit tests                     | 180 pass                                  | 20 files across schemas, adapters, ingestion, storage, worker and API runtime                    |
+| Integration tests              | 26 pass                                   | API plus real PostgreSQL, ClickHouse, and versioned object storage                               |
 | Repeat-run integration         | Pass twice consecutively                  | isolated identities prevent stale-volume false positives                                         |
-| Coverage gate                  | Pass                                      | 87.93% statements, 79.44% branches, 97.02% functions, 89.19% lines                               |
+| Coverage gate                  | Pass                                      | 87.61% statements, 79.66% branches, 97.09% functions, 88.83% lines                               |
 | Chromium E2E                   | 6 pass                                    | three flows each on desktop and Pixel 7                                                          |
 | Formatting / ESLint / types    | Pass                                      | full repository                                                                                  |
 | Dependency vulnerability audit | Pass                                      | 0 vulnerabilities across the complete npm dependency graph                                       |

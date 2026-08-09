@@ -125,37 +125,42 @@ migrations; do not delete a developer's volumes to simulate migration.
 
 Important values:
 
-| Variable                              | Meaning                                                                         |
-| ------------------------------------- | ------------------------------------------------------------------------------- |
-| `API_PORT` / `WEB_PORT`               | host ports                                                                      |
-| `CORS_ORIGIN`                         | comma-separated exact browser origins                                           |
-| `PROVIDER_ALLOW_HOSTS`                | comma-separated exact provider hostnames                                        |
-| `ALLOW_PRIVATE_PROVIDER_URLS`         | explicit local proxy/private-RPC exception; defaults to false                   |
-| `PROVIDER_MAX_ATTEMPTS`               | bounded attempts per endpoint, including the first attempt                      |
-| `PROVIDER_RETRY_BASE_MS/MAX_MS`       | exponential retry-delay bounds; provider `Retry-After` is capped by the maximum |
-| `PROVIDER_CIRCUIT_*`                  | consecutive-failure threshold and half-open reset delay                         |
-| `PROVIDER_CACHE_TTL_MS/MAX_ENTRIES`   | process-local TTL/LRU response cache; zero TTL disables stored responses        |
-| `ALCHEMY_API_KEY` / `ETH_RPC_URL`     | optional Ethereum key and read-only URL/template                                |
-| `EVM_*_RPC_URLS`                      | ordered, comma-separated EVM provider pools                                     |
-| `EVM_*_REQUESTS_PER_SECOND`           | per-endpoint request pacing; zero disables internal pacing                      |
-| `BITCOIN_ESPLORA_URLS`                | ordered Esplora base paths                                                      |
-| `BITCOIN_ESPLORA_REQUESTS_PER_SECOND` | per-endpoint Esplora pacing                                                     |
-| `SOLANA_RPC_URLS`                     | ordered Solana read-only RPC pool                                               |
-| `SOLANA_REQUESTS_PER_SECOND`          | per-endpoint Solana pacing                                                      |
-| `SOLANA_COMMITMENT`                   | processed, confirmed, or finalized; production analysis should use finalized    |
-| `SQD_PORTAL_URL`                      | clean HTTP origin used by the finalized ingestion worker                        |
-| `SQD_PROVIDER_ALLOW_HOSTS`            | worker-only exact hostname allowlist; defaults to `portal.sqd.dev`              |
-| `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                       |
-| `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                       |
-| `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present  |
-| `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests |
-| `CLICKHOUSE_URL` / credentials        | Raw Fact HTTP origin and optional separately supplied credentials               |
-| `OBJECT_STORE_*`                      | S3-compatible origin, credentials, and versioned raw-artifact bucket            |
-| `TEST_CLICKHOUSE_URL`                 | disposable initialized ClickHouse used by storage integration tests             |
-| `TEST_OBJECT_STORE_*`                 | disposable object store endpoint and credentials used by integration tests      |
+| Variable                              | Meaning                                                                          |
+| ------------------------------------- | -------------------------------------------------------------------------------- |
+| `API_PORT` / `WEB_PORT`               | host ports                                                                       |
+| `CORS_ORIGIN`                         | comma-separated exact browser origins                                            |
+| `PROVIDER_ALLOW_HOSTS`                | comma-separated exact provider hostnames                                         |
+| `ALLOW_PRIVATE_PROVIDER_URLS`         | explicit local proxy/private-RPC exception; defaults to false                    |
+| `PROVIDER_MAX_ATTEMPTS`               | bounded attempts per endpoint, including the first attempt                       |
+| `PROVIDER_RETRY_BASE_MS/MAX_MS`       | exponential retry-delay bounds; provider `Retry-After` is capped by the maximum  |
+| `PROVIDER_CIRCUIT_*`                  | consecutive-failure threshold and half-open reset delay                          |
+| `PROVIDER_CACHE_TTL_MS/MAX_ENTRIES`   | process-local TTL/LRU response cache; zero TTL disables stored responses         |
+| `ALCHEMY_API_KEY` / `ETH_RPC_URL`     | optional Ethereum key and read-only URL/template                                 |
+| `EVM_*_RPC_URLS`                      | ordered, comma-separated EVM provider pools                                      |
+| `EVM_*_SNAPSHOT_TAG`                  | `finalized`, `safe`, or `latest`; defaults to `finalized` per configured network |
+| `EVM_*_REQUESTS_PER_SECOND`           | per-endpoint request pacing; zero disables internal pacing                       |
+| `BITCOIN_ESPLORA_URLS`                | ordered Esplora base paths                                                       |
+| `BITCOIN_ESPLORA_REQUESTS_PER_SECOND` | per-endpoint Esplora pacing                                                      |
+| `SOLANA_RPC_URLS`                     | ordered Solana read-only RPC pool                                                |
+| `SOLANA_REQUESTS_PER_SECOND`          | per-endpoint Solana pacing                                                       |
+| `SOLANA_COMMITMENT`                   | processed, confirmed, or finalized; production analysis should use finalized     |
+| `SQD_PORTAL_URL`                      | clean HTTP origin used by the finalized ingestion worker                         |
+| `SQD_PROVIDER_ALLOW_HOSTS`            | worker-only exact hostname allowlist; defaults to `portal.sqd.dev`               |
+| `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                        |
+| `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                        |
+| `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present   |
+| `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests  |
+| `CLICKHOUSE_URL` / credentials        | Raw Fact HTTP origin and optional separately supplied credentials                |
+| `OBJECT_STORE_*`                      | S3-compatible origin, credentials, and versioned raw-artifact bucket             |
+| `TEST_CLICKHOUSE_URL`                 | disposable initialized ClickHouse used by storage integration tests              |
+| `TEST_OBJECT_STORE_*`                 | disposable object store endpoint and credentials used by integration tests       |
 
 `PROVIDER_ALLOW_HOSTS` does not authorize transaction methods. Method allowlists remain enforced
 inside each adapter.
+
+Keep EVM snapshot tags at `finalized` for normal analysis. Selecting `safe` or `latest` is an
+explicit freshness/finality tradeoff; the chosen value remains in the persisted Snapshot and
+Evidence metadata.
 
 Never commit `.env` or API keys. ZeroTrace records safe source IDs such as
 `ethereum-rpc@eth-mainnet.g.alchemy.com`; provider URL paths and credentials are not exposed in

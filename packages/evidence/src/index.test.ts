@@ -184,6 +184,7 @@ describe('evidence ledger', () => {
       chainId: 'eip155:1',
       blockNumber: '1',
       blockHash: '0x' + 'a'.repeat(64),
+      finality: 'finalized' as const,
       capturedAt: '2026-08-09T00:00:00.000Z',
       providerVersions: { fixture: '1' },
       adapterVersions: { evm: '0.1.0' },

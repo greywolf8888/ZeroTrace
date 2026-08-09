@@ -14,6 +14,20 @@ import type { JsonRpcTransport } from './transport.js';
 
 export type SolanaSnapshot = z.infer<typeof SolanaSnapshotSchema>;
 
+export interface SolanaAccountState {
+  data: readonly [string, 'base64'];
+  executable: boolean;
+  lamports: string;
+  owner: string;
+  rentEpoch: string;
+  space: number;
+}
+
+export interface SolanaAccountInfoResponse {
+  context: { slot: number; apiVersion?: string };
+  value: SolanaAccountState | null;
+}
+
 const ALLOWED_SOLANA_METHODS = new Set([
   'getHealth',
   'getVersion',
@@ -45,6 +59,11 @@ const SOLANA_CAPABILITIES: ProviderCapability[] = [
   'SIMULATION',
 ];
 
+const SOLANA_BASE58 = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
+const UNSIGNED_QUANTITY = /^(?:0|[1-9][0-9]*)$/;
+const SIGNED_QUANTITY = /^-?(?:0|[1-9][0-9]*)$/;
+const BASE64_DATA = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
 export interface SolanaAdapterConfig {
   id: string;
   commitment: 'processed' | 'confirmed' | 'finalized';
@@ -56,6 +75,114 @@ function requireSafeInteger(value: unknown, field: string): number {
     throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
   }
   return value;
+}
+
+function requireUnsignedQuantity(value: unknown, field: string): string {
+  if (typeof value === 'number') return String(requireSafeInteger(value, field));
+  if (typeof value !== 'string' || !UNSIGNED_QUANTITY.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
+  }
+  return value;
+}
+
+function requireSafeQuantityNumber(value: unknown, field: string): number {
+  const quantity = requireUnsignedQuantity(value, field);
+  const parsed = Number(quantity);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an unsafe ${field}.`);
+  }
+  return parsed;
+}
+
+function requireBase58(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !SOLANA_BASE58.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
+  }
+  return value;
+}
+
+function optionalBlockTimestamp(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  const text = typeof value === 'number' ? String(value) : value;
+  if (typeof text !== 'string' || !SIGNED_QUANTITY.test(text)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana provider returned an invalid block time.');
+  }
+  const seconds = Number(text);
+  if (
+    !Number.isSafeInteger(seconds) ||
+    Math.abs(seconds) > Math.floor(Number.MAX_SAFE_INTEGER / 1_000)
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana block time is outside the safe range.');
+  }
+  const date = new Date(seconds * 1_000);
+  if (Number.isNaN(date.getTime())) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana provider returned an invalid block time.');
+  }
+  return date.toISOString();
+}
+
+function parseAccountInfo(
+  raw: unknown,
+  minimumContextSlot: number | undefined,
+): SolanaAccountInfoResponse {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account response must be an object.');
+  }
+  const response = raw as Record<string, unknown>;
+  const context = response.context;
+  if (typeof context !== 'object' || context === null || Array.isArray(context)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account context is invalid.');
+  }
+  const contextRecord = context as Record<string, unknown>;
+  const slot = requireSafeQuantityNumber(contextRecord.slot, 'account context slot');
+  if (minimumContextSlot !== undefined && slot < minimumContextSlot) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana account response predates the requested minimum context slot.',
+    );
+  }
+  const apiVersion = contextRecord.apiVersion;
+  if (apiVersion !== undefined && typeof apiVersion !== 'string') {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account API version is invalid.');
+  }
+  if (!Object.hasOwn(response, 'value')) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account response is missing value.');
+  }
+  if (response.value === null) {
+    return {
+      context: { slot, ...(apiVersion === undefined ? {} : { apiVersion }) },
+      value: null,
+    };
+  }
+  if (typeof response.value !== 'object' || Array.isArray(response.value)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account value is invalid.');
+  }
+  const account = response.value as Record<string, unknown>;
+  const data = account.data;
+  if (
+    !Array.isArray(data) ||
+    data.length !== 2 ||
+    typeof data[0] !== 'string' ||
+    !BASE64_DATA.test(data[0]) ||
+    data[1] !== 'base64'
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account data is invalid.');
+  }
+  if (typeof account.executable !== 'boolean') {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account executable flag is invalid.');
+  }
+  const space = requireSafeQuantityNumber(account.space, 'account space');
+  return {
+    context: { slot, ...(apiVersion === undefined ? {} : { apiVersion }) },
+    value: {
+      data: [data[0], 'base64'],
+      executable: account.executable,
+      lamports: requireUnsignedQuantity(account.lamports, 'account lamports'),
+      owner: requireBase58(account.owner, 'account owner'),
+      rentEpoch: requireUnsignedQuantity(account.rentEpoch, 'account rent epoch'),
+      space,
+    },
+  };
 }
 
 export class SolanaLedgerAdapter {
@@ -82,8 +209,15 @@ export class SolanaLedgerAdapter {
     return this.#transport.request<T>(method, params);
   }
 
-  getAccountInfo(address: string, minimumContextSlot?: number): Promise<Record<string, unknown>> {
-    return this.read<Record<string, unknown>>('getAccountInfo', [
+  async getAccountInfo(
+    address: string,
+    minimumContextSlot?: number,
+  ): Promise<SolanaAccountInfoResponse> {
+    requireBase58(address, 'account address');
+    if (minimumContextSlot !== undefined) {
+      requireSafeInteger(minimumContextSlot, 'minimum context slot');
+    }
+    const response = await this.read<unknown>('getAccountInfo', [
       address,
       {
         encoding: 'base64',
@@ -91,6 +225,7 @@ export class SolanaLedgerAdapter {
         ...(minimumContextSlot === undefined ? {} : { minContextSlot: minimumContextSlot }),
       },
     ]);
+    return parseAccountInfo(response, minimumContextSlot);
   }
 
   async probe(): Promise<ProviderHealth> {
@@ -144,23 +279,40 @@ export class SolanaLedgerAdapter {
   }
 
   async createSnapshot(): Promise<SolanaSnapshot> {
-    const [rawSlot, latest] = await Promise.all([
-      this.read<number>('getSlot', [{ commitment: this.config.commitment }]),
-      this.read<{ value?: { blockhash?: unknown } }>('getLatestBlockhash', [
-        { commitment: this.config.commitment },
-      ]),
+    const slotNumber = requireSafeQuantityNumber(
+      await this.read<unknown>('getSlot', [{ commitment: this.config.commitment }]),
+      'slot',
+    );
+    const rawBlock = await this.read<unknown>('getBlock', [
+      slotNumber,
+      {
+        commitment: this.config.commitment,
+        transactionDetails: 'none',
+        rewards: false,
+        maxSupportedTransactionVersion: 0,
+      },
     ]);
-    const slot = requireSafeInteger(rawSlot, 'slot').toString();
-    const blockhash = latest.value?.blockhash;
-    if (typeof blockhash !== 'string' || blockhash.length < 32) {
-      throw new ProviderError('INVALID_RESPONSE', 'Solana provider returned an invalid blockhash.');
+    if (typeof rawBlock !== 'object' || rawBlock === null || Array.isArray(rawBlock)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Solana provider did not return the selected committed block.',
+      );
     }
+    const block = rawBlock as Record<string, unknown>;
+    const blockhash = requireBase58(block.blockhash, 'blockhash');
+    requireBase58(block.previousBlockhash, 'previous blockhash');
+    const parentSlot = requireSafeQuantityNumber(block.parentSlot, 'parent slot');
+    if (parentSlot > slotNumber) {
+      throw new ProviderError('INVALID_RESPONSE', 'Solana parent slot exceeds the snapshot slot.');
+    }
+    const blockTimestamp = optionalBlockTimestamp(block.blockTime);
     return {
       ledger: 'SOLANA',
       chainId: 'solana-mainnet',
-      slot,
+      slot: String(slotNumber),
       blockhash,
       commitment: this.config.commitment,
+      ...(blockTimestamp === undefined ? {} : { blockTimestamp }),
       capturedAt: new Date().toISOString(),
       providerVersions: { [this.sourceId]: 'solana-json-rpc' },
       adapterVersions: { solana: this.config.adapterVersion ?? '0.1.0' },

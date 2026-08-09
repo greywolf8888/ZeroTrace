@@ -159,6 +159,7 @@ export const EvmSnapshotSchema = SnapshotBaseSchema.extend({
   chainId: z.string().min(1),
   blockNumber: QuantityStringSchema,
   blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  finality: z.enum(['latest', 'safe', 'finalized']),
   blockTimestamp: IsoDateTimeSchema.optional(),
 });
 
@@ -167,6 +168,7 @@ export const BitcoinSnapshotSchema = SnapshotBaseSchema.extend({
   chainId: z.literal('bitcoin-mainnet'),
   height: QuantityStringSchema,
   blockHash: Hash256Schema,
+  finality: z.literal('best-chain'),
   mempoolSnapshot: z.string().min(1).optional(),
 });
 

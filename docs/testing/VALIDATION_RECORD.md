@@ -106,6 +106,28 @@ archive history, a forced real-provider failover, cross-provider semantic agreem
 handling, or any launchpad decoder. The local interception-proxy exception described above remained
 necessary for this host.
 
+## Current-state Snapshot anchor correction
+
+On 2026-08-10 the adapter contracts were corrected and re-probed against all four live networks:
+
+| Chain           | Anchor contract                                    | Observed position | Result                                                                                |
+| --------------- | -------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------- |
+| Ethereum        | `eth_getBlockByNumber("finalized", false)`         | `25718782`        | canonical block hash/timestamp and pinned balance/code accepted                       |
+| BNB Smart Chain | `eth_getBlockByNumber("finalized", false)`         | `114967284`       | canonical block hash/timestamp and pinned zero-address balance accepted               |
+| Bitcoin         | tip height followed by `/block-height/:height`     | `961756`          | same-height best-chain hash accepted                                                  |
+| Solana          | finalized `getSlot`, then slot-specific `getBlock` | `438238158`       | real blockhash/timestamp accepted; System Program context `438238160` met the minimum |
+
+The Solana Snapshot now uses the blockhash returned for the selected slot, not the unrelated recent
+transaction blockhash returned by `getLatestBlockhash`. Bitcoin no longer samples tip height and tip
+hash independently. EVM Snapshot metadata records the configured finality tag, and malformed or
+non-canonical quantities/data fail closed. The Solana account probe also confirmed lossless account
+quantities and an explicit distinction between `value: null` and a malformed/missing value.
+
+The Ethereum credential was injected only into the probe process and was neither printed nor written
+to disk. These are public current-head smoke observations, not immutable archive fixtures,
+independent-provider reconciliation, forced-reorg acceptance, or proof that Esplora address
+aggregates are historical-state pinned.
+
 ## Durable Evidence repository follow-up
 
 A separate disposable Compose project built a fresh `postgres:17.10-alpine` target, applied
@@ -298,14 +320,19 @@ provider reconciliation, and archive-scale backfill remain open.
 
 | Command                  | Result                                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `npm run verify:full`    | pass: format, lint, typecheck, 175 unit, 25 integration, build, license, audit, coverage, 6 E2E, SBOM |
-| `npm run test:coverage`  | pass: 200 tests; 87.93% statements, 79.44% branches, 97.02% functions, 89.19% lines                   |
+| `npm run verify:full`    | pass: format, lint, typecheck, 180 unit, 26 integration, build, license, audit, coverage, 6 E2E, SBOM |
+| `npm run test:coverage`  | pass: 206 tests; 87.61% statements, 79.66% branches, 97.09% functions, 88.83% lines                   |
 | `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                     |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                |
 | `docker compose config`  | pass                                                                                                  |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                    |
 | branch GitHub Actions CI | pass on `83b5194`: quality/contracts, Chromium E2E, and five production container targets             |
 | branch CodeQL            | pass on `83b5194`: JavaScript and TypeScript analysis                                                 |
+
+The latest full run used the isolated `zerotrace-snapshot-test` project on alternate ports with
+fresh PostgreSQL, ClickHouse, and MinIO volumes. After all 26 integration tests passed, exactly its
+three containers, three named volumes, and network were removed; unrelated local containers were
+left running.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

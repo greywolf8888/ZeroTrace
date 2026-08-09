@@ -27,16 +27,19 @@ class FakeJsonRpcTransport implements JsonRpcTransport {
 class FakeRestTransport implements RestTransport {
   readonly endpointId = 'fake-esplora';
   readonly responses: Record<string, unknown>;
+  readonly calls: Array<{ kind: 'json' | 'text'; path: string }> = [];
 
   constructor(responses: Record<string, unknown>) {
     this.responses = responses;
   }
 
   async getText(path: string): Promise<string> {
+    this.calls.push({ kind: 'text', path });
     return String(this.responses[path]);
   }
 
   async getJson<T>(path: string): Promise<T> {
+    this.calls.push({ kind: 'json', path });
     return this.responses[path] as T;
   }
 }
@@ -81,34 +84,58 @@ describe('capability probes and snapshots', () => {
     expect(health.head).toEqual({ state: 'known', value: '9007199254740993' });
   });
 
-  it('creates a replayable Bitcoin snapshot from two independent tip endpoints', async () => {
-    const adapter = new BitcoinUtxoLedgerAdapter(
-      { id: 'esplora' },
-      new FakeRestTransport({
-        '/blocks/tip/height': '840000',
-        '/blocks/tip/hash': 'a'.repeat(64),
-      }),
-    );
+  it('creates a replayable Bitcoin snapshot from a height-pinned hash endpoint', async () => {
+    const transport = new FakeRestTransport({
+      '/blocks/tip/height': '840000',
+      '/block-height/840000': 'a'.repeat(64),
+      '/blocks/tip/hash': 'b'.repeat(64),
+    });
+    const adapter = new BitcoinUtxoLedgerAdapter({ id: 'esplora' }, transport);
     await expect(adapter.createSnapshot()).resolves.toMatchObject({
       ledger: 'BITCOIN',
       height: '840000',
       blockHash: 'a'.repeat(64),
+      finality: 'best-chain',
     });
+    expect(transport.calls).toEqual([
+      { kind: 'text', path: '/blocks/tip/height' },
+      { kind: 'text', path: '/block-height/840000' },
+    ]);
   });
 
   it('creates a finalized Solana snapshot', async () => {
-    const adapter = new SolanaLedgerAdapter(
-      { id: 'solana', commitment: 'finalized' },
-      new FakeJsonRpcTransport({
-        getSlot: 300_000_000,
-        getLatestBlockhash: { value: { blockhash: '11111111111111111111111111111111' } },
-      }),
-    );
+    const transport = new FakeJsonRpcTransport({
+      getSlot: 300_000_000,
+      getBlock: {
+        blockhash: '11111111111111111111111111111111',
+        previousBlockhash: '22222222222222222222222222222222',
+        parentSlot: 299_999_999,
+        blockTime: 1_700_000_000,
+      },
+    });
+    const adapter = new SolanaLedgerAdapter({ id: 'solana', commitment: 'finalized' }, transport);
     await expect(adapter.createSnapshot()).resolves.toMatchObject({
       ledger: 'SOLANA',
       slot: '300000000',
       commitment: 'finalized',
+      blockhash: '11111111111111111111111111111111',
+      blockTimestamp: '2023-11-14T22:13:20.000Z',
     });
+    expect(transport.calls).toEqual([
+      { method: 'getSlot', params: [{ commitment: 'finalized' }] },
+      {
+        method: 'getBlock',
+        params: [
+          300_000_000,
+          {
+            commitment: 'finalized',
+            transactionDetails: 'none',
+            rewards: false,
+            maxSupportedTransactionVersion: 0,
+          },
+        ],
+      },
+    ]);
   });
 
   it('creates a replayable EVM snapshot and forwards block-pinned reads', async () => {
@@ -130,6 +157,7 @@ describe('capability probes and snapshots', () => {
       chainId: 'eip155:1',
       blockNumber: '16',
       blockHash: '0x' + 'a'.repeat(64),
+      finality: 'finalized',
       adapterVersions: { evm: 'fixture' },
     });
     await expect(adapter.getBalance('0xabc', '0x10')).resolves.toBe('0x2a');
@@ -137,6 +165,28 @@ describe('capability probes and snapshots', () => {
     expect(transport.calls.at(-1)).toEqual({
       method: 'eth_getCode',
       params: ['0xabc', '0x10'],
+    });
+    expect(transport.calls[0]).toEqual({
+      method: 'eth_getBlockByNumber',
+      params: ['finalized', false],
+    });
+  });
+
+  it('rejects non-canonical EVM quantities and malformed bytecode', async () => {
+    const invalidBalance = new EvmLedgerAdapter(
+      { id: 'ethereum', chainId: 1, chainName: 'Ethereum' },
+      new FakeJsonRpcTransport({ eth_getBalance: '0x00' }),
+    );
+    await expect(invalidBalance.getBalance('0xabc', 'finalized')).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+
+    const invalidCode = new EvmLedgerAdapter(
+      { id: 'ethereum', chainId: 1, chainName: 'Ethereum' },
+      new FakeJsonRpcTransport({ eth_getCode: '0x0' }),
+    );
+    await expect(invalidCode.getCode('0xabc', 'finalized')).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
     });
   });
 
@@ -204,7 +254,7 @@ describe('capability probes and snapshots', () => {
       { id: 'esplora' },
       new FakeRestTransport({
         '/blocks/tip/height': '-1',
-        '/blocks/tip/hash': 'bad',
+        '/block-height/-1': 'bad',
       }),
     );
     await expect(invalid.probe()).resolves.toMatchObject({
@@ -217,7 +267,7 @@ describe('capability probes and snapshots', () => {
       { id: 'esplora' },
       new FakeRestTransport({
         '/blocks/tip/height': '840000',
-        '/blocks/tip/hash': 'bad',
+        '/block-height/840000': 'bad',
       }),
     );
     await expect(invalidHash.createSnapshot()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
@@ -253,12 +303,56 @@ describe('capability probes and snapshots', () => {
     });
   });
 
+  it('normalizes lossless Solana account quantities and rejects stale or incomplete contexts', async () => {
+    const response = {
+      context: { slot: 12, apiVersion: '3.1.8' },
+      value: {
+        data: ['', 'base64'],
+        executable: false,
+        lamports: '18446744073709551615',
+        owner: '11111111111111111111111111111111',
+        rentEpoch: '18446744073709551615',
+        space: 0,
+      },
+    };
+    const adapter = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({ getAccountInfo: response }),
+    );
+    await expect(adapter.getAccountInfo('11111111111111111111111111111111', 12)).resolves.toEqual(
+      response,
+    );
+
+    const stale = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({
+        getAccountInfo: { context: { slot: 11 }, value: null },
+      }),
+    );
+    await expect(
+      stale.getAccountInfo('11111111111111111111111111111111', 12),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+
+    const missing = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({ getAccountInfo: { context: { slot: 12 } } }),
+    );
+    await expect(
+      missing.getAccountInfo('11111111111111111111111111111111', 12),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+
   it('rejects malformed Solana snapshot state', async () => {
     const invalidSlot = new SolanaLedgerAdapter(
       { id: 'solana', commitment: 'finalized' },
       new FakeJsonRpcTransport({
         getSlot: Number.MAX_SAFE_INTEGER + 1,
-        getLatestBlockhash: { value: { blockhash: '1'.repeat(32) } },
+        getBlock: {
+          blockhash: '1'.repeat(32),
+          previousBlockhash: '2'.repeat(32),
+          parentSlot: 1,
+          blockTime: null,
+        },
       }),
     );
     await expect(invalidSlot.createSnapshot()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
@@ -267,10 +361,23 @@ describe('capability probes and snapshots', () => {
       { id: 'solana', commitment: 'finalized' },
       new FakeJsonRpcTransport({
         getSlot: 10,
-        getLatestBlockhash: { value: { blockhash: 'short' } },
+        getBlock: {
+          blockhash: 'short',
+          previousBlockhash: '2'.repeat(32),
+          parentSlot: 9,
+          blockTime: null,
+        },
       }),
     );
     await expect(invalidHash.createSnapshot()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+
+    const missingBlock = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({ getSlot: 10, getBlock: null }),
+    );
+    await expect(missingBlock.createSnapshot()).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
   });
 
   it('combines configured and unconfigured health in stable id order', async () => {

@@ -123,9 +123,10 @@ progress ledger.
 
 Each analysis is anchored independently:
 
-- EVM: chain ID, block number, block hash, captured time;
-- Bitcoin: network, height, best-block hash, captured time;
-- Solana: cluster, slot, blockhash when available, commitment, captured time.
+- EVM: chain ID, block number, block hash, explicit `latest`/`safe`/`finalized` selection, captured
+  time;
+- Bitcoin: network, height, height-resolved best-chain hash, captured time;
+- Solana: cluster, slot, that slot's `getBlock` blockhash, commitment, captured time.
 
 Cross-chain results are a snapshot set, not a fictional global block. The set records capture skew
 and the finality policy used for each ledger.
@@ -228,7 +229,7 @@ sequenceDiagram
     Evidence-->>Worker: canonical transaction Evidence ID
     Worker->>Facts: put Evidence-linked transaction Raw Fact
   end
-  loop Each applicable EVM log, BTC input/output, or Solana instruction
+  loop Each applicable EVM execution/state, BTC input/output, or Solana execution/balance record
     Worker->>Evidence: append raw-record Evidence on the same Snapshot/artifact
     Evidence-->>Worker: canonical record Evidence ID
     Worker->>Facts: put Evidence-linked ledger Raw Fact

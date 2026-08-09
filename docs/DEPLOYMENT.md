@@ -91,6 +91,8 @@ Before internet-facing deployment, add and verify:
 - a managed secret store and credential rotation;
 - provider egress allowlists and per-provider quotas;
 - redundant archive-grade providers with consistency checks;
+- explicit per-network EVM finality policy (`EVM_*_SNAPSHOT_TAG`, default `finalized`) and alerts
+  for unsupported or regressed provider finality;
 - encrypted persistent volumes, backups, restore drills, retention, and deletion policy;
 - migration automation plus remaining PostgreSQL and ClickHouse application repositories;
 - managed object retention/object-lock policy beyond the implemented versioned content-addressed

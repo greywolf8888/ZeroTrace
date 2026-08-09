@@ -1,6 +1,6 @@
 # Verified Source Ledger
 
-Research snapshot: **2026-08-09**
+Research snapshot: **2026-08-10**
 
 This ledger records sources inspected for the initial architecture. It is not a claim that every
 listed project is integrated. GitHub heads are immutable observations at the research date; release
@@ -23,6 +23,20 @@ work must refresh them.
 | Solana live stream         | [Yellowstone gRPC](https://github.com/rpcpool/yellowstone-grpc), SHA `f402c411887e360d4002e52254244cfea167b070`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Geyser/gRPC implementation; AGPL-3.0                                                                                                                                                                                                      | Optional separately deployed sidecar with source obligations                                                      |
 | Solana archive             | [Yellowstone Old Faithful](https://github.com/rpcpool/yellowstone-faithful), SHA `a69a0d2e189006608e3b73b7659a957b00b3567e`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Content-addressed historical access; AGPL-3.0                                                                                                                                                                                             | Remote or isolated archive service after legal/operational review                                                 |
 | Solana decoding            | [Carbon](https://github.com/sevenlabs-hq/carbon), `v1.0.0`, SHA `af70b199b39e60a1a33306e5411f8040374f8d9a`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | MIT indexer framework with program decoder packages for Pump, PumpSwap, Raydium, Meteora and Token-2022                                                                                                                                   | Preferred future Rust decoder/sidecar; validate exact program versions                                            |
+
+### Current-state Snapshot contracts
+
+- [Ethereum JSON-RPC](https://ethereum.org/developers/docs/apis/json-rpc/) defines named block tags,
+  canonical hex quantity/data encoding, and the block, balance, and code methods used by the EVM
+  adapter. ZeroTrace defaults named EVM networks to `finalized` and records the selected tag.
+- [Esplora's API contract](https://github.com/Blockstream/esplora/blob/master/API.md) exposes
+  `/blocks/tip/height` and `/block-height/:height`; ZeroTrace resolves the best-chain hash from the
+  observed height instead of independently sampling tip height and tip hash.
+- Solana's official [`getSlot`](https://solana.com/docs/rpc/http/getslot),
+  [`getBlock`](https://solana.com/docs/rpc/http/getblock), and
+  [`getAccountInfo`](https://solana.com/docs/rpc/http/getaccountinfo) contracts distinguish a
+  slot-specific blockhash from a recent transaction blockhash and provide the account context slot.
+  ZeroTrace enforces that distinction and preserves explicit null account state.
 
 ## Durable storage clients
 

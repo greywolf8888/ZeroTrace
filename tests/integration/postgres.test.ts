@@ -17,6 +17,7 @@ const snapshot = {
   chainId: 'eip155:1',
   blockNumber: '25717412',
   blockHash: '0x' + 'a'.repeat(64),
+  finality: 'finalized' as const,
   capturedAt: '2026-08-09T00:00:00.000Z',
   providerVersions: { 'ethereum-rpc@test.example': 'json-rpc' },
   adapterVersions: { evm: '0.1.0' },
@@ -34,7 +35,7 @@ const raw = createEvidence({
   payload: { balanceHex: '0x1', blockHash: snapshot.blockHash },
   observedAt: '2026-08-09T00:00:01.000Z',
   blockOrSlot: snapshot.blockNumber,
-  finality: 'snapshot-block',
+  finality: 'finalized',
   summary: 'PostgreSQL integration source Evidence.',
 });
 
@@ -47,7 +48,7 @@ const derived = createEvidence({
   payload: { score: 1 },
   observedAt: '2026-08-09T00:00:02.000Z',
   blockOrSlot: snapshot.blockNumber,
-  finality: 'snapshot-block',
+  finality: 'finalized',
   summary: 'PostgreSQL integration derived Evidence.',
   sourceEvidenceIds: [raw.id],
 });
@@ -125,7 +126,7 @@ postgresDescribe('PostgreSQL durable Evidence integration', () => {
         payload: { balanceHex: '0x2', blockHash: snapshot.blockHash },
         observedAt: '2026-08-09T00:00:02.500Z',
         blockOrSlot: snapshot.blockNumber,
-        finality: 'snapshot-block',
+        finality: 'finalized',
         summary: 'Second PostgreSQL source Evidence.',
       });
       await repository.put(otherRaw, [], snapshot);
@@ -151,7 +152,7 @@ postgresDescribe('PostgreSQL durable Evidence integration', () => {
         payload: { score: 0 },
         observedAt: '2026-08-09T00:00:03.000Z',
         blockOrSlot: snapshot.blockNumber,
-        finality: 'snapshot-block',
+        finality: 'finalized',
         summary: 'Ungrounded database write probe.',
       });
       await expect(

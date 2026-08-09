@@ -36,9 +36,11 @@ const config: AppConfig = {
   },
   ethereumRpcUrls: [],
   ethereumChainId: 1,
+  ethereumSnapshotTag: 'finalized',
   ethereumRequestsPerSecond: 0,
   bscRpcUrls: [],
   bscChainId: 56,
+  bscSnapshotTag: 'finalized',
   bscRequestsPerSecond: 0,
   bitcoinEsploraUrls: [],
   bitcoinEsploraRequestsPerSecond: 0,
@@ -106,7 +108,16 @@ function runtimeWithEvm(): AppRuntime {
   };
 }
 
-function runtimeWithAllLedgers(): AppRuntime {
+const defaultSolanaAccount = {
+  data: ['', 'base64'],
+  lamports: 123,
+  owner: '11111111111111111111111111111111',
+  executable: false,
+  rentEpoch: 0,
+  space: 0,
+};
+
+function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccount): AppRuntime {
   const evm = new EvmLedgerAdapter(
     { id: 'ethereum-rpc', chainId: 1, chainName: 'Ethereum' },
     new FakeTransport({
@@ -125,7 +136,7 @@ function runtimeWithAllLedgers(): AppRuntime {
     { id: 'bitcoin-esplora' },
     new FakeRestTransport({
       '/blocks/tip/height': '840000',
-      '/blocks/tip/hash': 'b'.repeat(64),
+      '/block-height/840000': 'b'.repeat(64),
       '/address/bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4': {
         address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
         chain_stats: {
@@ -150,14 +161,15 @@ function runtimeWithAllLedgers(): AppRuntime {
     new FakeTransport({
       getHealth: 'ok',
       getSlot: 300_000_000,
-      getLatestBlockhash: { value: { blockhash: '11111111111111111111111111111111' } },
+      getBlock: {
+        blockhash: '11111111111111111111111111111111',
+        previousBlockhash: '22222222222222222222222222222222',
+        parentSlot: 299_999_999,
+        blockTime: 1_700_000_000,
+      },
       getAccountInfo: {
         context: { slot: 300_000_000 },
-        value: {
-          lamports: 123,
-          owner: '11111111111111111111111111111111',
-          executable: false,
-        },
+        value: solanaAccountValue,
       },
     }),
   );
@@ -196,6 +208,7 @@ const fixtureSnapshot = {
   chainId: 'eip155:1',
   blockNumber: '16',
   blockHash: '0x' + 'a'.repeat(64),
+  finality: 'finalized' as const,
   capturedAt: '2026-08-09T00:00:00.000Z',
   providerVersions: { fixture: '1' },
   adapterVersions: { evm: '0.1.0' },
@@ -228,7 +241,7 @@ function addFixtureEvidence(runtime: AppRuntime, blockOrSlot = '16') {
     locator: 'pool:pool-1@' + blockOrSlot,
     payload: { baseReserve: '1000', quoteReserve: '1000', feeBps: '0', blockOrSlot },
     blockOrSlot,
-    finality: 'snapshot-block',
+    finality: 'finalized',
     summary: 'Pool reserves at fixture block.',
   });
   runtime.evidenceLedger.add(evidence, [], { ...fixtureSnapshot, blockNumber: blockOrSlot });
@@ -271,7 +284,12 @@ describe('ZeroTrace API contract', () => {
     expect(response.statusCode).toBe(200);
     const body = response.json();
     expect(body.facts.nativeBalanceAtomic).toEqual({ state: 'known', value: '0' });
-    expect(body.metadata.snapshot).toMatchObject({ ledger: 'EVM', blockNumber: '16' });
+    expect(body.metadata.snapshot).toMatchObject({
+      ledger: 'EVM',
+      blockNumber: '16',
+      finality: 'finalized',
+    });
+    expect(body.evidence[0]).toMatchObject({ finality: 'finalized' });
     expect(body.evidence).toHaveLength(1);
     expect(runtime.evidenceLedger.get(body.evidence[0].id)).toBeDefined();
   });
@@ -378,7 +396,7 @@ describe('ZeroTrace API contract', () => {
       locator: 'pool:pool-1@16',
       payload: { baseReserve: '1000', quoteReserve: '1000', feeBps: '0' },
       blockOrSlot: '16',
-      finality: 'snapshot-block',
+      finality: 'finalized',
       summary: 'Pool reserves at fixture block.',
     });
     runtime.evidenceLedger.add(sourceEvidence, [], fixtureSnapshot);
@@ -403,6 +421,7 @@ describe('ZeroTrace API contract', () => {
             chainId: 'eip155:1',
             blockNumber: '16',
             blockHash: '0x' + 'a'.repeat(64),
+            finality: 'finalized',
             capturedAt: '2026-08-09T00:00:00.000Z',
             providerVersions: { fixture: '1' },
             adapterVersions: { evm: '0.1.0' },
@@ -597,6 +616,11 @@ describe('ZeroTrace API contract', () => {
       mempoolDeltaSats: { state: 'known', value: '-10' },
       transactionCount: { state: 'known', value: '3' },
     });
+    expect(bitcoin.json().metadata.snapshot).toMatchObject({
+      height: '840000',
+      blockHash: 'b'.repeat(64),
+      finality: 'best-chain',
+    });
 
     const bitcoinEvidenceId = bitcoin.json().evidence[0].id;
     const evidence = await app.inject({
@@ -622,6 +646,28 @@ describe('ZeroTrace API contract', () => {
       lamports: { state: 'known', value: '123' },
       owner: { state: 'known', value: '11111111111111111111111111111111' },
       executable: { state: 'known', value: false },
+    });
+    expect(solana.json().metadata.snapshot).toMatchObject({
+      slot: '300000000',
+      blockhash: '11111111111111111111111111111111',
+      commitment: 'finalized',
+    });
+  });
+
+  it('treats an explicit null Solana account as known absence rather than Unknown', async () => {
+    const app = await createApp({ config, runtime: runtimeWithAllLedgers(null), logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/subjects/SOLANA/11111111111111111111111111111111',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().facts).toEqual({
+      exists: { state: 'known', value: false },
+      lamports: { state: 'known', value: '0' },
+      owner: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      executable: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
     });
   });
 

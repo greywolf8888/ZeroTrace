@@ -44,21 +44,41 @@ const EVM_CAPABILITIES: ProviderCapability[] = [
   'LOG',
 ];
 
-function requireHex(value: unknown, field: string): string {
-  if (typeof value !== 'string' || !/^0x[0-9a-fA-F]+$/.test(value)) {
+function requireHexQuantity(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/.test(value)) {
     throw new ProviderError('INVALID_RESPONSE', `EVM provider returned an invalid ${field}.`);
   }
   return value;
 }
 
 function hexQuantity(value: unknown, field: string): bigint {
-  return BigInt(requireHex(value, field));
+  return BigInt(requireHexQuantity(value, field));
+}
+
+function requireHexData(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !/^0x(?:[0-9a-fA-F]{2})*$/.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `EVM provider returned invalid ${field}.`);
+  }
+  return value;
+}
+
+function timestampFromHex(value: unknown): string {
+  const seconds = hexQuantity(value, 'block timestamp');
+  if (seconds > BigInt(Math.floor(Number.MAX_SAFE_INTEGER / 1_000))) {
+    throw new ProviderError('INVALID_RESPONSE', 'EVM block timestamp is outside the safe range.');
+  }
+  const date = new Date(Number(seconds) * 1_000);
+  if (Number.isNaN(date.getTime())) {
+    throw new ProviderError('INVALID_RESPONSE', 'EVM block timestamp is invalid.');
+  }
+  return date.toISOString();
 }
 
 export interface EvmAdapterConfig {
   id: string;
   chainId: number;
   chainName: string;
+  snapshotBlockTag?: 'latest' | 'safe' | 'finalized';
   adapterVersion?: string;
 }
 
@@ -152,37 +172,43 @@ export class EvmLedgerAdapter {
     }
   }
 
-  getBalance(address: string, blockTag = 'latest'): Promise<string> {
-    return this.read<string>('eth_getBalance', [address, blockTag]);
+  async getBalance(address: string, blockTag = 'latest'): Promise<string> {
+    return requireHexQuantity(
+      await this.read<unknown>('eth_getBalance', [address, blockTag]),
+      'balance',
+    );
   }
 
-  getCode(address: string, blockTag = 'latest'): Promise<string> {
-    return this.read<string>('eth_getCode', [address, blockTag]);
+  async getCode(address: string, blockTag = 'latest'): Promise<string> {
+    return requireHexData(await this.read<unknown>('eth_getCode', [address, blockTag]), 'bytecode');
   }
 
   async createSnapshot(): Promise<EvmSnapshot> {
-    const block = await this.read<Record<string, unknown>>('eth_getBlockByNumber', [
-      'latest',
-      false,
-    ]);
+    const finality = this.config.snapshotBlockTag ?? 'finalized';
+    const rawBlock = await this.read<unknown>('eth_getBlockByNumber', [finality, false]);
+    if (typeof rawBlock !== 'object' || rawBlock === null || Array.isArray(rawBlock)) {
+      throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned an invalid block.');
+    }
+    const block = rawBlock as Record<string, unknown>;
     const blockNumber = hexQuantity(block.number, 'block number').toString();
     const blockHash = block.hash;
     if (typeof blockHash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(blockHash)) {
       throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned an invalid block hash.');
     }
-    const timestamp = Number(hexQuantity(block.timestamp, 'block timestamp'));
     return {
       ledger: 'EVM',
       chainId: `eip155:${this.config.chainId}`,
       blockNumber,
       blockHash,
-      blockTimestamp: new Date(timestamp * 1000).toISOString(),
+      finality,
+      blockTimestamp: timestampFromHex(block.timestamp),
       capturedAt: new Date().toISOString(),
       providerVersions: { [this.sourceId]: 'json-rpc' },
       adapterVersions: { evm: this.config.adapterVersion ?? '0.1.0' },
       configHash: hashPayload({
         id: this.config.id,
         chainId: this.config.chainId,
+        finality,
         sourceId: this.sourceId,
       }),
       entityModelVersion: 'entity-v0.1.0',

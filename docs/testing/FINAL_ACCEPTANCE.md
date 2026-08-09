@@ -7,6 +7,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Repository installs reproducibly from lockfile
 - [x] Strict type contracts preserve Unknown/unavailable
 - [x] EVM, Bitcoin, and Solana adapter boundaries exist
+- [x] Current-state Snapshots use explicit EVM finality, height-pinned Bitcoin best-chain hashes,
+      and slot-specific Solana blockhashes with minimum-context account reads
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
 - [x] API, UI, infrastructure schema, health, and test foundation exist
 - [x] Clean Docker build, database initialization, and runtime smoke check recorded

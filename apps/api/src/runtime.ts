@@ -123,6 +123,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     id: string,
     chainId: number,
     chainName: string,
+    snapshotBlockTag: 'latest' | 'safe' | 'finalized',
     requestsPerSecond: number,
   ) => {
     if (urls.length === 0) {
@@ -141,7 +142,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       return;
     }
     const adapter = new EvmLedgerAdapter(
-      { id, chainId, chainName },
+      { id, chainId, chainName, snapshotBlockTag },
       jsonRpcTransport(urls, id, config, requestsPerSecond),
     );
     providers.push(adapter);
@@ -153,6 +154,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     'ethereum-rpc',
     config.ethereumChainId,
     'Ethereum',
+    config.ethereumSnapshotTag,
     config.ethereumRequestsPerSecond,
   );
   addEvm(
@@ -160,6 +162,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     'bsc-rpc',
     config.bscChainId,
     'BNB Smart Chain',
+    config.bscSnapshotTag,
     config.bscRequestsPerSecond,
   );
 

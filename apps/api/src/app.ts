@@ -192,9 +192,9 @@ function snapshotPosition(snapshot: AnalysisSnapshot): {
 } {
   switch (snapshot.ledger) {
     case 'EVM':
-      return { blockOrSlot: snapshot.blockNumber, finality: 'snapshot-block' };
+      return { blockOrSlot: snapshot.blockNumber, finality: snapshot.finality };
     case 'BITCOIN':
-      return { blockOrSlot: snapshot.height, finality: 'best-chain' };
+      return { blockOrSlot: snapshot.height, finality: snapshot.finality };
     case 'SOLANA':
       return { blockOrSlot: snapshot.slot, finality: snapshot.commitment };
   }
@@ -700,7 +700,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             locator: `address:${subject.normalizedId}@${snapshot.blockNumber}`,
             payload,
             blockOrSlot: snapshot.blockNumber,
-            finality: 'snapshot-head',
+            finality: snapshot.finality,
             summary: 'EVM native balance and bytecode at the snapshot block.',
           }),
           [],
@@ -722,7 +722,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           subject,
           facts: {
             nativeBalanceAtomic: knownValue(parseHexQuantity(balanceHex, 'EVM balance')),
-            accountKind: knownValue(code === '0x' || code === '0x0' ? 'EOA' : 'CONTRACT'),
+            accountKind: knownValue(code === '0x' ? 'EOA' : 'CONTRACT'),
           },
           metadata,
           evidence: [evidence],
@@ -755,7 +755,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             locator: `address:${subject.normalizedId}@${snapshot.height}`,
             payload,
             blockOrSlot: snapshot.height,
-            finality: 'best-chain',
+            finality: snapshot.finality,
             summary: 'Bitcoin address chain and mempool statistics near the snapshot tip.',
           }),
           [],
@@ -797,7 +797,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       }
       const snapshot = await adapter.createSnapshot();
       const response = await adapter.getAccountInfo(subject.normalizedId, Number(snapshot.slot));
-      const value = (response as { value?: unknown }).value;
+      const value = response.value;
       const payload = {
         response,
         snapshotSlot: snapshot.slot,
@@ -819,27 +819,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         [],
         snapshot,
       );
-      const account =
-        typeof value === 'object' && value !== null
-          ? (value as Record<string, unknown>)
-          : undefined;
-      const lamports = account?.lamports;
-      const lamportsValue =
-        account === undefined
-          ? knownValue('0')
-          : typeof lamports === 'string' && /^\d+$/.test(lamports)
-            ? knownValue(lamports)
-            : typeof lamports === 'number' && Number.isSafeInteger(lamports)
-              ? knownValue(String(lamports))
-              : unavailableValue(
-                  'PRECISION_UNSAFE',
-                  'Provider balance was not a lossless integer.',
-                );
+      const account = value ?? undefined;
       return {
         subject,
         facts: {
           exists: knownValue(account !== undefined),
-          lamports: lamportsValue,
+          lamports: knownValue(account?.lamports ?? '0'),
           owner:
             account === undefined || typeof account.owner !== 'string'
               ? unknownValue('INSUFFICIENT_DATA')

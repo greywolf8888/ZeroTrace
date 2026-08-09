@@ -32,6 +32,11 @@
   rejected in memory, in the repository, and by PostgreSQL.
 - Snapshot-bound sources are incompatible when their complete Snapshot differs, even at the same
   block/slot.
+- EVM Snapshot tags are explicit and provider quantities/data must be canonical; Bitcoin resolves
+  the best-chain hash from the observed height; Solana uses `getBlock` for the selected slot and
+  rejects missing blocks or account contexts older than that slot.
+- Solana account quantities remain lossless decimal strings. Only explicit `value: null` means a
+  Known non-existent account; missing or malformed values never become zero.
 - PostgreSQL writes are transactional and idempotent; Evidence, Snapshot, and derivation edges remain
   immutable and drill down after a repository restart.
 - finalized ingestion stores the raw artifact before Evidence/Raw Fact, advances checkpoints only

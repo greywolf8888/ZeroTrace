@@ -154,6 +154,33 @@ function jsonValue(value: unknown): unknown {
   }
 }
 
+function parseStoredSnapshot(value: unknown): AnalysisSnapshot {
+  const parsed = jsonValue(value);
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return AnalysisSnapshotSchema.parse(parsed);
+  }
+  const record = parsed as Record<string, unknown>;
+  if (Object.hasOwn(record, 'finality')) return AnalysisSnapshotSchema.parse(record);
+  if (record.ledger === 'BITCOIN') {
+    return AnalysisSnapshotSchema.parse({ ...record, finality: 'best-chain' });
+  }
+  if (record.ledger === 'EVM') {
+    const providerVersions = record.providerVersions;
+    const wasFinalizedIngestion =
+      typeof providerVersions === 'object' &&
+      providerVersions !== null &&
+      !Array.isArray(providerVersions) &&
+      Object.values(providerVersions).some(
+        (version) => typeof version === 'string' && version.includes('sqd-portal-finalized-http'),
+      );
+    return AnalysisSnapshotSchema.parse({
+      ...record,
+      finality: wasFinalizedIngestion ? 'finalized' : 'latest',
+    });
+  }
+  return AnalysisSnapshotSchema.parse(record);
+}
+
 function rowToNode(row: DatabaseRow): EvidenceNode {
   const rawSources = row.source_evidence_ids;
   if (!Array.isArray(rawSources) || rawSources.some((value) => typeof value !== 'string')) {
@@ -186,7 +213,7 @@ function rowToNode(row: DatabaseRow): EvidenceNode {
   const snapshot =
     snapshotPayload === null || snapshotPayload === undefined
       ? undefined
-      : AnalysisSnapshotSchema.parse(jsonValue(snapshotPayload));
+      : parseStoredSnapshot(snapshotPayload);
   const normalizedSources = sources(rawSources as string[]);
   if (evidence.id !== evidenceIdFor(evidence, normalizedSources)) {
     throw new StorageError(
@@ -555,7 +582,7 @@ export class PostgresEvidenceRepository implements EvidenceRepository {
         retryable: true,
       });
     }
-    const storedSnapshot = AnalysisSnapshotSchema.parse(jsonValue(existing.payload));
+    const storedSnapshot = parseStoredSnapshot(existing.payload);
     if (hashPayload(storedSnapshot) !== hashPayload(snapshot)) {
       throw new StorageError('SNAPSHOT_CONFLICT', 'Stored Snapshot content conflicts.');
     }

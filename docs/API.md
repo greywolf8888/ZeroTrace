@@ -29,6 +29,19 @@ The initial API has no authentication and is suitable only for local/staging use
 | POST   | `/api/v1/rv/constant-product`    | exact-integer pool exit quote                                    |
 | POST   | `/api/v1/scenarios/exit-race`    | seeded shared-pool exit ordering                                 |
 
+Current-state subject reads establish a ledger-specific anchor before reading the subject:
+
+- EVM calls `eth_getBlockByNumber` with the configured `finalized`, `safe`, or `latest` tag, then
+  reads balance and code at that exact numeric block. The selected finality is part of the Snapshot.
+- Bitcoin reads the tip height and resolves its hash with `/block-height/:height`, preventing a
+  mixed height/hash pair. Esplora address aggregates remain best-effort near that tip and carry the
+  `BEST_EFFORT_ESPLORA_TIP` marker; they are not archive-pinned UTXO proofs.
+- Solana reads the configured commitment slot, obtains that slot's blockhash with `getBlock`, and
+  requires `getAccountInfo.context.slot` to be at least the Snapshot slot.
+
+Solana's explicit `value: null` is a Known non-existent account. A missing, stale, malformed, or
+provider-failed response remains Unknown/unavailable and is never converted to a zero balance.
+
 Entity, RV, and scenario analysis is accepted only when every supplied source evidence ID already
 exists in the evidence ledger and matches the request ledger, chain, and snapshot block/slot. A
 successful analysis creates a `DERIVED_FEATURE` evidence node linked to those sources. Missing or

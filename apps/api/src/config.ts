@@ -27,11 +27,13 @@ const EnvironmentSchema = z.object({
   EVM_ETHEREUM_RPC_URL: optionalString,
   EVM_ETHEREUM_RPC_URLS: optionalString,
   EVM_ETHEREUM_CHAIN_ID: z.coerce.number().int().positive().default(1),
+  EVM_ETHEREUM_SNAPSHOT_TAG: z.enum(['latest', 'safe', 'finalized']).default('finalized'),
   EVM_ETHEREUM_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(10_000).default(5),
   BSC_RPC_URL: optionalString,
   EVM_BSC_RPC_URL: optionalString,
   EVM_BSC_RPC_URLS: optionalString,
   EVM_BSC_CHAIN_ID: z.coerce.number().int().positive().default(56),
+  EVM_BSC_SNAPSHOT_TAG: z.enum(['latest', 'safe', 'finalized']).default('finalized'),
   EVM_BSC_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(10_000).default(10),
   BTC_ESPLORA_URL: optionalString,
   BITCOIN_ESPLORA_URL: optionalString,
@@ -87,10 +89,12 @@ export interface AppConfig {
   ethereumRpcUrl?: string;
   ethereumRpcUrls: string[];
   ethereumChainId: number;
+  ethereumSnapshotTag: 'latest' | 'safe' | 'finalized';
   ethereumRequestsPerSecond: number;
   bscRpcUrl?: string;
   bscRpcUrls: string[];
   bscChainId: number;
+  bscSnapshotTag: 'latest' | 'safe' | 'finalized';
   bscRequestsPerSecond: number;
   bitcoinEsploraUrl?: string;
   bitcoinEsploraUrls: string[];
@@ -275,9 +279,11 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     },
     ethereumRpcUrls,
     ethereumChainId: parsed.EVM_ETHEREUM_CHAIN_ID,
+    ethereumSnapshotTag: parsed.EVM_ETHEREUM_SNAPSHOT_TAG,
     ethereumRequestsPerSecond: parsed.EVM_ETHEREUM_REQUESTS_PER_SECOND,
     bscRpcUrls,
     bscChainId: parsed.EVM_BSC_CHAIN_ID,
+    bscSnapshotTag: parsed.EVM_BSC_SNAPSHOT_TAG,
     bscRequestsPerSecond: parsed.EVM_BSC_REQUESTS_PER_SECOND,
     bitcoinEsploraUrls,
     bitcoinEsploraRequestsPerSecond: parsed.BITCOIN_ESPLORA_REQUESTS_PER_SECOND,

@@ -12,6 +12,19 @@ describe('API configuration', () => {
     expect(config.bitcoinEsploraUrls).toEqual([]);
     expect(config.solanaRpcUrl).toBeUndefined();
     expect(config.solanaRpcUrls).toEqual([]);
+    expect(config.ethereumSnapshotTag).toBe('finalized');
+    expect(config.bscSnapshotTag).toBe('finalized');
+  });
+
+  it('allows an explicit EVM snapshot finality without accepting pending state', () => {
+    expect(
+      loadConfig({
+        NODE_ENV: 'test',
+        EVM_ETHEREUM_SNAPSHOT_TAG: 'safe',
+        EVM_BSC_SNAPSHOT_TAG: 'latest',
+      }),
+    ).toMatchObject({ ethereumSnapshotTag: 'safe', bscSnapshotTag: 'latest' });
+    expect(() => loadConfig({ NODE_ENV: 'test', EVM_ETHEREUM_SNAPSHOT_TAG: 'pending' })).toThrow();
   });
 
   it('tracks optional provider configuration without exposing its secret', () => {

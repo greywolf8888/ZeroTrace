@@ -12,6 +12,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - canonical multi-ledger snapshot, knowledge, evidence, entity, control, launch, and RV schemas;
 - checksum-aware EVM, Bitcoin, and Solana identifier parsing;
 - hardened read-only provider transport and current-state adapters;
+- ledger-canonical current-state snapshots with explicit EVM finality tags, height-pinned Bitcoin
+  best-chain hashes, Solana `getBlock` anchors, strict lossless account parsing, and legacy Snapshot
+  read compatibility;
 - bounded provider retry, `Retry-After`, pacing, TTL/LRU cache, circuit breaker, failover, and health
   diagnostics;
 - ordered Ethereum/BSC/Bitcoin/Solana provider pools and safe hostname-based Evidence source IDs;

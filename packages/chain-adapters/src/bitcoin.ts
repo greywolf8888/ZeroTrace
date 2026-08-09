@@ -140,12 +140,15 @@ export class BitcoinUtxoLedgerAdapter {
 
   async createSnapshot(): Promise<BitcoinSnapshot> {
     const height = requireHeight(await this.#transport.getText('/blocks/tip/height'));
-    const blockHash = requireBlockHash(await this.#transport.getText('/blocks/tip/hash'));
+    const blockHash = requireBlockHash(
+      await this.#transport.getText(`/block-height/${encodeURIComponent(height)}`),
+    );
     return {
       ledger: 'BITCOIN',
       chainId: 'bitcoin-mainnet',
       height,
       blockHash,
+      finality: 'best-chain',
       capturedAt: new Date().toISOString(),
       providerVersions: { [this.sourceId]: 'esplora-http' },
       adapterVersions: { bitcoin: this.config.adapterVersion ?? '0.1.0' },

@@ -37,6 +37,7 @@ const evmSnapshot = {
   chainId: 'eip155:1',
   blockNumber: '1',
   blockHash: '0x' + 'a'.repeat(64),
+  finality: 'finalized' as const,
   capturedAt: '2026-08-09T00:00:00.000Z',
   providerVersions: { fixture: '1' },
   adapterVersions: { evm: '0.1.0' },
@@ -192,7 +193,7 @@ describe('PostgreSQL Evidence repository boundaries', () => {
       payload: { score: 1 },
       observedAt: rawEvidence.observedAt,
       blockOrSlot: '1',
-      finality: 'snapshot-block',
+      finality: 'finalized',
       rawArtifactRef: 'sha256:' + 'c'.repeat(64),
       summary: 'Complete stored row fixture.',
       sourceEvidenceIds: ['ev_a', 'ev_b'],
@@ -225,13 +226,57 @@ describe('PostgreSQL Evidence repository boundaries', () => {
     await expect(repository.get(storedEvidence.id)).resolves.toMatchObject({
       evidence: {
         sourceUri: 'https://provider.example/evidence',
-        finality: 'snapshot-block',
+        finality: 'finalized',
         rawArtifactRef: 'sha256:' + 'c'.repeat(64),
       },
       sourceEvidenceIds: ['ev_a', 'ev_b'],
       snapshot: evmSnapshot,
     });
     await expect(repository.get('ev_missing')).resolves.toBeUndefined();
+  });
+
+  it('upgrades legacy stored Snapshot finality without changing its chain anchor', async () => {
+    const { finality, ...legacyBase } = evmSnapshot;
+    expect(finality).toBe('finalized');
+    const legacySnapshot = {
+      ...legacyBase,
+      providerVersions: { sqd: 'sqd-portal-finalized-http-v1' },
+    };
+    const repository = new PostgresEvidenceRepository(
+      pool({
+        query: vi.fn(async () => ({
+          rows: [
+            {
+              id: rawEvidence.id,
+              ledger: rawEvidence.ledger,
+              chain_id: rawEvidence.chainId,
+              evidence_kind: rawEvidence.kind,
+              source: rawEvidence.source,
+              locator: rawEvidence.locator,
+              source_uri: null,
+              payload_hash: rawEvidence.payloadHash,
+              observed_at: new Date(rawEvidence.observedAt),
+              block_or_slot: rawEvidence.blockOrSlot,
+              finality: null,
+              summary: rawEvidence.summary,
+              raw_artifact_ref: null,
+              snapshot_payload: JSON.stringify(legacySnapshot),
+              source_evidence_ids: [],
+            },
+          ],
+          rowCount: 1,
+        })),
+      }),
+    );
+
+    await expect(repository.get(rawEvidence.id)).resolves.toMatchObject({
+      snapshot: {
+        ledger: 'EVM',
+        blockNumber: '1',
+        blockHash: evmSnapshot.blockHash,
+        finality: 'finalized',
+      },
+    });
   });
 
   it('rolls back and releases a checked-out client after a write failure', async () => {

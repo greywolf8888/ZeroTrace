@@ -1,6 +1,9 @@
 # Third-party Dependencies
 
-Inventory date: **2026-08-09**
+Inventory date: **2026-08-10**
+
+The 2026-08-10 current-state Snapshot hardening uses the existing clean HTTP adapters and Node.js
+built-ins; it adds no runtime package or copied upstream code.
 
 Direct versions are pinned in manifests or container configuration. Transitive npm components are
 captured by `npm run sbom` in CycloneDX JSON and checked by `npm run license:check`.

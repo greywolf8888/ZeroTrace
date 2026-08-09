@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   AnalysisMetadataSchema,
+  AnalysisSnapshotSchema,
   ProviderHealthSchema,
   knownValue,
   unavailableValue,
@@ -98,5 +99,39 @@ describe('analysis metadata', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe('analysis snapshots', () => {
+  it('requires explicit EVM and Bitcoin finality semantics', () => {
+    const common = {
+      capturedAt: '2026-08-10T00:00:00.000Z',
+      providerVersions: { fixture: '1' },
+      adapterVersions: { fixture: '1' },
+      configHash: 'a'.repeat(64),
+      entityModelVersion: 'entity-v0.1.0',
+      labelSnapshot: 'labels-empty-v1',
+    };
+    const evm = {
+      ...common,
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      blockNumber: '1',
+      blockHash: `0x${'b'.repeat(64)}`,
+    };
+    const bitcoin = {
+      ...common,
+      ledger: 'BITCOIN',
+      chainId: 'bitcoin-mainnet',
+      height: '1',
+      blockHash: 'c'.repeat(64),
+    };
+
+    expect(AnalysisSnapshotSchema.safeParse(evm).success).toBe(false);
+    expect(AnalysisSnapshotSchema.safeParse({ ...evm, finality: 'finalized' }).success).toBe(true);
+    expect(AnalysisSnapshotSchema.safeParse(bitcoin).success).toBe(false);
+    expect(AnalysisSnapshotSchema.safeParse({ ...bitcoin, finality: 'best-chain' }).success).toBe(
+      true,
+    );
   });
 });

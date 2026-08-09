@@ -263,6 +263,7 @@ describe('SqdFinalizedIngestionPipeline', () => {
     expect(stores.ledger.values()[0]?.snapshot).toMatchObject({
       ledger: 'EVM',
       blockNumber: '0',
+      finality: 'finalized',
       blockTimestamp: '1970-01-01T00:00:00.000Z',
     });
   });
@@ -655,7 +656,7 @@ describe('SqdFinalizedIngestionPipeline', () => {
           timestamp: 1_231_006_505,
         },
       },
-      expected: { ledger: 'BITCOIN', height: '0' },
+      expected: { ledger: 'BITCOIN', height: '0', finality: 'best-chain' },
     },
     {
       dataset: 'solana-mainnet' as const,
