@@ -304,8 +304,8 @@ provider reconciliation, and archive-scale backfill remain open.
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                |
 | `docker compose config`  | pass                                                                                                  |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                    |
-| branch GitHub Actions CI | pass on `0193c95`: quality/contracts, Chromium E2E, and five production container targets             |
-| branch CodeQL            | pass on `0193c95`: JavaScript and TypeScript analysis                                                 |
+| branch GitHub Actions CI | pass on `83b5194`: quality/contracts, Chromium E2E, and five production container targets             |
+| branch CodeQL            | pass on `83b5194`: JavaScript and TypeScript analysis                                                 |
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

@@ -18,7 +18,7 @@ completed feature.
 | Unit tests                       | **175 passing across 20 files**                                                     |
 | Integration tests                | **25 passing across API and three real durable stores**                             |
 | Real-browser E2E                 | **6 passing: Chromium desktop and Pixel 7**                                         |
-| Remote CI                        | **Pass on immutable development commit `0193c95`; protected main `5f94dca`**        |
+| Remote CI                        | **Pass on immutable development commit `83b5194`; protected main `3372a5a`**        |
 | Coverage                         | **87.93% statements / 79.44% branches / 97.02% functions / 89.19% lines**           |
 | Real-chain validation            | Four-chain current state plus finalized raw-ledger ingestion passed                 |
 | Durable evidence/history         | Cross-ledger raw execution/state provenance wired; semantics and continuity pending |
@@ -65,9 +65,9 @@ The only allowed status vocabulary in this ledger is:
 - [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31321516761) and
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31321516799) passed on immutable
   development commit `235fad6` before promotion to protected `main`.
-- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31323118898) and
-  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31323118887) passed on immutable
-  development commit `0193c95` for ledger-specific raw-record ingestion.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31325135812) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31325135794) passed on immutable
+  development commit `83b5194` for finalized cross-ledger execution/state ingestion.
 
 ### Read-only chain foundation
 
@@ -230,7 +230,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                      | PostgreSQL 001–004/triggers and ClickHouse Raw Fact schema/migration                             |
 | Runtime/browser smoke          | Pass                                      | API/web health, proxy, security headers, desktop/mobile render                                   |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope | four current-state reads plus four finalized ledger-record pipelines; full archive scope pending |
-| Remote CI                      | Pass                                      | CI and CodeQL on immutable development commit `0193c95`; protected main remains `5f94dca`        |
+| Remote CI                      | Pass                                      | CI and CodeQL on immutable development commit `83b5194`; protected main remains `3372a5a`        |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
