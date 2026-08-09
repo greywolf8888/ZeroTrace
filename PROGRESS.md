@@ -18,7 +18,7 @@ completed feature.
 | Unit tests                       | **197 passing across 22 files**                                                      |
 | Integration tests                | **32 passing across API and three real durable stores**                              |
 | Real-browser E2E                 | **6 passing: Chromium desktop and Pixel 7**                                          |
-| Remote CI                        | **Pass on immutable development commit `328a102`; protected main `3372a5a`**         |
+| Remote CI                        | **Pass on immutable development commit `fa69cc5`; protected main `3372a5a`**         |
 | Coverage                         | **87.05% statements / 78.24% branches / 95.07% functions / 88.10% lines**            |
 | Real-chain validation            | Four-chain anchor reads, BSC endpoint agreement/continuity, and raw ingestion passed |
 | Durable evidence/history         | Raw execution/state plus anchor/alert provenance wired; semantic history pending     |
@@ -75,6 +75,10 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31327702700) passed on immutable
   development commit `6c0b7f4` for request-scoped provider provenance and dynamic-anchor cache
   bypass.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31331644908) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31331644917) passed on immutable
+  development commit `fa69cc5` for Evidence-backed anchor reconciliation, continuity, durable
+  alerts, Snapshot recapture, API/UI Data Health, and restart acceptance.
 
 ### Read-only chain foundation
 
@@ -274,7 +278,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                      | PostgreSQL 001–006/triggers and ClickHouse Raw Fact schema/migration                                                          |
 | Runtime/browser smoke          | Pass                                      | API/web health, proxy, security headers, desktop/mobile render                                                                |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending |
-| Remote CI                      | Pass                                      | CI and CodeQL on immutable development commit `328a102`; protected main remains `3372a5a`                                     |
+| Remote CI                      | Pass                                      | CI and CodeQL on immutable development commit `fa69cc5`; protected main remains `3372a5a`                                     |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

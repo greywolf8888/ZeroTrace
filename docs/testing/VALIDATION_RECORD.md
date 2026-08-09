@@ -407,8 +407,8 @@ rollback/replay is not implemented. Those remain release gates.
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                          |
 | `docker compose config`  | pass                                                                                                                                                            |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                              |
-| branch GitHub Actions CI | [pass on `6c0b7f4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31327702718): quality/contracts, Chromium E2E, and five production container targets |
-| branch CodeQL            | [pass on `6c0b7f4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31327702700): JavaScript and TypeScript analysis                                     |
+| branch GitHub Actions CI | [pass on `fa69cc5`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31331644908): quality/contracts, Chromium E2E, and five production container targets |
+| branch CodeQL            | [pass on `fa69cc5`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31331644917): JavaScript and TypeScript analysis                                     |
 
 The latest full run used the isolated `zerotrace-dq-test` project on alternate ports with separate
 PostgreSQL, ClickHouse, and MinIO volumes. All 32 integration tests passed. The dedicated local test
