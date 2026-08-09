@@ -12,22 +12,22 @@ captured by `npm run sbom` in CycloneDX JSON and checked by `npm run license:che
 
 ## Runtime npm packages
 
-| Package                      | Version | Purpose                                  | License      | Repository                                                                                        |
-| ---------------------------- | ------: | ---------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------- |
-| `fastify`                    |  5.11.3 | HTTP API framework                       | MIT          | [fastify/fastify](https://github.com/fastify/fastify)                                             |
-| `@fastify/cors`              |  11.3.0 | explicit browser-origin policy           | MIT          | [fastify-cors](https://github.com/fastify/fastify-cors)                                           |
-| `@fastify/swagger`           |   9.8.1 | OpenAPI generation                       | MIT          | [fastify-swagger](https://github.com/fastify/fastify-swagger)                                     |
-| `@fastify/swagger-ui`        |   6.1.1 | local API documentation UI               | MIT          | [fastify-swagger-ui](https://github.com/fastify/fastify-swagger-ui)                               |
-| `dotenv`                     |  17.4.2 | local environment loading                | BSD-2-Clause | [motdotla/dotenv](https://github.com/motdotla/dotenv)                                             |
-| `prom-client`                |  15.1.3 | Prometheus metrics                       | Apache-2.0   | [siimon/prom-client](https://github.com/siimon/prom-client)                                       |
-| `zod`                        |   4.4.3 | canonical runtime validation             | MIT          | [colinhacks/zod](https://github.com/colinhacks/zod)                                               |
-| `react` / `react-dom`        |  19.2.8 | analyst UI                               | MIT          | [facebook/react](https://github.com/facebook/react)                                               |
-| `viem`                       | 2.55.11 | EVM checksum/address normalization only  | MIT          | [wevm/viem](https://github.com/wevm/viem)                                                         |
-| `bitcoin-address-validation` |   3.0.0 | Bitcoin network/type/checksum validation | MIT          | [ruigomeseu/bitcoin-address-validation](https://github.com/ruigomeseu/bitcoin-address-validation) |
-| `bs58`                       |   6.0.0 | lossless Solana public-key decoding      | MIT          | [cryptocoinjs/bs58](https://github.com/cryptocoinjs/bs58)                                         |
-| `pg`                         |  8.23.0 | pooled, parameterized PostgreSQL access  | MIT          | [brianc/node-postgres](https://github.com/brianc/node-postgres)                                   |
-| `@clickhouse/client`         |  1.23.1 | parameterized ClickHouse Raw Fact access | Apache-2.0   | [ClickHouse/clickhouse-js](https://github.com/ClickHouse/clickhouse-js)                           |
-| `minio`                      |   8.0.7 | S3-compatible versioned artifact client  | Apache-2.0   | [minio/minio-js](https://github.com/minio/minio-js)                                               |
+| Package                      | Version | Purpose                                       | License      | Repository                                                                                        |
+| ---------------------------- | ------: | --------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------- |
+| `fastify`                    |  5.11.3 | HTTP API framework                            | MIT          | [fastify/fastify](https://github.com/fastify/fastify)                                             |
+| `@fastify/cors`              |  11.3.0 | explicit browser-origin policy                | MIT          | [fastify-cors](https://github.com/fastify/fastify-cors)                                           |
+| `@fastify/swagger`           |   9.8.1 | OpenAPI generation                            | MIT          | [fastify-swagger](https://github.com/fastify/fastify-swagger)                                     |
+| `@fastify/swagger-ui`        |   6.1.1 | local API documentation UI                    | MIT          | [fastify-swagger-ui](https://github.com/fastify/fastify-swagger-ui)                               |
+| `dotenv`                     |  17.4.2 | local environment loading                     | BSD-2-Clause | [motdotla/dotenv](https://github.com/motdotla/dotenv)                                             |
+| `prom-client`                |  15.1.3 | Prometheus metrics                            | Apache-2.0   | [siimon/prom-client](https://github.com/siimon/prom-client)                                       |
+| `zod`                        |   4.4.3 | canonical runtime validation                  | MIT          | [colinhacks/zod](https://github.com/colinhacks/zod)                                               |
+| `react` / `react-dom`        |  19.2.8 | analyst UI                                    | MIT          | [facebook/react](https://github.com/facebook/react)                                               |
+| `viem`                       | 2.55.11 | EVM checksum/address normalization only       | MIT          | [wevm/viem](https://github.com/wevm/viem)                                                         |
+| `bitcoin-address-validation` |   3.0.0 | Bitcoin network/type/checksum validation      | MIT          | [ruigomeseu/bitcoin-address-validation](https://github.com/ruigomeseu/bitcoin-address-validation) |
+| `bs58`                       |   6.0.0 | lossless Solana public-key/signature decoding | MIT          | [cryptocoinjs/bs58](https://github.com/cryptocoinjs/bs58)                                         |
+| `pg`                         |  8.23.0 | pooled, parameterized PostgreSQL access       | MIT          | [brianc/node-postgres](https://github.com/brianc/node-postgres)                                   |
+| `@clickhouse/client`         |  1.23.1 | parameterized ClickHouse Raw Fact access      | Apache-2.0   | [ClickHouse/clickhouse-js](https://github.com/ClickHouse/clickhouse-js)                           |
+| `minio`                      |   8.0.7 | S3-compatible versioned artifact client       | Apache-2.0   | [minio/minio-js](https://github.com/minio/minio-js)                                               |
 
 Internal `@zerotrace/*` workspace packages are not third-party dependencies.
 

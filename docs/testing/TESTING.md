@@ -41,6 +41,11 @@
   rejects missing blocks or account contexts older than that slot.
 - EVM, Bitcoin, and Solana anchor parent identities must match their replay Snapshots; malformed or
   cross-linked parent data is rejected before reconciliation.
+- typed transaction reads reject malformed identity, placement, quantity, receipt, status, log,
+  signature, output, and outspend fields before any result is constructed;
+- confirmed ledger records must match their position-pinned block/slot Snapshot; pending EVM and
+  Bitcoin mempool observations are bound to a captured head, and null EVM/Solana results retain raw
+  provider Evidence plus an evidenced, ambiguous negative observation;
 - endpoint heads are lowered to one common position before comparison, so ordinary head skew cannot
   become disagreement; two matching endpoints are required and source independence remains Unknown.
 - conflicting same-position anchors produce no canonical winner and create an Evidence-linked
@@ -108,13 +113,16 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - valid EVM identifier classification without a provider;
 - scenario gating;
 - data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
+- typed Solana transaction rendering with Snapshot, Evidence, and humanized field names;
 - anchor-reconciliation status, common-position/operator-independence explanation, four configured
   chain targets, and process-local data-quality storage truth;
-- mobile viewport layout.
+- mobile viewport layout;
 - containment of primary panels within the mobile viewport.
 
-The Playwright configuration never reuses an already-listening local server. It also clears
-provider and durable-storage runtime variables for its API process, so a developer's provider key,
+CI-owned Playwright servers never reuse an already-listening process. On Windows,
+`npm run test:e2e:windows` starts and health-checks test-only API/web processes itself, then Playwright
+reuses only those endpoints and the wrapper stops only its owned process IDs. Both paths clear
+provider and durable-storage runtime variables for the API process, so a developer's provider key,
 database, or unrelated process cannot silently contaminate browser acceptance.
 
 Install Chromium once with `npx playwright install chromium`. Test artifacts stay under

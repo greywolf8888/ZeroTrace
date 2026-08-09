@@ -20,15 +20,16 @@ The initial API has no authentication and is suitable only for local/staging use
 
 ## Implemented intelligence endpoints
 
-| Method | Path                             | Notes                                                            |
-| ------ | -------------------------------- | ---------------------------------------------------------------- |
-| GET    | `/api/v1/search?q=...`           | local identifier classification; optional `ledger` and `chainId` |
-| GET    | `/api/v1/subjects/:ledger/:id`   | snapshot-pinned current-state read when provider exists          |
-| GET    | `/api/v1/evidence/:id`           | Evidence node, source edges, and bound Snapshot                  |
-| GET    | `/api/v1/evidence/:id/drilldown` | restart-safe derived/source Evidence traversal                   |
-| POST   | `/api/v1/entities/resolve`       | deterministic evidence-feature baseline                          |
-| POST   | `/api/v1/rv/constant-product`    | exact-integer pool exit quote                                    |
-| POST   | `/api/v1/scenarios/exit-race`    | seeded shared-pool exit ordering                                 |
+| Method | Path                               | Notes                                                            |
+| ------ | ---------------------------------- | ---------------------------------------------------------------- |
+| GET    | `/api/v1/search?q=...`             | local identifier classification; optional `ledger` and `chainId` |
+| GET    | `/api/v1/subjects/:ledger/:id`     | snapshot-pinned current-state read when provider exists          |
+| GET    | `/api/v1/ledger/:ledger/:type/:id` | typed block, transaction, or Bitcoin outpoint query              |
+| GET    | `/api/v1/evidence/:id`             | Evidence node, source edges, and bound Snapshot                  |
+| GET    | `/api/v1/evidence/:id/drilldown`   | restart-safe derived/source Evidence traversal                   |
+| POST   | `/api/v1/entities/resolve`         | deterministic evidence-feature baseline                          |
+| POST   | `/api/v1/rv/constant-product`      | exact-integer pool exit quote                                    |
+| POST   | `/api/v1/scenarios/exit-race`      | seeded shared-pool exit ordering                                 |
 
 Current-state subject reads establish a ledger-specific anchor before reading the subject:
 
@@ -42,6 +43,25 @@ Current-state subject reads establish a ledger-specific anchor before reading th
 
 Solana's explicit `value: null` is a Known non-existent account. A missing, stale, malformed, or
 provider-failed response remains Unknown/unavailable and is never converted to a zero balance.
+
+### Typed ledger records
+
+`type` accepts `BLOCK` and `TRANSACTION` on EVM, Bitcoin, and Solana, plus `OUTPOINT` on Bitcoin.
+EVM requires an explicit canonical `chainId=eip155:<id>`. Bitcoin and Solana reject a conflicting
+`chainId`. IDs are canonical block positions/hashes, transaction hashes/signatures, or
+`<txid>:<vout>` outpoints.
+
+Confirmed transactions are re-read against their reported block/slot and rejected if the placement
+hash conflicts with the Snapshot. Pending EVM transactions use a captured finalized head. Bitcoin
+mempool transactions and outpoints use a best-chain-tip Snapshot plus a content digest of the
+mutable observation. A null EVM/Solana transaction response creates raw provider Evidence and
+source-linked negative Evidence; the result stays Unknown because absence, pruning/propagation, and
+commitment delay cannot be conflated.
+
+The response contains `subject`, typed `facts`, `metadata`, and `evidence`. `metadata` always carries
+the Snapshot, coverage, freshness, source set, model version, confidence, and Evidence IDs. These
+records validate provider shape and placement but do not claim semantic transfer, protocol-event,
+controller, launchpad, or RV decoding.
 
 Each successful transport response carries its own safe hostname-based endpoint ID. Snapshot
 `providerVersions` lists every endpoint used to establish the anchor; Evidence names the endpoint or

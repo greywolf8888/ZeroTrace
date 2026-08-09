@@ -11,6 +11,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - runnable npm workspace for API, web, and domain packages;
 - canonical multi-ledger snapshot, knowledge, evidence, entity, control, launch, and RV schemas;
 - checksum-aware EVM, Bitcoin, and Solana identifier parsing;
+- strict Solana signature recognition plus typed EVM/Bitcoin/Solana block and transaction and Bitcoin
+  outpoint query contracts;
 - hardened read-only provider transport and current-state adapters;
 - ledger-canonical current-state snapshots with explicit EVM finality tags, height-pinned Bitcoin
   best-chain hashes, Solana `getBlock` anchors, strict lossless account parsing, and legacy Snapshot
@@ -33,7 +35,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   real PostgreSQL integration coverage in CI;
 - deterministic entity-evidence baseline, constant-product quote, and exit-race simulation;
 - Fastify API with OpenAPI, health, capability truth, metrics, and analysis endpoints;
-- responsive React analyst workspace with explicit Unknown states;
+- Snapshot/Evidence-backed ledger query API with pending, mempool, null, and unavailable observations
+  kept distinct from confirmed facts;
+- responsive React analyst workspace with typed ledger results and explicit Unknown states;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,
@@ -48,6 +52,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - safe, actionable worker failure codes that preserve the underlying provider/storage category
   without exposing error text, URL paths, or credentials;
 - repeat-run-safe integration coverage against real PostgreSQL, ClickHouse, and MinIO services;
+- deterministic Windows browser-test launcher with isolated provider/storage configuration and owned
+  API/web process teardown;
 - explicit block-header/transaction profiles, strict per-ledger transaction identities, and
   finalized-head-proven Solana skipped-slot handling;
 - explicit `ledger-records` profile with strict EVM log/trace/state-key, Bitcoin source-position, and
@@ -74,7 +80,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 ### Known limitations
 
 - finalized provider-shaped EVM execution/state, Bitcoin UTXO, and Solana execution/balance records
-  are persisted, but semantic transaction/event normalization and protocol-specific
+  are persisted and strict raw ledger queries are exposed, but semantic transaction/event
+  normalization and protocol-specific
   launchpad/market decoding are not implemented;
 - common-position endpoint reconciliation and reorg detection are implemented, but continuous
   scheduling, automatic rollback/replay, and independently operated provider acceptance are not;

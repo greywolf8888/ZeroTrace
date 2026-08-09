@@ -223,6 +223,16 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
+On Windows, use the owned-process launcher if shell process-tree teardown is unreliable:
+
+```powershell
+npm run test:e2e:windows
+```
+
+It starts the built API and Vite preview on test-only ports, clears provider and durable-storage
+variables for those owned processes, waits for both health endpoints, runs Playwright, and stops only
+the processes it created.
+
 Generate dependency evidence:
 
 ```bash
@@ -242,6 +252,21 @@ The API starts on `http://localhost:8080`. Check:
 ```bash
 npm run health
 ```
+
+Typed, read-only ledger queries use canonical identifiers:
+
+```text
+GET /api/v1/ledger/EVM/BLOCK/16?chainId=eip155:1
+GET /api/v1/ledger/EVM/TRANSACTION/<hash>?chainId=eip155:1
+GET /api/v1/ledger/BITCOIN/TRANSACTION/<txid>
+GET /api/v1/ledger/BITCOIN/OUTPOINT/<txid>:<vout>
+GET /api/v1/ledger/SOLANA/BLOCK/<slot>
+GET /api/v1/ledger/SOLANA/TRANSACTION/<signature>
+```
+
+EVM queries require an explicit canonical `eip155:<chain-id>`. Confirmed results are bound to their
+exact block/slot Snapshot. Pending, mempool, null, and unavailable observations retain distinct
+knowledge states and Evidence.
 
 The readiness endpoint may report `DEGRADED` when no provider is configured, or HTTP 503 when the
 configured Evidence repository is unavailable. The no-provider state is valid for development;

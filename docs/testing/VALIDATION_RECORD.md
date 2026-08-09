@@ -397,23 +397,59 @@ This is real endpoint-level agreement and continuity-path evidence. The two BSC 
 claimed to be independently operated, no real reorg was forced or observed, and automatic
 rollback/replay is not implemented. Those remain release gates.
 
+## Typed ledger query follow-up
+
+The API now validates and returns typed EVM, Bitcoin, and Solana blocks/transactions plus Bitcoin
+outpoints. Confirmed records are rebound to an exact block or slot Snapshot; pending EVM, Bitcoin
+mempool, and outpoint views are tied to a captured head; Bitcoin mutable views additionally carry a
+content digest. Null EVM/Solana provider responses persist a raw provider observation and
+source-linked negative Evidence while keeping absence, pruning/propagation, and commitment delay
+ambiguous.
+
+Deterministic API coverage includes confirmed and pending EVM transactions, confirmed and mempool
+Bitcoin transactions, spent/unspent-field behavior for outpoints, confirmed and null Solana
+transactions, block queries on all three ledgers, placement/source mismatches, malformed provider
+records, explicit chain context, unconfigured providers, and missing EVM receipts. The last case
+keeps the transaction confirmed while execution, gas used, and log count remain Unknown.
+
+The analyst UI accepts typed transaction/block/outpoint search candidates and renders field knowledge
+states, the bound Snapshot, source/coverage/model metadata, and Evidence. Chromium exercised the
+Solana transaction result on desktop and Pixel 7. On Windows an owned-process wrapper starts isolated
+API/web servers and terminates only their process IDs, avoiding shell-dependent Playwright teardown.
+
+Local Docker Desktop was not running during this follow-up. The local coverage run therefore passed
+225 tests and explicitly skipped 15 opt-in PostgreSQL/ClickHouse/object-store tests; it still passed
+the coverage gate at 83.60% statements, 75.20% branches, 90.44% functions, and 84.57% lines. Those
+skips were not counted as durable acceptance. GitHub Actions then started disposable initialized
+stores and passed all 240 tests: 203 unit and 37 integration, with 86.93% statements, 78.44%
+branches, 95.05% functions, and 87.91% lines. The same immutable commit passed 8 Chromium flows,
+CodeQL, dependency/license/SBOM gates, Compose validation, and all five production container targets.
+
+The requested Flap/BSC FFT contract
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` is registered in the
+[terminal acceptance specification](FLAP_FFT_ACCEPTANCE.md). Official deployment, inspection,
+event-indexing, and bonding-curve documentation has been located, but no FFT product conclusion is
+recorded because versioned Flap decoding, entity calibration, market reconstruction, and complete RV
+are not implemented. The specification uses zero tolerance for exact chain state, field-class error
+budgets for derived values, Brier/ECE gates for entity probabilities, and excludes Unknown from
+numeric error denominators.
+
 ## Automated verification
 
-| Command                  | Result                                                                                                                                                          |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run verify:full`    | pass: format, lint, typecheck, 197 unit, 32 integration, build, license, audit, coverage, 6 E2E, SBOM                                                           |
-| `npm run test:coverage`  | pass: 229 tests; 87.05% statements, 78.24% branches, 95.07% functions, 88.10% lines                                                                             |
-| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                                                                               |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                          |
-| `docker compose config`  | pass                                                                                                                                                            |
-| production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                              |
-| branch GitHub Actions CI | [pass on `fa69cc5`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31331644908): quality/contracts, Chromium E2E, and five production container targets |
-| branch CodeQL            | [pass on `fa69cc5`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31331644917): JavaScript and TypeScript analysis                                     |
+| Command                  | Result                                                                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| local non-browser gates  | pass: format, lint, typecheck, 203 unit, 22 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
+| branch `test:coverage`   | pass: 240 tests; 86.93% statements, 78.44% branches, 95.05% functions, 87.91% lines                                                                                |
+| `test:e2e:windows` / CI  | pass: 8 Chromium tests across desktop and Pixel 7                                                                                                                  |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                             |
+| `docker compose config`  | pass                                                                                                                                                               |
+| production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                 |
+| branch GitHub Actions CI | [pass on `5b77783`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31335114054): 240 tests, Chromium E2E, and five production container targets            |
+| branch CodeQL            | [pass on `5b77783`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31335114055): JavaScript and TypeScript analysis                                        |
 
-The latest full run used the isolated `zerotrace-dq-test` project on alternate ports with separate
-PostgreSQL, ClickHouse, and MinIO volumes. All 32 integration tests passed. The dedicated local test
-projects are removed after the final repository/remote checks; unrelated local containers are left
-untouched.
+The latest complete durable run used GitHub Actions disposable PostgreSQL, ClickHouse, and MinIO
+services. All 37 integration tests passed and the workflow removed its named volumes. The local
+Docker engine limitation remains an environment constraint, not a claimed failure or pass.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

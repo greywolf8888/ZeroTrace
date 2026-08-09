@@ -14,6 +14,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Parent-linked EVM/Bitcoin/Solana anchors, common-position endpoint reconciliation, typed
       disagreement/insufficient states, and Evidence-linked continuity alerts are implemented and
       deterministically tested
+- [x] Strict EVM/Bitcoin/Solana block and transaction plus Bitcoin outpoint queries bind confirmed
+      records to exact Snapshots and pending/mempool/null observations to evidenced uncertainty
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
 - [x] API, UI, infrastructure schema, health, and test foundation exist
 - [x] Clean Docker build, database initialization, and runtime smoke check recorded
@@ -35,6 +37,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31331644908) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31331644917) pass on immutable
       anchor-reconciliation and restart-acceptance development commit `fa69cc5`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31335114054) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31335114055) pass on immutable
+      typed-ledger-query development commit `5b77783`
 
 ## Evidence and data
 
@@ -91,6 +96,10 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [ ] Solana archive plus dedicated RPC fixture suite
 - [ ] Named launch/migration fixtures for every declared platform/version
 - [ ] RV reconciliation against historical executable quotes
+- [ ] Run the registered
+      [Flap/BSC FFT terminal acceptance](FLAP_FFT_ACCEPTANCE.md) for
+      `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, including entity, market, RV, Evidence replay,
+      typed error budgets, and automatic multi-source discrepancy checks
 
 Until every applicable item for a release claim is checked with attached evidence, ZeroTrace must not
 be described as terminal-complete or production-approved.

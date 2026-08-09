@@ -118,11 +118,13 @@ flowchart TB
 Solid paths describe the terminal design. The current runtime wires query-time provider reads,
 canonical facts, a process-local Evidence cache backed by durable PostgreSQL Snapshots/nodes/edges,
 and a separate finalized raw-ledger worker backed by versioned artifacts, ClickHouse Raw Facts, and
-PostgreSQL checkpoints. Blocks, transactions, EVM logs, Bitcoin inputs/outputs, and Solana
-instructions are wired. Baseline entity inference, two deterministic RV algorithms, API, and UI are
-also wired. Query-time endpoint anchors are compared at a common position, parent continuity is
-checked against prior observations, and Evidence-linked alerts are stored when sources conflict or
-history changes. Provider-shaped records are not transaction-level semantic normalization;
+PostgreSQL checkpoints. Strict query-time EVM/Bitcoin/Solana block and transaction records plus
+Bitcoin outpoints are Snapshot- and Evidence-bound; finalized blocks, transactions, EVM logs,
+Bitcoin inputs/outputs, and Solana instructions are also wired through ingestion. Baseline entity
+inference, two deterministic RV algorithms, API, and UI are wired. Query-time endpoint anchors are
+compared at a common position, parent continuity is checked against prior observations, and
+Evidence-linked alerts are stored when sources conflict or history changes. Provider-shaped records
+and validated EVM receipts are not transaction-level semantic normalization;
 operator independence, graph projection, rollback/replay, and workflow behavior must not be
 inferred as complete. Consult the progress ledger.
 
@@ -239,6 +241,12 @@ sequenceDiagram
 
 No request path falls back to a send method. If a provider lacks the necessary historical or
 snapshot-consistent read, the operation returns unavailable.
+
+For typed ledger records, confirmed transactions are re-anchored at the provider-reported
+block/slot and rejected if the hash placement conflicts. Pending EVM transactions and Bitcoin
+mempool/outpoint observations use a captured head (plus a content digest for the Bitcoin mempool
+view). A null EVM or Solana transaction response creates a raw provider observation followed by
+source-linked negative Evidence whose ambiguity remains explicit; it is not proof of non-existence.
 
 ## Finalized ingestion commit sequence
 
