@@ -110,10 +110,11 @@ flowchart TB
 
 Solid paths describe the terminal design. The current runtime wires query-time provider reads,
 canonical facts, a process-local Evidence cache backed by durable PostgreSQL Snapshots/nodes/edges,
-and a separate finalized block/raw-transaction worker backed by versioned artifacts, ClickHouse Raw
-Facts, and PostgreSQL checkpoints. Baseline entity inference, two deterministic RV algorithms, API,
-and UI are also wired. Provider-shaped transaction observations are not transaction-level semantic
-normalization; graph projection and workflow behavior must not be inferred as complete. Consult the
+and a separate finalized raw-ledger worker backed by versioned artifacts, ClickHouse Raw Facts, and
+PostgreSQL checkpoints. Blocks, transactions, EVM logs, Bitcoin inputs/outputs, and Solana
+instructions are wired. Baseline entity inference, two deterministic RV algorithms, API, and UI are
+also wired. Provider-shaped records are not transaction-level semantic normalization; graph
+projection and workflow behavior must not be inferred as complete. Consult the
 progress ledger.
 
 ## Canonical concepts
@@ -216,7 +217,7 @@ sequenceDiagram
   Worker->>Checkpoint: begin or resume stable range identity
   Checkpoint-->>Worker: next uncommitted block or terminal state
   Worker->>SQD: bounded finalized range from next block
-  SQD-->>Worker: streamed JSONL block, optional transactions, and finalized head
+  SQD-->>Worker: streamed JSONL block, requested raw tables, and finalized head
   Worker->>Object: put canonical content-addressed artifact
   Object-->>Worker: verified immutable reference
   Worker->>Evidence: append Snapshot and block Evidence
@@ -226,6 +227,11 @@ sequenceDiagram
     Worker->>Evidence: append transaction Evidence on the same Snapshot/artifact
     Evidence-->>Worker: canonical transaction Evidence ID
     Worker->>Facts: put Evidence-linked transaction Raw Fact
+  end
+  loop Each applicable EVM log, BTC input/output, or Solana instruction
+    Worker->>Evidence: append raw-record Evidence on the same Snapshot/artifact
+    Evidence-->>Worker: canonical record Evidence ID
+    Worker->>Facts: put Evidence-linked ledger Raw Fact
   end
   Facts-->>Worker: verify all idempotent facts
   Worker->>Checkpoint: advance monotonically
@@ -258,14 +264,14 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                     | Current state                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot and ingestion checkpoints wired; other repositories pending                  |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | finalized block and provider-shaped transaction Raw Facts wired; semantic facts/series pending |
-| Object storage   | raw provider payloads and large artifacts by content hash                                              | versioned content-addressed artifacts wired for finalized ingestion                            |
-| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only                                                               |
-| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                                                                           |
-| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only                                                                  |
+| Store            | Intended authority                                                                                     | Current state                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot and ingestion checkpoints wired; other repositories pending                           |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | finalized block/transaction/log/input/output/instruction Raw Facts wired; semantic facts/series pending |
+| Object storage   | raw provider payloads and large artifacts by content hash                                              | versioned content-addressed artifacts wired for finalized ingestion                                     |
+| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only                                                                        |
+| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                                                                                    |
+| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only                                                                           |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, and ingestion-run tables include append-only or
 monotonic guards. Deferred database constraints reject inferred Evidence without a source edge,
@@ -273,12 +279,15 @@ while repositories verify canonical IDs, Snapshot identity, idempotent conflicts
 writes. ClickHouse Raw Facts bind Evidence and artifact references and use explicit logical
 deduplication; metric tables enforce a knowledge-state/value consistency constraint.
 
-The worker exposes explicit `block-headers` and `transactions` profiles. Header-only output reports
-transaction coverage as `NOT_QUERIED` with a null count; it never reports a numeric zero. The SQD
-contract may omit an optional transaction table when an explicitly requested table has no matches;
-that provider-defined empty result is materialized as a known zero only under the transaction profile.
-Solana skipped-slot ranges are advanced only when the finalized-head header proves coverage; an empty
-stream with Unknown head remains an error.
+The worker exposes explicit `block-headers`, `transactions`, and `ledger-records` profiles. The last
+profile materializes transactions plus EVM logs, Bitcoin inputs/outputs, or Solana instructions as
+applicable. Each table uses a discriminated `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE` state;
+only materialized tables receive a numeric count. SQD may omit an explicitly requested optional table
+when it has no rows, which is a known zero only for that requested table. Bitcoin coinbase outpoints
+remain explicitly null. Solana instruction identity uses blockhash, provider transaction index, and
+the complete instruction-address path; the transaction index is not assumed to be a returned-array
+offset. Solana skipped-slot ranges are advanced only when the finalized-head header proves coverage;
+an empty stream with Unknown head remains an error.
 
 ## Platform-adapter policy
 

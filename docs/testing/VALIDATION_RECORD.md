@@ -171,8 +171,8 @@ secure default, the worker returned the safe code `PRIVATE_NETWORK_BLOCKED`; ena
 local interception-proxy exception then ingested a BNB Smart Chain finalized block, and an immediate
 replay returned `processedBlocks: 0` and `alreadyTerminal: true`.
 
-These observations validate finalized block-header transport, provenance, storage ordering, and
-restart behavior. They do **not** validate transaction/log/trace/input/output/instruction decoding,
+These observations validated finalized block-header transport, provenance, storage ordering, and
+restart behavior at that stage. They did **not** validate the later transaction/ledger-record work,
 continuous scheduling, unfinalized forks/reorgs, cross-provider reconciliation, or protocol
 semantics. The interception-proxy exception documented above was still necessary on this host; the
 secure default remains `ALLOW_PRIVATE_PROVIDER_URLS=false`.
@@ -203,24 +203,66 @@ range with zero blocks/transactions; an empty stream with a missing finalized-he
 error. Header-only runs return `transactionCoverage: NOT_QUERIED` and a null transaction count, so
 not-queried history is never presented as numeric zero.
 
-This follow-up validates provider-shaped raw transaction capture and provenance only. EVM receipt,
-log and trace normalization, Bitcoin input/output and outpoint materialization, Solana
-instruction/CPI and balance tables, protocol decoding, independent-provider reconciliation, and
-archive-scale backfill remain open. The disposable transaction-validation containers, network, and
+This follow-up validated provider-shaped raw transaction capture and provenance only at that stage.
+The subsequent ledger-record follow-up below extends raw capture but still does not claim semantic
+transaction or protocol decoding. The disposable transaction-validation containers, network, and
 named volumes were removed after the reverse-read assertions.
+
+## Finalized ledger-record follow-up
+
+The `ledger-records` profile was derived from the official SQD EVM log, Bitcoin input/output, and
+Solana instruction field contracts, then checked against live public finalized streams. The live
+contract probes confirmed two fail-closed edge cases: Bitcoin coinbase inputs carry explicit null
+outpoints, and a Solana instruction `transactionIndex` is not necessarily the returned transaction
+array offset. A separate Solana slot probe returned 3,851 unique instruction identities, including
+1,973 nested CPI paths up to depth four.
+
+A fresh isolated `zerotrace-ledger-test` stack on non-default ports passed all 25 integration tests
+against PostgreSQL, ClickHouse, and MinIO. The production-built worker then persisted these named
+public-chain observations:
+
+| Dataset            | Position | Transactions | Ledger records                 | Run ID                                 | Artifact SHA-256                                                   |
+| ------------------ | -------: | -----------: | ------------------------------ | -------------------------------------- | ------------------------------------------------------------------ |
+| `ethereum-mainnet` |  1000000 |            2 | 1 EVM log                      | `f9eb25c0-6ada-4fe9-a322-98fda439fdbe` | `a423c0bcdbb85a69c72f10e3915dd814141723fc10dfa4f0b673b5572759cb05` |
+| `binance-mainnet`  |        1 |            7 | 1 EVM log                      | `6cb3d74e-90dc-478f-99b2-cc973912cca2` | `50494c2dbdd996524a68a2d2e8ae0505160c6800b4240a054945248bba441fb6` |
+| `bitcoin-mainnet`  |      170 |            2 | 2 inputs and 3 outputs         | `7f0b3ae0-2aa6-46ba-8450-30c85cdf95ac` | `1e797af366f6c8bf2c5332153abd54983a2ff62292e4e451b5dd8f3f98ed9f9f` |
+| `solana-mainnet`   |   105368 |            1 | 2 instruction/CPI path records | `581374f0-a92d-4c9a-a581-a4f0fc33c180` | `f709b4febfe620a25ce84bdb83825ac369ac5c1c6d00b5a4ae77c72bc00fec17` |
+
+ClickHouse returned one distinct Evidence ID per fact and the expected fact-type counts. PostgreSQL
+returned a non-null Snapshot for every Evidence node. Every fact in a provider block shared exactly
+one content-addressed artifact, and an integrity-checked MinIO reverse read reproduced the exact
+transaction and ledger-table counts. Immediate replay returned the same four run IDs with zero newly
+processed records and `alreadyTerminal: true`.
+
+A separate Ethereum header-only observation at block `1000001` returned `NOT_QUERIED` with null
+counts for transactions and logs, and `NOT_APPLICABLE` with null counts for Bitcoin/Solana-only
+tables. Numeric zero is therefore reserved for explicitly materialized empty tables. The host uses a
+local interception proxy whose synthetic DNS address is reserved; live checks enabled the documented
+private-resolution exception while retaining the exact `portal.sqd.dev` allowlist and HTTPS URL.
+
+The production API, web, and ingest-worker Docker targets rebuilt successfully from the locked
+`npm ci` stage. The resulting worker container ingested BNB Smart Chain block `2` with one transaction
+and one log under run `6b0d1c5d-e6b5-4edd-8ba4-0e6c23c18849`; its immediate container replay was a
+terminal no-op. After all reverse-read assertions, the exact disposable Compose project, network,
+and its three named data volumes were removed; unrelated containers and the database already using
+host port 5432 were not touched.
+
+This validates raw EVM log, Bitcoin input/output, and Solana top-level/CPI instruction capture and
+provenance. EVM traces/state diffs, Solana balance/token-balance/reward tables, semantic transfers,
+protocol decoding, independent-provider reconciliation, and archive-scale backfill remain open.
 
 ## Automated verification
 
 | Command                  | Result                                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `npm run verify:full`    | pass: format, lint, typecheck, 161 unit, 25 integration, build, license, audit, coverage, 6 E2E, SBOM |
-| `npm run test:coverage`  | pass: 186 tests; 87.57% statements, 78.82% branches, 96.71% functions, 88.99% lines                   |
+| `npm run verify:full`    | pass: format, lint, typecheck, 172 unit, 25 integration, build, license, audit, coverage, 6 E2E, SBOM |
+| `npm run test:coverage`  | pass: 197 tests; 87.87% statements, 79.36% branches, 96.88% functions, 89.22% lines                   |
 | `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                     |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                |
 | `docker compose config`  | pass                                                                                                  |
 | production Compose smoke | pass with the port overrides documented above                                                         |
-| branch GitHub Actions CI | pass on `235fad6`: quality/contracts, Chromium E2E, and five production container targets             |
-| branch CodeQL            | pass on `235fad6`: JavaScript and TypeScript analysis                                                 |
+| branch GitHub Actions CI | pass on `0193c95`: quality/contracts, Chromium E2E, and five production container targets             |
+| branch CodeQL            | pass on `0193c95`: JavaScript and TypeScript analysis                                                 |
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

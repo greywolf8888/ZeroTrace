@@ -3,8 +3,8 @@
 ## Current deployment classification
 
 The repository supports a reproducible local/staging topology. It is **not production-approved**:
-Evidence/Snapshot persistence and bounded finalized block/raw-transaction ingestion are wired;
-authentication/authorization, remaining durable repositories, normalized transaction/event history,
+Evidence/Snapshot persistence and bounded finalized raw-ledger ingestion are wired;
+authentication/authorization, remaining durable repositories, semantic transaction/event history,
 multi-provider reconciliation, backup recovery, load testing, and terminal real-chain acceptance
 remain incomplete.
 
@@ -41,22 +41,24 @@ Add the optional graph projection store:
 docker compose --profile graph up -d
 ```
 
-Profiles expose architecture seams. The `ingest` worker is implemented for bounded finalized blocks
-and provider-shaped raw transactions; the `full` workflow and `graph` profiles do not imply their
+Profiles expose architecture seams. The `ingest` worker is implemented for bounded finalized blocks,
+transactions, EVM logs, Bitcoin inputs/outputs, and Solana instructions; the `full` workflow and `graph` profiles do not imply their
 application projections or orchestration are implemented.
 
 Run one bounded finalized range through the implemented worker profile:
 
 ```bash
 docker compose --profile ingest run --rm ingest-worker \
-  --dataset binance-mainnet --profile transactions --from 0 --to 100
+  --dataset binance-mainnet --profile ledger-records --from 0 --to 100
 ```
 
 The worker checks PostgreSQL Evidence/checkpoint schemas, ClickHouse Raw Facts, and the versioned
-object bucket before reading SQD. `block-headers` is the default profile; `transactions` additionally
-materializes strict ledger-specific raw transaction identities without claiming protocol decoding.
-The worker is restart-safe for the same dataset/range/query identity and does not contain any
-chain-write operation. Scheduling and continuous-head following are not yet supplied.
+object bucket before reading SQD. `block-headers` is the default profile; `transactions` adds strict
+ledger-specific raw transaction identities; `ledger-records` also adds the applicable EVM log,
+Bitcoin input/output, or Solana instruction table. These records retain provider shape and do not
+claim semantic transfer or protocol decoding. The worker is restart-safe for the same
+dataset/range/query identity and does not contain any chain-write operation. Scheduling and
+continuous-head following are not yet supplied.
 
 ## Health and smoke checks
 

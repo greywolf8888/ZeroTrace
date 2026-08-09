@@ -38,8 +38,11 @@
   after durable writes, resumes monotonically, and makes terminal replay a no-op;
 - transaction-profile ingestion validates EVM hash, Bitcoin txid, and Solana signature identities,
   rejects duplicate/malformed records, and writes every transaction before advancing its block;
-- header-only runs preserve transaction coverage as `NOT_QUERIED`/null, while an explicitly queried
-  provider-empty table may report a known zero;
+- ledger-record ingestion validates EVM log source identity, Bitcoin coinbase/outpoint positions,
+  and complete Solana instruction-address paths, rejects duplicate/malformed records, and writes all
+  applicable raw records before advancing its block;
+- header-only runs preserve applicable table coverage as `NOT_QUERIED`/null, distinguish
+  `NOT_APPLICABLE`, and only let an explicitly materialized provider-empty table report zero;
 - Solana skipped-slot empty streams advance only with a finalized-head coverage proof;
 - raw artifacts are content-addressed, read-after-write verified, and kept in a versioned bucket;
 - ClickHouse Raw Fact writes are idempotent and preserve Evidence/artifact provenance;

@@ -90,24 +90,26 @@ For a host-side worker, set `POSTGRES_URL` to the host port and use the object/C
 `.env`:
 
 ```bash
-npm run ingest -- --dataset ethereum-mainnet --profile transactions --from 0 --to 100
+npm run ingest -- --dataset ethereum-mainnet --profile ledger-records --from 0 --to 100
 ```
 
 Or let Compose inject the internal service URLs:
 
 ```bash
 docker compose --profile ingest run --rm ingest-worker \
-  --dataset solana-mainnet --profile transactions --from 0 --to 100
+  --dataset solana-mainnet --profile ledger-records --from 0 --to 100
 ```
 
 Valid datasets are `ethereum-mainnet`, `binance-mainnet`, `bitcoin-mainnet`, and
-`solana-mainnet`. Valid profiles are `block-headers` (default) and `transactions`. Ranges are
-inclusive and capped by `SQD_MAX_RANGE_BLOCKS`. The worker streams only finalized data, writes one
-block artifact, then its block and requested transaction Evidence/Snapshot plus Raw Facts, and only
-then advances the checkpoint. It resumes the same dataset/range/query identity after failure; a
-completed identity is a no-op on replay. Header-only runs report transaction coverage as
-`NOT_QUERIED`, not numeric zero. It is a chain-read worker and contains no private-key, signing, swap,
-or broadcast interface.
+`solana-mainnet`. Valid profiles are `block-headers` (default), `transactions`, and
+`ledger-records`. The last profile requests transactions plus EVM logs, Bitcoin inputs/outputs, or
+Solana instructions for the selected dataset. Ranges are inclusive and capped by
+`SQD_MAX_RANGE_BLOCKS`. The worker streams only finalized data, writes one block artifact, then its
+block, transaction, and requested ledger-record Evidence/Snapshot plus Raw Facts, and only then
+advances the checkpoint. It resumes the same dataset/range/query identity after failure; a completed
+identity is a no-op on replay. Every record table reports `MATERIALIZED`, `NOT_QUERIED`, or
+`NOT_APPLICABLE`, with null rather than numeric zero outside materialized coverage. It is a
+chain-read worker and contains no private-key, signing, swap, or broadcast interface.
 
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
