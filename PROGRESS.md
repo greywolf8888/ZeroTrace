@@ -62,6 +62,9 @@ The only allowed status vocabulary in this ledger is:
 - [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814357) and
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814380) passed on immutable main
   commit `5f94dca`.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31319977042) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31319977056) passed on immutable
+  development commit `dea2133` before promotion to protected `main`.
 
 ### Read-only chain foundation
 

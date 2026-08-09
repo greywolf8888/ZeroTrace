@@ -13,6 +13,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814357) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814380) pass on immutable main
       commit `5f94dca`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31319977042) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31319977056) pass on immutable
+      development commit `dea2133`
 
 ## Evidence and data
 
@@ -20,6 +23,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Durable append-only Snapshot, Evidence-node, and derivation-edge repository
 - [x] Restart-safe Evidence drilldown and real PostgreSQL constraint tests
 - [x] Content-addressed, versioned raw payload repository for implemented ingestion records
+- [x] Finalized block-header ingestion on EVM, Bitcoin, and Solana with restart-safe checkpoints
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [ ] Reorg/replay and cross-provider reconciliation tests
 - [ ] Temporal graph projection and rebuild
