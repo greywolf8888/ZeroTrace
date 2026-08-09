@@ -79,19 +79,32 @@ migrations; do not delete a developer's volumes to simulate migration.
 
 Important values:
 
-| Variable                      | Meaning                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------- |
-| `API_PORT` / `WEB_PORT`       | host ports                                                                   |
-| `CORS_ORIGIN`                 | comma-separated exact browser origins                                        |
-| `PROVIDER_ALLOW_HOSTS`        | comma-separated exact provider hostnames                                     |
-| `ALLOW_PRIVATE_PROVIDER_URLS` | explicit local proxy/private-RPC exception; defaults to false                |
-| `EVM_*_RPC_URL`               | optional Ethereum/BSC read-only RPC                                          |
-| `BITCOIN_ESPLORA_URL`         | optional Esplora base path                                                   |
-| `SOLANA_RPC_URL`              | optional Solana read-only RPC                                                |
-| `SOLANA_COMMITMENT`           | processed, confirmed, or finalized; production analysis should use finalized |
+| Variable                              | Meaning                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------- |
+| `API_PORT` / `WEB_PORT`               | host ports                                                                      |
+| `CORS_ORIGIN`                         | comma-separated exact browser origins                                           |
+| `PROVIDER_ALLOW_HOSTS`                | comma-separated exact provider hostnames                                        |
+| `ALLOW_PRIVATE_PROVIDER_URLS`         | explicit local proxy/private-RPC exception; defaults to false                   |
+| `PROVIDER_MAX_ATTEMPTS`               | bounded attempts per endpoint, including the first attempt                      |
+| `PROVIDER_RETRY_BASE_MS/MAX_MS`       | exponential retry-delay bounds; provider `Retry-After` is capped by the maximum |
+| `PROVIDER_CIRCUIT_*`                  | consecutive-failure threshold and half-open reset delay                         |
+| `PROVIDER_CACHE_TTL_MS/MAX_ENTRIES`   | process-local TTL/LRU response cache; zero TTL disables stored responses        |
+| `ALCHEMY_API_KEY` / `ETH_RPC_URL`     | optional Ethereum key and read-only URL/template                                |
+| `EVM_*_RPC_URLS`                      | ordered, comma-separated EVM provider pools                                     |
+| `EVM_*_REQUESTS_PER_SECOND`           | per-endpoint request pacing; zero disables internal pacing                      |
+| `BITCOIN_ESPLORA_URLS`                | ordered Esplora base paths                                                      |
+| `BITCOIN_ESPLORA_REQUESTS_PER_SECOND` | per-endpoint Esplora pacing                                                     |
+| `SOLANA_RPC_URLS`                     | ordered Solana read-only RPC pool                                               |
+| `SOLANA_REQUESTS_PER_SECOND`          | per-endpoint Solana pacing                                                      |
+| `SOLANA_COMMITMENT`                   | processed, confirmed, or finalized; production analysis should use finalized    |
+| `SQD_PORTAL_URL`                      | reserved clean HTTP/sidecar boundary; historical ingestion is not wired yet     |
 
 `PROVIDER_ALLOW_HOSTS` does not authorize transaction methods. Method allowlists remain enforced
 inside each adapter.
+
+Never commit `.env` or API keys. ZeroTrace records safe source IDs such as
+`ethereum-rpc@eth-mainnet.g.alchemy.com`; provider URL paths and credentials are not exposed in
+health or Evidence metadata.
 
 Keep `ALLOW_PRIVATE_PROVIDER_URLS=false` unless an explicitly trusted local network or interception
 proxy maps approved public provider names to private/reserved addresses (for example, a local

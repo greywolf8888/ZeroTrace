@@ -12,6 +12,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - canonical multi-ledger snapshot, knowledge, evidence, entity, control, launch, and RV schemas;
 - checksum-aware EVM, Bitcoin, and Solana identifier parsing;
 - hardened read-only provider transport and current-state adapters;
+- bounded provider retry, `Retry-After`, pacing, TTL/LRU cache, circuit breaker, failover, and health
+  diagnostics;
+- ordered Ethereum/BSC/Bitcoin/Solana provider pools and safe hostname-based Evidence source IDs;
 - immutable process-local evidence graph;
 - deterministic entity-evidence baseline, constant-product quote, and exit-race simulation;
 - Fastify API with OpenAPI, health, capability truth, metrics, and analysis endpoints;
@@ -29,6 +32,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
   and unsafe-integer preservation;
 - read-only product boundary documented across API, UI, tests, and security policy.
 - evidence/snapshot grounding enforced before entity, RV, or scenario derivation.
+- Evidence IDs hash the complete observation identity so identical payloads from different sources,
+  locations, snapshots, or times cannot collide.
 - immutable-SHA GitHub Actions, production dependency audit, and pruned API runtime image.
 
 ### Known limitations
@@ -36,7 +41,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - evidence storage is process-local;
 - historical ingestion and protocol-specific launchpad/market decoders are not implemented;
 - entity resolution is an uncalibrated baseline;
-- public Bitcoin/Solana current-state smoke checks pass; dedicated/archive EVM, load, reorg,
-  provider-reconciliation, and production deployment validation remain open.
+- Ethereum, BSC, Bitcoin, and Solana current-state smoke checks pass; archive history, forced
+  real-provider failover, load, reorg, provider reconciliation, and production deployment validation
+  remain open.
 
 [Unreleased]: https://github.com/greywolf8888/ZeroTrace/commits/main

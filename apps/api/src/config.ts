@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-const optionalUrl = z.preprocess((value) => (value === '' ? undefined : value), z.url().optional());
 const optionalString = z.preprocess(
   (value) => (value === '' ? undefined : value),
   z.string().optional(),
@@ -16,16 +15,51 @@ const EnvironmentSchema = z.object({
   HEALTH_CACHE_TTL_MS: z.coerce.number().int().min(0).max(300_000).default(15_000),
   PROVIDER_ALLOW_HOSTS: z.string().default(''),
   ALLOW_PRIVATE_PROVIDER_URLS: z.enum(['true', 'false']).default('false'),
-  EVM_ETHEREUM_RPC_URL: optionalUrl,
+  PROVIDER_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(3),
+  PROVIDER_RETRY_BASE_MS: z.coerce.number().int().min(0).max(60_000).default(100),
+  PROVIDER_RETRY_MAX_MS: z.coerce.number().int().min(0).max(300_000).default(2_000),
+  PROVIDER_CIRCUIT_FAILURE_THRESHOLD: z.coerce.number().int().min(1).max(1_000).default(5),
+  PROVIDER_CIRCUIT_RESET_MS: z.coerce.number().int().min(1).max(3_600_000).default(30_000),
+  PROVIDER_CACHE_TTL_MS: z.coerce.number().int().min(0).max(3_600_000).default(1_000),
+  PROVIDER_CACHE_MAX_ENTRIES: z.coerce.number().int().min(1).max(100_000).default(500),
+  ALCHEMY_API_KEY: optionalString,
+  ETH_RPC_URL: optionalString,
+  EVM_ETHEREUM_RPC_URL: optionalString,
+  EVM_ETHEREUM_RPC_URLS: optionalString,
   EVM_ETHEREUM_CHAIN_ID: z.coerce.number().int().positive().default(1),
-  EVM_BSC_RPC_URL: optionalUrl,
+  EVM_ETHEREUM_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(10_000).default(5),
+  BSC_RPC_URL: optionalString,
+  EVM_BSC_RPC_URL: optionalString,
+  EVM_BSC_RPC_URLS: optionalString,
   EVM_BSC_CHAIN_ID: z.coerce.number().int().positive().default(56),
-  BITCOIN_ESPLORA_URL: optionalUrl,
-  SOLANA_RPC_URL: optionalUrl,
+  EVM_BSC_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(10_000).default(10),
+  BTC_ESPLORA_URL: optionalString,
+  BITCOIN_ESPLORA_URL: optionalString,
+  BITCOIN_ESPLORA_URLS: optionalString,
+  BITCOIN_ESPLORA_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(10_000).default(2),
+  SOLANA_RPC_URL: optionalString,
+  SOLANA_RPC_URLS: optionalString,
+  SOLANA_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(10_000).default(4),
   SOLANA_COMMITMENT: z.enum(['processed', 'confirmed', 'finalized']).default('finalized'),
+  SQD_PORTAL_URL: optionalString,
   POSTGRES_URL: optionalString,
   GMGN_API_KEY: optionalString,
+  JUPITER_API_KEY: optionalString,
+  ETHERSCAN_API_KEY: optionalString,
+  DUNE_API_KEY: optionalString,
+  NANSEN_API_KEY: optionalString,
+  ARKHAM_API_KEY: optionalString,
 });
+
+export interface ProviderResilienceConfig {
+  maxAttempts: number;
+  retryBaseDelayMs: number;
+  retryMaxDelayMs: number;
+  circuitFailureThreshold: number;
+  circuitResetMs: number;
+  cacheTtlMs: number;
+  cacheMaxEntries: number;
+}
 
 export interface AppConfig {
   environment: 'development' | 'test' | 'production';
@@ -37,19 +71,107 @@ export interface AppConfig {
   healthCacheTtlMs: number;
   providerAllowedHosts: string[];
   allowPrivateProviderUrls: boolean;
+  providerResilience: ProviderResilienceConfig;
   ethereumRpcUrl?: string;
+  ethereumRpcUrls: string[];
   ethereumChainId: number;
+  ethereumRequestsPerSecond: number;
   bscRpcUrl?: string;
+  bscRpcUrls: string[];
   bscChainId: number;
+  bscRequestsPerSecond: number;
   bitcoinEsploraUrl?: string;
+  bitcoinEsploraUrls: string[];
+  bitcoinEsploraRequestsPerSecond: number;
   solanaRpcUrl?: string;
+  solanaRpcUrls: string[];
+  solanaRequestsPerSecond: number;
   solanaCommitment: 'processed' | 'confirmed' | 'finalized';
+  sqdPortalUrl?: string;
   postgresUrl?: string;
   gmgnConfigured: boolean;
+  jupiterConfigured: boolean;
+  etherscanConfigured: boolean;
+  duneConfigured: boolean;
+  nansenConfigured: boolean;
+  arkhamConfigured: boolean;
+}
+
+function splitUrls(value: string | undefined): string[] {
+  return (
+    value
+      ?.split(',')
+      .map((item) => item.trim())
+      .filter(Boolean) ?? []
+  );
+}
+
+function validateUrl(rawUrl: string, field: string): string {
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('invalid protocol');
+    return url.toString().replace(/\/$/, rawUrl.endsWith('/') ? '/' : '');
+  } catch {
+    throw new Error(`${field} must contain valid HTTP(S) provider URLs.`);
+  }
+}
+
+function providerUrls(
+  field: string,
+  values: Array<string | undefined>,
+  alchemyApiKey?: string,
+): string[] {
+  const expanded = values
+    .flatMap(splitUrls)
+    .flatMap((value) => {
+      if (!value.includes('${ALCHEMY_API_KEY}')) return [value];
+      return alchemyApiKey === undefined
+        ? []
+        : [value.replaceAll('${ALCHEMY_API_KEY}', encodeURIComponent(alchemyApiKey))];
+    })
+    .map((value) => validateUrl(value, field));
+  return [...new Set(expanded)];
+}
+
+function optionalUrl(rawUrl: string | undefined, field: string): string | undefined {
+  return rawUrl === undefined ? undefined : validateUrl(rawUrl, field);
+}
+
+function firstUrl(values: readonly string[]): { primary?: string } {
+  const primary = values[0];
+  return primary === undefined ? {} : { primary };
 }
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = EnvironmentSchema.parse(environment);
+  const ethereumRpcUrls = providerUrls(
+    'Ethereum RPC',
+    [parsed.EVM_ETHEREUM_RPC_URLS, parsed.EVM_ETHEREUM_RPC_URL, parsed.ETH_RPC_URL],
+    parsed.ALCHEMY_API_KEY,
+  );
+  if (ethereumRpcUrls.length === 0 && parsed.ALCHEMY_API_KEY !== undefined) {
+    ethereumRpcUrls.push(
+      `https://eth-mainnet.g.alchemy.com/v2/${encodeURIComponent(parsed.ALCHEMY_API_KEY)}`,
+    );
+  }
+  const bscRpcUrls = providerUrls('BSC RPC', [
+    parsed.EVM_BSC_RPC_URLS,
+    parsed.EVM_BSC_RPC_URL,
+    parsed.BSC_RPC_URL,
+  ]);
+  const bitcoinEsploraUrls = providerUrls('Bitcoin Esplora', [
+    parsed.BITCOIN_ESPLORA_URLS,
+    parsed.BITCOIN_ESPLORA_URL,
+    parsed.BTC_ESPLORA_URL,
+  ]);
+  const solanaRpcUrls = providerUrls('Solana RPC', [parsed.SOLANA_RPC_URLS, parsed.SOLANA_RPC_URL]);
+  const ethereumPrimary = firstUrl(ethereumRpcUrls).primary;
+  const bscPrimary = firstUrl(bscRpcUrls).primary;
+  const bitcoinPrimary = firstUrl(bitcoinEsploraUrls).primary;
+  const solanaPrimary = firstUrl(solanaRpcUrls).primary;
+  const sqdPortalUrl = optionalUrl(parsed.SQD_PORTAL_URL, 'SQD Portal URL');
+  const postgresUrl = parsed.POSTGRES_URL;
+
   return {
     environment: parsed.NODE_ENV,
     host: parsed.HOST,
@@ -64,18 +186,37 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
       .map((value) => value.trim().toLowerCase())
       .filter(Boolean),
     allowPrivateProviderUrls: parsed.ALLOW_PRIVATE_PROVIDER_URLS === 'true',
+    providerResilience: {
+      maxAttempts: parsed.PROVIDER_MAX_ATTEMPTS,
+      retryBaseDelayMs: parsed.PROVIDER_RETRY_BASE_MS,
+      retryMaxDelayMs: parsed.PROVIDER_RETRY_MAX_MS,
+      circuitFailureThreshold: parsed.PROVIDER_CIRCUIT_FAILURE_THRESHOLD,
+      circuitResetMs: parsed.PROVIDER_CIRCUIT_RESET_MS,
+      cacheTtlMs: parsed.PROVIDER_CACHE_TTL_MS,
+      cacheMaxEntries: parsed.PROVIDER_CACHE_MAX_ENTRIES,
+    },
+    ethereumRpcUrls,
     ethereumChainId: parsed.EVM_ETHEREUM_CHAIN_ID,
+    ethereumRequestsPerSecond: parsed.EVM_ETHEREUM_REQUESTS_PER_SECOND,
+    bscRpcUrls,
     bscChainId: parsed.EVM_BSC_CHAIN_ID,
+    bscRequestsPerSecond: parsed.EVM_BSC_REQUESTS_PER_SECOND,
+    bitcoinEsploraUrls,
+    bitcoinEsploraRequestsPerSecond: parsed.BITCOIN_ESPLORA_REQUESTS_PER_SECOND,
+    solanaRpcUrls,
+    solanaRequestsPerSecond: parsed.SOLANA_REQUESTS_PER_SECOND,
     solanaCommitment: parsed.SOLANA_COMMITMENT,
     gmgnConfigured: parsed.GMGN_API_KEY !== undefined,
-    ...(parsed.EVM_ETHEREUM_RPC_URL === undefined
-      ? {}
-      : { ethereumRpcUrl: parsed.EVM_ETHEREUM_RPC_URL }),
-    ...(parsed.EVM_BSC_RPC_URL === undefined ? {} : { bscRpcUrl: parsed.EVM_BSC_RPC_URL }),
-    ...(parsed.BITCOIN_ESPLORA_URL === undefined
-      ? {}
-      : { bitcoinEsploraUrl: parsed.BITCOIN_ESPLORA_URL }),
-    ...(parsed.SOLANA_RPC_URL === undefined ? {} : { solanaRpcUrl: parsed.SOLANA_RPC_URL }),
-    ...(parsed.POSTGRES_URL === undefined ? {} : { postgresUrl: parsed.POSTGRES_URL }),
+    jupiterConfigured: parsed.JUPITER_API_KEY !== undefined,
+    etherscanConfigured: parsed.ETHERSCAN_API_KEY !== undefined,
+    duneConfigured: parsed.DUNE_API_KEY !== undefined,
+    nansenConfigured: parsed.NANSEN_API_KEY !== undefined,
+    arkhamConfigured: parsed.ARKHAM_API_KEY !== undefined,
+    ...(ethereumPrimary === undefined ? {} : { ethereumRpcUrl: ethereumPrimary }),
+    ...(bscPrimary === undefined ? {} : { bscRpcUrl: bscPrimary }),
+    ...(bitcoinPrimary === undefined ? {} : { bitcoinEsploraUrl: bitcoinPrimary }),
+    ...(solanaPrimary === undefined ? {} : { solanaRpcUrl: solanaPrimary }),
+    ...(sqdPortalUrl === undefined ? {} : { sqdPortalUrl }),
+    ...(postgresUrl === undefined ? {} : { postgresUrl }),
   };
 }

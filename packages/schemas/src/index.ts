@@ -198,6 +198,26 @@ export const ProviderStatusSchema = z.enum([
   'UNCONFIGURED',
   'RATE_LIMITED',
 ]);
+export const ProviderCircuitStateSchema = z.enum(['CLOSED', 'OPEN', 'HALF_OPEN']);
+export const TransportDiagnosticsSchema = z.object({
+  endpointId: z.string().min(1),
+  activeEndpointId: z.string().min(1).optional(),
+  circuitState: ProviderCircuitStateSchema,
+  circuitOpenUntil: IsoDateTimeSchema.nullable(),
+  logicalRequests: z.number().int().nonnegative(),
+  attempts: z.number().int().nonnegative(),
+  successes: z.number().int().nonnegative(),
+  failures: z.number().int().nonnegative(),
+  retries: z.number().int().nonnegative(),
+  rateLimitDelays: z.number().int().nonnegative(),
+  cacheHits: z.number().int().nonnegative(),
+  cacheMisses: z.number().int().nonnegative(),
+  failovers: z.number().int().nonnegative(),
+  lastAttemptAt: IsoDateTimeSchema.nullable(),
+  lastSuccessAt: IsoDateTimeSchema.nullable(),
+  lastFailureAt: IsoDateTimeSchema.nullable(),
+});
+export type TransportDiagnostics = z.infer<typeof TransportDiagnosticsSchema>;
 export const ProviderHealthSchema = z.object({
   id: z.string().min(1),
   ledger: LedgerSchema,
@@ -210,6 +230,7 @@ export const ProviderHealthSchema = z.object({
   lag: knowledgeValueSchema(z.number().nonnegative()),
   errorCode: z.string().optional(),
   errorDetail: z.string().optional(),
+  transport: TransportDiagnosticsSchema.optional(),
 });
 export type ProviderHealth = z.infer<typeof ProviderHealthSchema>;
 

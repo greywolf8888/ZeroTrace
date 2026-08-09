@@ -72,6 +72,10 @@ export class EvmLedgerAdapter {
     this.#transport = transport;
   }
 
+  get sourceId(): string {
+    return this.#transport.lastEndpointId ?? this.#transport.endpointId;
+  }
+
   async read<T>(method: string, params: readonly unknown[] = []): Promise<T> {
     if (!ALLOWED_EVM_METHODS.has(method)) {
       throw new ProviderError(
@@ -105,6 +109,9 @@ export class EvmLedgerAdapter {
           lag: unknownValue('NOT_QUERIED', 'No trusted comparison head is configured.'),
           errorCode: 'CHAIN_MISMATCH',
           errorDetail: `Expected chain ${this.config.chainId}, received ${actualChainId}.`,
+          ...(this.#transport.diagnostics === undefined
+            ? {}
+            : { transport: this.#transport.diagnostics() }),
         };
       }
       return {
@@ -117,6 +124,9 @@ export class EvmLedgerAdapter {
         lastSuccessAt: checkedAt,
         head: knownValue(head),
         lag: unknownValue('NOT_QUERIED', 'No trusted comparison head is configured.'),
+        ...(this.#transport.diagnostics === undefined
+          ? {}
+          : { transport: this.#transport.diagnostics() }),
       };
     } catch (error) {
       const providerError = toProviderError(error);
@@ -135,6 +145,9 @@ export class EvmLedgerAdapter {
         lag: unavailableValue('PROVIDER_DOWN'),
         errorCode: providerError.code,
         errorDetail: providerError.message,
+        ...(this.#transport.diagnostics === undefined
+          ? {}
+          : { transport: this.#transport.diagnostics() }),
       };
     }
   }
@@ -165,9 +178,13 @@ export class EvmLedgerAdapter {
       blockHash,
       blockTimestamp: new Date(timestamp * 1000).toISOString(),
       capturedAt: new Date().toISOString(),
-      providerVersions: { [this.config.id]: 'json-rpc' },
+      providerVersions: { [this.sourceId]: 'json-rpc' },
       adapterVersions: { evm: this.config.adapterVersion ?? '0.1.0' },
-      configHash: hashPayload({ id: this.config.id, chainId: this.config.chainId }),
+      configHash: hashPayload({
+        id: this.config.id,
+        chainId: this.config.chainId,
+        sourceId: this.sourceId,
+      }),
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',
     };

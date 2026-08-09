@@ -14,10 +14,32 @@ function baseConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     healthCacheTtlMs: 0,
     providerAllowedHosts: [],
     allowPrivateProviderUrls: false,
+    providerResilience: {
+      maxAttempts: 3,
+      retryBaseDelayMs: 0,
+      retryMaxDelayMs: 0,
+      circuitFailureThreshold: 5,
+      circuitResetMs: 30_000,
+      cacheTtlMs: 0,
+      cacheMaxEntries: 100,
+    },
+    ethereumRpcUrls: [],
     ethereumChainId: 1,
+    ethereumRequestsPerSecond: 0,
+    bscRpcUrls: [],
     bscChainId: 56,
+    bscRequestsPerSecond: 0,
+    bitcoinEsploraUrls: [],
+    bitcoinEsploraRequestsPerSecond: 0,
+    solanaRpcUrls: [],
+    solanaRequestsPerSecond: 0,
     solanaCommitment: 'finalized',
     gmgnConfigured: false,
+    jupiterConfigured: false,
+    etherscanConfigured: false,
+    duneConfigured: false,
+    nansenConfigured: false,
+    arkhamConfigured: false,
     ...overrides,
   };
 }
@@ -45,14 +67,15 @@ describe('application runtime wiring', () => {
       baseConfig({
         providerAllowedHosts: [
           'ethereum.example',
+          'ethereum-fallback.example',
           'bsc.example',
           'bitcoin.example',
           'solana.example',
         ],
-        ethereumRpcUrl: 'https://ethereum.example',
-        bscRpcUrl: 'https://bsc.example',
-        bitcoinEsploraUrl: 'https://bitcoin.example/api',
-        solanaRpcUrl: 'https://solana.example',
+        ethereumRpcUrls: ['https://ethereum.example', 'https://ethereum-fallback.example'],
+        bscRpcUrls: ['https://bsc.example'],
+        bitcoinEsploraUrls: ['https://bitcoin.example/api'],
+        solanaRpcUrls: ['https://solana.example'],
       }),
     );
     expect([...runtime.evmAdapters.keys()]).toEqual([1, 56]);
@@ -60,12 +83,24 @@ describe('application runtime wiring', () => {
     expect(runtime.solanaAdapter?.config.commitment).toBe('finalized');
   });
 
+  it('uses hostname-based source identifiers without exposing provider URL paths', async () => {
+    const runtime = createRuntime(
+      baseConfig({
+        providerAllowedHosts: ['ethereum.example'],
+        ethereumRpcUrls: ['https://ethereum.example/v2/private-path-value'],
+      }),
+    );
+    const adapter = runtime.evmAdapters.get(1);
+    expect(adapter?.sourceId).toBe('ethereum-rpc@ethereum.example');
+    expect(adapter?.sourceId).not.toContain('private-path-value');
+  });
+
   it('allows an explicitly opted-in local development provider boundary', () => {
     const runtime = createRuntime(
       baseConfig({
         environment: 'development',
         allowPrivateProviderUrls: true,
-        ethereumRpcUrl: 'http://127.0.0.1:8545',
+        ethereumRpcUrls: ['http://127.0.0.1:8545'],
       }),
     );
     expect(runtime.evmAdapters.has(1)).toBe(true);

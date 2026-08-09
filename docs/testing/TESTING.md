@@ -24,6 +24,10 @@
 - Solana `sendTransaction` is rejected before network access.
 - URL credentials, unapproved hosts, private/reserved destinations, redirects, traversal, oversized
   responses, and timeouts fail closed.
+- retries are bounded, `Retry-After` is capped, pacing is deterministic, expired cache entries are
+  missed, circuits recover through half-open, and failover remains on the last healthy endpoint.
+- Evidence IDs change when source, locator, block/slot, or observation time changes even when the
+  payload hash is identical.
 - integers above `Number.MAX_SAFE_INTEGER` remain exact strings.
 - invalid EVM/Bitcoin/Solana checksums or structure do not become a valid address.
 - no-evidence entity input remains Unknown.

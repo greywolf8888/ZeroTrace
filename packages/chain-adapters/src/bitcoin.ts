@@ -71,6 +71,10 @@ export class BitcoinUtxoLedgerAdapter {
     this.#transport = transport;
   }
 
+  get sourceId(): string {
+    return this.#transport.lastEndpointId ?? this.#transport.endpointId;
+  }
+
   getAddress(address: string): Promise<EsploraAddressStats> {
     return this.#transport.getJson<EsploraAddressStats>(`/address/${encodeURIComponent(address)}`);
   }
@@ -106,6 +110,9 @@ export class BitcoinUtxoLedgerAdapter {
         lastSuccessAt: checkedAt,
         head: knownValue(height),
         lag: unknownValue('NOT_QUERIED', 'No trusted comparison head is configured.'),
+        ...(this.#transport.diagnostics === undefined
+          ? {}
+          : { transport: this.#transport.diagnostics() }),
       };
     } catch (error) {
       const providerError = toProviderError(error);
@@ -124,6 +131,9 @@ export class BitcoinUtxoLedgerAdapter {
         lag: unavailableValue('PROVIDER_DOWN'),
         errorCode: providerError.code,
         errorDetail: providerError.message,
+        ...(this.#transport.diagnostics === undefined
+          ? {}
+          : { transport: this.#transport.diagnostics() }),
       };
     }
   }
@@ -137,9 +147,13 @@ export class BitcoinUtxoLedgerAdapter {
       height,
       blockHash,
       capturedAt: new Date().toISOString(),
-      providerVersions: { [this.config.id]: 'esplora-http' },
+      providerVersions: { [this.sourceId]: 'esplora-http' },
       adapterVersions: { bitcoin: this.config.adapterVersion ?? '0.1.0' },
-      configHash: hashPayload({ id: this.config.id, chainId: 'bitcoin-mainnet' }),
+      configHash: hashPayload({
+        id: this.config.id,
+        chainId: 'bitcoin-mainnet',
+        sourceId: this.sourceId,
+      }),
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',
     };

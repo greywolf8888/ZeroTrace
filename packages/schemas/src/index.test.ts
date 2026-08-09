@@ -46,6 +46,40 @@ describe('knowledge values', () => {
 
     expect(result.success).toBe(false);
   });
+
+  it('accepts explicit transport resilience diagnostics', () => {
+    const result = ProviderHealthSchema.safeParse({
+      id: 'ethereum-rpc',
+      ledger: 'EVM',
+      status: 'UP',
+      capabilities: ['CURRENT_STATE'],
+      checkedAt: new Date().toISOString(),
+      latencyMs: 12,
+      lastSuccessAt: new Date().toISOString(),
+      head: { state: 'known', value: '123' },
+      lag: { state: 'unknown', reason: 'NOT_QUERIED' },
+      transport: {
+        endpointId: 'ethereum-rpc',
+        activeEndpointId: 'ethereum-rpc-2',
+        circuitState: 'CLOSED',
+        circuitOpenUntil: null,
+        logicalRequests: 2,
+        attempts: 3,
+        successes: 2,
+        failures: 0,
+        retries: 1,
+        rateLimitDelays: 0,
+        cacheHits: 1,
+        cacheMisses: 1,
+        failovers: 1,
+        lastAttemptAt: new Date().toISOString(),
+        lastSuccessAt: new Date().toISOString(),
+        lastFailureAt: null,
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe('analysis metadata', () => {

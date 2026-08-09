@@ -68,6 +68,10 @@ export class SolanaLedgerAdapter {
     this.#transport = transport;
   }
 
+  get sourceId(): string {
+    return this.#transport.lastEndpointId ?? this.#transport.endpointId;
+  }
+
   async read<T>(method: string, params: readonly unknown[] = []): Promise<T> {
     if (!ALLOWED_SOLANA_METHODS.has(method)) {
       throw new ProviderError(
@@ -111,6 +115,9 @@ export class SolanaLedgerAdapter {
         lastSuccessAt: checkedAt,
         head: knownValue(slot),
         lag: unknownValue('NOT_QUERIED', 'No trusted comparison slot is configured.'),
+        ...(this.#transport.diagnostics === undefined
+          ? {}
+          : { transport: this.#transport.diagnostics() }),
       };
     } catch (error) {
       const providerError = toProviderError(error);
@@ -129,6 +136,9 @@ export class SolanaLedgerAdapter {
         lag: unavailableValue('PROVIDER_DOWN'),
         errorCode: providerError.code,
         errorDetail: providerError.message,
+        ...(this.#transport.diagnostics === undefined
+          ? {}
+          : { transport: this.#transport.diagnostics() }),
       };
     }
   }
@@ -152,9 +162,13 @@ export class SolanaLedgerAdapter {
       blockhash,
       commitment: this.config.commitment,
       capturedAt: new Date().toISOString(),
-      providerVersions: { [this.config.id]: 'solana-json-rpc' },
+      providerVersions: { [this.sourceId]: 'solana-json-rpc' },
       adapterVersions: { solana: this.config.adapterVersion ?? '0.1.0' },
-      configHash: hashPayload({ id: this.config.id, commitment: this.config.commitment }),
+      configHash: hashPayload({
+        id: this.config.id,
+        commitment: this.config.commitment,
+        sourceId: this.sourceId,
+      }),
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',
     };

@@ -37,20 +37,24 @@ export interface CreateEvidenceInput {
 
 export function createEvidence(input: CreateEvidenceInput): Evidence {
   const payloadHash = hashPayload(input.payload);
-  const evidence: Evidence = {
-    id: `ev_${payloadHash.slice(0, 24)}`,
+  const observedAt = input.observedAt ?? new Date().toISOString();
+  const content = {
     ledger: input.ledger,
     chainId: input.chainId,
     kind: input.kind,
     source: input.source,
     locator: input.locator,
     payloadHash,
-    observedAt: input.observedAt ?? new Date().toISOString(),
+    observedAt,
     summary: input.summary,
     ...(input.sourceUri === undefined ? {} : { sourceUri: input.sourceUri }),
     ...(input.blockOrSlot === undefined ? {} : { blockOrSlot: input.blockOrSlot }),
     ...(input.finality === undefined ? {} : { finality: input.finality }),
     ...(input.rawArtifactRef === undefined ? {} : { rawArtifactRef: input.rawArtifactRef }),
+  };
+  const evidence: Evidence = {
+    id: `ev_${hashPayload({ schema: 'zerotrace-evidence-v1', ...content }).slice(0, 24)}`,
+    ...content,
   };
   return EvidenceSchema.parse(evidence);
 }

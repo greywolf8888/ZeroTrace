@@ -19,6 +19,24 @@ export interface ProviderHealth {
   lag: KnowledgeValue<number>;
   errorCode?: string;
   errorDetail?: string;
+  transport?: {
+    endpointId: string;
+    activeEndpointId?: string;
+    circuitState: 'CLOSED' | 'OPEN' | 'HALF_OPEN';
+    circuitOpenUntil: string | null;
+    logicalRequests: number;
+    attempts: number;
+    successes: number;
+    failures: number;
+    retries: number;
+    rateLimitDelays: number;
+    cacheHits: number;
+    cacheMisses: number;
+    failovers: number;
+    lastAttemptAt: string | null;
+    lastSuccessAt: string | null;
+    lastFailureAt: string | null;
+  };
 }
 
 export interface HealthResponse {

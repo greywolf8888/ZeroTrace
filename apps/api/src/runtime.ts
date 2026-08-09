@@ -1,11 +1,15 @@
 import {
   BitcoinUtxoLedgerAdapter,
   EvmLedgerAdapter,
+  FailoverJsonRpcTransport,
+  FailoverRestTransport,
   ProviderRegistry,
   SafeJsonRpcTransport,
   SafeRestTransport,
   SolanaLedgerAdapter,
   type ProviderUrlPolicy,
+  type RestTransport,
+  type JsonRpcTransport,
 } from '@zerotrace/chain-adapters';
 import { EvidenceLedger } from '@zerotrace/evidence';
 
@@ -29,13 +33,75 @@ function policyFor(url: string, config: AppConfig): ProviderUrlPolicy {
   };
 }
 
+function configuredUrls(urls: readonly string[], primary: string | undefined): string[] {
+  if (urls.length > 0) return [...urls];
+  return primary === undefined ? [] : [primary];
+}
+
+function resilienceFor(config: AppConfig, requestsPerSecond: number) {
+  return { ...config.providerResilience, requestsPerSecond };
+}
+
+function sourceIdFor(id: string, url: string, index: number, total: number): string {
+  const host = new URL(url).hostname.toLowerCase();
+  return `${id}@${host}${total === 1 ? '' : `#${index + 1}`}`;
+}
+
+function jsonRpcTransport(
+  urls: readonly string[],
+  id: string,
+  config: AppConfig,
+  requestsPerSecond: number,
+): JsonRpcTransport {
+  const transports = urls.map(
+    (url, index) =>
+      new SafeJsonRpcTransport({
+        endpointId: sourceIdFor(id, url, index, urls.length),
+        baseUrl: url,
+        policy: policyFor(url, config),
+        timeoutMs: config.requestTimeoutMs,
+        resilience: resilienceFor(config, requestsPerSecond),
+      }),
+  );
+  const first = transports[0];
+  if (first === undefined) throw new Error(`Provider pool ${id} requires at least one URL.`);
+  return transports.length === 1 ? first : new FailoverJsonRpcTransport(id, transports);
+}
+
+function restTransport(
+  urls: readonly string[],
+  id: string,
+  config: AppConfig,
+  requestsPerSecond: number,
+): RestTransport {
+  const transports = urls.map(
+    (url, index) =>
+      new SafeRestTransport({
+        endpointId: sourceIdFor(id, url, index, urls.length),
+        baseUrl: url,
+        policy: policyFor(url, config),
+        timeoutMs: config.requestTimeoutMs,
+        resilience: resilienceFor(config, requestsPerSecond),
+      }),
+  );
+  const first = transports[0];
+  if (first === undefined) throw new Error(`Provider pool ${id} requires at least one URL.`);
+  return transports.length === 1 ? first : new FailoverRestTransport(id, transports);
+}
+
 export function createRuntime(config: AppConfig): AppRuntime {
   const providers: Array<EvmLedgerAdapter | BitcoinUtxoLedgerAdapter | SolanaLedgerAdapter> = [];
   const unconfigured = [];
   const evmAdapters = new Map<number, EvmLedgerAdapter>();
 
-  const addEvm = (url: string | undefined, id: string, chainId: number, chainName: string) => {
-    if (url === undefined) {
+  const addEvm = (
+    urls: readonly string[],
+    id: string,
+    chainId: number,
+    chainName: string,
+    requestsPerSecond: number,
+  ) => {
+    if (urls.length === 0) {
       unconfigured.push({
         id,
         ledger: 'EVM' as const,
@@ -52,22 +118,30 @@ export function createRuntime(config: AppConfig): AppRuntime {
     }
     const adapter = new EvmLedgerAdapter(
       { id, chainId, chainName },
-      new SafeJsonRpcTransport({
-        endpointId: id,
-        baseUrl: url,
-        policy: policyFor(url, config),
-        timeoutMs: config.requestTimeoutMs,
-      }),
+      jsonRpcTransport(urls, id, config, requestsPerSecond),
     );
     providers.push(adapter);
     evmAdapters.set(chainId, adapter);
   };
 
-  addEvm(config.ethereumRpcUrl, 'ethereum-rpc', config.ethereumChainId, 'Ethereum');
-  addEvm(config.bscRpcUrl, 'bsc-rpc', config.bscChainId, 'BNB Smart Chain');
+  addEvm(
+    configuredUrls(config.ethereumRpcUrls, config.ethereumRpcUrl),
+    'ethereum-rpc',
+    config.ethereumChainId,
+    'Ethereum',
+    config.ethereumRequestsPerSecond,
+  );
+  addEvm(
+    configuredUrls(config.bscRpcUrls, config.bscRpcUrl),
+    'bsc-rpc',
+    config.bscChainId,
+    'BNB Smart Chain',
+    config.bscRequestsPerSecond,
+  );
 
   let bitcoinAdapter: BitcoinUtxoLedgerAdapter | undefined;
-  if (config.bitcoinEsploraUrl === undefined) {
+  const bitcoinUrls = configuredUrls(config.bitcoinEsploraUrls, config.bitcoinEsploraUrl);
+  if (bitcoinUrls.length === 0) {
     unconfigured.push({
       id: 'bitcoin-esplora',
       ledger: 'BITCOIN' as const,
@@ -76,18 +150,14 @@ export function createRuntime(config: AppConfig): AppRuntime {
   } else {
     bitcoinAdapter = new BitcoinUtxoLedgerAdapter(
       { id: 'bitcoin-esplora' },
-      new SafeRestTransport({
-        endpointId: 'bitcoin-esplora',
-        baseUrl: config.bitcoinEsploraUrl,
-        policy: policyFor(config.bitcoinEsploraUrl, config),
-        timeoutMs: config.requestTimeoutMs,
-      }),
+      restTransport(bitcoinUrls, 'bitcoin-esplora', config, config.bitcoinEsploraRequestsPerSecond),
     );
     providers.push(bitcoinAdapter);
   }
 
   let solanaAdapter: SolanaLedgerAdapter | undefined;
-  if (config.solanaRpcUrl === undefined) {
+  const solanaUrls = configuredUrls(config.solanaRpcUrls, config.solanaRpcUrl);
+  if (solanaUrls.length === 0) {
     unconfigured.push({
       id: 'solana-rpc',
       ledger: 'SOLANA' as const,
@@ -103,12 +173,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
   } else {
     solanaAdapter = new SolanaLedgerAdapter(
       { id: 'solana-rpc', commitment: config.solanaCommitment },
-      new SafeJsonRpcTransport({
-        endpointId: 'solana-rpc',
-        baseUrl: config.solanaRpcUrl,
-        policy: policyFor(config.solanaRpcUrl, config),
-        timeoutMs: config.requestTimeoutMs,
-      }),
+      jsonRpcTransport(solanaUrls, 'solana-rpc', config, config.solanaRequestsPerSecond),
     );
     providers.push(solanaAdapter);
   }

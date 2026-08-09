@@ -77,6 +77,39 @@ describe('evidence ledger', () => {
     });
   });
 
+  it('content-addresses the complete observation rather than only its payload', () => {
+    const base = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:1',
+      kind: 'ACCOUNT_STATE' as const,
+      source: 'ethereum-rpc@one.example',
+      locator: 'address:0xabc@100',
+      payload: { balance: '0' },
+      observedAt: '2026-08-09T00:00:00.000Z',
+      blockOrSlot: '100',
+      summary: 'Account state.',
+    };
+    const original = createEvidence(base);
+    const replay = createEvidence(base);
+    const otherSource = createEvidence({ ...base, source: 'ethereum-rpc@two.example' });
+    const otherBlock = createEvidence({
+      ...base,
+      locator: 'address:0xabc@101',
+      blockOrSlot: '101',
+    });
+
+    expect(replay.id).toBe(original.id);
+    expect(otherSource.payloadHash).toBe(original.payloadHash);
+    expect(otherBlock.payloadHash).toBe(original.payloadHash);
+    expect(new Set([original.id, otherSource.id, otherBlock.id]).size).toBe(3);
+
+    const ledger = new EvidenceLedger();
+    ledger.add(original);
+    ledger.add(otherSource);
+    ledger.add(otherBlock);
+    expect(ledger.values()).toHaveLength(3);
+  });
+
   it('rejects duplicates and missing derivation sources', () => {
     const ledger = new EvidenceLedger();
     const raw = createEvidence({

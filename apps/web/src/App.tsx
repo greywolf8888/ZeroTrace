@@ -251,6 +251,8 @@ function ProviderTable({ health }: { health?: HealthResponse | undefined }) {
             <th>Provider</th>
             <th>Ledger</th>
             <th>Status</th>
+            <th>Endpoint</th>
+            <th>Circuit</th>
             <th>Head</th>
             <th>Latency</th>
           </tr>
@@ -258,7 +260,7 @@ function ProviderTable({ health }: { health?: HealthResponse | undefined }) {
         <tbody>
           {providers.length === 0 ? (
             <tr>
-              <td colSpan={5} className="empty-cell">
+              <td colSpan={7} className="empty-cell">
                 Provider health has not loaded.
               </td>
             </tr>
@@ -276,6 +278,12 @@ function ProviderTable({ health }: { health?: HealthResponse | undefined }) {
                 <td>
                   <StatusPill status={provider.status} />
                 </td>
+                <td>
+                  <code>
+                    {provider.transport?.activeEndpointId ?? provider.transport?.endpointId ?? '—'}
+                  </code>
+                </td>
+                <td>{provider.transport?.circuitState ?? '—'}</td>
                 <td>
                   {provider.head.state === 'known' ? (
                     <code>{provider.head.value}</code>
@@ -753,6 +761,30 @@ function DataHealth({
               <div>
                 <dt>Capabilities</dt>
                 <dd>{provider.capabilities.length}</dd>
+              </div>
+              <div>
+                <dt>Active endpoint</dt>
+                <dd>
+                  {provider.transport?.activeEndpointId ??
+                    provider.transport?.endpointId ??
+                    'Unavailable'}
+                </dd>
+              </div>
+              <div>
+                <dt>Circuit</dt>
+                <dd>{provider.transport?.circuitState ?? 'Unavailable'}</dd>
+              </div>
+              <div>
+                <dt>Retries / failovers</dt>
+                <dd>
+                  {provider.transport === undefined
+                    ? 'Unavailable'
+                    : `${provider.transport.retries} / ${provider.transport.failovers}`}
+                </dd>
+              </div>
+              <div>
+                <dt>Cache hits</dt>
+                <dd>{provider.transport?.cacheHits ?? 'Unavailable'}</dd>
               </div>
             </dl>
             {provider.errorDetail === undefined ? null : (

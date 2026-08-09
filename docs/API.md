@@ -88,6 +88,11 @@ array, or a confident label.
 Provider errors distinguish retryable timeout/quota/availability failures from invalid requests.
 Secret values and raw provider URLs are not included.
 
+Configured providers include a `transport` object in health responses with the safe active endpoint
+ID, circuit state, logical request/attempt/success/failure counters, retries, pacing delays, cache
+hits/misses, failovers, and last attempt timestamps. Endpoint IDs contain the provider role and
+hostname only; URL paths and credentials are excluded.
+
 ## Numeric representation
 
 Atomic ledger quantities and reserves use decimal strings. JSON numbers are used only for bounded

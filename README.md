@@ -135,9 +135,9 @@ The default Compose stack starts PostgreSQL, ClickHouse, Valkey, NATS, MinIO, AP
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
 
-Public Bitcoin and Solana endpoints are development fallbacks and can be rate-limited. Configure
-dedicated read-only endpoints before production validation. EVM providers are deliberately blank by
-default.
+Public BNB Smart Chain, Bitcoin, and Solana endpoints are development fallbacks and can be
+rate-limited. Ethereum remains unconfigured until a local Alchemy key or another read-only RPC is
+provided. Configure dedicated, redundant endpoints before production validation.
 
 ### Local development
 
@@ -182,7 +182,10 @@ Copy [`.env.example`](.env.example) and edit only the providers you trust. The a
 - accepts HTTPS provider URLs by default;
 - requires an explicit hostname allowlist;
 - rejects URL credentials, redirects, traversal, and private or reserved destinations;
-- imposes timeout, rate, and response-size limits;
+- applies bounded exponential retries, `Retry-After`, per-endpoint pacing, TTL/LRU caching,
+  in-flight request deduplication, circuit breaking, and ordered failover;
+- exposes safe hostname-based route and resilience diagnostics without exposing URL paths or keys;
+- imposes timeout and response-size limits;
 - preserves unsafe JSON integer tokens as strings;
 - allows only audited read methods and rejects transaction broadcasting.
 

@@ -202,7 +202,11 @@ connections:
 - hostname allowlist and DNS/IP checks against loopback, private, link-local, multicast, and reserved
   space;
 - no embedded URL credentials, fragments, path traversal, or redirects;
-- bounded response size, request timeout, concurrency/rate limits, and JSON content validation;
+- bounded response size, request timeout, per-endpoint pacing, and JSON content validation;
+- bounded exponential retry with capped `Retry-After`, in-flight deduplication, TTL/LRU response
+  caching, per-endpoint circuit breakers, and ordered sticky failover;
+- hostname-based source identifiers and transport diagnostics that exclude credentials and URL
+  paths;
 - lossless handling of integers beyond JavaScript's safe range;
 - adapter-level method allowlists.
 

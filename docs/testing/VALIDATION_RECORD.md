@@ -72,24 +72,50 @@ for unavailable data.
   `NativeLoader1111111111111111111111111111111`;
 - Evidence ID: `ev_6d7be195e513ed7b3d264a62`.
 
-### Boundaries
+### Initial smoke boundaries
 
-- Ethereum and BNB Smart Chain remained `UNCONFIGURED`; no EVM live-read acceptance is claimed.
+- Ethereum and BNB Smart Chain remained `UNCONFIGURED` in this initial smoke. A later follow-up is
+  recorded below.
 - The two observations are floating-head smoke checks. They are not immutable fixture suites, archive
   validation, independent provider reconciliation, reorg tests, or protocol-decoder acceptance.
 - Evidence persistence is process-local, so the IDs above are reproducible content references but do
   not survive an API restart until the PostgreSQL repository is wired.
 
+## Four-chain provider follow-up
+
+After the resilient transport and safe hostname-based source IDs were wired, the same API process
+completed snapshot-pinned subject reads on all four configured networks. The supplied Ethereum key
+was injected only into the test process, was not printed, and was removed from that process after the
+run. It was not written to the repository.
+
+| Chain           | Safe source ID                           | Snapshot head | Snapshot hash                                                        | Evidence ID                   |
+| --------------- | ---------------------------------------- | ------------- | -------------------------------------------------------------------- | ----------------------------- |
+| Ethereum        | `ethereum-rpc@eth-mainnet.g.alchemy.com` | `25717412`    | `0x57ac811472c6b3592809e17b60479951224ee71462b86c09185c592ff085ed8d` | `ev_fcddbf315c8dcb12cd8f981b` |
+| BNB Smart Chain | `bsc-rpc@bsc-dataseed.bnbchain.org#1`    | `114928609`   | `0xd0ac31a0fe4489e44b79dc39e32aba3377a806a700650929381783c02f00ef38` | `ev_75d3538400d4f07a48ce3756` |
+| Bitcoin         | `bitcoin-esplora@blockstream.info`       | `961727`      | `00000000000000000000b79b7b22483afc3b9c8ba10860a468d7cfe2b12615ba`   | `ev_9d74234ba23dac03a7679fae` |
+| Solana          | `solana-rpc@api.mainnet.solana.com`      | `438197081`   | `FMw2JVJwE5GAxTrGVBXFsP9QzRk57AkaswxRLjUjQn7r`                       | `ev_6ecb9cd4d7f3dbf415c59779` |
+
+All four subject requests returned HTTP 200 and Known facts rather than converting provider state to
+zero. The Ethereum and BSC subject was the zero address and returned the provider-reported native
+balance plus `EOA`; Bitcoin returned confirmed/mempool balances and transaction count; Solana
+returned the System Program account state. Snapshot capture times ranged from
+`2026-08-09T12:26:26.144Z` to `2026-08-09T12:26:34.605Z`.
+
+This validates the current-state happy path and Evidence construction only. It does not validate
+archive history, a forced real-provider failover, cross-provider semantic agreement, reorg/finality
+handling, or any launchpad decoder. The local interception-proxy exception described above remained
+necessary for this host.
+
 ## Automated verification
 
-| Command                  | Result                                                                         |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| `npm run verify`         | pass: format, lint, typecheck, 84 unit, 12 integration, build, licenses, audit |
-| `npm run test:coverage`  | pass: 95.41% statements, 82% branches, 99.29% functions, 96.36% lines          |
-| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                              |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                         |
-| `docker compose config`  | pass                                                                           |
-| production Compose smoke | pass with the port overrides documented above                                  |
+| Command                  | Result                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `npm run verify`         | pass: format, lint, typecheck, 99 unit, 12 integration, build, license, audit |
+| `npm run test:coverage`  | pass: 94% statements, 81.43% branches, 98.06% functions, 95.44% lines         |
+| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                             |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                        |
+| `docker compose config`  | pass                                                                          |
+| production Compose smoke | pass with the port overrides documented above                                 |
 
-Remote GitHub Actions, dedicated/provider-key EVM reads, archive history, load, failover, reorg,
-backup/restore, and production security controls remain external acceptance gates.
+Remote CI for this branch, archive history, load, forced real-provider failover, reorg,
+backup/restore, and production security controls remain acceptance gates.
