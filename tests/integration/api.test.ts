@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   BitcoinUtxoLedgerAdapter,
@@ -9,6 +9,7 @@ import {
   type RestTransport,
 } from '@zerotrace/chain-adapters';
 import { createEvidence, EvidenceLedger } from '@zerotrace/evidence';
+import { StorageError, type EvidenceRepository } from '@zerotrace/storage';
 
 import { createApp } from '../../apps/api/src/app.js';
 import type { AppConfig } from '../../apps/api/src/config.js';
@@ -168,6 +169,26 @@ function runtimeWithAllLedgers(): AppRuntime {
   };
 }
 
+function repository(overrides: Partial<EvidenceRepository> = {}): EvidenceRepository {
+  return {
+    put: vi.fn(async (evidence, sourceEvidenceIds = [], snapshot) => ({
+      evidence,
+      sourceEvidenceIds: [...sourceEvidenceIds].sort(),
+      ...(snapshot === undefined ? {} : { snapshot }),
+    })),
+    get: vi.fn(async () => undefined),
+    drilldown: vi.fn(async () => []),
+    health: vi.fn(async () => ({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+      checkedAt: new Date().toISOString(),
+    })),
+    close: vi.fn(async () => undefined),
+    ...overrides,
+  };
+}
+
 const fixtureSnapshot = {
   ledger: 'EVM' as const,
   chainId: 'eip155:1',
@@ -208,7 +229,7 @@ function addFixtureEvidence(runtime: AppRuntime, blockOrSlot = '16') {
     finality: 'snapshot-block',
     summary: 'Pool reserves at fixture block.',
   });
-  runtime.evidenceLedger.add(evidence);
+  runtime.evidenceLedger.add(evidence, [], { ...fixtureSnapshot, blockNumber: blockOrSlot });
   return evidence;
 }
 
@@ -251,6 +272,25 @@ describe('ZeroTrace API contract', () => {
     expect(body.metadata.snapshot).toMatchObject({ ledger: 'EVM', blockNumber: '16' });
     expect(body.evidence).toHaveLength(1);
     expect(runtime.evidenceLedger.get(body.evidence[0].id)).toBeDefined();
+  });
+
+  it('persists subject Evidence with its replayable Snapshot when durable storage is configured', async () => {
+    const runtime = runtimeWithEvm();
+    const durable = repository();
+    runtime.evidenceRepository = durable;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/subjects/EVM/0x52908400098527886e0f7030069857d2e4169ee7?chainId=eip155:1',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(durable.put).toHaveBeenCalledOnce();
+    expect(vi.mocked(durable.put).mock.calls[0]?.[2]).toMatchObject({
+      ledger: 'EVM',
+      blockNumber: '16',
+    });
   });
 
   it('returns explicit unknowns for an engine with no evidence', async () => {
@@ -339,7 +379,7 @@ describe('ZeroTrace API contract', () => {
       finality: 'snapshot-block',
       summary: 'Pool reserves at fixture block.',
     });
-    runtime.evidenceLedger.add(sourceEvidence);
+    runtime.evidenceLedger.add(sourceEvidence, [], fixtureSnapshot);
     const app = await createApp({ config, runtime, logger: false });
     apps.push(app);
     const response = await app.inject({
@@ -365,7 +405,7 @@ describe('ZeroTrace API contract', () => {
             providerVersions: { fixture: '1' },
             adapterVersions: { evm: '0.1.0' },
             configHash: 'b'.repeat(64),
-            entityModelVersion: 'not-used',
+            entityModelVersion: 'entity-v0.1.0',
             labelSnapshot: 'none',
           },
           dataCoverage: 1,
@@ -424,6 +464,42 @@ describe('ZeroTrace API contract', () => {
     expect(metrics.statusCode).toBe(200);
     expect(metrics.headers['content-type']).toContain('text/plain');
     expect(metrics.body).toContain('zerotrace_http_requests_total');
+  });
+
+  it('fails readiness explicitly when configured durable storage is down', async () => {
+    const runtime = runtimeWithEvm();
+    runtime.evidenceRepository = repository({
+      health: vi.fn(async () => ({
+        status: 'DOWN',
+        backend: 'POSTGRES',
+        durable: true,
+        checkedAt: new Date().toISOString(),
+        errorCode: 'STORAGE_UNAVAILABLE',
+      })),
+      put: vi.fn(async () => {
+        throw new StorageError('STORAGE_UNAVAILABLE', 'Durable Evidence storage is unavailable.', {
+          retryable: true,
+        });
+      }),
+    });
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const ready = await app.inject({ method: 'GET', url: '/health/ready' });
+    expect(ready.statusCode).toBe(503);
+    expect(ready.json()).toMatchObject({
+      status: 'DEGRADED',
+      storage: { status: 'DOWN', durable: true, errorCode: 'STORAGE_UNAVAILABLE' },
+    });
+    const subject = await app.inject({
+      method: 'GET',
+      url: '/api/v1/subjects/EVM/0x52908400098527886e0f7030069857d2e4169ee7?chainId=eip155:1',
+    });
+    expect(subject.statusCode).toBe(503);
+    expect(subject.json().error).toMatchObject({
+      code: 'STORAGE_UNAVAILABLE',
+      retryable: true,
+    });
   });
 
   it('normalizes Bitcoin and Solana subject state with evidence', async () => {
@@ -581,6 +657,7 @@ describe('ZeroTrace API contract', () => {
   it('rejects missing or snapshot-incompatible analysis evidence', async () => {
     const runtime = runtimeWithEvm();
     const wrongBlock = addFixtureEvidence(runtime, '15');
+    const wrongHash = addFixtureEvidence(runtime);
     const app = await createApp({ config, runtime, logger: false });
     apps.push(app);
 
@@ -626,6 +703,31 @@ describe('ZeroTrace API contract', () => {
     expect(incompatible.json().evidenceIssue).toEqual({
       kind: 'SNAPSHOT_INCOMPATIBLE',
       evidenceIds: [wrongBlock.id],
+    });
+
+    const conflictingAnchor = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/constant-product',
+      payload: {
+        pool: {
+          id: 'pool-1',
+          baseReserve: '1000',
+          quoteReserve: '1000',
+          feeBps: '0',
+          sellEnabled: true,
+          evidenceIds: [wrongHash.id],
+        },
+        inputQuantity: '100',
+        metadata: {
+          ...fixtureMetadata(wrongHash.id),
+          snapshot: { ...fixtureSnapshot, blockHash: '0x' + 'c'.repeat(64) },
+        },
+      },
+    });
+    expect(conflictingAnchor.statusCode).toBe(422);
+    expect(conflictingAnchor.json().evidenceIssue).toEqual({
+      kind: 'SNAPSHOT_INCOMPATIBLE',
+      evidenceIds: [wrongHash.id],
     });
   });
 });

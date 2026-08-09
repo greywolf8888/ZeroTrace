@@ -18,6 +18,9 @@ jobs:
     name: Quality and contracts
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      POSTGRES_PASSWORD: zerotrace-ci
+      POSTGRES_PORT: 55432
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -43,8 +46,15 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Start disposable PostgreSQL
+        run: |
+          docker compose -p zerotrace-ci up -d --build postgres
+          timeout 90 bash -c 'until docker compose -p zerotrace-ci exec -T postgres pg_isready -U zerotrace -d zerotrace; do sleep 2; done'
+
       - name: Unit and integration coverage
         run: npm run test:coverage
+        env:
+          TEST_POSTGRES_URL: postgresql://zerotrace:zerotrace-ci@127.0.0.1:55432/zerotrace
 
       - name: Production build
         run: npm run build
@@ -59,6 +69,10 @@ jobs:
         run: |
           mkdir -p reports
           npm run sbom
+
+      - name: Stop disposable PostgreSQL
+        if: always()
+        run: docker compose -p zerotrace-ci down --volumes
 
       - name: Upload verification artifacts
         if: always()

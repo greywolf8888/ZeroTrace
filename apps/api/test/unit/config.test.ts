@@ -70,4 +70,23 @@ describe('API configuration', () => {
       expect(String(error)).not.toContain('sensitive-provider-value');
     }
   });
+
+  it('accepts only a PostgreSQL connection URL without echoing invalid input', () => {
+    expect(
+      loadConfig({
+        NODE_ENV: 'test',
+        POSTGRES_URL: 'postgresql://zerotrace:test@postgres:5432/zerotrace',
+      }).postgresUrl,
+    ).toBe('postgresql://zerotrace:test@postgres:5432/zerotrace');
+
+    const invalid = 'https://database.example/sensitive-database-value';
+    expect(() => loadConfig({ NODE_ENV: 'test', POSTGRES_URL: invalid })).toThrow(
+      'POSTGRES_URL must be a valid PostgreSQL connection URL.',
+    );
+    try {
+      loadConfig({ NODE_ENV: 'test', POSTGRES_URL: invalid });
+    } catch (error) {
+      expect(String(error)).not.toContain('sensitive-database-value');
+    }
+  });
 });

@@ -26,8 +26,8 @@ The validation stack used alternate host ports to avoid unrelated local services
   `26,257,140` bytes in this Docker Engine;
 - `vitest` and `pino-pretty` were absent from the API image; npm retained `typescript` as an optional
   peer in the pinned `viem`/`abitype` graph;
-- PostgreSQL applied `001_core` and `002_indexes`, created the six representative core tables
-  checked by the run, and installed four append-only triggers;
+- in the original full-stack run, PostgreSQL applied `001_core` and `002_indexes`, created the six
+  representative core tables checked by the run, and installed four append-only triggers;
 - ClickHouse created `raw_chain_facts`, `platform_events`, and `metric_series`; `CHECK TABLE` passed
   and `metric_series` retained its Known/value consistency constraint;
 - a transactional mutation probe was rejected by PostgreSQL's Evidence trigger and rolled back with
@@ -78,8 +78,8 @@ for unavailable data.
   recorded below.
 - The two observations are floating-head smoke checks. They are not immutable fixture suites, archive
   validation, independent provider reconciliation, reorg tests, or protocol-decoder acceptance.
-- Evidence persistence is process-local, so the IDs above are reproducible content references but do
-  not survive an API restart until the PostgreSQL repository is wired.
+- this initial smoke predated repository wiring, so those two observations were intentionally
+  process-local. Current Compose runs persist new observations as described in the follow-up below.
 
 ## Four-chain provider follow-up
 
@@ -106,16 +106,48 @@ archive history, a forced real-provider failover, cross-provider semantic agreem
 handling, or any launchpad decoder. The local interception-proxy exception described above remained
 necessary for this host.
 
+## Durable Evidence repository follow-up
+
+A separate disposable Compose project built a fresh `postgres:17.10-alpine` target, applied
+`001_core`, `002_indexes`, and `003_evidence_integrity`, ran the real node-postgres repository tests,
+and then removed its container, network, and named volume. All four integration cases passed:
+
+- schema/migration-aware storage health returned `POSTGRES`, `UP`, and `durable: true`;
+- a Snapshot-bound raw observation was written, read, and idempotently re-written without mutation;
+- a derived node and its source edge survived pool shutdown/restart and complete drilldown replay;
+- SQL rejected Evidence mutation, edge mutation, raw-fact derivation, post-commit edge-set expansion,
+  and inferred Evidence with no source observation.
+
+A subsequent default-topology smoke built the current API, web, and PostgreSQL images, started a
+fresh PostgreSQL/ClickHouse/Valkey/API/web dependency chain, and verified:
+
+- API liveness returned `UP` with `readOnly: true`;
+- storage health returned `POSTGRES`, `UP`, and `durable: true`;
+- the capability ledger reported `evidence-ledger: IMPLEMENTED_DURABLE`;
+- the Nginx web health endpoint returned HTTP 200;
+- the full API health was `DEGRADED` because no public provider became healthy in that isolated
+  container run, not because of storage. The earlier host-side four-chain smoke remains the current
+  provider validation evidence.
+
+The current production-pruned images measured `76,080,966` bytes for API and `27,798,914` bytes for
+web on this Docker Engine. The disposable runtime containers, networks, and volumes were removed
+after assertions.
+
+The application layer separately rejects a source Snapshot whose block hash or other canonical
+Snapshot content differs even when its block number matches. These tests validate local persistence
+and integrity behavior, not managed-database failover, backup/restore, encryption, retention, or
+production migration operations.
+
 ## Automated verification
 
-| Command                  | Result                                                                        |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| `npm run verify`         | pass: format, lint, typecheck, 99 unit, 12 integration, build, license, audit |
-| `npm run test:coverage`  | pass: 94% statements, 81.43% branches, 98.06% functions, 95.44% lines         |
-| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                             |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                        |
-| `docker compose config`  | pass                                                                          |
-| production Compose smoke | pass with the port overrides documented above                                 |
+| Command                  | Result                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `npm run verify`         | pass: format, lint, typecheck, 113 unit, 18 integration, build, license, audit |
+| `npm run test:coverage`  | pass: 92.80% statements, 81.47% branches, 97.55% functions, 93.94% lines       |
+| `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                              |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                         |
+| `docker compose config`  | pass                                                                           |
+| production Compose smoke | pass with the port overrides documented above                                  |
 
 Remote CI for this branch, archive history, load, forced real-provider failover, reorg,
 backup/restore, and production security controls remain acceptance gates.

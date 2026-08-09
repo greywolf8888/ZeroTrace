@@ -105,4 +105,12 @@ describe('application runtime wiring', () => {
     );
     expect(runtime.evmAdapters.has(1)).toBe(true);
   });
+
+  it('wires PostgreSQL Evidence storage lazily when configured', async () => {
+    const runtime = createRuntime(
+      baseConfig({ postgresUrl: 'postgresql://zerotrace:secret@postgres.example/zerotrace' }),
+    );
+    expect(runtime.evidenceRepository).toBeDefined();
+    await runtime.evidenceRepository?.close();
+  });
 });

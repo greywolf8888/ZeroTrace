@@ -64,5 +64,10 @@ test('keeps scenario execution gated and exposes provider availability', async (
       'A failed or unconfigured provider becomes an availability state—never a business value of zero.',
     ),
   ).toBeVisible();
+  const storageCard = page.locator('.storage-card');
+  await expect(storageCard.getByRole('heading', { name: 'Evidence storage' })).toBeVisible();
+  await expect(storageCard).toContainText('Memory');
+  await expect(storageCard).toContainText('Process-local');
+  await expect(storageCard).toContainText('Ephemeral');
   await expect(page.getByRole('button', { name: 'Refresh providers' })).toBeEnabled();
 });

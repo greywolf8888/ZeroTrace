@@ -20,6 +20,7 @@ captured by `npm run sbom` in CycloneDX JSON and checked by `npm run license:che
 | `viem`                       | 2.55.11 | EVM checksum/address normalization only  | MIT          | [wevm/viem](https://github.com/wevm/viem)                                                         |
 | `bitcoin-address-validation` |   3.0.0 | Bitcoin network/type/checksum validation | MIT          | [ruigomeseu/bitcoin-address-validation](https://github.com/ruigomeseu/bitcoin-address-validation) |
 | `bs58`                       |   6.0.0 | lossless Solana public-key decoding      | MIT          | [cryptocoinjs/bs58](https://github.com/cryptocoinjs/bs58)                                         |
+| `pg`                         |  8.23.0 | pooled, parameterized PostgreSQL access  | MIT          | [brianc/node-postgres](https://github.com/brianc/node-postgres)                                   |
 
 Internal `@zerotrace/*` workspace packages are not third-party dependencies.
 
@@ -43,6 +44,7 @@ Internal `@zerotrace/*` workspace packages are not third-party dependencies.
 | `license-checker-rseidelsohn`       |            5.0.1 | production license allowlist        | BSD-3-Clause | [RSeidelsohn/node-license-checker](https://github.com/RSeidelsohn/node-license-checker)       |
 | `@types/node`                       |         24.10.14 | Node type declarations              | MIT          | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped)         |
 | `@types/react` / `@types/react-dom` | 19.2.18 / 19.2.4 | React type declarations             | MIT          | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped)         |
+| `@types/pg`                         |           8.21.0 | node-postgres type declarations     | MIT          | [DefinitelyTyped/DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped)         |
 
 ## Container images
 

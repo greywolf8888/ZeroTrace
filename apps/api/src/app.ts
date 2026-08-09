@@ -7,10 +7,11 @@ import { z, ZodError } from 'zod';
 
 import { ProviderError } from '@zerotrace/chain-adapters';
 import { resolveEntityRelationship } from '@zerotrace/entity-engine';
-import { createEvidence } from '@zerotrace/evidence';
+import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
 import { PLATFORM_REGISTRY } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
+import { StorageError, type StorageHealth } from '@zerotrace/storage';
 import {
   AnalysisMetadataSchema,
   knownValue,
@@ -136,23 +137,48 @@ function emptyMetadata(modelVersion: string, confidence = 0): AnalysisMetadata {
   };
 }
 
-function addEvidence(
+async function getEvidenceNode(runtime: AppRuntime, id: string) {
+  return runtime.evidenceLedger.get(id) ?? runtime.evidenceRepository?.get(id);
+}
+
+async function addEvidence(
   runtime: AppRuntime,
   evidence: Evidence,
   sourceEvidenceIds: readonly string[] = [],
-): Evidence {
-  const existing = runtime.evidenceLedger.get(evidence.id);
-  if (existing !== undefined) return existing.evidence;
-  runtime.evidenceLedger.add(evidence, sourceEvidenceIds);
-  return evidence;
+  snapshot?: AnalysisSnapshot,
+): Promise<Evidence> {
+  const existing = await getEvidenceNode(runtime, evidence.id);
+  if (existing !== undefined) {
+    const normalizedSources = uniqueEvidenceIds(sourceEvidenceIds).sort();
+    if (
+      hashPayload(existing.evidence) !== hashPayload(evidence) ||
+      hashPayload(existing.sourceEvidenceIds) !== hashPayload(normalizedSources)
+    ) {
+      throw new StorageError(
+        'EVIDENCE_CONFLICT',
+        'Existing Evidence conflicts with the canonical observation.',
+      );
+    }
+    if (hashPayload(existing.snapshot ?? null) !== hashPayload(snapshot ?? null)) {
+      throw new StorageError('SNAPSHOT_CONFLICT', 'Existing Evidence uses a different Snapshot.');
+    }
+    return existing.evidence;
+  }
+  const stored = await runtime.evidenceRepository?.put(evidence, sourceEvidenceIds, snapshot);
+  if (sourceEvidenceIds.every((id) => runtime.evidenceLedger.get(id) !== undefined)) {
+    runtime.evidenceLedger.add(evidence, sourceEvidenceIds, snapshot);
+  }
+  return stored?.evidence ?? evidence;
 }
 
 function uniqueEvidenceIds(ids: readonly string[]): string[] {
   return [...new Set(ids)];
 }
 
-function missingEvidenceIds(runtime: AppRuntime, ids: readonly string[]): string[] {
-  return uniqueEvidenceIds(ids).filter((id) => runtime.evidenceLedger.get(id) === undefined);
+async function missingEvidenceIds(runtime: AppRuntime, ids: readonly string[]): Promise<string[]> {
+  const unique = uniqueEvidenceIds(ids);
+  const nodes = await Promise.all(unique.map((id) => getEvidenceNode(runtime, id)));
+  return unique.filter((_id, index) => nodes[index] === undefined);
 }
 
 function snapshotPosition(snapshot: AnalysisSnapshot): {
@@ -169,24 +195,29 @@ function snapshotPosition(snapshot: AnalysisSnapshot): {
   }
 }
 
-function incompatibleEvidenceIds(
+async function incompatibleEvidenceIds(
   runtime: AppRuntime,
   ids: readonly string[],
   snapshot: AnalysisSnapshot,
-): string[] {
+): Promise<string[]> {
   const position = snapshotPosition(snapshot);
-  return uniqueEvidenceIds(ids).filter((id) => {
-    const node = runtime.evidenceLedger.get(id);
+  const unique = uniqueEvidenceIds(ids);
+  const nodes = await Promise.all(unique.map((id) => getEvidenceNode(runtime, id)));
+  return unique.filter((_id, index) => {
+    const node = nodes[index];
     if (node === undefined) return false;
-    return (
+    if (
       node.evidence.ledger !== snapshot.ledger ||
       node.evidence.chainId !== snapshot.chainId ||
       node.evidence.blockOrSlot !== position.blockOrSlot
-    );
+    ) {
+      return true;
+    }
+    return node.snapshot === undefined || hashPayload(node.snapshot) !== hashPayload(snapshot);
   });
 }
 
-function addDerivedAnalysisEvidence(
+async function addDerivedAnalysisEvidence(
   runtime: AppRuntime,
   snapshot: AnalysisSnapshot,
   sourceEvidenceIds: readonly string[],
@@ -194,7 +225,7 @@ function addDerivedAnalysisEvidence(
   locator: string,
   payload: unknown,
   summary: string,
-): Evidence {
+): Promise<Evidence> {
   const position = snapshotPosition(snapshot);
   return addEvidence(
     runtime,
@@ -208,8 +239,10 @@ function addDerivedAnalysisEvidence(
       blockOrSlot: position.blockOrSlot,
       finality: position.finality,
       summary,
+      sourceEvidenceIds,
     }),
     sourceEvidenceIds,
+    snapshot,
   );
 }
 
@@ -261,6 +294,7 @@ export interface CreateAppOptions {
 
 export async function createApp(options: CreateAppOptions): Promise<FastifyInstance> {
   const runtime = options.runtime ?? createRuntime(options.config);
+  const ownsRuntime = options.runtime === undefined;
   const app = Fastify({
     logger:
       options.logger === false
@@ -316,6 +350,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     });
     done();
   });
+  if (ownsRuntime && runtime.evidenceRepository !== undefined) {
+    app.addHook('onClose', async () => runtime.evidenceRepository?.close());
+  }
 
   let healthCache:
     | { expiresAt: number; value: Awaited<ReturnType<AppRuntime['providerRegistry']['health']>> }
@@ -324,6 +361,31 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     if (healthCache !== undefined && healthCache.expiresAt > Date.now()) return healthCache.value;
     const value = await runtime.providerRegistry.health();
     healthCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
+    return value;
+  };
+  type RuntimeStorageHealth =
+    | StorageHealth
+    | {
+        status: 'EPHEMERAL';
+        backend: 'MEMORY';
+        durable: false;
+        checkedAt: string;
+      };
+  let storageCache: { expiresAt: number; value: RuntimeStorageHealth } | undefined;
+  const storageHealth = async (): Promise<RuntimeStorageHealth> => {
+    if (storageCache !== undefined && storageCache.expiresAt > Date.now()) {
+      return storageCache.value;
+    }
+    const value: RuntimeStorageHealth =
+      runtime.evidenceRepository === undefined
+        ? {
+            status: 'EPHEMERAL',
+            backend: 'MEMORY',
+            durable: false,
+            checkedAt: new Date().toISOString(),
+          }
+        : await runtime.evidenceRepository.health();
+    storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
   };
 
@@ -344,6 +406,11 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof StorageError) {
+      return reply
+        .code(503)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     const internalError = error instanceof Error ? error : new Error('Unknown thrown value');
     request.log.error(
       { message: internalError.message, name: internalError.name },
@@ -362,25 +429,33 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     checkedAt: new Date().toISOString(),
   }));
 
-  app.get('/health/ready', { schema: { tags: ['system'] } }, async () => {
-    const providers = await providerHealth();
-    const status = providers.some((provider) => provider.status === 'UP') ? 'UP' : 'DEGRADED';
-    return {
+  app.get('/health/ready', { schema: { tags: ['system'] } }, async (_request, reply) => {
+    const [providers, storage] = await Promise.all([providerHealth(), storageHealth()]);
+    const status =
+      providers.some((provider) => provider.status === 'UP') && storage.status !== 'DOWN'
+        ? 'UP'
+        : 'DEGRADED';
+    return reply.code(status === 'UP' ? 200 : 503).send({
       status,
       service: 'zerotrace-api',
       readOnly: true,
       providers,
+      storage,
       checkedAt: new Date().toISOString(),
-    };
+    });
   });
 
   app.get('/health', { schema: { tags: ['system'] } }, async () => {
-    const providers = await providerHealth();
+    const [providers, storage] = await Promise.all([providerHealth(), storageHealth()]);
     return {
-      status: providers.some((provider) => provider.status === 'UP') ? 'UP' : 'DEGRADED',
+      status:
+        providers.some((provider) => provider.status === 'UP') && storage.status !== 'DOWN'
+          ? 'UP'
+          : 'DEGRADED',
       service: 'zerotrace-api',
       readOnly: true,
       providers,
+      storage,
       checkedAt: new Date().toISOString(),
     };
   });
@@ -396,8 +471,14 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       { id: 'canonical-schemas', status: 'IMPLEMENTED' },
       {
         id: 'evidence-ledger',
-        status: 'IMPLEMENTED_EPHEMERAL',
-        detail: 'PostgreSQL persistence is not wired yet.',
+        status:
+          runtime.evidenceRepository === undefined
+            ? 'IMPLEMENTED_EPHEMERAL'
+            : 'IMPLEMENTED_DURABLE',
+        detail:
+          runtime.evidenceRepository === undefined
+            ? 'POSTGRES_URL is absent; Evidence is process-local.'
+            : 'PostgreSQL append-only Evidence and Snapshot persistence is configured.',
       },
       {
         id: 'evm-current-state',
@@ -523,7 +604,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           adapter.getCode(subject.normalizedId, blockTag),
         ]);
         const payload = { balanceHex, code, blockTag, blockHash: snapshot.blockHash };
-        const evidence = addEvidence(
+        const evidence = await addEvidence(
           runtime,
           createEvidence({
             ledger: 'EVM',
@@ -536,6 +617,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             finality: 'snapshot-head',
             summary: 'EVM native balance and bytecode at the snapshot block.',
           }),
+          [],
+          snapshot,
         );
         const metadata: AnalysisMetadata = {
           snapshot,
@@ -576,7 +659,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           snapshotHeight: snapshot.height,
           snapshotHash: snapshot.blockHash,
         };
-        const evidence = addEvidence(
+        const evidence = await addEvidence(
           runtime,
           createEvidence({
             ledger: 'BITCOIN',
@@ -589,6 +672,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             finality: 'best-chain',
             summary: 'Bitcoin address chain and mempool statistics near the snapshot tip.',
           }),
+          [],
+          snapshot,
         );
         const confirmedBalance = stats.chain_stats.funded_txo_sum - stats.chain_stats.spent_txo_sum;
         const mempoolDelta = stats.mempool_stats.funded_txo_sum - stats.mempool_stats.spent_txo_sum;
@@ -632,7 +717,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         snapshotSlot: snapshot.slot,
         snapshotBlockhash: snapshot.blockhash,
       };
-      const evidence = addEvidence(
+      const evidence = await addEvidence(
         runtime,
         createEvidence({
           ledger: 'SOLANA',
@@ -645,6 +730,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           finality: snapshot.commitment,
           summary: 'Solana account state with a minimum snapshot slot.',
         }),
+        [],
+        snapshot,
       );
       const account =
         typeof value === 'object' && value !== null
@@ -698,7 +785,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     { schema: { tags: ['intelligence'] } },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const node = runtime.evidenceLedger.get(id);
+      const node = await getEvidenceNode(runtime, id);
       if (node === undefined)
         return reply
           .code(404)
@@ -712,7 +799,10 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     { schema: { tags: ['intelligence'] } },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const nodes = runtime.evidenceLedger.drilldown(id);
+      const nodes =
+        runtime.evidenceRepository === undefined
+          ? runtime.evidenceLedger.drilldown(id)
+          : await runtime.evidenceRepository.drilldown(id);
       if (nodes.length === 0)
         return reply
           .code(404)
@@ -738,7 +828,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         ...input.metadata.evidenceIds,
         ...input.features.map((feature) => feature.evidenceId),
       ]);
-      const missingIds = missingEvidenceIds(runtime, sourceEvidenceIds);
+      const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
       if (missingIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -747,7 +837,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           missingIds,
         );
       }
-      const incompatibleIds = incompatibleEvidenceIds(
+      const incompatibleIds = await incompatibleEvidenceIds(
         runtime,
         sourceEvidenceIds,
         input.metadata.snapshot,
@@ -762,7 +852,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         );
       }
       const result = resolveEntityRelationship(input);
-      const derived = addDerivedAnalysisEvidence(
+      const derived = await addDerivedAnalysisEvidence(
         runtime,
         input.metadata.snapshot,
         sourceEvidenceIds,
@@ -798,7 +888,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         ...input.metadata.evidenceIds,
         ...input.pool.evidenceIds,
       ]);
-      const missingIds = missingEvidenceIds(runtime, sourceEvidenceIds);
+      const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
       if (missingIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -807,7 +897,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           missingIds,
         );
       }
-      const incompatibleIds = incompatibleEvidenceIds(
+      const incompatibleIds = await incompatibleEvidenceIds(
         runtime,
         sourceEvidenceIds,
         input.metadata.snapshot,
@@ -822,7 +912,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         );
       }
       const result = quoteConstantProductExit(input);
-      const derived = addDerivedAnalysisEvidence(
+      const derived = await addDerivedAnalysisEvidence(
         runtime,
         input.metadata.snapshot,
         sourceEvidenceIds,
@@ -858,7 +948,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         ...input.metadata.evidenceIds,
         ...input.pool.evidenceIds,
       ]);
-      const missingIds = missingEvidenceIds(runtime, sourceEvidenceIds);
+      const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
       if (missingIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -867,7 +957,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           missingIds,
         );
       }
-      const incompatibleIds = incompatibleEvidenceIds(
+      const incompatibleIds = await incompatibleEvidenceIds(
         runtime,
         sourceEvidenceIds,
         input.metadata.snapshot,
@@ -882,7 +972,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         );
       }
       const result = simulateExitRace(input);
-      const derived = addDerivedAnalysisEvidence(
+      const derived = await addDerivedAnalysisEvidence(
         runtime,
         input.metadata.snapshot,
         sourceEvidenceIds,

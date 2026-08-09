@@ -7,6 +7,7 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/schemas/package.json packages/schemas/package.json
 COPY packages/identifiers/package.json packages/identifiers/package.json
 COPY packages/evidence/package.json packages/evidence/package.json
+COPY packages/storage/package.json packages/storage/package.json
 COPY packages/chain-adapters/package.json packages/chain-adapters/package.json
 COPY packages/platform-adapters/package.json packages/platform-adapters/package.json
 COPY packages/entity-engine/package.json packages/entity-engine/package.json

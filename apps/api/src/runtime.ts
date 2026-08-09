@@ -12,6 +12,7 @@ import {
   type JsonRpcTransport,
 } from '@zerotrace/chain-adapters';
 import { EvidenceLedger } from '@zerotrace/evidence';
+import { PostgresEvidenceRepository, type EvidenceRepository } from '@zerotrace/storage';
 
 import type { AppConfig } from './config.js';
 
@@ -21,6 +22,7 @@ export interface AppRuntime {
   bitcoinAdapter?: BitcoinUtxoLedgerAdapter;
   solanaAdapter?: SolanaLedgerAdapter;
   evidenceLedger: EvidenceLedger;
+  evidenceRepository?: EvidenceRepository;
 }
 
 function policyFor(url: string, config: AppConfig): ProviderUrlPolicy {
@@ -178,6 +180,16 @@ export function createRuntime(config: AppConfig): AppRuntime {
     providers.push(solanaAdapter);
   }
 
+  const evidenceRepository =
+    config.postgresUrl === undefined
+      ? undefined
+      : PostgresEvidenceRepository.fromConnectionString({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 10,
+        });
+
   return {
     providerRegistry: new ProviderRegistry(
       providers,
@@ -185,6 +197,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ),
     evmAdapters,
     evidenceLedger: new EvidenceLedger(),
+    ...(evidenceRepository === undefined ? {} : { evidenceRepository }),
     ...(bitcoinAdapter === undefined ? {} : { bitcoinAdapter }),
     ...(solanaAdapter === undefined ? {} : { solanaAdapter }),
   };

@@ -8,7 +8,7 @@
 | Lint        | `npm run lint`                  | static correctness and hook rules                       |
 | Type        | `npm run typecheck`             | strict project-reference compilation                    |
 | Unit        | `npm run test:unit`             | canonical contracts and deterministic domain logic      |
-| Integration | `npm run test:integration`      | in-process API contracts and safety behavior            |
+| Integration | `npm run test:integration`      | API contracts plus opt-in real PostgreSQL repository    |
 | Coverage    | `npm run test:coverage`         | line/function/statement 80%, branch 75% gate            |
 | Build       | `npm run build`                 | production package/API/web output                       |
 | E2E         | `npm run test:e2e`              | built app in real Chromium at desktop and mobile widths |
@@ -28,6 +28,12 @@
   missed, circuits recover through half-open, and failover remains on the last healthy endpoint.
 - Evidence IDs change when source, locator, block/slot, or observation time changes even when the
   payload hash is identical.
+- Evidence IDs include the normalized derivation-edge set; inferred Evidence without a source is
+  rejected in memory, in the repository, and by PostgreSQL.
+- Snapshot-bound sources are incompatible when their complete Snapshot differs, even at the same
+  block/slot.
+- PostgreSQL writes are transactional and idempotent; Evidence, Snapshot, and derivation edges remain
+  immutable and drill down after a repository restart.
 - integers above `Number.MAX_SAFE_INTEGER` remain exact strings.
 - invalid EVM/Bitcoin/Solana checksums or structure do not become a valid address.
 - no-evidence entity input remains Unknown.
@@ -53,6 +59,10 @@ Do not make public tests depend on a floating chain head. Capture immutable evid
 terms permit it. Credentialed smoke tests must be opt-in and skip with a visible reason when secrets
 are absent.
 
+`tests/integration/postgres.test.ts` also requires explicit `TEST_POSTGRES_URL`. Use only a fresh,
+initialized disposable database. CI builds the repository's PostgreSQL target, waits for readiness,
+runs this suite under the coverage gate, and destroys its named test volume afterward.
+
 ## Browser tests
 
 Playwright starts the built API and Vite preview servers. The E2E suite covers:
@@ -61,7 +71,7 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - explicit Unknown metric rendering;
 - valid EVM identifier classification without a provider;
 - scenario gating;
-- data-health navigation;
+- data-health navigation and explicit Evidence-storage durability state;
 - mobile viewport layout.
 - containment of primary panels within the mobile viewport.
 

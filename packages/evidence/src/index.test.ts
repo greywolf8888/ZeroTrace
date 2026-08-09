@@ -27,6 +27,7 @@ describe('evidence ledger', () => {
       locator: 'feature:settlement-convergence',
       payload: { score: 0.8 },
       summary: 'Settlement convergence feature',
+      sourceEvidenceIds: [raw.id],
     });
     ledger.add(derived, [raw.id]);
 
@@ -110,6 +111,23 @@ describe('evidence ledger', () => {
     expect(ledger.values()).toHaveLength(3);
   });
 
+  it('canonicalizes equivalent observation timestamps before deriving an ID', () => {
+    const input = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:1',
+      kind: 'BLOCK' as const,
+      source: 'fixture',
+      locator: 'block:1',
+      payload: { number: '1' },
+      blockOrSlot: '1',
+      summary: 'Timestamp canonicalization fixture.',
+    };
+    const utc = createEvidence({ ...input, observedAt: '2026-08-09T00:00:00.000Z' });
+    const offset = createEvidence({ ...input, observedAt: '2026-08-09T08:00:00.000+08:00' });
+    expect(offset.observedAt).toBe('2026-08-09T00:00:00.000Z');
+    expect(offset.id).toBe(utc.id);
+  });
+
   it('rejects duplicates and missing derivation sources', () => {
     const ledger = new EvidenceLedger();
     const raw = createEvidence({
@@ -132,8 +150,61 @@ describe('evidence ledger', () => {
       locator: 'feature:no-common-funder',
       payload: { present: false },
       summary: 'No common funder observed.',
+      sourceEvidenceIds: ['ev_missing'],
     });
     expect(() => ledger.add(negative, ['ev_missing'])).toThrow('must exist');
+  });
+
+  it('rejects derivation edges on raw facts and deeply freezes stored provenance', () => {
+    const ledger = new EvidenceLedger();
+    const raw = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'LOG',
+      source: 'fixture',
+      locator: 'log:source',
+      payload: { value: 1 },
+      summary: 'Source log.',
+    });
+    ledger.add(raw);
+    const invalidRaw = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'LOG',
+      source: 'fixture',
+      locator: 'log:invalid-derived',
+      payload: { value: 2 },
+      summary: 'Invalid derived raw log.',
+      sourceEvidenceIds: [raw.id],
+    });
+    expect(() => ledger.add(invalidRaw, [raw.id])).toThrow('may not derive');
+
+    const snapshot = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:1',
+      blockNumber: '1',
+      blockHash: '0x' + 'a'.repeat(64),
+      capturedAt: '2026-08-09T00:00:00.000Z',
+      providerVersions: { fixture: '1' },
+      adapterVersions: { evm: '0.1.0' },
+      configHash: 'b'.repeat(64),
+      entityModelVersion: 'entity-v0.1.0',
+      labelSnapshot: 'none',
+    };
+    const bound = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'ACCOUNT_STATE',
+      source: 'fixture',
+      locator: 'account:one@1',
+      payload: { balance: '1' },
+      blockOrSlot: '1',
+      summary: 'Snapshot-bound account.',
+    });
+    const node = ledger.add(bound, [], snapshot);
+    expect(Object.isFrozen(node)).toBe(true);
+    expect(Object.isFrozen(node.sourceEvidenceIds)).toBe(true);
+    expect(Object.isFrozen(node.snapshot?.providerVersions)).toBe(true);
   });
 
   it('deduplicates a diamond drilldown and lists immutable nodes', () => {
@@ -156,6 +227,7 @@ describe('evidence ledger', () => {
       locator: 'feature:left',
       payload: { value: 'left' },
       summary: 'Left feature.',
+      sourceEvidenceIds: [raw.id],
     });
     const right = createEvidence({
       ledger: 'EVM',
@@ -165,6 +237,7 @@ describe('evidence ledger', () => {
       locator: 'feature:right',
       payload: { value: 'right' },
       summary: 'Right feature.',
+      sourceEvidenceIds: [raw.id],
     });
     ledger.add(left, [raw.id]);
     ledger.add(right, [raw.id]);
@@ -176,6 +249,7 @@ describe('evidence ledger', () => {
       locator: 'feature:root',
       payload: { value: 'root' },
       summary: 'Root feature.',
+      sourceEvidenceIds: [left.id, right.id],
     });
     ledger.add(root, [left.id, right.id]);
     expect(ledger.drilldown(root.id)).toHaveLength(4);

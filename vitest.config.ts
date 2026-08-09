@@ -1,6 +1,27 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vitest/config';
 
+const workspacePackages = [
+  'chain-adapters',
+  'entity-engine',
+  'evidence',
+  'identifiers',
+  'platform-adapters',
+  'rv',
+  'schemas',
+  'storage',
+];
+
 export default defineConfig({
+  resolve: {
+    alias: Object.fromEntries(
+      workspacePackages.map((name) => [
+        `@zerotrace/${name}`,
+        fileURLToPath(new URL(`./packages/${name}/src/index.ts`, import.meta.url)),
+      ]),
+    ),
+  },
   test: {
     testTimeout: 15_000,
     hookTimeout: 15_000,

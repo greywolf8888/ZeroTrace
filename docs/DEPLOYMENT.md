@@ -3,8 +3,9 @@
 ## Current deployment classification
 
 The repository supports a reproducible local/staging topology. It is **not production-approved**:
-durable repositories, authentication/authorization, multi-provider reconciliation, historical
-ingestion, backup recovery, load testing, and real-chain acceptance remain incomplete.
+only Evidence/Snapshot persistence is wired; authentication/authorization, remaining durable
+repositories, multi-provider reconciliation, historical ingestion, backup recovery, load testing,
+and real-chain acceptance remain incomplete.
 
 ## Build
 
@@ -54,7 +55,8 @@ curl http://localhost:8080/metrics
 Expected invariants:
 
 - `/health/live` returns HTTP 200, `status: UP`, and `readOnly: true`;
-- readiness is `UP` when at least one provider is healthy and `DEGRADED` otherwise;
+- readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
+- configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
 - capability output marks signing, broadcasting, and key storage as `FORBIDDEN`;
 - missing capabilities return 501 rather than fabricated data;
 - the UI renders provider failures and Unknown values visibly.
@@ -69,7 +71,7 @@ Before internet-facing deployment, add and verify:
 - provider egress allowlists and per-provider quotas;
 - redundant archive-grade providers with consistency checks;
 - encrypted persistent volumes, backups, restore drills, retention, and deletion policy;
-- PostgreSQL/ClickHouse migrations and application repository wiring;
+- migration automation plus remaining PostgreSQL and ClickHouse application repositories;
 - object-store immutability/versioning;
 - metrics, logs, traces, alerts, SLOs, and incident response;
 - worker scaling and replay-safe workflow semantics;

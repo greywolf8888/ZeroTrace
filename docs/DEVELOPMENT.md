@@ -66,6 +66,17 @@ Database initialization is automatic on a new Compose volume:
 The SQL is copied into small project image stages instead of bind-mounted. This keeps initialization
 reliable from Windows workspaces whose paths contain Unicode characters.
 
+The default full Compose path configures durable PostgreSQL Evidence/Snapshot persistence. For
+host-side watch mode, either leave `POSTGRES_URL` blank for an explicitly ephemeral development
+ledger, or start PostgreSQL and set:
+
+```text
+POSTGRES_URL=postgresql://zerotrace:zerotrace@localhost:5432/zerotrace
+```
+
+When that variable is present, database failure closes writes and readiness; the API does not fall
+back to process memory.
+
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration.
@@ -98,6 +109,8 @@ Important values:
 | `SOLANA_REQUESTS_PER_SECOND`          | per-endpoint Solana pacing                                                      |
 | `SOLANA_COMMITMENT`                   | processed, confirmed, or finalized; production analysis should use finalized    |
 | `SQD_PORTAL_URL`                      | reserved clean HTTP/sidecar boundary; historical ingestion is not wired yet     |
+| `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present  |
+| `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests |
 
 `PROVIDER_ALLOW_HOSTS` does not authorize transaction methods. Method allowlists remain enforced
 inside each adapter.
@@ -120,6 +133,18 @@ npm run test:unit
 npm run test:integration
 npm run typecheck
 ```
+
+The PostgreSQL integration suite skips unless a disposable initialized database is explicitly
+provided. Example after starting a fresh test database:
+
+```powershell
+$env:TEST_POSTGRES_URL = 'postgresql://zerotrace:zerotrace@127.0.0.1:5432/zerotrace'
+npx vitest run tests/integration/postgres.test.ts
+Remove-Item Env:TEST_POSTGRES_URL
+```
+
+Do not point `TEST_POSTGRES_URL` at production. Required CI creates and removes a dedicated Compose
+project and volume for this suite.
 
 Run the complete non-browser gate:
 
@@ -154,8 +179,10 @@ The API starts on `http://localhost:8080`. Check:
 npm run health
 ```
 
-The readiness endpoint may report `DEGRADED` when no provider is configured. This is a valid
-developer state; `readOnly` must still be true.
+The readiness endpoint may report `DEGRADED` when no provider is configured, or HTTP 503 when a
+configured durable repository is unavailable. The no-provider state is valid for development;
+`readOnly` must still be true. Inspect the separate `storage` field rather than inferring database
+state from provider health.
 
 ## Web-only development
 

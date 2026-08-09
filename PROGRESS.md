@@ -9,19 +9,19 @@ completed feature.
 
 ## Executive status
 
-| Measure                          | Current state                                                          |
-| -------------------------------- | ---------------------------------------------------------------------- |
-| Terminal architecture completion | **12% estimated**                                                      |
-| Runnable foundation              | **Yes; clean Docker build/start verified**                             |
-| Production acceptance            | **No**                                                                 |
-| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**         |
-| Unit tests                       | **99 passing across 12 files**                                         |
-| API integration tests            | **12 passing**                                                         |
-| Real-browser E2E                 | **6 passing: Chromium desktop and Pixel 7**                            |
-| Remote CI                        | **Pass on immutable main commit `5f94dca`**                            |
-| Coverage                         | **94% statements / 81.43% branches / 98.06% functions / 95.44% lines** |
-| Real-chain validation            | Ethereum, BSC, Bitcoin, and Solana current-state smoke passed          |
-| Durable evidence/history         | Not wired                                                              |
+| Measure                          | Current state                                                             |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| Terminal architecture completion | **13% estimated**                                                         |
+| Runnable foundation              | **Yes; clean Docker build/start verified**                                |
+| Production acceptance            | **No**                                                                    |
+| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**            |
+| Unit tests                       | **113 passing across 13 files**                                           |
+| Integration tests                | **18 passing: 14 API + 4 real PostgreSQL**                                |
+| Real-browser E2E                 | **6 passing: Chromium desktop and Pixel 7**                               |
+| Remote CI                        | **Pass on immutable main commit `5f94dca`**                               |
+| Coverage                         | **92.80% statements / 81.47% branches / 97.55% functions / 93.94% lines** |
+| Real-chain validation            | Ethereum, BSC, Bitcoin, and Solana current-state smoke passed             |
+| Durable evidence/history         | Evidence/Snapshot graph wired; historical ingestion not implemented       |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
@@ -32,21 +32,21 @@ The only allowed status vocabulary in this ledger is:
 `IMPLEMENTED_AND_VERIFIED`, `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`,
 `PARTIALLY_IMPLEMENTED`, `BLOCKED_EXTERNAL`, and `NOT_IMPLEMENTED`.
 
-| Architecture domain                  | Status                                      | Current boundary                                                                 |
-| ------------------------------------ | ------------------------------------------- | -------------------------------------------------------------------------------- |
-| Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed   |
-| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | retries/cache/pacing/circuit/failover tested; real outage/failover drill pending |
-| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | Ethereum and BSC snapshot-pinned read-only smoke passed                          |
-| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | Esplora snapshot-pinned read-only smoke passed                                   |
-| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | finalized snapshot-pinned account smoke passed                                   |
-| Durable ingestion and chain history  | `NOT_IMPLEMENTED`                           | SQD/Core/Geyser backfill, reorg, reconciliation, and writers are absent          |
-| Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | complete-observation IDs and drilldown work; durable repository is absent        |
-| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline engine only; calibration and temporal graph are absent     |
-| Launchpad Intelligence               | `NOT_IMPLEMENTED`                           | registry boundaries exist, no decoder is claimed                                 |
-| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | exact constant-product kernel only; routes/tax/gas/capacity are absent           |
-| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                         |
-| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | search/health/evidence shell works; terminal investigation workflows are absent  |
-| Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent    |
+| Architecture domain                  | Status                                      | Current boundary                                                                  |
+| ------------------------------------ | ------------------------------------------- | --------------------------------------------------------------------------------- |
+| Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed    |
+| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | retries/cache/pacing/circuit/failover tested; real outage/failover drill pending  |
+| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | Ethereum and BSC snapshot-pinned read-only smoke passed                           |
+| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | Esplora snapshot-pinned read-only smoke passed                                    |
+| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | finalized snapshot-pinned account smoke passed                                    |
+| Durable ingestion and chain history  | `NOT_IMPLEMENTED`                           | SQD/Core/Geyser backfill, reorg, reconciliation, and writers are absent           |
+| Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/edges work; raw artifacts and historical ingestion absent |
+| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline engine only; calibration and temporal graph are absent      |
+| Launchpad Intelligence               | `NOT_IMPLEMENTED`                           | registry boundaries exist, no decoder is claimed                                  |
+| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | exact constant-product kernel only; routes/tax/gas/capacity are absent            |
+| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                          |
+| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | search/health/evidence shell works; terminal investigation workflows are absent   |
+| Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent     |
 
 ## Completed
 
@@ -81,8 +81,12 @@ The only allowed status vocabulary in this ledger is:
 ### Evidence and analysis foundation
 
 - deterministic canonical JSON hashing, independent payload hashes, and complete-observation
-  content-addressed Evidence IDs that distinguish source, locator, block/slot, and observation time;
-- immutable process-local evidence ledger with derivation edges and drilldown;
+  content-addressed Evidence IDs that distinguish source, locator, block/slot, observation time, and
+  the normalized derivation-edge set;
+- immutable process-local evidence cache plus transactional, append-only PostgreSQL persistence for
+  complete Snapshots, nodes, edges, idempotent writes, and restart-safe drilldown;
+- application and deferred database constraints that reject inferred/negative Evidence without a
+  source observation and reject mutation of Evidence, edges, or Snapshots;
 - entity, RV, and scenario requests reject missing or snapshot-incompatible source Evidence with
   HTTP 422 instead of producing an ungrounded result;
 - baseline evidence-weighted entity relationship model with CoinJoin, service-hub, and independence
@@ -95,8 +99,8 @@ The only allowed status vocabulary in this ledger is:
 
 - Fastify API with OpenAPI UI, liveness/readiness/full health, capability truth, metrics, search,
   current subject reads, evidence drilldown, entity baseline, RV, and scenario endpoints;
-- React workspace with responsive desktop/mobile layout, provider status, chain search, Evidence,
-  Unknown rendering, platform truth, and disabled scenario state until evidence exists;
+- React workspace with responsive desktop/mobile layout, provider/storage status, chain search,
+  Evidence, Unknown rendering, platform truth, and disabled scenario state until evidence exists;
 - PostgreSQL and ClickHouse bootstrap schemas, including append-only PostgreSQL Evidence triggers and
   ClickHouse Known/Unknown consistency constraints;
 - Compose topology for API, web, PostgreSQL, ClickHouse, Valkey, NATS, MinIO, optional Temporal, and
@@ -108,7 +112,8 @@ The only allowed status vocabulary in this ledger is:
 
 ## In development
 
-- durable PostgreSQL repositories for evidence, snapshots, subjects, analysis runs, and overrides;
+- durable PostgreSQL repositories for subjects, analysis runs, entities, control rights, launches,
+  scenarios, labels, and analyst overrides;
 - raw-fact ingestion into ClickHouse and immutable object payload storage;
 - immutable real-chain fixture corpus and cross-provider reconciliation;
 - complete OpenAPI request/response schemas beyond the current endpoint metadata.
@@ -174,9 +179,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                | Scope                                                                       |
 | ------------------------------ | ---------------------------- | --------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                         | locked npm install in production container; all packages/API/web            |
-| Unit tests                     | 99 pass                      | 12 files across schemas, adapters, evidence, entity, platform, RV, runtime  |
-| API integration                | 12 pass                      | health, contracts, grounding, Evidence, boundaries, metrics                 |
-| Coverage gate                  | Pass                         | 94% statements, 81.43% branches, 98.06% functions, 95.44% lines             |
+| Unit tests                     | 113 pass                     | 13 files across schemas, adapters, evidence, storage, entity, RV, runtime   |
+| API integration                | 14 pass                      | health, storage failure, grounding, Evidence, boundaries, metrics           |
+| PostgreSQL integration         | 4 pass                       | migrations, idempotency, restart drilldown, append-only/source constraints  |
+| Coverage gate                  | Pass                         | 92.80% statements, 81.47% branches, 97.55% functions, 93.94% lines          |
 | Chromium E2E                   | 6 pass                       | three flows each on desktop and Pixel 7                                     |
 | Formatting / ESLint / types    | Pass                         | full repository                                                             |
 | Dependency vulnerability audit | Pass                         | 0 vulnerabilities across the complete npm dependency graph                  |
@@ -184,7 +190,7 @@ correctness. Exact local smoke observations and limitations are in
 | CycloneDX SBOM                 | Pass                         | npm dependency graph                                                        |
 | Compose model                  | Pass                         | rendered default topology                                                   |
 | Docker image build/start       | Pass                         | API, web, PostgreSQL, ClickHouse, Valkey, NATS, MinIO                       |
-| Database bootstrap             | Pass                         | PostgreSQL migrations/triggers and three ClickHouse tables/constraint       |
+| Database bootstrap             | Pass                         | PostgreSQL 001–003/triggers and three ClickHouse tables/constraint          |
 | Runtime/browser smoke          | Pass                         | API/web health, proxy, security headers, desktop/mobile render              |
 | Public chain smoke             | Pass for current-state scope | Ethereum/BSC/Bitcoin/Solana snapshot-pinned Evidence; archive scope pending |
 | Remote CI                      | Pass                         | CI and CodeQL on immutable main commit `5f94dca` (linked above)             |

@@ -742,6 +742,12 @@ tbody tr:hover {
   border-color: rgba(20, 241, 149, 0.24);
 }
 
+.storage-tag {
+  color: #7bd9ff;
+  background: rgba(43, 173, 230, 0.08);
+  border-color: rgba(81, 193, 241, 0.25);
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -762,6 +768,7 @@ tbody tr:hover {
 
 .status-up,
 .status-implemented,
+.status-implemented-durable,
 .status-implemented-baseline,
 .status-implemented-deterministic {
   color: var(--accent);
@@ -787,6 +794,8 @@ tbody tr:hover {
 
 .status-unconfigured,
 .status-interface-ready,
+.status-ephemeral,
+.status-checking,
 .status-implemented-ephemeral {
   color: var(--text-secondary);
 }
@@ -1196,6 +1205,10 @@ tbody tr:hover {
 
 .provider-card dl div {
   grid-template-columns: 100px 1fr;
+}
+
+.storage-card {
+  border-color: color-mix(in srgb, #51c1f1 20%, var(--border));
 }
 
 .provider-error {

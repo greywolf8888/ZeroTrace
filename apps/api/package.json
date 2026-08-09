@@ -20,6 +20,7 @@
     "@zerotrace/platform-adapters": "*",
     "@zerotrace/rv": "*",
     "@zerotrace/schemas": "*",
+    "@zerotrace/storage": "*",
     "dotenv": "17.4.2",
     "fastify": "5.11.3",
     "prom-client": "15.1.3",

@@ -39,11 +39,20 @@ export interface ProviderHealth {
   };
 }
 
+export interface StorageHealth {
+  status: 'UP' | 'DOWN' | 'EPHEMERAL';
+  backend: 'POSTGRES' | 'MEMORY';
+  durable: boolean;
+  checkedAt: string;
+  errorCode?: string;
+}
+
 export interface HealthResponse {
   status: 'UP' | 'DEGRADED';
   service: string;
   readOnly: boolean;
   providers: ProviderHealth[];
+  storage: StorageHealth;
   checkedAt: string;
 }
 

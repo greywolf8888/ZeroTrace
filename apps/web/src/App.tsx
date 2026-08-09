@@ -730,6 +730,42 @@ function DataHealth({
         <ProviderTable health={health} />
       </section>
       <section className="health-grid">
+        <article className="panel provider-card storage-card">
+          <div className="provider-card-top">
+            <div>
+              <span className="chain-tag storage-tag">PROVENANCE</span>
+              <h3>Evidence storage</h3>
+            </div>
+            <StatusPill status={health?.storage.status ?? 'CHECKING'} />
+          </div>
+          <dl>
+            <div>
+              <dt>Backend</dt>
+              <dd>
+                {health?.storage.backend === undefined
+                  ? 'Not available'
+                  : titleCase(health.storage.backend)}
+              </dd>
+            </div>
+            <div>
+              <dt>Durability</dt>
+              <dd>
+                {health === undefined
+                  ? 'Not available'
+                  : health.storage.durable
+                    ? 'Durable'
+                    : 'Process-local'}
+              </dd>
+            </div>
+            <div>
+              <dt>Checked</dt>
+              <dd>{formatTime(health?.storage.checkedAt)}</dd>
+            </div>
+          </dl>
+          {health?.storage.errorCode === undefined ? null : (
+            <div className="provider-error">{titleCase(health.storage.errorCode)}</div>
+          )}
+        </article>
         {(health?.providers ?? []).map((provider) => (
           <article className="panel provider-card" key={provider.id}>
             <div className="provider-card-top">

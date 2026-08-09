@@ -108,10 +108,10 @@ flowchart TB
   INGEST --> BUS
 ```
 
-Solid paths describe the terminal design. The current initial runtime wires query-time provider reads,
-canonical facts, process-local evidence, baseline entity inference, two deterministic RV algorithms,
-API, and UI. Dashed or absent persistence/workflow behavior must not be inferred as complete; consult
-the progress ledger.
+Solid paths describe the terminal design. The current runtime wires query-time provider reads,
+canonical facts, a process-local Evidence cache backed by durable PostgreSQL Snapshots/nodes/edges,
+baseline entity inference, two deterministic RV algorithms, API, and UI. Dashed or absent raw-fact,
+artifact, graph, and workflow behavior must not be inferred as complete; consult the progress ledger.
 
 ## Canonical concepts
 
@@ -145,10 +145,11 @@ states end-to-end.
 
 ### Evidence
 
-Evidence IDs are hashes over canonical content. A node records ledger, chain, source, locator,
-snapshot position, finality, payload hash, capture time, and summary. Derived evidence must list its
-source evidence IDs. The initial in-memory ledger enforces immutability; durable PostgreSQL/object
-storage wiring is pending.
+Evidence IDs hash canonical observation content plus the sorted derivation-edge set. A node records
+ledger, chain, source, locator, snapshot position, finality, payload hash, capture time, and summary.
+Derived and negative evidence must list source Evidence IDs. The in-memory ledger is an immutable
+runtime cache; the PostgreSQL repository transactionally persists complete Snapshots, Evidence nodes,
+and edges and supports drilldown after restart. Raw payload artifact storage remains pending.
 
 ### Entity relationship
 
@@ -174,6 +175,7 @@ sequenceDiagram
   participant Resolver
   participant Adapter
   participant Evidence
+  participant Store as PostgreSQL
   participant Engine
 
   Analyst->>API: subject or analysis request
@@ -184,6 +186,8 @@ sequenceDiagram
   API->>Adapter: allowlisted read at anchor
   Adapter-->>API: lossless raw response
   API->>Evidence: content-address raw observation
+  Evidence->>Store: append Snapshot + node + edges
+  Store-->>Evidence: committed canonical node
   Evidence-->>API: evidence ID
   API->>Engine: facts + evidence + metadata
   Engine-->>API: typed result + coverage + evidence IDs
@@ -216,17 +220,19 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                     | Current state                              |
-| ---------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Schema initialized; repositories not wired |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | Schema initialized; ingestion not wired    |
-| Object storage   | raw provider payloads and large artifacts by content hash                                              | Compose service only                       |
-| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only           |
-| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                       |
-| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only              |
+| Store            | Intended authority                                                                                     | Current state                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot repository wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | Schema initialized; ingestion not wired                        |
+| Object storage   | raw provider payloads and large artifacts by content hash                                              | Compose service only                                           |
+| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only                               |
+| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                                           |
+| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only                                  |
 
-PostgreSQL evidence and snapshot tables include append-only guards. ClickHouse tables enforce a
-knowledge-state/value consistency constraint.
+PostgreSQL Evidence, derivation-edge, and Snapshot tables include append-only guards. Deferred
+database constraints reject inferred Evidence without a source edge, while the repository verifies
+canonical IDs, Snapshot identity, idempotent conflicts, and transactional writes. ClickHouse tables
+enforce a knowledge-state/value consistency constraint.
 
 ## Platform-adapter policy
 

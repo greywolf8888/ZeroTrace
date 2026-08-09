@@ -55,6 +55,7 @@ The current foundation includes:
 - exact-integer constant-product exit quoting and seeded, reproducible shared-liquidity exit races;
 - a Fastify API with OpenAPI, health, readiness, capability truth, and Prometheus metrics;
 - a responsive React intelligence workspace that renders missing knowledge as Unknown rather than 0;
+- append-only PostgreSQL Evidence/Snapshot persistence with restart-safe derivation drilldown;
 - PostgreSQL and ClickHouse initialization, plus Docker Compose for the local platform.
 
 Unimplemented API domains return `501 CAPABILITY_NOT_IMPLEMENTED` with typed Unknown metadata.
@@ -87,13 +88,13 @@ flowchart LR
   CH[("ClickHouse")]
   OBJ[("Object storage")]
   F -. "planned persistence" .-> CH
-  EV -. "planned persistence" .-> DB
+  EV -->|"snapshots, nodes, edges"| DB
   EV -. "raw payloads" .-> OBJ
 ```
 
-The logical architecture is intentionally larger than the currently wired runtime. Persistence,
-historical indexing, graph projection, protocol-specific decoders, and distributed workflows remain
-open work. Read [Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
+The logical architecture is intentionally larger than the currently wired runtime. Raw-fact and
+artifact persistence, historical indexing, graph projection, protocol-specific decoders, and
+distributed workflows remain open work. Read [Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
 [Master Prompt](docs/architecture/ZEROTRACE_MASTER_PROMPT.md).
 
 ## Chain and platform scope
@@ -106,7 +107,7 @@ open work. Read [Architecture](docs/architecture/ARCHITECTURE.md) and the author
 | Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending          |
 | Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Registry and generic detector only; official decoders require real-chain validation |
 | Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product and exit-race kernel implemented; routing/tax/gas adapters pending |
-| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Process-local ledger implemented; durable storage pending                           |
+| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | PostgreSQL Snapshot/node/edge repository and restart-safe drilldown implemented     |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
 execution/label observation source; it is not a launchpad and can never merge entities by itself.
@@ -131,7 +132,9 @@ Open:
 - OpenAPI UI: [http://localhost:8080/docs](http://localhost:8080/docs)
 - Prometheus metrics: [http://localhost:8080/metrics](http://localhost:8080/metrics)
 
-The default Compose stack starts PostgreSQL, ClickHouse, Valkey, NATS, MinIO, API, and web UI.
+The default Compose stack starts PostgreSQL, ClickHouse, Valkey, NATS, MinIO, API, and web UI. The
+API requires PostgreSQL for durable Evidence/Snapshot writes and exposes that state in readiness and
+the Data Health screen.
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
 
@@ -149,8 +152,10 @@ npm ci
 npm run dev
 ```
 
-The web application runs on port `5173` and the API on `8080`. Local development does not require
-the database services for the currently implemented ephemeral core, but persistence work does.
+The web application runs on port `5173` and the API on `8080`. With the example's blank
+`POSTGRES_URL`, Evidence is explicitly process-local. For durable host-side development, start
+PostgreSQL and set `POSTGRES_URL=postgresql://zerotrace:zerotrace@localhost:5432/zerotrace` before
+starting the API. Production/Compose paths do not silently fall back when configured storage fails.
 
 ## Verification
 
@@ -190,6 +195,8 @@ Copy [`.env.example`](.env.example) and edit only the providers you trust. The a
 - allows only audited read methods and rejects transaction broadcasting.
 
 Never commit API keys. Provider absence is a supported degraded state, not a startup failure.
+`POSTGRES_URL` is optional only for explicit ephemeral development; Docker Compose configures it and
+persists Evidence, Snapshots, and derivation edges in PostgreSQL.
 
 ## Repository layout
 
@@ -205,6 +212,7 @@ packages/
   platform-adapters/    Platform registry and detection boundary
   rv/                   Realizable-value and exit-race kernels
   schemas/              Canonical contracts and knowledge states
+  storage/              PostgreSQL Evidence and Snapshot repository
 infra/
   postgres/init/        Relational/evidence schema
   clickhouse/init/      Raw fact and metric schema
@@ -218,7 +226,8 @@ This roadmap describes implementation progress rather than product marketing pha
 
 - [x] Monorepo, canonical contracts, read-only transports, API/UI shell, local infrastructure
 - [x] Evidence primitives, identifier validation, baseline entity fusion, deterministic RV kernel
-- [ ] Wire PostgreSQL evidence/snapshot repositories and ClickHouse raw-fact ingestion
+- [x] Wire append-only PostgreSQL Evidence/Snapshot persistence and restart-safe drilldown
+- [ ] Wire ClickHouse raw-fact ingestion and immutable object payload storage
 - [ ] Implement finalized historical ingestion and reorg/finality handling for all three ledgers
 - [ ] Add versioned Flap, Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation

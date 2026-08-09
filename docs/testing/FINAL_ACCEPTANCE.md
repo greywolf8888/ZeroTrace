@@ -17,7 +17,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 ## Evidence and data
 
 - [x] Content-addressed evidence primitive and derivation traversal
-- [ ] Durable append-only evidence and raw payload repositories
+- [x] Durable append-only Snapshot, Evidence-node, and derivation-edge repository
+- [x] Restart-safe Evidence drilldown and real PostgreSQL constraint tests
+- [ ] Content-addressed raw payload repository
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [ ] Reorg/replay and cross-provider reconciliation tests
 - [ ] Temporal graph projection and rebuild

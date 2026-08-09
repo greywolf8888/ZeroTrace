@@ -10,8 +10,8 @@ The initial API has no authentication and is suitable only for local/staging use
 | Method | Path                   | Behavior                                                   |
 | ------ | ---------------------- | ---------------------------------------------------------- |
 | GET    | `/health/live`         | process liveness and read-only invariant                   |
-| GET    | `/health/ready`        | provider-aware readiness                                   |
-| GET    | `/health`              | full provider state                                        |
+| GET    | `/health/ready`        | provider- and configured-storage-aware readiness           |
+| GET    | `/health`              | full provider and Evidence-storage state                   |
 | GET    | `/metrics`             | Prometheus text exposition                                 |
 | GET    | `/api/v1/capabilities` | implemented, provider-required, and forbidden capabilities |
 | GET    | `/api/v1/chains`       | configured chain adapters                                  |
@@ -23,8 +23,8 @@ The initial API has no authentication and is suitable only for local/staging use
 | ------ | -------------------------------- | ---------------------------------------------------------------- |
 | GET    | `/api/v1/search?q=...`           | local identifier classification; optional `ledger` and `chainId` |
 | GET    | `/api/v1/subjects/:ledger/:id`   | snapshot-pinned current-state read when provider exists          |
-| GET    | `/api/v1/evidence/:id`           | process-local evidence node                                      |
-| GET    | `/api/v1/evidence/:id/drilldown` | derived/source evidence traversal                                |
+| GET    | `/api/v1/evidence/:id`           | Evidence node, source edges, and bound Snapshot                  |
+| GET    | `/api/v1/evidence/:id/drilldown` | restart-safe derived/source Evidence traversal                   |
 | POST   | `/api/v1/entities/resolve`       | deterministic evidence-feature baseline                          |
 | POST   | `/api/v1/rv/constant-product`    | exact-integer pool exit quote                                    |
 | POST   | `/api/v1/scenarios/exit-race`    | seeded shared-pool exit ordering                                 |
@@ -33,8 +33,9 @@ Entity, RV, and scenario analysis is accepted only when every supplied source ev
 exists in the evidence ledger and matches the request ledger, chain, and snapshot block/slot. A
 successful analysis creates a `DERIVED_FEATURE` evidence node linked to those sources. Missing or
 incompatible sources return HTTP 422 with `UNGROUNDED_ANALYSIS` and a typed `evidenceIssue` rather
-than producing an ungrounded result. Evidence is currently process-local, so callers must perform
-the provider-backed subject read in the same API process before submitting downstream analysis.
+than producing an ungrounded result. Compatibility includes the complete bound Snapshot, not only
+the block/slot number. With `POSTGRES_URL` configured, source Evidence remains available after API
+restart; without it, capability and health output explicitly report process-local storage.
 
 ## Explicitly incomplete endpoints
 
@@ -88,10 +89,18 @@ array, or a confident label.
 Provider errors distinguish retryable timeout/quota/availability failures from invalid requests.
 Secret values and raw provider URLs are not included.
 
+Storage failures return HTTP 503 with a stable `STORAGE_*`, `EVIDENCE_*`, or `SNAPSHOT_CONFLICT`
+code. When `POSTGRES_URL` is configured, failed durable writes never fall back to process memory.
+
 Configured providers include a `transport` object in health responses with the safe active endpoint
 ID, circuit state, logical request/attempt/success/failure counters, retries, pacing delays, cache
 hits/misses, failovers, and last attempt timestamps. Endpoint IDs contain the provider role and
 hostname only; URL paths and credentials are excluded.
+
+Health responses also contain `storage`: `POSTGRES`/`UP`/`durable: true` for an initialized durable
+repository, `POSTGRES`/`DOWN` with a safe error code when configured storage is unavailable, or
+`MEMORY`/`EPHEMERAL` for an intentional no-`POSTGRES_URL` development runtime. Configured storage
+failure makes `/health/ready` return HTTP 503.
 
 ## Numeric representation
 
@@ -108,5 +117,7 @@ Production conclusions must return:
 - evidence IDs whose nodes can be retrieved;
 - derivation edges for calculated conclusions.
 
-Current search classification is local structural evidence and current subject reads add
-process-local evidence. Durable retrieval across restarts remains pending.
+Current search classification is local structural evidence. Provider-backed subject reads and
+derived entity/RV/scenario results write their Evidence, derivation edges, and complete Snapshot to
+PostgreSQL when configured. Raw provider payload artifacts and historical facts are not yet written
+to object storage or ClickHouse.

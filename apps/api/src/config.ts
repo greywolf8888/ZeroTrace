@@ -137,6 +137,17 @@ function optionalUrl(rawUrl: string | undefined, field: string): string | undefi
   return rawUrl === undefined ? undefined : validateUrl(rawUrl, field);
 }
 
+function optionalPostgresUrl(rawUrl: string | undefined): string | undefined {
+  if (rawUrl === undefined) return undefined;
+  try {
+    const url = new URL(rawUrl);
+    if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error('invalid protocol');
+    return rawUrl;
+  } catch {
+    throw new Error('POSTGRES_URL must be a valid PostgreSQL connection URL.');
+  }
+}
+
 function firstUrl(values: readonly string[]): { primary?: string } {
   const primary = values[0];
   return primary === undefined ? {} : { primary };
@@ -170,7 +181,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
   const bitcoinPrimary = firstUrl(bitcoinEsploraUrls).primary;
   const solanaPrimary = firstUrl(solanaRpcUrls).primary;
   const sqdPortalUrl = optionalUrl(parsed.SQD_PORTAL_URL, 'SQD Portal URL');
-  const postgresUrl = parsed.POSTGRES_URL;
+  const postgresUrl = optionalPostgresUrl(parsed.POSTGRES_URL);
 
   return {
     environment: parsed.NODE_ENV,

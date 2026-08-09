@@ -106,7 +106,7 @@ export const EvidenceSchema = z.object({
   sourceUri: z.url().optional(),
   payloadHash: Hash256Schema,
   observedAt: IsoDateTimeSchema,
-  blockOrSlot: z.string().optional(),
+  blockOrSlot: QuantityStringSchema.optional(),
   finality: z.string().optional(),
   summary: z.string().min(1),
   rawArtifactRef: z.string().optional(),
