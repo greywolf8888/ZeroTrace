@@ -1,0 +1,52 @@
+name: Feature request
+description: Propose an architecture-aligned intelligence or engineering capability.
+title: '[Feature]: '
+labels: ['enhancement', 'triage']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What analyst or engineering decision cannot be supported today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Terminal architecture boundary
+      description: Ledgers, platforms, evidence, entity, control, RV, scenario, API, or UI domains affected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: sources
+    attributes:
+      label: Official sources and existing projects
+      description: Link official docs/repos and include versions, revisions, and licenses.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and Unknown behavior
+      description: Define provenance, snapshot/finality, coverage, failure, and unavailable states.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Include automated, real-chain, failure, security, and UI checks.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Product boundary
+      options:
+        - label: The proposal remains read-only and does not require keys, signing, swaps, or broadcasting.
+          required: true

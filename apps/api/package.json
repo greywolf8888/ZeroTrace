@@ -1,0 +1,31 @@
+{
+  "name": "@zerotrace/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/server.js",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsx watch --tsconfig ../../tsconfig.base.json src/server.ts",
+    "start": "node dist/src/server.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "11.3.0",
+    "@fastify/swagger": "9.8.1",
+    "@fastify/swagger-ui": "6.1.1",
+    "@zerotrace/chain-adapters": "*",
+    "@zerotrace/entity-engine": "*",
+    "@zerotrace/evidence": "*",
+    "@zerotrace/identifiers": "*",
+    "@zerotrace/platform-adapters": "*",
+    "@zerotrace/rv": "*",
+    "@zerotrace/schemas": "*",
+    "dotenv": "17.4.2",
+    "fastify": "5.11.3",
+    "prom-client": "15.1.3",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "pino-pretty": "13.1.3"
+  }
+}

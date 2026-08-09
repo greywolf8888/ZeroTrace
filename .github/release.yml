@@ -1,0 +1,29 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: Security and correctness
+      labels:
+        - security
+        - correctness
+    - title: Chain and protocol adapters
+      labels:
+        - protocol
+        - chain-adapter
+    - title: Intelligence and evidence
+      labels:
+        - intelligence
+        - evidence
+    - title: API and product
+      labels:
+        - api
+        - ui
+    - title: Operations and maintenance
+      labels:
+        - infrastructure
+        - dependencies
+        - documentation
+    - title: Other changes
+      labels:
+        - '*'

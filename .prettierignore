@@ -1,0 +1,9 @@
+node_modules
+dist
+.types
+coverage
+playwright-report
+test-results
+reports
+package-lock.json
+docs/architecture/ZEROTRACE_MASTER_PROMPT.md

@@ -1,0 +1,52 @@
+name: Protocol adapter research
+description: Record the evidence needed before implementing a chain or platform decoder.
+title: '[Protocol]: '
+labels: ['protocol', 'research']
+body:
+  - type: input
+    id: protocol
+    attributes:
+      label: Protocol and ledger
+      placeholder: PumpSwap / Solana
+    validations:
+      required: true
+
+  - type: textarea
+    id: authority
+    attributes:
+      label: Authoritative sources
+      description: Official docs, ABI/IDL/Candid, repository, deployment registry, audits, and immutable revisions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: versions
+    attributes:
+      label: Deployment and version windows
+      description: Programs/contracts/canisters, activation heights/slots/times, migrations, and upgrade authority.
+    validations:
+      required: true
+
+  - type: textarea
+    id: license
+    attributes:
+      label: License and integration boundary
+      description: SPDX license and whether code is copied, linked, generated, isolated, or accessed remotely.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fixtures
+    attributes:
+      label: Real-chain fixtures
+      description: Named creation, trade, migration, failure, and edge-case identifiers with snapshot anchors.
+    validations:
+      required: true
+
+  - type: textarea
+    id: model
+    attributes:
+      label: Canonical mapping and Unknown cases
+      description: Facts/evidence emitted, precision rules, missing state, version ambiguity, and validation plan.
+    validations:
+      required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/greywolf8888/ZeroTrace/security/advisories/new
+    about: Report vulnerabilities privately.
+  - name: Architecture and progress
+    url: https://github.com/greywolf8888/ZeroTrace/blob/main/PROGRESS.md
+    about: Check current implementation truth before opening a request.

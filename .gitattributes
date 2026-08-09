@@ -1,0 +1,3 @@
+* text=auto eol=lf
+*.png binary
+docs/architecture/ZEROTRACE_MASTER_PROMPT.md -text -whitespace

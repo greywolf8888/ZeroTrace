@@ -1,0 +1,187 @@
+name: zerotrace
+
+services:
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      API_PORT: 8080
+      CORS_ORIGIN: http://localhost:${WEB_PORT:-5173}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-8000}
+      HEALTH_CACHE_TTL_MS: ${HEALTH_CACHE_TTL_MS:-15000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-api.mainnet.solana.com,blockstream.info}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      EVM_ETHEREUM_RPC_URL: ${EVM_ETHEREUM_RPC_URL:-}
+      EVM_ETHEREUM_CHAIN_ID: ${EVM_ETHEREUM_CHAIN_ID:-1}
+      EVM_BSC_RPC_URL: ${EVM_BSC_RPC_URL:-}
+      EVM_BSC_CHAIN_ID: ${EVM_BSC_CHAIN_ID:-56}
+      BITCOIN_ESPLORA_URL: ${BITCOIN_ESPLORA_URL:-https://blockstream.info/api}
+      SOLANA_RPC_URL: ${SOLANA_RPC_URL:-https://api.mainnet.solana.com}
+      SOLANA_COMMITMENT: ${SOLANA_COMMITMENT:-finalized}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+      CLICKHOUSE_URL: http://clickhouse:8123
+      VALKEY_URL: redis://valkey:6379
+      NATS_URL: nats://nats:4222
+      OBJECT_STORE_ENDPOINT: http://minio:9000
+      GMGN_API_KEY: ${GMGN_API_KEY:-}
+    ports:
+      - '${API_PORT:-8080}:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  web:
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-5173}:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  postgres:
+    image: zerotrace-postgres:17.10
+    build:
+      context: .
+      target: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zerotrace
+      POSTGRES_USER: zerotrace
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zerotrace}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U zerotrace -d zerotrace']
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    networks: [zerotrace]
+
+  clickhouse:
+    image: zerotrace-clickhouse:26.7.3.19
+    build:
+      context: .
+      target: clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: zerotrace
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: '1'
+    ports:
+      - '${CLICKHOUSE_HTTP_PORT:-8123}:8123'
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8123/ping | grep -q Ok']
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    networks: [zerotrace]
+
+  valkey:
+    image: valkey/valkey:8.1.9-alpine
+    restart: unless-stopped
+    command: ['valkey-server', '--appendonly', 'yes', '--save', '60', '1']
+    ports:
+      - '${VALKEY_PORT:-6379}:6379'
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 4s
+      retries: 20
+    networks: [zerotrace]
+
+  nats:
+    image: nats:2.11.17-alpine
+    restart: unless-stopped
+    command: ['--jetstream', '--store_dir=/data', '--http_port=8222']
+    ports:
+      - '${NATS_PORT:-4222}:4222'
+      - '${NATS_MONITOR_PORT:-8222}:8222'
+    volumes:
+      - nats-data:/data
+    networks: [zerotrace]
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${OBJECT_STORE_ACCESS_KEY:-zerotrace}
+      MINIO_ROOT_PASSWORD: ${OBJECT_STORE_SECRET_KEY:-change-me-in-non-local-environments}
+    ports:
+      - '${MINIO_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - minio-data:/data
+    networks: [zerotrace]
+
+  temporal:
+    image: temporalio/auto-setup:1.29.7
+    profiles: [full]
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: zerotrace
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-zerotrace}
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '${TEMPORAL_PORT:-7233}:7233'
+    networks: [zerotrace]
+
+  temporal-ui:
+    image: temporalio/ui:2.53.1
+    profiles: [full]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:${WEB_PORT:-5173}
+    depends_on: [temporal]
+    ports:
+      - '${TEMPORAL_UI_PORT:-8233}:8080'
+    networks: [zerotrace]
+
+  graph-db:
+    image: apache/age:release_PG18_1.7.0
+    profiles: [graph]
+    environment:
+      POSTGRES_DB: zerotrace_graph
+      POSTGRES_USER: zerotrace
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zerotrace}
+    ports:
+      - '${AGE_PORT:-5455}:5432'
+    volumes:
+      - age-data:/var/lib/postgresql
+    networks: [zerotrace]
+
+networks:
+  zerotrace:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  clickhouse-data:
+  valkey-data:
+  nats-data:
+  minio-data:
+  age-data:
