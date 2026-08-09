@@ -48,6 +48,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31341351830) pass on immutable
       exact-receipt Flap event commit `1b6a40e`; the newer bounded-history batch remains pending
       remote validation
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31342767551) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31342767550) pass on immutable
+      bounded Flap history commit `a52a78e`
 
 ## Evidence and data
 
