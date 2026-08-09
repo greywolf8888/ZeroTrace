@@ -26,6 +26,10 @@
   responses, and timeouts fail closed.
 - retries are bounded, `Retry-After` is capped, pacing is deterministic, expired cache entries are
   missed, circuits recover through half-open, and failover remains on the last healthy endpoint.
+- dynamic ledger anchors bypass stored TTL entries without overwriting normal cached values, and
+  diagnostics count the bypasses;
+- each concurrent/failover response retains the endpoint that actually produced it; Snapshot
+  providers, Evidence source, and metadata source sets include all anchor/state endpoints;
 - Evidence IDs change when source, locator, block/slot, or observation time changes even when the
   payload hash is identical.
 - Evidence IDs include the normalized derivation-edge set; inferred Evidence without a source is

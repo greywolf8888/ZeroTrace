@@ -180,6 +180,18 @@ function uniqueEvidenceIds(ids: readonly string[]): string[] {
   return [...new Set(ids)];
 }
 
+function uniqueSourceIds(ids: readonly string[]): string[] {
+  return [...new Set(ids)].sort();
+}
+
+function evidenceSourceId(ids: readonly string[]): string {
+  return uniqueSourceIds(ids).join('|');
+}
+
+function snapshotSourceIds(snapshot: AnalysisSnapshot): string[] {
+  return Object.keys(snapshot.providerVersions);
+}
+
 async function missingEvidenceIds(runtime: AppRuntime, ids: readonly string[]): Promise<string[]> {
   const unique = uniqueEvidenceIds(ids);
   const nodes = await Promise.all(unique.map((id) => getEvidenceNode(runtime, id)));
@@ -685,18 +697,32 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         }
         const snapshot = await adapter.createSnapshot();
         const blockTag = `0x${BigInt(snapshot.blockNumber).toString(16)}`;
-        const [balanceHex, code] = await Promise.all([
-          adapter.getBalance(subject.normalizedId, blockTag),
-          adapter.getCode(subject.normalizedId, blockTag),
+        const [balanceObservation, codeObservation] = await Promise.all([
+          adapter.getBalanceObservation(subject.normalizedId, blockTag),
+          adapter.getCodeObservation(subject.normalizedId, blockTag),
         ]);
-        const payload = { balanceHex, code, blockTag, blockHash: snapshot.blockHash };
+        const balanceHex = balanceObservation.value;
+        const code = codeObservation.value;
+        const observationSources = {
+          balance: balanceObservation.endpointId,
+          code: codeObservation.endpointId,
+        };
+        const stateSourceIds = uniqueSourceIds(Object.values(observationSources));
+        const sourceSet = uniqueSourceIds([...snapshotSourceIds(snapshot), ...stateSourceIds]);
+        const payload = {
+          balanceHex,
+          code,
+          blockTag,
+          blockHash: snapshot.blockHash,
+          observationSources,
+        };
         const evidence = await addEvidence(
           runtime,
           createEvidence({
             ledger: 'EVM',
             chainId: snapshot.chainId,
             kind: 'ACCOUNT_STATE',
-            source: adapter.sourceId,
+            source: evidenceSourceId(stateSourceIds),
             locator: `address:${subject.normalizedId}@${snapshot.blockNumber}`,
             payload,
             blockOrSlot: snapshot.blockNumber,
@@ -713,7 +739,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           historyCoverage: 0,
           simulationCoverage: 0,
           freshness: snapshot.capturedAt,
-          sourceSet: [adapter.sourceId],
+          sourceSet,
           modelVersion: 'evm-subject-v0.1.0',
           confidence: 1,
           evidenceIds: [evidence.id],
@@ -739,11 +765,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           });
         }
         const snapshot = await adapter.createSnapshot();
-        const stats = await adapter.getAddress(subject.normalizedId);
+        const statsObservation = await adapter.getAddressObservation(subject.normalizedId);
+        const stats = statsObservation.value;
+        const sourceSet = uniqueSourceIds([
+          ...snapshotSourceIds(snapshot),
+          statsObservation.endpointId,
+        ]);
         const payload = {
           stats,
           snapshotHeight: snapshot.height,
           snapshotHash: snapshot.blockHash,
+          observationSource: statsObservation.endpointId,
         };
         const evidence = await addEvidence(
           runtime,
@@ -751,7 +783,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ledger: 'BITCOIN',
             chainId: snapshot.chainId,
             kind: 'ACCOUNT_STATE',
-            source: adapter.sourceId,
+            source: statsObservation.endpointId,
             locator: `address:${subject.normalizedId}@${snapshot.height}`,
             payload,
             blockOrSlot: snapshot.height,
@@ -777,7 +809,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             historyCoverage: 0.5,
             simulationCoverage: 0,
             freshness: snapshot.capturedAt,
-            sourceSet: [adapter.sourceId],
+            sourceSet,
             modelVersion: 'btc-subject-v0.1.0',
             confidence: 0.9,
             evidenceIds: [evidence.id],
@@ -796,12 +828,21 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         });
       }
       const snapshot = await adapter.createSnapshot();
-      const response = await adapter.getAccountInfo(subject.normalizedId, Number(snapshot.slot));
+      const accountObservation = await adapter.getAccountInfoObservation(
+        subject.normalizedId,
+        Number(snapshot.slot),
+      );
+      const response = accountObservation.value;
       const value = response.value;
+      const sourceSet = uniqueSourceIds([
+        ...snapshotSourceIds(snapshot),
+        accountObservation.endpointId,
+      ]);
       const payload = {
         response,
         snapshotSlot: snapshot.slot,
         snapshotBlockhash: snapshot.blockhash,
+        observationSource: accountObservation.endpointId,
       };
       const evidence = await addEvidence(
         runtime,
@@ -809,7 +850,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           ledger: 'SOLANA',
           chainId: snapshot.chainId,
           kind: 'ACCOUNT_STATE',
-          source: adapter.sourceId,
+          source: accountObservation.endpointId,
           locator: `account:${subject.normalizedId}@${snapshot.slot}`,
           payload,
           blockOrSlot: snapshot.slot,
@@ -841,7 +882,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           historyCoverage: 0,
           simulationCoverage: 0,
           freshness: snapshot.capturedAt,
-          sourceSet: [adapter.sourceId],
+          sourceSet,
           modelVersion: 'solana-subject-v0.1.0',
           confidence: 1,
           evidenceIds: [evidence.id],

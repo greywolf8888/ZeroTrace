@@ -254,6 +254,8 @@ connections:
 - bounded response size, request timeout, per-endpoint pacing, and JSON content validation;
 - bounded exponential retry with capped `Retry-After`, in-flight deduplication, TTL/LRU response
   caching, per-endpoint circuit breakers, and ordered sticky failover;
+- request-scoped endpoint provenance so concurrent/failover observations cannot inherit another
+  request's mutable active endpoint, plus explicit stored-cache bypass for dynamic ledger anchors;
 - hostname-based source identifiers and transport diagnostics that exclude credentials and URL
   paths;
 - lossless handling of integers beyond JavaScript's safe range;

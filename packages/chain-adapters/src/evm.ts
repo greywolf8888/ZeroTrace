@@ -10,7 +10,12 @@ import {
 import type { z } from 'zod';
 
 import { ProviderError, toProviderError } from './errors.js';
-import type { JsonRpcTransport } from './transport.js';
+import {
+  requestJsonRpcSourced,
+  type JsonRpcTransport,
+  type TransportObservation,
+  type TransportReadOptions,
+} from './transport.js';
 
 export type EvmSnapshot = z.infer<typeof EvmSnapshotSchema>;
 
@@ -96,14 +101,26 @@ export class EvmLedgerAdapter {
     return this.#transport.lastEndpointId ?? this.#transport.endpointId;
   }
 
-  async read<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+  async read<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<T> {
+    return (await this.readSourced<T>(method, params, options)).value;
+  }
+
+  async readSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
     if (!ALLOWED_EVM_METHODS.has(method)) {
       throw new ProviderError(
         'METHOD_NOT_ALLOWED',
         `EVM method ${method} is outside the read-only allowlist.`,
       );
     }
-    return this.#transport.request<T>(method, params);
+    return requestJsonRpcSourced<T>(this.#transport, method, params, options);
   }
 
   async probe(): Promise<ProviderHealth> {
@@ -112,7 +129,7 @@ export class EvmLedgerAdapter {
     try {
       const [rawChainId, rawHead] = await Promise.all([
         this.read<string>('eth_chainId'),
-        this.read<string>('eth_blockNumber'),
+        this.read<string>('eth_blockNumber', [], { cacheMode: 'bypass' }),
       ]);
       const actualChainId = Number(hexQuantity(rawChainId, 'chain id'));
       const head = hexQuantity(rawHead, 'block number').toString();
@@ -173,19 +190,35 @@ export class EvmLedgerAdapter {
   }
 
   async getBalance(address: string, blockTag = 'latest'): Promise<string> {
-    return requireHexQuantity(
-      await this.read<unknown>('eth_getBalance', [address, blockTag]),
-      'balance',
-    );
+    return (await this.getBalanceObservation(address, blockTag)).value;
+  }
+
+  async getBalanceObservation(
+    address: string,
+    blockTag = 'latest',
+  ): Promise<TransportObservation<string>> {
+    const observation = await this.readSourced<unknown>('eth_getBalance', [address, blockTag]);
+    return { ...observation, value: requireHexQuantity(observation.value, 'balance') };
   }
 
   async getCode(address: string, blockTag = 'latest'): Promise<string> {
-    return requireHexData(await this.read<unknown>('eth_getCode', [address, blockTag]), 'bytecode');
+    return (await this.getCodeObservation(address, blockTag)).value;
+  }
+
+  async getCodeObservation(
+    address: string,
+    blockTag = 'latest',
+  ): Promise<TransportObservation<string>> {
+    const observation = await this.readSourced<unknown>('eth_getCode', [address, blockTag]);
+    return { ...observation, value: requireHexData(observation.value, 'bytecode') };
   }
 
   async createSnapshot(): Promise<EvmSnapshot> {
     const finality = this.config.snapshotBlockTag ?? 'finalized';
-    const rawBlock = await this.read<unknown>('eth_getBlockByNumber', [finality, false]);
+    const observation = await this.readSourced<unknown>('eth_getBlockByNumber', [finality, false], {
+      cacheMode: 'bypass',
+    });
+    const rawBlock = observation.value;
     if (typeof rawBlock !== 'object' || rawBlock === null || Array.isArray(rawBlock)) {
       throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned an invalid block.');
     }
@@ -203,13 +236,13 @@ export class EvmLedgerAdapter {
       finality,
       blockTimestamp: timestampFromHex(block.timestamp),
       capturedAt: new Date().toISOString(),
-      providerVersions: { [this.sourceId]: 'json-rpc' },
+      providerVersions: { [observation.endpointId]: 'json-rpc' },
       adapterVersions: { evm: this.config.adapterVersion ?? '0.1.0' },
       configHash: hashPayload({
         id: this.config.id,
         chainId: this.config.chainId,
         finality,
-        sourceId: this.sourceId,
+        sourceIds: [observation.endpointId],
       }),
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',

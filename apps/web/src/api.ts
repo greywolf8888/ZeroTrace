@@ -32,6 +32,7 @@ export interface ProviderHealth {
     rateLimitDelays: number;
     cacheHits: number;
     cacheMisses: number;
+    cacheBypasses: number;
     failovers: number;
     lastAttemptAt: string | null;
     lastSuccessAt: string | null;

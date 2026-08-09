@@ -7,6 +7,8 @@ import {
   SolanaLedgerAdapter,
   type JsonRpcTransport,
   type RestTransport,
+  type TransportObservation,
+  type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
 import { createEvidence, EvidenceLedger } from '@zerotrace/evidence';
 import { StorageError, type EvidenceRepository } from '@zerotrace/storage';
@@ -58,22 +60,37 @@ const config: AppConfig = {
 class FakeTransport implements JsonRpcTransport {
   readonly endpointId = 'ethereum-rpc';
   readonly #responses: Record<string, unknown>;
+  readonly #sourceIds: Record<string, string>;
 
-  constructor(responses: Record<string, unknown>) {
+  constructor(responses: Record<string, unknown>, sourceIds: Record<string, string> = {}) {
     this.#responses = responses;
+    this.#sourceIds = sourceIds;
   }
 
   async request<T>(method: string): Promise<T> {
     return this.#responses[method] as T;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    _params: readonly unknown[] = [],
+    _options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    return {
+      value: this.#responses[method] as T,
+      endpointId: this.#sourceIds[method] ?? this.endpointId,
+    };
   }
 }
 
 class FakeRestTransport implements RestTransport {
   readonly endpointId = 'bitcoin-esplora';
   readonly #responses: Record<string, unknown>;
+  readonly #sourceIds: Record<string, string>;
 
-  constructor(responses: Record<string, unknown>) {
+  constructor(responses: Record<string, unknown>, sourceIds: Record<string, string> = {}) {
     this.#responses = responses;
+    this.#sourceIds = sourceIds;
   }
 
   async getText(path: string): Promise<string> {
@@ -83,22 +100,43 @@ class FakeRestTransport implements RestTransport {
   async getJson<T>(path: string): Promise<T> {
     return this.#responses[path] as T;
   }
+
+  async getTextSourced(path: string): Promise<TransportObservation<string>> {
+    return {
+      value: String(this.#responses[path]),
+      endpointId: this.#sourceIds[path] ?? this.endpointId,
+    };
+  }
+
+  async getJsonSourced<T>(path: string): Promise<TransportObservation<T>> {
+    return {
+      value: this.#responses[path] as T,
+      endpointId: this.#sourceIds[path] ?? this.endpointId,
+    };
+  }
 }
 
 function runtimeWithEvm(): AppRuntime {
   const evm = new EvmLedgerAdapter(
     { id: 'ethereum-rpc', chainId: 1, chainName: 'Ethereum' },
-    new FakeTransport({
-      eth_chainId: '0x1',
-      eth_blockNumber: '0x10',
-      eth_getBlockByNumber: {
-        number: '0x10',
-        hash: '0x' + 'a'.repeat(64),
-        timestamp: '0x65',
+    new FakeTransport(
+      {
+        eth_chainId: '0x1',
+        eth_blockNumber: '0x10',
+        eth_getBlockByNumber: {
+          number: '0x10',
+          hash: '0x' + 'a'.repeat(64),
+          timestamp: '0x65',
+        },
+        eth_getBalance: '0x0',
+        eth_getCode: '0x',
       },
-      eth_getBalance: '0x0',
-      eth_getCode: '0x',
-    }),
+      {
+        eth_getBlockByNumber: 'ethereum-anchor',
+        eth_getBalance: 'ethereum-state-a',
+        eth_getCode: 'ethereum-state-b',
+      },
+    ),
   );
   return {
     providerRegistry: new ProviderRegistry([evm]),
@@ -134,44 +172,58 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
   );
   const bitcoin = new BitcoinUtxoLedgerAdapter(
     { id: 'bitcoin-esplora' },
-    new FakeRestTransport({
-      '/blocks/tip/height': '840000',
-      '/block-height/840000': 'b'.repeat(64),
-      '/address/bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4': {
-        address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
-        chain_stats: {
-          funded_txo_count: 2,
-          funded_txo_sum: 500,
-          spent_txo_count: 1,
-          spent_txo_sum: 200,
-          tx_count: 3,
-        },
-        mempool_stats: {
-          funded_txo_count: 1,
-          funded_txo_sum: 10,
-          spent_txo_count: 1,
-          spent_txo_sum: 20,
-          tx_count: 2,
+    new FakeRestTransport(
+      {
+        '/blocks/tip/height': '840000',
+        '/block-height/840000': 'b'.repeat(64),
+        '/address/bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4': {
+          address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+          chain_stats: {
+            funded_txo_count: 2,
+            funded_txo_sum: 500,
+            spent_txo_count: 1,
+            spent_txo_sum: 200,
+            tx_count: 3,
+          },
+          mempool_stats: {
+            funded_txo_count: 1,
+            funded_txo_sum: 10,
+            spent_txo_count: 1,
+            spent_txo_sum: 20,
+            tx_count: 2,
+          },
         },
       },
-    }),
+      {
+        '/blocks/tip/height': 'bitcoin-anchor-a',
+        '/block-height/840000': 'bitcoin-anchor-b',
+        '/address/bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4': 'bitcoin-state',
+      },
+    ),
   );
   const solana = new SolanaLedgerAdapter(
     { id: 'solana-rpc', commitment: 'finalized' },
-    new FakeTransport({
-      getHealth: 'ok',
-      getSlot: 300_000_000,
-      getBlock: {
-        blockhash: '11111111111111111111111111111111',
-        previousBlockhash: '22222222222222222222222222222222',
-        parentSlot: 299_999_999,
-        blockTime: 1_700_000_000,
+    new FakeTransport(
+      {
+        getHealth: 'ok',
+        getSlot: 300_000_000,
+        getBlock: {
+          blockhash: '11111111111111111111111111111111',
+          previousBlockhash: '22222222222222222222222222222222',
+          parentSlot: 299_999_999,
+          blockTime: 1_700_000_000,
+        },
+        getAccountInfo: {
+          context: { slot: 300_000_000 },
+          value: solanaAccountValue,
+        },
       },
-      getAccountInfo: {
-        context: { slot: 300_000_000 },
-        value: solanaAccountValue,
+      {
+        getSlot: 'solana-anchor-a',
+        getBlock: 'solana-anchor-b',
+        getAccountInfo: 'solana-state',
       },
-    }),
+    ),
   );
   return {
     providerRegistry: new ProviderRegistry([evm, bitcoin, solana]),
@@ -288,8 +340,17 @@ describe('ZeroTrace API contract', () => {
       ledger: 'EVM',
       blockNumber: '16',
       finality: 'finalized',
+      providerVersions: { 'ethereum-anchor': 'json-rpc' },
     });
-    expect(body.evidence[0]).toMatchObject({ finality: 'finalized' });
+    expect(body.metadata.sourceSet).toEqual([
+      'ethereum-anchor',
+      'ethereum-state-a',
+      'ethereum-state-b',
+    ]);
+    expect(body.evidence[0]).toMatchObject({
+      finality: 'finalized',
+      source: 'ethereum-state-a|ethereum-state-b',
+    });
     expect(body.evidence).toHaveLength(1);
     expect(runtime.evidenceLedger.get(body.evidence[0].id)).toBeDefined();
   });
@@ -620,7 +681,17 @@ describe('ZeroTrace API contract', () => {
       height: '840000',
       blockHash: 'b'.repeat(64),
       finality: 'best-chain',
+      providerVersions: {
+        'bitcoin-anchor-a': 'esplora-http',
+        'bitcoin-anchor-b': 'esplora-http',
+      },
     });
+    expect(bitcoin.json().metadata.sourceSet).toEqual([
+      'bitcoin-anchor-a',
+      'bitcoin-anchor-b',
+      'bitcoin-state',
+    ]);
+    expect(bitcoin.json().evidence[0].source).toBe('bitcoin-state');
 
     const bitcoinEvidenceId = bitcoin.json().evidence[0].id;
     const evidence = await app.inject({
@@ -651,7 +722,17 @@ describe('ZeroTrace API contract', () => {
       slot: '300000000',
       blockhash: '11111111111111111111111111111111',
       commitment: 'finalized',
+      providerVersions: {
+        'solana-anchor-a': 'solana-json-rpc',
+        'solana-anchor-b': 'solana-json-rpc',
+      },
     });
+    expect(solana.json().metadata.sourceSet).toEqual([
+      'solana-anchor-a',
+      'solana-anchor-b',
+      'solana-state',
+    ]);
+    expect(solana.json().evidence[0].source).toBe('solana-state');
   });
 
   it('treats an explicit null Solana account as known absence rather than Unknown', async () => {

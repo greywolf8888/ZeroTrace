@@ -17,6 +17,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
   read compatibility;
 - bounded provider retry, `Retry-After`, pacing, TTL/LRU cache, circuit breaker, failover, and health
   diagnostics;
+- request-scoped endpoint provenance and explicit cache bypass for dynamic EVM, Bitcoin, and Solana
+  Snapshot anchors, including visible bypass counters;
 - ordered Ethereum/BSC/Bitcoin/Solana provider pools and safe hostname-based Evidence source IDs;
 - immutable process-local evidence graph plus append-only PostgreSQL Evidence/Snapshot repository;
 - transactionally persisted derivation edges, restart-safe drilldown, storage health/readiness, and

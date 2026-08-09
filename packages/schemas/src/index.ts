@@ -246,6 +246,7 @@ export const TransportDiagnosticsSchema = z.object({
   rateLimitDelays: z.number().int().nonnegative(),
   cacheHits: z.number().int().nonnegative(),
   cacheMisses: z.number().int().nonnegative(),
+  cacheBypasses: z.number().int().nonnegative(),
   failovers: z.number().int().nonnegative(),
   lastAttemptAt: IsoDateTimeSchema.nullable(),
   lastSuccessAt: IsoDateTimeSchema.nullable(),

@@ -861,8 +861,12 @@ function DataHealth({
                 </dd>
               </div>
               <div>
-                <dt>Cache hits</dt>
-                <dd>{provider.transport?.cacheHits ?? 'Unavailable'}</dd>
+                <dt>Cache hits / bypasses</dt>
+                <dd>
+                  {provider.transport === undefined
+                    ? 'Unavailable'
+                    : `${provider.transport.cacheHits} / ${provider.transport.cacheBypasses}`}
+                </dd>
               </div>
             </dl>
             {provider.errorDetail === undefined ? null : (

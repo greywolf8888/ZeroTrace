@@ -10,7 +10,12 @@ import {
 import type { z } from 'zod';
 
 import { ProviderError, toProviderError } from './errors.js';
-import type { JsonRpcTransport } from './transport.js';
+import {
+  requestJsonRpcSourced,
+  type JsonRpcTransport,
+  type TransportObservation,
+  type TransportReadOptions,
+} from './transport.js';
 
 export type SolanaSnapshot = z.infer<typeof SolanaSnapshotSchema>;
 
@@ -199,25 +204,44 @@ export class SolanaLedgerAdapter {
     return this.#transport.lastEndpointId ?? this.#transport.endpointId;
   }
 
-  async read<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+  async read<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<T> {
+    return (await this.readSourced<T>(method, params, options)).value;
+  }
+
+  async readSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
     if (!ALLOWED_SOLANA_METHODS.has(method)) {
       throw new ProviderError(
         'METHOD_NOT_ALLOWED',
         `Solana method ${method} is outside the read-only allowlist.`,
       );
     }
-    return this.#transport.request<T>(method, params);
+    return requestJsonRpcSourced<T>(this.#transport, method, params, options);
   }
 
   async getAccountInfo(
     address: string,
     minimumContextSlot?: number,
   ): Promise<SolanaAccountInfoResponse> {
+    return (await this.getAccountInfoObservation(address, minimumContextSlot)).value;
+  }
+
+  async getAccountInfoObservation(
+    address: string,
+    minimumContextSlot?: number,
+  ): Promise<TransportObservation<SolanaAccountInfoResponse>> {
     requireBase58(address, 'account address');
     if (minimumContextSlot !== undefined) {
       requireSafeInteger(minimumContextSlot, 'minimum context slot');
     }
-    const response = await this.read<unknown>('getAccountInfo', [
+    const observation = await this.readSourced<unknown>('getAccountInfo', [
       address,
       {
         encoding: 'base64',
@@ -225,7 +249,7 @@ export class SolanaLedgerAdapter {
         ...(minimumContextSlot === undefined ? {} : { minContextSlot: minimumContextSlot }),
       },
     ]);
-    return parseAccountInfo(response, minimumContextSlot);
+    return { ...observation, value: parseAccountInfo(observation.value, minimumContextSlot) };
   }
 
   async probe(): Promise<ProviderHealth> {
@@ -234,7 +258,9 @@ export class SolanaLedgerAdapter {
     try {
       const [health, rawSlot] = await Promise.all([
         this.read<string>('getHealth'),
-        this.read<number>('getSlot', [{ commitment: this.config.commitment }]),
+        this.read<number>('getSlot', [{ commitment: this.config.commitment }], {
+          cacheMode: 'bypass',
+        }),
       ]);
       if (health !== 'ok') {
         throw new ProviderError('INVALID_RESPONSE', 'Solana getHealth did not return ok.');
@@ -279,19 +305,26 @@ export class SolanaLedgerAdapter {
   }
 
   async createSnapshot(): Promise<SolanaSnapshot> {
-    const slotNumber = requireSafeQuantityNumber(
-      await this.read<unknown>('getSlot', [{ commitment: this.config.commitment }]),
-      'slot',
+    const slotObservation = await this.readSourced<unknown>(
+      'getSlot',
+      [{ commitment: this.config.commitment }],
+      { cacheMode: 'bypass' },
     );
-    const rawBlock = await this.read<unknown>('getBlock', [
-      slotNumber,
-      {
-        commitment: this.config.commitment,
-        transactionDetails: 'none',
-        rewards: false,
-        maxSupportedTransactionVersion: 0,
-      },
-    ]);
+    const slotNumber = requireSafeQuantityNumber(slotObservation.value, 'slot');
+    const blockObservation = await this.readSourced<unknown>(
+      'getBlock',
+      [
+        slotNumber,
+        {
+          commitment: this.config.commitment,
+          transactionDetails: 'none',
+          rewards: false,
+          maxSupportedTransactionVersion: 0,
+        },
+      ],
+      { cacheMode: 'bypass' },
+    );
+    const rawBlock = blockObservation.value;
     if (typeof rawBlock !== 'object' || rawBlock === null || Array.isArray(rawBlock)) {
       throw new ProviderError(
         'INVALID_RESPONSE',
@@ -306,6 +339,9 @@ export class SolanaLedgerAdapter {
       throw new ProviderError('INVALID_RESPONSE', 'Solana parent slot exceeds the snapshot slot.');
     }
     const blockTimestamp = optionalBlockTimestamp(block.blockTime);
+    const sourceIds = [
+      ...new Set([slotObservation.endpointId, blockObservation.endpointId]),
+    ].sort();
     return {
       ledger: 'SOLANA',
       chainId: 'solana-mainnet',
@@ -314,12 +350,14 @@ export class SolanaLedgerAdapter {
       commitment: this.config.commitment,
       ...(blockTimestamp === undefined ? {} : { blockTimestamp }),
       capturedAt: new Date().toISOString(),
-      providerVersions: { [this.sourceId]: 'solana-json-rpc' },
+      providerVersions: Object.fromEntries(
+        sourceIds.map((sourceId) => [sourceId, 'solana-json-rpc']),
+      ),
       adapterVersions: { solana: this.config.adapterVersion ?? '0.1.0' },
       configHash: hashPayload({
         id: this.config.id,
         commitment: this.config.commitment,
-        sourceId: this.sourceId,
+        sourceIds,
       }),
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',

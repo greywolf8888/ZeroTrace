@@ -53,6 +53,8 @@ The current foundation includes:
 - finality-explicit current-state anchors: configurable EVM `finalized`/`safe`/`latest` block tags,
   height-pinned Bitcoin best-chain hashes, and Solana `getBlock` hashes with minimum-context account
   reads;
+- request-scoped provider provenance across failover pools, with dynamic head/tip/slot anchors
+  explicitly bypassing stored TTL responses;
 - content-addressed evidence nodes and deterministic evidence drilldown;
 - baseline evidence fusion with explicit service-hub, CoinJoin, and independence suppression;
 - exact-integer constant-product exit quoting and seeded, reproducible shared-liquidity exit races;
@@ -221,6 +223,8 @@ Copy [`.env.example`](.env.example) and edit only the providers you trust. The a
 - rejects URL credentials, redirects, traversal, and private or reserved destinations;
 - applies bounded exponential retries, `Retry-After`, per-endpoint pacing, TTL/LRU caching,
   in-flight request deduplication, circuit breaking, and ordered failover;
+- returns the safe endpoint ID that produced each observation; Snapshot anchors bypass stored TTL
+  cache entries while immutable/pinned reads may still use bounded caching;
 - exposes safe hostname-based route and resilience diagnostics without exposing URL paths or keys;
 - imposes timeout and response-size limits;
 - preserves unsafe JSON integer tokens as strings;

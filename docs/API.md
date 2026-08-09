@@ -42,6 +42,11 @@ Current-state subject reads establish a ledger-specific anchor before reading th
 Solana's explicit `value: null` is a Known non-existent account. A missing, stale, malformed, or
 provider-failed response remains Unknown/unavailable and is never converted to a zero balance.
 
+Each successful transport response carries its own safe hostname-based endpoint ID. Snapshot
+`providerVersions` lists every endpoint used to establish the anchor; Evidence names the endpoint or
+deterministic endpoint set used for the observed state; response metadata `sourceSet` is their sorted
+union. This remains correct when concurrent calls complete out of order or a failover occurs.
+
 Entity, RV, and scenario analysis is accepted only when every supplied source evidence ID already
 exists in the evidence ledger and matches the request ledger, chain, and snapshot block/slot. A
 successful analysis creates a `DERIVED_FEATURE` evidence node linked to those sources. Missing or

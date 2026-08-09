@@ -94,6 +94,34 @@ describe('safe transports', () => {
     expect(fakeFetch).toHaveBeenCalledTimes(2);
   });
 
+  it('bypasses stored responses for dynamic anchors without replacing the normal cache', async () => {
+    let responseNumber = 0;
+    const fakeFetch = vi.fn<typeof fetch>().mockImplementation(async () => {
+      responseNumber += 1;
+      return new Response(`head-${responseNumber}`, { status: 200 });
+    });
+    const transport = new SafeRestTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: { cacheTtlMs: 1_000, cacheMaxEntries: 2 },
+      fetchImplementation: fakeFetch,
+    });
+
+    await expect(transport.getText('/head')).resolves.toBe('head-1');
+    await expect(transport.getText('/head')).resolves.toBe('head-1');
+    await expect(transport.getText('/head', { cacheMode: 'bypass' })).resolves.toBe('head-2');
+    await expect(transport.getText('/head', { cacheMode: 'bypass' })).resolves.toBe('head-3');
+    await expect(transport.getText('/head')).resolves.toBe('head-1');
+    expect(fakeFetch).toHaveBeenCalledTimes(3);
+    expect(transport.diagnostics()).toMatchObject({
+      cacheHits: 2,
+      cacheMisses: 1,
+      cacheBypasses: 2,
+    });
+  });
+
   it('paces distinct requests according to the configured endpoint rate', async () => {
     let now = 10_000;
     const delays: number[] = [];
@@ -175,12 +203,59 @@ describe('safe transports', () => {
       createEndpoint('secondary', secondaryFetch),
     ]);
 
-    await expect(transport.request('eth_chainId')).resolves.toBe('0x1');
+    await expect(transport.requestSourced('eth_chainId')).resolves.toEqual({
+      value: '0x1',
+      endpointId: 'secondary',
+    });
     await expect(transport.request('eth_chainId')).resolves.toBe('0x1');
     expect(primaryFetch).toHaveBeenCalledTimes(1);
     expect(secondaryFetch).toHaveBeenCalledTimes(2);
     expect(transport.lastEndpointId).toBe('secondary');
     expect(transport.diagnostics()).toMatchObject({ failovers: 1, activeEndpointId: 'secondary' });
+  });
+
+  it('keeps each concurrent response bound to its producer when failover changes the active endpoint', async () => {
+    let releasePrimary: (() => void) | undefined;
+    const primaryGate = new Promise<void>((resolve) => {
+      releasePrimary = resolve;
+    });
+    const rpcResponse = (init: RequestInit | undefined, result: string) => {
+      const request = JSON.parse(String(init?.body)) as { id: number };
+      return new Response(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }), {
+        status: 200,
+      });
+    };
+    const primaryFetch = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as { method: string };
+      if (request.method === 'switch_endpoint') return new Response('down', { status: 503 });
+      await primaryGate;
+      return rpcResponse(init, 'primary-result');
+    });
+    const secondaryFetch = vi
+      .fn<typeof fetch>()
+      .mockImplementation(async (_url, init) => rpcResponse(init, 'secondary-result'));
+    const endpoint = (endpointId: string, fetchImplementation: typeof fetch) =>
+      new SafeJsonRpcTransport({
+        endpointId,
+        baseUrl: 'http://localhost:8545',
+        policy: localPolicy,
+        timeoutMs: 1000,
+        resilience: { maxAttempts: 1 },
+        fetchImplementation,
+      });
+    const transport = new FailoverJsonRpcTransport('pool', [
+      endpoint('primary', primaryFetch),
+      endpoint('secondary', secondaryFetch),
+    ]);
+
+    const slowPrimary = transport.requestSourced('slow_primary');
+    const switched = await transport.requestSourced('switch_endpoint');
+    releasePrimary?.();
+    const primary = await slowPrimary;
+
+    expect(switched).toEqual({ value: 'secondary-result', endpointId: 'secondary' });
+    expect(primary).toEqual({ value: 'primary-result', endpointId: 'primary' });
+    expect(transport.lastEndpointId).toBe('primary');
   });
 
   it('fails over retryable REST failures without changing the requested path', async () => {
@@ -206,7 +281,10 @@ describe('safe transports', () => {
     });
     const transport = new FailoverRestTransport('pool', [primary, secondary]);
 
-    await expect(transport.getText('/blocks/tip/height')).resolves.toBe('ok');
+    await expect(transport.getTextSourced('/blocks/tip/height')).resolves.toEqual({
+      value: 'ok',
+      endpointId: 'secondary',
+    });
     expect(String(secondaryFetch.mock.calls[0]?.[0])).toBe(
       'http://localhost:8081/blocks/tip/height',
     );

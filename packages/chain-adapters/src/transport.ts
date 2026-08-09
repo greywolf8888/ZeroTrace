@@ -18,25 +18,74 @@ export interface TransportDiagnostics {
   rateLimitDelays: number;
   cacheHits: number;
   cacheMisses: number;
+  cacheBypasses: number;
   failovers: number;
   lastAttemptAt: string | null;
   lastSuccessAt: string | null;
   lastFailureAt: string | null;
 }
 
+export interface TransportReadOptions {
+  cacheMode?: 'default' | 'bypass';
+}
+
+export interface TransportObservation<T> {
+  value: T;
+  endpointId: string;
+}
+
 export interface JsonRpcTransport {
   readonly endpointId: string;
   readonly lastEndpointId?: string | undefined;
-  request<T>(method: string, params?: readonly unknown[]): Promise<T>;
+  request<T>(
+    method: string,
+    params?: readonly unknown[],
+    options?: TransportReadOptions,
+  ): Promise<T>;
+  requestSourced<T>(
+    method: string,
+    params?: readonly unknown[],
+    options?: TransportReadOptions,
+  ): Promise<TransportObservation<T>>;
   diagnostics?(): TransportDiagnostics;
 }
 
 export interface RestTransport {
   readonly endpointId: string;
   readonly lastEndpointId?: string | undefined;
-  getText(path: string): Promise<string>;
-  getJson<T>(path: string): Promise<T>;
+  getText(path: string, options?: TransportReadOptions): Promise<string>;
+  getTextSourced(
+    path: string,
+    options?: TransportReadOptions,
+  ): Promise<TransportObservation<string>>;
+  getJson<T>(path: string, options?: TransportReadOptions): Promise<T>;
+  getJsonSourced<T>(path: string, options?: TransportReadOptions): Promise<TransportObservation<T>>;
   diagnostics?(): TransportDiagnostics;
+}
+
+export async function requestJsonRpcSourced<T>(
+  transport: JsonRpcTransport,
+  method: string,
+  params: readonly unknown[] = [],
+  options: TransportReadOptions = {},
+): Promise<TransportObservation<T>> {
+  return transport.requestSourced<T>(method, params, options);
+}
+
+export async function getRestTextSourced(
+  transport: RestTransport,
+  path: string,
+  options: TransportReadOptions = {},
+): Promise<TransportObservation<string>> {
+  return transport.getTextSourced(path, options);
+}
+
+export async function getRestJsonSourced<T>(
+  transport: RestTransport,
+  path: string,
+  options: TransportReadOptions = {},
+): Promise<TransportObservation<T>> {
+  return transport.getJsonSourced<T>(path, options);
 }
 
 export interface TransportResilienceOptions {
@@ -250,6 +299,7 @@ class ResilientExecutor {
   #rateLimitDelays = 0;
   #cacheHits = 0;
   #cacheMisses = 0;
+  #cacheBypasses = 0;
   #lastAttemptAt: number | null = null;
   #lastSuccessAt: number | null = null;
   #lastFailureAt: number | null = null;
@@ -262,26 +312,36 @@ class ResilientExecutor {
     this.#random = options.randomImplementation ?? Math.random;
   }
 
-  async execute<T>(cacheKey: string, operation: () => Promise<T>): Promise<T> {
+  async execute<T>(
+    cacheKey: string,
+    operation: () => Promise<T>,
+    options: TransportReadOptions = {},
+  ): Promise<T> {
     this.#logicalRequests += 1;
-    const cached = this.#readCache<T>(cacheKey);
-    if (cached.found) return cached.value;
+    const bypassCache = options.cacheMode === 'bypass';
+    if (bypassCache) {
+      this.#cacheBypasses += 1;
+    } else {
+      const cached = this.#readCache<T>(cacheKey);
+      if (cached.found) return cached.value;
+    }
 
-    const existing = this.#inFlight.get(cacheKey);
+    const inFlightKey = `${bypassCache ? 'bypass' : 'default'}:${cacheKey}`;
+    const existing = this.#inFlight.get(inFlightKey);
     if (existing !== undefined) {
       this.#cacheHits += 1;
       return existing as Promise<T>;
     }
 
     const promise = this.#run(operation).then((value) => {
-      this.#writeCache(cacheKey, value);
+      if (!bypassCache) this.#writeCache(cacheKey, value);
       return value;
     });
-    this.#inFlight.set(cacheKey, promise);
+    this.#inFlight.set(inFlightKey, promise);
     try {
       return await promise;
     } finally {
-      this.#inFlight.delete(cacheKey);
+      this.#inFlight.delete(inFlightKey);
     }
   }
 
@@ -298,6 +358,7 @@ class ResilientExecutor {
       rateLimitDelays: this.#rateLimitDelays,
       cacheHits: this.#cacheHits,
       cacheMisses: this.#cacheMisses,
+      cacheBypasses: this.#cacheBypasses,
       failovers: 0,
       lastAttemptAt: isoTimestamp(this.#lastAttemptAt),
       lastSuccessAt: isoTimestamp(this.#lastSuccessAt),
@@ -459,58 +520,78 @@ export class SafeJsonRpcTransport implements JsonRpcTransport {
     return this.#executor.diagnostics();
   }
 
-  request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
-    return this.#executor.execute(rpcCacheKey(method, params), async () => {
-      const id = ++this.#requestId;
-      const body = await fetchSafely(this.#options, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
-      });
-      let parsed: unknown;
-      try {
-        parsed = parseProviderJson(body);
-      } catch (error) {
-        throw new ProviderError('INVALID_RESPONSE', 'Provider returned invalid JSON.', {
-          cause: error,
+  async request<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<T> {
+    return (await this.requestSourced<T>(method, params, options)).value;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    const value = await this.#executor.execute(
+      rpcCacheKey(method, params),
+      async () => {
+        const id = ++this.#requestId;
+        const body = await fetchSafely(this.#options, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
         });
-      }
-      if (typeof parsed !== 'object' || parsed === null) {
-        throw new ProviderError(
-          'INVALID_RESPONSE',
-          'Provider returned a non-object JSON-RPC response.',
-        );
-      }
-      const response = parsed as {
-        id?: unknown;
-        result?: unknown;
-        error?: { code?: unknown; message?: unknown };
-      };
-      if (response.id !== id) {
-        throw new ProviderError(
-          'INVALID_RESPONSE',
-          'Provider returned an unexpected JSON-RPC request id.',
-        );
-      }
-      if (response.error !== undefined) {
-        const message =
-          typeof response.error.message === 'string'
-            ? response.error.message
-            : 'Unknown JSON-RPC error';
-        if (isRateLimitRpcError(response.error.code, message)) {
-          throw new ProviderError('RATE_LIMITED', 'Provider rate limit exceeded.', {
-            retryable: true,
+        let parsed: unknown;
+        try {
+          parsed = parseProviderJson(body);
+        } catch (error) {
+          throw new ProviderError('INVALID_RESPONSE', 'Provider returned invalid JSON.', {
+            cause: error,
           });
         }
-        throw new ProviderError('RPC_ERROR', message, {
-          retryable: response.error.code === -32_603,
-        });
-      }
-      if (!('result' in response)) {
-        throw new ProviderError('INVALID_RESPONSE', 'Provider response is missing a result field.');
-      }
-      return response.result as T;
-    });
+        if (typeof parsed !== 'object' || parsed === null) {
+          throw new ProviderError(
+            'INVALID_RESPONSE',
+            'Provider returned a non-object JSON-RPC response.',
+          );
+        }
+        const response = parsed as {
+          id?: unknown;
+          result?: unknown;
+          error?: { code?: unknown; message?: unknown };
+        };
+        if (response.id !== id) {
+          throw new ProviderError(
+            'INVALID_RESPONSE',
+            'Provider returned an unexpected JSON-RPC request id.',
+          );
+        }
+        if (response.error !== undefined) {
+          const message =
+            typeof response.error.message === 'string'
+              ? response.error.message
+              : 'Unknown JSON-RPC error';
+          if (isRateLimitRpcError(response.error.code, message)) {
+            throw new ProviderError('RATE_LIMITED', 'Provider rate limit exceeded.', {
+              retryable: true,
+            });
+          }
+          throw new ProviderError('RPC_ERROR', message, {
+            retryable: response.error.code === -32_603,
+          });
+        }
+        if (!('result' in response)) {
+          throw new ProviderError(
+            'INVALID_RESPONSE',
+            'Provider response is missing a result field.',
+          );
+        }
+        return response.result as T;
+      },
+      options,
+    );
+    return { value, endpointId: this.endpointId };
   }
 }
 
@@ -533,16 +614,36 @@ export class SafeRestTransport implements RestTransport {
     return this.#executor.diagnostics();
   }
 
-  getText(path: string): Promise<string> {
-    return this.#executor.execute(`rest:text:${path}`, () =>
-      fetchSafely(this.#options, { method: 'GET' }, path),
-    );
+  async getText(path: string, options: TransportReadOptions = {}): Promise<string> {
+    return (await this.getTextSourced(path, options)).value;
   }
 
-  async getJson<T>(path: string): Promise<T> {
-    const body = await this.getText(path);
+  async getTextSourced(
+    path: string,
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<string>> {
+    const value = await this.#executor.execute(
+      `rest:text:${path}`,
+      () => fetchSafely(this.#options, { method: 'GET' }, path),
+      options,
+    );
+    return { value, endpointId: this.endpointId };
+  }
+
+  async getJson<T>(path: string, options: TransportReadOptions = {}): Promise<T> {
+    return (await this.getJsonSourced<T>(path, options)).value;
+  }
+
+  async getJsonSourced<T>(
+    path: string,
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    const observation = await this.getTextSourced(path, options);
     try {
-      return parseProviderJson(body) as T;
+      return {
+        value: parseProviderJson(observation.value) as T,
+        endpointId: observation.endpointId,
+      };
     } catch (error) {
       throw new ProviderError('INVALID_RESPONSE', 'Provider returned invalid JSON.', {
         cause: error,
@@ -598,6 +699,7 @@ function failoverDiagnostics(
     rateLimitDelays: sum('rateLimitDelays'),
     cacheHits: sum('cacheHits'),
     cacheMisses: sum('cacheMisses'),
+    cacheBypasses: sum('cacheBypasses'),
     failovers,
     lastAttemptAt: latest('lastAttemptAt'),
     lastSuccessAt: latest('lastSuccessAt'),
@@ -625,7 +727,19 @@ export class FailoverJsonRpcTransport implements JsonRpcTransport {
     return this.#lastEndpointId;
   }
 
-  async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+  async request<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<T> {
+    return (await this.requestSourced<T>(method, params, options)).value;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
     this.#logicalRequests += 1;
     let lastError: ProviderError | undefined;
     for (let offset = 0; offset < this.#transports.length; offset += 1) {
@@ -633,9 +747,9 @@ export class FailoverJsonRpcTransport implements JsonRpcTransport {
       const transport = this.#transports[index];
       if (transport === undefined) continue;
       try {
-        const result = await transport.request<T>(method, params);
+        const result = await requestJsonRpcSourced<T>(transport, method, params, options);
         this.#preferredIndex = index;
-        this.#lastEndpointId = transport.lastEndpointId ?? transport.endpointId;
+        this.#lastEndpointId = result.endpointId;
         this.#successes += 1;
         return result;
       } catch (error) {
@@ -687,12 +801,26 @@ export class FailoverRestTransport implements RestTransport {
     return this.#lastEndpointId;
   }
 
-  getText(path: string): Promise<string> {
-    return this.#request((transport) => transport.getText(path));
+  async getText(path: string, options: TransportReadOptions = {}): Promise<string> {
+    return (await this.getTextSourced(path, options)).value;
   }
 
-  getJson<T>(path: string): Promise<T> {
-    return this.#request((transport) => transport.getJson<T>(path));
+  getTextSourced(
+    path: string,
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<string>> {
+    return this.#request((transport) => getRestTextSourced(transport, path, options));
+  }
+
+  async getJson<T>(path: string, options: TransportReadOptions = {}): Promise<T> {
+    return (await this.getJsonSourced<T>(path, options)).value;
+  }
+
+  getJsonSourced<T>(
+    path: string,
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    return this.#request((transport) => getRestJsonSourced<T>(transport, path, options));
   }
 
   diagnostics(): TransportDiagnostics {
@@ -707,7 +835,9 @@ export class FailoverRestTransport implements RestTransport {
     );
   }
 
-  async #request<T>(operation: (transport: RestTransport) => Promise<T>): Promise<T> {
+  async #request<T>(
+    operation: (transport: RestTransport) => Promise<TransportObservation<T>>,
+  ): Promise<TransportObservation<T>> {
     this.#logicalRequests += 1;
     let lastError: ProviderError | undefined;
     for (let offset = 0; offset < this.#transports.length; offset += 1) {
@@ -717,7 +847,7 @@ export class FailoverRestTransport implements RestTransport {
       try {
         const result = await operation(transport);
         this.#preferredIndex = index;
-        this.#lastEndpointId = transport.lastEndpointId ?? transport.endpointId;
+        this.#lastEndpointId = result.endpointId;
         this.#successes += 1;
         return result;
       } catch (error) {

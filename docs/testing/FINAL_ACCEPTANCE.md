@@ -9,6 +9,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] EVM, Bitcoin, and Solana adapter boundaries exist
 - [x] Current-state Snapshots use explicit EVM finality, height-pinned Bitcoin best-chain hashes,
       and slot-specific Solana blockhashes with minimum-context account reads
+- [x] Dynamic anchors bypass stored response caches and query-time Evidence retains request-scoped
+      endpoint provenance across concurrent failover pools
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
 - [x] API, UI, infrastructure schema, health, and test foundation exist
 - [x] Clean Docker build, database initialization, and runtime smoke check recorded

@@ -72,6 +72,7 @@ describe('knowledge values', () => {
         rateLimitDelays: 0,
         cacheHits: 1,
         cacheMisses: 1,
+        cacheBypasses: 2,
         failovers: 1,
         lastAttemptAt: new Date().toISOString(),
         lastSuccessAt: new Date().toISOString(),

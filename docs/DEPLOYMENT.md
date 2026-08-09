@@ -76,6 +76,7 @@ Expected invariants:
 - readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
 - `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
+- provider diagnostics expose request cache hits/misses/bypasses and a safe active endpoint ID;
 - a configured historical backend failure degrades aggregate health, while API readiness continues
   to describe whether current API requests can be served;
 - capability output marks signing, broadcasting, and key storage as `FORBIDDEN`;

@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                          |
 | Production acceptance            | **No**                                                                              |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                      |
-| Unit tests                       | **180 passing across 20 files**                                                     |
+| Unit tests                       | **182 passing across 20 files**                                                     |
 | Integration tests                | **26 passing across API and three real durable stores**                             |
 | Real-browser E2E                 | **6 passing: Chromium desktop and Pixel 7**                                         |
 | Remote CI                        | **Pass on immutable development commit `73a1cae`; protected main `3372a5a`**        |
-| Coverage                         | **87.61% statements / 79.66% branches / 97.09% functions / 88.83% lines**           |
+| Coverage                         | **87.65% statements / 79.66% branches / 96.10% functions / 88.84% lines**           |
 | Real-chain validation            | Four-chain current state plus finalized raw-ledger ingestion passed                 |
 | Durable evidence/history         | Cross-ledger raw execution/state provenance wired; semantics and continuity pending |
 
@@ -35,7 +35,7 @@ The only allowed status vocabulary in this ledger is:
 | Architecture domain                  | Status                                      | Current boundary                                                                           |
 | ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed             |
-| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | retries/cache/pacing/circuit/failover tested; real outage/failover drill pending           |
+| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass, resilience tested; real outage/failover drill pending |
 | EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | explicit finalized/safe/latest anchor; Ethereum and BSC finalized smoke passed             |
 | Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | height-pinned best-chain hash; public Esplora smoke passed                                 |
 | Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | finalized `getBlock` anchor and minimum-context account smoke passed                       |
@@ -84,11 +84,16 @@ The only allowed status vocabulary in this ledger is:
   bounded exponential retries, `Retry-After`, request pacing, in-flight deduplication, TTL/LRU
   caching, circuit breaking, ordered failover, response-size bounds, and unsafe-integer
   preservation;
+- request-scoped safe endpoint IDs survive concurrent failover, dynamic Snapshot anchors bypass
+  stored TTL entries, and health distinguishes cache hits/misses/bypasses;
 - safe hostname-based active-source diagnostics in health, Snapshot and Evidence metadata;
 - regression tests that reject EVM and Solana broadcast methods before network access;
 - Ethereum via Alchemy plus public BSC, Bitcoin, and Solana current-state smoke reads with
   ledger-canonical Snapshot anchors and snapshot-pinned Evidence. These are smoke checks, not
   archive-grade, forced-reorg, or cross-provider semantic acceptance.
+- query-time Snapshot `providerVersions`, Evidence source, payload hash, and metadata `sourceSet`
+  bind the actual endpoints used for anchor and state calls rather than a shared last-completed
+  endpoint value;
 
 ### Evidence and analysis foundation
 
@@ -222,10 +227,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                             | Scope                                                                                            |
 | ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Reproducible install/build     | Pass                                      | locked npm install in production container; all packages/API/web                                 |
-| Unit tests                     | 180 pass                                  | 20 files across schemas, adapters, ingestion, storage, worker and API runtime                    |
+| Unit tests                     | 182 pass                                  | 20 files across schemas, adapters, ingestion, storage, worker and API runtime                    |
 | Integration tests              | 26 pass                                   | API plus real PostgreSQL, ClickHouse, and versioned object storage                               |
 | Repeat-run integration         | Pass twice consecutively                  | isolated identities prevent stale-volume false positives                                         |
-| Coverage gate                  | Pass                                      | 87.61% statements, 79.66% branches, 97.09% functions, 88.83% lines                               |
+| Coverage gate                  | Pass                                      | 87.65% statements, 79.66% branches, 96.10% functions, 88.84% lines                               |
 | Chromium E2E                   | 6 pass                                    | three flows each on desktop and Pixel 7                                                          |
 | Formatting / ESLint / types    | Pass                                      | full repository                                                                                  |
 | Dependency vulnerability audit | Pass                                      | 0 vulnerabilities across the complete npm dependency graph                                       |

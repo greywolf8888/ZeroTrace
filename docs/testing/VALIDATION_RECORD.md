@@ -316,12 +316,38 @@ This validates provider-shaped finalized execution/state capture and provenance.
 event/call/state-change interpretation, continuous scheduling, live/reorg handling, independent
 provider reconciliation, and archive-scale backfill remain open.
 
+## Request-scoped provider provenance and cache consistency
+
+The current-state transport now returns the safe endpoint ID alongside each response instead of
+requiring callers to inspect a shared mutable `lastEndpointId`. Deterministic failover tests prove
+that the returned endpoint is the one that produced that specific response. API integration tests
+force EVM balance and code, Bitcoin tip height/hash/address, and Solana slot/block/account calls onto
+different synthetic endpoints and verify:
+
+- Snapshot `providerVersions` contains every endpoint used to establish its anchor;
+- Evidence names the endpoint or deterministic endpoint set used for state observation;
+- response metadata `sourceSet` is the sorted union of anchor and state sources;
+- concurrent EVM state reads cannot overwrite each other's provenance;
+- dynamic anchor requests bypass stored TTL entries, do not replace the normal cached value, and
+  increment `cacheBypasses` diagnostics.
+
+The focused transport/adapter/schema/API run passed 62 tests. This is deterministic failover and
+concurrency-contract coverage; a forced outage across real independent providers and semantic
+agreement/reorg acceptance remain pending.
+
+A live 60-second-TTL probe then captured two successive Snapshots per public network. BNB Smart
+Chain moved from block `114971472` to `114971479` with `2` anchor bypasses; Bitcoin remained at
+height `961757` with `4` height/hash bypasses; Solana moved from slot `438242571` to `438242581` with
+`4` slot/block bypasses. Each Snapshot named only the safe endpoint that returned its anchor. The
+changing BSC/Solana positions and exact bypass counters confirm that the stored TTL entry was not
+served. No credential was used in this probe.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                          |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run verify:full`    | pass: format, lint, typecheck, 180 unit, 26 integration, build, license, audit, coverage, 6 E2E, SBOM                                                           |
-| `npm run test:coverage`  | pass: 206 tests; 87.61% statements, 79.66% branches, 97.09% functions, 88.83% lines                                                                             |
+| `npm run verify:full`    | pass: format, lint, typecheck, 182 unit, 26 integration, build, license, audit, coverage, 6 E2E, SBOM                                                           |
+| `npm run test:coverage`  | pass: 208 tests; 87.65% statements, 79.66% branches, 96.10% functions, 88.84% lines                                                                             |
 | `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                                                                               |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                          |
 | `docker compose config`  | pass                                                                                                                                                            |
@@ -329,7 +355,7 @@ provider reconciliation, and archive-scale backfill remain open.
 | branch GitHub Actions CI | [pass on `73a1cae`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31326491651): quality/contracts, Chromium E2E, and five production container targets |
 | branch CodeQL            | [pass on `73a1cae`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31326491643): JavaScript and TypeScript analysis                                     |
 
-The latest full run used the isolated `zerotrace-snapshot-test` project on alternate ports with
+The latest full run used the isolated `zerotrace-provenance-test` project on alternate ports with
 fresh PostgreSQL, ClickHouse, and MinIO volumes. After all 26 integration tests passed, exactly its
 three containers, three named volumes, and network were removed; unrelated local containers were
 left running.

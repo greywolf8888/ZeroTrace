@@ -10,7 +10,12 @@ import {
 import type { z } from 'zod';
 
 import { ProviderError, toProviderError } from './errors.js';
-import type { RestTransport } from './transport.js';
+import {
+  getRestJsonSourced,
+  getRestTextSourced,
+  type RestTransport,
+  type TransportObservation,
+} from './transport.js';
 
 export type BitcoinSnapshot = z.infer<typeof BitcoinSnapshotSchema>;
 
@@ -75,22 +80,44 @@ export class BitcoinUtxoLedgerAdapter {
     return this.#transport.lastEndpointId ?? this.#transport.endpointId;
   }
 
-  getAddress(address: string): Promise<EsploraAddressStats> {
-    return this.#transport.getJson<EsploraAddressStats>(`/address/${encodeURIComponent(address)}`);
+  async getAddress(address: string): Promise<EsploraAddressStats> {
+    return (await this.getAddressObservation(address)).value;
   }
 
-  getTransaction(txid: string): Promise<Record<string, unknown>> {
-    return this.#transport.getJson<Record<string, unknown>>(`/tx/${encodeURIComponent(txid)}`);
+  getAddressObservation(address: string): Promise<TransportObservation<EsploraAddressStats>> {
+    return getRestJsonSourced<EsploraAddressStats>(
+      this.#transport,
+      `/address/${encodeURIComponent(address)}`,
+    );
+  }
+
+  async getTransaction(txid: string): Promise<Record<string, unknown>> {
+    return (await this.getTransactionObservation(txid)).value;
+  }
+
+  getTransactionObservation(txid: string): Promise<TransportObservation<Record<string, unknown>>> {
+    return getRestJsonSourced<Record<string, unknown>>(
+      this.#transport,
+      `/tx/${encodeURIComponent(txid)}`,
+    );
   }
 
   getOutspend(txid: string, vout: number): Promise<Record<string, unknown>> {
+    return this.getOutspendObservation(txid, vout).then((observation) => observation.value);
+  }
+
+  getOutspendObservation(
+    txid: string,
+    vout: number,
+  ): Promise<TransportObservation<Record<string, unknown>>> {
     if (!Number.isSafeInteger(vout) || vout < 0) {
       throw new ProviderError(
         'INVALID_RESPONSE',
         'Bitcoin vout must be a non-negative safe integer.',
       );
     }
-    return this.#transport.getJson<Record<string, unknown>>(
+    return getRestJsonSourced<Record<string, unknown>>(
+      this.#transport,
       `/tx/${encodeURIComponent(txid)}/outspend/${vout}`,
     );
   }
@@ -99,7 +126,9 @@ export class BitcoinUtxoLedgerAdapter {
     const checkedAt = new Date().toISOString();
     const started = performance.now();
     try {
-      const height = requireHeight(await this.#transport.getText('/blocks/tip/height'));
+      const height = requireHeight(
+        await this.#transport.getText('/blocks/tip/height', { cacheMode: 'bypass' }),
+      );
       return {
         id: this.config.id,
         ledger: 'BITCOIN',
@@ -139,10 +168,19 @@ export class BitcoinUtxoLedgerAdapter {
   }
 
   async createSnapshot(): Promise<BitcoinSnapshot> {
-    const height = requireHeight(await this.#transport.getText('/blocks/tip/height'));
-    const blockHash = requireBlockHash(
-      await this.#transport.getText(`/block-height/${encodeURIComponent(height)}`),
+    const heightObservation = await getRestTextSourced(this.#transport, '/blocks/tip/height', {
+      cacheMode: 'bypass',
+    });
+    const height = requireHeight(heightObservation.value);
+    const hashObservation = await getRestTextSourced(
+      this.#transport,
+      `/block-height/${encodeURIComponent(height)}`,
+      { cacheMode: 'bypass' },
     );
+    const blockHash = requireBlockHash(hashObservation.value);
+    const sourceIds = [
+      ...new Set([heightObservation.endpointId, hashObservation.endpointId]),
+    ].sort();
     return {
       ledger: 'BITCOIN',
       chainId: 'bitcoin-mainnet',
@@ -150,12 +188,12 @@ export class BitcoinUtxoLedgerAdapter {
       blockHash,
       finality: 'best-chain',
       capturedAt: new Date().toISOString(),
-      providerVersions: { [this.sourceId]: 'esplora-http' },
+      providerVersions: Object.fromEntries(sourceIds.map((sourceId) => [sourceId, 'esplora-http'])),
       adapterVersions: { bitcoin: this.config.adapterVersion ?? '0.1.0' },
       configHash: hashPayload({
         id: this.config.id,
         chainId: 'bitcoin-mainnet',
-        sourceId: this.sourceId,
+        sourceIds,
       }),
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',

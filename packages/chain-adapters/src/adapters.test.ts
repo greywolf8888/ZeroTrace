@@ -5,42 +5,102 @@ import { ProviderError } from './errors.js';
 import { EvmLedgerAdapter } from './evm.js';
 import { ProviderRegistry } from './registry.js';
 import { SolanaLedgerAdapter } from './solana.js';
-import type { JsonRpcTransport, RestTransport } from './transport.js';
+import type {
+  JsonRpcTransport,
+  RestTransport,
+  TransportObservation,
+  TransportReadOptions,
+} from './transport.js';
 
 class FakeJsonRpcTransport implements JsonRpcTransport {
   readonly endpointId = 'fake';
-  readonly calls: Array<{ method: string; params: readonly unknown[] }> = [];
+  readonly calls: Array<{
+    method: string;
+    params: readonly unknown[];
+    options?: TransportReadOptions;
+  }> = [];
   readonly #responses: Record<string, unknown>;
+  readonly #sourceIds: Record<string, string>;
 
-  constructor(responses: Record<string, unknown>) {
+  constructor(responses: Record<string, unknown>, sourceIds: Record<string, string> = {}) {
     this.#responses = responses;
+    this.#sourceIds = sourceIds;
   }
 
-  async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
-    this.calls.push({ method, params });
+  async request<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<T> {
+    this.calls.push({ method, params, ...(options.cacheMode === undefined ? {} : { options }) });
     const response = this.#responses[method];
     if (response instanceof Error) throw response;
     return response as T;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    return {
+      value: await this.request<T>(method, params, options),
+      endpointId: this.#sourceIds[method] ?? this.endpointId,
+    };
   }
 }
 
 class FakeRestTransport implements RestTransport {
   readonly endpointId = 'fake-esplora';
   readonly responses: Record<string, unknown>;
-  readonly calls: Array<{ kind: 'json' | 'text'; path: string }> = [];
+  readonly calls: Array<{
+    kind: 'json' | 'text';
+    path: string;
+    options?: TransportReadOptions;
+  }> = [];
+  readonly #sourceIds: Record<string, string>;
 
-  constructor(responses: Record<string, unknown>) {
+  constructor(responses: Record<string, unknown>, sourceIds: Record<string, string> = {}) {
     this.responses = responses;
+    this.#sourceIds = sourceIds;
   }
 
-  async getText(path: string): Promise<string> {
-    this.calls.push({ kind: 'text', path });
+  async getText(path: string, options: TransportReadOptions = {}): Promise<string> {
+    this.calls.push({
+      kind: 'text',
+      path,
+      ...(options.cacheMode === undefined ? {} : { options }),
+    });
     return String(this.responses[path]);
   }
 
-  async getJson<T>(path: string): Promise<T> {
-    this.calls.push({ kind: 'json', path });
+  async getTextSourced(
+    path: string,
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<string>> {
+    return {
+      value: await this.getText(path, options),
+      endpointId: this.#sourceIds[path] ?? this.endpointId,
+    };
+  }
+
+  async getJson<T>(path: string, options: TransportReadOptions = {}): Promise<T> {
+    this.calls.push({
+      kind: 'json',
+      path,
+      ...(options.cacheMode === undefined ? {} : { options }),
+    });
     return this.responses[path] as T;
+  }
+
+  async getJsonSourced<T>(
+    path: string,
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    return {
+      value: await this.getJson<T>(path, options),
+      endpointId: this.#sourceIds[path] ?? this.endpointId,
+    };
   }
 }
 
@@ -85,34 +145,52 @@ describe('capability probes and snapshots', () => {
   });
 
   it('creates a replayable Bitcoin snapshot from a height-pinned hash endpoint', async () => {
-    const transport = new FakeRestTransport({
-      '/blocks/tip/height': '840000',
-      '/block-height/840000': 'a'.repeat(64),
-      '/blocks/tip/hash': 'b'.repeat(64),
-    });
+    const transport = new FakeRestTransport(
+      {
+        '/blocks/tip/height': '840000',
+        '/block-height/840000': 'a'.repeat(64),
+        '/blocks/tip/hash': 'b'.repeat(64),
+      },
+      {
+        '/blocks/tip/height': 'esplora-a',
+        '/block-height/840000': 'esplora-b',
+      },
+    );
     const adapter = new BitcoinUtxoLedgerAdapter({ id: 'esplora' }, transport);
     await expect(adapter.createSnapshot()).resolves.toMatchObject({
       ledger: 'BITCOIN',
       height: '840000',
       blockHash: 'a'.repeat(64),
       finality: 'best-chain',
+      providerVersions: { 'esplora-a': 'esplora-http', 'esplora-b': 'esplora-http' },
     });
     expect(transport.calls).toEqual([
-      { kind: 'text', path: '/blocks/tip/height' },
-      { kind: 'text', path: '/block-height/840000' },
+      {
+        kind: 'text',
+        path: '/blocks/tip/height',
+        options: { cacheMode: 'bypass' },
+      },
+      {
+        kind: 'text',
+        path: '/block-height/840000',
+        options: { cacheMode: 'bypass' },
+      },
     ]);
   });
 
   it('creates a finalized Solana snapshot', async () => {
-    const transport = new FakeJsonRpcTransport({
-      getSlot: 300_000_000,
-      getBlock: {
-        blockhash: '11111111111111111111111111111111',
-        previousBlockhash: '22222222222222222222222222222222',
-        parentSlot: 299_999_999,
-        blockTime: 1_700_000_000,
+    const transport = new FakeJsonRpcTransport(
+      {
+        getSlot: 300_000_000,
+        getBlock: {
+          blockhash: '11111111111111111111111111111111',
+          previousBlockhash: '22222222222222222222222222222222',
+          parentSlot: 299_999_999,
+          blockTime: 1_700_000_000,
+        },
       },
-    });
+      { getSlot: 'solana-a', getBlock: 'solana-b' },
+    );
     const adapter = new SolanaLedgerAdapter({ id: 'solana', commitment: 'finalized' }, transport);
     await expect(adapter.createSnapshot()).resolves.toMatchObject({
       ledger: 'SOLANA',
@@ -120,9 +198,17 @@ describe('capability probes and snapshots', () => {
       commitment: 'finalized',
       blockhash: '11111111111111111111111111111111',
       blockTimestamp: '2023-11-14T22:13:20.000Z',
+      providerVersions: {
+        'solana-a': 'solana-json-rpc',
+        'solana-b': 'solana-json-rpc',
+      },
     });
     expect(transport.calls).toEqual([
-      { method: 'getSlot', params: [{ commitment: 'finalized' }] },
+      {
+        method: 'getSlot',
+        params: [{ commitment: 'finalized' }],
+        options: { cacheMode: 'bypass' },
+      },
       {
         method: 'getBlock',
         params: [
@@ -134,20 +220,28 @@ describe('capability probes and snapshots', () => {
             maxSupportedTransactionVersion: 0,
           },
         ],
+        options: { cacheMode: 'bypass' },
       },
     ]);
   });
 
   it('creates a replayable EVM snapshot and forwards block-pinned reads', async () => {
-    const transport = new FakeJsonRpcTransport({
-      eth_getBlockByNumber: {
-        number: '0x10',
-        hash: '0x' + 'a'.repeat(64),
-        timestamp: '0x65',
+    const transport = new FakeJsonRpcTransport(
+      {
+        eth_getBlockByNumber: {
+          number: '0x10',
+          hash: '0x' + 'a'.repeat(64),
+          timestamp: '0x65',
+        },
+        eth_getBalance: '0x2a',
+        eth_getCode: '0x6000',
       },
-      eth_getBalance: '0x2a',
-      eth_getCode: '0x6000',
-    });
+      {
+        eth_getBlockByNumber: 'evm-anchor',
+        eth_getBalance: 'evm-balance',
+        eth_getCode: 'evm-code',
+      },
+    );
     const adapter = new EvmLedgerAdapter(
       { id: 'ethereum', chainId: 1, chainName: 'Ethereum', adapterVersion: 'fixture' },
       transport,
@@ -159,9 +253,16 @@ describe('capability probes and snapshots', () => {
       blockHash: '0x' + 'a'.repeat(64),
       finality: 'finalized',
       adapterVersions: { evm: 'fixture' },
+      providerVersions: { 'evm-anchor': 'json-rpc' },
     });
-    await expect(adapter.getBalance('0xabc', '0x10')).resolves.toBe('0x2a');
-    await expect(adapter.getCode('0xabc', '0x10')).resolves.toBe('0x6000');
+    await expect(adapter.getBalanceObservation('0xabc', '0x10')).resolves.toEqual({
+      value: '0x2a',
+      endpointId: 'evm-balance',
+    });
+    await expect(adapter.getCodeObservation('0xabc', '0x10')).resolves.toEqual({
+      value: '0x6000',
+      endpointId: 'evm-code',
+    });
     expect(transport.calls.at(-1)).toEqual({
       method: 'eth_getCode',
       params: ['0xabc', '0x10'],
@@ -169,6 +270,7 @@ describe('capability probes and snapshots', () => {
     expect(transport.calls[0]).toEqual({
       method: 'eth_getBlockByNumber',
       params: ['finalized', false],
+      options: { cacheMode: 'bypass' },
     });
   });
 

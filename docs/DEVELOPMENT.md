@@ -158,6 +158,11 @@ Important values:
 `PROVIDER_ALLOW_HOSTS` does not authorize transaction methods. Method allowlists remain enforced
 inside each adapter.
 
+The shared cache never serves EVM block-tag anchors, Bitcoin tip-height/hash anchors, Solana slot or
+slot-block anchors, or dynamic health heads: those calls use explicit cache bypass. The bypass does
+not overwrite a normal cached value, retains in-flight deduplication within its own mode, and is
+visible as `cacheBypasses` in provider diagnostics. Fixed block/slot reads may use the bounded cache.
+
 Keep EVM snapshot tags at `finalized` for normal analysis. Selecting `safe` or `latest` is an
 explicit freshness/finality tradeoff; the chosen value remains in the persisted Snapshot and
 Evidence metadata.
