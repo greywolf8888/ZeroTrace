@@ -33,7 +33,7 @@ HEALTHCHECK --interval=15s --timeout=4s --start-period=10s --retries=4 \
   CMD node -e "fetch('http://127.0.0.1:8080/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 CMD ["node", "apps/api/dist/src/server.js"]
 
-FROM nginx:1.29-alpine AS web
+FROM nginx:1.31-alpine AS web
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 80
