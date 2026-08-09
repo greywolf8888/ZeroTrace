@@ -4,6 +4,7 @@ const checksummedEvmAddress = '0x52908400098527886E0F7030069857D2E4169EE7';
 const solanaSignature =
   '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
 const bscTokenAddress = `0x${'a'.repeat(40)}`;
+const bscFlapCreationTransaction = `0x${'7'.repeat(64)}`;
 
 test('renders capability truth and unknown values without fake market data', async ({ page }) => {
   const browserErrors: string[] = [];
@@ -258,6 +259,92 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
       }),
     });
   });
+  await page.route('**/api/v1/launches/EVM/**/events/**', async (route) => {
+    const officialDefault = (value: unknown) => ({
+      value,
+      source: 'OFFICIAL_DEFAULT',
+      evidenceIds: ['ev_flap_defaults'],
+    });
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        transactionHash: bscFlapCreationTransaction,
+        platformMatch: { state: 'known', value: true },
+        transactionKind: 'CREATION_CONFIGURATION',
+        creation: {
+          timestampUnix: '1700000000',
+          creator: `0x${'c'.repeat(40)}`,
+          nonce: '7',
+          token: bscTokenAddress,
+          name: 'Fixture Token',
+          symbol: 'FIX',
+          metadataUri: 'ipfs://fixture',
+        },
+        staged: null,
+        configuration: {
+          curveAddress: officialDefault({ state: 'unknown', reason: 'NOT_QUERIED' }),
+          curveParameter: officialDefault({ state: 'known', value: '16000000000000000000' }),
+          virtualQuoteReserve: officialDefault({ state: 'unknown', reason: 'NOT_QUERIED' }),
+          virtualBaseReserve: officialDefault({ state: 'unknown', reason: 'NOT_QUERIED' }),
+          virtualLiquiditySquared: officialDefault({ state: 'unknown', reason: 'NOT_QUERIED' }),
+          dexSupplyThreshold: officialDefault({
+            state: 'known',
+            value: '667000000000000000000000000',
+          }),
+          quoteTokenAddress: officialDefault({
+            state: 'known',
+            value: `0x${'0'.repeat(40)}`,
+          }),
+          migratorType: officialDefault({ state: 'known', value: 'V3_MIGRATOR' }),
+          tokenVersion: officialDefault({ state: 'known', value: 'TOKEN_LEGACY' }),
+          buyTaxBps: officialDefault({ state: 'known', value: '0' }),
+          sellTaxBps: officialDefault({ state: 'known', value: '0' }),
+          dexId: officialDefault({ state: 'known', value: 'DEX0' }),
+          lpFeeProfile: officialDefault({ state: 'known', value: 'STANDARD' }),
+          extensions: [],
+          rawConfigHash: '4'.repeat(64),
+        },
+        migration: null,
+        decodedEventNames: ['TokenCreated'],
+        unrecognizedPortalLogCount: 0,
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '49900000',
+            blockHash: `0x${'4'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 1,
+          sourceCoverage: 1,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: '2026-08-10T00:00:00.000Z',
+          sourceSet: ['bsc-rpc-fixture', 'flap-official-event-guide'],
+          modelVersion: 'flap-event-transaction-v1',
+          confidence: 0.99,
+          evidenceIds: ['ev_flap_event'],
+        },
+        evidence: [
+          {
+            id: 'ev_flap_event',
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:flap-event-transaction-v1',
+            locator: `flap-event-transaction:${bscTokenAddress}:${bscFlapCreationTransaction}`,
+            payloadHash: '5'.repeat(64),
+            observedAt: '2026-08-10T00:00:00.000Z',
+            blockOrSlot: '49900000',
+            finality: 'finalized',
+            summary: 'Flap transaction-local creation and configuration events normalized.',
+          },
+        ],
+      }),
+    });
+  });
   await page.route('**/api/v1/rv/flap-sell', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -325,6 +412,24 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(page.getByRole('heading', { name: 'Flap evidence ledger' })).toBeVisible();
   await expect(
     page.getByText('Flap launch mechanism normalized from versioned Portal state.'),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Flap creation / migration transaction' }),
+  ).toBeVisible();
+  await page.getByLabel('Creation or migration transaction hash').fill(bscFlapCreationTransaction);
+  await page.getByRole('button', { name: 'Inspect events' }).click();
+  await expect(page.locator('.event-panel .snapshot-strip')).toContainText(
+    'Classification Creation Configuration',
+  );
+  await expect(page.getByText('Fixture Token', { exact: true })).toBeVisible();
+  await expect(page.getByText('Official Default').first()).toBeVisible();
+  await expect(page.getByText('History coverage')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Flap transaction evidence ledger' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Flap transaction-local creation and configuration events normalized.'),
   ).toBeVisible();
 
   await page.getByLabel('Sell amount (atomic units)').fill('1000000000000000000');

@@ -4,6 +4,8 @@ import {
   api,
   type Capability,
   type EvidenceRecord,
+  type FlapConfigurationField,
+  type FlapEventTransactionResponse,
   type FlapInspectionResponse,
   type FlapSellQuoteResponse,
   type HealthResponse,
@@ -512,6 +514,184 @@ function EvidencePanel({
   );
 }
 
+function FlapEventTransactionPanel({ token }: { token: string }) {
+  const [transactionHash, setTransactionHash] = useState('');
+  const [result, setResult] = useState<FlapEventTransactionResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const validTransactionHash = /^0x[0-9a-fA-F]{64}$/.test(transactionHash);
+
+  async function inspectTransaction(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validTransactionHash) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(await api.flapEventTransaction(token, transactionHash));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Flap event inspection failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const configurationRows: Array<[string, FlapConfigurationField]> =
+    result?.configuration === null || result?.configuration === undefined
+      ? []
+      : [
+          ['Curve address', result.configuration.curveAddress],
+          ['Curve parameter', result.configuration.curveParameter],
+          ['Virtual quote reserve', result.configuration.virtualQuoteReserve],
+          ['Virtual base reserve', result.configuration.virtualBaseReserve],
+          ['Virtual liquidity squared', result.configuration.virtualLiquiditySquared],
+          ['DEX supply threshold', result.configuration.dexSupplyThreshold],
+          ['Quote token', result.configuration.quoteTokenAddress],
+          ['Migrator', result.configuration.migratorType],
+          ['Token version', result.configuration.tokenVersion],
+          ['Buy tax bps', result.configuration.buyTaxBps],
+          ['Sell tax bps', result.configuration.sellTaxBps],
+          ['DEX', result.configuration.dexId],
+          ['LP fee profile', result.configuration.lpFeeProfile],
+        ];
+  const creationRows: Array<[string, string]> =
+    result?.creation === null || result?.creation === undefined
+      ? []
+      : [
+          ['Creator', result.creation.creator],
+          ['Name', result.creation.name],
+          ['Symbol', result.creation.symbol],
+          ['Metadata URI', result.creation.metadataUri],
+          ['Nonce', result.creation.nonce],
+        ];
+
+  return (
+    <>
+      <section className="panel subject-panel quote-panel event-panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Exact receipt and Portal logs</span>
+            <h3>Flap creation / migration transaction</h3>
+          </div>
+          <span className="snapshot-badge">Transaction-local</span>
+        </div>
+        <form className="quote-form" onSubmit={(event) => void inspectTransaction(event)}>
+          <label htmlFor="flap-event-transaction">Creation or migration transaction hash</label>
+          <input
+            id="flap-event-transaction"
+            placeholder="0x…"
+            value={transactionHash}
+            onChange={(event) => setTransactionHash(event.target.value.trim())}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button
+            className="secondary-button"
+            type="submit"
+            disabled={busy || !validTransactionHash}
+          >
+            {busy ? 'Decoding receipt…' : 'Inspect events'}
+          </button>
+        </form>
+        <p className="quote-note">
+          This decodes a supplied transaction at its exact block. It does not claim complete launch
+          history until automatic chain-wide discovery has run.
+        </p>
+        {error === undefined ? null : (
+          <div className="alert alert-warning">
+            <strong>Event inspection unavailable</strong>
+            {error}
+          </div>
+        )}
+        {result === undefined ? null : (
+          <>
+            <div className="snapshot-strip">
+              <span>
+                <b>Classification</b> {titleCase(result.transactionKind)}
+              </span>
+              <span>
+                <b>Platform match</b> <KnowledgeDisplay data={result.platformMatch} />
+              </span>
+              <span>
+                <b>Events</b> {result.decodedEventNames.join(', ') || 'None supported'}
+              </span>
+              <span>
+                <b>Unrecognized Portal logs</b> {result.unrecognizedPortalLogCount}
+              </span>
+              <span>
+                <b>History coverage</b> {Math.round(result.metadata.historyCoverage * 100)}%
+              </span>
+            </div>
+            {creationRows.length === 0 ? null : (
+              <div className="fact-grid">
+                {creationRows.map(([label, value]) => (
+                  <div className="fact-row" key={label}>
+                    <span>{label}</span>
+                    <code>{shortId(value, 16)}</code>
+                  </div>
+                ))}
+              </div>
+            )}
+            {configurationRows.length === 0 ? null : (
+              <div className="fact-grid">
+                {configurationRows.map(([label, field]) => (
+                  <div className="fact-row" key={label}>
+                    <span>
+                      {label} <small>{titleCase(field.source)}</small>
+                    </span>
+                    <KnowledgeDisplay data={field.value} />
+                  </div>
+                ))}
+              </div>
+            )}
+            {result.migration === null ? null : (
+              <div className="fact-grid">
+                <div className="fact-row">
+                  <span>Launch pool</span>
+                  <KnowledgeDisplay
+                    data={
+                      result.migration.launchedToDex === null
+                        ? { state: 'unknown', reason: 'INSUFFICIENT_DATA' }
+                        : { state: 'known', value: result.migration.launchedToDex.pool }
+                    }
+                  />
+                </div>
+                <div className="fact-row">
+                  <span>Token amount</span>
+                  <KnowledgeDisplay
+                    data={
+                      result.migration.launchedToDex === null
+                        ? { state: 'unknown', reason: 'INSUFFICIENT_DATA' }
+                        : { state: 'known', value: result.migration.launchedToDex.tokenAmount }
+                    }
+                  />
+                </div>
+                <div className="fact-row">
+                  <span>Quote amount</span>
+                  <KnowledgeDisplay
+                    data={
+                      result.migration.launchedToDex === null
+                        ? { state: 'unknown', reason: 'INSUFFICIENT_DATA' }
+                        : { state: 'known', value: result.migration.launchedToDex.quoteAmount }
+                    }
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+      {result === undefined || result.evidence.length === 0 ? null : (
+        <EvidencePanel
+          evidence={result.evidence}
+          eyebrow="Receipt → Portal event → normalized fact"
+          title="Flap transaction evidence ledger"
+        />
+      )}
+    </>
+  );
+}
+
 function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse }) {
   const launch = inspection.launch;
   const [sellAmount, setSellAmount] = useState('');
@@ -607,6 +787,7 @@ function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse })
           </>
         )}
       </section>
+      <FlapEventTransactionPanel token={inspection.token} />
       {launch === null ? null : (
         <section className="panel subject-panel quote-panel">
           <div className="panel-header">

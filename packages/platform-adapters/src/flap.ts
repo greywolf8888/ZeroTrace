@@ -50,7 +50,7 @@ export const FLAP_BSC_MAINNET_DEPLOYMENT: FlapDeployment = Object.freeze({
 const TOKEN_STATUS_NAMES = ['INVALID', 'TRADABLE', 'IN_DUEL', 'KILLED', 'DEX', 'STAGED'] as const;
 export type FlapTokenStatus = (typeof TOKEN_STATUS_NAMES)[number];
 
-const TOKEN_VERSION_NAMES = [
+export const FLAP_TOKEN_VERSION_NAMES = [
   'TOKEN_LEGACY_MINT_NO_PERMIT',
   'TOKEN_LEGACY_MINT_NO_PERMIT_DUPLICATE',
   'TOKEN_V2_PERMIT',
@@ -60,7 +60,7 @@ const TOKEN_VERSION_NAMES = [
   'TOKEN_TAXED_V3',
   'TOKEN_V3_PERMIT',
 ] as const;
-export type FlapTokenVersion = (typeof TOKEN_VERSION_NAMES)[number];
+export type FlapTokenVersion = (typeof FLAP_TOKEN_VERSION_NAMES)[number];
 
 const ZERO_ADDRESS = `0x${'0'.repeat(40)}`;
 const WAD = 1_000_000_000_000_000_000n;
@@ -362,7 +362,7 @@ function normalizeState(
     circulatingSupply: uint(decoded.circulatingSupply, 'circulating supply').toString(),
     priceWad: uint(decoded.price, 'price').toString(),
     tokenVersionCode,
-    tokenVersion: enumKnowledge(tokenVersionCode, TOKEN_VERSION_NAMES, 'token version'),
+    tokenVersion: enumKnowledge(tokenVersionCode, FLAP_TOKEN_VERSION_NAMES, 'token version'),
     r: uint(decoded.r, 'curve r').toString(),
     h: uint(decoded.h, 'curve h').toString(),
     k: uint(decoded.k, 'curve k').toString(),

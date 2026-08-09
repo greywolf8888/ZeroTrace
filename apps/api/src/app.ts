@@ -12,7 +12,9 @@ import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
 import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
+  FLAP_EVENT_MODEL_VERSION,
   PLATFORM_REGISTRY,
+  inspectFlapEventTransaction,
   inspectFlapToken,
   quoteFlapSell,
 } from '@zerotrace/platform-adapters';
@@ -84,6 +86,18 @@ const LaunchInspectionQuerySchema = z.object({
     .string()
     .regex(/^(?:0|[1-9]\d*)$/)
     .optional(),
+});
+
+const FlapEventTransactionParamsSchema = LaunchInspectionParamsSchema.extend({
+  transactionHash: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{64}$/),
+});
+
+const FlapEventTransactionQuerySchema = z.object({
+  chainId: z.literal('eip155:56'),
+  platform: z.literal('flap').optional(),
 });
 
 const FlapSellQuoteRequestSchema = z
@@ -772,7 +786,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
           : 'BSC_PROVIDER_REQUIRED',
         detail:
-          'Versioned read-only Flap Portal V8Safe/V6/V5 decoding binds deployment metadata, bytecode, raw state, normalized launch fields, Snapshot, and Evidence. TokenCreated history, tax/vault internals, migration/LP control, and complete realizable value remain pending.',
+          'Versioned read-only Flap Portal V8Safe/V6/V5 decoding binds deployment metadata, bytecode, raw state, normalized launch fields, Snapshot, and Evidence. Transaction-local TokenCreated/configuration/migration decoding is available separately; automatic history discovery, tax/vault internals, migration/LP control analysis, and complete realizable value remain pending.',
+      },
+      {
+        id: 'flap-event-transaction',
+        status: runtime.evmAdapters.has(56)
+          ? 'IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
+          : 'BSC_PROVIDER_REQUIRED',
+        detail:
+          'A caller-supplied Flap transaction hash is decoded against the versioned Portal event interface at its exact block. Creation defaults remain source-tagged, unavailable curve internals remain Unknown, and migration facts carry receipt/log/derived Evidence. Chain-wide discovery remains pending.',
       },
       {
         id: 'flap-bsc-sell-preview',
@@ -1294,6 +1316,44 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           .code(404)
           .send(errorResponse(request, 'EVIDENCE_NOT_FOUND', 'Evidence was not found.', false));
       return { rootEvidenceId: id, nodes };
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/events/:transactionHash',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = FlapEventTransactionParamsSchema.parse(request.params);
+      FlapEventTransactionQuerySchema.parse(request.query);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        return reply.code(503).send({
+          platform: 'flap',
+          token: params.token,
+          transactionHash: params.transactionHash,
+          platformMatch: unavailableValue(
+            'PROVIDER_UNCONFIGURED',
+            'A BNB Smart Chain read-only provider is required.',
+          ),
+          transactionKind: null,
+          creation: null,
+          staged: null,
+          configuration: null,
+          migration: null,
+          decodedEventNames: [],
+          unrecognizedPortalLogCount: null,
+          metadata: emptyMetadata(FLAP_EVENT_MODEL_VERSION),
+          evidence: [],
+        });
+      }
+      return inspectFlapEventTransaction({
+        adapter,
+        token: params.token,
+        transactionHash: params.transactionHash,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      });
     },
   );
 

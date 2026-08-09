@@ -24,7 +24,7 @@ import {
   type ComparisonObservation,
 } from '@zerotrace/schemas';
 import { StorageError, type EvidenceRepository } from '@zerotrace/storage';
-import { encodeAbiParameters } from 'viem';
+import { encodeAbiParameters, toEventSelector } from 'viem';
 
 import { createApp } from '../../apps/api/src/app.js';
 import type { AppConfig } from '../../apps/api/src/config.js';
@@ -130,7 +130,11 @@ class FlapQuoteTransport implements JsonRpcTransport {
     return (await this.requestSourced<T>(method, params)).value;
   }
 
-  async requestSourced<T>(method: string): Promise<TransportObservation<T>> {
+  async requestSourced<T>(
+    method: string,
+    _params: readonly unknown[] = [],
+    _options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
     if (method === 'eth_getBlockByNumber') {
       return {
         value: {
@@ -149,6 +153,38 @@ class FlapQuoteTransport implements JsonRpcTransport {
       return { value: this.#callResults.shift() as T, endpointId: 'bsc-call' };
     }
     throw new Error(`Unexpected Flap quote fixture method ${method}`);
+  }
+}
+
+class FlapEventTransport implements JsonRpcTransport {
+  readonly endpointId = 'bsc-event-fixture';
+
+  constructor(readonly receiptValue: unknown) {}
+
+  async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+    return (await this.requestSourced<T>(method, params)).value;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    _params: readonly unknown[] = [],
+    _options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    if (method === 'eth_getTransactionReceipt') {
+      return { value: this.receiptValue as T, endpointId: 'bsc-receipt' };
+    }
+    if (method === 'eth_getBlockByNumber') {
+      return {
+        value: {
+          number: '0x10',
+          hash: `0x${'6'.repeat(64)}`,
+          parentHash: `0x${'5'.repeat(64)}`,
+          timestamp: '0x65',
+        } as T,
+        endpointId: 'bsc-anchor',
+      };
+    }
+    throw new Error(`Unexpected Flap event fixture method ${method}`);
   }
 }
 
@@ -232,6 +268,58 @@ const fixtureBitcoinTransactionId = 'c'.repeat(64);
 const fixtureSolanaSignature =
   '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
 const fixtureFlapToken = `0x${'a'.repeat(40)}`;
+const fixtureFlapEventTransactionHash = `0x${'7'.repeat(64)}`;
+
+function fixtureFlapCreationReceipt() {
+  const portal = '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0';
+  const data = encodeAbiParameters(
+    [
+      { type: 'uint256' },
+      { type: 'address' },
+      { type: 'uint256' },
+      { type: 'address' },
+      { type: 'string' },
+      { type: 'string' },
+      { type: 'string' },
+    ],
+    [
+      1_700_000_000n,
+      `0x${'c'.repeat(40)}`,
+      7n,
+      fixtureFlapToken,
+      'Fixture Token',
+      'FIX',
+      'ipfs://fixture',
+    ],
+  );
+  return {
+    transactionHash: fixtureFlapEventTransactionHash,
+    blockHash: `0x${'6'.repeat(64)}`,
+    blockNumber: '0x10',
+    transactionIndex: '0x1',
+    from: `0x${'c'.repeat(40)}`,
+    to: portal,
+    contractAddress: null,
+    cumulativeGasUsed: '0x100',
+    gasUsed: '0x80',
+    status: '0x1',
+    logs: [
+      {
+        address: portal,
+        blockHash: `0x${'6'.repeat(64)}`,
+        blockNumber: '0x10',
+        transactionHash: fixtureFlapEventTransactionHash,
+        transactionIndex: '0x1',
+        logIndex: '0x0',
+        data,
+        topics: [
+          toEventSelector('TokenCreated(uint256,address,uint256,address,string,string,string)'),
+        ],
+        removed: false,
+      },
+    ],
+  };
+}
 
 function fixtureFlapV8SafeResult() {
   return encodeAbiParameters(
@@ -1400,6 +1488,70 @@ describe('ZeroTrace API contract', () => {
     expect(drilldown.json().nodes).toHaveLength(5);
   });
 
+  it('decodes a caller-supplied Flap creation transaction with explicit default provenance', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new FlapEventTransport(fixtureFlapCreationReceipt()),
+      ),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/events/${fixtureFlapEventTransactionHash}?chainId=eip155:56&platform=flap`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      platform: 'flap',
+      token: fixtureFlapToken,
+      transactionHash: fixtureFlapEventTransactionHash,
+      platformMatch: { state: 'known', value: true },
+      transactionKind: 'CREATION_CONFIGURATION',
+      creation: {
+        creator: `0x${'c'.repeat(40)}`,
+        name: 'Fixture Token',
+        symbol: 'FIX',
+      },
+      configuration: {
+        curveAddress: {
+          value: { state: 'unknown', reason: 'NOT_QUERIED' },
+          source: 'OFFICIAL_DEFAULT',
+        },
+        curveParameter: {
+          value: { state: 'known', value: '16000000000000000000' },
+          source: 'OFFICIAL_DEFAULT',
+        },
+      },
+      metadata: {
+        snapshot: { chainId: 'eip155:56', blockNumber: '16' },
+        modelVersion: 'flap-event-transaction-v1',
+      },
+    });
+    expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'RECEIPT',
+      'LOG',
+      'PROVIDER_OBSERVATION',
+      'DERIVED_FEATURE',
+    ]);
+    const derivedId = response.json().evidence.at(-1).id;
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${derivedId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes).toHaveLength(4);
+  });
+
   it('returns a fixed-block Flap previewSell quote without inventing fee or impact fields', async () => {
     const runtime = runtimeWithAllLedgers();
     runtime.evmAdapters.set(
@@ -1578,6 +1730,16 @@ describe('ZeroTrace API contract', () => {
     expect(unavailableLaunch.json().platformMatch).toMatchObject({
       state: 'unavailable',
       reason: 'PROVIDER_UNCONFIGURED',
+    });
+    const unavailableFlapEvent = await degraded.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/events/${fixtureFlapEventTransactionHash}?chainId=eip155:56`,
+    });
+    expect(unavailableFlapEvent.statusCode).toBe(503);
+    expect(unavailableFlapEvent.json()).toMatchObject({
+      platformMatch: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
+      transactionKind: null,
+      evidence: [],
     });
     const unavailableFlapQuote = await degraded.inject({
       method: 'POST',

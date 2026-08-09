@@ -21,19 +21,20 @@ The initial API has no authentication and is suitable only for local/staging use
 
 ## Implemented intelligence endpoints
 
-| Method | Path                                 | Notes                                                            |
-| ------ | ------------------------------------ | ---------------------------------------------------------------- |
-| GET    | `/api/v1/search?q=...`               | local identifier classification; optional `ledger` and `chainId` |
-| GET    | `/api/v1/subjects/:ledger/:id`       | snapshot-pinned current-state read when provider exists          |
-| GET    | `/api/v1/ledger/:ledger/:type/:id`   | typed block, transaction, or Bitcoin outpoint query              |
-| GET    | `/api/v1/launches/EVM/:token`        | version-pinned Flap BSC current Portal-state inspection          |
-| POST   | `/api/v1/rv/flap-sell`               | fixed-block read-only Flap Portal `previewSell` quote            |
-| POST   | `/api/v1/data-quality/discrepancies` | typed error-budget and discrepancy audit                         |
-| GET    | `/api/v1/evidence/:id`               | Evidence node, source edges, and bound Snapshot                  |
-| GET    | `/api/v1/evidence/:id/drilldown`     | restart-safe derived/source Evidence traversal                   |
-| POST   | `/api/v1/entities/resolve`           | deterministic evidence-feature baseline                          |
-| POST   | `/api/v1/rv/constant-product`        | exact-integer pool exit quote                                    |
-| POST   | `/api/v1/scenarios/exit-race`        | seeded shared-pool exit ordering                                 |
+| Method | Path                                                  | Notes                                                            |
+| ------ | ----------------------------------------------------- | ---------------------------------------------------------------- |
+| GET    | `/api/v1/search?q=...`                                | local identifier classification; optional `ledger` and `chainId` |
+| GET    | `/api/v1/subjects/:ledger/:id`                        | snapshot-pinned current-state read when provider exists          |
+| GET    | `/api/v1/ledger/:ledger/:type/:id`                    | typed block, transaction, or Bitcoin outpoint query              |
+| GET    | `/api/v1/launches/EVM/:token`                         | version-pinned Flap BSC current Portal-state inspection          |
+| GET    | `/api/v1/launches/EVM/:token/events/:transactionHash` | exact-receipt Flap creation/configuration/migration decoding     |
+| POST   | `/api/v1/rv/flap-sell`                                | fixed-block read-only Flap Portal `previewSell` quote            |
+| POST   | `/api/v1/data-quality/discrepancies`                  | typed error-budget and discrepancy audit                         |
+| GET    | `/api/v1/evidence/:id`                                | Evidence node, source edges, and bound Snapshot                  |
+| GET    | `/api/v1/evidence/:id/drilldown`                      | restart-safe derived/source Evidence traversal                   |
+| POST   | `/api/v1/entities/resolve`                            | deterministic evidence-feature baseline                          |
+| POST   | `/api/v1/rv/constant-product`                         | exact-integer pool exit quote                                    |
+| POST   | `/api/v1/scenarios/exit-race`                         | seeded shared-pool exit ordering                                 |
 
 Current-state subject reads establish a ledger-specific anchor before reading the subject:
 
@@ -84,6 +85,20 @@ including current sell capacity and LP rights, remain typed Unknown.
 
 No token bytecode yields negative Evidence and `platformMatch=false`; it does not produce a
 plausible launch record. This endpoint performs no approval, signing, swap, or broadcast operation.
+
+`GET /api/v1/launches/EVM/:token/events/:transactionHash?chainId=eip155:56&platform=flap`
+accepts a caller-supplied creation, staging, or migration transaction hash. It validates the final
+receipt and every log position, recaptures the exact block/hash Snapshot, decodes only logs emitted
+by the versioned Portal, and returns receipt, log, documented-default, and derived Evidence.
+`TokenCreated` configuration fields identify their provenance as `EVENT`, `OFFICIAL_DEFAULT`, or
+`NOT_APPLICABLE`; a documented legacy curve type does not fabricate a curve address or V2 reserve
+parameters. Future enum values stay Unknown. `LaunchedToDEX` and
+`TokenPoolInfoUpdated` are returned as observed migration facts without inferring an absent
+counterpart.
+
+This endpoint has `historyCoverage=0`: it proves what the supplied transaction contains, not that
+the transaction is the token's only creation/configuration/migration event. Automatic log discovery
+and chain-wide lifecycle reconstruction remain incomplete.
 
 `POST /api/v1/rv/flap-sell` accepts `chainId=eip155:56`, `token`, unsigned-decimal atomic
 `inputQuantity`, optional `platform=flap`, and optional decimal `blockNumber`. The inspector and
@@ -172,9 +187,9 @@ restart; without it, capability and health output explicitly report process-loca
 
 This is deliberate contract preservation, not an implementation.
 
-The implemented Flap route above is the only current `/launches` exception. Other ledgers,
-platforms, historical event reconstruction, and launch queries remain unavailable rather than
-falling back to generic data.
+The implemented Flap current-state and supplied-event-transaction routes above are the only current
+`/launches` exceptions. Other ledgers, platforms, automatic historical event reconstruction, and
+launch queries remain unavailable rather than falling back to generic data.
 
 ## Knowledge values
 

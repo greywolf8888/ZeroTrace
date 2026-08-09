@@ -117,6 +117,8 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - scenario gating;
 - data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
 - typed Solana transaction rendering with Snapshot, Evidence, and humanized field names;
+- Flap fixed-block state, transaction-local creation/default provenance, sell preview, Unknown
+  preservation and Evidence rendering;
 - anchor-reconciliation status, common-position/operator-independence explanation, four configured
   chain targets, and process-local data-quality storage truth;
 - mobile viewport layout;

@@ -358,7 +358,15 @@ versioned read-only Portal calls at one numeric Snapshot block. Raw deployment, 
 observations are distinct Evidence nodes; the normalized launch record is a derived node linked to
 all of them. V6-to-V5 fallback occurs only for an explicit RPC method failure. Unknown enum values,
 unqueried rights/configuration and negative contract-code observations remain typed and cannot be
-converted into lifecycle, ownership or numeric facts. Event/configuration history, migration proof,
+converted into lifecycle, ownership or numeric facts.
+
+The transaction-local Flap event layer accepts an explicit transaction hash, validates its receipt
+against a recaptured block/hash Snapshot, and decodes official Portal creation, configuration,
+staging, launch and pool-update events. Raw receipts and logs are distinct Evidence nodes. Optional
+creation configuration is either event-sourced or explicitly bound to the versioned official
+default policy; missing legacy curve addresses/reserves remain Unknown. This layer deliberately
+reports zero history coverage because caller-supplied transaction decoding does not prove complete
+history. Automatic event discovery, cross-transaction lifecycle reconstruction, migration control,
 market reconstruction and sell capacity remain separate later stages.
 
 Flap realizable-value preview is a distinct provider-observation layer, not a replacement for the

@@ -755,6 +755,129 @@ export const LaunchMechanismSnapshotSchema = z.object({
 });
 export type LaunchMechanismSnapshot = z.infer<typeof LaunchMechanismSnapshotSchema>;
 
+export const EvmEventPositionSchema = z.object({
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  transactionIndex: UnsignedQuantityStringSchema,
+  logIndex: UnsignedQuantityStringSchema,
+});
+export type EvmEventPosition = z.infer<typeof EvmEventPositionSchema>;
+
+export const LaunchConfigurationSourceSchema = z.enum([
+  'EVENT',
+  'OFFICIAL_DEFAULT',
+  'NOT_APPLICABLE',
+]);
+
+export const LaunchConfigurationFieldSchema = z.object({
+  value: OptionalStringKnowledgeSchema,
+  source: LaunchConfigurationSourceSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type LaunchConfigurationField = z.infer<typeof LaunchConfigurationFieldSchema>;
+
+export const FlapCreationEventSchema = z.object({
+  timestampUnix: UnsignedQuantityStringSchema,
+  creator: z.string().regex(/^0x[0-9a-f]{40}$/),
+  nonce: UnsignedQuantityStringSchema,
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  name: z.string().max(1_024),
+  symbol: z.string().max(256),
+  metadataUri: z.string().max(4_096),
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapCreationEvent = z.infer<typeof FlapCreationEventSchema>;
+
+export const FlapStagedEventSchema = z.object({
+  timestampUnix: UnsignedQuantityStringSchema,
+  creator: z.string().regex(/^0x[0-9a-f]{40}$/),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapStagedEvent = z.infer<typeof FlapStagedEventSchema>;
+
+export const FlapExtensionConfigurationSchema = z.object({
+  extensionId: z.string().regex(/^0x[0-9a-f]{64}$/),
+  extensionAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
+  version: UnsignedQuantityStringSchema,
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapExtensionConfiguration = z.infer<typeof FlapExtensionConfigurationSchema>;
+
+export const FlapLaunchConfigurationSchema = z.object({
+  curveAddress: LaunchConfigurationFieldSchema,
+  curveParameter: LaunchConfigurationFieldSchema,
+  virtualQuoteReserve: LaunchConfigurationFieldSchema,
+  virtualBaseReserve: LaunchConfigurationFieldSchema,
+  virtualLiquiditySquared: LaunchConfigurationFieldSchema,
+  dexSupplyThreshold: LaunchConfigurationFieldSchema,
+  quoteTokenAddress: LaunchConfigurationFieldSchema,
+  migratorType: LaunchConfigurationFieldSchema,
+  tokenVersion: LaunchConfigurationFieldSchema,
+  buyTaxBps: LaunchConfigurationFieldSchema,
+  sellTaxBps: LaunchConfigurationFieldSchema,
+  dexId: LaunchConfigurationFieldSchema,
+  lpFeeProfile: LaunchConfigurationFieldSchema,
+  extensions: z.array(FlapExtensionConfigurationSchema),
+  rawConfigHash: Hash256Schema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapLaunchConfiguration = z.infer<typeof FlapLaunchConfigurationSchema>;
+
+export const FlapDexLaunchEventSchema = z.object({
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  pool: z.string().regex(/^0x[0-9a-f]{40}$/),
+  tokenAmount: UnsignedQuantityStringSchema,
+  quoteAmount: UnsignedQuantityStringSchema,
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const FlapPoolConfigurationEventSchema = z.object({
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  pool: z.string().regex(/^0x[0-9a-f]{40}$/),
+  fee: UnsignedQuantityStringSchema,
+  poolTypeCode: UnsignedQuantityStringSchema,
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const FlapMigrationEventSchema = z.object({
+  launchedToDex: FlapDexLaunchEventSchema.nullable(),
+  poolConfiguration: FlapPoolConfigurationEventSchema.nullable(),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapMigrationEvent = z.infer<typeof FlapMigrationEventSchema>;
+
+export const FlapEventTransactionKindSchema = z.enum([
+  'CREATION_CONFIGURATION',
+  'STAGED',
+  'MIGRATION',
+  'MIXED',
+  'UNRECOGNIZED',
+]);
+
+export const FlapEventTransactionSchema = z.object({
+  platform: z.literal('flap'),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  platformMatch: knowledgeValueSchema(z.boolean()),
+  transactionKind: FlapEventTransactionKindSchema,
+  creation: FlapCreationEventSchema.nullable(),
+  staged: FlapStagedEventSchema.nullable(),
+  configuration: FlapLaunchConfigurationSchema.nullable(),
+  migration: FlapMigrationEventSchema.nullable(),
+  decodedEventNames: z.array(z.string().min(1)),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+  metadata: AnalysisMetadataSchema,
+  evidence: z.array(EvidenceSchema).min(1),
+});
+export type FlapEventTransaction = z.infer<typeof FlapEventTransactionSchema>;
+
 export const RealizableValuePointSchema = z.object({
   inputQuantity: DecimalStringSchema,
   nominalValue: knowledgeValueSchema(DecimalStringSchema),

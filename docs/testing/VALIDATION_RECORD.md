@@ -494,19 +494,45 @@ This slice does not compare live independent providers and does not implement co
 probability calibration. Brier score and expected calibration error remain explicit FFT acceptance
 gates; the engine cannot convert missing labels or unverified source independence into a pass.
 
+### Flap transaction-local event slice
+
+The clean adapter now accepts a caller-supplied Flap transaction hash, validates the successful
+receipt and every log's block/hash/transaction/index placement, recaptures the exact block Snapshot,
+and decodes only versioned Portal events for the requested token. Raw receipt and log Evidence remain
+separate from the normalized transaction result. Known malformed or duplicate facts and replay-hash
+conflicts fail closed.
+
+Deterministic tests cover creation plus explicit curve/tax/DEX configuration, documented defaults,
+unknown legacy curve internals, future enum codes, migration launch/pool facts, unrelated Portal
+logs, duplicate creation events and inconsistent placement. API integration verifies persistent
+Evidence drilldown. The analyst UI accepts the transaction hash and displays value provenance,
+Unknown states, zero history coverage, and Evidence; the focused Chromium run passed on desktop and
+Pixel 7.
+
+This is not chain-wide history. The caller must supply the transaction, `historyCoverage` remains
+zero, and no named FFT or other real-chain event transaction has been accepted. Automatic Portal-log
+discovery, cross-transaction lifecycle reconstruction, market/RV linkage and entity calibration
+remain required before the registered FFT run.
+
+The complete local gate passed formatting, lint, typecheck, 233 unit tests, 27 API integration
+tests, production builds, license policy and a zero-vulnerability dependency audit. Coverage passed
+260 tests with 15 Docker-dependent durable tests explicitly skipped at 84.11% statements, 76.06%
+branches, 91.31% functions and 85.07% lines. All 10 Chromium desktop/mobile flows, CycloneDX SBOM,
+Compose-model parsing, diff checks and the credential scan passed.
+
 ## Automated verification
 
-| Command                  | Result                                                                                                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| local non-browser gates  | pass: format, lint, typecheck, 226 unit, 26 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
-| local `test:coverage`    | pass: 252 tests, 15 durable skips; 83.81% statements, 75.83% branches, 91.20% functions, 84.76% lines                                                              |
-| branch `test:coverage`   | pass: 266 tests; 86.80% statements, 78.69% branches, 95.38% functions, 87.75% lines                                                                                |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap Evidence/Unknown                                                                                |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                             |
-| `docker compose config`  | pass                                                                                                                                                               |
-| production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                 |
-| branch GitHub Actions CI | [pass on `7b41820`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339423268): 266 tests, 10 Chromium E2E, and five production container targets         |
-| branch CodeQL            | [pass on `7b41820`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339423250): JavaScript and TypeScript analysis                                        |
+| Command                  | Result                                                                                                                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| local non-browser gates  | pass: format, lint, typecheck, 233 unit, 27 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
+| local `test:coverage`    | pass: 260 tests, 15 durable skips; 84.11% statements, 76.06% branches, 91.31% functions, 85.07% lines                                                                       |
+| branch `test:coverage`   | latest completed pass: 267 tests; 86.83% statements, 78.72% branches, 95.38% functions, 87.78% lines                                                                        |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/default provenance/Evidence/Unknown                                                         |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |
+| `docker compose config`  | pass                                                                                                                                                                        |
+| production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                          |
+| branch GitHub Actions CI | [latest completed pass on `fd1327a`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339918653): 267 tests, 10 Chromium E2E, and five production container targets |
+| branch CodeQL            | [latest completed pass on `fd1327a`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339918663): JavaScript and TypeScript analysis                                |
 
 The latest complete durable run used GitHub Actions disposable PostgreSQL, ClickHouse, and MinIO
 services. All 41 integration tests passed and the workflow removed its named volumes. The local

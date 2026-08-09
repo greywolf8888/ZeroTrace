@@ -43,6 +43,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
   read-only launch-mechanism UI;
 - fixed-block Flap `previewSell` realizable-value observations with source-linked raw/derived
   Evidence, explicit blocked/unsupported states, and an atomic-unit analyst UI;
+- exact-receipt Flap `TokenCreated`, configuration, staging and migration event decoding with
+  source-tagged official defaults, future-enum Unknown states, replay Evidence, API, and responsive UI;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;
@@ -88,9 +90,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 ### Known limitations
 
 - finalized provider-shaped EVM execution/state, Bitcoin UTXO, and Solana execution/balance records
-  are persisted and strict raw ledger queries are exposed; Flap BSC current Portal state is decoded,
-  but semantic event history, configuration, migration, other launchpads, and market reconstruction
-  are not implemented;
+  are persisted and strict raw ledger queries are exposed; Flap BSC current Portal state and a
+  caller-supplied event transaction are decoded, but automatic semantic history discovery,
+  lifecycle reconstruction, other launchpads, and market reconstruction are not implemented;
 - common-position endpoint reconciliation and reorg detection are implemented, but continuous
   scheduling, automatic rollback/replay, and independently operated provider acceptance are not;
 - entity resolution is an uncalibrated baseline;

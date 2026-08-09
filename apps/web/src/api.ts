@@ -255,6 +255,59 @@ export interface FlapSellQuoteResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface FlapConfigurationField {
+  value: KnowledgeValue<string>;
+  source: 'EVENT' | 'OFFICIAL_DEFAULT' | 'NOT_APPLICABLE';
+  evidenceIds: string[];
+}
+
+export interface FlapEventTransactionResponse {
+  platform: 'flap';
+  token: string;
+  transactionHash: string;
+  platformMatch: KnowledgeValue<boolean>;
+  transactionKind: 'CREATION_CONFIGURATION' | 'STAGED' | 'MIGRATION' | 'MIXED' | 'UNRECOGNIZED';
+  creation: {
+    timestampUnix: string;
+    creator: string;
+    nonce: string;
+    token: string;
+    name: string;
+    symbol: string;
+    metadataUri: string;
+  } | null;
+  staged: { timestampUnix: string; creator: string; token: string } | null;
+  configuration: {
+    curveAddress: FlapConfigurationField;
+    curveParameter: FlapConfigurationField;
+    virtualQuoteReserve: FlapConfigurationField;
+    virtualBaseReserve: FlapConfigurationField;
+    virtualLiquiditySquared: FlapConfigurationField;
+    dexSupplyThreshold: FlapConfigurationField;
+    quoteTokenAddress: FlapConfigurationField;
+    migratorType: FlapConfigurationField;
+    tokenVersion: FlapConfigurationField;
+    buyTaxBps: FlapConfigurationField;
+    sellTaxBps: FlapConfigurationField;
+    dexId: FlapConfigurationField;
+    lpFeeProfile: FlapConfigurationField;
+    extensions: unknown[];
+    rawConfigHash: string;
+  } | null;
+  migration: {
+    launchedToDex: {
+      pool: string;
+      tokenAmount: string;
+      quoteAmount: string;
+    } | null;
+    poolConfiguration: { pool: string; fee: string; poolTypeCode: string } | null;
+  } | null;
+  decodedEventNames: string[];
+  unrecognizedPortalLogCount: number;
+  metadata: AnalysisMetadata;
+  evidence: EvidenceRecord[];
+}
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -360,6 +413,17 @@ export const api = {
         blockNumber,
       }),
     }),
+  flapEventTransaction: (token: string, transactionHash: string) => {
+    const parameters = new URLSearchParams({ chainId: 'eip155:56', platform: 'flap' });
+    return requestJson<FlapEventTransactionResponse>(
+      '/api/v1/launches/EVM/' +
+        encodeURIComponent(token) +
+        '/events/' +
+        encodeURIComponent(transactionHash) +
+        '?' +
+        parameters.toString(),
+    );
+  },
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',
