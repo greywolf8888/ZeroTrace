@@ -1,4 +1,4 @@
-FROM node:24.11.1-alpine AS build
+FROM node:26.7.0-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json tsconfig.json tsconfig.base.json tsconfig.packages.json ./
@@ -19,7 +19,7 @@ COPY packages ./packages
 RUN npm run build
 RUN npm prune --omit=dev --no-audit --no-fund
 
-FROM node:24.11.1-alpine AS api
+FROM node:26.7.0-alpine AS api
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
