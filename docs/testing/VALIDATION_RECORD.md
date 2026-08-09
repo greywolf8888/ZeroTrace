@@ -475,8 +475,13 @@ The repository-level local run passed 225 unit tests and 26 API integration test
 passed 251 tests and explicitly skipped 15 opt-in durable-store tests because the local Docker engine
 was unavailable; coverage was 83.79% statements, 75.80% branches, 91.20% functions, and 84.73%
 lines. Ten Chromium desktop/mobile flows, formatting, lint, typecheck, build, license, vulnerability,
-SBOM and Compose-model gates passed. No dependency was added. Remote durable-store and container
-acceptance for this discrepancy batch remains pending until its immutable commit is pushed.
+SBOM and Compose-model gates passed. No dependency was added.
+
+GitHub Actions then passed all 266 tests, including all 41 API/durable integration tests against
+disposable initialized PostgreSQL, ClickHouse, and MinIO. Remote coverage was 86.80% statements,
+78.69% branches, 95.38% functions, and 87.75% lines. Ten Chromium flows, dependency/license/SBOM
+and Compose gates, all five production container targets, and CodeQL passed on the same immutable
+code commit.
 
 This slice does not compare live independent providers and does not implement corpus-level entity
 probability calibration. Brier score and expected calibration error remain explicit FFT acceptance
@@ -488,16 +493,16 @@ gates; the engine cannot convert missing labels or unverified source independenc
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | local non-browser gates  | pass: format, lint, typecheck, 225 unit, 26 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
 | local `test:coverage`    | pass: 251 tests, 15 durable skips; 83.79% statements, 75.80% branches, 91.20% functions, 84.73% lines                                                              |
-| branch `test:coverage`   | pass on prior quote commit: 253 tests; 86.67% statements, 78.11% branches, 95.18% functions, 87.61% lines                                                          |
+| branch `test:coverage`   | pass: 266 tests; 86.80% statements, 78.69% branches, 95.38% functions, 87.75% lines                                                                                |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap Evidence/Unknown                                                                                |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                             |
 | `docker compose config`  | pass                                                                                                                                                               |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                 |
-| branch GitHub Actions CI | [pass on `53131cc`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31338076164): 253 tests, 10 Chromium E2E, and five production container targets         |
-| branch CodeQL            | [pass on `53131cc`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31338076179): JavaScript and TypeScript analysis                                        |
+| branch GitHub Actions CI | [pass on `7b41820`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339423268): 266 tests, 10 Chromium E2E, and five production container targets         |
+| branch CodeQL            | [pass on `7b41820`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339423250): JavaScript and TypeScript analysis                                        |
 
 The latest complete durable run used GitHub Actions disposable PostgreSQL, ClickHouse, and MinIO
-services. All 39 integration tests passed and the workflow removed its named volumes. The local
+services. All 41 integration tests passed and the workflow removed its named volumes. The local
 Docker engine limitation remains an environment constraint, not a claimed failure or pass.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
