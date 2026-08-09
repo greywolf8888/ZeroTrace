@@ -74,10 +74,10 @@ read-only adapter. An optional canonical-hex `blockNumber` pins replay to a hist
 otherwise the adapter captures its configured Snapshot anchor and converts it to a numeric block
 tag before any bytecode or `eth_call` read.
 
-The inspector verifies Portal and token bytecode, attempts the officially documented BSC
-`getTokenV6` interface, and falls back to documented `getTokenV5` only when the RPC reports that the
-newer method is unavailable. A malformed successful response is rejected rather than reinterpreted
-as another version. Returned fields include deployment/interface revision, lifecycle, quote and
+The inspector verifies Portal and token bytecode, attempts the officially recommended BSC
+`getTokenV8Safe` interface, and falls back through V6/V5 only when the RPC reports that a newer
+method is unavailable. A malformed successful response is rejected rather than reinterpreted as
+another version. Returned fields include deployment/interface revision, lifecycle, quote and
 virtual reserves, circulating/remaining supply, graduation threshold, progress, tax state, pool,
 Snapshot, coverage, confidence, and source-linked Evidence. Fields not exposed by that interface,
 including current sell capacity and LP rights, remain typed Unknown.

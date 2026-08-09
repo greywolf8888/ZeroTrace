@@ -55,7 +55,8 @@ The current foundation includes:
   reads;
 - typed block, transaction, and Bitcoin outpoint queries that bind confirmed records to exact
   Snapshots, bind pending/mempool observations to captured heads, and retain replayable Evidence;
-- version-pinned Flap BSC Portal inspection (`getTokenV6` with documented `getTokenV5` fallback)
+- version-pinned Flap BSC Portal inspection (forward-compatible `getTokenV8Safe` with explicit
+  V6/V5 fallbacks)
   that checks Portal/token bytecode at one fixed block and preserves unsupported or unqueried fields
   as typed Unknown;
 - fixed-block Flap `previewSell` quotes whose provider-returned atomic proceeds and derivation

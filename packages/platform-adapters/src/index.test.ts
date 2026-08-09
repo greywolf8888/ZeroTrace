@@ -274,17 +274,17 @@ describe('platform registry', () => {
 });
 
 describe('Flap read-only inspection', () => {
-  it('normalizes a BSC V6 token into an Evidence-backed mechanism Snapshot', async () => {
-    const fixture = flapFixture([encodeFlapV6()]);
+  it('normalizes the current BSC V8Safe token state into an Evidence-backed mechanism Snapshot', async () => {
+    const fixture = flapFixture([encodeFlapV8Safe()]);
     const result = await fixture.inspect();
 
     expect(result.platformMatch).toEqual({ state: 'known', value: true });
     expect(result.state).toMatchObject({
-      inspectionMethod: 'getTokenV6',
+      inspectionMethod: 'getTokenV8Safe',
       status: { state: 'known', value: 'TRADABLE' },
-      tokenVersion: { state: 'known', value: 'TOKEN_TAXED_V2' },
-      buyTaxBps: { state: 'known', value: '500' },
-      sellTaxBps: { state: 'known', value: '500' },
+      tokenVersion: { state: 'known', value: 'TOKEN_TAXED_V3' },
+      buyTaxBps: { state: 'known', value: '300' },
+      sellTaxBps: { state: 'known', value: '700' },
     });
     expect(result.launch).toMatchObject({
       platform: 'flap',
@@ -296,7 +296,7 @@ describe('Flap read-only inspection', () => {
       circulatingSupply: { state: 'known', value: '500' },
       remainingSupply: { state: 'known', value: '500' },
       progress: { state: 'known', value: '0.5' },
-      taxModel: { state: 'known', value: 'FLAP_TAX_V2' },
+      taxModel: { state: 'known', value: 'FLAP_TAX_V3' },
       currentSellCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
     });
     expect(result.evidence.map((item) => item.kind)).toEqual([
@@ -313,8 +313,27 @@ describe('Flap read-only inspection', () => {
     expect(fixture.transport.calls.at(-1)?.params[1]).toBe('0x10');
   });
 
-  it('falls back from an unavailable V6 method to V5 without inventing tax or pool fields', async () => {
+  it('falls back from an unavailable V8Safe method to V6 with symmetric tax semantics', async () => {
     const fixture = flapFixture([
+      new ProviderError('RPC_ERROR', 'method unavailable'),
+      encodeFlapV6(),
+    ]);
+    const result = await fixture.inspect();
+
+    expect(result.state).toMatchObject({
+      inspectionMethod: 'getTokenV6',
+      tokenVersion: { state: 'known', value: 'TOKEN_TAXED_V2' },
+      buyTaxBps: { state: 'known', value: '500' },
+      sellTaxBps: { state: 'known', value: '500' },
+      lpFeeProfile: { state: 'unknown', reason: 'NOT_QUERIED' },
+      dexId: { state: 'unknown', reason: 'NOT_QUERIED' },
+    });
+    expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(2);
+  });
+
+  it('falls back from unavailable V8Safe and V6 methods to V5 without inventing fields', async () => {
+    const fixture = flapFixture([
+      new ProviderError('RPC_ERROR', 'method unavailable'),
       new ProviderError('RPC_ERROR', 'method unavailable'),
       encodeFlapV5(),
     ]);
@@ -327,7 +346,7 @@ describe('Flap read-only inspection', () => {
       pool: { state: 'unknown', reason: 'NOT_QUERIED' },
     });
     expect(result.launch?.progress).toEqual({ state: 'known', value: '0.5' });
-    expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(2);
+    expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(3);
   });
 
   it('does not reinterpret a retryable provider RPC failure as an older interface', async () => {
@@ -384,8 +403,8 @@ describe('Flap read-only inspection', () => {
     expect(transport.calls.some((call) => call.method === 'eth_call')).toBe(false);
   });
 
-  it('rejects malformed V6 progress instead of clamping it to a plausible value', async () => {
-    const fixture = flapFixture([encodeFlapV6({ progress: 1_000_000_000_000_000_001n })]);
+  it('rejects malformed V8Safe progress instead of clamping it to a plausible value', async () => {
+    const fixture = flapFixture([encodeFlapV8Safe({ progress: 1_000_000_000_000_000_001n })]);
     await expect(fixture.inspect()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 });
@@ -393,7 +412,7 @@ describe('Flap read-only inspection', () => {
 describe('Flap read-only sell preview', () => {
   it('preserves the exact Portal preview output with source-linked Evidence', async () => {
     const fixture = flapFixture([
-      encodeFlapV6(),
+      encodeFlapV8Safe(),
       encodeAbiParameters([{ type: 'uint256' }], [42n]),
     ]);
     const result = await fixture.quote('100');
@@ -430,7 +449,10 @@ describe('Flap read-only sell preview', () => {
   });
 
   it('keeps an exact zero known only when previewSell returns zero', async () => {
-    const fixture = flapFixture([encodeFlapV6(), encodeAbiParameters([{ type: 'uint256' }], [0n])]);
+    const fixture = flapFixture([
+      encodeFlapV8Safe(),
+      encodeAbiParameters([{ type: 'uint256' }], [0n]),
+    ]);
 
     const result = await fixture.quote('1');
     expect(result.quote.realizableValue).toEqual({ state: 'known', value: '0' });
@@ -440,7 +462,7 @@ describe('Flap read-only sell preview', () => {
   });
 
   it('reports a buy-only Portal status as execution-blocked without calling previewSell', async () => {
-    const fixture = flapFixture([encodeFlapV6({ status: 2 })]);
+    const fixture = flapFixture([encodeFlapV8Safe({ status: 2 })]);
 
     const result = await fixture.quote('100');
     expect(result.quote.realizableValue).toMatchObject({
@@ -452,7 +474,7 @@ describe('Flap read-only sell preview', () => {
   });
 
   it('does not call previewSell when input exceeds evidenced circulating supply', async () => {
-    const fixture = flapFixture([encodeFlapV6()]);
+    const fixture = flapFixture([encodeFlapV8Safe()]);
 
     const result = await fixture.quote('501');
     expect(result.quote.realizableValue).toMatchObject({

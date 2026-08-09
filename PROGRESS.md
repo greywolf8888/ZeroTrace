@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                               |
 | Production acceptance            | **No**                                                                                   |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                           |
-| Unit tests                       | **225 passing across 23 files**                                                          |
+| Unit tests                       | **226 passing across 23 files**                                                          |
 | Integration tests                | **26 local passing; all 41 integration tests pass in CI**                                |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                             |
 | Remote CI                        | **Pass on immutable development commit `7b41820`; protected main `3372a5a`**             |
-| Coverage                         | **Current local: 83.79% statements / 75.80% branches / 91.20% functions / 84.73% lines** |
+| Coverage                         | **Current local: 83.81% statements / 75.83% branches / 91.20% functions / 84.76% lines** |
 | Real-chain validation            | Four-chain anchor reads, BSC endpoint agreement/continuity, and raw ingestion passed     |
 | Durable evidence/history         | Raw execution/state plus anchor/alert provenance wired; semantic history pending         |
 
@@ -43,7 +43,7 @@ The only allowed status vocabulary in this ledger is:
 | Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                   |
 | Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; independent real-source reconciliation and entity calibration remain      |
 | Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline engine only; calibration and temporal graph are absent                                                   |
-| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap BSC fixed-block V6/V5 Portal state works; history, migration, other platforms and real-chain validation remain            |
+| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap BSC fixed-block V8Safe/V6/V5 state works; history, migration, other platforms and real-chain validation remain            |
 | Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels and Flap Portal preview work; DEX routes, fee/impact decomposition, gas and capacity remain |
 | Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                       |
 | Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger results, Evidence and anchor Data Health work; terminal investigation is absent                                   |
@@ -180,9 +180,9 @@ The only allowed status vocabulary in this ledger is:
 
 ### Flap BSC inspection foundation
 
-- official BSC Portal v5.8.6 deployment and inspected interface revision are explicit source
+- official BSC Portal v5.14.16 deployment and inspected interface revision are explicit source
   observations rather than silent constants;
-- fixed-block Portal/token bytecode reads and versioned `getTokenV6`/`getTokenV5` calls retain raw
+- fixed-block Portal/token bytecode reads and versioned `getTokenV8Safe`/V6/V5 calls retain raw
   Evidence and produce one source-linked derived launch Snapshot;
 - lifecycle, reserves, curve parameters, supply/progress, quote asset, tax and pool fields are
   normalized without converting future enums or unqueried configuration/rights into facts;
@@ -302,7 +302,7 @@ The only allowed status vocabulary in this ledger is:
 | Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Height/hash/previous-hash public Esplora read passed; Core reconciliation pending                                                                  |
 | Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                     |
 | Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Pending                                                                                                                                            |
-| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | Flap BSC current V6/V5 Portal-state slice passes deterministic/unit/browser tests; named real-chain, event/migration and other platforms pending   |
+| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | Flap BSC current V8Safe/V6/V5 state slice passes deterministic/unit/browser tests; named real-chain, event/migration and other platforms pending   |
 | Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Typed discrepancy core exists; event/history, market routes, entity calibration and complete RV still gate any product conclusion                  |
 | RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels plus Flap fixed-block Portal preview pass tests; independent quotes, DEX routes, fee/impact/gas/capacity and history pending |
 | Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic disagreement/reorg tests and live common-position BSC continuity passed; forced real reorg/outage and independent operators pending  |
@@ -320,10 +320,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                             | Scope                                                                                                                         |
 | ------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                      | locked npm install in production container; all packages/API/web                                                              |
-| Unit tests                     | 225 pass                                  | 23 files across schemas, adapters, data quality, ingestion, storage, worker and API runtime                                   |
+| Unit tests                     | 226 pass                                  | 23 files across schemas, adapters, data quality, ingestion, storage, worker and API runtime                                   |
 | Integration tests              | 26 local pass; 41 CI pass                 | all API and durable PostgreSQL, ClickHouse, and object-storage integration tests pass in CI; local Docker remains unavailable |
 | Restart regression             | Pass                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                       |
-| Coverage gate                  | Pass                                      | current local: 83.79% statements, 75.80% branches, 91.20% functions, 84.73% lines on 251 tests; 15 durable tests skipped      |
+| Coverage gate                  | Pass                                      | current local: 83.81% statements, 75.83% branches, 91.20% functions, 84.76% lines on 252 tests; 15 durable tests skipped      |
 | Chromium E2E                   | 10 pass                                   | five flows each on desktop and Pixel 7, including Flap Evidence/Unknown rendering                                             |
 | Formatting / ESLint / types    | Pass                                      | full repository                                                                                                               |
 | Dependency vulnerability audit | Pass                                      | 0 vulnerabilities across the complete npm dependency graph                                                                    |

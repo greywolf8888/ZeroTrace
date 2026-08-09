@@ -40,11 +40,11 @@ export const FLAP_BSC_MAINNET_DEPLOYMENT: FlapDeployment = Object.freeze({
   chainId: 'eip155:56',
   portal: '0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0',
   vaultPortal: '0x90497450f2a706f1951b5bdda52B4E5d16f34C06',
-  documentedVersion: 'v5.8.6',
+  documentedVersion: 'v5.14.16',
   registryObservedAt: '2026-08-10T00:00:00.000Z',
   officialSource: 'https://docs.flap.sh/flap/developers/deployed-contract-addresses',
   sourceRevision: FLAP_INTERFACE_SOURCE_REVISION,
-  inspectionMethods: ['getTokenV6', 'getTokenV5'] as const,
+  inspectionMethods: ['getTokenV8Safe', 'getTokenV6', 'getTokenV5'] as const,
 });
 
 const TOKEN_STATUS_NAMES = ['INVALID', 'TRADABLE', 'IN_DUEL', 'KILLED', 'DEX', 'STAGED'] as const;

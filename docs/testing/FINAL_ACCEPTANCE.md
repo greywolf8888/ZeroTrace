@@ -64,7 +64,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [ ] Calibrated entity-resolution model and labeled evaluation corpus
 - [ ] Controller/control-right extraction across terminal scope
 - [ ] Versioned launchpad and market lifecycle adapters
-  - [x] Deterministic Flap BSC fixed-block Portal V6/V5 inspection, negative Evidence, API and UI
+  - [x] Deterministic Flap BSC fixed-block Portal V8Safe/V6/V5 inspection, negative Evidence, API and UI
   - [ ] Flap event/configuration/migration history, named real-chain fixture, and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels

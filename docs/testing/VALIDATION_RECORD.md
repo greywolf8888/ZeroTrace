@@ -437,10 +437,17 @@ numeric error denominators.
 ### Deterministic Flap Portal inspection slice
 
 The repository now contains a clean read-only Flap BSC inspector bound to the officially documented
-Portal v5.8.6 deployment and an explicit official interface revision. At one fixed Snapshot block it
-checks Portal/token bytecode, decodes V6 with an RPC-error-only V5 fallback, rejects malformed
-successful output, preserves future enum codes as Unknown, and source-links the normalized launch
-Evidence to deployment, bytecode and call observations. No-code input produces negative Evidence.
+Portal v5.14.16 deployment and an explicit official interface revision. At one fixed Snapshot block
+it checks Portal/token bytecode, decodes V8Safe with RPC-error-only V6/V5 fallbacks, rejects
+malformed successful output, preserves future enum codes as Unknown, and source-links the normalized
+launch Evidence to deployment, bytecode and call observations. No-code input produces negative
+Evidence.
+
+The official registry and inspection guide were re-read on 2026-08-10 after they advanced the same
+BSC Portal address from the previously recorded v5.8.6 to v5.14.16. The production deployment now
+prefers forward-compatible `getTokenV8Safe` and falls back through V6/V5 only for explicit
+non-retryable RPC method errors. Deterministic tests cover current asymmetric taxes, V8-to-V6 and
+V8/V6-to-V5 fallback, future enum codes, and malformed-success rejection.
 
 Local verification passed 210 unit tests and 23 API integration tests; 15 durable-store tests were
 explicitly skipped because local Docker Desktop remained unavailable. The Windows-owned browser run
@@ -491,8 +498,8 @@ gates; the engine cannot convert missing labels or unverified source independenc
 
 | Command                  | Result                                                                                                                                                             |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| local non-browser gates  | pass: format, lint, typecheck, 225 unit, 26 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
-| local `test:coverage`    | pass: 251 tests, 15 durable skips; 83.79% statements, 75.80% branches, 91.20% functions, 84.73% lines                                                              |
+| local non-browser gates  | pass: format, lint, typecheck, 226 unit, 26 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
+| local `test:coverage`    | pass: 252 tests, 15 durable skips; 83.81% statements, 75.83% branches, 91.20% functions, 84.76% lines                                                              |
 | branch `test:coverage`   | pass: 266 tests; 86.80% statements, 78.69% branches, 95.38% functions, 87.75% lines                                                                                |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap Evidence/Unknown                                                                                |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                             |

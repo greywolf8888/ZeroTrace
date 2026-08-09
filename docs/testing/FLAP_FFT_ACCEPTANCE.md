@@ -32,7 +32,7 @@ hashes and decoded Evidence at that Snapshot. It must use:
 2. the deployed Flap Portal discovered from the official
    [deployment registry](https://docs.flap.sh/flap/developers/deployed-contract-addresses);
 3. the version-appropriate Portal inspection result, preferring the documented
-   [`getTokenV5`/BSC `getTokenV6` interface](https://docs.flap.sh/flap/developers/inspect-a-token);
+   [BSC `getTokenV8Safe` with explicit legacy fallbacks](https://docs.flap.sh/flap/developers/wallet-and-terminal-and-bot-developers/inspect-a-token);
 4. indexed `TokenCreated` plus optional same-transaction configuration events described by the
    official [event indexing guide](https://docs.flap.sh/flap/developers/wallet-and-terminal-and-bot-developers/index-token-created-events);
 5. token bytecode, supply/balance state, holders, authorities/control rights, pool/reserve state,

@@ -233,7 +233,7 @@ const fixtureSolanaSignature =
   '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
 const fixtureFlapToken = `0x${'a'.repeat(40)}`;
 
-function fixtureFlapV6Result() {
+function fixtureFlapV8SafeResult() {
   return encodeAbiParameters(
     [
       {
@@ -251,9 +251,12 @@ function fixtureFlapV6Result() {
           { name: 'quoteTokenAddress', type: 'address' },
           { name: 'nativeToQuoteSwapEnabled', type: 'bool' },
           { name: 'extensionID', type: 'bytes32' },
-          { name: 'taxRate', type: 'uint256' },
+          { name: 'buyTaxRate', type: 'uint256' },
+          { name: 'sellTaxRate', type: 'uint256' },
           { name: 'pool', type: 'address' },
           { name: 'progress', type: 'uint256' },
+          { name: 'lpFeeProfile', type: 'uint8' },
+          { name: 'dexId', type: 'uint8' },
         ],
       },
     ],
@@ -263,7 +266,7 @@ function fixtureFlapV6Result() {
         reserve: 1_000n,
         circulatingSupply: 750n,
         price: 2_000n,
-        tokenVersion: 5,
+        tokenVersion: 6,
         r: 100n,
         h: 200n,
         k: 300n,
@@ -271,9 +274,12 @@ function fixtureFlapV6Result() {
         quoteTokenAddress: `0x${'0'.repeat(40)}`,
         nativeToQuoteSwapEnabled: true,
         extensionID: `0x${'0'.repeat(64)}`,
-        taxRate: 500n,
+        buyTaxRate: 300n,
+        sellTaxRate: 700n,
         pool: `0x${'0'.repeat(40)}`,
         progress: 750_000_000_000_000_000n,
+        lpFeeProfile: 0,
+        dexId: 0,
       },
     ],
   );
@@ -1337,7 +1343,7 @@ describe('ZeroTrace API contract', () => {
               timestamp: '0x65',
             },
             eth_getCode: '0x6000',
-            eth_call: fixtureFlapV6Result(),
+            eth_call: fixtureFlapV8SafeResult(),
           },
           {
             eth_getBlockByNumber: 'bsc-anchor',
@@ -1361,16 +1367,16 @@ describe('ZeroTrace API contract', () => {
       token: fixtureFlapToken,
       platformMatch: { state: 'known', value: true },
       state: {
-        inspectionMethod: 'getTokenV6',
+        inspectionMethod: 'getTokenV8Safe',
         status: { state: 'known', value: 'TRADABLE' },
-        tokenVersion: { state: 'known', value: 'TOKEN_TAXED_V2' },
+        tokenVersion: { state: 'known', value: 'TOKEN_TAXED_V3' },
       },
       launch: {
         lifecycle: 'PRIMARY_MARKET',
         circulatingSupply: { state: 'known', value: '750' },
         remainingSupply: { state: 'known', value: '250' },
         progress: { state: 'known', value: '0.75' },
-        taxModel: { state: 'known', value: 'FLAP_TAX_V2' },
+        taxModel: { state: 'known', value: 'FLAP_TAX_V3' },
         currentSellCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
       },
       metadata: {
@@ -1406,7 +1412,7 @@ describe('ZeroTrace API contract', () => {
           snapshotBlockTag: 'finalized',
         },
         new FlapQuoteTransport([
-          fixtureFlapV6Result(),
+          fixtureFlapV8SafeResult(),
           encodeAbiParameters([{ type: 'uint256' }], [250n]),
         ]),
       ),

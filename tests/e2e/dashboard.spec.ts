@@ -185,13 +185,13 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
         token: bscTokenAddress,
         deployment: {
           portal: '0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0',
-          documentedVersion: '5.8.6',
+          documentedVersion: 'v5.14.16',
           sourceRevision: 'flap-sh/FlapVaultExample@0a6ad1b',
         },
         platformMatch: { state: 'known', value: true },
         launch: {
           platform: 'flap',
-          platformVersion: { state: 'known', value: '5.8.6' },
+          platformVersion: { state: 'known', value: 'v5.14.16' },
           deploymentId: { state: 'known', value: 'eip155:56:portal' },
           factoryOrProgram: {
             state: 'known',
@@ -219,7 +219,7 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
           lpLocked: { state: 'unknown', reason: 'NOT_QUERIED' },
           lpBurned: { state: 'unknown', reason: 'NOT_QUERIED' },
           sourceBlockOrSlot: '50000000',
-          sourceVersion: 'flap:getTokenV6:flap-sh/FlapVaultExample@0a6ad1b',
+          sourceVersion: 'flap:getTokenV8Safe:flap-sh/FlapVaultExample@0a6ad1b',
           evidenceIds: ['ev_flap_derived'],
         },
         metadata: {
@@ -236,7 +236,7 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
           simulationCoverage: 0,
           freshness: '2026-08-10T00:00:00.000Z',
           sourceSet: ['flap-official-docs', 'bsc-rpc-fixture'],
-          modelVersion: 'flap-inspector-getTokenV6-v0.1.0',
+          modelVersion: 'flap-inspector-getTokenV8Safe-v0.1.0',
           confidence: 0.95,
           evidenceIds: ['ev_flap_derived'],
         },
