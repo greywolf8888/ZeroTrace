@@ -308,6 +308,32 @@ export interface FlapEventTransactionResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface FlapEventHistoryResponse {
+  platform: 'flap';
+  token: string;
+  requestedRange: {
+    fromBlock: string;
+    toBlock: string;
+    chunkSize: number;
+    chunkCount: number;
+  };
+  requestedRangeCoverage: number;
+  lifetimeCoverage: KnowledgeValue<boolean>;
+  chronology: Array<{
+    transactionHash: string;
+    blockNumber: string;
+    blockHash: string;
+    transactionIndex: string;
+    transactionKind: FlapEventTransactionResponse['transactionKind'];
+    decodedEventNames: string[];
+    evidenceIds: string[];
+  }>;
+  transactions: FlapEventTransactionResponse[];
+  unrecognizedPortalLogCount: number;
+  metadata: AnalysisMetadata;
+  evidence: EvidenceRecord[];
+}
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -422,6 +448,17 @@ export const api = {
         encodeURIComponent(transactionHash) +
         '?' +
         parameters.toString(),
+    );
+  },
+  flapEventHistory: (token: string, fromBlock: string, toBlock: string) => {
+    const parameters = new URLSearchParams({
+      chainId: 'eip155:56',
+      platform: 'flap',
+      fromBlock,
+      toBlock,
+    });
+    return requestJson<FlapEventHistoryResponse>(
+      '/api/v1/launches/EVM/' + encodeURIComponent(token) + '/history?' + parameters.toString(),
     );
   },
   exitRace: (payload: unknown) =>

@@ -1,4 +1,4 @@
-import { ProviderError, type EvmLedgerAdapter } from '@zerotrace/chain-adapters';
+import { ProviderError, type EvmLedgerAdapter, type EvmLogRecord } from '@zerotrace/chain-adapters';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import {
   AnalysisMetadataSchema,
@@ -191,7 +191,7 @@ const FLAP_EVENT_ABI = [
   },
 ] as const;
 
-const SUPPORTED_EVENT_TOPICS = new Set([
+export const FLAP_EVENT_TOPIC0S = Object.freeze([
   toEventSelector('TokenCreated(uint256,address,uint256,address,string,string,string)'),
   toEventSelector('FlapTokenStaged(uint256,address,address)'),
   toEventSelector('TokenCurveSet(address,address,uint256)'),
@@ -206,7 +206,9 @@ const SUPPORTED_EVENT_TOPICS = new Set([
   toEventSelector('TokenDexPreferenceSet(address,uint8,uint8)'),
   toEventSelector('LaunchedToDEX(address,address,uint256,uint256)'),
   toEventSelector('TokenPoolInfoUpdated(address,(address,uint24,uint8,uint64))'),
-]);
+] as const);
+
+const SUPPORTED_EVENT_TOPICS = new Set(FLAP_EVENT_TOPIC0S);
 
 interface StrictReceiptLog {
   address: string;
@@ -226,6 +228,16 @@ interface DecodedPortalEvent {
   args: Record<string, unknown>;
   log: StrictReceiptLog;
   evidence?: Evidence;
+}
+
+export interface FlapPortalEventIdentity {
+  eventName: string;
+  token: string;
+  transactionHash: string;
+  blockNumber: string;
+  blockHash: string;
+  transactionIndex: string;
+  logIndex: string;
 }
 
 function canonicalAddress(value: unknown, field: string): string {
@@ -401,6 +413,36 @@ function decodePortalEvent(log: StrictReceiptLog): DecodedPortalEvent | undefine
       cause: error,
     });
   }
+}
+
+export function identifyFlapPortalEvent(log: EvmLogRecord): FlapPortalEventIdentity | undefined {
+  const firstTopic = log.topics[0];
+  if (firstTopic === undefined) return undefined;
+  const decoded = decodePortalEvent({
+    address: canonicalAddress(log.address, 'discovery log address'),
+    blockHash: hash(log.blockHash, 'discovery log block hash'),
+    blockNumber: BigInt(log.blockNumber).toString(),
+    transactionHash: hash(log.transactionHash, 'discovery log transaction hash'),
+    transactionIndex: BigInt(log.transactionIndex).toString(),
+    logIndex: BigInt(log.logIndex).toString(),
+    data: hexData(log.data, 'discovery log data'),
+    topics: log.topics.map((topic, index) => hash(topic, `discovery log topic ${index}`)) as [
+      `0x${string}`,
+      ...`0x${string}`[],
+    ],
+    removed: false,
+    raw: log.raw,
+  });
+  if (decoded === undefined) return undefined;
+  return {
+    eventName: decoded.eventName,
+    token: tokenForEvent(decoded),
+    transactionHash: decoded.log.transactionHash,
+    blockNumber: decoded.log.blockNumber,
+    blockHash: decoded.log.blockHash,
+    transactionIndex: decoded.log.transactionIndex,
+    logIndex: decoded.log.logIndex,
+  };
 }
 
 function tokenForEvent(event: DecodedPortalEvent): string {

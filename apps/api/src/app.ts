@@ -13,7 +13,12 @@ import { classifyIdentifier } from '@zerotrace/identifiers';
 import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   FLAP_EVENT_MODEL_VERSION,
+  FLAP_HISTORY_DEFAULT_CHUNK_SIZE,
+  FLAP_HISTORY_MAX_CHUNKS,
+  FLAP_HISTORY_MAX_RANGE_BLOCKS,
+  FLAP_HISTORY_MODEL_VERSION,
   PLATFORM_REGISTRY,
+  discoverFlapEventHistory,
   inspectFlapEventTransaction,
   inspectFlapToken,
   quoteFlapSell,
@@ -98,6 +103,40 @@ const FlapEventTransactionParamsSchema = LaunchInspectionParamsSchema.extend({
 const FlapEventTransactionQuerySchema = z.object({
   chainId: z.literal('eip155:56'),
   platform: z.literal('flap').optional(),
+});
+
+const FlapEventHistoryQuerySchema = FlapEventTransactionQuerySchema.extend({
+  fromBlock: z
+    .string()
+    .max(32)
+    .regex(/^(?:0|[1-9]\d*)$/),
+  toBlock: z
+    .string()
+    .max(32)
+    .regex(/^(?:0|[1-9]\d*)$/),
+  chunkSize: z.coerce.number().int().min(1).max(10_000).optional(),
+}).superRefine((query, context) => {
+  const fromBlock = BigInt(query.fromBlock);
+  const toBlock = BigInt(query.toBlock);
+  if (toBlock < fromBlock) {
+    context.addIssue({ code: 'custom', path: ['toBlock'], message: 'toBlock precedes fromBlock.' });
+  } else if (toBlock - fromBlock + 1n > BigInt(FLAP_HISTORY_MAX_RANGE_BLOCKS)) {
+    context.addIssue({
+      code: 'custom',
+      path: ['toBlock'],
+      message: `History range exceeds ${FLAP_HISTORY_MAX_RANGE_BLOCKS} blocks.`,
+    });
+  } else {
+    const chunkSize = BigInt(query.chunkSize ?? FLAP_HISTORY_DEFAULT_CHUNK_SIZE);
+    const chunkCount = (toBlock - fromBlock + chunkSize) / chunkSize;
+    if (chunkCount > BigInt(FLAP_HISTORY_MAX_CHUNKS)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['chunkSize'],
+        message: `History query exceeds ${FLAP_HISTORY_MAX_CHUNKS} chunks.`,
+      });
+    }
+  }
 });
 
 const FlapSellQuoteRequestSchema = z
@@ -797,6 +836,14 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'A caller-supplied Flap transaction hash is decoded against the versioned Portal event interface at its exact block. Creation defaults remain source-tagged, unavailable curve internals remain Unknown, and migration facts carry receipt/log/derived Evidence. Chain-wide discovery remains pending.',
       },
       {
+        id: 'flap-bounded-event-history',
+        status: runtime.evmAdapters.has(56)
+          ? 'IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
+          : 'BSC_PROVIDER_REQUIRED',
+        detail:
+          'Bounded Portal log ranges are chunked, decoded by token, and receipt-replayed at exact block hashes. Requested-range coverage is distinct from token-lifetime coverage, which remains Unknown until deployment-origin indexing is continuous.',
+      },
+      {
         id: 'flap-bsc-sell-preview',
         status: runtime.evmAdapters.has(56)
           ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
@@ -1353,6 +1400,53 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
         writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      });
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/history',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LaunchInspectionParamsSchema.parse(request.params);
+      const query = FlapEventHistoryQuerySchema.parse(request.query);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        const chunkSize = query.chunkSize ?? FLAP_HISTORY_DEFAULT_CHUNK_SIZE;
+        const fromBlock = BigInt(query.fromBlock);
+        const toBlock = BigInt(query.toBlock);
+        const range = toBlock >= fromBlock ? toBlock - fromBlock + 1n : 0n;
+        return reply.code(503).send({
+          platform: 'flap',
+          token: params.token,
+          requestedRange: {
+            fromBlock: query.fromBlock,
+            toBlock: query.toBlock,
+            chunkSize,
+            chunkCount:
+              range === 0n ? 0 : Number((range + BigInt(chunkSize) - 1n) / BigInt(chunkSize)),
+          },
+          requestedRangeCoverage: 0,
+          lifetimeCoverage: unavailableValue(
+            'PROVIDER_UNCONFIGURED',
+            'A BNB Smart Chain read-only provider is required.',
+          ),
+          chronology: [],
+          transactions: [],
+          unrecognizedPortalLogCount: null,
+          metadata: emptyMetadata(FLAP_HISTORY_MODEL_VERSION),
+          evidence: [],
+        });
+      }
+      return discoverFlapEventHistory({
+        adapter,
+        token: params.token,
+        fromBlock: query.fromBlock,
+        toBlock: query.toBlock,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(query.chunkSize === undefined ? {} : { chunkSize: query.chunkSize }),
       });
     },
   );

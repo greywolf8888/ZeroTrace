@@ -403,6 +403,112 @@ describe('capability probes and snapshots', () => {
     });
   });
 
+  it('reads bounded, canonical EVM log ranges with request-scoped provenance', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    const topic = `0x${'b'.repeat(64)}`;
+    const transactionHash = `0x${'c'.repeat(64)}`;
+    const blockHash = `0x${'d'.repeat(64)}`;
+    const transport = new FakeJsonRpcTransport(
+      {
+        eth_getLogs: [
+          {
+            address,
+            blockHash,
+            blockNumber: '0x11',
+            transactionHash,
+            transactionIndex: '0x1',
+            logIndex: '0x2',
+            data: '0x1234',
+            topics: [topic],
+            removed: false,
+          },
+          {
+            address,
+            blockHash: `0x${'e'.repeat(64)}`,
+            blockNumber: '0x10',
+            transactionHash: `0x${'f'.repeat(64)}`,
+            transactionIndex: '0x0',
+            logIndex: '0x0',
+            data: '0x',
+            topics: [topic],
+            removed: false,
+          },
+        ],
+      },
+      { eth_getLogs: 'evm-log-source' },
+    );
+    const adapter = new EvmLedgerAdapter(
+      {
+        id: 'ethereum',
+        chainId: 1,
+        chainName: 'Ethereum',
+        maxLogRangeBlocks: 10,
+      },
+      transport,
+    );
+
+    await expect(
+      adapter.getLogsObservation({
+        address,
+        fromBlock: '16',
+        toBlock: '17',
+        topics: [[topic, topic]],
+      }),
+    ).resolves.toMatchObject({
+      endpointId: 'evm-log-source',
+      value: [
+        { blockNumber: '0x10', logIndex: '0x0' },
+        { blockNumber: '0x11', logIndex: '0x2' },
+      ],
+    });
+    expect(transport.calls[0]).toMatchObject({
+      method: 'eth_getLogs',
+      params: [
+        {
+          address,
+          fromBlock: '0x10',
+          toBlock: '0x11',
+          topics: [[topic]],
+        },
+      ],
+    });
+  });
+
+  it('rejects unbounded, removed, duplicate, or misplaced EVM log responses', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    const topic = `0x${'b'.repeat(64)}`;
+    const baseLog = {
+      address,
+      blockHash: `0x${'d'.repeat(64)}`,
+      blockNumber: '0x10',
+      transactionHash: `0x${'c'.repeat(64)}`,
+      transactionIndex: '0x0',
+      logIndex: '0x0',
+      data: '0x',
+      topics: [topic],
+      removed: false,
+    };
+    const query = { address, fromBlock: '16', toBlock: '17', topics: [topic] };
+    const bounded = new EvmLedgerAdapter(
+      { id: 'ethereum', chainId: 1, chainName: 'Ethereum', maxLogRangeBlocks: 1 },
+      new FakeJsonRpcTransport({ eth_getLogs: [] }),
+    );
+    await expect(bounded.getLogs(query)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+
+    for (const response of [
+      [{ ...baseLog, removed: true }],
+      [baseLog, baseLog],
+      [{ ...baseLog, blockNumber: '0xf' }],
+      [{ ...baseLog, topics: [`0x${'e'.repeat(64)}`] }],
+    ]) {
+      const adapter = new EvmLedgerAdapter(
+        { id: 'ethereum', chainId: 1, chainName: 'Ethereum' },
+        new FakeJsonRpcTransport({ eth_getLogs: response }),
+      );
+      await expect(adapter.getLogs(query)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    }
+  });
+
   it('reads ledger anchors at explicit historical positions', async () => {
     const evmTransport = new FakeJsonRpcTransport({
       eth_getBlockByNumber: {

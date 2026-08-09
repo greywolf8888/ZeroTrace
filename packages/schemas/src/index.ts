@@ -878,6 +878,37 @@ export const FlapEventTransactionSchema = z.object({
 });
 export type FlapEventTransaction = z.infer<typeof FlapEventTransactionSchema>;
 
+export const FlapEventHistoryRangeSchema = z.object({
+  fromBlock: UnsignedQuantityStringSchema,
+  toBlock: UnsignedQuantityStringSchema,
+  chunkSize: z.number().int().positive(),
+  chunkCount: z.number().int().positive(),
+});
+
+export const FlapEventChronologyItemSchema = z.object({
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  transactionIndex: UnsignedQuantityStringSchema,
+  transactionKind: FlapEventTransactionKindSchema,
+  decodedEventNames: z.array(z.string().min(1)).min(1),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const FlapEventHistorySchema = z.object({
+  platform: z.literal('flap'),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  requestedRange: FlapEventHistoryRangeSchema,
+  requestedRangeCoverage: CoverageRatioSchema,
+  lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+  chronology: z.array(FlapEventChronologyItemSchema),
+  transactions: z.array(FlapEventTransactionSchema),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+  metadata: AnalysisMetadataSchema,
+  evidence: z.array(EvidenceSchema).min(1),
+});
+export type FlapEventHistory = z.infer<typeof FlapEventHistorySchema>;
+
 export const RealizableValuePointSchema = z.object({
   inputQuantity: DecimalStringSchema,
   nominalValue: knowledgeValueSchema(DecimalStringSchema),

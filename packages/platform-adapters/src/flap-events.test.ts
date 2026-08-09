@@ -9,7 +9,11 @@ import {
 import { EvidenceLedger } from '@zerotrace/evidence';
 import { encodeAbiParameters, toEventSelector, type AbiParameter } from 'viem';
 
-import { FLAP_BSC_MAINNET_DEPLOYMENT, inspectFlapEventTransaction } from './index.js';
+import {
+  FLAP_BSC_MAINNET_DEPLOYMENT,
+  discoverFlapEventHistory,
+  inspectFlapEventTransaction,
+} from './index.js';
 
 const token = `0x${'a'.repeat(40)}`;
 const creator = `0x${'c'.repeat(40)}`;
@@ -113,6 +117,58 @@ class EventJsonRpcTransport implements JsonRpcTransport {
     _options: TransportReadOptions = {},
   ): Promise<TransportObservation<T>> {
     return { value: await this.request<T>(method, params), endpointId: this.endpointId };
+  }
+}
+
+class HistoryJsonRpcTransport implements JsonRpcTransport {
+  readonly endpointId = 'bsc-history-fixture';
+  readonly calls: Array<{ method: string; params: readonly unknown[] }> = [];
+
+  constructor(
+    readonly includeCreation = true,
+    readonly includeCreationInEveryChunk = false,
+  ) {}
+
+  async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+    return (await this.requestSourced<T>(method, params)).value;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    _options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    this.calls.push({ method, params });
+    if (method === 'eth_getBlockByNumber') {
+      const tag = params[0];
+      if (tag !== '0x10' && tag !== '0x11') throw new Error(`Unexpected block tag ${String(tag)}`);
+      return {
+        value: {
+          number: tag,
+          hash: tag === '0x10' ? blockHash : `0x${'4'.repeat(64)}`,
+          parentHash: tag === '0x10' ? parentHash : blockHash,
+          timestamp: '0x65',
+        } as T,
+        endpointId: 'bsc-history-anchor',
+      };
+    }
+    if (method === 'eth_getLogs') {
+      const filter = params[0] as { fromBlock: string };
+      return {
+        value: (this.includeCreation &&
+        (this.includeCreationInEveryChunk || filter.fromBlock === '0x10')
+          ? [eventLog(tokenCreated(), 0)]
+          : []) as T,
+        endpointId: 'bsc-history-logs',
+      };
+    }
+    if (method === 'eth_getTransactionReceipt') {
+      return {
+        value: receipt([eventLog(tokenCreated(), 0)]) as T,
+        endpointId: 'bsc-history-receipt',
+      };
+    }
+    throw new Error(`Unexpected history fixture method ${method}`);
   }
 }
 
@@ -373,5 +429,114 @@ describe('Flap transaction-local event inspection', () => {
     ).rejects.toMatchObject({
       code: 'INVALID_RESPONSE',
     });
+  });
+});
+
+describe('Flap bounded event-history discovery', () => {
+  function historyFixture(includeCreation = true) {
+    const transport = new HistoryJsonRpcTransport(includeCreation);
+    const adapter = new EvmLedgerAdapter(
+      {
+        id: 'bsc-rpc',
+        chainId: 56,
+        chainName: 'BNB Smart Chain',
+        snapshotBlockTag: 'finalized',
+      },
+      transport,
+    );
+    const ledger = new EvidenceLedger();
+    return {
+      transport,
+      ledger,
+      discover: (fromBlock = '16', toBlock = '17') =>
+        discoverFlapEventHistory({
+          adapter,
+          token,
+          fromBlock,
+          toBlock,
+          chunkSize: 1,
+          deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+          writeEvidence: async (item, sources = [], snapshot) =>
+            ledger.add(item, sources, snapshot).evidence,
+        }),
+    };
+  }
+
+  it('discovers, receipt-replays, and orders token events in a complete requested range', async () => {
+    const fixture = historyFixture();
+    const result = await fixture.discover();
+
+    expect(result.requestedRange).toEqual({
+      fromBlock: '16',
+      toBlock: '17',
+      chunkSize: 1,
+      chunkCount: 2,
+    });
+    expect(result.requestedRangeCoverage).toBe(1);
+    expect(result.lifetimeCoverage).toMatchObject({
+      state: 'unknown',
+      reason: 'INSUFFICIENT_DATA',
+    });
+    expect(result.metadata.historyCoverage).toBe(0);
+    expect(result.chronology).toEqual([
+      expect.objectContaining({
+        transactionHash,
+        blockNumber: '16',
+        transactionKind: 'CREATION_CONFIGURATION',
+        decodedEventNames: ['TokenCreated'],
+      }),
+    ]);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.creation?.symbol).toBe('FIX');
+    expect(result.evidence.map((item) => item.kind)).toEqual([
+      'PROVIDER_OBSERVATION',
+      'PROVIDER_OBSERVATION',
+      'DERIVED_FEATURE',
+    ]);
+    expect(fixture.ledger.drilldown(result.evidence.at(-1)?.id ?? '')).toHaveLength(7);
+    expect(fixture.transport.calls.filter((call) => call.method === 'eth_getLogs')).toHaveLength(2);
+  });
+
+  it('returns bounded negative Evidence without claiming token-lifetime absence', async () => {
+    const fixture = historyFixture(false);
+    const result = await fixture.discover();
+
+    expect(result.chronology).toEqual([]);
+    expect(result.transactions).toEqual([]);
+    expect(result.evidence.at(-1)).toMatchObject({
+      kind: 'NEGATIVE_EVIDENCE',
+      summary: expect.stringContaining('requested bounded range'),
+    });
+    expect(result.lifetimeCoverage.state).toBe('unknown');
+    expect(result.metadata.historyCoverage).toBe(0);
+  });
+
+  it('rejects invalid or operationally unbounded history requests before network access', async () => {
+    const fixture = historyFixture();
+    await expect(fixture.discover('17', '16')).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+    await expect(fixture.discover('0', '50000')).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+    expect(fixture.transport.calls).toHaveLength(0);
+
+    const overflowTransport = new HistoryJsonRpcTransport(true, true);
+    const overflowAdapter = new EvmLedgerAdapter(
+      { id: 'bsc-rpc', chainId: 56, chainName: 'BNB Smart Chain' },
+      overflowTransport,
+    );
+    await expect(
+      discoverFlapEventHistory({
+        adapter: overflowAdapter,
+        token,
+        fromBlock: '16',
+        toBlock: '17',
+        chunkSize: 1,
+        maxLogs: 1,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: async (item) => item,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 });

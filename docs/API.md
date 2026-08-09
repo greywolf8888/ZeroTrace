@@ -28,6 +28,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/ledger/:ledger/:type/:id`                    | typed block, transaction, or Bitcoin outpoint query              |
 | GET    | `/api/v1/launches/EVM/:token`                         | version-pinned Flap BSC current Portal-state inspection          |
 | GET    | `/api/v1/launches/EVM/:token/events/:transactionHash` | exact-receipt Flap creation/configuration/migration decoding     |
+| GET    | `/api/v1/launches/EVM/:token/history`                 | bounded Flap Portal log discovery with exact receipt replay      |
 | POST   | `/api/v1/rv/flap-sell`                                | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/data-quality/discrepancies`                  | typed error-budget and discrepancy audit                         |
 | GET    | `/api/v1/evidence/:id`                                | Evidence node, source edges, and bound Snapshot                  |
@@ -99,6 +100,20 @@ counterpart.
 This endpoint has `historyCoverage=0`: it proves what the supplied transaction contains, not that
 the transaction is the token's only creation/configuration/migration event. Automatic log discovery
 and chain-wide lifecycle reconstruction remain incomplete.
+
+`GET /api/v1/launches/EVM/:token/history?chainId=eip155:56&platform=flap&fromBlock=...&toBlock=...`
+scans at most 50,000 blocks per request. The server splits the range into bounded log queries,
+filters the versioned Portal event topic set, decodes the non-indexed token field, and then requires
+every candidate transaction to pass the exact receipt/block replay described above. An optional
+`chunkSize` is limited to 10,000 blocks; total observations are limited to 25,000 Portal logs and
+250 receipt-replayed transactions. Request count, result count, topic mismatches, removed logs,
+duplicates, out-of-range responses, and inconsistent placements fail closed.
+
+`requestedRangeCoverage=1` means every chunk in the requested range returned and all matching
+transactions were replayed. It does not mean full token history: `lifetimeCoverage` and metadata
+`historyCoverage` remain Unknown/zero until the Portal deployment origin is evidenced and indexing
+is continuous through the analysis Snapshot. An empty result creates bounded negative Evidence,
+not a claim that the token never emitted a Flap event.
 
 `POST /api/v1/rv/flap-sell` accepts `chainId=eip155:56`, `token`, unsigned-decimal atomic
 `inputQuantity`, optional `platform=flap`, and optional decimal `blockNumber`. The inspector and
@@ -187,9 +202,9 @@ restart; without it, capability and health output explicitly report process-loca
 
 This is deliberate contract preservation, not an implementation.
 
-The implemented Flap current-state and supplied-event-transaction routes above are the only current
-`/launches` exceptions. Other ledgers, platforms, automatic historical event reconstruction, and
-launch queries remain unavailable rather than falling back to generic data.
+The implemented Flap current-state, supplied-event-transaction, and bounded-history routes above are
+the only current `/launches` exceptions. Other ledgers, platforms, deployment-origin continuous
+history, and launch queries remain unavailable rather than falling back to generic data.
 
 ## Knowledge values
 

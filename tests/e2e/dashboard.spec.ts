@@ -345,6 +345,73 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
       }),
     });
   });
+  await page.route('**/api/v1/launches/EVM/**/history*', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        requestedRange: {
+          fromBlock: '49900000',
+          toBlock: '49900000',
+          chunkSize: 2000,
+          chunkCount: 1,
+        },
+        requestedRangeCoverage: 1,
+        lifetimeCoverage: {
+          state: 'unknown',
+          reason: 'INSUFFICIENT_DATA',
+          detail: 'The bounded range is complete; lifetime indexing is not.',
+        },
+        chronology: [
+          {
+            transactionHash: bscFlapCreationTransaction,
+            blockNumber: '49900000',
+            blockHash: `0x${'4'.repeat(64)}`,
+            transactionIndex: '1',
+            transactionKind: 'CREATION_CONFIGURATION',
+            decodedEventNames: ['TokenCreated'],
+            evidenceIds: ['ev_flap_event'],
+          },
+        ],
+        transactions: [],
+        unrecognizedPortalLogCount: 0,
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '49900000',
+            blockHash: `0x${'4'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 1,
+          sourceCoverage: 0.5,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: '2026-08-10T00:00:00.000Z',
+          sourceSet: ['bsc-rpc-fixture'],
+          modelVersion: 'flap-bounded-event-history-v1',
+          confidence: 0.95,
+          evidenceIds: ['ev_flap_history'],
+        },
+        evidence: [
+          {
+            id: 'ev_flap_history',
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:flap-bounded-event-history-v1',
+            locator: `flap-event-history:${bscTokenAddress}:49900000-49900000`,
+            payloadHash: '6'.repeat(64),
+            observedAt: '2026-08-10T00:00:00.000Z',
+            blockOrSlot: '49900000',
+            finality: 'finalized',
+            summary: 'Flap event transactions discovered in the requested bounded range.',
+          },
+        ],
+      }),
+    });
+  });
   await page.route('**/api/v1/rv/flap-sell', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -430,6 +497,19 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   ).toBeVisible();
   await expect(
     page.getByText('Flap transaction-local creation and configuration events normalized.'),
+  ).toBeVisible();
+
+  await expect(page.getByRole('heading', { name: 'Flap bounded event history' })).toBeVisible();
+  await page.getByLabel('From block').fill('49900000');
+  await page.getByLabel('To block').fill('49900000');
+  await page.getByRole('button', { name: 'Scan range' }).click();
+  const historyPanel = page.locator('.event-history-panel');
+  await expect(historyPanel).toContainText('Range coverage 100%');
+  await expect(historyPanel).toContainText('Lifetime coverage Insufficient Data');
+  await expect(historyPanel).toContainText('Block 49900000 · Creation Configuration');
+  await expect(page.getByRole('heading', { name: 'Flap history evidence ledger' })).toBeVisible();
+  await expect(
+    page.getByText('Flap event transactions discovered in the requested bounded range.'),
   ).toBeVisible();
 
   await page.getByLabel('Sell amount (atomic units)').fill('1000000000000000000');

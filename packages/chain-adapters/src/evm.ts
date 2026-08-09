@@ -50,6 +50,28 @@ export interface EvmTransactionReceiptRecord {
   raw: Readonly<Record<string, unknown>>;
 }
 
+export interface EvmLogRecord {
+  address: string;
+  blockHash: string;
+  blockNumber: string;
+  transactionHash: string;
+  transactionIndex: string;
+  logIndex: string;
+  data: string;
+  topics: readonly string[];
+  removed: false;
+  raw: Readonly<Record<string, unknown>>;
+}
+
+export type EvmLogTopicFilter = string | readonly string[] | null;
+
+export interface EvmLogQuery {
+  address: string;
+  fromBlock: string;
+  toBlock: string;
+  topics?: readonly EvmLogTopicFilter[];
+}
+
 const ALLOWED_EVM_METHODS = new Set([
   'eth_chainId',
   'eth_blockNumber',
@@ -206,6 +228,59 @@ function parseReceipt(value: unknown, expectedHash: string): EvmTransactionRecei
   };
 }
 
+function parseLog(value: unknown): EvmLogRecord {
+  const raw = requireRecord(value, 'log');
+  if (!Array.isArray(raw.topics) || raw.topics.length > 4) {
+    throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned invalid log topics.');
+  }
+  if (raw.removed !== false) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'EVM provider returned a removed or non-final log observation.',
+    );
+  }
+  return {
+    address: requireAddress(raw.address, 'log address').toLowerCase(),
+    blockHash: requireHash(raw.blockHash, 'log block hash'),
+    blockNumber: requireHexQuantity(raw.blockNumber, 'log block number'),
+    transactionHash: requireHash(raw.transactionHash, 'log transaction hash'),
+    transactionIndex: requireHexQuantity(raw.transactionIndex, 'log transaction index'),
+    logIndex: requireHexQuantity(raw.logIndex, 'log index'),
+    data: requireHexData(raw.data, 'log data').toLowerCase(),
+    topics: raw.topics.map((topic, index) => requireHash(topic, `log topic ${index}`)),
+    removed: false,
+    raw,
+  };
+}
+
+function normalizeLogTopics(topics: readonly EvmLogTopicFilter[] | undefined) {
+  if (topics === undefined) return undefined;
+  if (topics.length > 4) {
+    throw new ProviderError('INVALID_RESPONSE', 'EVM log queries support at most four topics.');
+  }
+  return topics.map((topic, index) => {
+    if (topic === null) return null;
+    if (typeof topic === 'string') return requireHash(topic, `log filter topic ${index}`);
+    if (topic.length === 0) {
+      throw new ProviderError('INVALID_RESPONSE', 'EVM log topic alternatives may not be empty.');
+    }
+    return [...new Set(topic.map((item) => requireHash(item, `log filter topic ${index}`)))];
+  });
+}
+
+function matchesLogTopics(
+  logTopics: readonly string[],
+  filters: ReturnType<typeof normalizeLogTopics>,
+): boolean {
+  if (filters === undefined) return true;
+  return filters.every((filter, index) => {
+    if (filter === null) return true;
+    const topic = logTopics[index];
+    if (topic === undefined) return false;
+    return typeof filter === 'string' ? topic === filter : filter.includes(topic);
+  });
+}
+
 function timestampFromHex(value: unknown): string {
   const seconds = hexQuantity(value, 'block timestamp');
   if (seconds > BigInt(Math.floor(Number.MAX_SAFE_INTEGER / 1_000))) {
@@ -241,6 +316,8 @@ export interface EvmAdapterConfig {
   chainName: string;
   snapshotBlockTag?: 'latest' | 'safe' | 'finalized';
   adapterVersion?: string;
+  maxLogRangeBlocks?: number;
+  maxLogResults?: number;
 }
 
 export class EvmLedgerAdapter {
@@ -415,6 +492,82 @@ export class EvmLedgerAdapter {
       normalizedHash,
     ]);
     return { ...observation, value: parseReceipt(observation.value, normalizedHash) };
+  }
+
+  async getLogs(query: EvmLogQuery): Promise<EvmLogRecord[]> {
+    return (await this.getLogsObservation(query)).value;
+  }
+
+  async getLogsObservation(query: EvmLogQuery): Promise<TransportObservation<EvmLogRecord[]>> {
+    const fromBlock = requireDecimalPosition(query.fromBlock);
+    const toBlock = requireDecimalPosition(query.toBlock);
+    if (toBlock < fromBlock) {
+      throw new ProviderError('INVALID_RESPONSE', 'EVM log range ends before it begins.');
+    }
+    const range = toBlock - fromBlock + 1n;
+    const configuredRange = this.config.maxLogRangeBlocks ?? 10_000;
+    if (!Number.isSafeInteger(configuredRange) || configuredRange < 1) {
+      throw new ProviderError('INVALID_RESPONSE', 'EVM maximum log range is invalid.');
+    }
+    if (range > BigInt(configuredRange)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        `EVM log range exceeds the configured ${configuredRange}-block limit.`,
+      );
+    }
+    const address = requireAddress(query.address, 'log filter address').toLowerCase();
+    const topics = normalizeLogTopics(query.topics);
+    const filter = {
+      address,
+      fromBlock: `0x${fromBlock.toString(16)}`,
+      toBlock: `0x${toBlock.toString(16)}`,
+      ...(topics === undefined ? {} : { topics }),
+    };
+    const observation = await this.readSourced<unknown>('eth_getLogs', [filter]);
+    if (!Array.isArray(observation.value)) {
+      throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned a non-array log result.');
+    }
+    const configuredResults = this.config.maxLogResults ?? 10_000;
+    if (!Number.isSafeInteger(configuredResults) || configuredResults < 1) {
+      throw new ProviderError('INVALID_RESPONSE', 'EVM maximum log result count is invalid.');
+    }
+    if (observation.value.length > configuredResults) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        `EVM log result exceeds the configured ${configuredResults}-record limit.`,
+      );
+    }
+    const seen = new Set<string>();
+    const logs = observation.value
+      .map((value) => parseLog(value))
+      .sort((left, right) => {
+        const blockOrder = BigInt(left.blockNumber) - BigInt(right.blockNumber);
+        if (blockOrder !== 0n) return blockOrder < 0n ? -1 : 1;
+        const transactionOrder = BigInt(left.transactionIndex) - BigInt(right.transactionIndex);
+        if (transactionOrder !== 0n) return transactionOrder < 0n ? -1 : 1;
+        const logOrder = BigInt(left.logIndex) - BigInt(right.logIndex);
+        return logOrder === 0n ? 0 : logOrder < 0n ? -1 : 1;
+      });
+    for (const log of logs) {
+      const position = BigInt(log.blockNumber);
+      if (
+        position < fromBlock ||
+        position > toBlock ||
+        log.address !== address ||
+        !matchesLogTopics(log.topics, topics)
+      ) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'EVM provider returned a log outside the requested range, address, or topic filter.',
+        );
+      }
+      const identity = `${log.blockHash}:${log.transactionHash}:${log.logIndex}`;
+      if (seen.has(identity)) {
+        throw new ProviderError('INVALID_RESPONSE', 'EVM provider returned a duplicate log.');
+      }
+      seen.add(identity);
+    }
+    return { ...observation, value: logs };
   }
 
   #anchorFromBlock(

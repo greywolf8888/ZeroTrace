@@ -5,6 +5,7 @@ import {
   type Capability,
   type EvidenceRecord,
   type FlapConfigurationField,
+  type FlapEventHistoryResponse,
   type FlapEventTransactionResponse,
   type FlapInspectionResponse,
   type FlapSellQuoteResponse,
@@ -53,6 +54,13 @@ function titleCase(value: string): string {
     .split(/[_\s-]+/)
     .map((item) => item.charAt(0).toUpperCase() + item.slice(1))
     .join(' ');
+}
+
+function isValidBoundedBlockRange(fromBlock: string, toBlock: string): boolean {
+  if (!/^(?:0|[1-9]\d*)$/.test(fromBlock) || !/^(?:0|[1-9]\d*)$/.test(toBlock)) return false;
+  const from = BigInt(fromBlock);
+  const to = BigInt(toBlock);
+  return to >= from && to - from + 1n <= 50_000n;
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -519,7 +527,13 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
   const [result, setResult] = useState<FlapEventTransactionResponse>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [historyFromBlock, setHistoryFromBlock] = useState('');
+  const [historyToBlock, setHistoryToBlock] = useState('');
+  const [historyResult, setHistoryResult] = useState<FlapEventHistoryResponse>();
+  const [historyError, setHistoryError] = useState<string>();
+  const [historyBusy, setHistoryBusy] = useState(false);
   const validTransactionHash = /^0x[0-9a-fA-F]{64}$/.test(transactionHash);
+  const validHistoryRange = isValidBoundedBlockRange(historyFromBlock, historyToBlock);
 
   async function inspectTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -533,6 +547,21 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
       setError(cause instanceof Error ? cause.message : 'Flap event inspection failed.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function scanHistory(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validHistoryRange) return;
+    setHistoryBusy(true);
+    setHistoryError(undefined);
+    setHistoryResult(undefined);
+    try {
+      setHistoryResult(await api.flapEventHistory(token, historyFromBlock, historyToBlock));
+    } catch (cause) {
+      setHistoryError(cause instanceof Error ? cause.message : 'Flap history scan failed.');
+    } finally {
+      setHistoryBusy(false);
     }
   }
 
@@ -681,11 +710,105 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
           </>
         )}
       </section>
+      <section className="panel subject-panel event-history-panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Chunked read-only Portal log scan</span>
+            <h3>Flap bounded event history</h3>
+          </div>
+          <span className="snapshot-badge">Maximum 50,000 blocks</span>
+        </div>
+        <form className="history-range-form" onSubmit={(event) => void scanHistory(event)}>
+          <label htmlFor="flap-history-from">
+            <span>From block</span>
+            <input
+              id="flap-history-from"
+              inputMode="numeric"
+              value={historyFromBlock}
+              onChange={(event) => setHistoryFromBlock(event.target.value.trim())}
+              placeholder="Start block"
+            />
+          </label>
+          <label htmlFor="flap-history-to">
+            <span>To block</span>
+            <input
+              id="flap-history-to"
+              inputMode="numeric"
+              value={historyToBlock}
+              onChange={(event) => setHistoryToBlock(event.target.value.trim())}
+              placeholder="End block"
+            />
+          </label>
+          <button
+            className="secondary-button"
+            type="submit"
+            disabled={historyBusy || !validHistoryRange}
+          >
+            {historyBusy ? 'Scanning logs…' : 'Scan range'}
+          </button>
+        </form>
+        <p className="quote-note">
+          A completed bounded scan proves only the requested range. Token-lifetime coverage stays
+          Unknown until deployment-origin indexing is continuous.
+        </p>
+        {historyError === undefined ? null : (
+          <div className="alert alert-warning">
+            <strong>History scan unavailable</strong>
+            {historyError}
+          </div>
+        )}
+        {historyResult === undefined ? null : (
+          <>
+            <div className="snapshot-strip">
+              <span>
+                <b>Requested range</b> {historyResult.requestedRange.fromBlock}–
+                {historyResult.requestedRange.toBlock}
+              </span>
+              <span>
+                <b>Range coverage</b> {Math.round(historyResult.requestedRangeCoverage * 100)}%
+              </span>
+              <span>
+                <b>Lifetime coverage</b> <KnowledgeDisplay data={historyResult.lifetimeCoverage} />
+              </span>
+              <span>
+                <b>Transactions</b> {historyResult.chronology.length}
+              </span>
+              <span>
+                <b>History coverage</b> {Math.round(historyResult.metadata.historyCoverage * 100)}%
+              </span>
+            </div>
+            {historyResult.chronology.length === 0 ? (
+              <div className="alert alert-warning">
+                <strong>No matching event in this bounded range</strong>
+                This is not a token-lifetime absence claim.
+              </div>
+            ) : (
+              <div className="fact-grid">
+                {historyResult.chronology.map((item) => (
+                  <div className="fact-row" key={item.transactionHash}>
+                    <span>
+                      Block {item.blockNumber} · {titleCase(item.transactionKind)}
+                    </span>
+                    <code title={item.transactionHash}>{shortId(item.transactionHash, 10)}</code>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </section>
       {result === undefined || result.evidence.length === 0 ? null : (
         <EvidencePanel
           evidence={result.evidence}
           eyebrow="Receipt → Portal event → normalized fact"
           title="Flap transaction evidence ledger"
+        />
+      )}
+      {historyResult === undefined || historyResult.evidence.length === 0 ? null : (
+        <EvidencePanel
+          evidence={historyResult.evidence}
+          eyebrow="Bounded Portal logs → receipt-replayed chronology"
+          title="Flap history evidence ledger"
         />
       )}
     </>

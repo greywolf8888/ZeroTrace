@@ -44,6 +44,10 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339918663) pass on immutable
       Flap v5.14.16/V8Safe interface-alignment commit `fd1327a`; the newer event batch remains
       pending remote validation
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31341351857) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31341351830) pass on immutable
+      exact-receipt Flap event commit `1b6a40e`; the newer bounded-history batch remains pending
+      remote validation
 
 ## Evidence and data
 
@@ -71,7 +75,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
   - [x] Deterministic Flap BSC fixed-block Portal V8Safe/V6/V5 inspection, negative Evidence, API and UI
   - [x] Deterministic caller-supplied Flap creation/configuration/migration transaction decoding,
         default provenance, Evidence drilldown, and desktop/mobile UI
-  - [ ] Automatic Flap event-history discovery, named real-chain fixture, lifecycle and market/RV linkage
+  - [x] Bounded chunked Flap Portal-log discovery, exact receipt replay, range/lifetime coverage
+        separation, negative Evidence, API and desktop/mobile UI
+  - [ ] Deployment-origin continuous Flap history, named real-chain fixture, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
 - [x] Deterministic Flap fixed-block `previewSell` quote and blocked/Unknown/no-fake-zero tests

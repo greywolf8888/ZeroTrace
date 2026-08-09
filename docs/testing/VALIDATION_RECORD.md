@@ -510,9 +510,9 @@ Unknown states, zero history coverage, and Evidence; the focused Chromium run pa
 Pixel 7.
 
 This is not chain-wide history. The caller must supply the transaction, `historyCoverage` remains
-zero, and no named FFT or other real-chain event transaction has been accepted. Automatic Portal-log
-discovery, cross-transaction lifecycle reconstruction, market/RV linkage and entity calibration
-remain required before the registered FFT run.
+zero, and no named FFT or other real-chain event transaction has been accepted. Deployment-origin
+continuous discovery, cross-range lifecycle reconstruction, market/RV linkage and entity
+calibration remain required before the registered FFT run.
 
 The complete local gate passed formatting, lint, typecheck, 233 unit tests, 27 API integration
 tests, production builds, license policy and a zero-vulnerability dependency audit. Coverage passed
@@ -520,22 +520,48 @@ tests, production builds, license policy and a zero-vulnerability dependency aud
 branches, 91.31% functions and 85.07% lines. All 10 Chromium desktop/mobile flows, CycloneDX SBOM,
 Compose-model parsing, diff checks and the credential scan passed.
 
+### Flap bounded event-history slice
+
+The EVM adapter now exposes a strictly bounded typed log query: decimal ranges are normalized to
+canonical block tags, topic alternatives are deduplicated, result counts are bounded, and removed,
+duplicate, wrong-address, out-of-range, malformed, or non-final log responses fail closed. The Flap
+layer chunks at most 50,000 requested blocks and fails above 25,000 observed Portal logs, scans the
+official Portal topic set, decodes each non-indexed token field, and exact-receipt replays every
+matching transaction.
+
+Deterministic tests cover range sorting/provenance, range and result limits, invalid provider logs,
+positive creation discovery, bounded negative Evidence, Evidence drilldown, and invalid-range
+rejection before network access. API integration returns the chronology and nested transaction
+Evidence. Desktop and Pixel 7 browser tests display requested-range coverage separately from Unknown
+token-lifetime coverage and zero terminal history coverage.
+
+This is bounded discovery, not continuous history acceptance. The implementation does not yet prove
+the Portal deployment-origin block, persist an incremental semantic event index/checkpoint, or prove
+continuous coverage from deployment through the analysis Snapshot. No named real-chain or FFT
+history result is accepted by this slice.
+
+The complete local gate for this slice passed formatting, lint, typecheck, 238 unit tests, 28 API
+integration tests, production builds, license policy and a zero-vulnerability dependency audit.
+Coverage passed 266 tests with 15 Docker-dependent durable tests explicitly skipped at 83.89%
+statements, 75.43% branches, 91.55% functions and 85% lines. All 10 Chromium desktop/mobile
+flows passed, including the bounded-history range and Evidence rendering.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 233 unit, 27 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
-| local `test:coverage`    | pass: 260 tests, 15 durable skips; 84.11% statements, 76.06% branches, 91.31% functions, 85.07% lines                                                                       |
-| branch `test:coverage`   | latest completed pass: 267 tests; 86.83% statements, 78.72% branches, 95.38% functions, 87.78% lines                                                                        |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/default provenance/Evidence/Unknown                                                         |
+| local non-browser gates  | pass: format, lint, typecheck, 238 unit, 28 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
+| local `test:coverage`    | pass: 266 tests, 15 durable skips; 83.89% statements, 75.43% branches, 91.55% functions, 85% lines                                                                          |
+| branch `test:coverage`   | latest completed pass: 275 tests; 86.96% statements, 78.79% branches, 95.23% functions, 87.92% lines                                                                        |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                         |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |
 | `docker compose config`  | pass                                                                                                                                                                        |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                          |
-| branch GitHub Actions CI | [latest completed pass on `fd1327a`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339918653): 267 tests, 10 Chromium E2E, and five production container targets |
-| branch CodeQL            | [latest completed pass on `fd1327a`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339918663): JavaScript and TypeScript analysis                                |
+| branch GitHub Actions CI | [latest completed pass on `1b6a40e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31341351857): 275 tests, 10 Chromium E2E, and five production container targets |
+| branch CodeQL            | [latest completed pass on `1b6a40e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31341351830): JavaScript and TypeScript analysis                                |
 
 The latest complete durable run used GitHub Actions disposable PostgreSQL, ClickHouse, and MinIO
-services. All 41 integration tests passed and the workflow removed its named volumes. The local
+services. All 42 integration tests passed and the workflow removed its named volumes. The local
 Docker engine limitation remains an environment constraint, not a claimed failure or pass.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and

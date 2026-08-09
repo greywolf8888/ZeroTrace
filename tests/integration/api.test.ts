@@ -173,6 +173,10 @@ class FlapEventTransport implements JsonRpcTransport {
     if (method === 'eth_getTransactionReceipt') {
       return { value: this.receiptValue as T, endpointId: 'bsc-receipt' };
     }
+    if (method === 'eth_getLogs') {
+      const receipt = this.receiptValue as { logs: unknown[] };
+      return { value: receipt.logs as T, endpointId: 'bsc-logs' };
+    }
     if (method === 'eth_getBlockByNumber') {
       return {
         value: {
@@ -1552,6 +1556,58 @@ describe('ZeroTrace API contract', () => {
     expect(drilldown.json().nodes).toHaveLength(4);
   });
 
+  it('discovers Flap events in a bounded range and keeps lifetime coverage Unknown', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new FlapEventTransport(fixtureFlapCreationReceipt()),
+      ),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/history?chainId=eip155:56&platform=flap&fromBlock=16&toBlock=16&chunkSize=1`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      platform: 'flap',
+      token: fixtureFlapToken,
+      requestedRange: { fromBlock: '16', toBlock: '16', chunkSize: 1, chunkCount: 1 },
+      requestedRangeCoverage: 1,
+      lifetimeCoverage: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      chronology: [
+        {
+          transactionHash: fixtureFlapEventTransactionHash,
+          blockNumber: '16',
+          transactionKind: 'CREATION_CONFIGURATION',
+        },
+      ],
+      transactions: [{ creation: { symbol: 'FIX' } }],
+      metadata: { historyCoverage: 0, modelVersion: 'flap-bounded-event-history-v1' },
+    });
+    expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'PROVIDER_OBSERVATION',
+      'DERIVED_FEATURE',
+    ]);
+    const derivedId = response.json().evidence.at(-1).id;
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${derivedId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes).toHaveLength(6);
+  });
+
   it('returns a fixed-block Flap previewSell quote without inventing fee or impact fields', async () => {
     const runtime = runtimeWithAllLedgers();
     runtime.evmAdapters.set(
@@ -1739,6 +1795,18 @@ describe('ZeroTrace API contract', () => {
     expect(unavailableFlapEvent.json()).toMatchObject({
       platformMatch: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
       transactionKind: null,
+      evidence: [],
+    });
+    const unavailableFlapHistory = await degraded.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/history?chainId=eip155:56&fromBlock=16&toBlock=17`,
+    });
+    expect(unavailableFlapHistory.statusCode).toBe(503);
+    expect(unavailableFlapHistory.json()).toMatchObject({
+      requestedRangeCoverage: 0,
+      lifetimeCoverage: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
+      chronology: [],
+      transactions: [],
       evidence: [],
     });
     const unavailableFlapQuote = await degraded.inject({
