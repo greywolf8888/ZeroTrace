@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { ProviderError } from './errors.js';
-import { SqdPortalClient, type SqdFinalizedBlock } from './sqd.js';
+import { SqdPortalClient, sqdTransactionsFromBlock, type SqdFinalizedBlock } from './sqd.js';
 
 const policy = { allowedHosts: ['portal.sqd.dev'], allowPrivateNetworks: true } as const;
 
@@ -206,6 +206,53 @@ describe('SqdPortalClient', () => {
     expect(result.completion).toBe('REQUESTED_RANGE_COMPLETE');
   });
 
+  it('treats an empty finalized Solana response as covered only with a verifiable head', async () => {
+    const completeFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonlResponse([], { finalizedHead: 12 }));
+    const complete = await client(completeFetch, { dataset: 'solana-mainnet' }).readFinalizedRange(
+      { fromBlock: 10, toBlock: 12 },
+      vi.fn(),
+    );
+    expect(complete).toMatchObject({
+      completion: 'REQUESTED_RANGE_COMPLETE',
+      lastBlock: null,
+      nextBlock: 13,
+      finalizedHead: 12,
+      blocks: 0,
+    });
+
+    const sourceHeadFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonlResponse([], { finalizedHead: 11 }));
+    const sourceHead = await client(sourceHeadFetch, {
+      dataset: 'solana-mainnet',
+    }).readFinalizedRange({ fromBlock: 10, toBlock: 12 }, vi.fn());
+    expect(sourceHead).toMatchObject({
+      completion: 'SOURCE_HEAD_REACHED',
+      nextBlock: 12,
+      finalizedHead: 11,
+      blocks: 0,
+    });
+  });
+
+  it('rejects empty coverage for contiguous ledgers or when the finalized head is Unknown', async () => {
+    const contiguousFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonlResponse([], { finalizedHead: 12 }));
+    await expect(
+      client(contiguousFetch).readFinalizedRange({ fromBlock: 10, toBlock: 12 }, vi.fn()),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+
+    const unknownHeadFetch = vi.fn<typeof fetch>().mockResolvedValue(jsonlResponse([]));
+    await expect(
+      client(unknownHeadFetch, { dataset: 'solana-mainnet' }).readFinalizedRange(
+        { fromBlock: 10, toBlock: 12 },
+        vi.fn(),
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+
   it('honors rate-limit retry metadata and does not turn it into provider-down', async () => {
     const fetchImplementation = vi
       .fn<typeof fetch>()
@@ -273,5 +320,69 @@ describe('SqdPortalClient', () => {
           policy,
         }),
     ).toThrow(ProviderError);
+  });
+});
+
+describe('sqdTransactionsFromBlock', () => {
+  it.each([
+    {
+      dataset: 'ethereum-mainnet' as const,
+      transaction: { hash: `0x${'a'.repeat(64)}`, value: '9007199254740993' },
+      identity: `0x${'a'.repeat(64)}`,
+    },
+    {
+      dataset: 'bitcoin-mainnet' as const,
+      transaction: { txid: 'b'.repeat(64), weight: 400 },
+      identity: 'b'.repeat(64),
+    },
+    {
+      dataset: 'solana-mainnet' as const,
+      transaction: { signatures: ['1'.repeat(88)], fee: 5000 },
+      identity: '1'.repeat(88),
+    },
+  ])(
+    'extracts a strict transaction identity for $dataset',
+    ({ dataset, transaction, identity }) => {
+      const item = sqdTransactionsFromBlock(dataset, {
+        ...block(1),
+        transactions: [transaction],
+      })[0];
+
+      expect(item).toEqual({ sourceIndex: 0, identity, payload: transaction });
+    },
+  );
+
+  it('accepts the provider-defined omitted or explicit empty transaction table', () => {
+    expect(sqdTransactionsFromBlock('ethereum-mainnet', block(1))).toEqual([]);
+    expect(sqdTransactionsFromBlock('ethereum-mainnet', { ...block(1), transactions: [] })).toEqual(
+      [],
+    );
+  });
+
+  it('rejects malformed and duplicate transaction identities', () => {
+    expect(() =>
+      sqdTransactionsFromBlock('ethereum-mainnet', {
+        ...block(1),
+        transactions: [{ hash: 'not-a-hash' }],
+      }),
+    ).toThrow(/hash/);
+    expect(() =>
+      sqdTransactionsFromBlock('bitcoin-mainnet', {
+        ...block(1),
+        transactions: [{ txid: 'c'.repeat(64) }, { txid: 'C'.repeat(64) }],
+      }),
+    ).toThrow(/duplicate/);
+    expect(() =>
+      sqdTransactionsFromBlock('solana-mainnet', {
+        ...block(1),
+        transactions: [{ signatures: [] }],
+      }),
+    ).toThrow(/signatures/);
+    expect(() =>
+      sqdTransactionsFromBlock('solana-mainnet', {
+        ...block(1),
+        transactions: null,
+      }),
+    ).toThrow(/table/);
   });
 });

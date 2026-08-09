@@ -23,8 +23,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - responsive React analyst workspace with explicit Unknown states;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
-- bounded, restart-safe SQD finalized block-header ingestion for Ethereum, BNB Smart Chain,
-  Bitcoin, and Solana;
+- bounded, restart-safe SQD finalized block and provider-shaped raw-transaction ingestion for
+  Ethereum, BNB Smart Chain, Bitcoin, and Solana;
 - content-addressed versioned raw-artifact storage, Evidence-linked ClickHouse Raw Facts, and
   monotonic PostgreSQL ingestion checkpoints;
 - read-only host and Compose ingestion-worker entrypoints with storage preflight and terminal replay
@@ -33,6 +33,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - safe, actionable worker failure codes that preserve the underlying provider/storage category
   without exposing error text, URL paths, or credentials;
 - repeat-run-safe integration coverage against real PostgreSQL, ClickHouse, and MinIO services;
+- explicit block-header/transaction profiles, strict per-ledger transaction identities, and
+  finalized-head-proven Solana skipped-slot handling;
 - Docker Compose topology and multi-stage production images;
 - database initialization images that work from Windows Unicode workspace paths;
 - repository governance, dependency policy, CI, test, deployment, and release documentation.
@@ -53,8 +55,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Known limitations
 
-- finalized block headers are persisted, but transactions, logs, traces, Bitcoin inputs/outputs,
-  Solana instructions, and protocol-specific launchpad/market decoding are not implemented;
+- finalized blocks and provider-shaped raw transactions are persisted, but semantic transaction
+  normalization, logs, traces, Bitcoin inputs/outputs, Solana instructions, and protocol-specific
+  launchpad/market decoding are not implemented;
 - continuous scheduling, unfinalized/reorg handling, and cross-provider reconciliation are not
   implemented;
 - entity resolution is an uncalibrated baseline;

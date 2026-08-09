@@ -1,7 +1,9 @@
 import { SQD_DATASETS, type SqdDataset } from '@zerotrace/chain-adapters';
+import { SQD_INGESTION_PROFILES, type SqdIngestionProfile } from '@zerotrace/ingestion';
 
 export interface IngestWorkerConfig {
   dataset: SqdDataset;
+  profile: SqdIngestionProfile;
   fromBlock: number;
   toBlock: number;
   portalUrl: string;
@@ -27,6 +29,7 @@ export interface IngestWorkerConfig {
 
 interface ParsedArguments {
   dataset?: string;
+  profile?: string;
   fromBlock?: string;
   toBlock?: string;
 }
@@ -35,7 +38,7 @@ function parseArguments(args: readonly string[]): ParsedArguments {
   const result: ParsedArguments = {};
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
-    if (!['--dataset', '--from', '--to'].includes(argument ?? '')) {
+    if (!['--dataset', '--profile', '--from', '--to'].includes(argument ?? '')) {
       throw new Error(`Unknown ingest argument: ${argument ?? ''}`);
     }
     const value = args[index + 1];
@@ -44,6 +47,7 @@ function parseArguments(args: readonly string[]): ParsedArguments {
     }
     index += 1;
     if (argument === '--dataset') result.dataset = value;
+    if (argument === '--profile') result.profile = value;
     if (argument === '--from') result.fromBlock = value;
     if (argument === '--to') result.toBlock = value;
   }
@@ -109,6 +113,10 @@ export function loadIngestWorkerConfig(
     throw new Error('--dataset must name a supported SQD dataset.');
   }
   const dataset = parsed.dataset as SqdDataset;
+  const profile = parsed.profile ?? 'block-headers';
+  if (!SQD_INGESTION_PROFILES.includes(profile as SqdIngestionProfile)) {
+    throw new Error('--profile must be block-headers or transactions.');
+  }
   const fromBlock = integer(parsed.fromBlock, '--from', undefined, 0, Number.MAX_SAFE_INTEGER);
   const toBlock = integer(parsed.toBlock, '--to', undefined, 0, Number.MAX_SAFE_INTEGER);
   if (toBlock < fromBlock) throw new Error('--to must be greater than or equal to --from.');
@@ -131,6 +139,7 @@ export function loadIngestWorkerConfig(
   const clickHousePassword = optional(env.CLICKHOUSE_PASSWORD);
   return {
     dataset,
+    profile: profile as SqdIngestionProfile,
     fromBlock,
     toBlock,
     portalUrl: env.SQD_PORTAL_URL?.trim() || 'https://portal.sqd.dev',

@@ -24,6 +24,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Restart-safe Evidence drilldown and real PostgreSQL constraint tests
 - [x] Content-addressed, versioned raw payload repository for implemented ingestion records
 - [x] Finalized block-header ingestion on EVM, Bitcoin, and Solana with restart-safe checkpoints
+- [x] Finalized provider-shaped raw-transaction ingestion on EVM, Bitcoin, and Solana
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [ ] Reorg/replay and cross-provider reconciliation tests
 - [ ] Temporal graph projection and rebuild
@@ -57,6 +58,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 
 ## Real-chain acceptance
 
+- [x] Named finalized raw-transaction capture and terminal replay on four SQD datasets
 - [ ] Ethereum archive/current-state fixture suite
 - [ ] BNB Smart Chain archive/current-state fixture suite
 - [ ] Bitcoin Core plus Esplora fixture suite
@@ -67,6 +69,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 Until every applicable item for a release claim is checked with attached evidence, ZeroTrace must not
 be described as terminal-complete or production-approved.
 
-The unchecked historical-ingestion item is intentionally broader than the completed finalized
-block-header path: transaction/log/trace/input/output/instruction ingestion, continuous operation,
-reorg policy, and independent-provider reconciliation remain required.
+The unchecked historical-ingestion item is intentionally broader than the completed finalized block
+and raw-transaction path: semantic transaction normalization, log/trace/input/output/instruction
+ingestion, continuous operation, reorg policy, and independent-provider reconciliation remain
+required.

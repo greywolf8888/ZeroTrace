@@ -11,6 +11,7 @@ import type { Ledger, RawChainFact } from '@zerotrace/schemas';
 import type { IngestionRun } from '@zerotrace/storage';
 
 import {
+  createSqdProfileRequest,
   IngestionPipelineError,
   SqdFinalizedIngestionPipeline,
   sqdIngestionQuery,
@@ -239,6 +240,8 @@ describe('SqdFinalizedIngestionPipeline', () => {
     ]);
     expect(result).toMatchObject({
       processedBlocks: 2,
+      transactionCoverage: 'NOT_QUERIED',
+      processedTransactions: null,
       resumedFrom: 0,
       alreadyTerminal: false,
       run: { status: 'REQUESTED_RANGE_COMPLETE', nextBlock: 2 },
@@ -250,6 +253,100 @@ describe('SqdFinalizedIngestionPipeline', () => {
       blockNumber: '0',
       blockTimestamp: '1970-01-01T00:00:00.000Z',
     });
+  });
+
+  it('materializes strict transaction Evidence and Raw Facts before advancing the block cursor', async () => {
+    const events: string[] = [];
+    const checkpoints = new FakeCheckpoints(events);
+    const stores = createStores(events);
+    const transactions = [
+      { hash: `0x${'a'.repeat(64)}`, from: `0x${'1'.repeat(40)}`, value: '1' },
+      { hash: `0x${'b'.repeat(64)}`, from: `0x${'2'.repeat(40)}`, value: '2' },
+    ];
+    const source = new FakeSource('ethereum-mainnet', 'EVM', '1', [
+      { ...evmBlocks[0]!, transactions },
+    ]);
+    const pipeline = new SqdFinalizedIngestionPipeline({
+      source,
+      checkpoints,
+      artifacts: stores.artifacts,
+      evidence: stores.evidence,
+      facts: stores.factWriter,
+      nowImplementation: () => new Date('2026-08-09T13:00:00.000Z'),
+    });
+    const request = createSqdProfileRequest({
+      dataset: 'ethereum-mainnet',
+      profile: 'transactions',
+      fromBlock: 0,
+      toBlock: 0,
+    });
+
+    const result = await pipeline.run(request);
+
+    expect(events).toEqual([
+      'artifact:0',
+      'evidence:0',
+      'fact:0',
+      'evidence:0',
+      'fact:0',
+      'evidence:0',
+      'fact:0',
+      'checkpoint:0',
+      'finish:REQUESTED_RANGE_COMPLETE',
+    ]);
+    expect(result).toMatchObject({
+      processedBlocks: 1,
+      transactionCoverage: 'MATERIALIZED',
+      processedTransactions: 2,
+    });
+    expect(stores.facts.map((fact) => [fact.factType, fact.subject])).toEqual([
+      ['BLOCK', evmBlocks[0]!.header.hash],
+      ['TRANSACTION', transactions[0]!.hash],
+      ['TRANSACTION', transactions[1]!.hash],
+    ]);
+    expect(stores.ledger.values().map((node) => node.evidence.kind)).toEqual([
+      'BLOCK',
+      'TRANSACTION',
+      'TRANSACTION',
+    ]);
+    expect(checkpoints.run?.query).toMatchObject({
+      materialize: { blocks: true, transactions: true },
+    });
+  });
+
+  it('records provider-defined empty transaction coverage without inventing a count', async () => {
+    const events: string[] = [];
+    const checkpoints = new FakeCheckpoints(events);
+    const stores = createStores(events);
+    const source = new FakeSource('ethereum-mainnet', 'EVM', '1', evmBlocks.slice(0, 1));
+    const pipeline = new SqdFinalizedIngestionPipeline({
+      source,
+      checkpoints,
+      artifacts: stores.artifacts,
+      evidence: stores.evidence,
+      facts: stores.factWriter,
+    });
+    const request = createSqdProfileRequest({
+      dataset: 'ethereum-mainnet',
+      profile: 'transactions',
+      fromBlock: 0,
+      toBlock: 0,
+    });
+
+    await expect(pipeline.run(request)).resolves.toMatchObject({
+      processedBlocks: 1,
+      transactionCoverage: 'MATERIALIZED',
+      processedTransactions: 0,
+      run: { status: 'REQUESTED_RANGE_COMPLETE', nextBlock: 1 },
+    });
+    expect(events).toEqual([
+      'artifact:0',
+      'evidence:0',
+      'fact:0',
+      'checkpoint:0',
+      'finish:REQUESTED_RANGE_COMPLETE',
+    ]);
+    expect(checkpoints.failures).toEqual([]);
   });
 
   it('resumes from the durable cursor and reuses the original observation time', async () => {

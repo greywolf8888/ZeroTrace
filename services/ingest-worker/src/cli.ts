@@ -1,7 +1,7 @@
 import 'dotenv/config';
 
 import { SqdPortalClient } from '@zerotrace/chain-adapters';
-import { SqdFinalizedIngestionPipeline } from '@zerotrace/ingestion';
+import { createSqdProfileRequest, SqdFinalizedIngestionPipeline } from '@zerotrace/ingestion';
 import {
   ClickHouseRawFactRepository,
   PostgresEvidenceRepository,
@@ -15,10 +15,13 @@ import { publicWorkerError } from './errors.js';
 const HELP = `ZeroTrace finalized historical ingestion
 
 Usage:
-  npm run ingest -- --dataset <dataset> --from <block-or-slot> --to <block-or-slot>
+  npm run ingest -- --dataset <dataset> --profile <profile> --from <block-or-slot> --to <block-or-slot>
 
 Datasets:
   ethereum-mainnet | binance-mainnet | bitcoin-mainnet | solana-mainnet
+
+Profiles:
+  block-headers (default) | transactions
 
 This worker is read-only with respect to chains. It never signs or broadcasts transactions.`;
 
@@ -76,23 +79,32 @@ async function main(): Promise<void> {
         retryable: true,
       });
     }
+    const request = createSqdProfileRequest({
+      dataset: config.dataset,
+      profile: config.profile,
+      fromBlock: config.fromBlock,
+      toBlock: config.toBlock,
+    });
     const result = await new SqdFinalizedIngestionPipeline({
       source,
       checkpoints,
       artifacts,
       evidence,
       facts,
-    }).run({ fromBlock: config.fromBlock, toBlock: config.toBlock });
+    }).run(request);
     process.stdout.write(
       `${JSON.stringify({
         event: 'finalized_ingestion_complete',
         dataset: config.dataset,
+        profile: config.profile,
         runId: result.run.id,
         status: result.run.status,
         requestedFrom: result.run.fromBlock,
         requestedTo: result.run.toBlock,
         nextBlock: result.run.nextBlock,
         processedBlocks: result.processedBlocks,
+        transactionCoverage: result.transactionCoverage,
+        processedTransactions: result.processedTransactions,
         alreadyTerminal: result.alreadyTerminal,
         sourceCompletion: result.sourceSummary?.completion ?? null,
       })}\n`,

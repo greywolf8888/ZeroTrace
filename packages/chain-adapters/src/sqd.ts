@@ -57,6 +57,12 @@ export interface SqdFinalizedBlock {
   [field: string]: JsonValue;
 }
 
+export interface SqdTransactionItem {
+  sourceIndex: number;
+  identity: string;
+  payload: Readonly<Record<string, JsonValue>>;
+}
+
 export interface SqdFinalizedRangeRequest {
   fromBlock: number;
   toBlock: number;
@@ -131,7 +137,11 @@ class SqdConsumerError extends Error {
 
 const DATASET_PATH = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FIELD_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
+const EVM_TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/;
+const BITCOIN_TRANSACTION_ID = /^[0-9a-fA-F]{64}$/;
+const SOLANA_SIGNATURE = /^[1-9A-HJ-NP-Za-km-z]{64,96}$/;
 const MAX_QUERY_BYTES = 262_144;
+const MAX_TRANSACTIONS_PER_BLOCK = 100_000;
 
 const ALLOWED_FIELD_GROUPS: Record<SqdQueryType, ReadonlySet<string>> = {
   evm: new Set(['block', 'transaction', 'log', 'trace', 'stateDiff']),
@@ -343,6 +353,65 @@ function parseBlock(line: string, fromBlock: number, toBlock: number): SqdFinali
       timestamp: timestamp === undefined ? null : (timestamp as number | null),
     },
   };
+}
+
+function transactionIdentity(
+  dataset: SqdDataset,
+  transaction: Readonly<Record<string, unknown>>,
+): string {
+  const queryType = SQD_DATASETS[dataset].queryType;
+  if (queryType === 'evm') {
+    const hash = transaction.hash;
+    if (typeof hash !== 'string' || !EVM_TRANSACTION_HASH.test(hash)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM transaction hash is invalid.');
+    }
+    return hash.toLowerCase();
+  }
+  if (queryType === 'bitcoin') {
+    const txid = transaction.txid;
+    if (typeof txid !== 'string' || !BITCOIN_TRANSACTION_ID.test(txid)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD Bitcoin transaction ID is invalid.');
+    }
+    return txid.toLowerCase();
+  }
+  const signatures = transaction.signatures;
+  if (
+    !Array.isArray(signatures) ||
+    signatures.length === 0 ||
+    !signatures.every(
+      (signature) => typeof signature === 'string' && SOLANA_SIGNATURE.test(signature),
+    )
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', 'SQD Solana transaction signatures are invalid.');
+  }
+  return signatures[0] as string;
+}
+
+export function sqdTransactionsFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdTransactionItem[] {
+  const transactions = block.transactions;
+  if (transactions === undefined) return [];
+  if (!Array.isArray(transactions) || transactions.length > MAX_TRANSACTIONS_PER_BLOCK) {
+    throw new ProviderError('INVALID_RESPONSE', 'SQD transaction table is invalid or too large.');
+  }
+  const identities = new Set<string>();
+  return transactions.map((transaction, sourceIndex) => {
+    if (typeof transaction !== 'object' || transaction === null || Array.isArray(transaction)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD transaction must be a JSON object.');
+    }
+    const payload = transaction as Readonly<Record<string, JsonValue>>;
+    const identity = transactionIdentity(dataset, payload);
+    if (identities.has(identity)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'SQD transaction table contains a duplicate identity.',
+      );
+    }
+    identities.add(identity);
+    return { sourceIndex, identity, payload };
+  });
 }
 
 function validateFilterValue(value: unknown, depth = 0): void {
@@ -573,6 +642,31 @@ export class SqdPortalClient {
               retries,
             };
           }
+          if (outcome.emptyRange) {
+            if (SQD_DATASETS[this.dataset].contiguous || outcome.finalizedHead === null) {
+              throw new ProviderError(
+                'INVALID_RESPONSE',
+                'SQD finalized stream returned unverifiable empty coverage.',
+              );
+            }
+            if (outcome.finalizedHead < request.toBlock) {
+              return {
+                dataset: this.dataset,
+                completion: 'SOURCE_HEAD_REACHED',
+                requestedFrom: request.fromBlock,
+                requestedTo: request.toBlock,
+                lastBlock: progress.lastBlock,
+                nextBlock: Math.max(cursor, outcome.finalizedHead + 1),
+                finalizedHead: progress.finalizedHead,
+                blocks: progress.blocks,
+                requests,
+                retries,
+              };
+            }
+            cursor = request.toBlock + 1;
+            completedResponse = true;
+            break;
+          }
           if (progress.lastBlock === null || progress.lastBlock < attemptStart) {
             throw new ProviderError(
               'INVALID_RESPONSE',
@@ -629,7 +723,7 @@ export class SqdPortalClient {
     toBlock: number,
     progress: StreamProgress,
     onBlock: (block: SqdFinalizedBlock) => void | Promise<void>,
-  ): Promise<{ noContent: boolean; finalizedHead: number | null }> {
+  ): Promise<{ noContent: boolean; emptyRange: boolean; finalizedHead: number | null }> {
     const response = await this.#fetch('finalized-stream', {
       method: 'POST',
       headers: {
@@ -639,7 +733,7 @@ export class SqdPortalClient {
       body: JSON.stringify(query),
     });
     if (response.status === 204) {
-      return { noContent: true, finalizedHead: parseHead(response) };
+      return { noContent: true, emptyRange: false, finalizedHead: parseHead(response) };
     }
     if (!response.ok) throw responseError(response, this.#options.nowImplementation());
     const finalizedHead = parseHead(response);
@@ -736,12 +830,9 @@ export class SqdPortalClient {
       reader.releaseLock();
     }
     if (responseBlocks === 0) {
-      throw new ProviderError(
-        'INVALID_RESPONSE',
-        'SQD finalized stream returned an empty response.',
-      );
+      return { noContent: false, emptyRange: true, finalizedHead };
     }
-    return { noContent: false, finalizedHead };
+    return { noContent: false, emptyRange: false, finalizedHead };
   }
 
   async #fetch(path: 'metadata' | 'finalized-stream', init: RequestInit): Promise<Response> {

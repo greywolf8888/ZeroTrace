@@ -576,7 +576,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               ? 'STORAGE_PARTIALLY_CONFIGURED'
               : 'STORAGE_REQUIRED',
         detail:
-          'Restart-safe SQD finalized block-header ingestion is implemented for Ethereum, BNB Smart Chain, Bitcoin, and Solana. Transaction, log, trace, input/output, and instruction normalization remains pending.',
+          'Restart-safe SQD finalized block and raw-transaction ingestion is implemented for Ethereum, BNB Smart Chain, Bitcoin, and Solana. Log, trace, input/output, instruction, and protocol normalization remains pending.',
       },
       { id: 'entity-evidence-fusion', status: 'IMPLEMENTED_BASELINE' },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },

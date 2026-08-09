@@ -131,7 +131,9 @@ Production conclusions must return:
 
 Current search classification is local structural evidence. Provider-backed subject reads and
 derived entity/RV/scenario results write their Evidence, derivation edges, and complete Snapshot to
-PostgreSQL when configured. The separate finalized worker stores each ingested block header as a
-content-addressed versioned raw artifact, binds it to durable Evidence/Snapshot provenance, stores an
-idempotent ClickHouse Raw Fact, and only then advances its PostgreSQL checkpoint. Transaction, log,
-trace, input/output, and instruction payloads are not yet normalized by that path.
+PostgreSQL when configured. The separate finalized worker stores each ingested provider block as a
+content-addressed versioned raw artifact, binds block and optionally raw-transaction observations to
+durable Evidence/Snapshot provenance, stores idempotent ClickHouse Raw Facts, and only then advances
+its PostgreSQL checkpoint. Header-only runs expose transaction coverage as `NOT_QUERIED`; raw
+transactions are not yet normalized into logs, traces, inputs/outputs, instructions, transfers, or
+protocol events.

@@ -1,4 +1,4 @@
-import { SQD_DATASETS } from '@zerotrace/chain-adapters';
+import { SQD_DATASETS, sqdTransactionsFromBlock } from '@zerotrace/chain-adapters';
 import type {
   SqdDataset,
   SqdDatasetMetadata,
@@ -14,7 +14,9 @@ import {
   type RawArtifactWriteResult,
 } from '@zerotrace/storage';
 
-export const SQD_INGESTION_VERSION = 'sqd-finalized-ingestion-v1';
+export * from './profiles.js';
+
+export const SQD_INGESTION_VERSION = 'sqd-finalized-ingestion-v2';
 
 export type IngestionPipelineErrorCode =
   | 'INGESTION_SOURCE_MISMATCH'
@@ -109,6 +111,8 @@ export interface SqdIngestionResult {
   run: IngestionRun;
   resumedFrom: number;
   processedBlocks: number;
+  transactionCoverage: 'NOT_QUERIED' | 'MATERIALIZED';
+  processedTransactions: number | null;
   alreadyTerminal: boolean;
   sourceSummary: SqdStreamSummary | null;
 }
@@ -221,6 +225,8 @@ export function sqdIngestionQuery(
   dataset: SqdDataset,
   request: SqdFinalizedRangeRequest,
 ): Readonly<Record<string, unknown>> {
+  const materializeTransactions =
+    Array.isArray(request.requests?.transactions) && request.requests.transactions.length > 0;
   return {
     schema: SQD_INGESTION_VERSION,
     dataset,
@@ -228,6 +234,7 @@ export function sqdIngestionQuery(
     fromBlock: request.fromBlock,
     toBlock: request.toBlock,
     includeAllBlocks: true,
+    materialize: { blocks: true, transactions: materializeTransactions },
     fields: request.fields ?? {},
     requests: request.requests ?? {},
   };
@@ -259,6 +266,9 @@ export class SqdFinalizedIngestionPipeline {
   async run(request: SqdFinalizedRangeRequest): Promise<SqdIngestionResult> {
     const sourceId = `sqd:${this.#source.dataset}`;
     const query = sqdIngestionQuery(this.#source.dataset, request);
+    const materializeTransactions =
+      Array.isArray(request.requests?.transactions) && request.requests.transactions.length > 0;
+    const transactionCoverage = materializeTransactions ? 'MATERIALIZED' : 'NOT_QUERIED';
     let run = await this.#checkpoints.begin({
       source: sourceId,
       dataset: this.#source.dataset,
@@ -275,6 +285,8 @@ export class SqdFinalizedIngestionPipeline {
         run,
         resumedFrom,
         processedBlocks: 0,
+        transactionCoverage,
+        processedTransactions: materializeTransactions ? 0 : null,
         alreadyTerminal: true,
         sourceSummary: null,
       };
@@ -287,6 +299,8 @@ export class SqdFinalizedIngestionPipeline {
           run,
           resumedFrom,
           processedBlocks: 0,
+          transactionCoverage,
+          processedTransactions: materializeTransactions ? 0 : null,
           alreadyTerminal: false,
           sourceSummary: null,
         };
@@ -312,6 +326,7 @@ export class SqdFinalizedIngestionPipeline {
       }
 
       let processedBlocks = 0;
+      let processedTransactions = 0;
       const sourceSummary = await this.#source.readFinalizedRange(
         { ...request, fromBlock: run.nextBlock, toBlock: run.toBlock },
         async (block) => {
@@ -364,8 +379,44 @@ export class SqdFinalizedIngestionPipeline {
             observedAt: run.startedAt,
           });
           await this.#facts.put(fact);
+          const transactions = materializeTransactions
+            ? sqdTransactionsFromBlock(this.#source.dataset, block)
+            : [];
+          for (const transaction of transactions) {
+            const transactionEvidence = createEvidence({
+              ledger: this.#source.ledger,
+              chainId: this.#source.chainId,
+              kind: 'TRANSACTION',
+              source: sourceId,
+              locator: `transaction:${transaction.identity}`,
+              payload: transaction.payload,
+              observedAt: run.startedAt,
+              blockOrSlot: position,
+              finality: 'finalized',
+              rawArtifactRef: artifact.ref,
+              summary: `SQD finalized ${this.#source.dataset} transaction ${transaction.identity}.`,
+            });
+            await this.#evidence.put(transactionEvidence, [], snapshot);
+            await this.#facts.put(
+              createRawChainFact({
+                ledger: this.#source.ledger,
+                chainId: this.#source.chainId,
+                blockOrSlot: position,
+                blockHash: block.header.hash,
+                factType: 'TRANSACTION',
+                subject: transaction.identity,
+                provider: sourceId,
+                finality: 'finalized',
+                payload: transaction.payload,
+                evidenceId: transactionEvidence.id,
+                rawArtifactRef: artifact.ref,
+                observedAt: run.startedAt,
+              }),
+            );
+          }
           run = await this.#checkpoints.advance(run.id, block.header.number);
           processedBlocks += 1;
+          processedTransactions += transactions.length;
         },
       );
       run = await this.#checkpoints.finish(
@@ -373,7 +424,15 @@ export class SqdFinalizedIngestionPipeline {
         sourceSummary.completion,
         sourceSummary.nextBlock,
       );
-      return { run, resumedFrom, processedBlocks, alreadyTerminal: false, sourceSummary };
+      return {
+        run,
+        resumedFrom,
+        processedBlocks,
+        transactionCoverage,
+        processedTransactions: materializeTransactions ? processedTransactions : null,
+        alreadyTerminal: false,
+        sourceSummary,
+      };
     } catch (error) {
       try {
         await this.#checkpoints.recordFailure(run.id, safeErrorCode(error));

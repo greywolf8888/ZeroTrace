@@ -3,7 +3,11 @@ import { randomUUID } from 'node:crypto';
 
 import type { SqdFinalizedBlock, SqdFinalizedRangeRequest } from '@zerotrace/chain-adapters';
 import { createEvidence } from '@zerotrace/evidence';
-import { SqdFinalizedIngestionPipeline, type SqdFinalizedSource } from '@zerotrace/ingestion';
+import {
+  createSqdProfileRequest,
+  SqdFinalizedIngestionPipeline,
+  type SqdFinalizedSource,
+} from '@zerotrace/ingestion';
 import {
   ClickHouseRawFactRepository,
   createRawChainFact,
@@ -148,6 +152,10 @@ storageDescribe('historical ingestion storage integration', () => {
         parentHash: payload.header.hash,
         timestamp: 1_438_269_988,
       },
+      transactions: [
+        { hash: `0x${'a'.repeat(64)}`, from: `0x${'1'.repeat(40)}`, value: '1' },
+        { hash: `0x${'b'.repeat(64)}`, from: `0x${'2'.repeat(40)}`, value: '2' },
+      ],
     };
     const source: SqdFinalizedSource = {
       dataset: testDataset,
@@ -187,12 +195,17 @@ storageDescribe('historical ingestion storage integration', () => {
       nowImplementation: () => new Date('2026-08-09T13:30:00.000Z'),
     });
 
-    const completed = await pipeline.run({
+    const request = createSqdProfileRequest({
+      dataset: testDataset,
+      profile: 'transactions',
       fromBlock: pipelineBlockNumber,
       toBlock: pipelineBlockNumber,
     });
+    const completed = await pipeline.run(request);
     expect(completed).toMatchObject({
       processedBlocks: 1,
+      transactionCoverage: 'MATERIALIZED',
+      processedTransactions: 2,
       alreadyTerminal: false,
       run: { status: 'REQUESTED_RANGE_COMPLETE', nextBlock: pipelineBlockNumber + 1 },
     });
@@ -202,21 +215,26 @@ storageDescribe('historical ingestion storage integration', () => {
       fromBlock: pipelineBlockNumber,
       toBlock: pipelineBlockNumber,
     });
-    expect(storedFacts).toHaveLength(1);
-    const storedFact = storedFacts[0];
-    expect(storedFact).toBeDefined();
-    await expect(evidence.get(storedFact!.evidenceId)).resolves.toMatchObject({
-      evidence: { rawArtifactRef: storedFact!.rawArtifactRef },
-      snapshot: { ledger: 'EVM', blockNumber: String(pipelineBlockNumber) },
-    });
-    await expect(artifacts.get(storedFact!.rawArtifactRef)).resolves.toMatchObject({
+    expect(storedFacts).toHaveLength(3);
+    expect(storedFacts.map((fact) => fact.factType).sort()).toEqual([
+      'BLOCK',
+      'TRANSACTION',
+      'TRANSACTION',
+    ]);
+    for (const storedFact of storedFacts) {
+      await expect(evidence.get(storedFact.evidenceId)).resolves.toMatchObject({
+        evidence: { rawArtifactRef: storedFact.rawArtifactRef },
+        snapshot: { ledger: 'EVM', blockNumber: String(pipelineBlockNumber) },
+      });
+    }
+    await expect(artifacts.get(storedFacts[0]!.rawArtifactRef)).resolves.toMatchObject({
       payload: block,
     });
 
-    await expect(
-      pipeline.run({ fromBlock: pipelineBlockNumber, toBlock: pipelineBlockNumber }),
-    ).resolves.toMatchObject({
+    await expect(pipeline.run(request)).resolves.toMatchObject({
       processedBlocks: 0,
+      transactionCoverage: 'MATERIALIZED',
+      processedTransactions: 0,
       alreadyTerminal: true,
       run: { id: completed.run.id },
     });

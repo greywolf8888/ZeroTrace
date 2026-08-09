@@ -36,6 +36,11 @@
   immutable and drill down after a repository restart.
 - finalized ingestion stores the raw artifact before Evidence/Raw Fact, advances checkpoints only
   after durable writes, resumes monotonically, and makes terminal replay a no-op;
+- transaction-profile ingestion validates EVM hash, Bitcoin txid, and Solana signature identities,
+  rejects duplicate/malformed records, and writes every transaction before advancing its block;
+- header-only runs preserve transaction coverage as `NOT_QUERIED`/null, while an explicitly queried
+  provider-empty table may report a known zero;
+- Solana skipped-slot empty streams advance only with a finalized-head coverage proof;
 - raw artifacts are content-addressed, read-after-write verified, and kept in a versioned bucket;
 - ClickHouse Raw Fact writes are idempotent and preserve Evidence/artifact provenance;
 - integers above `Number.MAX_SAFE_INTEGER` remain exact strings.

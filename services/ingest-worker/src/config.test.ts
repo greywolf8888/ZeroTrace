@@ -17,11 +17,27 @@ describe('ingest worker config', () => {
       loadIngestWorkerConfig(env, ['--dataset', 'bitcoin-mainnet', '--from', '100', '--to', '120']),
     ).toMatchObject({
       dataset: 'bitcoin-mainnet',
+      profile: 'block-headers',
       fromBlock: 100,
       toBlock: 120,
       requestsPerSecond: 2,
       providerPolicy: { allowPrivateNetworks: false },
     });
+  });
+
+  it('accepts the explicit transaction profile', () => {
+    expect(
+      loadIngestWorkerConfig(env, [
+        '--dataset',
+        'solana-mainnet',
+        '--profile',
+        'transactions',
+        '--from',
+        '100',
+        '--to',
+        '100',
+      ]),
+    ).toMatchObject({ dataset: 'solana-mainnet', profile: 'transactions' });
   });
 
   it('rejects unsupported datasets, unknown arguments, unsafe ranges, and missing durable stores', () => {
@@ -40,6 +56,18 @@ describe('ingest worker config', () => {
         'true',
       ]),
     ).toThrow(/Unknown/);
+    expect(() =>
+      loadIngestWorkerConfig(env, [
+        '--dataset',
+        'ethereum-mainnet',
+        '--profile',
+        'all-data',
+        '--from',
+        '0',
+        '--to',
+        '1',
+      ]),
+    ).toThrow(/profile/);
     expect(() =>
       loadIngestWorkerConfig({ ...env, SQD_MAX_RANGE_BLOCKS: '1' }, [
         '--dataset',

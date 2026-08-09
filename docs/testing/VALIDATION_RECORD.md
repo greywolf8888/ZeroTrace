@@ -177,12 +177,44 @@ continuous scheduling, unfinalized forks/reorgs, cross-provider reconciliation, 
 semantics. The interception-proxy exception documented above was still necessary on this host; the
 secure default remains `ALLOW_PRIVATE_PROVIDER_URLS=false`.
 
+## Finalized raw-transaction follow-up
+
+The transaction profile was checked first against the official SQD EVM, Bitcoin, and Solana field
+contracts and then probed against the public Portal without a key. A production-built worker wrote a
+named finalized position for every configured dataset through the same PostgreSQL, ClickHouse, and
+versioned MinIO pipeline:
+
+| Dataset            | Position | Transactions | Run ID                                 | Persisted-fact manifest SHA-256                                    |
+| ------------------ | -------: | -----------: | -------------------------------------- | ------------------------------------------------------------------ |
+| `ethereum-mainnet` |    46147 |            1 | `8470b62e-c87b-4941-baff-b90b398bfdf5` | `cbf7e100df8d09702c403052212dd1749872daef9e186a13a87f6906036f9105` |
+| `binance-mainnet`  |        1 |            7 | `2cb84bee-409f-4857-bdfc-d973efe3c04b` | `51b11e7cf83aaf0276784d58b18c89290fc52daae5c49221793795450a913b66` |
+| `bitcoin-mainnet`  |      170 |            2 | `4d93bcf9-be7c-48de-87a8-b8f8dee7dcae` | `a123fbc346605e0b3b2f9f7d2b12025983aceb8b47eb0e275fe61499d4215b40` |
+| `solana-mainnet`   |   105368 |            1 | `19f980af-9e5d-4867-b874-75f520df3f49` | `37a1da0501d697343c4ed158b0f14ff198d03e06a6ac6546a041baebaa465b1b` |
+
+ClickHouse and PostgreSQL independently returned one block plus the listed transaction count, one
+Evidence ID per fact, and one shared content-addressed artifact reference per provider block. Reading
+each artifact back from MinIO reproduced the exact transaction count, and every immediate replay
+returned the same run ID with `processedBlocks: 0`, `processedTransactions: 0`, and
+`alreadyTerminal: true`.
+
+Solana slot `259984950` was also a real skipped-slot probe. Portal returned HTTP 200 with an empty
+JSONL body and a finalized head above the requested slot. The worker completed that proven empty
+range with zero blocks/transactions; an empty stream with a missing finalized-head proof remains an
+error. Header-only runs return `transactionCoverage: NOT_QUERIED` and a null transaction count, so
+not-queried history is never presented as numeric zero.
+
+This follow-up validates provider-shaped raw transaction capture and provenance only. EVM receipt,
+log and trace normalization, Bitcoin input/output and outpoint materialization, Solana
+instruction/CPI and balance tables, protocol decoding, independent-provider reconciliation, and
+archive-scale backfill remain open. The disposable transaction-validation containers, network, and
+named volumes were removed after the reverse-read assertions.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `npm run verify:full`    | pass: format, lint, typecheck, 146 unit, 25 integration, build, license, audit, coverage, 6 E2E, SBOM |
-| `npm run test:coverage`  | pass: 171 tests; 87.24% statements, 78.15% branches, 96.65% functions, 88.70% lines                   |
+| `npm run verify:full`    | pass: format, lint, typecheck, 161 unit, 25 integration, build, license, audit, coverage, 6 E2E, SBOM |
+| `npm run test:coverage`  | pass: 186 tests; 87.57% statements, 78.82% branches, 96.71% functions, 88.99% lines                   |
 | `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                     |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                |
 | `docker compose config`  | pass                                                                                                  |
