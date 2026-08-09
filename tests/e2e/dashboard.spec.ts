@@ -23,6 +23,11 @@ test('renders capability truth and unknown values without fake market data', asy
   await expect(page.getByRole('heading', { name: 'Capability ledger' })).toBeVisible();
   await expect(
     page.getByText(
+      /Evidence-grounded same-Snapshot comparisons enforce zero mismatch for exact state/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
       /EVM logs\/traces\/state diffs, Bitcoin inputs\/outputs, and Solana instructions\/logs\/balances\/token balances\/rewards are implemented/,
     ),
   ).toBeVisible();

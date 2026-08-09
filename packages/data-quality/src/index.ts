@@ -24,6 +24,8 @@ import {
   type ReconciledChainAnchor,
 } from '@zerotrace/schemas';
 
+export * from './discrepancy.js';
+
 export const DATA_QUALITY_MODEL_VERSION = 'anchor-reconciliation-v1';
 
 export interface ChainAnchorReader {

@@ -43,6 +43,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   read-only launch-mechanism UI;
 - fixed-block Flap `previewSell` realizable-value observations with source-linked raw/derived
   Evidence, explicit blocked/unsupported states, and an atomic-unit analyst UI;
+- Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
+  exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
+  excluded from numeric denominators;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,

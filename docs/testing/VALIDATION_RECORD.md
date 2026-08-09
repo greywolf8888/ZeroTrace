@@ -456,22 +456,48 @@ Only the raw Portal output becomes Known; nominal value, decimals-normalized pri
 breakdown remain Unknown. This does not satisfy independent quote reconciliation, migrated DEX
 routing, sell-capacity discovery, or the registered FFT terminal run.
 
+GitHub Actions then validated that immutable quote commit with disposable initialized stores. It
+passed all 253 tests, 10 Chromium flows, dependency/license/SBOM and Compose gates, and all five
+production container targets. Coverage was 86.67% statements, 78.11% branches, 95.18% functions,
+and 87.61% lines; CodeQL also passed.
+
+### Typed discrepancy audit slice
+
+The Data Quality package now applies exact decimal/rational comparisons to the registered field
+classes. Deterministic tests exercise exact-state conflicts, decimal-normalized conservation,
+the exact `0.10%` derived boundary, `0.50%`/`1.00%` quote bands, evidenced explanations,
+zero-reference equality, coverage gates, Snapshot conflicts, missing Evidence, Unknown exclusion,
+unverified source independence, and an empty audit that remains inconclusive. The API additionally
+rejects missing source Evidence, persists one derived audit node, and attaches that Evidence ID to
+every returned discrepancy.
+
+The repository-level local run passed 225 unit tests and 26 API integration tests. The coverage run
+passed 251 tests and explicitly skipped 15 opt-in durable-store tests because the local Docker engine
+was unavailable; coverage was 83.79% statements, 75.80% branches, 91.20% functions, and 84.73%
+lines. Ten Chromium desktop/mobile flows, formatting, lint, typecheck, build, license, vulnerability,
+SBOM and Compose-model gates passed. No dependency was added. Remote durable-store and container
+acceptance for this discrepancy batch remains pending until its immutable commit is pushed.
+
+This slice does not compare live independent providers and does not implement corpus-level entity
+probability calibration. Brier score and expected calibration error remain explicit FFT acceptance
+gates; the engine cannot convert missing labels or unverified source independence into a pass.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                             |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| local non-browser gates  | pass: format, lint, typecheck, 214 unit, 24 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
-| local `test:coverage`    | pass: 238 tests, 15 durable skips; 83.54% statements, 75.06% branches, 90.83% functions, 84.47% lines                                                              |
-| branch `test:coverage`   | pass: 248 tests; 86.73% statements, 78.25% branches, 95.14% functions, 87.66% lines                                                                                |
+| local non-browser gates  | pass: format, lint, typecheck, 225 unit, 26 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
+| local `test:coverage`    | pass: 251 tests, 15 durable skips; 83.79% statements, 75.80% branches, 91.20% functions, 84.73% lines                                                              |
+| branch `test:coverage`   | pass on prior quote commit: 253 tests; 86.67% statements, 78.11% branches, 95.18% functions, 87.61% lines                                                          |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap Evidence/Unknown                                                                                |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                             |
 | `docker compose config`  | pass                                                                                                                                                               |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                 |
-| branch GitHub Actions CI | [pass on `440f328`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31337044939): 248 tests, 10 Chromium E2E, and five production container targets         |
-| branch CodeQL            | [pass on `440f328`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31337044942): JavaScript and TypeScript analysis                                        |
+| branch GitHub Actions CI | [pass on `53131cc`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31338076164): 253 tests, 10 Chromium E2E, and five production container targets         |
+| branch CodeQL            | [pass on `53131cc`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31338076179): JavaScript and TypeScript analysis                                        |
 
 The latest complete durable run used GitHub Actions disposable PostgreSQL, ClickHouse, and MinIO
-services. All 38 integration tests passed and the workflow removed its named volumes. The local
+services. All 39 integration tests passed and the workflow removed its named volumes. The local
 Docker engine limitation remains an environment constraint, not a claimed failure or pass.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and

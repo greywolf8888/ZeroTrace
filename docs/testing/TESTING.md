@@ -78,6 +78,9 @@
 - sell-disabled RV is unavailable rather than zero.
 - exit-race simulations are deterministic for the same seed.
 - incomplete API domains return HTTP 501 and typed Unknown.
+- typed discrepancy audits require same-Snapshot Evidence, use exact-decimal class budgets, keep
+  insufficient coverage and Unknown outside numeric denominators, and refuse to score independent
+  quote/RV comparisons unless source independence is positively verified;
 - UI displays Unknown and read-only state without placeholder data.
 
 ## Real-chain fixture rules

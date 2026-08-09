@@ -6,6 +6,7 @@ import { Counter, Registry, collectDefaultMetrics } from 'prom-client';
 import { z, ZodError } from 'zod';
 
 import { ProviderError } from '@zerotrace/chain-adapters';
+import { auditDiscrepancies, DISCREPANCY_MODEL_VERSION } from '@zerotrace/data-quality';
 import { resolveEntityRelationship } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
@@ -24,6 +25,7 @@ import {
 } from '@zerotrace/storage';
 import {
   AnalysisMetadataSchema,
+  DiscrepancyCheckInputSchema,
   knownValue,
   unavailableValue,
   unknownValue,
@@ -94,6 +96,13 @@ const FlapSellQuoteRequestSchema = z
       .string()
       .regex(/^(?:0|[1-9]\d*)$/)
       .optional(),
+  })
+  .strict();
+
+const DiscrepancyAuditRequestSchema = z
+  .object({
+    checks: z.array(DiscrepancyCheckInputSchema).max(1_000),
+    metadata: AnalysisMetadataSchema,
   })
   .strict();
 
@@ -784,6 +793,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'Common-position anchor comparison, continuity checks, reorg alerts, and explicit disagreement states are wired. Endpoint operator independence is not inferred from hostnames.',
       },
       {
+        id: 'typed-discrepancy-audit',
+        status: 'IMPLEMENTED_DETERMINISTIC',
+        detail:
+          'Evidence-grounded same-Snapshot comparisons enforce zero mismatch for exact state, exact-decimal typed budgets for derived/quote/aggregate values, warning bands, coverage gates, and Unknown exclusion from numeric denominators.',
+      },
+      {
         id: 'finalized-historical-ingestion',
         status:
           runtime.ingestionStorage.rawFacts !== undefined &&
@@ -1317,6 +1332,83 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
     });
   });
+
+  app.post(
+    '/api/v1/data-quality/discrepancies',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = DiscrepancyAuditRequestSchema.parse(request.body);
+      if (input.checks.length === 0) return auditDiscrepancies(input.checks, input.metadata);
+      if (input.metadata.snapshot === null) {
+        return rejectUngroundedAnalysis(
+          request,
+          reply,
+          'Discrepancy comparisons require a target ledger Snapshot.',
+        );
+      }
+      const sourceEvidenceIds = uniqueEvidenceIds([
+        ...input.metadata.evidenceIds,
+        ...input.checks.flatMap((check) => [
+          ...check.actual.evidenceIds,
+          ...check.reference.evidenceIds,
+          ...(check.sourceIndependenceEvidenceIds ?? []),
+          ...(check.explanationEvidenceIds ?? []),
+        ]),
+      ]);
+      if (sourceEvidenceIds.length === 0) {
+        return rejectUngroundedAnalysis(
+          request,
+          reply,
+          'A non-empty discrepancy audit requires at least one source Evidence node.',
+        );
+      }
+      const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
+      if (missingIds.length > 0) {
+        return rejectUngroundedAnalysis(
+          request,
+          reply,
+          'Discrepancy source or explanation Evidence is not present in the evidence ledger.',
+          missingIds,
+        );
+      }
+      const incompatibleIds = await incompatibleEvidenceIds(
+        runtime,
+        sourceEvidenceIds,
+        input.metadata.snapshot,
+      );
+      if (incompatibleIds.length > 0) {
+        return rejectUngroundedAnalysis(
+          request,
+          reply,
+          'Discrepancy Evidence is not anchored to the target Snapshot.',
+          incompatibleIds,
+          'SNAPSHOT_INCOMPATIBLE',
+        );
+      }
+      const result = auditDiscrepancies(input.checks, input.metadata);
+      const derived = await addDerivedAnalysisEvidence(
+        runtime,
+        input.metadata.snapshot,
+        sourceEvidenceIds,
+        DISCREPANCY_MODEL_VERSION,
+        `data-quality:discrepancy-audit:${hashPayload(input.checks)}`,
+        { input, result },
+        'Typed same-Snapshot discrepancy and error-budget audit.',
+      );
+      return {
+        ...result,
+        checks: result.checks.map((check) => ({
+          ...check,
+          evidenceIds: uniqueEvidenceIds([...check.evidenceIds, derived.id]),
+        })),
+        metadata: {
+          ...result.metadata,
+          evidenceIds: uniqueEvidenceIds([...result.metadata.evidenceIds, derived.id]),
+        },
+        evidence: [derived],
+      };
+    },
+  );
 
   app.post(
     '/api/v1/entities/resolve',

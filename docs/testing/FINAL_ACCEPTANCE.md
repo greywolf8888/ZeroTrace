@@ -69,6 +69,11 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
 - [x] Deterministic Flap fixed-block `previewSell` quote and blocked/Unknown/no-fake-zero tests
+- [x] Evidence-grounded same-Snapshot typed discrepancy engine with exact-state, conservation,
+      derived, quote/RV, aggregate, freshness and API/UI classes
+- [x] Exact-decimal class budgets, warning bands, zero-reference handling, coverage gates, missing
+      Evidence rejection and Unknown exclusion from numeric denominators
+- [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
 
 ## Product

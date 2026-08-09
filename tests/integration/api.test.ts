@@ -17,7 +17,12 @@ import {
   type ChainAnchorReader,
 } from '@zerotrace/data-quality';
 import { createEvidence, EvidenceLedger, hashPayload } from '@zerotrace/evidence';
-import type { ChainAnchorRead } from '@zerotrace/schemas';
+import {
+  knownValue,
+  unknownValue,
+  type ChainAnchorRead,
+  type ComparisonObservation,
+} from '@zerotrace/schemas';
 import { StorageError, type EvidenceRepository } from '@zerotrace/storage';
 import { encodeAbiParameters } from 'viem';
 
@@ -1638,6 +1643,194 @@ describe('ZeroTrace API contract', () => {
     expect(scenario.json()).toMatchObject({
       iterations: 1,
       evidence: [expect.objectContaining({ kind: 'DERIVED_FEATURE' })],
+    });
+  });
+
+  it('runs an Evidence-grounded typed discrepancy audit with exact, warning, and Unknown states', async () => {
+    const runtime = runtimeWithEvm();
+    const actualEvidence = addFixtureEvidence(runtime);
+    const referenceEvidence = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'CONTRACT_STATE',
+      source: 'reference-fixture',
+      locator: 'pool:pool-reference@16',
+      payload: { quote: '100', blockOrSlot: '16' },
+      blockOrSlot: '16',
+      finality: 'finalized',
+      summary: 'Independent reference fixture at the same Snapshot.',
+    });
+    runtime.evidenceLedger.add(referenceEvidence, [], fixtureSnapshot);
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const compared = (
+      value: ComparisonObservation['value'],
+      evidenceId: string,
+      source: string,
+    ) => ({
+      value,
+      snapshot: fixtureSnapshot,
+      evidenceIds: [evidenceId],
+      sourceSet: [source],
+      modelVersion: `${source}-v1`,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/data-quality/discrepancies',
+      payload: {
+        checks: [
+          {
+            fieldPath: 'identity.chainId',
+            comparisonClass: 'EXACT_IDENTITY_STATE',
+            actual: compared(knownValue('eip155:56'), actualEvidence.id, 'actual-fixture'),
+            reference: compared(knownValue('eip155:1'), referenceEvidence.id, 'reference-fixture'),
+          },
+          {
+            fieldPath: 'rv.previewSell',
+            comparisonClass: 'INDEPENDENT_MARKET_QUOTE_RV',
+            sourceIndependence: knownValue(true),
+            sourceIndependenceEvidenceIds: [referenceEvidence.id],
+            actual: compared(knownValue('100.75'), actualEvidence.id, 'actual-fixture'),
+            reference: compared(knownValue('100'), referenceEvidence.id, 'reference-fixture'),
+          },
+          {
+            fieldPath: 'rv.secondaryProvider',
+            comparisonClass: 'INDEPENDENT_MARKET_QUOTE_RV',
+            actual: compared(unknownValue('PROVIDER_DOWN'), actualEvidence.id, 'actual-fixture'),
+            reference: compared(knownValue('100'), referenceEvidence.id, 'reference-fixture'),
+          },
+        ],
+        metadata: fixtureMetadata(actualEvidence.id),
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: 'FAIL',
+      summary: {
+        total: 3,
+        warnings: 1,
+        failed: 1,
+        inconclusive: 1,
+        numericDenominator: 1,
+        coverageGaps: 1,
+      },
+      checks: [
+        { disposition: 'FAIL', severity: 'CRITICAL' },
+        {
+          disposition: 'WARNING',
+          relativeErrorPct: { state: 'known', value: '0.75' },
+          passThresholdPct: { state: 'known', value: '0.5' },
+          warningThresholdPct: { state: 'known', value: '1' },
+        },
+        {
+          disposition: 'INCONCLUSIVE',
+          numericDenominatorIncluded: false,
+        },
+      ],
+      evidence: [expect.objectContaining({ kind: 'DERIVED_FEATURE' })],
+    });
+    const derivedId = response.json().evidence[0].id;
+    expect(
+      response
+        .json()
+        .checks.every((check: { evidenceIds: string[] }) => check.evidenceIds.includes(derivedId)),
+    ).toBe(true);
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${derivedId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes).toHaveLength(3);
+  });
+
+  it('keeps an empty discrepancy audit inconclusive and rejects missing comparison Evidence', async () => {
+    const runtime = runtimeWithEvm();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const empty = await app.inject({
+      method: 'POST',
+      url: '/api/v1/data-quality/discrepancies',
+      payload: { checks: [], metadata: { ...fixtureMetadata('ev_unused'), evidenceIds: [] } },
+    });
+    expect(empty.statusCode, empty.body).toBe(200);
+    expect(empty.json()).toMatchObject({
+      status: 'INCONCLUSIVE',
+      summary: { total: 0, numericDenominator: 0 },
+    });
+    expect(empty.json().evidence).toBeUndefined();
+
+    const missing = await app.inject({
+      method: 'POST',
+      url: '/api/v1/data-quality/discrepancies',
+      payload: {
+        checks: [
+          {
+            fieldPath: 'rv.previewSell',
+            comparisonClass: 'INDEPENDENT_MARKET_QUOTE_RV',
+            actual: {
+              value: knownValue('100'),
+              snapshot: fixtureSnapshot,
+              evidenceIds: ['ev_missing_actual'],
+              sourceSet: ['actual'],
+              modelVersion: 'actual-v1',
+            },
+            reference: {
+              value: knownValue('100'),
+              snapshot: fixtureSnapshot,
+              evidenceIds: ['ev_missing_reference'],
+              sourceSet: ['reference'],
+              modelVersion: 'reference-v1',
+            },
+          },
+        ],
+        metadata: { ...fixtureMetadata('ev_unused'), evidenceIds: [] },
+      },
+    });
+    expect(missing.statusCode, missing.body).toBe(422);
+    expect(missing.json()).toMatchObject({
+      error: { code: 'UNGROUNDED_ANALYSIS' },
+      evidenceIssue: {
+        kind: 'MISSING',
+        evidenceIds: ['ev_missing_actual', 'ev_missing_reference'],
+      },
+    });
+
+    const ungrounded = await app.inject({
+      method: 'POST',
+      url: '/api/v1/data-quality/discrepancies',
+      payload: {
+        checks: [
+          {
+            fieldPath: 'rv.unqueried',
+            comparisonClass: 'INDEPENDENT_MARKET_QUOTE_RV',
+            actual: {
+              value: unknownValue('NOT_QUERIED'),
+              snapshot: fixtureSnapshot,
+              evidenceIds: [],
+              sourceSet: ['actual'],
+              modelVersion: 'actual-v1',
+            },
+            reference: {
+              value: unknownValue('NOT_QUERIED'),
+              snapshot: fixtureSnapshot,
+              evidenceIds: [],
+              sourceSet: ['reference'],
+              modelVersion: 'reference-v1',
+            },
+          },
+        ],
+        metadata: { ...fixtureMetadata('ev_unused'), evidenceIds: [] },
+      },
+    });
+    expect(ungrounded.statusCode, ungrounded.body).toBe(422);
+    expect(ungrounded.json()).toMatchObject({
+      error: {
+        code: 'UNGROUNDED_ANALYSIS',
+        message: 'A non-empty discrepancy audit requires at least one source Evidence node.',
+      },
     });
   });
 

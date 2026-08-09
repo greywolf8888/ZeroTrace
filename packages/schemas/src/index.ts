@@ -32,6 +32,7 @@ export type SubjectType = z.infer<typeof SubjectTypeSchema>;
 
 export const KnowledgeReasonSchema = z.enum([
   'NOT_QUERIED',
+  'NOT_APPLICABLE',
   'INSUFFICIENT_DATA',
   'UNSUPPORTED',
   'NOT_IMPLEMENTED',
@@ -462,6 +463,96 @@ export const AnalysisMetadataSchema = z.object({
   evidenceIds: z.array(z.string()),
 });
 export type AnalysisMetadata = z.infer<typeof AnalysisMetadataSchema>;
+
+export const DiscrepancyClassSchema = z.enum([
+  'EXACT_IDENTITY_STATE',
+  'CONSERVATION',
+  'DETERMINISTIC_DERIVED',
+  'INDEPENDENT_MARKET_QUOTE_RV',
+  'HOLDER_ENTITY_AGGREGATE',
+  'FRESHNESS',
+  'API_UI_PARITY',
+]);
+export type DiscrepancyClass = z.infer<typeof DiscrepancyClassSchema>;
+
+export const DiscrepancyDispositionSchema = z.enum(['PASS', 'WARNING', 'FAIL', 'INCONCLUSIVE']);
+export type DiscrepancyDisposition = z.infer<typeof DiscrepancyDispositionSchema>;
+
+export const DiscrepancyAuditStatusSchema = z.enum([
+  'PASS',
+  'PASS_WITH_WARNINGS',
+  'FAIL',
+  'INCONCLUSIVE',
+]);
+export type DiscrepancyAuditStatus = z.infer<typeof DiscrepancyAuditStatusSchema>;
+
+export const DiscrepancySeveritySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
+export type DiscrepancySeverity = z.infer<typeof DiscrepancySeveritySchema>;
+
+export const ComparableValueSchema = z.union([z.string(), z.boolean()]);
+export type ComparableValue = z.infer<typeof ComparableValueSchema>;
+
+export const ComparisonObservationSchema = z.object({
+  value: knowledgeValueSchema(ComparableValueSchema),
+  snapshot: AnalysisSnapshotSchema.nullable(),
+  evidenceIds: z.array(z.string().min(1)),
+  sourceSet: z.array(z.string().min(1)),
+  modelVersion: z.string().min(1),
+});
+export type ComparisonObservation = z.infer<typeof ComparisonObservationSchema>;
+
+export const DiscrepancyCheckInputSchema = z.object({
+  fieldPath: z.string().min(1),
+  comparisonClass: DiscrepancyClassSchema,
+  actual: ComparisonObservationSchema,
+  reference: ComparisonObservationSchema,
+  sourceIndependence: knowledgeValueSchema(z.boolean()).optional(),
+  sourceIndependenceEvidenceIds: z.array(z.string().min(1)).optional(),
+  coverage: CoverageRatioSchema.optional(),
+  requiredCoverage: CoverageRatioSchema.optional(),
+  explanationEvidenceIds: z.array(z.string().min(1)).optional(),
+});
+export type DiscrepancyCheckInput = z.infer<typeof DiscrepancyCheckInputSchema>;
+
+export const DiscrepancyCheckResultSchema = z.object({
+  id: z.string().regex(/^dq_[0-9a-f]{24}$/),
+  fieldPath: z.string().min(1),
+  comparisonClass: DiscrepancyClassSchema,
+  disposition: DiscrepancyDispositionSchema,
+  severity: DiscrepancySeveritySchema,
+  actual: knowledgeValueSchema(ComparableValueSchema),
+  reference: knowledgeValueSchema(ComparableValueSchema),
+  absoluteError: knowledgeValueSchema(DecimalStringSchema),
+  relativeErrorPct: knowledgeValueSchema(DecimalStringSchema),
+  passThresholdPct: knowledgeValueSchema(DecimalStringSchema),
+  warningThresholdPct: knowledgeValueSchema(DecimalStringSchema),
+  coverage: CoverageRatioSchema,
+  requiredCoverage: CoverageRatioSchema,
+  sourceIndependence: knowledgeValueSchema(z.boolean()),
+  sourceIndependenceEvidenceIds: z.array(z.string().min(1)),
+  numericDenominatorIncluded: z.boolean(),
+  sourceSet: z.array(z.string().min(1)),
+  evidenceIds: z.array(z.string().min(1)),
+  explanationEvidenceIds: z.array(z.string().min(1)),
+  message: z.string().min(1),
+});
+export type DiscrepancyCheckResult = z.infer<typeof DiscrepancyCheckResultSchema>;
+
+export const DiscrepancyAuditResultSchema = z.object({
+  status: DiscrepancyAuditStatusSchema,
+  checks: z.array(DiscrepancyCheckResultSchema),
+  summary: z.object({
+    total: z.number().int().nonnegative(),
+    passed: z.number().int().nonnegative(),
+    warnings: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    inconclusive: z.number().int().nonnegative(),
+    numericDenominator: z.number().int().nonnegative(),
+    coverageGaps: z.number().int().nonnegative(),
+  }),
+  metadata: AnalysisMetadataSchema,
+});
+export type DiscrepancyAuditResult = z.infer<typeof DiscrepancyAuditResultSchema>;
 
 export const ProviderCapabilitySchema = z.enum([
   'CURRENT_STATE',

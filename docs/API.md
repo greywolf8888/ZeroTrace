@@ -7,31 +7,33 @@ The initial API has no authentication and is suitable only for local/staging use
 
 ## System endpoints
 
-| Method | Path                           | Behavior                                                             |
-| ------ | ------------------------------ | -------------------------------------------------------------------- |
-| GET    | `/health/live`                 | process liveness and read-only invariant                             |
-| GET    | `/health/ready`                | provider- and configured-request-storage-aware readiness             |
-| GET    | `/health`                      | full provider, Evidence, ingestion-store, and data-quality state     |
-| GET    | `/metrics`                     | Prometheus text exposition                                           |
-| GET    | `/api/v1/capabilities`         | implemented, provider-required, and forbidden capabilities           |
-| GET    | `/api/v1/chains`               | configured chain adapters                                            |
-| GET    | `/api/v1/platforms`            | platform role and implementation truth                               |
-| GET    | `/api/v1/data-quality/anchors` | endpoint anchor reconciliation, continuity, coverage, and alert data |
+| Method | Path                                 | Behavior                                                             |
+| ------ | ------------------------------------ | -------------------------------------------------------------------- |
+| GET    | `/health/live`                       | process liveness and read-only invariant                             |
+| GET    | `/health/ready`                      | provider- and configured-request-storage-aware readiness             |
+| GET    | `/health`                            | full provider, Evidence, ingestion-store, and data-quality state     |
+| GET    | `/metrics`                           | Prometheus text exposition                                           |
+| GET    | `/api/v1/capabilities`               | implemented, provider-required, and forbidden capabilities           |
+| GET    | `/api/v1/chains`                     | configured chain adapters                                            |
+| GET    | `/api/v1/platforms`                  | platform role and implementation truth                               |
+| GET    | `/api/v1/data-quality/anchors`       | endpoint anchor reconciliation, continuity, coverage, and alert data |
+| POST   | `/api/v1/data-quality/discrepancies` | Evidence-grounded typed same-Snapshot comparisons                    |
 
 ## Implemented intelligence endpoints
 
-| Method | Path                               | Notes                                                            |
-| ------ | ---------------------------------- | ---------------------------------------------------------------- |
-| GET    | `/api/v1/search?q=...`             | local identifier classification; optional `ledger` and `chainId` |
-| GET    | `/api/v1/subjects/:ledger/:id`     | snapshot-pinned current-state read when provider exists          |
-| GET    | `/api/v1/ledger/:ledger/:type/:id` | typed block, transaction, or Bitcoin outpoint query              |
-| GET    | `/api/v1/launches/EVM/:token`      | version-pinned Flap BSC current Portal-state inspection          |
-| POST   | `/api/v1/rv/flap-sell`             | fixed-block read-only Flap Portal `previewSell` quote            |
-| GET    | `/api/v1/evidence/:id`             | Evidence node, source edges, and bound Snapshot                  |
-| GET    | `/api/v1/evidence/:id/drilldown`   | restart-safe derived/source Evidence traversal                   |
-| POST   | `/api/v1/entities/resolve`         | deterministic evidence-feature baseline                          |
-| POST   | `/api/v1/rv/constant-product`      | exact-integer pool exit quote                                    |
-| POST   | `/api/v1/scenarios/exit-race`      | seeded shared-pool exit ordering                                 |
+| Method | Path                                 | Notes                                                            |
+| ------ | ------------------------------------ | ---------------------------------------------------------------- |
+| GET    | `/api/v1/search?q=...`               | local identifier classification; optional `ledger` and `chainId` |
+| GET    | `/api/v1/subjects/:ledger/:id`       | snapshot-pinned current-state read when provider exists          |
+| GET    | `/api/v1/ledger/:ledger/:type/:id`   | typed block, transaction, or Bitcoin outpoint query              |
+| GET    | `/api/v1/launches/EVM/:token`        | version-pinned Flap BSC current Portal-state inspection          |
+| POST   | `/api/v1/rv/flap-sell`               | fixed-block read-only Flap Portal `previewSell` quote            |
+| POST   | `/api/v1/data-quality/discrepancies` | typed error-budget and discrepancy audit                         |
+| GET    | `/api/v1/evidence/:id`               | Evidence node, source edges, and bound Snapshot                  |
+| GET    | `/api/v1/evidence/:id/drilldown`     | restart-safe derived/source Evidence traversal                   |
+| POST   | `/api/v1/entities/resolve`           | deterministic evidence-feature baseline                          |
+| POST   | `/api/v1/rv/constant-product`        | exact-integer pool exit quote                                    |
+| POST   | `/api/v1/scenarios/exit-race`        | seeded shared-pool exit ordering                                 |
 
 Current-state subject reads establish a ledger-specific anchor before reading the subject:
 
@@ -95,6 +97,30 @@ The output and input remain atomic strings. Nominal value, decimals-normalized a
 independent price impact, and complete fee breakdown remain Unknown until separate same-Snapshot
 sources are implemented. The endpoint uses `eth_call` only and cannot sign, approve, swap, or
 broadcast.
+
+### Typed discrepancy audit
+
+`POST /api/v1/data-quality/discrepancies` accepts up to 1,000 actual/reference comparisons plus
+analysis metadata. Every non-empty audit requires one replayable target Snapshot; both observations
+and every source or explanation Evidence ID must exist in the Evidence ledger and be compatible
+with that complete Snapshot identity. A successful non-empty audit creates a derived Evidence node
+linked to all comparison sources.
+
+The engine uses exact decimal/rational arithmetic and field-class budgets:
+
+- exact identity/state, conservation, freshness, and API/UI parity require zero mismatch;
+- deterministic derived values pass at relative error `<= 0.10%`;
+- independent market quote/RV values pass at `<= 0.50%`, warn through `1.00%`, and fail above
+  `1.00%` unless the distinction has explicit explanation Evidence; their source independence must
+  also be positively verified by referenced Evidence or the comparison is inconclusive;
+- holder/entity aggregates pass at `<= 0.10%` only when declared coverage meets its gate.
+
+When the reference is zero, comparison uses exact absolute equality and is excluded from the
+relative-error denominator. Unknown, unavailable, stale, provider-down, unsupported, and not
+applicable observations produce `INCONCLUSIVE` coverage gaps, never numeric zero or a passing
+comparison. Overall status is `PASS`, `PASS_WITH_WARNINGS`, `FAIL`, or `INCONCLUSIVE`; an empty audit
+is inconclusive. Entity-probability Brier/ECE calibration is a separate corpus-level acceptance gate
+and is not implemented by this same-Snapshot endpoint.
 
 Each successful transport response carries its own safe hostname-based endpoint ID. Snapshot
 `providerVersions` lists every endpoint used to establish the anchor; Evidence names the endpoint or

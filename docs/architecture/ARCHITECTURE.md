@@ -368,6 +368,18 @@ derived Evidence node exposes the atomic realizable value. Nominal price, decima
 decomposition, gas, route capacity and migrated-DEX execution remain Unknown until independently
 evidenced. A revert or unsupported lifecycle cannot become a zero quote.
 
+The Data Quality domain also owns a typed discrepancy engine. It compares Evidence-grounded actual
+and reference observations only when both resolve to the same canonical ledger/position/hash and
+finality/commitment Snapshot. Exact state and conservation use exact equality; derived, quote/RV,
+and aggregate classes use exact decimal arithmetic with versioned class budgets. Missing Evidence,
+Snapshot conflicts, insufficient coverage, and non-Known values remain typed failures or
+inconclusive gaps instead of entering a numeric denominator. Independent quote/RV checks require a
+positive source-independence observation plus its Evidence; hostname differences alone never
+satisfy that gate. Each non-empty audit produces a derived Evidence node and a replayable result
+with source set, coverage, model version, confidence, and severity. Corpus-level entity probability
+calibration remains a separate model-validation system;
+a same-Snapshot chain comparison cannot establish Brier score or calibration error.
+
 The evaluated repositories, revisions, licenses, and intended boundaries are recorded in
 [THIRD_PARTY_DEPENDENCIES.md](../research/THIRD_PARTY_DEPENDENCIES.md).
 

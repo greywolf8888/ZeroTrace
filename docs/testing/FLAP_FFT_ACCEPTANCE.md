@@ -18,6 +18,11 @@ entity analysis, realizable-value routing, and automatic discrepancy engine are 
 then, a generic address or transaction read is foundation evidence only and cannot be presented as
 an FFT product conclusion.
 
+Implementation note: the deterministic same-Snapshot discrepancy core and the class budgets below
+are implemented. The FFT terminal run remains gated by event/configuration history, semantic market
+and route reconstruction, controller/control-right analysis, corpus-level entity calibration, and
+complete multi-route realizable value.
+
 ## Authoritative inputs
 
 The acceptance run must pin one finalized BSC block number and hash, then retain all raw payload
@@ -58,6 +63,9 @@ automatic checker therefore applies the following typed budgets:
 Relative error is `abs(actual - reference) / abs(reference)`. When the reference is zero, the checker
 uses exact absolute equality. Unknown, unavailable, stale, provider-down, unsupported, and not
 applicable values are excluded from numeric denominators and reported as coverage gaps.
+Independent quote/RV checks additionally require positively verified source independence and its
+Evidence; separate hostnames alone do not establish independence, and an unverified relationship is
+inconclusive.
 
 ## Automatic discrepancy workflow
 

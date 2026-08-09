@@ -60,6 +60,8 @@ The current foundation includes:
   as typed Unknown;
 - fixed-block Flap `previewSell` quotes whose provider-returned atomic proceeds and derivation
   Evidence remain separate from unqueried nominal price, fee breakdown and price impact;
+- an Evidence-grounded typed discrepancy engine with exact-state checks, exact-decimal error
+  budgets, warning bands, coverage gates, and explicit Unknown exclusion from numeric denominators;
 - request-scoped provider provenance across failover pools, with dynamic head/tip/slot anchors
   explicitly bypassing stored TTL responses;
 - common-position chain-anchor reconciliation across configured endpoints, with explicit
@@ -319,6 +321,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add Snapshot- and Evidence-backed block/transaction/outpoint query contracts and UI rendering
 - [x] Add version-pinned Flap BSC Portal-state inspection with Evidence/Unknown UI rendering
 - [x] Add fixed-block Flap Portal sell previews with provider Evidence and no-fake-zero UI states
+- [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets
 - [ ] Add continuous scheduling, live/unfinalized handling, rollback/replay and independent-provider validation
 - [ ] Complete Flap event/config/migration history and add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
