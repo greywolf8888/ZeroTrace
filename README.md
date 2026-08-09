@@ -58,6 +58,8 @@ The current foundation includes:
 - version-pinned Flap BSC Portal inspection (`getTokenV6` with documented `getTokenV5` fallback)
   that checks Portal/token bytecode at one fixed block and preserves unsupported or unqueried fields
   as typed Unknown;
+- fixed-block Flap `previewSell` quotes whose provider-returned atomic proceeds and derivation
+  Evidence remain separate from unqueried nominal price, fee breakdown and price impact;
 - request-scoped provider provenance across failover pools, with dynamic head/tip/slot anchors
   explicitly bypassing stored TTL responses;
 - common-position chain-anchor reconciliation across configured endpoints, with explicit
@@ -139,7 +141,7 @@ protocol-specific decoders, and distributed workflows remain open work. Read
 | Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending         |
 | Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                                  |
 | Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap BSC current Portal-state decoder and UI implemented pending real-chain validation; event history, migration and other adapters pending |
-| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product and exit-race kernel implemented; routing/tax/gas adapters pending                                                         |
+| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels plus Flap Portal sell preview work; DEX routing, decomposition, gas and capacity pending                 |
 | Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                        |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
@@ -316,6 +318,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add common-position endpoint anchor reconciliation and parent-history continuity detection
 - [x] Add Snapshot- and Evidence-backed block/transaction/outpoint query contracts and UI rendering
 - [x] Add version-pinned Flap BSC Portal-state inspection with Evidence/Unknown UI rendering
+- [x] Add fixed-block Flap Portal sell previews with provider Evidence and no-fake-zero UI states
 - [ ] Add continuous scheduling, live/unfinalized handling, rollback/replay and independent-provider validation
 - [ ] Complete Flap event/config/migration history and add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation

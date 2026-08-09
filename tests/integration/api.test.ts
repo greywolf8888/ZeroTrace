@@ -113,6 +113,40 @@ class FakeTransport implements JsonRpcTransport {
   }
 }
 
+class FlapQuoteTransport implements JsonRpcTransport {
+  readonly endpointId = 'bsc-quote-fixture';
+  readonly #callResults: unknown[];
+
+  constructor(callResults: unknown[]) {
+    this.#callResults = [...callResults];
+  }
+
+  async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+    return (await this.requestSourced<T>(method, params)).value;
+  }
+
+  async requestSourced<T>(method: string): Promise<TransportObservation<T>> {
+    if (method === 'eth_getBlockByNumber') {
+      return {
+        value: {
+          number: '0x10',
+          hash: `0x${'6'.repeat(64)}`,
+          parentHash: `0x${'5'.repeat(64)}`,
+          timestamp: '0x65',
+        } as T,
+        endpointId: 'bsc-anchor',
+      };
+    }
+    if (method === 'eth_getCode') {
+      return { value: '0x6000' as T, endpointId: 'bsc-code' };
+    }
+    if (method === 'eth_call') {
+      return { value: this.#callResults.shift() as T, endpointId: 'bsc-call' };
+    }
+    throw new Error(`Unexpected Flap quote fixture method ${method}`);
+  }
+}
+
 class FakeRestTransport implements RestTransport {
   readonly endpointId = 'bitcoin-esplora';
   readonly #responses: Record<string, unknown>;
@@ -1355,6 +1389,72 @@ describe('ZeroTrace API contract', () => {
     expect(drilldown.json().nodes).toHaveLength(5);
   });
 
+  it('returns a fixed-block Flap previewSell quote without inventing fee or impact fields', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new FlapQuoteTransport([
+          fixtureFlapV6Result(),
+          encodeAbiParameters([{ type: 'uint256' }], [250n]),
+        ]),
+      ),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-sell',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        inputQuantity: '100',
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      platform: 'flap',
+      token: fixtureFlapToken,
+      quoteAsset: { state: 'known', value: 'eip155:56:native' },
+      quote: {
+        inputQuantity: '100',
+        realizableValue: { state: 'known', value: '250' },
+        nominalValue: { state: 'unknown', reason: 'NOT_QUERIED' },
+        priceImpactBps: { state: 'unknown', reason: 'NOT_QUERIED' },
+        totalFeeBps: { state: 'unknown', reason: 'NOT_QUERIED' },
+        metadata: {
+          snapshot: { chainId: 'eip155:56', blockNumber: '16' },
+          modelVersion: 'flap-preview-sell-v0.1.0',
+        },
+      },
+    });
+    expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'PROVIDER_OBSERVATION',
+      'CONTRACT_STATE',
+      'CONTRACT_STATE',
+      'CONTRACT_STATE',
+      'DERIVED_FEATURE',
+      'CONTRACT_STATE',
+      'DERIVED_FEATURE',
+    ]);
+    const derivedId = response.json().evidence.at(-1).id;
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${derivedId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes).toHaveLength(7);
+  });
+
   it('keeps Solana account absence known without coercing unavailable fields to zero', async () => {
     const app = await createApp({ config, runtime: runtimeWithAllLedgers(null), logger: false });
     apps.push(app);
@@ -1465,6 +1565,20 @@ describe('ZeroTrace API contract', () => {
     });
     expect(unavailableLaunch.statusCode).toBe(503);
     expect(unavailableLaunch.json().platformMatch).toMatchObject({
+      state: 'unavailable',
+      reason: 'PROVIDER_UNCONFIGURED',
+    });
+    const unavailableFlapQuote = await degraded.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-sell',
+      payload: {
+        chainId: 'eip155:56',
+        token: fixtureFlapToken,
+        inputQuantity: '100',
+      },
+    });
+    expect(unavailableFlapQuote.statusCode).toBe(503);
+    expect(unavailableFlapQuote.json().quote.realizableValue).toMatchObject({
       state: 'unavailable',
       reason: 'PROVIDER_UNCONFIGURED',
     });

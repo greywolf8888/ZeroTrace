@@ -5,6 +5,7 @@ import {
   type Capability,
   type EvidenceRecord,
   type FlapInspectionResponse,
+  type FlapSellQuoteResponse,
   type HealthResponse,
   type KnowledgeValue,
   type PlatformDescriptor,
@@ -513,6 +514,30 @@ function EvidencePanel({
 
 function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse }) {
   const launch = inspection.launch;
+  const [sellAmount, setSellAmount] = useState('');
+  const [sellQuote, setSellQuote] = useState<FlapSellQuoteResponse>();
+  const [quoteError, setQuoteError] = useState<string>();
+  const [quoteBusy, setQuoteBusy] = useState(false);
+  const quoteOnlyEvidence =
+    sellQuote?.evidence.filter(
+      (item) => !inspection.evidence.some((inspectionItem) => inspectionItem.id === item.id),
+    ) ?? [];
+
+  async function previewSell(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (launch === null || !/^(?:0|[1-9]\d*)$/.test(sellAmount)) return;
+    setQuoteBusy(true);
+    setQuoteError(undefined);
+    setSellQuote(undefined);
+    try {
+      setSellQuote(await api.flapSellQuote(inspection.token, sellAmount, launch.sourceBlockOrSlot));
+    } catch (error) {
+      setQuoteError(error instanceof Error ? error.message : 'Flap sell preview failed.');
+    } finally {
+      setQuoteBusy(false);
+    }
+  }
+
   return (
     <>
       <section className="panel subject-panel launch-panel">
@@ -582,11 +607,85 @@ function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse })
           </>
         )}
       </section>
+      {launch === null ? null : (
+        <section className="panel subject-panel quote-panel">
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">Read-only eth_call at the same Snapshot</span>
+              <h3>Flap realizable sell preview</h3>
+            </div>
+            <span className="snapshot-badge">No signing or broadcast</span>
+          </div>
+          <form className="quote-form" onSubmit={(event) => void previewSell(event)}>
+            <label htmlFor="flap-sell-amount">Sell amount (atomic units)</label>
+            <input
+              id="flap-sell-amount"
+              inputMode="numeric"
+              pattern="(?:0|[1-9][0-9]*)"
+              placeholder="Enter a token amount"
+              value={sellAmount}
+              onChange={(event) => setSellAmount(event.target.value.trim())}
+            />
+            <button
+              className="secondary-button"
+              type="submit"
+              disabled={quoteBusy || !/^(?:0|[1-9]\d*)$/.test(sellAmount)}
+            >
+              {quoteBusy ? 'Reading Portal…' : 'Preview sell'}
+            </button>
+          </form>
+          <p className="quote-note">
+            The amount and returned proceeds stay in atomic units until token and quote decimals are
+            separately evidenced.
+          </p>
+          {quoteError === undefined ? null : (
+            <div className="alert alert-warning">
+              <strong>Sell preview unavailable</strong>
+              {quoteError}
+            </div>
+          )}
+          {sellQuote === undefined ? null : (
+            <>
+              <div className="fact-grid quote-facts">
+                {[
+                  ['Input quantity', { state: 'known', value: sellQuote.quote.inputQuantity }],
+                  ['Quote asset', sellQuote.quoteAsset],
+                  ['Realizable value', sellQuote.quote.realizableValue],
+                  ['Nominal value', sellQuote.quote.nominalValue],
+                  ['Average exit price', sellQuote.quote.averageExitPrice],
+                  ['Price impact bps', sellQuote.quote.priceImpactBps],
+                  ['Total fee bps', sellQuote.quote.totalFeeBps],
+                ].map(([label, value]) => (
+                  <div className="fact-row" key={label as string}>
+                    <span>{label as string}</span>
+                    <KnowledgeDisplay data={value as KnowledgeValue<unknown>} />
+                  </div>
+                ))}
+              </div>
+              <div className="snapshot-strip">
+                <span>
+                  <b>Route</b> {sellQuote.quote.route.join(' → ') || 'Unavailable'}
+                </span>
+                <span>
+                  <b>Model</b> {sellQuote.quote.metadata.modelVersion}
+                </span>
+              </div>
+            </>
+          )}
+        </section>
+      )}
       {inspection.evidence.length === 0 ? null : (
         <EvidencePanel
           evidence={inspection.evidence}
           eyebrow="Portal state → normalized mechanism"
           title="Flap evidence ledger"
+        />
+      )}
+      {quoteOnlyEvidence.length === 0 ? null : (
+        <EvidencePanel
+          evidence={quoteOnlyEvidence}
+          eyebrow="Requested amount → Portal previewSell"
+          title="Sell quote evidence ledger"
         />
       )}
     </>

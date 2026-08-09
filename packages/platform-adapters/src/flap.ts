@@ -7,13 +7,16 @@ import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import {
   AnalysisMetadataSchema,
   LaunchMechanismSnapshotSchema,
+  RealizableValuePointSchema,
   knownValue,
+  unavailableValue,
   unknownValue,
   type AnalysisMetadata,
   type AnalysisSnapshot,
   type Evidence,
   type KnowledgeValue,
   type LaunchMechanismSnapshot,
+  type RealizableValuePoint,
 } from '@zerotrace/schemas';
 import { decodeFunctionResult, encodeFunctionData, getAddress } from 'viem';
 
@@ -132,6 +135,19 @@ const GET_TOKEN_V8_SAFE_ABI = [
   },
 ] as const;
 
+const PREVIEW_SELL_ABI = [
+  {
+    type: 'function',
+    name: 'previewSell',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: 'quoteAmount', type: 'uint256' }],
+  },
+] as const;
+
 export interface FlapTokenState {
   inspectionMethod: FlapInspectionMethod;
   statusCode: number;
@@ -164,6 +180,14 @@ export interface FlapInspectionResult {
   state: FlapTokenState | null;
   launch: LaunchMechanismSnapshot | null;
   metadata: AnalysisMetadata;
+  evidence: Evidence[];
+}
+
+export interface FlapSellQuoteResult {
+  platform: 'flap';
+  token: string;
+  quoteAsset: LaunchMechanismSnapshot['quoteAsset'];
+  quote: RealizableValuePoint;
   evidence: Evidence[];
 }
 
@@ -203,6 +227,16 @@ function uint8(value: unknown, field: string): number {
     throw new ProviderError('INVALID_RESPONSE', `Flap returned an invalid ${field}.`);
   }
   return Number(parsed);
+}
+
+function unsignedDecimal(value: string, field: string): bigint {
+  if (!/^(?:0|[1-9]\d*)$/.test(value)) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      `Flap ${field} must be an unsigned decimal string.`,
+    );
+  }
+  return BigInt(value);
 }
 
 function bool(value: unknown, field: string): boolean {
@@ -785,4 +819,237 @@ export async function inspectFlapToken(options: {
     ),
     evidence,
   };
+}
+
+async function finalizeSellQuote(options: {
+  inspection: FlapInspectionResult;
+  writeEvidence: FlapEvidenceWriter;
+  inputQuantity: string;
+  output: KnowledgeValue<string>;
+  additionalEvidence?: Evidence;
+  dataCoverage: number;
+  confidence: number;
+}): Promise<FlapSellQuoteResult> {
+  const { inspection, writeEvidence, inputQuantity, output, dataCoverage, confidence } = options;
+  const snapshot = inspection.metadata.snapshot;
+  if (snapshot === null || snapshot.ledger !== 'EVM') {
+    throw new ProviderError('INVALID_RESPONSE', 'Flap sell preview requires an EVM Snapshot.');
+  }
+  const supportingEvidence = inspection.evidence.at(-1);
+  if (supportingEvidence === undefined) {
+    throw new ProviderError('INVALID_RESPONSE', 'Flap inspection did not produce Evidence.');
+  }
+  const sourceEvidenceIds = [
+    supportingEvidence.id,
+    ...(options.additionalEvidence === undefined ? [] : [options.additionalEvidence.id]),
+  ];
+  const derived = await writeEvidence(
+    createEvidence({
+      ledger: 'EVM',
+      chainId: inspection.deployment.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:flap-preview-sell:v0.1.0',
+      locator: `rv:flap-preview-sell:${inspection.token}:${inputQuantity}@${snapshot.blockNumber}`,
+      payload: {
+        platform: 'flap',
+        token: inspection.token,
+        inputQuantity,
+        output,
+      },
+      observedAt: snapshot.capturedAt,
+      blockOrSlot: snapshot.blockNumber,
+      finality: snapshot.finality,
+      summary: 'Flap sell preview normalized into a realizable-value observation.',
+      sourceEvidenceIds,
+    }),
+    sourceEvidenceIds,
+    snapshot,
+  );
+  const evidence = [
+    ...inspection.evidence,
+    ...(options.additionalEvidence === undefined ? [] : [options.additionalEvidence]),
+    derived,
+  ];
+  const quoteMetadata = metadata(
+    snapshot,
+    [
+      ...inspection.metadata.sourceSet,
+      ...(options.additionalEvidence === undefined ? [] : [options.additionalEvidence.source]),
+    ],
+    'flap-preview-sell-v0.1.0',
+    evidence.map((item) => item.id),
+    dataCoverage,
+    confidence,
+  );
+  const quote = RealizableValuePointSchema.parse({
+    inputQuantity,
+    nominalValue: unknownValue(
+      'NOT_QUERIED',
+      'A decimals-normalized independent reference price was not queried.',
+    ),
+    realizableValue: output,
+    averageExitPrice: unknownValue(
+      'NOT_QUERIED',
+      'Token and quote-asset decimals are not yet bound to this Snapshot.',
+    ),
+    priceImpactBps: unknownValue(
+      'NOT_QUERIED',
+      'Price impact requires a separately evidenced reference price.',
+    ),
+    totalFeeBps: unknownValue(
+      'NOT_QUERIED',
+      'previewSell returns aggregate proceeds; fee decomposition was not queried.',
+    ),
+    route: [
+      `${inspection.deployment.chainId}:${canonicalAddress(inspection.deployment.portal, 'Portal')}:previewSell`,
+    ],
+    metadata: quoteMetadata,
+  });
+  return {
+    platform: 'flap',
+    token: inspection.token,
+    quoteAsset:
+      inspection.launch?.quoteAsset ??
+      unknownValue('INSUFFICIENT_DATA', 'No evidenced Flap launch mechanism is available.'),
+    quote,
+    evidence,
+  };
+}
+
+export async function quoteFlapSell(options: {
+  adapter: EvmLedgerAdapter;
+  token: string;
+  inputQuantity: string;
+  deployment: FlapDeployment;
+  writeEvidence: FlapEvidenceWriter;
+  blockNumber?: string;
+}): Promise<FlapSellQuoteResult> {
+  const inputAmount = unsignedDecimal(options.inputQuantity, 'sell input quantity');
+  const inspection = await inspectFlapToken({
+    adapter: options.adapter,
+    token: options.token,
+    deployment: options.deployment,
+    writeEvidence: options.writeEvidence,
+    ...(options.blockNumber === undefined ? {} : { blockNumber: options.blockNumber }),
+  });
+  const state = inspection.state;
+  if (inspection.launch === null || state === null) {
+    return finalizeSellQuote({
+      inspection,
+      writeEvidence: options.writeEvidence,
+      inputQuantity: options.inputQuantity,
+      output: unavailableValue(
+        'UNSUPPORTED',
+        'The selected Portal does not identify this address as a tradable Flap token.',
+      ),
+      dataCoverage: 0.2,
+      confidence: 1,
+    });
+  }
+  if (state.status.state !== 'known') {
+    return finalizeSellQuote({
+      inspection,
+      writeEvidence: options.writeEvidence,
+      inputQuantity: options.inputQuantity,
+      output: unknownValue(
+        'UNSUPPORTED',
+        'The Portal token status is newer than this versioned decoder.',
+      ),
+      dataCoverage: 0.3,
+      confidence: 0.6,
+    });
+  }
+  if (state.status.value !== 'TRADABLE') {
+    const detail =
+      state.status.value === 'DEX'
+        ? 'The token has migrated; a DEX route must be reconstructed instead of using Portal previewSell.'
+        : `Portal status ${state.status.value} does not permit a sell preview.`;
+    return finalizeSellQuote({
+      inspection,
+      writeEvidence: options.writeEvidence,
+      inputQuantity: options.inputQuantity,
+      output: unavailableValue(
+        state.status.value === 'DEX' ? 'UNSUPPORTED' : 'EXECUTION_BLOCKED',
+        detail,
+      ),
+      dataCoverage: 0.4,
+      confidence: 0.98,
+    });
+  }
+  if (inputAmount > BigInt(state.circulatingSupply)) {
+    return finalizeSellQuote({
+      inspection,
+      writeEvidence: options.writeEvidence,
+      inputQuantity: options.inputQuantity,
+      output: unavailableValue(
+        'EXECUTION_BLOCKED',
+        'The requested input exceeds the Snapshot circulating supply.',
+      ),
+      dataCoverage: 0.45,
+      confidence: 1,
+    });
+  }
+
+  const snapshot = inspection.metadata.snapshot;
+  if (snapshot === null || snapshot.ledger !== 'EVM') {
+    throw new ProviderError('INVALID_RESPONSE', 'Flap sell preview requires an EVM Snapshot.');
+  }
+  const callData = encodeFunctionData({
+    abi: PREVIEW_SELL_ABI,
+    functionName: 'previewSell',
+    args: [inspection.token as `0x${string}`, inputAmount],
+  });
+  const observation = await options.adapter.callObservation(
+    inspection.deployment.portal,
+    callData,
+    `0x${BigInt(snapshot.blockNumber).toString(16)}`,
+  );
+  let outputAmount: bigint;
+  try {
+    outputAmount = uint(
+      decodeFunctionResult({
+        abi: PREVIEW_SELL_ABI,
+        functionName: 'previewSell',
+        data: observation.value as `0x${string}`,
+      }),
+      'previewSell output',
+    );
+  } catch (error) {
+    if (error instanceof ProviderError) throw error;
+    throw new ProviderError('INVALID_RESPONSE', 'Flap previewSell result could not be decoded.', {
+      cause: error,
+    });
+  }
+  const quoteEvidence = await options.writeEvidence(
+    createEvidence({
+      ledger: 'EVM',
+      chainId: inspection.deployment.chainId,
+      kind: 'CONTRACT_STATE',
+      source: observation.endpointId,
+      locator: `flap:previewSell:${inspection.token}:${options.inputQuantity}@${snapshot.blockNumber}`,
+      payload: {
+        portal: canonicalAddress(inspection.deployment.portal, 'Portal'),
+        token: inspection.token,
+        inputQuantity: options.inputQuantity,
+        callData,
+        rawResult: observation.value,
+        outputQuoteAtomic: outputAmount.toString(),
+      },
+      observedAt: snapshot.capturedAt,
+      blockOrSlot: snapshot.blockNumber,
+      finality: snapshot.finality,
+      summary: 'Flap previewSell output observed at the pinned Snapshot.',
+    }),
+    [],
+    snapshot,
+  );
+  return finalizeSellQuote({
+    inspection,
+    writeEvidence: options.writeEvidence,
+    inputQuantity: options.inputQuantity,
+    output: knownValue(outputAmount.toString()),
+    additionalEvidence: quoteEvidence,
+    dataCoverage: 0.6,
+    confidence: 0.95,
+  });
 }

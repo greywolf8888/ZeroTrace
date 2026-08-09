@@ -68,6 +68,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
   - [ ] Flap event/configuration/migration history, named real-chain fixture, and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
+- [x] Deterministic Flap fixed-block `previewSell` quote and blocked/Unknown/no-fake-zero tests
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
 
 ## Product

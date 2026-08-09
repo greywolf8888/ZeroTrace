@@ -32,7 +32,7 @@ export const PLATFORM_REGISTRY: readonly PlatformDescriptor[] = Object.freeze([
       'https://docs.flap.sh/flap/developers/basic-and-mechanism/bonding-curve',
     ],
     integrationBoundary:
-      'Versioned Portal V8Safe/V6/V5 inspection is wired; event history, tax/vault, migration, LP ownership, and RV remain pending.',
+      'Versioned Portal V8Safe/V6/V5 inspection and fixed-block previewSell are wired; event history, tax/vault, migration, LP ownership, DEX routes, and complete RV remain pending.',
   },
   {
     id: 'pump',

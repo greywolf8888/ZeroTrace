@@ -13,6 +13,7 @@ import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   PLATFORM_REGISTRY,
   inspectFlapToken,
+  quoteFlapSell,
 } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
@@ -82,6 +83,19 @@ const LaunchInspectionQuerySchema = z.object({
     .regex(/^(?:0|[1-9]\d*)$/)
     .optional(),
 });
+
+const FlapSellQuoteRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z.string().trim().min(1).max(128),
+    inputQuantity: z.string().regex(/^(?:0|[1-9]\d*)$/),
+    blockNumber: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  })
+  .strict();
 
 const EntityFeatureSchema = z.object({
   kind: z.enum([
@@ -752,6 +766,14 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'Versioned read-only Flap Portal V8Safe/V6/V5 decoding binds deployment metadata, bytecode, raw state, normalized launch fields, Snapshot, and Evidence. TokenCreated history, tax/vault internals, migration/LP control, and complete realizable value remain pending.',
       },
       {
+        id: 'flap-bsc-sell-preview',
+        status: runtime.evmAdapters.has(56)
+          ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
+          : 'BSC_PROVIDER_REQUIRED',
+        detail:
+          'Read-only Portal previewSell produces a fixed-block, provider-observed quote with Evidence. Non-tradable, migrated, unsupported, excessive-input, and provider-failure states never become zero proceeds.',
+      },
+      {
         id: 'cross-source-anchor-reconciliation',
         status: dataQualityReady
           ? runtime.dataQuality.durable
@@ -1259,6 +1281,42 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       return { rootEvidenceId: id, nodes };
     },
   );
+
+  app.post('/api/v1/rv/flap-sell', { schema: { tags: ['analysis'] } }, async (request, reply) => {
+    const input = FlapSellQuoteRequestSchema.parse(request.body);
+    const adapter = runtime.evmAdapters.get(56);
+    if (adapter === undefined) {
+      const unavailable = unavailableValue(
+        'PROVIDER_UNCONFIGURED',
+        'A BNB Smart Chain read-only provider is required.',
+      );
+      return reply.code(503).send({
+        platform: 'flap',
+        token: input.token,
+        quoteAsset: unavailable,
+        quote: {
+          inputQuantity: input.inputQuantity,
+          nominalValue: unavailable,
+          realizableValue: unavailable,
+          averageExitPrice: unavailable,
+          priceImpactBps: unavailable,
+          totalFeeBps: unavailable,
+          route: [],
+          metadata: emptyMetadata('flap-preview-sell-v0.1.0'),
+        },
+        evidence: [],
+      });
+    }
+    return quoteFlapSell({
+      adapter,
+      token: input.token,
+      inputQuantity: input.inputQuantity,
+      deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+      writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+        addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+    });
+  });
 
   app.post(
     '/api/v1/entities/resolve',

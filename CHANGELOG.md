@@ -41,6 +41,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - version-pinned, fixed-block Flap BSC Portal inspection with V6/V5 decoding, bytecode provenance,
   negative Evidence for non-contract subjects, forward-compatible enum Unknown states, and a
   read-only launch-mechanism UI;
+- fixed-block Flap `previewSell` realizable-value observations with source-linked raw/derived
+  Evidence, explicit blocked/unsupported states, and an atomic-unit analyst UI;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,

@@ -238,6 +238,23 @@ export interface FlapInspectionResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface FlapSellQuoteResponse {
+  platform: 'flap';
+  token: string;
+  quoteAsset: KnowledgeValue<string>;
+  quote: {
+    inputQuantity: string;
+    nominalValue: KnowledgeValue<string>;
+    realizableValue: KnowledgeValue<string>;
+    averageExitPrice: KnowledgeValue<string>;
+    priceImpactBps: KnowledgeValue<string>;
+    totalFeeBps: KnowledgeValue<string>;
+    route: string[];
+    metadata: AnalysisMetadata;
+  };
+  evidence: EvidenceRecord[];
+}
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -332,6 +349,17 @@ export const api = {
         parameters.toString(),
     );
   },
+  flapSellQuote: (token: string, inputQuantity: string, blockNumber: string) =>
+    requestJson<FlapSellQuoteResponse>('/api/v1/rv/flap-sell', {
+      method: 'POST',
+      body: JSON.stringify({
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token,
+        inputQuantity,
+        blockNumber,
+      }),
+    }),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',

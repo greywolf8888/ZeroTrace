@@ -429,8 +429,8 @@ The requested Flap/BSC FFT contract
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` is registered in the
 [terminal acceptance specification](FLAP_FFT_ACCEPTANCE.md). Official deployment, inspection,
 event-indexing, and bonding-curve documentation has been located, but no FFT product conclusion is
-recorded because versioned Flap decoding, entity calibration, market reconstruction, and complete RV
-are not implemented. The specification uses zero tolerance for exact chain state, field-class error
+recorded because entity calibration, Flap event/migration history, market reconstruction, and
+complete multi-route RV are not implemented. The specification uses zero tolerance for exact chain state, field-class error
 budgets for derived values, Brier/ECE gates for entity probabilities, and excludes Unknown from
 numeric error denominators.
 
@@ -449,12 +449,19 @@ Evidence, and Unknown sell-capacity rendering. This is deterministic adapter/UI 
 No FFT request or named real-chain Flap conclusion was made, and event history, migration, market
 reconstruction, entity calibration, executable sell capacity and full RV remain pending.
 
+The follow-up read-only RV slice calls the official `previewSell(address,uint256)` view at the exact
+inspection block. Tests cover a positive provider quote, an exact provider-returned zero, buy-only
+execution blocking, excessive input, API unavailability, replay drilldown, and desktop/mobile UI.
+Only the raw Portal output becomes Known; nominal value, decimals-normalized price, impact and fee
+breakdown remain Unknown. This does not satisfy independent quote reconciliation, migrated DEX
+routing, sell-capacity discovery, or the registered FFT terminal run.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                             |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| local non-browser gates  | pass: format, lint, typecheck, 210 unit, 23 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
-| local `test:coverage`    | pass: 233 tests, 15 durable skips; 83.56% statements, 75.15% branches, 90.75% functions, 84.48% lines                                                              |
+| local non-browser gates  | pass: format, lint, typecheck, 214 unit, 24 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
+| local `test:coverage`    | pass: 238 tests, 15 durable skips; 83.54% statements, 75.06% branches, 90.83% functions, 84.47% lines                                                              |
 | branch `test:coverage`   | pass: 248 tests; 86.73% statements, 78.25% branches, 95.14% functions, 87.66% lines                                                                                |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap Evidence/Unknown                                                                                |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                             |

@@ -253,6 +253,58 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
       }),
     });
   });
+  await page.route('**/api/v1/rv/flap-sell', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        quoteAsset: { state: 'known', value: 'eip155:56:native' },
+        quote: {
+          inputQuantity: '1000000000000000000',
+          nominalValue: { state: 'unknown', reason: 'NOT_QUERIED' },
+          realizableValue: { state: 'known', value: '2500000000000000' },
+          averageExitPrice: { state: 'unknown', reason: 'NOT_QUERIED' },
+          priceImpactBps: { state: 'unknown', reason: 'NOT_QUERIED' },
+          totalFeeBps: { state: 'unknown', reason: 'NOT_QUERIED' },
+          route: ['eip155:56:portal:previewSell'],
+          metadata: {
+            snapshot: {
+              ledger: 'EVM',
+              chainId: 'eip155:56',
+              blockNumber: '50000000',
+              blockHash: `0x${'1'.repeat(64)}`,
+              finality: 'finalized',
+            },
+            dataCoverage: 0.6,
+            sourceCoverage: 1,
+            historyCoverage: 0,
+            simulationCoverage: 0,
+            freshness: '2026-08-10T00:00:00.000Z',
+            sourceSet: ['flap-official-docs', 'bsc-rpc-fixture'],
+            modelVersion: 'flap-preview-sell-v0.1.0',
+            confidence: 0.95,
+            evidenceIds: ['ev_flap_quote'],
+          },
+        },
+        evidence: [
+          {
+            id: 'ev_flap_quote',
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:flap-preview-sell:v0.1.0',
+            locator: `rv:flap-preview-sell:${bscTokenAddress}:1000000000000000000@50000000`,
+            payloadHash: '3'.repeat(64),
+            observedAt: '2026-08-10T00:00:00.000Z',
+            blockOrSlot: '50000000',
+            finality: 'finalized',
+            summary: 'Flap sell preview normalized into a realizable-value observation.',
+          },
+        ],
+      }),
+    });
+  });
 
   await page.goto('/');
   await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
@@ -268,6 +320,16 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(page.getByRole('heading', { name: 'Flap evidence ledger' })).toBeVisible();
   await expect(
     page.getByText('Flap launch mechanism normalized from versioned Portal state.'),
+  ).toBeVisible();
+
+  await page.getByLabel('Sell amount (atomic units)').fill('1000000000000000000');
+  await page.getByRole('button', { name: 'Preview sell' }).click();
+  await expect(page.getByRole('heading', { name: 'Flap realizable sell preview' })).toBeVisible();
+  await expect(page.getByText('2500000000000000', { exact: true })).toBeVisible();
+  await expect(page.getByText('Price Impact Bps')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sell quote evidence ledger' })).toBeVisible();
+  await expect(
+    page.getByText('Flap sell preview normalized into a realizable-value observation.'),
   ).toBeVisible();
 });
 

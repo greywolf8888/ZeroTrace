@@ -1060,6 +1060,39 @@ tbody tr:hover {
   color: var(--text-secondary);
 }
 
+.quote-form {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) auto;
+  gap: 9px;
+  padding: 18px;
+}
+
+.quote-form label {
+  grid-column: 1 / -1;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.quote-form input {
+  min-width: 0;
+  height: 42px;
+  padding: 0 13px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+}
+
+.quote-note {
+  margin: -5px 18px 18px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.quote-facts {
+  border-top: 1px solid var(--border);
+}
+
 .raw-details,
 .evidence-item {
   border-top: 1px solid var(--border);
@@ -1450,6 +1483,10 @@ footer a {
   }
 
   .search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-form {
     grid-template-columns: 1fr;
   }
 

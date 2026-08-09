@@ -26,6 +26,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/subjects/:ledger/:id`     | snapshot-pinned current-state read when provider exists          |
 | GET    | `/api/v1/ledger/:ledger/:type/:id` | typed block, transaction, or Bitcoin outpoint query              |
 | GET    | `/api/v1/launches/EVM/:token`      | version-pinned Flap BSC current Portal-state inspection          |
+| POST   | `/api/v1/rv/flap-sell`             | fixed-block read-only Flap Portal `previewSell` quote            |
 | GET    | `/api/v1/evidence/:id`             | Evidence node, source edges, and bound Snapshot                  |
 | GET    | `/api/v1/evidence/:id/drilldown`   | restart-safe derived/source Evidence traversal                   |
 | POST   | `/api/v1/entities/resolve`         | deterministic evidence-feature baseline                          |
@@ -81,6 +82,19 @@ including current sell capacity and LP rights, remain typed Unknown.
 
 No token bytecode yields negative Evidence and `platformMatch=false`; it does not produce a
 plausible launch record. This endpoint performs no approval, signing, swap, or broadcast operation.
+
+`POST /api/v1/rv/flap-sell` accepts `chainId=eip155:56`, `token`, unsigned-decimal atomic
+`inputQuantity`, optional `platform=flap`, and optional decimal `blockNumber`. The inspector and
+`previewSell` call share that exact Snapshot. The returned `realizableValue` is Known only when the
+Portal returns a valid `uint256`; an exact provider-returned zero remains zero with raw call
+Evidence. Buy-only/killed/staged status is `unavailable/EXECUTION_BLOCKED`, migrated DEX status is
+`unavailable/UNSUPPORTED`, future status is Unknown, excessive input is blocked, and provider errors
+remain provider errors. None of those states is converted to zero.
+
+The output and input remain atomic strings. Nominal value, decimals-normalized average price,
+independent price impact, and complete fee breakdown remain Unknown until separate same-Snapshot
+sources are implemented. The endpoint uses `eth_call` only and cannot sign, approve, swap, or
+broadcast.
 
 Each successful transport response carries its own safe hostname-based endpoint ID. Snapshot
 `providerVersions` lists every endpoint used to establish the anchor; Evidence names the endpoint or

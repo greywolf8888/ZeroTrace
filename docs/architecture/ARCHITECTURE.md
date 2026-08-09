@@ -361,6 +361,13 @@ unqueried rights/configuration and negative contract-code observations remain ty
 converted into lifecycle, ownership or numeric facts. Event/configuration history, migration proof,
 market reconstruction and sell capacity remain separate later stages.
 
+Flap realizable-value preview is a distinct provider-observation layer, not a replacement for the
+deterministic RV engine. It reuses the inspection Snapshot and calls the official view-only
+`previewSell` interface at that exact block. The raw output is Contract State Evidence; a separate
+derived Evidence node exposes the atomic realizable value. Nominal price, decimals, impact, fee
+decomposition, gas, route capacity and migrated-DEX execution remain Unknown until independently
+evidenced. A revert or unsupported lifecycle cannot become a zero quote.
+
 The evaluated repositories, revisions, licenses, and intended boundaries are recorded in
 [THIRD_PARTY_DEPENDENCIES.md](../research/THIRD_PARTY_DEPENDENCIES.md).
 

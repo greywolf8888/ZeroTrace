@@ -15,6 +15,7 @@ import {
   PLATFORM_REGISTRY,
   inferGenericLaunchMechanism,
   inspectFlapToken,
+  quoteFlapSell,
   type FlapDeployment,
 } from './index.js';
 
@@ -203,6 +204,15 @@ function flapFixture(callResults: unknown[], deployment = FLAP_BSC_MAINNET_DEPLO
         writeEvidence: async (item, sources = [], snapshot) =>
           evidence.add(item, sources, snapshot).evidence,
       }),
+    quote: (inputQuantity: string) =>
+      quoteFlapSell({
+        adapter,
+        deployment,
+        token: tokenAddress,
+        inputQuantity,
+        writeEvidence: async (item, sources = [], snapshot) =>
+          evidence.add(item, sources, snapshot).evidence,
+      }),
   };
 }
 
@@ -377,5 +387,79 @@ describe('Flap read-only inspection', () => {
   it('rejects malformed V6 progress instead of clamping it to a plausible value', async () => {
     const fixture = flapFixture([encodeFlapV6({ progress: 1_000_000_000_000_000_001n })]);
     await expect(fixture.inspect()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+});
+
+describe('Flap read-only sell preview', () => {
+  it('preserves the exact Portal preview output with source-linked Evidence', async () => {
+    const fixture = flapFixture([
+      encodeFlapV6(),
+      encodeAbiParameters([{ type: 'uint256' }], [42n]),
+    ]);
+    const result = await fixture.quote('100');
+
+    expect(result.quoteAsset).toEqual({ state: 'known', value: 'eip155:56:native' });
+    expect(result.quote).toMatchObject({
+      inputQuantity: '100',
+      realizableValue: { state: 'known', value: '42' },
+      nominalValue: { state: 'unknown', reason: 'NOT_QUERIED' },
+      averageExitPrice: { state: 'unknown', reason: 'NOT_QUERIED' },
+      priceImpactBps: { state: 'unknown', reason: 'NOT_QUERIED' },
+      totalFeeBps: { state: 'unknown', reason: 'NOT_QUERIED' },
+      metadata: {
+        snapshot: { blockNumber: '16' },
+        modelVersion: 'flap-preview-sell-v0.1.0',
+      },
+    });
+    expect(result.evidence.map((item) => item.kind)).toEqual([
+      'PROVIDER_OBSERVATION',
+      'CONTRACT_STATE',
+      'CONTRACT_STATE',
+      'CONTRACT_STATE',
+      'DERIVED_FEATURE',
+      'CONTRACT_STATE',
+      'DERIVED_FEATURE',
+    ]);
+    expect(fixture.evidence.get(result.evidence.at(-1)?.id ?? '')?.sourceEvidenceIds).toEqual(
+      result.evidence
+        .slice(4, 6)
+        .map((item) => item.id)
+        .sort(),
+    );
+    expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(2);
+  });
+
+  it('keeps an exact zero known only when previewSell returns zero', async () => {
+    const fixture = flapFixture([encodeFlapV6(), encodeAbiParameters([{ type: 'uint256' }], [0n])]);
+
+    const result = await fixture.quote('1');
+    expect(result.quote.realizableValue).toEqual({ state: 'known', value: '0' });
+    expect(result.evidence.at(-2)?.summary).toBe(
+      'Flap previewSell output observed at the pinned Snapshot.',
+    );
+  });
+
+  it('reports a buy-only Portal status as execution-blocked without calling previewSell', async () => {
+    const fixture = flapFixture([encodeFlapV6({ status: 2 })]);
+
+    const result = await fixture.quote('100');
+    expect(result.quote.realizableValue).toMatchObject({
+      state: 'unavailable',
+      reason: 'EXECUTION_BLOCKED',
+    });
+    expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(1);
+    expect(result.evidence.at(-1)?.kind).toBe('DERIVED_FEATURE');
+  });
+
+  it('does not call previewSell when input exceeds evidenced circulating supply', async () => {
+    const fixture = flapFixture([encodeFlapV6()]);
+
+    const result = await fixture.quote('501');
+    expect(result.quote.realizableValue).toMatchObject({
+      state: 'unavailable',
+      reason: 'EXECUTION_BLOCKED',
+      detail: expect.stringContaining('circulating supply'),
+    });
+    expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(1);
   });
 });
