@@ -56,8 +56,8 @@ The current foundation includes:
 - a Fastify API with OpenAPI, health, readiness, capability truth, and Prometheus metrics;
 - a responsive React intelligence workspace that renders missing knowledge as Unknown rather than 0;
 - append-only PostgreSQL Evidence/Snapshot persistence with restart-safe derivation drilldown;
-- restart-safe SQD finalized block, transaction, EVM log, Bitcoin input/output, and Solana
-  instruction ingestion for Ethereum, BNB Smart Chain, Bitcoin, and Solana;
+- restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs, Bitcoin
+  inputs/outputs, and Solana instructions/logs/balances/token balances/rewards;
 - content-addressed, versioned raw artifacts, append-only Evidence/Snapshots, monotonic ingestion
   checkpoints, and idempotent ClickHouse Raw Facts;
 - PostgreSQL, ClickHouse, and object-store initialization, plus Docker Compose for the local
@@ -99,24 +99,25 @@ flowchart LR
   EV -->|"snapshots, nodes, edges"| DB
 ```
 
-The finalized raw-ledger path is wired end to end for blocks, transactions, EVM logs, Bitcoin
-inputs/outputs, and Solana top-level/CPI instructions. These remain provider-shaped observations,
-not semantic transfers or protocol events. EVM traces/state diffs, Solana balance deltas, continuous
-scheduling, reorg/reconciliation, graph projection, protocol-specific decoders, and distributed workflows remain open work. Read
+The finalized raw-ledger path is wired end to end for blocks, transactions, EVM logs/traces/state
+diffs, Bitcoin inputs/outputs, and Solana instructions/logs/native balances/token balances/rewards.
+These remain provider-shaped observations, not semantic transfers or protocol events. Continuous
+scheduling, reorg/reconciliation, semantic normalization, graph projection, protocol-specific
+decoders, and distributed workflows remain open work. Read
 [Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
 [Master Prompt](docs/architecture/ZEROTRACE_MASTER_PROMPT.md).
 
 ## Chain and platform scope
 
-| Domain            | Terminal scope                                                                                | Current repository state                                                                                       |
-| ----------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| EVM               | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Current-state RPC plus finalized Ethereum/BSC blocks, transactions, and logs; traces/protocol decoding pending |
-| Bitcoin           | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Esplora current state plus finalized blocks, transactions, inputs, and outputs; spend semantics pending        |
-| Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Current account snapshots plus finalized slots, transactions, and raw instruction/CPI paths; decoding pending  |
-| Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                     |
-| Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Registry and generic detector only; official decoders require real-chain validation                            |
-| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product and exit-race kernel implemented; routing/tax/gas adapters pending                            |
-| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record           |
+| Domain            | Terminal scope                                                                                | Current repository state                                                                                                             |
+| ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| EVM               | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Current-state RPC plus finalized Ethereum/BSC blocks, transactions, logs, traces and state diffs; semantic/protocol decoding pending |
+| Bitcoin           | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Esplora current state plus finalized blocks, transactions, inputs, and outputs; spend semantics pending                              |
+| Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Current account snapshots plus finalized transactions, instruction/CPI paths, logs, balances and rewards; decoding pending           |
+| Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                           |
+| Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Registry and generic detector only; official decoders require real-chain validation                                                  |
+| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product and exit-race kernel implemented; routing/tax/gas adapters pending                                                  |
+| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                 |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
 execution/label observation source; it is not a launchpad and can never merge entities by itself.
@@ -152,10 +153,11 @@ docker compose --profile ingest run --rm ingest-worker \
 
 Supported dataset names are `ethereum-mainnet`, `binance-mainnet`, `bitcoin-mainnet`, and
 `solana-mainnet`. Profiles are `block-headers` (the conservative default), `transactions`, and
-`ledger-records`. The last profile adds EVM logs, Bitcoin inputs/outputs, or Solana instructions as
-applicable. Every output reports `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`; only materialized
-tables receive numeric counts. The worker accepts bounded finalized ranges only, claims no protocol
-decoding, and has no signing or broadcast interface.
+`ledger-records`. The last profile adds EVM logs/traces/state diffs, Bitcoin inputs/outputs, or
+Solana instructions/logs/native balances/token balances/rewards as applicable. Every output reports
+`MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`; only materialized tables receive numeric counts.
+The worker accepts bounded finalized ranges only, claims no protocol decoding, and has no signing or
+broadcast interface.
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
 
@@ -261,8 +263,8 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Implement restart-safe SQD finalized block-header ingestion across all three ledger families
 - [x] Add restart-safe provider-shaped raw-transaction ingestion across all three ledger families
 - [x] Add finalized EVM logs, Bitcoin inputs/outputs, and Solana instruction/CPI raw records
-- [ ] Expand ingestion to EVM traces/state diffs, Solana balance deltas, and continuous,
-      reorg-aware reconciliation
+- [x] Add EVM trace/state-diff and Solana log/balance/token-balance/reward raw records
+- [ ] Add continuous scheduling, live/unfinalized handling, reorg rollback and cross-provider reconciliation
 - [ ] Add versioned Flap, Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs

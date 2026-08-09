@@ -42,8 +42,9 @@ docker compose --profile graph up -d
 ```
 
 Profiles expose architecture seams. The `ingest` worker is implemented for bounded finalized blocks,
-transactions, EVM logs, Bitcoin inputs/outputs, and Solana instructions; the `full` workflow and `graph` profiles do not imply their
-application projections or orchestration are implemented.
+transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana
+instructions/logs/balances/token balances/rewards; the `full` workflow and `graph` profiles do not
+imply their application projections or orchestration are implemented.
 
 Run one bounded finalized range through the implemented worker profile:
 
@@ -54,11 +55,11 @@ docker compose --profile ingest run --rm ingest-worker \
 
 The worker checks PostgreSQL Evidence/checkpoint schemas, ClickHouse Raw Facts, and the versioned
 object bucket before reading SQD. `block-headers` is the default profile; `transactions` adds strict
-ledger-specific raw transaction identities; `ledger-records` also adds the applicable EVM log,
-Bitcoin input/output, or Solana instruction table. These records retain provider shape and do not
-claim semantic transfer or protocol decoding. The worker is restart-safe for the same
-dataset/range/query identity and does not contain any chain-write operation. Scheduling and
-continuous-head following are not yet supplied.
+ledger-specific raw transaction identities; `ledger-records` also adds the applicable EVM
+log/trace/state-diff, Bitcoin input/output, or Solana instruction/log/balance/token-balance/reward
+tables. These records retain provider shape and do not claim semantic transfer or protocol decoding.
+The worker is restart-safe for the same dataset/range/query identity and does not contain any
+chain-write operation. Scheduling and continuous-head following are not yet supplied.
 
 ## Health and smoke checks
 

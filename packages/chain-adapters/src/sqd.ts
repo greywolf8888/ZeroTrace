@@ -144,9 +144,17 @@ class SqdConsumerError extends Error {
 const DATASET_PATH = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const FIELD_NAME = /^[A-Za-z][A-Za-z0-9]*$/;
 const EVM_TRANSACTION_HASH = /^0x[0-9a-fA-F]{64}$/;
+const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+const EVM_STATE_KEY = /^(?:balance|code|nonce|0x[0-9a-fA-F]{64})$/;
 const BITCOIN_TRANSACTION_ID = /^[0-9a-fA-F]{64}$/;
 const SOLANA_SIGNATURE = /^[1-9A-HJ-NP-Za-km-z]{64,96}$/;
 const SOLANA_BLOCK_HASH = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
+const SOLANA_ACCOUNT = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const UNSIGNED_DECIMAL = /^(?:0|[1-9][0-9]*)$/;
+const SIGNED_DECIMAL = /^-?(?:0|[1-9][0-9]*)$/;
+const EVM_TRACE_TYPES = new Set(['call', 'create', 'suicide', 'reward']);
+const EVM_STATE_DIFF_KINDS = new Set(['=', '+', '*', '-']);
+const SOLANA_LOG_KINDS = new Set(['log', 'data', 'other']);
 const MAX_QUERY_BYTES = 262_144;
 const MAX_TRANSACTIONS_PER_BLOCK = 100_000;
 const MAX_LEDGER_RECORDS_PER_BLOCK = 1_000_000;
@@ -432,8 +440,17 @@ function sourcePosition(value: JsonValue | undefined, field: string): number {
 
 function ledgerRecordsFromTable(
   block: SqdFinalizedBlock,
-  tableName: 'logs' | 'inputs' | 'outputs' | 'instructions',
-  identityFor: (payload: Readonly<Record<string, JsonValue>>) => string,
+  tableName:
+    | 'logs'
+    | 'inputs'
+    | 'outputs'
+    | 'instructions'
+    | 'traces'
+    | 'stateDiffs'
+    | 'balances'
+    | 'tokenBalances'
+    | 'rewards',
+  identityFor: (payload: Readonly<Record<string, JsonValue>>, sourceIndex: number) => string,
 ): readonly SqdLedgerRecordItem[] {
   const table = block[tableName];
   if (table === undefined) return [];
@@ -446,7 +463,7 @@ function ledgerRecordsFromTable(
       throw new ProviderError('INVALID_RESPONSE', `SQD ${tableName} item must be a JSON object.`);
     }
     const payload = record as Readonly<Record<string, JsonValue>>;
-    const identity = identityFor(payload);
+    const identity = identityFor(payload, sourceIndex);
     if (identities.has(identity)) {
       throw new ProviderError(
         'INVALID_RESPONSE',
@@ -477,6 +494,85 @@ export function sqdEvmLogsFromBlock(
     const logIndex = sourcePosition(payload.logIndex, 'EVM log index');
     sourcePosition(payload.transactionIndex, 'EVM log transaction index');
     return `${transactionHash.toLowerCase()}:${logIndex}`;
+  });
+}
+
+function evmBlockHash(block: SqdFinalizedBlock, tableName: string): string {
+  if (!EVM_TRANSACTION_HASH.test(block.header.hash)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${tableName} block hash is invalid.`);
+  }
+  return block.header.hash.toLowerCase();
+}
+
+function sourcePath(value: JsonValue | undefined, field: string, allowEmpty: boolean): number[] {
+  if (
+    !Array.isArray(value) ||
+    (!allowEmpty && value.length === 0) ||
+    value.length > MAX_INSTRUCTION_ADDRESS_DEPTH ||
+    !value.every(
+      (position) => typeof position === 'number' && Number.isSafeInteger(position) && position >= 0,
+    )
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${field} is invalid.`);
+  }
+  return value as number[];
+}
+
+export function sqdEvmTracesFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'evm', 'EVM trace');
+  const blockHash = evmBlockHash(block, 'EVM trace');
+  return ledgerRecordsFromTable(block, 'traces', (payload) => {
+    const transactionIndex = sourcePosition(
+      payload.transactionIndex,
+      'EVM trace transaction index',
+    );
+    const traceAddress = sourcePath(payload.traceAddress, 'EVM trace address', true);
+    if (typeof payload.type !== 'string' || !EVM_TRACE_TYPES.has(payload.type)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM trace type is invalid.');
+    }
+    for (const field of ['error', 'revertReason'] as const) {
+      const value = payload[field];
+      if (value !== undefined && value !== null && typeof value !== 'string') {
+        throw new ProviderError('INVALID_RESPONSE', `SQD EVM trace ${field} is invalid.`);
+      }
+    }
+    const path = traceAddress.length === 0 ? 'root' : traceAddress.join('.');
+    return `${blockHash}:${transactionIndex}:${path}`;
+  });
+}
+
+export function sqdEvmStateDiffsFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'evm', 'EVM state diff');
+  const blockHash = evmBlockHash(block, 'EVM state diff');
+  return ledgerRecordsFromTable(block, 'stateDiffs', (payload) => {
+    const transactionIndex = sourcePosition(
+      payload.transactionIndex,
+      'EVM state diff transaction index',
+    );
+    const address = payload.address;
+    const key = payload.key;
+    if (typeof address !== 'string' || !EVM_ADDRESS.test(address)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM state diff address is invalid.');
+    }
+    if (typeof key !== 'string' || !EVM_STATE_KEY.test(key)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM state diff key is invalid.');
+    }
+    if (typeof payload.kind !== 'string' || !EVM_STATE_DIFF_KINDS.has(payload.kind)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM state diff kind is invalid.');
+    }
+    for (const field of ['prev', 'next'] as const) {
+      const value = payload[field];
+      if (value !== undefined && value !== null && typeof value !== 'string') {
+        throw new ProviderError('INVALID_RESPONSE', `SQD EVM state diff ${field} is invalid.`);
+      }
+    }
+    return `${blockHash}:${transactionIndex}:${address.toLowerCase()}:${key.toLowerCase()}`;
   });
 }
 
@@ -545,19 +641,163 @@ export function sqdSolanaInstructionsFromBlock(
       payload.transactionIndex,
       'Solana instruction transaction index',
     );
-    const address = payload.instructionAddress;
-    if (
-      !Array.isArray(address) ||
-      address.length === 0 ||
-      address.length > MAX_INSTRUCTION_ADDRESS_DEPTH ||
-      !address.every(
-        (position) =>
-          typeof position === 'number' && Number.isSafeInteger(position) && position >= 0,
-      )
-    ) {
-      throw new ProviderError('INVALID_RESPONSE', 'SQD Solana instruction address is invalid.');
-    }
+    const address = sourcePath(payload.instructionAddress, 'Solana instruction address', false);
     return `${block.header.hash}:${transactionIndex}:${address.join('.')}`;
+  });
+}
+
+function solanaBlockHash(block: SqdFinalizedBlock, tableName: string): string {
+  if (!SOLANA_BLOCK_HASH.test(block.header.hash)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${tableName} block hash is invalid.`);
+  }
+  return block.header.hash;
+}
+
+function solanaAccount(value: JsonValue | undefined, field: string): string {
+  if (typeof value !== 'string' || !SOLANA_ACCOUNT.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${field} is invalid.`);
+  }
+  return value;
+}
+
+function optionalSolanaAccount(value: JsonValue | undefined, field: string): void {
+  if (value === undefined || value === null) return;
+  solanaAccount(value, field);
+}
+
+function decimalQuantity(
+  value: JsonValue | undefined,
+  field: string,
+  options: { nullable?: boolean; signed?: boolean } = {},
+): boolean {
+  if (value === undefined || value === null) {
+    if (options.nullable) return false;
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${field} is unavailable.`);
+  }
+  const pattern = options.signed ? SIGNED_DECIMAL : UNSIGNED_DECIMAL;
+  if (typeof value !== 'string' || !pattern.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${field} is invalid.`);
+  }
+  return true;
+}
+
+function optionalDecimals(value: JsonValue | undefined, field: string): void {
+  if (value === undefined || value === null) return;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value > 255) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD ${field} is invalid.`);
+  }
+}
+
+export function sqdSolanaLogsFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'solana', 'Solana log');
+  const blockHash = solanaBlockHash(block, 'Solana log');
+  return ledgerRecordsFromTable(block, 'logs', (payload) => {
+    const transactionIndex = sourcePosition(
+      payload.transactionIndex,
+      'Solana log transaction index',
+    );
+    const logIndex = sourcePosition(payload.logIndex, 'Solana log index');
+    sourcePath(payload.instructionAddress, 'Solana log instruction address', true);
+    solanaAccount(payload.programId, 'Solana log program ID');
+    if (typeof payload.kind !== 'string' || !SOLANA_LOG_KINDS.has(payload.kind)) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD Solana log kind is invalid.');
+    }
+    if (typeof payload.message !== 'string') {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD Solana log message is invalid.');
+    }
+    return `${blockHash}:${transactionIndex}:${logIndex}`;
+  });
+}
+
+export function sqdSolanaBalancesFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'solana', 'Solana balance');
+  const blockHash = solanaBlockHash(block, 'Solana balance');
+  return ledgerRecordsFromTable(block, 'balances', (payload) => {
+    const transactionIndex = sourcePosition(
+      payload.transactionIndex,
+      'Solana balance transaction index',
+    );
+    const account = solanaAccount(payload.account, 'Solana balance account');
+    decimalQuantity(payload.pre, 'Solana pre-balance');
+    decimalQuantity(payload.post, 'Solana post-balance');
+    return `${blockHash}:${transactionIndex}:${account}`;
+  });
+}
+
+export function sqdSolanaTokenBalancesFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'solana', 'Solana token balance');
+  const blockHash = solanaBlockHash(block, 'Solana token balance');
+  return ledgerRecordsFromTable(block, 'tokenBalances', (payload) => {
+    const transactionIndex = sourcePosition(
+      payload.transactionIndex,
+      'Solana token balance transaction index',
+    );
+    const account = solanaAccount(payload.account, 'Solana token balance account');
+    const hasPre = decimalQuantity(payload.preAmount, 'Solana pre-token amount', {
+      nullable: true,
+    });
+    const hasPost = decimalQuantity(payload.postAmount, 'Solana post-token amount', {
+      nullable: true,
+    });
+    if (!hasPre && !hasPost) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'SQD Solana token balance has neither a pre nor post amount.',
+      );
+    }
+    for (const field of [
+      'preProgramId',
+      'preMint',
+      'preOwner',
+      'postProgramId',
+      'postMint',
+      'postOwner',
+    ] as const) {
+      optionalSolanaAccount(payload[field], `Solana token balance ${field}`);
+    }
+    optionalDecimals(payload.preDecimals, 'Solana pre-token decimals');
+    optionalDecimals(payload.postDecimals, 'Solana post-token decimals');
+    return `${blockHash}:${transactionIndex}:${account}`;
+  });
+}
+
+export function sqdSolanaRewardsFromBlock(
+  dataset: SqdDataset,
+  block: SqdFinalizedBlock,
+): readonly SqdLedgerRecordItem[] {
+  requireDatasetType(dataset, 'solana', 'Solana reward');
+  const blockHash = solanaBlockHash(block, 'Solana reward');
+  return ledgerRecordsFromTable(block, 'rewards', (payload, sourceIndex) => {
+    const pubkey = solanaAccount(payload.pubkey, 'Solana reward pubkey');
+    decimalQuantity(payload.lamports, 'Solana reward lamports', { signed: true });
+    decimalQuantity(payload.postBalance, 'Solana reward post-balance');
+    if (
+      payload.rewardType !== undefined &&
+      payload.rewardType !== null &&
+      typeof payload.rewardType !== 'string'
+    ) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD Solana reward type is invalid.');
+    }
+    if (
+      payload.commission !== undefined &&
+      payload.commission !== null &&
+      (typeof payload.commission !== 'number' ||
+        !Number.isSafeInteger(payload.commission) ||
+        payload.commission < 0 ||
+        payload.commission > 100)
+    ) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD Solana reward commission is invalid.');
+    }
+    return `${blockHash}:${sourceIndex}:${pubkey}`;
   });
 }
 

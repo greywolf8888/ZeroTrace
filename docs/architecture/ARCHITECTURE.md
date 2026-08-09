@@ -264,14 +264,14 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                     | Current state                                                                                           |
-| ---------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot and ingestion checkpoints wired; other repositories pending                           |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | finalized block/transaction/log/input/output/instruction Raw Facts wired; semantic facts/series pending |
-| Object storage   | raw provider payloads and large artifacts by content hash                                              | versioned content-addressed artifacts wired for finalized ingestion                                     |
-| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only                                                                        |
-| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                                                                                    |
-| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only                                                                           |
+| Store            | Intended authority                                                                                     | Current state                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot and ingestion checkpoints wired; other repositories pending                                            |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                             | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending |
+| Object storage   | raw provider payloads and large artifacts by content hash                                              | versioned content-addressed artifacts wired for finalized ingestion                                                      |
+| Graph projection | temporal entity/control traversal                                                                      | Optional Apache AGE service only                                                                                         |
+| Valkey           | bounded cache, locks, rate coordination                                                                | Compose service only                                                                                                     |
+| NATS / Temporal  | ingestion events and durable workflows                                                                 | Compose/profile services only                                                                                            |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, and ingestion-run tables include append-only or
 monotonic guards. Deferred database constraints reject inferred Evidence without a source edge,
@@ -280,14 +280,17 @@ writes. ClickHouse Raw Facts bind Evidence and artifact references and use expli
 deduplication; metric tables enforce a knowledge-state/value consistency constraint.
 
 The worker exposes explicit `block-headers`, `transactions`, and `ledger-records` profiles. The last
-profile materializes transactions plus EVM logs, Bitcoin inputs/outputs, or Solana instructions as
-applicable. Each table uses a discriminated `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE` state;
-only materialized tables receive a numeric count. SQD may omit an explicitly requested optional table
-when it has no rows, which is a known zero only for that requested table. Bitcoin coinbase outpoints
-remain explicitly null. Solana instruction identity uses blockhash, provider transaction index, and
-the complete instruction-address path; the transaction index is not assumed to be a returned-array
-offset. Solana skipped-slot ranges are advanced only when the finalized-head header proves coverage;
-an empty stream with Unknown head remains an error.
+profile materializes transactions plus EVM logs/traces/state diffs, Bitcoin inputs/outputs, or Solana
+instructions/logs/native balances/token balances/rewards as applicable. Each table uses a
+discriminated `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE` state; only materialized tables
+receive a numeric count. SQD may omit an explicitly requested optional table when it has no rows,
+which is a known zero only for that requested table. Bitcoin coinbase outpoints and one-sided Solana
+token-balance fields remain explicitly null. EVM trace identity uses block hash, provider transaction
+index, and complete trace address; state-diff identity adds the changed account/state key. Solana
+instruction identity uses blockhash, provider transaction index, and the complete
+instruction-address path; the transaction index is not assumed to be a returned-array offset.
+Solana skipped-slot ranges are advanced only when the finalized-head header proves coverage; an empty
+stream with Unknown head remains an error.
 
 ## Platform-adapter policy
 

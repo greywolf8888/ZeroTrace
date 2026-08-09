@@ -19,7 +19,9 @@ test('renders capability truth and unknown values without fake market data', asy
   await expect(page.getByText('Unknown · select an asset')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Capability ledger' })).toBeVisible();
   await expect(
-    page.getByText(/EVM logs, Bitcoin inputs\/outputs, and Solana instructions are implemented/),
+    page.getByText(
+      /EVM logs\/traces\/state diffs, Bitcoin inputs\/outputs, and Solana instructions\/logs\/balances\/token balances\/rewards are implemented/,
+    ),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Platform adapter boundaries' })).toBeVisible();
   await expect(page.getByText('API unavailable')).toHaveCount(0);

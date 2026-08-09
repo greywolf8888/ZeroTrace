@@ -166,6 +166,17 @@ storageDescribe('historical ingestion storage integration', () => {
           data: '0x',
         },
       ],
+      traces: [{ transactionIndex: 0, traceAddress: [], type: 'call' }],
+      stateDiffs: [
+        {
+          transactionIndex: 0,
+          address: `0x${'3'.repeat(40)}`,
+          key: 'balance',
+          kind: '*',
+          prev: '0x01',
+          next: '0x02',
+        },
+      ],
     };
     const source: SqdFinalizedSource = {
       dataset: testDataset,
@@ -220,6 +231,11 @@ storageDescribe('historical ingestion storage integration', () => {
         inputs: { state: 'NOT_APPLICABLE', processed: null },
         outputs: { state: 'NOT_APPLICABLE', processed: null },
         instructions: { state: 'NOT_APPLICABLE', processed: null },
+        traces: { state: 'MATERIALIZED', processed: 1 },
+        stateDiffs: { state: 'MATERIALIZED', processed: 1 },
+        balances: { state: 'NOT_APPLICABLE', processed: null },
+        tokenBalances: { state: 'NOT_APPLICABLE', processed: null },
+        rewards: { state: 'NOT_APPLICABLE', processed: null },
       },
       transactionCoverage: 'MATERIALIZED',
       processedTransactions: 2,
@@ -232,10 +248,12 @@ storageDescribe('historical ingestion storage integration', () => {
       fromBlock: pipelineBlockNumber,
       toBlock: pipelineBlockNumber,
     });
-    expect(storedFacts).toHaveLength(4);
+    expect(storedFacts).toHaveLength(6);
     expect(storedFacts.map((fact) => fact.factType).sort()).toEqual([
       'BLOCK',
       'LOG',
+      'STATE_DIFF',
+      'TRACE',
       'TRANSACTION',
       'TRANSACTION',
     ]);
@@ -257,6 +275,11 @@ storageDescribe('historical ingestion storage integration', () => {
         inputs: { state: 'NOT_APPLICABLE', processed: null },
         outputs: { state: 'NOT_APPLICABLE', processed: null },
         instructions: { state: 'NOT_APPLICABLE', processed: null },
+        traces: { state: 'MATERIALIZED', processed: 0 },
+        stateDiffs: { state: 'MATERIALIZED', processed: 0 },
+        balances: { state: 'NOT_APPLICABLE', processed: null },
+        tokenBalances: { state: 'NOT_APPLICABLE', processed: null },
+        rewards: { state: 'NOT_APPLICABLE', processed: null },
       },
       transactionCoverage: 'MATERIALIZED',
       processedTransactions: 0,

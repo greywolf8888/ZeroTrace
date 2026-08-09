@@ -6,7 +6,13 @@ import {
   sqdBitcoinInputsFromBlock,
   sqdBitcoinOutputsFromBlock,
   sqdEvmLogsFromBlock,
+  sqdEvmStateDiffsFromBlock,
+  sqdEvmTracesFromBlock,
+  sqdSolanaBalancesFromBlock,
   sqdSolanaInstructionsFromBlock,
+  sqdSolanaLogsFromBlock,
+  sqdSolanaRewardsFromBlock,
+  sqdSolanaTokenBalancesFromBlock,
   sqdTransactionsFromBlock,
   type SqdFinalizedBlock,
 } from './sqd.js';
@@ -415,6 +421,34 @@ describe('SQD ledger-specific record extraction', () => {
     expect(sqdEvmLogsFromBlock('binance-mainnet', block(1))).toEqual([]);
   });
 
+  it('identifies EVM traces by source path and state diffs by changed state key', () => {
+    const evmBlock: SqdFinalizedBlock = {
+      ...block(1),
+      traces: [
+        { transactionIndex: 0, traceAddress: [], type: 'call' },
+        { transactionIndex: 0, traceAddress: [0, 1], type: 'create' },
+      ],
+      stateDiffs: [
+        {
+          transactionIndex: 0,
+          address: `0x${'A'.repeat(40)}`,
+          key: `0x${'B'.repeat(64)}`,
+          kind: '*',
+          prev: '0x01',
+          next: '0x02',
+        },
+      ],
+    };
+    const prefix = evmBlock.header.hash.toLowerCase();
+
+    expect(
+      sqdEvmTracesFromBlock('ethereum-mainnet', evmBlock).map((item) => item.identity),
+    ).toEqual([`${prefix}:0:root`, `${prefix}:0:0.1`]);
+    expect(sqdEvmStateDiffsFromBlock('ethereum-mainnet', evmBlock)[0]?.identity).toBe(
+      `${prefix}:0:0x${'a'.repeat(40)}:0x${'b'.repeat(64)}`,
+    );
+  });
+
   it('preserves coinbase nulls while identifying Bitcoin inputs and outputs by source position', () => {
     const bitcoinBlock: SqdFinalizedBlock = {
       header: {
@@ -462,6 +496,64 @@ describe('SQD ledger-specific record extraction', () => {
     ).toEqual([`${'1'.repeat(44)}:2:0`, `${'1'.repeat(44)}:2:0.1`]);
   });
 
+  it('extracts Solana logs, native/token balances, and block rewards without array joins', () => {
+    const solanaBlock: SqdFinalizedBlock = {
+      header: {
+        number: 259_985_000,
+        hash: '1'.repeat(44),
+        parentHash: '2'.repeat(44),
+        timestamp: 1_234_567_890,
+      },
+      logs: [
+        {
+          transactionIndex: 65,
+          logIndex: 1,
+          instructionAddress: [0, 1],
+          programId: '3'.repeat(44),
+          kind: 'log',
+          message: 'Instruction: test',
+        },
+      ],
+      balances: [{ transactionIndex: 65, account: '4'.repeat(44), pre: '2', post: '1' }],
+      tokenBalances: [
+        {
+          transactionIndex: 65,
+          account: '5'.repeat(44),
+          preProgramId: null,
+          preMint: null,
+          preDecimals: null,
+          preOwner: null,
+          preAmount: null,
+          postProgramId: '3'.repeat(44),
+          postMint: '7'.repeat(44),
+          postDecimals: 6,
+          postOwner: '8'.repeat(44),
+          postAmount: '2',
+        },
+      ],
+      rewards: [{ pubkey: '6'.repeat(44), lamports: '3', postBalance: '4', rewardType: 'Fee' }],
+    };
+
+    expect(sqdSolanaLogsFromBlock('solana-mainnet', solanaBlock)[0]?.identity).toBe(
+      `${'1'.repeat(44)}:65:1`,
+    );
+    expect(sqdSolanaBalancesFromBlock('solana-mainnet', solanaBlock)[0]?.identity).toBe(
+      `${'1'.repeat(44)}:65:${'4'.repeat(44)}`,
+    );
+    expect(sqdSolanaTokenBalancesFromBlock('solana-mainnet', solanaBlock)[0]?.identity).toBe(
+      `${'1'.repeat(44)}:65:${'5'.repeat(44)}`,
+    );
+    expect(
+      sqdSolanaTokenBalancesFromBlock('solana-mainnet', solanaBlock)[0]?.payload,
+    ).toMatchObject({
+      preAmount: null,
+      postAmount: '2',
+    });
+    expect(sqdSolanaRewardsFromBlock('solana-mainnet', solanaBlock)[0]?.identity).toBe(
+      `${'1'.repeat(44)}:0:${'6'.repeat(44)}`,
+    );
+  });
+
   it('rejects malformed, duplicate, and non-applicable ledger records', () => {
     expect(() =>
       sqdEvmLogsFromBlock('ethereum-mainnet', {
@@ -503,5 +595,44 @@ describe('SQD ledger-specific record extraction', () => {
     expect(() => sqdBitcoinOutputsFromBlock('ethereum-mainnet', block(1))).toThrow(
       /not applicable/,
     );
+    expect(() =>
+      sqdEvmTracesFromBlock('ethereum-mainnet', {
+        ...block(1),
+        traces: [{ transactionIndex: 0, traceAddress: [-1], type: 'call' }],
+      }),
+    ).toThrow(/trace address/);
+    expect(() =>
+      sqdEvmStateDiffsFromBlock('ethereum-mainnet', {
+        ...block(1),
+        stateDiffs: [
+          { transactionIndex: 0, address: `0x${'1'.repeat(40)}`, key: 'unknown-state-key' },
+        ],
+      }),
+    ).toThrow(/key/);
+    expect(() =>
+      sqdSolanaBalancesFromBlock('solana-mainnet', {
+        header: {
+          number: 1,
+          hash: '1'.repeat(44),
+          parentHash: '2'.repeat(44),
+          timestamp: null,
+        },
+        balances: [
+          { transactionIndex: 0, account: '3'.repeat(44), pre: '1', post: '0' },
+          { transactionIndex: 0, account: '3'.repeat(44), pre: '1', post: '0' },
+        ],
+      }),
+    ).toThrow(/duplicate/);
+    expect(() =>
+      sqdSolanaRewardsFromBlock('solana-mainnet', {
+        header: {
+          number: 1,
+          hash: '1'.repeat(44),
+          parentHash: '2'.repeat(44),
+          timestamp: null,
+        },
+        rewards: [{ pubkey: 'not-base58' }],
+      }),
+    ).toThrow(/pubkey/);
   });
 });

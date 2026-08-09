@@ -38,9 +38,10 @@
   after durable writes, resumes monotonically, and makes terminal replay a no-op;
 - transaction-profile ingestion validates EVM hash, Bitcoin txid, and Solana signature identities,
   rejects duplicate/malformed records, and writes every transaction before advancing its block;
-- ledger-record ingestion validates EVM log source identity, Bitcoin coinbase/outpoint positions,
-  and complete Solana instruction-address paths, rejects duplicate/malformed records, and writes all
-  applicable raw records before advancing its block;
+- ledger-record ingestion validates EVM log, trace-address and changed-state identities; Bitcoin
+  coinbase/outpoint positions; and Solana instruction/log/account/reward identities, including
+  one-sided token-balance nulls. It rejects duplicate/malformed records and writes all applicable raw
+  records before advancing its block;
 - header-only runs preserve applicable table coverage as `NOT_QUERIED`/null, distinguish
   `NOT_APPLICABLE`, and only let an explicitly materialized provider-empty table report zero;
 - Solana skipped-slot empty streams advance only with a finalized-head coverage proof;

@@ -79,6 +79,54 @@ describe('SQD ingestion profiles', () => {
         value: true,
       });
     }
+    if (fixture.dataset === 'ethereum-mainnet' || fixture.dataset === 'binance-mainnet') {
+      expect(request.requests).toMatchObject({ traces: [{}], stateDiffs: [{}] });
+      expect(request.fields?.trace).toMatchObject({
+        transactionIndex: true,
+        traceAddress: true,
+        type: true,
+        callFrom: true,
+        createResultAddress: true,
+      });
+      expect(request.fields?.stateDiff).toMatchObject({
+        transactionIndex: true,
+        address: true,
+        key: true,
+        kind: true,
+        prev: true,
+        next: true,
+      });
+    }
+    if (fixture.dataset === 'solana-mainnet') {
+      expect(request.requests).toMatchObject({
+        logs: [{}],
+        balances: [{}],
+        tokenBalances: [{}],
+        rewards: [{}],
+      });
+      expect(request.fields?.log).toMatchObject({
+        transactionIndex: true,
+        logIndex: true,
+        instructionAddress: true,
+      });
+      expect(request.fields?.balance).toMatchObject({
+        transactionIndex: true,
+        account: true,
+        pre: true,
+        post: true,
+      });
+      expect(request.fields?.tokenBalance).toMatchObject({
+        transactionIndex: true,
+        account: true,
+        preAmount: true,
+        postAmount: true,
+      });
+      expect(request.fields?.reward).toMatchObject({
+        pubkey: true,
+        lamports: true,
+        postBalance: true,
+      });
+    }
   });
 
   it.each([

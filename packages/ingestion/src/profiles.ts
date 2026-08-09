@@ -49,6 +49,46 @@ const EVM_LOG_FIELDS = {
   data: true,
 } as const;
 
+const EVM_TRACE_FIELDS = {
+  transactionIndex: true,
+  traceAddress: true,
+  type: true,
+  error: true,
+  revertReason: true,
+  subtraces: true,
+  callCallType: true,
+  callFrom: true,
+  callTo: true,
+  callValue: true,
+  callGas: true,
+  callSighash: true,
+  callInput: true,
+  callResultGasUsed: true,
+  callResultOutput: true,
+  createFrom: true,
+  createValue: true,
+  createGas: true,
+  createInit: true,
+  createResultGasUsed: true,
+  createResultCode: true,
+  createResultAddress: true,
+  suicideAddress: true,
+  suicideRefundAddress: true,
+  suicideBalance: true,
+  rewardAuthor: true,
+  rewardValue: true,
+  rewardType: true,
+} as const;
+
+const EVM_STATE_DIFF_FIELDS = {
+  transactionIndex: true,
+  address: true,
+  key: true,
+  kind: true,
+  prev: true,
+  next: true,
+} as const;
+
 const BITCOIN_INPUT_FIELDS = {
   transactionIndex: true,
   inputIndex: true,
@@ -77,6 +117,45 @@ const SOLANA_INSTRUCTION_FIELDS = {
   instructionAddress: true,
   isCommitted: true,
   error: true,
+} as const;
+
+const SOLANA_LOG_FIELDS = {
+  transactionIndex: true,
+  logIndex: true,
+  instructionAddress: true,
+  programId: true,
+  kind: true,
+  message: true,
+} as const;
+
+const SOLANA_BALANCE_FIELDS = {
+  transactionIndex: true,
+  account: true,
+  pre: true,
+  post: true,
+} as const;
+
+const SOLANA_TOKEN_BALANCE_FIELDS = {
+  transactionIndex: true,
+  account: true,
+  preProgramId: true,
+  preMint: true,
+  preDecimals: true,
+  preOwner: true,
+  preAmount: true,
+  postProgramId: true,
+  postMint: true,
+  postDecimals: true,
+  postOwner: true,
+  postAmount: true,
+} as const;
+
+const SOLANA_REWARD_FIELDS = {
+  pubkey: true,
+  lamports: true,
+  postBalance: true,
+  rewardType: true,
+  commission: true,
 } as const;
 
 const SOLANA_TRANSACTION_FIELDS = {
@@ -141,13 +220,32 @@ export function createSqdProfileRequest(input: {
   if (input.dataset === 'solana-mainnet') {
     return {
       ...range,
-      fields: { transaction: fields, instruction: SOLANA_INSTRUCTION_FIELDS },
-      requests: { transactions: [{}], instructions: [{}] },
+      fields: {
+        transaction: fields,
+        instruction: SOLANA_INSTRUCTION_FIELDS,
+        log: SOLANA_LOG_FIELDS,
+        balance: SOLANA_BALANCE_FIELDS,
+        tokenBalance: SOLANA_TOKEN_BALANCE_FIELDS,
+        reward: SOLANA_REWARD_FIELDS,
+      },
+      requests: {
+        transactions: [{}],
+        instructions: [{}],
+        logs: [{}],
+        balances: [{}],
+        tokenBalances: [{}],
+        rewards: [{}],
+      },
     };
   }
   return {
     ...range,
-    fields: { transaction: fields, log: EVM_LOG_FIELDS },
-    requests: { transactions: [{}], logs: [{}] },
+    fields: {
+      transaction: fields,
+      log: EVM_LOG_FIELDS,
+      trace: EVM_TRACE_FIELDS,
+      stateDiff: EVM_STATE_DIFF_FIELDS,
+    },
+    requests: { transactions: [{}], logs: [{}], traces: [{}], stateDiffs: [{}] },
   };
 }

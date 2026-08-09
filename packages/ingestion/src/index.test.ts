@@ -246,6 +246,11 @@ describe('SqdFinalizedIngestionPipeline', () => {
         inputs: { state: 'NOT_APPLICABLE', processed: null },
         outputs: { state: 'NOT_APPLICABLE', processed: null },
         instructions: { state: 'NOT_APPLICABLE', processed: null },
+        traces: { state: 'NOT_QUERIED', processed: null },
+        stateDiffs: { state: 'NOT_QUERIED', processed: null },
+        balances: { state: 'NOT_APPLICABLE', processed: null },
+        tokenBalances: { state: 'NOT_APPLICABLE', processed: null },
+        rewards: { state: 'NOT_APPLICABLE', processed: null },
       },
       transactionCoverage: 'NOT_QUERIED',
       processedTransactions: null,
@@ -259,6 +264,44 @@ describe('SqdFinalizedIngestionPipeline', () => {
       ledger: 'EVM',
       blockNumber: '0',
       blockTimestamp: '1970-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('keeps unqueried Solana tables distinct from records that do not apply', async () => {
+    const events: string[] = [];
+    const checkpoints = new FakeCheckpoints(events);
+    const stores = createStores(events);
+    const slot = 105_368;
+    const pipeline = new SqdFinalizedIngestionPipeline({
+      source: new FakeSource('solana-mainnet', 'SOLANA', 'solana-mainnet', [
+        {
+          header: {
+            number: slot,
+            hash: '1'.repeat(44),
+            parentHash: '2'.repeat(44),
+            timestamp: 1_234_567_890,
+          },
+        },
+      ]),
+      checkpoints,
+      artifacts: stores.artifacts,
+      evidence: stores.evidence,
+      facts: stores.factWriter,
+    });
+
+    await expect(pipeline.run({ fromBlock: slot, toBlock: slot })).resolves.toMatchObject({
+      recordCoverage: {
+        transactions: { state: 'NOT_QUERIED', processed: null },
+        logs: { state: 'NOT_QUERIED', processed: null },
+        inputs: { state: 'NOT_APPLICABLE', processed: null },
+        outputs: { state: 'NOT_APPLICABLE', processed: null },
+        instructions: { state: 'NOT_QUERIED', processed: null },
+        traces: { state: 'NOT_APPLICABLE', processed: null },
+        stateDiffs: { state: 'NOT_APPLICABLE', processed: null },
+        balances: { state: 'NOT_QUERIED', processed: null },
+        tokenBalances: { state: 'NOT_QUERIED', processed: null },
+        rewards: { state: 'NOT_QUERIED', processed: null },
+      },
     });
   });
 
@@ -370,6 +413,20 @@ describe('SqdFinalizedIngestionPipeline', () => {
             data: '0x',
           },
         ],
+        traces: [
+          { transactionIndex: 0, traceAddress: [], type: 'call' },
+          { transactionIndex: 0, traceAddress: [0], type: 'create' },
+        ],
+        stateDiffs: [
+          {
+            transactionIndex: 0,
+            address: `0x${'1'.repeat(40)}`,
+            key: 'balance',
+            kind: '*',
+            prev: '0x01',
+            next: '0x02',
+          },
+        ],
       },
     });
     expect(evm.result.recordCoverage).toEqual({
@@ -378,8 +435,20 @@ describe('SqdFinalizedIngestionPipeline', () => {
       inputs: { state: 'NOT_APPLICABLE', processed: null },
       outputs: { state: 'NOT_APPLICABLE', processed: null },
       instructions: { state: 'NOT_APPLICABLE', processed: null },
+      traces: { state: 'MATERIALIZED', processed: 2 },
+      stateDiffs: { state: 'MATERIALIZED', processed: 1 },
+      balances: { state: 'NOT_APPLICABLE', processed: null },
+      tokenBalances: { state: 'NOT_APPLICABLE', processed: null },
+      rewards: { state: 'NOT_APPLICABLE', processed: null },
     });
-    expect(evm.facts.map((fact) => fact.factType)).toEqual(['BLOCK', 'TRANSACTION', 'LOG']);
+    expect(evm.facts.map((fact) => fact.factType)).toEqual([
+      'BLOCK',
+      'TRANSACTION',
+      'LOG',
+      'TRACE',
+      'TRACE',
+      'STATE_DIFF',
+    ]);
 
     const bitcoin = await runFixture({
       dataset: 'bitcoin-mainnet',
@@ -406,6 +475,11 @@ describe('SqdFinalizedIngestionPipeline', () => {
       inputs: { state: 'MATERIALIZED', processed: 2 },
       outputs: { state: 'MATERIALIZED', processed: 1 },
       instructions: { state: 'NOT_APPLICABLE', processed: null },
+      traces: { state: 'NOT_APPLICABLE', processed: null },
+      stateDiffs: { state: 'NOT_APPLICABLE', processed: null },
+      balances: { state: 'NOT_APPLICABLE', processed: null },
+      tokenBalances: { state: 'NOT_APPLICABLE', processed: null },
+      rewards: { state: 'NOT_APPLICABLE', processed: null },
     });
     expect(bitcoin.facts.map((fact) => fact.factType)).toEqual([
       'BLOCK',
@@ -431,26 +505,54 @@ describe('SqdFinalizedIngestionPipeline', () => {
           { transactionIndex: 2, instructionAddress: [0], programId: '4'.repeat(44) },
           { transactionIndex: 2, instructionAddress: [0, 1], programId: '5'.repeat(44) },
         ],
+        logs: [
+          {
+            transactionIndex: 2,
+            logIndex: 0,
+            instructionAddress: [0],
+            programId: '4'.repeat(44),
+            kind: 'log',
+            message: 'Instruction: test',
+          },
+        ],
+        balances: [{ transactionIndex: 2, account: '6'.repeat(44), pre: '2', post: '1' }],
+        tokenBalances: [
+          { transactionIndex: 2, account: '7'.repeat(44), preAmount: '1', postAmount: '2' },
+        ],
+        rewards: [{ pubkey: '8'.repeat(44), lamports: '3', postBalance: '4' }],
       },
     });
     expect(solana.result.recordCoverage).toMatchObject({
       transactions: { state: 'MATERIALIZED', processed: 1 },
-      logs: { state: 'NOT_APPLICABLE', processed: null },
+      logs: { state: 'MATERIALIZED', processed: 1 },
       inputs: { state: 'NOT_APPLICABLE', processed: null },
       outputs: { state: 'NOT_APPLICABLE', processed: null },
       instructions: { state: 'MATERIALIZED', processed: 2 },
+      traces: { state: 'NOT_APPLICABLE', processed: null },
+      stateDiffs: { state: 'NOT_APPLICABLE', processed: null },
+      balances: { state: 'MATERIALIZED', processed: 1 },
+      tokenBalances: { state: 'MATERIALIZED', processed: 1 },
+      rewards: { state: 'MATERIALIZED', processed: 1 },
     });
     expect(solana.facts.map((fact) => fact.factType)).toEqual([
       'BLOCK',
       'TRANSACTION',
+      'LOG',
       'INSTRUCTION',
       'INSTRUCTION',
+      'BALANCE',
+      'TOKEN_BALANCE',
+      'REWARD',
     ]);
     expect(solana.ledger.values().map((node) => node.evidence.kind)).toEqual([
       'BLOCK',
       'TRANSACTION',
+      'LOG',
       'INSTRUCTION',
       'INSTRUCTION',
+      'ACCOUNT_STATE',
+      'ACCOUNT_STATE',
+      'ACCOUNT_STATE',
     ]);
   });
 
@@ -600,13 +702,7 @@ describe('SqdFinalizedIngestionPipeline', () => {
         {
           ...evmBlocks[0]!,
           transactions: [{ hash: transactionHash }],
-          logs: [
-            {
-              transactionHash,
-              transactionIndex: 0,
-              logIndex: -1,
-            },
-          ],
+          traces: [{ transactionIndex: 0, traceAddress: [-1], type: 'call' }],
         },
       ]),
       checkpoints,

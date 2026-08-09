@@ -247,20 +247,63 @@ terminal no-op. After all reverse-read assertions, the exact disposable Compose 
 and its three named data volumes were removed; unrelated containers and the database already using
 host port 5432 were not touched.
 
-This validates raw EVM log, Bitcoin input/output, and Solana top-level/CPI instruction capture and
-provenance. EVM traces/state diffs, Solana balance/token-balance/reward tables, semantic transfers,
-protocol decoding, independent-provider reconciliation, and archive-scale backfill remain open.
+At that stage, this validated raw EVM log, Bitcoin input/output, and Solana top-level/CPI instruction
+capture and provenance. The execution/state follow-up below closes the raw trace, state-diff,
+balance, token-balance, and reward gaps; semantic transfers, protocol decoding, independent-provider
+reconciliation, and archive-scale backfill remain open.
+
+## Finalized execution/state follow-up
+
+The `sqd-finalized-ingestion-v4` follow-up used the official SQD EVM API/field-selection and Solana
+API/field-selection contracts. Live raw-HTTP probes confirmed that EVM trace identity requires an
+explicitly selected `traceAddress`, including an empty root path, while a state diff is located by
+provider transaction index, account, and state key. Solana probes confirmed provider transaction
+indices for logs/native balances/token balances, block-level reward rows, and explicit null pre/post
+fields for one-sided token-account creation or closure.
+
+The expanded profile passed 25 integration tests against an isolated PostgreSQL, ClickHouse, and
+versioned MinIO stack. A freshly compiled worker runtime then persisted these public finalized
+observations:
+
+| Dataset            |  Position | Transactions | Additional materialized records                                         | Run ID                                 | Artifact SHA-256                                                   |
+| ------------------ | --------: | -----------: | ----------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------ |
+| `ethereum-mainnet` |   1000000 |            2 | 1 log, 3 traces, 8 state diffs                                          | `2e747f40-2d3a-41d2-baec-7f37738e62a7` | `7dfe4e4e8dc20962667f8f0854aa1eb457fed06952030dd4b182bd29322b04dd` |
+| `binance-mainnet`  |         2 |            1 | 1 log, 1 trace, 12 state diffs                                          | `1b876244-b878-49d1-8298-93303ca2272d` | `3fcd6c0fe6ab4d2fc56fa6c0e37c7c3c669e3689aba33cab1951e5202e3a20ed` |
+| `bitcoin-mainnet`  |       170 |            2 | 2 inputs and 3 outputs                                                  | `deb61c50-e645-4e03-972b-c9763ed8f001` | `b2ef07cc0f6be018307cfe3027ef0ec1b3fec61e184c9b7e875515fa600b6d67` |
+| `solana-mainnet`   | 200000000 |           25 | 148 instructions, 193 logs, 40 balances, 37 token balances, 473 rewards | `6a6f55d5-d117-40ae-96ae-d349abea8d76` | `38422f2f07a5ac537bb317f3ba7be01f9a294a78dd5f04b2e4ca3782191c74f3` |
+
+ClickHouse returned 956 facts at the four named positions, with one distinct Evidence ID per fact
+and exactly one artifact reference per block. PostgreSQL returned a non-null Snapshot and the same
+single artifact reference for every corresponding Evidence row. Integrity-checked object-store reads
+reproduced every table count shown above from the content-addressed envelopes. Immediate replay kept
+all four run IDs, processed zero new blocks/records, and returned `alreadyTerminal: true`.
+
+An Ethereum header-only run at block `1000001` reported transactions/logs/traces/state diffs as
+`NOT_QUERIED` with null counts, while Bitcoin- and Solana-only tables were `NOT_APPLICABLE` with null
+counts. The Docker Hub token endpoint was temporarily unreachable through the local interception
+proxy during the first image rebuild attempt. After connectivity recovered, the pinned
+`node:24.11.1-alpine` base pulled successfully and the clean current-source `ingest-worker` target
+built as image digest `sha256:6e53b6a89a9a5f8fb9ec141727afa391fd0a7e981162bed625f37e1566276f64`.
+That image ingested BNB Smart Chain block `3` under run
+`f1fc392c-8587-490c-a89d-a2e2d9b5936b`, persisted artifact
+`910e4f82eb95fd5a8a1c3273f4a6b3dc06796505dfe998a04d985b2ddbc12050`, and explicitly
+materialized zero transactions/logs/traces/state diffs. Its immediate replay retained the run ID,
+processed zero blocks, and returned `alreadyTerminal: true`.
+
+This validates provider-shaped finalized execution/state capture and provenance. Semantic transfer,
+event/call/state-change interpretation, continuous scheduling, live/reorg handling, independent
+provider reconciliation, and archive-scale backfill remain open.
 
 ## Automated verification
 
 | Command                  | Result                                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `npm run verify:full`    | pass: format, lint, typecheck, 172 unit, 25 integration, build, license, audit, coverage, 6 E2E, SBOM |
-| `npm run test:coverage`  | pass: 197 tests; 87.87% statements, 79.36% branches, 96.88% functions, 89.22% lines                   |
+| `npm run verify:full`    | pass: format, lint, typecheck, 175 unit, 25 integration, build, license, audit, coverage, 6 E2E, SBOM |
+| `npm run test:coverage`  | pass: 200 tests; 87.93% statements, 79.44% branches, 97.02% functions, 89.19% lines                   |
 | `npm run test:e2e`       | pass: 6 Chromium tests across desktop and Pixel 7                                                     |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                |
 | `docker compose config`  | pass                                                                                                  |
-| production Compose smoke | pass with the port overrides documented above                                                         |
+| production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                    |
 | branch GitHub Actions CI | pass on `0193c95`: quality/contracts, Chromium E2E, and five production container targets             |
 | branch CodeQL            | pass on `0193c95`: JavaScript and TypeScript analysis                                                 |
 

@@ -3,7 +3,13 @@ import {
   sqdBitcoinInputsFromBlock,
   sqdBitcoinOutputsFromBlock,
   sqdEvmLogsFromBlock,
+  sqdEvmStateDiffsFromBlock,
+  sqdEvmTracesFromBlock,
+  sqdSolanaBalancesFromBlock,
   sqdSolanaInstructionsFromBlock,
+  sqdSolanaLogsFromBlock,
+  sqdSolanaRewardsFromBlock,
+  sqdSolanaTokenBalancesFromBlock,
   sqdTransactionsFromBlock,
 } from '@zerotrace/chain-adapters';
 import type {
@@ -30,7 +36,7 @@ import {
 
 export * from './profiles.js';
 
-export const SQD_INGESTION_VERSION = 'sqd-finalized-ingestion-v3';
+export const SQD_INGESTION_VERSION = 'sqd-finalized-ingestion-v4';
 
 export type IngestionPipelineErrorCode =
   | 'INGESTION_SOURCE_MISMATCH'
@@ -132,7 +138,17 @@ export interface SqdIngestionResult {
   sourceSummary: SqdStreamSummary | null;
 }
 
-export type SqdRecordTable = 'transactions' | 'logs' | 'inputs' | 'outputs' | 'instructions';
+export type SqdRecordTable =
+  | 'transactions'
+  | 'logs'
+  | 'inputs'
+  | 'outputs'
+  | 'instructions'
+  | 'traces'
+  | 'stateDiffs'
+  | 'balances'
+  | 'tokenBalances'
+  | 'rewards';
 
 export type SqdRecordMaterialization =
   | { state: 'MATERIALIZED'; processed: number }
@@ -155,10 +171,15 @@ function requestedMaterialization(
   const queryType = SQD_DATASETS[dataset].queryType;
   return {
     transactions: requestGroupSelected(request, 'transactions'),
-    logs: queryType === 'evm' && requestGroupSelected(request, 'logs'),
+    logs: (queryType === 'evm' || queryType === 'solana') && requestGroupSelected(request, 'logs'),
     inputs: queryType === 'bitcoin' && requestGroupSelected(request, 'inputs'),
     outputs: queryType === 'bitcoin' && requestGroupSelected(request, 'outputs'),
     instructions: queryType === 'solana' && requestGroupSelected(request, 'instructions'),
+    traces: queryType === 'evm' && requestGroupSelected(request, 'traces'),
+    stateDiffs: queryType === 'evm' && requestGroupSelected(request, 'stateDiffs'),
+    balances: queryType === 'solana' && requestGroupSelected(request, 'balances'),
+    tokenBalances: queryType === 'solana' && requestGroupSelected(request, 'tokenBalances'),
+    rewards: queryType === 'solana' && requestGroupSelected(request, 'rewards'),
   };
 }
 
@@ -180,7 +201,11 @@ function recordCoverage(
   const queryType = SQD_DATASETS[dataset].queryType;
   return {
     transactions: materializationState(true, requested.transactions, counts.transactions),
-    logs: materializationState(queryType === 'evm', requested.logs, counts.logs),
+    logs: materializationState(
+      queryType === 'evm' || queryType === 'solana',
+      requested.logs,
+      counts.logs,
+    ),
     inputs: materializationState(queryType === 'bitcoin', requested.inputs, counts.inputs),
     outputs: materializationState(queryType === 'bitcoin', requested.outputs, counts.outputs),
     instructions: materializationState(
@@ -188,11 +213,31 @@ function recordCoverage(
       requested.instructions,
       counts.instructions,
     ),
+    traces: materializationState(queryType === 'evm', requested.traces, counts.traces),
+    stateDiffs: materializationState(queryType === 'evm', requested.stateDiffs, counts.stateDiffs),
+    balances: materializationState(queryType === 'solana', requested.balances, counts.balances),
+    tokenBalances: materializationState(
+      queryType === 'solana',
+      requested.tokenBalances,
+      counts.tokenBalances,
+    ),
+    rewards: materializationState(queryType === 'solana', requested.rewards, counts.rewards),
   };
 }
 
 function emptyProcessedCounts(): ProcessedRecordCounts {
-  return { transactions: 0, logs: 0, inputs: 0, outputs: 0, instructions: 0 };
+  return {
+    transactions: 0,
+    logs: 0,
+    inputs: 0,
+    outputs: 0,
+    instructions: 0,
+    traces: 0,
+    stateDiffs: 0,
+    balances: 0,
+    tokenBalances: 0,
+    rewards: 0,
+  };
 }
 
 function timestampFromSeconds(seconds: number | null): string | undefined {
@@ -311,9 +356,37 @@ async function materializeLedgerRecord(options: {
   rawArtifactRef: string;
   snapshot: AnalysisSnapshot;
   evidenceKind: EvidenceKind;
-  factType: 'LOG' | 'UTXO_INPUT' | 'UTXO_OUTPUT' | 'INSTRUCTION';
-  locatorPrefix: 'evm-log' | 'bitcoin-input' | 'bitcoin-output' | 'solana-instruction';
-  summaryNoun: 'log' | 'input' | 'output' | 'instruction';
+  factType:
+    | 'LOG'
+    | 'UTXO_INPUT'
+    | 'UTXO_OUTPUT'
+    | 'INSTRUCTION'
+    | 'TRACE'
+    | 'STATE_DIFF'
+    | 'BALANCE'
+    | 'TOKEN_BALANCE'
+    | 'REWARD';
+  locatorPrefix:
+    | 'evm-log'
+    | 'bitcoin-input'
+    | 'bitcoin-output'
+    | 'solana-instruction'
+    | 'evm-trace'
+    | 'evm-state-diff'
+    | 'solana-log'
+    | 'solana-balance'
+    | 'solana-token-balance'
+    | 'solana-reward';
+  summaryNoun:
+    | 'log'
+    | 'input'
+    | 'output'
+    | 'instruction'
+    | 'trace'
+    | 'state diff'
+    | 'balance'
+    | 'token balance'
+    | 'reward';
   evidence: EvidenceWriter;
   facts: RawFactWriter;
 }): Promise<void> {
@@ -555,15 +628,46 @@ export class SqdFinalizedIngestionPipeline {
             evidence: this.#evidence,
             facts: this.#facts,
           } as const;
-          const logs = materialize.logs ? sqdEvmLogsFromBlock(this.#source.dataset, block) : [];
+          const queryType = SQD_DATASETS[this.#source.dataset].queryType;
+          const logs = materialize.logs
+            ? queryType === 'solana'
+              ? sqdSolanaLogsFromBlock(this.#source.dataset, block)
+              : sqdEvmLogsFromBlock(this.#source.dataset, block)
+            : [];
           for (const item of logs) {
             await materializeLedgerRecord({
               ...commonRecord,
               item,
               evidenceKind: 'LOG',
               factType: 'LOG',
-              locatorPrefix: 'evm-log',
+              locatorPrefix: queryType === 'solana' ? 'solana-log' : 'evm-log',
               summaryNoun: 'log',
+            });
+          }
+          const traces = materialize.traces
+            ? sqdEvmTracesFromBlock(this.#source.dataset, block)
+            : [];
+          for (const item of traces) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'TRACE',
+              factType: 'TRACE',
+              locatorPrefix: 'evm-trace',
+              summaryNoun: 'trace',
+            });
+          }
+          const stateDiffs = materialize.stateDiffs
+            ? sqdEvmStateDiffsFromBlock(this.#source.dataset, block)
+            : [];
+          for (const item of stateDiffs) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'ACCOUNT_STATE',
+              factType: 'STATE_DIFF',
+              locatorPrefix: 'evm-state-diff',
+              summaryNoun: 'state diff',
             });
           }
           const inputs = materialize.inputs
@@ -605,6 +709,45 @@ export class SqdFinalizedIngestionPipeline {
               summaryNoun: 'instruction',
             });
           }
+          const balances = materialize.balances
+            ? sqdSolanaBalancesFromBlock(this.#source.dataset, block)
+            : [];
+          for (const item of balances) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'ACCOUNT_STATE',
+              factType: 'BALANCE',
+              locatorPrefix: 'solana-balance',
+              summaryNoun: 'balance',
+            });
+          }
+          const tokenBalances = materialize.tokenBalances
+            ? sqdSolanaTokenBalancesFromBlock(this.#source.dataset, block)
+            : [];
+          for (const item of tokenBalances) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'ACCOUNT_STATE',
+              factType: 'TOKEN_BALANCE',
+              locatorPrefix: 'solana-token-balance',
+              summaryNoun: 'token balance',
+            });
+          }
+          const rewards = materialize.rewards
+            ? sqdSolanaRewardsFromBlock(this.#source.dataset, block)
+            : [];
+          for (const item of rewards) {
+            await materializeLedgerRecord({
+              ...commonRecord,
+              item,
+              evidenceKind: 'ACCOUNT_STATE',
+              factType: 'REWARD',
+              locatorPrefix: 'solana-reward',
+              summaryNoun: 'reward',
+            });
+          }
           run = await this.#checkpoints.advance(run.id, block.header.number);
           processedBlocks += 1;
           processedRecords.transactions += transactions.length;
@@ -612,6 +755,11 @@ export class SqdFinalizedIngestionPipeline {
           processedRecords.inputs += inputs.length;
           processedRecords.outputs += outputs.length;
           processedRecords.instructions += instructions.length;
+          processedRecords.traces += traces.length;
+          processedRecords.stateDiffs += stateDiffs.length;
+          processedRecords.balances += balances.length;
+          processedRecords.tokenBalances += tokenBalances.length;
+          processedRecords.rewards += rewards.length;
         },
       );
       run = await this.#checkpoints.finish(

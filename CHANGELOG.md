@@ -23,8 +23,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - responsive React analyst workspace with explicit Unknown states;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
-- bounded, restart-safe SQD finalized block, transaction, EVM log, Bitcoin input/output, and Solana
-  instruction ingestion for Ethereum, BNB Smart Chain, Bitcoin, and Solana;
+- bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,
+  Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards;
 - content-addressed versioned raw-artifact storage, Evidence-linked ClickHouse Raw Facts, and
   monotonic PostgreSQL ingestion checkpoints;
 - read-only host and Compose ingestion-worker entrypoints with storage preflight and terminal replay
@@ -35,8 +35,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - repeat-run-safe integration coverage against real PostgreSQL, ClickHouse, and MinIO services;
 - explicit block-header/transaction profiles, strict per-ledger transaction identities, and
   finalized-head-proven Solana skipped-slot handling;
-- explicit `ledger-records` profile with strict EVM log, Bitcoin source-position, and Solana
-  instruction-path identities plus per-table materialized/not-queried/not-applicable coverage;
+- explicit `ledger-records` profile with strict EVM log/trace/state-key, Bitcoin source-position, and
+  Solana instruction/log/account/reward identities plus per-table
+  materialized/not-queried/not-applicable coverage;
 - Docker Compose topology and multi-stage production images;
 - database initialization images that work from Windows Unicode workspace paths;
 - repository governance, dependency policy, CI, test, deployment, and release documentation.
@@ -57,9 +58,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Known limitations
 
-- finalized provider-shaped blocks, transactions, EVM logs, Bitcoin inputs/outputs, and Solana
-  instructions are persisted, but semantic transaction normalization, EVM traces/state diffs,
-  Solana balance deltas, and protocol-specific launchpad/market decoding are not implemented;
+- finalized provider-shaped EVM execution/state, Bitcoin UTXO, and Solana execution/balance records
+  are persisted, but semantic transaction/event normalization and protocol-specific
+  launchpad/market decoding are not implemented;
 - continuous scheduling, unfinalized/reorg handling, and cross-provider reconciliation are not
   implemented;
 - entity resolution is an uncalibrated baseline;

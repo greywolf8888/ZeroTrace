@@ -132,9 +132,9 @@ Production conclusions must return:
 Current search classification is local structural evidence. Provider-backed subject reads and
 derived entity/RV/scenario results write their Evidence, derivation edges, and complete Snapshot to
 PostgreSQL when configured. The separate finalized worker stores each ingested provider block as a
-content-addressed versioned raw artifact, binds blocks, transactions, EVM logs, Bitcoin inputs and
-outputs, and Solana instructions to durable Evidence/Snapshot provenance, stores idempotent
-ClickHouse Raw Facts, and only then advances its PostgreSQL checkpoint. Per-table coverage is
-`MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`; non-materialized tables have null counts. These
-raw records are not semantic transfers or protocol events, and traces/state diffs/balance deltas are
-not yet materialized.
+content-addressed versioned raw artifact, binds blocks, transactions, EVM logs/traces/state diffs,
+Bitcoin inputs/outputs, and Solana instructions/logs/native balances/token balances/rewards to
+durable Evidence/Snapshot provenance, stores idempotent ClickHouse Raw Facts, and only then advances
+its PostgreSQL checkpoint. Per-table coverage is `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`;
+non-materialized tables have null counts. These raw records are not semantic transfers or protocol
+events.
