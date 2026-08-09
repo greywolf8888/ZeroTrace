@@ -455,16 +455,16 @@ reconstruction, entity calibration, executable sell capacity and full RV remain 
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | local non-browser gates  | pass: format, lint, typecheck, 210 unit, 23 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable |
 | local `test:coverage`    | pass: 233 tests, 15 durable skips; 83.56% statements, 75.15% branches, 90.75% functions, 84.48% lines                                                              |
-| branch `test:coverage`   | pass: 240 tests; 86.93% statements, 78.44% branches, 95.05% functions, 87.91% lines                                                                                |
+| branch `test:coverage`   | pass: 248 tests; 86.73% statements, 78.25% branches, 95.14% functions, 87.66% lines                                                                                |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap Evidence/Unknown                                                                                |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                             |
 | `docker compose config`  | pass                                                                                                                                                               |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                 |
-| branch GitHub Actions CI | [pass on `5b77783`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31335114054): 240 tests, Chromium E2E, and five production container targets            |
-| branch CodeQL            | [pass on `5b77783`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31335114055): JavaScript and TypeScript analysis                                        |
+| branch GitHub Actions CI | [pass on `440f328`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31337044939): 248 tests, 10 Chromium E2E, and five production container targets         |
+| branch CodeQL            | [pass on `440f328`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31337044942): JavaScript and TypeScript analysis                                        |
 
 The latest complete durable run used GitHub Actions disposable PostgreSQL, ClickHouse, and MinIO
-services. All 37 integration tests passed and the workflow removed its named volumes. The local
+services. All 38 integration tests passed and the workflow removed its named volumes. The local
 Docker engine limitation remains an environment constraint, not a claimed failure or pass.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
