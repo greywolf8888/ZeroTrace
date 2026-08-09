@@ -10,7 +10,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
 - [x] API, UI, infrastructure schema, health, and test foundation exist
 - [x] Clean Docker build, database initialization, and runtime smoke check recorded
-- [ ] CI passes on the immutable target commit
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814357) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814380) pass on immutable main
+      commit `5f94dca`
 
 ## Evidence and data
 

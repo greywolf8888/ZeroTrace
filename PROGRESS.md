@@ -18,6 +18,7 @@ completed feature.
 | Unit tests                       | **84 passing across 12 files**                                               |
 | API integration tests            | **12 passing**                                                               |
 | Real-browser E2E                 | **6 passing: Chromium desktop and Pixel 7**                                  |
+| Remote CI                        | **Pass on immutable main commit `5f94dca`**                                  |
 | Coverage                         | **95.41% statements / 82% branches / 99.29% functions / 96.36% lines**       |
 | Real-chain validation            | Public Bitcoin/Solana current-state smoke passed; EVM and archive gates open |
 | Durable evidence/history         | Not wired                                                                    |
@@ -35,7 +36,10 @@ tests does not increase unimplemented protocol, ingestion, intelligence, or oper
   health, label observations, entity results, control rights, launch state, RV points, and errors;
 - checksum/structure-aware EVM, Bitcoin, and Solana identifier handling;
 - Apache-2.0 project license, dependency-license policy, source ledger, CI, CodeQL, Dependabot, issue
-  forms, PR template, contribution, security, changelog, and release guidance.
+  forms, PR template, contribution, security, changelog, and release guidance;
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814357) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814380) passed on immutable main
+  commit `5f94dca`.
 
 ### Read-only chain foundation
 
@@ -80,8 +84,7 @@ tests does not increase unimplemented protocol, ingestion, intelligence, or oper
 - durable PostgreSQL repositories for evidence, snapshots, subjects, analysis runs, and overrides;
 - raw-fact ingestion into ClickHouse and immutable object payload storage;
 - immutable real-chain fixture corpus and cross-provider reconciliation;
-- complete OpenAPI request/response schemas beyond the current endpoint metadata;
-- first remote GitHub Actions execution on an immutable commit (workflow exists; not yet run).
+- complete OpenAPI request/response schemas beyond the current endpoint metadata.
 
 ## Not implemented
 
@@ -141,23 +144,23 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest local result | Scope                                                                      |
-| ------------------------------ | ------------------- | -------------------------------------------------------------------------- |
-| Reproducible install/build     | Pass                | locked npm install in production container; all packages/API/web           |
-| Unit tests                     | 84 pass             | 12 files across schemas, adapters, evidence, entity, platform, RV, runtime |
-| API integration                | 12 pass             | health, contracts, grounding, Evidence, boundaries, metrics                |
-| Coverage gate                  | Pass                | 95.41% statements, 82% branches, 99.29% functions, 96.36% lines            |
-| Chromium E2E                   | 6 pass              | three flows each on desktop and Pixel 7                                    |
-| Formatting / ESLint / types    | Pass                | full repository                                                            |
-| Dependency vulnerability audit | Pass                | 0 vulnerabilities across the complete npm dependency graph                 |
-| Dependency license allowlist   | Pass                | production dependency graph                                                |
-| CycloneDX SBOM                 | Pass                | npm dependency graph                                                       |
-| Compose model                  | Pass                | rendered default topology                                                  |
-| Docker image build/start       | Pass                | API, web, PostgreSQL, ClickHouse, Valkey, NATS, MinIO                      |
-| Database bootstrap             | Pass                | PostgreSQL migrations/triggers and three ClickHouse tables/constraint      |
-| Runtime/browser smoke          | Pass                | API/web health, proxy, security headers, desktop/mobile render             |
-| Public chain smoke             | Partial pass        | Bitcoin/Solana current-state Evidence; EVM unconfigured                    |
-| Remote CI                      | Not run             | requires an immutable pushed commit                                        |
+| Check                          | Latest result | Scope                                                                      |
+| ------------------------------ | ------------- | -------------------------------------------------------------------------- |
+| Reproducible install/build     | Pass          | locked npm install in production container; all packages/API/web           |
+| Unit tests                     | 84 pass       | 12 files across schemas, adapters, evidence, entity, platform, RV, runtime |
+| API integration                | 12 pass       | health, contracts, grounding, Evidence, boundaries, metrics                |
+| Coverage gate                  | Pass          | 95.41% statements, 82% branches, 99.29% functions, 96.36% lines            |
+| Chromium E2E                   | 6 pass        | three flows each on desktop and Pixel 7                                    |
+| Formatting / ESLint / types    | Pass          | full repository                                                            |
+| Dependency vulnerability audit | Pass          | 0 vulnerabilities across the complete npm dependency graph                 |
+| Dependency license allowlist   | Pass          | production dependency graph                                                |
+| CycloneDX SBOM                 | Pass          | npm dependency graph                                                       |
+| Compose model                  | Pass          | rendered default topology                                                  |
+| Docker image build/start       | Pass          | API, web, PostgreSQL, ClickHouse, Valkey, NATS, MinIO                      |
+| Database bootstrap             | Pass          | PostgreSQL migrations/triggers and three ClickHouse tables/constraint      |
+| Runtime/browser smoke          | Pass          | API/web health, proxy, security headers, desktop/mobile render             |
+| Public chain smoke             | Partial pass  | Bitcoin/Solana current-state Evidence; EVM unconfigured                    |
+| Remote CI                      | Pass          | CI and CodeQL on immutable main commit `5f94dca` (linked above)            |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
