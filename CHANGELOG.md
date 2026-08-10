@@ -71,6 +71,12 @@ All notable changes to ZeroTrace will be documented here. The project follows
   credential-free scan ID, plus an opt-in Compose service;
 - token- and scan-bound paginated projection replay through the API and analyst UI, with strict
   stored Snapshot/Evidence/result validation and no provider call on the replay path;
+- exact point-in-time Flap lifetime materialization that composes official SQD dataset-start origin
+  proof with immutable origin-to-finalized-target history, preserves absent origin as Unknown,
+  rejects child Snapshot/coverage conflicts, and resumes advance-before-finish without repeating
+  child work;
+- a read-only `flap:lifetime` host/Compose worker plus token-bound provider-free API and analyst UI
+  replay of composite progress, origin/history child scan IDs and terminal Evidence;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;
@@ -118,8 +124,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - finalized provider-shaped EVM execution/state, Bitcoin UTXO, and Solana execution/balance records
   are persisted and strict raw ledger queries are exposed; Flap BSC current Portal state and a
   caller-supplied event transaction, restart-safe bounded event-range projections with worker/API/UI
-  replay, and bounded creation-origin proofs are decoded, but deployment-origin continuous history,
-  complete lifecycle reconstruction, other launchpads, and market reconstruction are not implemented;
+  replay, bounded creation-origin proofs, and one-Snapshot lifetime materialization are decoded, but
+  repeated finalized-head scheduling, complete lifecycle reconstruction, other launchpads, and
+  market reconstruction are not implemented;
 - common-position endpoint reconciliation and reorg detection are implemented, but continuous
   scheduling, automatic rollback/replay, and independently operated provider acceptance are not;
 - entity resolution is an uncalibrated baseline;

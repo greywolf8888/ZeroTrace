@@ -95,6 +95,28 @@ GET /api/v1/launches/EVM/<token>/history/projections/<scan-id>?chainId=eip155:56
 The API endpoint and UI read only immutable projection rows. They never initiate an SQD/RPC scan.
 The worker is one-shot and does not claim deployment-origin-to-head continuity or lifetime coverage.
 
+Run an exact point-in-time lifetime materialization at the current finalized BSC head:
+
+```bash
+docker compose --profile semantic run --rm flap-lifetime-worker \
+  --token 0x0000000000000000000000000000000000000000
+```
+
+This service requires migrations `001-008` and preflights Evidence, semantic checkpoints and the
+immutable history projection before provider access. It obtains the official SQD dataset start,
+captures one finalized target, and composes origin plus origin-to-target event history. Set
+`FLAP_LIFETIME_TARGET_BLOCK` or pass `--target <block>` to pin an exact rerun; the worker proves that
+the target is no higher than the current finalized head. The terminal scan ID replays through:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/lifetime/materializations/<scan-id>?chainId=eip155:56&platform=flap
+```
+
+The endpoint and UI do not contact providers. A running checkpoint exposes progress but no terminal
+conclusion; a corrupt completed result fails closed. This one-shot proof can establish exact
+lifetime coverage at one Snapshot, but it is not continuous finalized-head scheduling or automatic
+reorg replay.
+
 ## Health and smoke checks
 
 ```bash

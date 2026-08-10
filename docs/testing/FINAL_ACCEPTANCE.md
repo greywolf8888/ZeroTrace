@@ -99,6 +99,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
   - [x] One-shot deployment-origin worker with storage preflight, bounded chunk resume and safe output
   - [x] One-shot event-history projection worker with storage preflight, immutable segment resume,
         provider-free paginated API replay, health gating, Compose and desktop/mobile UI boundary
+  - [x] Exact point-in-time lifetime materialization from official SQD dataset start through one
+        finalized target, with origin/history child scan linkage, restart-safe composite checkpoint,
+        provider-free API/UI replay and strict Known/Unknown/Snapshot gates
   - [ ] Continuous deployment-origin-to-finalized-head scheduler
   - [ ] Deployment-origin continuous Flap history, named migration/FFT fixtures, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
@@ -117,6 +120,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Provider health, read-only state, Unknown state, and evidence surface
 - [x] Flap scan-ID replay surface for immutable paginated history segments, with unavailable storage
       rendered explicitly and no provider-triggering path
+- [x] Flap lifetime scan-ID replay surface with origin/history child provenance, exact finalized
+      target, terminal Evidence root, explicit running/Unknown states and corrupt-result rejection
 - [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance

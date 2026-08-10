@@ -726,19 +726,56 @@ This batch supplies a restart-safe bounded worker and replay surface, not a sche
 deployment-origin-to-finalized-head history. It does not make token lifetime, entity, market, RV, or
 FFT claims. No FFT request was made.
 
+### Exact point-in-time Flap lifetime materialization
+
+The lifetime schema and composite runner now make the lifetime claim mechanically conditional. One
+identity binds official SQD `binance-mainnet` metadata and dataset start, token/deployment revisions,
+origin/history limits, and one exact finalized BSC target hash. The origin child must cover dataset
+start through target with one unique Portal-created contract. Its history child must then cover the
+evidenced creation block through that identical target Snapshot. Only 100% coverage across both
+children emits `lifetimeCoverage=known/true` and terminal `historyCoverage=1`. No unique origin stays
+Unknown; short ranges, incomplete children or Snapshot conflicts fail closed.
+
+Deterministic runner tests cover Known lifetime proof, Unknown origin without history execution,
+child Snapshot conflict, and a failure after the composite checkpoint advances but before finish.
+The latter retry finishes the stored result without repeating origin/history execution or Evidence
+writes. The one-shot worker preflights all three PostgreSQL repositories, captures the finalized head
+or proves a pinned target is at or below it, obtains SQD metadata, and emits only credential-free
+composite/child scan IDs and Evidence metadata. CLI parsing rejects unknown arguments including a
+private-key flag.
+
+The token-bound API replays only the semantic checkpoint, re-parses completed state, returns running
+progress without a terminal conclusion, and rejects corrupt or mismatched records. The React UI
+shows dataset range, composite progress, exact lifetime state, origin/history child provenance and
+the terminal Evidence root. Desktop and Pixel 7 Chromium exercised the completed Known fixture. That
+fixture is deterministic and not a real-chain claim.
+
+Local acceptance passed 288 unit tests across 35 files, 36 environment-free integration tests, the
+complete build, typecheck, lint and formatting gates, and 10 Chromium desktop/mobile tests. Coverage
+passed 324 tests with 20 opt-in durable skips at 82.72% statements, 76.04% branches, 91.16% functions
+and 83.63% lines. The lifetime CLI built and printed help without provider access; Compose rendered
+the new semantic service. The unchanged PostgreSQL storage layer was not re-exercised locally in
+this batch; its latest fresh-image `001-008` run remains 17 passing tests, and the latest completed
+all-store CI run remains 54 passing tests.
+
+This establishes exact lifetime coverage at one finalized Snapshot only. Repeated-head scheduling,
+target-to-target continuity, reorg rollback/replay, semantic market/RV/entity linkage and named FFT
+acceptance remain pending. No request was made for FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, and no FFT conclusion is claimed.
+
 ## Automated verification
 
-| Command                  | Result                                                                                                                                                            |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 275 unit, 34 environment-free integration, build, license and zero-vulnerability audit; 17 PostgreSQL tests passed separately      |
-| local `test:coverage`    | pass: 309 tests, 20 opt-in durable skips; 82.88% statements, 75.76% branches, 91.50% functions, 83.79% lines                                                      |
-| branch `test:coverage`   | pass on `cfce7f9`: 329 tests; 84.98% statements, 77.92% branches, 94.44% functions, 85.90% lines                                                                  |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, Unknown lifetime and durable-storage failure                                 |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                            |
-| `docker compose config`  | pass                                                                                                                                                              |
-| production Compose smoke | pass: clean current-source history semantic-worker image, UID 1000 CLI entrypoint and rendered dual semantic-worker profile                                       |
-| branch GitHub Actions CI | [latest completed pass on `cfce7f9`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31356333191): 329 tests, 10 Chromium flows and six production targets |
-| branch CodeQL            | [latest completed pass on `cfce7f9`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31356333186): JavaScript and TypeScript analysis                      |
+| Command                  | Result                                                                                                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| local non-browser gates  | pass: format, lint, typecheck, 288 unit, 36 environment-free integration and build; prior dependency gates and 17 PostgreSQL tests remain green                           |
+| local `test:coverage`    | pass: 324 tests, 20 opt-in durable skips; 82.72% statements, 76.04% branches, 91.16% functions, 83.63% lines                                                              |
+| branch `test:coverage`   | pass on `cfce7f9`: 329 tests; 84.98% statements, 77.92% branches, 94.44% functions, 85.90% lines                                                                          |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact lifetime replay, Unknown and storage failure                                   |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                    |
+| `docker compose config`  | pass                                                                                                                                                                      |
+| production Compose smoke | pass: current lifetime CLI build/help and rendered three-service semantic profile; prior locked semantic image ran as UID 1000                                            |
+| branch GitHub Actions CI | [pass on `b887be7`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31358180186): 344 tests, 84.73/78.09/94.01/85.65 coverage, 10 Chromium, six production targets |
+| branch CodeQL            | [pass on `b887be7`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31358180189): JavaScript and TypeScript analysis                                               |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

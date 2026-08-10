@@ -411,6 +411,17 @@ Unknown lifetime coverage. Neither surface starts a provider scan. Requested-ran
 complete while lifetime coverage remains Unknown and terminal `historyCoverage` remains zero.
 Continuous deployment-origin-to-finalized-head scheduling remains a later stage.
 
+The lifetime materializer composes those two child scans into one immutable, point-in-time semantic
+identity. It first binds official SQD dataset-start metadata and one exact finalized BSC target,
+requires the origin child to cover dataset start through that target, and, when the origin is unique,
+requires the history child to cover the creation block through the identical target Snapshot. Only
+that complete conjunction may emit `lifetimeCoverage=known/true` and `historyCoverage=1`. An absent
+or ambiguous origin remains Unknown; incomplete coverage, identity drift or Snapshot mismatch fails
+closed. The composite advances once after both child results exist, so an interruption before final
+checkpoint completion can finish without recomputation. Its API and UI replay only stored state.
+Repeated-head scheduling, target-to-target continuity, reorg rollback/replay and terminal FFT
+acceptance remain later stages.
+
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.
 A logical range may require multiple Portal responses, including header-only continuation records

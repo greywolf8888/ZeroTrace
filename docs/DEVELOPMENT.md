@@ -177,6 +177,42 @@ Pagination reads only stored segments. It performs no SQD/RPC request, and compl
 coverage still leaves token-lifetime coverage Unknown until continuous deployment-origin-to-head
 orchestration is proven.
 
+## Exact Flap lifetime materialization
+
+The third semantic-worker entrypoint composes the two durable primitives at one finalized BSC
+target. It reads the official SQD `binance-mainnet` dataset start, proves a unique Portal-created
+contract origin from that start through the target, then projects all supported Portal events from
+the creation block through the same target Snapshot:
+
+```bash
+npm run flap:lifetime -- \
+  --token 0x0000000000000000000000000000000000000000
+```
+
+Omitting `--target` captures the current finalized head. For exact replay after the first run, pass
+the emitted block as `--target <block>`; a pinned target is read only after the worker proves it is
+at or below the current finalized head. Origin chunk, history segment/query and result limits have
+separate bounded flags. The Compose equivalent is:
+
+```bash
+docker compose --profile semantic run --rm flap-lifetime-worker \
+  --token 0x0000000000000000000000000000000000000000
+```
+
+The composite scan advances once, only after the origin and history child results both validate
+against their immutable identities. A crash after that advance but before terminal completion is
+finished on retry without repeating child provider reads or Evidence writes. `lifetimeCoverage`
+becomes `known/true` only for a unique origin plus 100% origin-to-target history at the exact target
+Snapshot. No origin keeps the conclusion Unknown; incomplete or conflicting child results fail the
+run. Replay the stored composite result through the UI or:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/lifetime/materializations/<scan-id>?chainId=eip155:56&platform=flap
+```
+
+The replay endpoint reads only PostgreSQL. The worker is one-shot; repeated finalized-head
+scheduling, reorg replay and FFT terminal acceptance remain separate gates.
+
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
@@ -217,6 +253,7 @@ Important values:
 | `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                        |
 | `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                        |
 | `FLAP_HISTORY_*`                      | Compose defaults for the bounded event-history projection worker                 |
+| `FLAP_LIFETIME_*`                     | Compose defaults for exact point-in-time lifetime materialization                |
 | `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present   |
 | `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests  |
 | `CLICKHOUSE_URL` / credentials        | Raw Fact HTTP origin and optional separately supplied credentials                |

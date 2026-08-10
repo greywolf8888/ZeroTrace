@@ -135,6 +135,23 @@ state. `scan.requestedRangeCoverage` reports durable cursor progress. A complete
 100% requested-range coverage while terminal lifetime coverage remains Unknown and
 `historyCoverage=0`.
 
+`GET /api/v1/launches/EVM/:token/history/lifetime/materializations/:scanId?chainId=eip155:56&platform=flap`
+replays the composite point-in-time lifetime scan stored by `flap:lifetime`. The route binds the UUID
+to the exact token, EVM/BSC chain, `FLAP_LIFETIME_MATERIALIZATION` scan type, and versioned ZeroTrace
+source. It reports dataset start, finalized target, durable progress and safe failure metadata. A
+completed state is re-parsed through the lifetime schema before it is returned.
+
+The terminal result links its origin and history child scan IDs, origin-search coverage,
+origin-to-target history summary, exact target Snapshot, terminal Evidence root, source set,
+freshness, model version and confidence. `lifetimeCoverage=known/true` is valid only when the unique
+origin search covers official SQD dataset start through target and the history projection covers
+the evidenced creation block through that same target with 100% coverage. Missing origin remains
+Unknown. Partial or Snapshot-conflicting children never degrade to zero or a plausible result.
+
+The endpoint performs no SQD or RPC call. It returns `503` when durable checkpoints are not
+configured, `404` for a mismatched token/scan identity, and fails closed with a checkpoint conflict
+for corrupt completed state. This is stored point-in-time proof replay, not continuous scheduling.
+
 `GET /api/v1/launches/EVM/:token/origin?chainId=eip155:56&platform=flap&fromBlock=...&toBlock=...`
 searches at most 1,000,000 finalized BSC blocks through SQD's `createResultAddress` trace filter.
 The route requires both `SQD_PORTAL_URL` and a BSC RPC provider. A unique successful create trace is
