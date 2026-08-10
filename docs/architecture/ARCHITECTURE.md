@@ -204,8 +204,18 @@ remains open.
 
 The engine returns independent controller, coordination, and independence probabilities. Feature
 weights incorporate reliability and evidence IDs. Service hubs and privacy/co-spend patterns suppress
-overconfident merging. The baseline is deterministic and testable but is not yet a calibrated
-production entity model.
+overconfident merging.
+
+The separate versioned evaluation system uses millionth-scale fixed-point probabilities and exact
+integer comparisons. It gates high-confidence controller precision at `>= 0.98`, coordination
+precision at `>= 0.95`, Service Hub false merges at `<= 0.001`, and CoinJoin false merges at exactly
+zero. Brier score and expected calibration error are calculated per independent probability axis.
+A `LABELED_REAL_WORLD` corpus requires every prediction to retain a ledger Snapshot, canonical
+`ev_<24 hex>` Evidence IDs and non-test label sources, plus at least 100 labeled cases per axis,
+Brier `<= 0.15`, and ECE `<= 0.05`; missing denominators produce `INSUFFICIENT_DATA`. The checked-in
+`STRUCTURAL_GOLDEN` corpus is test-only and can prove regression and suppression behavior, but its
+calibration values are `DIAGNOSTIC_ONLY` and cannot establish a calibrated production entity model.
+Temporal graph extraction and a real labeled corpus remain open.
 
 ### Realizable value
 

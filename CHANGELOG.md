@@ -34,6 +34,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - transactionally persisted derivation edges, restart-safe drilldown, storage health/readiness, and
   real PostgreSQL integration coverage in CI;
 - deterministic entity-evidence baseline, constant-product quote, and exit-race simulation;
+- exact fixed-point Entity Resolution evaluation with versioned controller/coordination precision,
+  Service Hub/CoinJoin false-merge, Brier/ECE and minimum-corpus gates, plus a test-only structural
+  golden corpus and standalone CI command;
 - Fastify API with OpenAPI, health, capability truth, metrics, and analysis endpoints;
 - Snapshot/Evidence-backed ledger query API with pending, mempool, null, and unavailable observations
   kept distinct from confirmed facts;

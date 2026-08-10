@@ -85,6 +85,9 @@ The current foundation includes:
   regression alerts, and operator independence retained as Unknown until verified;
 - content-addressed evidence nodes and deterministic evidence drilldown;
 - baseline evidence fusion with explicit service-hub, CoinJoin, and independence suppression;
+- an exact fixed-point Entity Resolution evaluation system with high-confidence controller and
+  coordination precision gates, Service Hub/CoinJoin false-merge gates, Brier/ECE diagnostics, a
+  test-only structural golden corpus, and fail-closed real-world corpus requirements;
 - exact-integer constant-product exit quoting and seeded, reproducible shared-liquidity exit races;
 - a Fastify API with OpenAPI, health, readiness, capability truth, and Prometheus metrics;
 - a responsive React intelligence workspace that renders missing knowledge as Unknown rather than 0;
@@ -168,7 +171,7 @@ distributed workflows remain open work. Read
 | EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound block/transaction queries, anchor reconciliation and finalized raw execution/state; archive/semantic validation pending                                                                                                                                   |
 | Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                                                                                                    |
 | Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending                                                                                                                                      |
-| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                                                                                                                                                               |
+| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                              |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                  |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, and verified Pancake V2 buy/exit-size models work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                 |
 | Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Deterministic allocation/action kernel, target-indexed Transfer/Safe observation, live same-Snapshot FFT address flow and durable provider-free Claim Report replay work; official attribution, action semantics, capture scheduling and terminal FFT acceptance pending |
@@ -387,6 +390,7 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm test
+npm run eval:entity
 npm run test:coverage
 npm run build
 npm run test:e2e
@@ -464,6 +468,7 @@ This roadmap describes implementation progress rather than product marketing pha
 
 - [x] Monorepo, canonical contracts, read-only transports, API/UI shell, local infrastructure
 - [x] Evidence primitives, identifier validation, baseline entity fusion, deterministic RV kernel
+- [x] Add exact Entity Precision/False-Merge gates, Brier/ECE evaluation, and a test-only structural golden corpus
 - [x] Wire append-only PostgreSQL Evidence/Snapshot persistence and restart-safe drilldown
 - [x] Wire ClickHouse Raw Facts and content-addressed, versioned object payload storage
 - [x] Implement restart-safe SQD finalized block-header ingestion across all three ledger families
@@ -493,7 +498,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add same-Snapshot Pancake V2 spot plus multi-size Flap buy/exit scenarios with automatic 0.10% arithmetic checks
 - [ ] Add live/unfinalized policy, forced real-reorg drills and independently operated provider validation
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
-- [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
+- [ ] Build temporal entity graph, real-world calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
@@ -505,8 +510,8 @@ The named terminal real-chain acceptance target is Flap/BSC token FFT at
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`; its error budget and automatic discrepancy rules are
 defined in [the FFT acceptance specification](docs/testing/FLAP_FFT_ACCEPTANCE.md). Named
 same-Snapshot Pancake V2 buy/exit-size slices now pass their deterministic arithmetic checks; this is
-not a terminal FFT conclusion because independent-source, fork settlement, multi-route RV, entity and
-claim-action gates remain open.
+not a terminal FFT conclusion because independent-source, fork settlement, multi-route RV,
+real-world entity calibration and claim-action gates remain open.
 
 Exact percentages, test counts, and external validation gates live in [PROGRESS.md](PROGRESS.md).
 

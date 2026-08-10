@@ -147,9 +147,12 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       named FFT point-in-time run
 - [x] Same-Snapshot Pancake V2 nominal/gross/configured-tax exit-size scenarios with price impact,
       quote-reserve consumption, automatic Router/model checks and one named FFT partial-RV run
+- [x] Exact Entity Precision/False-Merge evaluator plus a test-only structural golden corpus covering
+      high-confidence same-controller, coordination, independence, Service Hub, CoinJoin and abstention
 - [ ] Automated durable capture scheduling, same-Snapshot action derivation, independent-source
       reconciliation, complete Claim Audit and terminal named FFT conclusion
-- [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`
+- [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
+      axis, Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
 
 ## Product

@@ -9,6 +9,8 @@
 | Type        | `npm run typecheck`             | strict project-reference compilation                          |
 | Unit        | `npm run test:unit`             | canonical contracts and deterministic domain logic            |
 | Integration | `npm run test:integration`      | API contracts plus opt-in PostgreSQL/ClickHouse/object stores |
+| Evals       | `npm run test:evals`            | test-only model regression and precision gates                |
+| Entity gate | `npm run eval:entity`           | printable structural Entity Precision/False-Merge report      |
 | Coverage    | `npm run test:coverage`         | line/function/statement 80%, branch 75% gate                  |
 | Build       | `npm run build`                 | production package/API/web output                             |
 | E2E         | `npm run test:e2e`              | built app in real Chromium at desktop and mobile widths       |
@@ -17,6 +19,19 @@
 | SBOM        | `npm run sbom`                  | CycloneDX dependency inventory                                |
 | Compose     | `docker compose config --quiet` | resolved topology validation                                  |
 | Runtime     | `npm run health`                | live/ready HTTP and read-only invariant                       |
+
+## Entity Resolution evaluation
+
+`npm run eval:entity` runs the versioned test-only structural corpus and emits its corpus hash,
+case IDs, probability coverage, exact Precision/False-Merge gates, Brier score, ECE and explicit
+abstentions. It must pass controller precision `>= 0.98`, coordination precision `>= 0.95`, Service
+Hub false merges `<= 0.001`, CoinJoin false merges `= 0`, and every expected structural class.
+
+Structural results never satisfy the production calibration gate. A `LABELED_REAL_WORLD` corpus
+must provide Snapshot-bound canonical prediction Evidence IDs and non-test source references,
+contain at least 100 labeled cases for each of the controller, coordination and independence axes,
+and pass Brier `<= 0.15` plus ECE `<= 0.05`. Missing labels, probabilities, Evidence, Snapshots or
+denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or a passing score.
 
 ## Required safety cases
 

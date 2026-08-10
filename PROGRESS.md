@@ -15,11 +15,12 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                      |
 | Production acceptance            | **No**                                                                                                          |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                  |
-| Unit tests                       | **360 passing across 46 files**                                                                                 |
+| Unit tests                       | **366 passing across 47 files**                                                                                 |
+| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                      |
 | Integration tests                | **44 environment-free plus 19 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **12 passing: Chromium desktop and Pixel 7**                                                                    |
 | Remote CI                        | **Pass on immutable exit-scenario commit `27c296d`: CI, Chromium, production images, and CodeQL**               |
-| Coverage                         | **Current local: 82.40% statements / 76.29% branches / 90.80% functions / 83.47% lines**                        |
+| Coverage                         | **Current local: 82.55% statements / 76.46% branches / 90.98% functions / 83.63% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion, named Flap history/origin and FFT market slices passed                        |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap history/lifetime, accepted heads and EVM Claim Reports wired    |
 
@@ -42,7 +43,7 @@ The only allowed status vocabulary in this ledger is:
 | Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity and generic semantic checkpoints work; general scheduling and rollback/replay remain                                                                 |
 | Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                                                                        |
 | Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; independent real-source reconciliation and entity calibration remain                                                           |
-| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline engine only; calibration and temporal graph are absent                                                                                                        |
+| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline plus exact structural Precision/False-Merge gates work; real-world calibration and temporal graph are absent                                                  |
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; full FFT lifecycle and other platforms remain |
 | Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview and verified Pancake V2 buy/exit-size scenarios work; fork execution, additional routes, gas and executable capacity remain      |
 | Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                                                            |
@@ -442,6 +443,28 @@ The only allowed status vocabulary in this ledger is:
   FFT acceptance remain pending. A post-run indexed-scan optimization passes deterministic tests; its live rerun
   exceeded the current outer execution window and is not claimed as accepted.
 
+### Entity Resolution precision and calibration gates
+
+- a reusable, versioned evaluator now measures controller and coordination precision, Service Hub
+  and CoinJoin false merges, independent-axis Brier score and expected calibration error with
+  millionth-scale fixed-point probabilities and exact integer gate comparisons;
+- the default policy matches the terminal acceptance contract: high-confidence controller
+  precision `>= 0.98`, coordination precision `>= 0.95`, Service Hub false merges `<= 0.001`, and
+  CoinJoin false merges exactly zero. A real-world calibration corpus additionally requires at
+  least 100 Snapshot/Evidence-backed labels per probability axis, Brier `<= 0.15`, and ECE
+  `<= 0.05`;
+- absent selections, labels or probability denominators return `INSUFFICIENT_DATA`; Unknown cases
+  are counted as abstentions and are never coerced to zero or silently excluded from coverage;
+- the test-only `entity-structural-golden-v1` corpus covers deterministic control, coordinated but
+  independent behavior, independent histories, labeled and path-based Service Hub suppression,
+  CoinJoin suppression, and evidence-absent abstention. Its immutable corpus hash is
+  `3ca725adc8414280f381426a88c86e659d3ef7f5ec1fb1712621cc28c1f77e63`;
+- `npm run eval:entity` passes all four structural gates: controller and coordination precision are
+  `1`, Service Hub and CoinJoin false-merge rates are `0`, six of seven cases have complete
+  probability outputs, and the unsupported case remains an explicit abstention;
+- structural Brier/ECE values are emitted only as `DIAGNOSTIC_ONLY`. They do not satisfy the real
+  calibration checkbox; a source-backed real corpus and temporal feature graph remain pending.
+
 ### Flap migrated DEX market and buy scenarios
 
 - the production adapter now composes Flap inspection with PancakeSwap V2 pool/factory/router reads
@@ -525,8 +548,8 @@ The only allowed status vocabulary in this ledger is:
   launches, scenarios, labels, and analyst overrides;
 - live/unfinalized policy plus forced real-provider rollback/replay drills;
 - immutable real-chain fixture corpus and independently operated provider reconciliation;
-- real-source discrepancy reconciliation and a labeled entity-probability corpus for Brier/ECE
-  calibration;
+- real-source discrepancy reconciliation and a Snapshot/Evidence-backed real-world entity corpus
+  with at least 100 labels per axis for Brier/ECE calibration;
 - independent-operator validation and archive-grade real-chain acceptance for the repeated Flap
   finalized-head scheduler;
 - complete OpenAPI request/response schemas beyond the current endpoint metadata.
@@ -583,7 +606,7 @@ The only allowed status vocabulary in this ledger is:
 | EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                       |
 | Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Height/hash/previous-hash public Esplora read passed; Core reconciliation pending                                                                                                                                                                            |
 | Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                                                               |
-| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Pending                                                                                                                                                                                                                                                      |
+| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Test-only structural golden passes exact Precision/False-Merge gates; Snapshot/Evidence-backed real-world labels and calibration remain pending                                                                                                              |
 | Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction and the named FFT migrated Pancake V2 point-in-time market passed; complete FFT migration history, forced real reorg and other platforms remain pending                                              |
 | Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Named Transfer/Safe composition and same-Snapshot Pancake V2 buy/exit-size runs passed with 0 bps Router/model error; official pension/action semantics, fork settlement, independent reconciliation and entity calibration still gate a terminal conclusion |
 | RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels, Portal preview and named FFT Pancake V2 buy/exit Router/model checks pass; actual fork settlement, independent quotes, additional routes, gas/executable capacity and history remain pending                                          |
@@ -602,10 +625,11 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                                    | Scope                                                                                                                           |
 | ------------------------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                             | locked npm install in production container; all packages/API/web                                                                |
-| Unit tests                     | 360 pass                                         | 46 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                    |
+| Unit tests                     | 366 pass                                         | 47 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                    |
 | Integration tests              | 44 environment-free plus 19 real PostgreSQL pass | Pancake buy/exit market, Claim Report API plus lifetime/head/projection guards and corrupt-state rejection are deterministic    |
+| Model evaluation tests         | 1 pass                                           | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                  |
 | Restart regression             | Pass                                             | same-anchor recapture persists across repository/API restart without Snapshot collision                                         |
-| Coverage gate                  | Pass                                             | current local: 82.40% statements, 76.29% branches, 90.80% functions, 83.47% lines on 404 tests; 22 opt-in durable tests skipped |
+| Coverage gate                  | Pass                                             | current local: 82.55% statements, 76.46% branches, 90.98% functions, 83.63% lines on 410 tests; 22 opt-in durable tests skipped |
 | Chromium E2E                   | 12 pass                                          | desktop and Pixel 7 include migrated-market scenarios, Claim Report, projection/lifetime replay and Unknown rendering           |
 | Formatting / ESLint / types    | Pass                                             | full repository                                                                                                                 |
 | Dependency vulnerability audit | Pass                                             | 0 vulnerabilities across the complete npm dependency graph                                                                      |

@@ -1037,13 +1037,41 @@ execution-net and executable capacity are `Unknown(NOT_QUERIED)` until a pinned 
 tax, exemptions, max-sell, blacklist/whitelist, swapback, gas, reverts and the final balance delta.
 This is one route and one chain operator, not independent-source or terminal FFT acceptance.
 
+## Entity structural Precision/False-Merge validation (2026-08-10)
+
+`npm run eval:entity` evaluated the test-only `entity-structural-golden-v1` corpus under policy
+`entity-precision-gates-v1.0.0`. The content hash was
+`3ca725adc8414280f381426a88c86e659d3ef7f5ec1fb1712621cc28c1f77e63`; six of seven cases emitted
+all three probabilities and the evidence-absent case remained an explicit abstention, giving
+probability coverage `0.857142` rather than a fabricated score.
+
+| Structural gate                      |    Requirement | Observed | Status |
+| ------------------------------------ | -------------: | -------: | :----- |
+| High-confidence controller precision |      `>= 0.98` |      `1` | PASS   |
+| Coordination precision               |      `>= 0.95` |      `1` | PASS   |
+| Service Hub false-merge rate         |     `<= 0.001` |      `0` | PASS   |
+| CoinJoin false-merge rate            |          `= 0` |      `0` | PASS   |
+| Expected-class regression            | `0` mismatches |      `0` | PASS   |
+
+The corpus covers deterministic authority plus funding, coordinated-but-independent behavior,
+independent histories, labeled and path-derived Service Hub suppression, CoinJoin suppression, and
+no-evidence abstention. It lives only under `evals/`; no fixture is connected to a production API.
+
+The evaluator also emitted Brier/ECE diagnostics for controller (`0.012080651809` / `0.047741`),
+coordination (`0.000462835742` / `0.020685`) and independence (`0.168571890082` / `0.242454`). These
+values are `DIAGNOSTIC_ONLY`: a seven-case structural suite is not a real calibration corpus. The
+real-world gate requires Snapshot-bound prediction Evidence, label source references, at least 100
+labeled cases per probability axis, Brier `<= 0.15`, and ECE `<= 0.05`; missing cases or denominators
+produce `INSUFFICIENT_DATA`. Therefore entity calibration and terminal FFT acceptance remain open.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 360 unit, 44 environment-free integration and build; dependency license/audit gates green                              |
+| local non-browser gates  | pass: format, lint, typecheck, 366 unit, 44 environment-free integration, 1 model-eval and build; dependency license/audit gates green                |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                        |
-| local `test:coverage`    | pass: 404 tests, 22 opt-in durable skips; 82.40% statements, 76.29% branches, 90.80% functions, 83.47% lines                                          |
+| local `test:coverage`    | pass: 410 tests, 22 opt-in durable skips; 82.55% statements, 76.46% branches, 90.98% functions, 83.63% lines                                          |
+| `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                     |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                      |
 | `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                             |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                |

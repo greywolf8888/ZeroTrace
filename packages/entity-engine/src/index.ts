@@ -5,6 +5,8 @@ import {
   type EntityResolution,
 } from '@zerotrace/schemas';
 
+export * from './evaluation.js';
+
 export type EntityFeatureKind =
   | 'SHARED_ONCHAIN_AUTHORITY'
   | 'COMMON_FUNDER'
