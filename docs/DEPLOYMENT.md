@@ -125,7 +125,7 @@ docker compose --profile semantic up --build flap-lifetime-head-worker
 ```
 
 Set `FLAP_LIFETIME_HEAD_TOKEN`, two or more `EVM_BSC_RPC_URLS`, and an optional
-`FLAP_LIFETIME_HEAD_INTERVAL_MS`. This service requires migrations `001-009`. It reconciles a common
+`FLAP_LIFETIME_HEAD_INTERVAL_MS`. This service requires migrations `001-010`. It reconciles a common
 finalized BSC target, appends only the missing delta after Evidence-proving the stored predecessor,
 and emits credential-free complete/deferred JSON events. The latest accepted state is available at:
 
@@ -152,7 +152,7 @@ Expected invariants:
 - `/health/live` returns HTTP 200, `status: UP`, and `readOnly: true`;
 - readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
-- missing or unhealthy Flap projection/head migrations `008`/`009` return readiness HTTP 503 when PostgreSQL
+- missing or unhealthy Flap projection/head migrations `008`/`010` return readiness HTTP 503 when PostgreSQL
   is configured;
 - `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
 - `/health` and `/api/v1/data-quality/anchors` distinguish agreement, disagreement, insufficient
@@ -232,6 +232,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/008_flap_history_projection.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/009_flap_lifetime_heads.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/010_flap_lifetime_reorgs.sql
 ```
 
 PowerShell equivalent:
@@ -246,6 +248,8 @@ Get-Content -Raw infra/postgres/init/007_semantic_scan_checkpoints.sql |
 Get-Content -Raw infra/postgres/init/008_flap_history_projection.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/009_flap_lifetime_heads.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/010_flap_lifetime_reorgs.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

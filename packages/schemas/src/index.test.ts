@@ -6,6 +6,7 @@ import {
   AnchorReconciliationResultSchema,
   ChainAnchorReadSchema,
   FlapLifetimeMaterializationSchema,
+  FlapLifetimeRollbackSchema,
   LaunchMechanismSnapshotSchema,
   ProviderHealthSchema,
   knownValue,
@@ -97,6 +98,65 @@ function flapLifetimeMaterialization() {
         blockOrSlot: '200',
         finality: 'finalized',
         summary: 'Fixture lifetime materialization.',
+      },
+    ],
+  };
+}
+
+function flapLifetimeRollback() {
+  const materialization = flapLifetimeMaterialization();
+  const terminalEvidenceId = `ev_${'5'.repeat(24)}`;
+  const capturedAt = '2026-08-10T00:05:00.000Z';
+  const snapshot = {
+    ...materialization.metadata.snapshot,
+    blockNumber: '220',
+    blockHash: `0x${'7'.repeat(64)}`,
+    parentBlockHash: `0x${'8'.repeat(64)}`,
+    capturedAt,
+  };
+  return {
+    chainId: 'eip155:56' as const,
+    token: materialization.token,
+    reason: 'FINALIZED_REORG' as const,
+    invalidatedHeads: [
+      {
+        headId: `flh_${'6'.repeat(24)}`,
+        scanId: materialization.originScanId,
+        targetBlock: materialization.targetBlock,
+        targetHash: materialization.metadata.snapshot.blockHash,
+        terminalEvidenceId: materialization.terminalEvidenceId,
+      },
+    ],
+    rollbackTo: null,
+    observedTarget: { blockNumber: '220', blockHash: snapshot.blockHash },
+    lineageCoverage: 1,
+    alertId: `dqa_${'7'.repeat(24)}`,
+    terminalEvidenceId,
+    metadata: {
+      snapshot,
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 1,
+      simulationCoverage: 0,
+      freshness: capturedAt,
+      sourceSet: ['bsc-rpc-a', 'bsc-rpc-b'],
+      modelVersion: 'flap-lifetime-rollback-v1',
+      confidence: 1,
+      evidenceIds: [materialization.terminalEvidenceId, terminalEvidenceId],
+    },
+    evidence: [
+      {
+        id: terminalEvidenceId,
+        ledger: 'EVM' as const,
+        chainId: 'eip155:56',
+        kind: 'DERIVED_FEATURE' as const,
+        source: 'zerotrace:flap-lifetime-rollback-v1',
+        locator: `flap-lifetime-rollback:${materialization.token}:200-220`,
+        payloadHash: '9'.repeat(64),
+        observedAt: capturedAt,
+        blockOrSlot: '220',
+        finality: 'finalized',
+        summary: 'Fixture finalized lifetime rollback.',
       },
     ],
   };
@@ -413,6 +473,28 @@ describe('Flap lifetime materialization', () => {
           snapshot: { ...materialization.metadata.snapshot, blockHash: `0x${'9'.repeat(64)}` },
         },
         targetBlock: '201',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('Flap lifetime rollback', () => {
+  it('accepts a fully evidenced invalidated suffix at one reconciled Snapshot', () => {
+    expect(FlapLifetimeRollbackSchema.safeParse(flapLifetimeRollback()).success).toBe(true);
+  });
+
+  it('rejects incomplete lineage coverage and a Snapshot mismatch', () => {
+    const rollback = flapLifetimeRollback();
+    expect(
+      FlapLifetimeRollbackSchema.safeParse({ ...rollback, lineageCoverage: 0.5 }).success,
+    ).toBe(false);
+    expect(
+      FlapLifetimeRollbackSchema.safeParse({
+        ...rollback,
+        metadata: {
+          ...rollback.metadata,
+          snapshot: { ...rollback.metadata.snapshot, blockHash: `0x${'0'.repeat(64)}` },
+        },
       }).success,
     ).toBe(false);
   });

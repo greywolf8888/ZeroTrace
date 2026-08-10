@@ -230,7 +230,9 @@ same service is available as `flap-lifetime-head-worker` in the `semantic` Compo
 extension links the previous lifetime terminal Evidence, target reconciliation Evidence,
 per-provider historical predecessor checks when the target is not a direct child, delta projection
 Evidence, and one new terminal root. Migration `009_flap_lifetime_heads` rejects non-completed scans,
-forked predecessors, out-of-order sequences, target/Snapshot conflicts and mutation.
+forked predecessors, out-of-order sequences, target/Snapshot conflicts and mutation. Migration
+`010_flap_lifetime_reorgs` adds immutable active-suffix invalidation and canonical-lineage replay;
+the automatic resolver that creates those records is a separate in-development step.
 
 Retryable provider or storage failures defer the cycle using a credential-free error code. Endpoint
 disagreement, regression, incomplete coverage or an accepted finalized hash conflict cannot advance
@@ -244,7 +246,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `009`, are in
+local upgrade commands, including migrations `007` through `010`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

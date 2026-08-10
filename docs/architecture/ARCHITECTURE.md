@@ -425,7 +425,11 @@ Repeated finalized-head scheduling builds on that materialization. Migration
 only by EXTENSION rows linked to the current predecessor. Both application and database layers bind
 the completed semantic scan, target block/hash, Snapshot hash, result hash, terminal Evidence and
 predecessor scan/target/hash/Evidence. Concurrent or forked appends cannot create a second accepted
-sequence.
+sequence. Migration `010_flap_lifetime_reorgs` preserves a detected fork response without mutating
+history: one Evidence-backed invalidation names the exact active suffix and its surviving
+predecessor, canonical reads exclude that suffix, and a replacement branch consumes the next global
+sequence. The storage boundary is implemented; automated multi-provider rollback-point discovery is
+still a separate acceptance gate.
 
 Before each append, the worker reconciles a common finalized BSC position across the configured RPC
 quorum. A direct-child target inherits the reconciled parent identity; a larger gap additionally

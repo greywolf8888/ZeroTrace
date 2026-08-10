@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                      |
 | Production acceptance            | **No**                                                                                                          |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                  |
-| Unit tests                       | **306 passing across 40 files**                                                                                 |
+| Unit tests                       | **309 passing across 40 files**                                                                                 |
 | Integration tests                | **38 environment-free plus 18 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                                                    |
 | Remote CI                        | **Pass on immutable development commit `12fc47d`; protected main `3372a5a`**                                    |
-| Coverage                         | **Current local: 81.92% statements / 76.06% branches / 89.51% functions / 82.84% lines**                        |
+| Coverage                         | **Current local: 81.85% statements / 76.04% branches / 89.72% functions / 82.79% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed                              |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap segments, exact lifetime and append-only finalized heads wired  |
 
@@ -312,6 +312,10 @@ The only allowed status vocabulary in this ledger is:
 - migration `009_flap_lifetime_heads` and its repository now preserve one immutable INITIAL→EXTENSION
   chain per token. Database guards require completed semantic scans, exact token/target/Snapshot/
   terminal-Evidence identity, current-predecessor linkage and monotonically increasing sequence;
+- migration `010_flap_lifetime_reorgs` preserves rollback as an append-only invalidation of one exact
+  active suffix. Canonical reads exclude invalidated descendants, retain the evidenced surviving
+  predecessor, reject invalidated scan replay, and permit a new branch to append with a monotonic
+  global sequence; the automatic multi-provider resolver is still in development;
 - `flap-lifetime-head-worker` repeatedly reconciles a common finalized BSC position across a
   configured endpoint quorum. It materializes the first exact head, proves direct or historical
   predecessor continuity with persisted Evidence, scans only the missing delta, and publishes the
@@ -448,10 +452,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                                                             | Scope                                                                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                                                      | locked npm install in production container; all packages/API/web                                                                |
-| Unit tests                     | 306 pass                                                                  | 40 files across schemas, adapters, data quality, ingestion, storage, workers and API runtime                                    |
+| Unit tests                     | 309 pass                                                                  | 40 files across schemas, adapters, data quality, ingestion, storage, workers and API runtime                                    |
 | Integration tests              | 38 environment-free; 18 real PostgreSQL pass; 54 latest completed CI pass | lifetime/head/projection checkpoint guards and corrupt-state rejection are deterministic; prior all-store suite passes          |
 | Restart regression             | Pass                                                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                         |
-| Coverage gate                  | Pass                                                                      | current local: 81.92% statements, 76.06% branches, 89.51% functions, 82.84% lines on 344 tests; 21 opt-in durable tests skipped |
+| Coverage gate                  | Pass                                                                      | current local: 81.85% statements, 76.04% branches, 89.72% functions, 82.79% lines on 347 tests; 21 opt-in durable tests skipped |
 | Chromium E2E                   | 10 pass                                                                   | desktop and Pixel 7 include projection paging, exact/latest lifetime replay, Unknown and storage-failure rendering              |
 | Formatting / ESLint / types    | Pass                                                                      | full repository                                                                                                                 |
 | Dependency vulnerability audit | Pass                                                                      | 0 vulnerabilities across the complete npm dependency graph                                                                      |
@@ -459,7 +463,7 @@ correctness. Exact local smoke observations and limitations are in
 | CycloneDX SBOM                 | Pass                                                                      | npm dependency graph                                                                                                            |
 | Compose model                  | Pass                                                                      | rendered default topology                                                                                                       |
 | Docker image build/start       | Pass                                                                      | API, web, ingest worker, semantic worker, PostgreSQL, ClickHouse; service images also validated by Compose                      |
-| Database bootstrap             | Pass                                                                      | PostgreSQL 001–009/triggers and ClickHouse Raw Fact schema/migration                                                            |
+| Database bootstrap             | Pass                                                                      | PostgreSQL 001–010/triggers and ClickHouse Raw Fact schema/migration                                                            |
 | Runtime/browser smoke          | Pass                                                                      | API/web health, proxy, security headers, desktop/mobile render                                                                  |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope                                 | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending   |
 | Remote CI                      | Pass                                                                      | CI/CodeQL pass on immutable `12fc47d`: 365 tests, 10 Chromium flows and six production container targets                        |

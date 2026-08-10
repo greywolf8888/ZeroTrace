@@ -158,7 +158,7 @@ includes sequence, predecessor ID, scan ID, exact finalized target/hash, typed l
 freshness/model metadata and terminal Evidence. The API performs no provider request and re-validates
 stored rows through the lifetime schema and canonical hashes in the repository.
 
-An absent token head returns `404` and remains Unknown; unconfigured or unhealthy migration `009`
+An absent token head returns `404` and remains Unknown; unconfigured or unhealthy migration `010`
 storage returns `503`. The endpoint never falls back to a one-shot scan, never converts absence to
 zero, and never triggers scheduling. Extensions are accepted only after the worker has persisted
 multi-endpoint target agreement, direct or historical predecessor continuity, complete delta

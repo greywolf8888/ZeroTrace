@@ -1124,6 +1124,80 @@ export const FlapLifetimeStateSchema = z.union([
 ]);
 export type FlapLifetimeState = z.infer<typeof FlapLifetimeStateSchema>;
 
+export const FlapLifetimeHeadReferenceSchema = z.object({
+  headId: z.string().regex(/^flh_[0-9a-f]{24}$/),
+  scanId: z.string().uuid(),
+  targetBlock: UnsignedQuantityStringSchema,
+  targetHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type FlapLifetimeHeadReference = z.infer<typeof FlapLifetimeHeadReferenceSchema>;
+
+export const FlapLifetimeRollbackSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    reason: z.literal('FINALIZED_REORG'),
+    invalidatedHeads: z.array(FlapLifetimeHeadReferenceSchema).min(1),
+    rollbackTo: FlapLifetimeHeadReferenceSchema.nullable(),
+    observedTarget: z.object({
+      blockNumber: UnsignedQuantityStringSchema,
+      blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+    }),
+    lineageCoverage: CoverageRatioSchema,
+    alertId: z.string().regex(/^dqa_[0-9a-f]{24}$/),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema,
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== value.chainId ||
+      snapshot.blockNumber !== value.observedTarget.blockNumber ||
+      snapshot.blockHash !== value.observedTarget.blockHash ||
+      snapshot.finality !== 'finalized'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Flap lifetime rollback must bind the exact reconciled finalized BSC Snapshot.',
+      });
+    }
+    const invalidatedTargets = value.invalidatedHeads.map((head) => BigInt(head.targetBlock));
+    if (
+      invalidatedTargets.some(
+        (target, index) => index > 0 && target <= (invalidatedTargets[index - 1] ?? -1n),
+      ) ||
+      (value.rollbackTo !== null &&
+        BigInt(value.rollbackTo.targetBlock) >= (invalidatedTargets[0] ?? 0n)) ||
+      BigInt(value.observedTarget.blockNumber) <
+        (invalidatedTargets[invalidatedTargets.length - 1] ?? 0n) ||
+      value.lineageCoverage !== 1 ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.sourceCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      value.metadata.simulationCoverage !== 0 ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.invalidatedHeads.every((head) =>
+        value.metadata.evidenceIds.includes(head.terminalEvidenceId),
+      ) ||
+      (value.rollbackTo !== null &&
+        !value.metadata.evidenceIds.includes(value.rollbackTo.terminalEvidenceId)) ||
+      !value.evidence.some((evidence) => evidence.id === value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['lineageCoverage'],
+        message:
+          'Flap lifetime rollback requires a fully evidenced ordered invalidated suffix and exact surviving predecessor.',
+      });
+    }
+  });
+export type FlapLifetimeRollback = z.infer<typeof FlapLifetimeRollbackSchema>;
+
 export const RealizableValuePointSchema = z.object({
   inputQuantity: DecimalStringSchema,
   nominalValue: knowledgeValueSchema(DecimalStringSchema),

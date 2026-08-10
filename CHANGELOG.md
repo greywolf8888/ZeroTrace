@@ -81,6 +81,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
   require a Known Evidence-backed continuity proof;
 - immutable PostgreSQL `flap_lifetime_heads` INITIAL/EXTENSION chains with completed-scan,
   predecessor, sequence, Snapshot/result hash, terminal Evidence and mutation guards;
+- append-only Flap lifetime-head invalidations with exact active-suffix validation, surviving
+  predecessor selection, immutable reorg Evidence, canonical-lineage reads and safe branch replay;
 - a continuous read-only Flap lifetime-head worker with multi-RPC common-position reconciliation,
   direct/historical predecessor verification, retryable deferral, finalized-reorg stop behavior,
   Compose/host entrypoints, and credential-free cycle summaries;
