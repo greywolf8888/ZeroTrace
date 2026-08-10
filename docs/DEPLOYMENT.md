@@ -6,9 +6,10 @@ The repository supports a reproducible local/staging topology. It is **not produ
 Evidence/Snapshot persistence, bounded finalized raw-ledger ingestion, restart-safe bounded Flap
 history projection, and incremental finalized Flap lifetime heads are wired; authentication/
 authorization, remaining durable repositories, general continuous semantic history,
-independent-operator acceptance, automatic reorg rollback/replay,
-backup recovery, load testing, and terminal real-chain acceptance remain incomplete. Common-position endpoint reconciliation,
-parent-history continuity detection, and Evidence-linked Data Quality Alerts are implemented.
+independent-operator and forced real-reorg acceptance, backup recovery, load testing, and terminal
+real-chain acceptance remain incomplete. Common-position endpoint reconciliation, parent-history
+continuity detection, append-only Flap rollback/replay, and Evidence-linked Data Quality Alerts are
+implemented.
 
 ## Build
 
@@ -134,8 +135,11 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 ```
 
 `FLAP_LIFETIME_HEAD_MAX_CYCLES` is for bounded tests and operations only; blank means continuous.
-Provider disagreement and retryable outages defer advancement. A finalized reorg is recorded and
-stops the worker because automatic rollback/replay is not yet accepted.
+Provider disagreement and retryable outages defer advancement. For a finalized conflict, all
+participating endpoints must agree over the active historical lineage before the worker appends an
+invalidation and immediately re-enters safe materialization/extension. Historical disagreement or
+unavailability never selects a branch. Forced real-reorg and independent-operator acceptance remain
+deployment gates.
 
 ## Health and smoke checks
 

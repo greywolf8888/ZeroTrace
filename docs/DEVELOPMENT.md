@@ -231,13 +231,16 @@ extension links the previous lifetime terminal Evidence, target reconciliation E
 per-provider historical predecessor checks when the target is not a direct child, delta projection
 Evidence, and one new terminal root. Migration `009_flap_lifetime_heads` rejects non-completed scans,
 forked predecessors, out-of-order sequences, target/Snapshot conflicts and mutation. Migration
-`010_flap_lifetime_reorgs` adds immutable active-suffix invalidation and canonical-lineage replay;
-the automatic resolver that creates those records is a separate in-development step.
+`010_flap_lifetime_reorgs` adds immutable active-suffix invalidation and canonical-lineage replay.
 
 Retryable provider or storage failures defer the cycle using a credential-free error code. Endpoint
 disagreement, regression, incomplete coverage or an accepted finalized hash conflict cannot advance
-the head. A finalized reorg stops the worker; automatic rollback/replay and FFT terminal acceptance
-remain separate gates. Replay the latest accepted state without providers through:
+the conflicting head. On a finalized conflict, every participating source is checked newest-to-oldest
+over the active lineage. Only unanimous historical results can select the newest surviving ancestor;
+the worker then appends one invalidation and immediately re-enters materialization/extension.
+Unavailable or disagreeing sources defer without majority selection. Forced real-reorg,
+independent-operator and FFT terminal acceptance remain separate gates. Replay the latest accepted
+state without providers through:
 
 ```text
 GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56&platform=flap

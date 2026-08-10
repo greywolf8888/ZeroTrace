@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { hashPayload } from '@zerotrace/evidence';
 import { AnchorReconciliationResultSchema, knownValue, unknownValue } from '@zerotrace/schemas';
-import type { FlapLifetimeHead } from '@zerotrace/storage';
+import type { FlapLifetimeHead, FlapLifetimeHeadInvalidation } from '@zerotrace/storage';
 import {
   flapLifetimeExtensionResult,
   flapLifetimeFixtureToken,
@@ -88,6 +88,7 @@ function headStore(initial?: FlapLifetimeHead) {
   let current = initial;
   const store: FlapLifetimeHeadStore = {
     latestHead: vi.fn(async () => current),
+    listActiveLineage: vi.fn(async () => (current === undefined ? [] : [current])),
     putHead: vi.fn(async ({ scanId, result }) => {
       current = storedHead(result, {
         id: `flh_${hashPayload({ scanId }).slice(0, 24)}`,
@@ -117,6 +118,7 @@ describe('Flap lifetime finalized-head cycle', () => {
       materialize,
       proveContinuity: vi.fn(),
       extend: vi.fn(),
+      resolveReorg: vi.fn(),
     });
     expect(result).toMatchObject({ action: 'INITIALIZED', targetBlock: '103' });
     expect(materialize).toHaveBeenCalledOnce();
@@ -142,6 +144,7 @@ describe('Flap lifetime finalized-head cycle', () => {
       materialize: vi.fn(),
       proveContinuity,
       extend,
+      resolveReorg: vi.fn(),
     });
     expect(result).toMatchObject({ action: 'EXTENDED', targetBlock: '105' });
     expect(proveContinuity).toHaveBeenCalledOnce();
@@ -161,6 +164,7 @@ describe('Flap lifetime finalized-head cycle', () => {
       materialize,
       proveContinuity,
       extend,
+      resolveReorg: vi.fn(),
     });
     expect(result.action).toBe('UNCHANGED');
     expect(materialize).not.toHaveBeenCalled();
@@ -168,14 +172,38 @@ describe('Flap lifetime finalized-head cycle', () => {
     expect(extend).not.toHaveBeenCalled();
   });
 
-  it('fails closed on disagreement, regression, and conflicting finalized hashes', async () => {
+  it('resolves a historical continuity conflict before any delta extension', async () => {
     const initial = flapLifetimeInitialResult();
+    const extend = vi.fn();
+    const resolveReorg = vi.fn().mockResolvedValue({} as FlapLifetimeHeadInvalidation);
+    const conflict = Object.assign(new Error('fixture finalized reorg'), {
+      code: 'LIFETIME_FINALIZED_REORG',
+      retryable: false,
+    });
+    const result = await runFlapLifetimeHeadCycle({
+      token: flapLifetimeFixtureToken,
+      reconciliation: reconciliation(105),
+      heads: headStore(storedHead(initial)),
+      materialize: vi.fn(),
+      proveContinuity: vi.fn().mockRejectedValue(conflict),
+      extend,
+      resolveReorg,
+    });
+    expect(result.action).toBe('ROLLED_BACK');
+    expect(resolveReorg).toHaveBeenCalledOnce();
+    expect(extend).not.toHaveBeenCalled();
+  });
+
+  it('fails closed on disagreement/regression and resolves a conflicting finalized hash', async () => {
+    const initial = flapLifetimeInitialResult();
+    const resolveReorg = vi.fn().mockResolvedValue({} as FlapLifetimeHeadInvalidation);
     const options = {
       token: flapLifetimeFixtureToken,
       heads: headStore(storedHead(initial)),
       materialize: vi.fn(),
       proveContinuity: vi.fn(),
       extend: vi.fn(),
+      resolveReorg,
     };
     await expect(
       runFlapLifetimeHeadCycle({ ...options, reconciliation: reconciliation(105, 'DISAGREEMENT') }),
@@ -191,7 +219,8 @@ describe('Flap lifetime finalized-head cycle', () => {
     changed.metadata.snapshot.blockHash = changed.canonicalAnchor.value.hash;
     await expect(
       runFlapLifetimeHeadCycle({ ...options, reconciliation: changed }),
-    ).rejects.toMatchObject({ code: 'LIFETIME_FINALIZED_REORG' });
+    ).resolves.toMatchObject({ action: 'ROLLED_BACK' });
+    expect(resolveReorg).toHaveBeenCalledOnce();
     expect(options.materialize).not.toHaveBeenCalled();
     expect(options.proveContinuity).not.toHaveBeenCalled();
     expect(options.extend).not.toHaveBeenCalled();

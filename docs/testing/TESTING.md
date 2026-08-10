@@ -55,7 +55,8 @@
 - Flap lifetime-head tests cover first materialization, unchanged replay, exact delta-only extension,
   multi-source direct/historical continuity, provider deferral, finalized conflict alerts, durable
   predecessor/sequence guards, append-only suffix invalidation, canonical rollback and safe branch
-  replay, provider-free API replay, and desktop/mobile UI rendering.
+  replay, newest-to-oldest all-source rollback resolution, disagreement/unavailability deferral,
+  immediate worker replay, provider-free API replay, and desktop/mobile UI rendering.
 - Solana account quantities remain lossless decimal strings. Only explicit `value: null` means a
   Known non-existent account; missing or malformed values never become zero.
 - PostgreSQL writes are transactional and idempotent; Evidence, Snapshot, and derivation edges remain

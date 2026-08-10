@@ -970,7 +970,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? 'DURABLE_STORAGE_REQUIRED'
             : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
         detail:
-          'A continuous read-only worker reconciles a finalized BSC endpoint quorum, accepts one exact INITIAL lifetime materialization, then appends only Evidence-proven continuous deltas. Regression, disagreement, incomplete history and finalized hash conflicts cannot advance the append-only head. The latest accepted state replays without providers; automatic reorg rollback and independent-operator acceptance remain pending.',
+          'A continuous read-only worker reconciles a finalized BSC endpoint quorum, accepts one exact INITIAL lifetime materialization, then appends only Evidence-proven continuous deltas. A finalized conflict triggers all-source historical verification, append-only suffix invalidation and safe replay from the newest verified ancestor; unavailable or disagreeing sources cannot choose a branch. The latest accepted state replays without providers; forced real-reorg and independent-operator acceptance remain pending.',
       },
       {
         id: 'flap-token-origin',

@@ -428,8 +428,7 @@ predecessor scan/target/hash/Evidence. Concurrent or forked appends cannot creat
 sequence. Migration `010_flap_lifetime_reorgs` preserves a detected fork response without mutating
 history: one Evidence-backed invalidation names the exact active suffix and its surviving
 predecessor, canonical reads exclude that suffix, and a replacement branch consumes the next global
-sequence. The storage boundary is implemented; automated multi-provider rollback-point discovery is
-still a separate acceptance gate.
+sequence.
 
 Before each append, the worker reconciles a common finalized BSC position across the configured RPC
 quorum. A direct-child target inherits the reconciled parent identity; a larger gap additionally
@@ -437,8 +436,12 @@ re-reads the accepted predecessor position from the participating sources and pe
 The resulting continuity root links predecessor lifetime Evidence, target anchor observations and
 historical checks. Only `known/true` continuity plus 100% delta projection can append. Same-height
 hash change, regression, disagreement, incomplete history and provider-down states never advance
-the head. A detected finalized reorg creates a critical Data Quality Alert and stops the worker;
-automatic rollback/replay, independent-operator acceptance and terminal FFT validation remain later
+the conflicting head. A detected finalized conflict invokes the rollback resolver over the complete
+active accepted lineage. Every participating endpoint must return the same hash at each checked
+position; unavailable history defers, cross-source disagreement creates a critical alert, and no
+majority winner is selected. The newest unanimously matching ancestor survives, the divergent suffix
+is invalidated append-only, and the next worker cycle immediately rematerializes or extends the new
+branch. Forced real-reorg, independent-operator acceptance and terminal FFT validation remain later
 stages. The API/UI latest-head path is provider-free and cannot initiate a scan.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted

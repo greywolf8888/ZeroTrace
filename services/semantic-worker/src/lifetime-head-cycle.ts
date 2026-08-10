@@ -11,7 +11,7 @@ import {
   type ChainAnchorRead,
   type FlapLifetimeContinuityProof,
 } from '@zerotrace/schemas';
-import type { FlapLifetimeHead } from '@zerotrace/storage';
+import type { FlapLifetimeHead, FlapLifetimeHeadInvalidation } from '@zerotrace/storage';
 
 export type FlapLifetimeHeadCycleErrorCode =
   | 'LIFETIME_RECONCILIATION_REQUIRED'
@@ -35,6 +35,7 @@ export class FlapLifetimeHeadCycleError extends Error {
 
 export interface FlapLifetimeHeadStore {
   latestHead(chainId: string, token: string): Promise<FlapLifetimeHead | undefined>;
+  listActiveLineage(chainId: string, token: string): Promise<FlapLifetimeHead[]>;
   putHead(input: { scanId: string; result: FlapLifetimeHead['result'] }): Promise<FlapLifetimeHead>;
 }
 
@@ -53,14 +54,28 @@ export interface RunFlapLifetimeHeadCycleOptions {
     continuity: FlapLifetimeContinuityProof,
     target: ChainAnchorRead,
   ): Promise<FlapLifetimeExtensionRun>;
+  resolveReorg(
+    predecessor: FlapLifetimeHead,
+    target: ChainAnchorRead,
+    reconciliation: AnchorReconciliationResult,
+    activeLineage: readonly FlapLifetimeHead[],
+  ): Promise<FlapLifetimeHeadInvalidation>;
 }
 
-export interface FlapLifetimeHeadCycleResult {
-  action: 'INITIALIZED' | 'EXTENDED' | 'UNCHANGED';
-  targetBlock: string;
-  targetHash: string;
-  head: FlapLifetimeHead;
-}
+export type FlapLifetimeHeadCycleResult =
+  | {
+      action: 'INITIALIZED' | 'EXTENDED' | 'UNCHANGED';
+      targetBlock: string;
+      targetHash: string;
+      head: FlapLifetimeHead;
+    }
+  | {
+      action: 'ROLLED_BACK';
+      targetBlock: string;
+      targetHash: string;
+      head: FlapLifetimeHead | undefined;
+      invalidation: FlapLifetimeHeadInvalidation;
+    };
 
 export function reconciledFlapTarget(input: AnchorReconciliationResult): ChainAnchorRead {
   const reconciliation = AnchorReconciliationResultSchema.parse(input);
@@ -164,10 +179,7 @@ export async function runFlapLifetimeHeadCycle(
   }
   if (positionOrder === 0) {
     if (target.anchor.hash !== predecessor.targetHash) {
-      throw new FlapLifetimeHeadCycleError(
-        'LIFETIME_FINALIZED_REORG',
-        'Reconciled finalized BSC hash conflicts with the accepted lifetime head.',
-      );
+      return rollback(options, predecessor, target);
     }
     return {
       action: 'UNCHANGED',
@@ -177,9 +189,22 @@ export async function runFlapLifetimeHeadCycle(
     };
   }
 
-  const continuity = FlapLifetimeContinuityProofSchema.parse(
-    await options.proveContinuity(predecessor, target, options.reconciliation),
-  );
+  let continuity: FlapLifetimeContinuityProof;
+  try {
+    continuity = FlapLifetimeContinuityProofSchema.parse(
+      await options.proveContinuity(predecessor, target, options.reconciliation),
+    );
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'LIFETIME_FINALIZED_REORG'
+    ) {
+      return rollback(options, predecessor, target);
+    }
+    throw error;
+  }
   if (continuity.continuous.state !== 'known' || continuity.continuous.value !== true) {
     throw new FlapLifetimeHeadCycleError(
       'LIFETIME_EXTENSION_INCOMPLETE',
@@ -194,5 +219,34 @@ export async function runFlapLifetimeHeadCycle(
     targetBlock: target.anchor.position,
     targetHash: target.anchor.hash,
     head,
+  };
+}
+
+async function rollback(
+  options: RunFlapLifetimeHeadCycleOptions,
+  predecessor: FlapLifetimeHead,
+  target: ChainAnchorRead,
+): Promise<FlapLifetimeHeadCycleResult> {
+  const activeLineage = await options.heads.listActiveLineage('eip155:56', options.token);
+  if (activeLineage[0]?.id !== predecessor.id) {
+    throw new FlapLifetimeHeadCycleError(
+      'LIFETIME_FINALIZED_REORG',
+      'Active Flap lifetime lineage changed during rollback resolution.',
+      true,
+    );
+  }
+  const invalidation = await options.resolveReorg(
+    predecessor,
+    target,
+    options.reconciliation,
+    activeLineage,
+  );
+  const head = await options.heads.latestHead('eip155:56', options.token);
+  return {
+    action: 'ROLLED_BACK',
+    targetBlock: target.anchor.position,
+    targetHash: target.anchor.hash,
+    head,
+    invalidation,
   };
 }

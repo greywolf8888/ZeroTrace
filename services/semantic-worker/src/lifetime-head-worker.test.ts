@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { hashPayload } from '@zerotrace/evidence';
-import type { FlapLifetimeHead } from '@zerotrace/storage';
+import type { FlapLifetimeHead, FlapLifetimeHeadInvalidation } from '@zerotrace/storage';
 import {
   flapLifetimeInitialResult,
   flapLifetimeInitialScanId,
@@ -129,6 +129,45 @@ describe('continuous Flap lifetime head worker', () => {
     expect(JSON.stringify(events)).not.toContain('provider URL with secret');
   });
 
+  it('emits an append-only rollback and immediately re-enters the next replay cycle', async () => {
+    const head = storedHead();
+    const invalidation = {
+      id: `fli_${'2'.repeat(24)}`,
+      token: head.token,
+      invalidatedFromHeadId: head.id,
+      invalidatedThroughHeadId: head.id,
+      rollbackToHeadId: null,
+      alertId: `dqa_${'3'.repeat(24)}`,
+      terminalEvidenceId: `ev_${'4'.repeat(24)}`,
+      result: { metadata: { modelVersion: 'flap-lifetime-rollback-v1' } },
+    } as FlapLifetimeHeadInvalidation;
+    const runCycle = vi
+      .fn()
+      .mockResolvedValueOnce({
+        action: 'ROLLED_BACK',
+        targetBlock: '107',
+        targetHash: `0x${'7'.repeat(64)}`,
+        head: undefined,
+        invalidation,
+      })
+      .mockResolvedValueOnce({
+        action: 'UNCHANGED',
+        targetBlock: String(head.targetBlock),
+        targetHash: head.targetHash,
+        head,
+      });
+    const sleep = vi.fn().mockResolvedValue(undefined);
+    const events = await runFlapLifetimeHeadLoop(config, resources(), runtime(runCycle), { sleep });
+    expect(events[0]).toMatchObject({
+      event: 'flap_lifetime_head_rollback_complete',
+      invalidationId: invalidation.id,
+      rollbackToHeadId: null,
+      terminalEvidenceId: invalidation.terminalEvidenceId,
+    });
+    expect(events[1]).toMatchObject({ event: 'flap_lifetime_head_cycle_complete' });
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
   it('does not inspect providers when durable head storage is down', async () => {
     const workerRuntime = runtime(vi.fn());
     const events = await runFlapLifetimeHeadLoop(
@@ -148,7 +187,7 @@ describe('continuous Flap lifetime head worker', () => {
     expect(workerRuntime.inspect).not.toHaveBeenCalled();
   });
 
-  it('surfaces non-retryable finalized reorgs instead of looping', async () => {
+  it('surfaces an unresolved non-retryable finalized conflict instead of looping', async () => {
     const workerRuntime = runtime(
       vi.fn().mockRejectedValue(
         Object.assign(new Error('finalized conflict'), {

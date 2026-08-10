@@ -84,8 +84,11 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - append-only Flap lifetime-head invalidations with exact active-suffix validation, surviving
   predecessor selection, immutable reorg Evidence, canonical-lineage reads and safe branch replay;
 - a continuous read-only Flap lifetime-head worker with multi-RPC common-position reconciliation,
-  direct/historical predecessor verification, retryable deferral, finalized-reorg stop behavior,
+  direct/historical predecessor verification, retryable deferral, and finalized-reorg detection,
   Compose/host entrypoints, and credential-free cycle summaries;
+- an all-source Flap rollback resolver that verifies the active lineage newest-to-oldest, refuses
+  unavailable or disagreeing history, appends one Evidence-backed invalidation, and immediately
+  re-enters safe materialization/extension from the surviving ancestor;
 - provider-free latest accepted Flap lifetime-head API and desktop/mobile UI replay with sequence,
   continuity, target and terminal Evidence visibility;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
@@ -138,8 +141,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   replay, bounded creation-origin proofs, one-Snapshot lifetime materialization, and incremental
   accepted finalized heads are decoded, but complete lifecycle reconstruction, other launchpads, and
   market reconstruction are not implemented;
-- common-position endpoint reconciliation, Flap finalized-head scheduling and reorg detection are
-  implemented, but automatic rollback/replay and independently operated provider acceptance are not;
+- common-position endpoint reconciliation, Flap finalized-head scheduling and deterministic
+  rollback/replay are implemented, but forced real-reorg and independently operated provider
+  acceptance are not;
 - entity resolution is an uncalibrated baseline;
 - Ethereum, BSC, Bitcoin, and Solana current-state smoke checks pass; archive history, forced
   real-provider failover, load, reorg, provider reconciliation, and production deployment validation

@@ -23,6 +23,7 @@ import { publicWorkerError } from './errors.js';
 import type { FlapLifetimeHeadWorkerConfig } from './lifetime-head-config.js';
 import { runFlapLifetimeHeadCycle } from './lifetime-head-cycle.js';
 import { proveFlapLifetimeContinuity } from './lifetime-continuity.js';
+import { resolveFlapLifetimeRollback } from './lifetime-rollback.js';
 import { createBscTransport, createBscTransports, providerPolicy } from './worker.js';
 
 export interface FlapLifetimeHeadWorkerResources {
@@ -58,8 +59,23 @@ export interface FlapLifetimeHeadDeferredSummary {
   retryable: true;
 }
 
+export interface FlapLifetimeHeadRollbackSummary {
+  event: 'flap_lifetime_head_rollback_complete';
+  cycle: number;
+  token: string;
+  invalidationId: string;
+  invalidatedFromHeadId: string;
+  invalidatedThroughHeadId: string;
+  rollbackToHeadId: string | null;
+  targetBlock: string;
+  targetHash: string;
+  alertId: string;
+  terminalEvidenceId: string;
+  modelVersion: string;
+}
+
 export type FlapLifetimeHeadLoopEvent =
-  FlapLifetimeHeadCycleSummary | FlapLifetimeHeadDeferredSummary;
+  FlapLifetimeHeadCycleSummary | FlapLifetimeHeadRollbackSummary | FlapLifetimeHeadDeferredSummary;
 
 export interface FlapLifetimeHeadRuntime {
   inspect(): ReturnType<AnchorDataQualityService['inspectAll']>;
@@ -227,6 +243,17 @@ export function createFlapLifetimeHeadRuntime(
             historyMaxTransactions: config.historyMaxTransactions,
             historyMaxLogs: config.historyMaxLogs,
           }),
+        resolveReorg: (_predecessor, targetAnchor, agreed, activeLineage) =>
+          resolveFlapLifetimeRollback({
+            token: config.token,
+            target: targetAnchor,
+            reconciliation: agreed,
+            activeLineage,
+            readers,
+            evidence: resources.evidence,
+            repository: resources.dataQuality,
+            heads: resources.heads,
+          }),
       }),
   };
 }
@@ -289,6 +316,27 @@ export async function runFlapLifetimeHeadLoop(
         });
       }
       const result = await runtime.runCycle(reconciliation);
+      if (result.action === 'ROLLED_BACK') {
+        const event: FlapLifetimeHeadRollbackSummary = {
+          event: 'flap_lifetime_head_rollback_complete',
+          cycle,
+          token: result.invalidation.token,
+          invalidationId: result.invalidation.id,
+          invalidatedFromHeadId: result.invalidation.invalidatedFromHeadId,
+          invalidatedThroughHeadId: result.invalidation.invalidatedThroughHeadId,
+          rollbackToHeadId: result.invalidation.rollbackToHeadId,
+          targetBlock: result.targetBlock,
+          targetHash: result.targetHash,
+          alertId: result.invalidation.alertId,
+          terminalEvidenceId: result.invalidation.terminalEvidenceId,
+          modelVersion: result.invalidation.result.metadata.modelVersion,
+        };
+        events.push(event);
+        emit(event);
+        // Re-enter immediately so the next cycle can replay from the evidenced surviving
+        // ancestor (or rematerialize from origin) before the normal polling delay.
+        continue;
+      }
       const event: FlapLifetimeHeadCycleSummary = {
         event: 'flap_lifetime_head_cycle_complete',
         cycle,

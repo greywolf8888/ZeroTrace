@@ -780,13 +780,14 @@ source and scan type, token, target, Snapshot, result hash, terminal Evidence, p
 sequence. Database triggers rejected update/delete and divergent or stale append attempts. The
 temporary container and volume were removed after the run.
 
-The continuous worker reconciles one common finalized BSC position across a configurable endpoint
-quorum, persists direct or historical predecessor checks, and advances the append-only head only
-after exact delta completion. Retryable provider or storage states produce a deferred cycle without
-advancement. A proven finalized replacement creates a critical Data Quality Alert and stops the
-worker; automatic rollback/replay is deliberately not claimed. The production semantic-worker image
-built and the lifetime-head CLI printed help successfully without provider access. Compose rendered
-the opt-in service with migrations `001-009`.
+The continuous worker in that accepted-head batch reconciled one common finalized BSC position
+across a configurable endpoint quorum, persisted direct or historical predecessor checks, and
+advanced the append-only head only after exact delta completion. Retryable provider or storage
+states produced a deferred cycle without advancement. At that point, a proven finalized replacement
+created a critical Data Quality Alert and stopped the worker; automatic rollback/replay was added and
+accepted in the follow-on batch below. The production semantic-worker image built and the
+lifetime-head CLI printed help successfully without provider access. Compose rendered the opt-in
+service with migrations `001-009`.
 
 The provider-free latest-head endpoint was exercised for a complete stored head, unconfigured
 storage and absent head. Desktop and Pixel 7 Chromium exercised the latest sequence, predecessor,
@@ -800,24 +801,34 @@ PostgreSQL 17.10 image. An exact active suffix was invalidated without updating 
 head rows; canonical reads returned the surviving predecessor, the invalidated scan was rejected on
 replay, and a replacement branch appended from that predecessor at the next global sequence. All 18
 PostgreSQL tests passed and the isolated `zt_reorg_migration` container, network and volume were
-removed. The current environment-free gate has 309 unit tests and 38 integration tests; coverage
-passes 347 tests with 21 durable skips at 81.85% statements, 76.04% branches, 89.72% functions and
-82.79% lines. This proves the append-only rollback storage boundary, not automatic rollback-point
-discovery or a live reorg recovery.
+removed.
+
+The automatic resolver now verifies every participant at each accepted Snapshot newest-to-oldest,
+retains only the newest unanimously confirmed ancestor, and invalidates the exact divergent suffix.
+Unavailable history or cross-source historical disagreement defers without invalidation or majority
+selection. A full-lineage divergence returns no surviving head, while the continuous worker
+immediately re-enters safe materialization or extension after either rollback shape. Focused tests
+cover suffix and full-lineage rollback, disagreement and unavailable-source deferral, same-height and
+historical conflict routing, lineage-race rejection, and immediate replay.
+
+The current environment-free gate has 315 unit tests and 38 integration tests; coverage passes 353
+tests with 21 durable skips at 81.95% statements, 76.19% branches, 89.80% functions and 82.87% lines.
+Together with the fresh PostgreSQL run, this proves deterministic rollback-point discovery,
+append-only invalidation, canonical surviving-head selection and safe replay. It does not prove a
+forced live-provider reorg recovery or operator independence.
 
 This acceptance is deterministic and storage-backed; it is not a named token conclusion. Endpoint
 quorum does not prove operator independence, the BSC sources were not certified archive-grade, and
-no live repeated-head run or forced reorg drill was accepted in this batch. Automatic rollback,
-market/RV/entity linkage, independent-source validation and the terminal FFT run remain pending. No
-request was made for FFT `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, and no FFT conclusion is
-claimed.
+no forced real reorg drill was accepted in this batch. Market/RV/entity linkage, independent-source
+validation and the terminal FFT run remain pending. No request was made for FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, and no FFT conclusion is claimed.
 
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                    |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 309 unit, 38 environment-free integration and build; dependency gates and 18 PostgreSQL tests green                                        |
-| local `test:coverage`    | pass: 347 tests, 21 opt-in durable skips; 81.85% statements, 76.04% branches, 89.72% functions, 82.79% lines                                                              |
+| local non-browser gates  | pass: format, lint, typecheck, 315 unit, 38 environment-free integration and build; dependency gates and 18 PostgreSQL tests green                                        |
+| local `test:coverage`    | pass: 353 tests, 21 opt-in durable skips; 81.95% statements, 76.19% branches, 89.80% functions, 82.87% lines                                                              |
 | branch `test:coverage`   | pass on `12fc47d`: 365 tests; 83.78% statements, 77.99% branches, 92.13% functions, 84.70% lines                                                                          |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure                            |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                    |

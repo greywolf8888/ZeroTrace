@@ -75,7 +75,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Finalized EVM trace/state-diff and Solana log/balance/token-balance/reward raw records
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [x] Deterministic common-position disagreement, source-failure, continuity, and reorg-detection tests
-- [ ] Forced real reorg, automatic rollback/replay, and independently operated provider acceptance
+- [x] Deterministic Flap accepted-lineage rollback/replay with append-only invalidation and no
+      majority branch selection
+- [ ] Forced real reorg and independently operated provider acceptance
 - [ ] Temporal graph projection and rebuild
 
 ## Intelligence
@@ -108,7 +110,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
   - [x] Continuous deployment-origin-to-finalized-head scheduler with multi-endpoint finalized
         reconciliation, append-only INITIAL/EXTENSION heads, exact delta projection, provider-free
         latest replay and fail-closed reorg/regression guards
-  - [ ] Named migration/FFT real-chain fixtures, automatic reorg rollback/replay, lifecycle and market/RV linkage
+  - [x] Deterministic all-source finalized-reorg rollback to the newest verified ancestor, immutable
+        suffix invalidation and immediate safe replay
+  - [ ] Named migration/FFT real-chain fixtures, forced reorg drill, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
 - [x] Deterministic Flap fixed-block `previewSell` quote and blocked/Unknown/no-fake-zero tests

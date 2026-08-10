@@ -156,7 +156,9 @@ for corrupt completed state. This is stored point-in-time proof replay, not cont
 returns the latest accepted INITIAL or EXTENSION row from the append-only lifetime-head chain. It
 includes sequence, predecessor ID, scan ID, exact finalized target/hash, typed lifetime state,
 freshness/model metadata and terminal Evidence. The API performs no provider request and re-validates
-stored rows through the lifetime schema and canonical hashes in the repository.
+stored rows through the lifetime schema and canonical hashes in the repository. Append-only reorg
+invalidations remove their exact descendant suffix from canonical selection without deleting those
+historical rows; after rollback the endpoint returns the surviving or safely replayed branch.
 
 An absent token head returns `404` and remains Unknown; unconfigured or unhealthy migration `010`
 storage returns `503`. The endpoint never falls back to a one-shot scan, never converts absence to
