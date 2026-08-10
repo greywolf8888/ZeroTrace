@@ -808,13 +808,13 @@ claimed.
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | local non-browser gates  | pass: format, lint, typecheck, 306 unit, 38 environment-free integration and build; dependency gates and 18 PostgreSQL tests green                                        |
 | local `test:coverage`    | pass: 344 tests, 21 opt-in durable skips; 81.92% statements, 76.06% branches, 89.51% functions, 82.84% lines                                                              |
-| branch `test:coverage`   | pass on `cfce7f9`: 329 tests; 84.98% statements, 77.92% branches, 94.44% functions, 85.90% lines                                                                          |
+| branch `test:coverage`   | pass on `12fc47d`: 365 tests; 83.78% statements, 77.99% branches, 92.13% functions, 84.70% lines                                                                          |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure                            |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                    |
 | `docker compose config`  | pass                                                                                                                                                                      |
 | production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000                       |
-| branch GitHub Actions CI | [pass on `b887be7`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31358180186): 344 tests, 84.73/78.09/94.01/85.65 coverage, 10 Chromium, six production targets |
-| branch CodeQL            | [pass on `b887be7`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31358180189): JavaScript and TypeScript analysis                                               |
+| branch GitHub Actions CI | [pass on `12fc47d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400150): 365 tests, 83.78/77.99/92.13/84.70 coverage, 10 Chromium, six production targets |
+| branch CodeQL            | [pass on `12fc47d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400149): JavaScript and TypeScript analysis                                               |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

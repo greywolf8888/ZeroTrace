@@ -55,6 +55,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31356333191) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31356333186) pass on immutable
       Flap history-worker/API/UI commit `cfce7f9`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400150) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400149) pass on immutable
+      continuous Flap lifetime-head capability commit `12fc47d`
 
 ## Evidence and data
 
