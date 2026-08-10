@@ -85,6 +85,8 @@ export interface CustodyObservation {
   threshold?: number | undefined;
   ownerCount?: number | undefined;
   executedTransactions?: number | undefined;
+  implementationAddress?: string | undefined;
+  implementationVersion?: string | undefined;
   evidenceIds: string[];
 }
 

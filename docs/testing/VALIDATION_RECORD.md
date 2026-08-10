@@ -817,31 +817,73 @@ immediately re-enters safe materialization or extension after either rollback sh
 cover suffix and full-lineage rollback, disagreement and unavailable-source deferral, same-height and
 historical conflict routing, lineage-race rejection, and immediate replay.
 
-The current environment-free gate has 315 unit tests and 38 integration tests; coverage passes 353
-tests with 21 durable skips at 81.95% statements, 76.19% branches, 89.80% functions and 82.87% lines.
+The current environment-free gate has 333 unit tests and 38 integration tests; coverage passes 371
+tests with 21 durable skips at 82.08% statements, 76.19% branches, 90.01% functions and 83.15% lines.
 Together with the fresh PostgreSQL run, this proves deterministic rollback-point discovery,
 append-only invalidation, canonical surviving-head selection and safe replay. It does not prove a
 forced live-provider reorg recovery or operator independence.
 
 This acceptance is deterministic and storage-backed; it is not a named token conclusion. Endpoint
 quorum does not prove operator independence, the BSC sources were not certified archive-grade, and
-no forced real reorg drill was accepted in this batch. Market/RV/entity linkage, independent-source
-validation and the terminal FFT run remain pending. No request was made for FFT
-`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, and no FFT conclusion is claimed.
+no forced real reorg drill was accepted in this batch. Market/RV/entity linkage and
+independent-source validation remain pending. A later section records the first named FFT claim
+observations; it does not claim terminal FFT acceptance.
+
+## FFT claim-observation acceptance (2026-08-10)
+
+Project code located the exact start boundary requested for the user-provided 2 August pension
+policy window. BSC block `113485950`, hash
+`0x1fef8f173019d1c31a372bd1d0e296af79e0e4b6c67d6aceee8b240ebe516f53`, is timestamped
+`2026-08-02T00:00:00.000Z`; its parent `113485949` is timestamped
+`2026-08-01T23:59:59.000Z`.
+
+The new finalized ERC-20 claim observer then completed the inclusive range from block `113485950`
+through Snapshot block `115107095`, hash
+`0x9da42a08afad71634fdebfad60a27014af0f6f1819d94438342e1a2632681510`, timestamp
+`2026-08-10T10:45:29.000Z`. SQD `binance-mainnet` returned 13,591 FFT Transfer logs and the adapter
+created the same number of content-addressed Evidence nodes before marking requested-range data and
+history coverage complete.
+
+For behavioral candidate `0x8d50a68b4f9ada119d198d6472eaf0cB6dB302d9`, the complete requested
+window contained 123 inflows from 109 unique senders, 71 exactly equal to 1,000,000 FFT, totaling
+176,000,010 FFT. It contained 10 outflows totaling 24,507,000 FFT, all to
+`0x343e8a70b212816a5582a880b9cd4c3278c4f360`. Within the same token-transfer window that
+dispatcher made 58 outbound transfers to 32 recipients totaling 24,407,000 FFT. These figures are
+atomic-integer calculations over complete requested-range logs. Canonical metadata uses
+`dataCoverage=1` and `historyCoverage=1` for that requested window, while `sourceCoverage=0.5`
+explicitly reserves `1` for two or more distinct source IDs; source count alone does not establish
+independent-operator agreement.
+
+A finalized public BSC RPC custody inspection at block `115108692`, hash
+`0xae4079645ae5dc487ab5ed20bfa0c09cf1b26c42ad4b3f46d074d68ec1940b9d`, classified the
+candidate as Safe 1.3.0 implementation `0x3e5c63644e683549055b9be8653de26e0b4cd36e`, threshold 4
+of 6, nonce 11, after matching the implementation/version against the pinned official Safe v1.3.0
+registry. Evidence `ev_e6d2e09c7071ef941a71ae18` has payload hash
+`86503f972bf8a3e3e5ce9353b1c4a348319aa44a7bb09ba221d66ffe2a2228b2` under model
+`safe-compatible-read-v1.1.0`. This proves owner-threshold movability at that Snapshot and
+contradicts a technical-lock interpretation; it does not identify the owners or establish the
+candidate's official social attribution.
+
+An attempted custody replay at the later transfer Snapshot failed with `missing trie node` on one
+public endpoint and `not supported` on the second. Therefore the two observations are not yet
+composed into a same-Snapshot Claim Audit, public RPC archive capability is unavailable, and all
+allocation/dividend/action conclusions remain pending or Unknown. The supplied community statement
+is claim input, not chain proof; no public official source exposing the pension address was accepted
+in this batch.
 
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                    |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 315 unit, 38 environment-free integration and build; dependency gates and 18 PostgreSQL tests green                                        |
-| local `test:coverage`    | pass: 353 tests, 21 opt-in durable skips; 81.95% statements, 76.19% branches, 89.80% functions, 82.87% lines                                                              |
-| branch `test:coverage`   | pass on `12fc47d`: 365 tests; 83.78% statements, 77.99% branches, 92.13% functions, 84.70% lines                                                                          |
+| local non-browser gates  | pass: format, lint, typecheck, 333 unit, 38 environment-free integration and build; dependency license/audit gates green                                                  |
+| local `test:coverage`    | pass: 371 tests, 21 opt-in durable skips; 82.08% statements, 76.19% branches, 90.01% functions, 83.15% lines                                                              |
+| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                          |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure                            |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                    |
 | `docker compose config`  | pass                                                                                                                                                                      |
 | production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000                       |
-| branch GitHub Actions CI | [pass on `12fc47d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400150): 365 tests, 83.78/77.99/92.13/84.70 coverage, 10 Chromium, six production targets |
-| branch CodeQL            | [pass on `12fc47d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400149): JavaScript and TypeScript analysis                                               |
+| branch GitHub Actions CI | [pass on `23b3306`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232227): 385 tests, 83.74/77.99/92.22/84.78 coverage, 10 Chromium, six production targets |
+| branch CodeQL            | [pass on `23b3306`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232232): JavaScript and TypeScript analysis                                               |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

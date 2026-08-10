@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@zerotrace/chain-adapters": "*",
+    "@zerotrace/claim-audit": "*",
     "@zerotrace/evidence": "*",
     "@zerotrace/schemas": "*",
     "viem": "2.55.11"

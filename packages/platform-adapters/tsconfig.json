@@ -5,6 +5,7 @@
   "references": [
     { "path": "../schemas" },
     { "path": "../evidence" },
-    { "path": "../chain-adapters" }
+    { "path": "../chain-adapters" },
+    { "path": "../claim-audit" }
   ]
 }

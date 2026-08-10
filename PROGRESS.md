@@ -141,6 +141,10 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400149) passed on immutable
   continuous lifetime-head capability commit `12fc47d`: 365 tests, 83.78% statement/77.99% branch/
   92.13% function/84.70% line coverage, 10 browser flows and all six production container targets.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232227) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232232) passed on immutable
+  claim-audit kernel commit `23b3306`: 385 tests, 83.74% statement/77.99% branch/92.22% function/
+  84.78% line coverage, 10 browser flows and all six production container targets.
 
 ### Read-only chain foundation
 
@@ -371,11 +375,26 @@ The only allowed status vocabulary in this ledger is:
   contradict a claimed technical no-exit guarantee;
 - declared share-unit adherence and payout cadence are measured separately; incomplete windows keep
   Actual and cadence Unknown while retaining observed lower bounds;
+- finalized EVM claim observations now decode chunked ERC-20 Transfer logs into per-log Evidence,
+  preserve block time, reject malformed, duplicate, removed, out-of-range and target-lineage
+  records, and expose coverage only after the complete requested range returns;
+- strict Snapshot-pinned custody reads distinguish EOA, unsupported generic contract and
+  Safe-compatible multisig. Safe version, singleton, owner count, threshold and nonce are retained;
+  no Safe or EOA is treated as irreversible custody;
 - eight deterministic engine tests plus two Schema Contract tests cover normal 20/40/40 execution,
   bounded policy validation, shortfall, fake burn custody,
   multi-hop burn, removable LP/controller return, pension Safe/no-exit, incomplete coverage and
-  invalid/unanchored inputs. Live chain extraction, durable reports, API/UI and FFT terminal replay
-  remain pending.
+  invalid/unanchored inputs. Seven focused EVM observation tests cover decoding, exact timestamp
+  fallback, range/lineage/canonicality failures, EOA, Safe and generic-contract Unknown behavior;
+- a named live BSC scan from `2026-08-02T00:00:00Z` through finalized block `115107095` decoded
+  13,591 FFT Transfer logs. The behavioral pension-wallet candidate
+  `0x8d50a68b4f9ada119d198d6472eaf0cB6dB302d9` received 123 transfers from 109 senders,
+  including 71 exact 1,000,000 FFT transfers and 176,000,010 FFT total, then sent 24,507,000 FFT
+  through one dispatcher. This is single-SQD-source chain observation, not official wallet
+  attribution or an independently reconciled conclusion;
+- a separate finalized custody read classified that candidate as a Safe 1.3.0, 4-of-6 multisig
+  with nonce 11 and therefore movable funds. Exact same-Snapshot composition, durable reports,
+  action-path attribution, API/UI and FFT terminal replay remain pending.
 
 ### Runtime and developer experience
 
@@ -421,7 +440,8 @@ The only allowed status vocabulary in this ledger is:
 ### EVM terminal scope
 
 - semantic receipt/event/call/state-change normalization and archive-state reconstruction;
-- ERC-20/721/1155, proxy, multisig, owner/role, general tax-token and DEX decoders;
+- ERC-20 semantics beyond Transfer, ERC-721/1155, proxy/control extraction beyond strict
+  Safe-compatible reads, owner/role, general tax-token and DEX decoders;
 - Ethereum/BSC archive-provider reconciliation and finalized-block policy;
 - Moonshot, Four.meme, Pancake and other versioned platform adapters.
 
@@ -446,25 +466,26 @@ The only allowed status vocabulary in this ledger is:
 - complete control-right extraction and revocation/validity windows;
 - launch lifecycle, reserve state, migration and multi-market reconstruction;
 - multi-route RV with taxes, gas, fees, price impact, execution failures and historical calibration;
-- claim extraction, chain-observation adapters, durable report/API/UI, timeline generation,
-  comparison/export, collaboration and analyst overrides;
+- claim-language extraction, restart-safe wide-range orchestration, action-path derivation,
+  independent-source reconciliation, durable report/API/UI, timeline generation, comparison/export,
+  collaboration and analyst overrides;
 - production authorization, tenancy, audit logs, retention, backup and privacy controls.
 
 ## Pending real-chain validation
 
-| Validation             | Requirement                                                                                                               | Status                                                                                                                                                                                                                 |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                 |
-| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Height/hash/previous-hash public Esplora read passed; Core reconciliation pending                                                                                                                                      |
-| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                         |
-| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Pending                                                                                                                                                                                                                |
-| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction passed; continuous accepted-head and deterministic rollback mechanics work, while forced real reorg, FFT/migration fixtures and other platforms remain pending |
-| Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Exact lifetime-head and discrepancy cores exist; named FFT chain validation, market routes, entity calibration and complete RV still gate any conclusion                                                               |
-| RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels plus Flap fixed-block Portal preview pass tests; independent quotes, DEX routes, fee/impact/gas/capacity and history pending                                                                     |
-| Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic all-source disagreement, suffix rollback and replay tests plus live common-position BSC continuity passed; forced real reorg/outage and independent operators pending                                    |
-| Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                               |
-| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; semantic decoding pending                                                                                                                                               |
-| Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                 |
+| Validation             | Requirement                                                                                                               | Status                                                                                                                                                                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                                                                      |
+| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Height/hash/previous-hash public Esplora read passed; Core reconciliation pending                                                                                                                                                                                                                           |
+| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                                                                                                              |
+| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Pending                                                                                                                                                                                                                                                                                                     |
+| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction passed; continuous accepted-head and deterministic rollback mechanics work, while forced real reorg, FFT/migration fixtures and other platforms remain pending                                                                                      |
+| Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Named finalized FFT Transfer coverage and Safe-custody observations passed against one SQD source and one public RPC; official pension-wallet attribution, same-Snapshot action composition, independent reconciliation, market routes, entity calibration and complete RV still gate a terminal conclusion |
+| RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels plus Flap fixed-block Portal preview pass tests; independent quotes, DEX routes, fee/impact/gas/capacity and history pending                                                                                                                                                          |
+| Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic all-source disagreement, suffix rollback and replay tests plus live common-position BSC continuity passed; forced real reorg/outage and independent operators pending                                                                                                                         |
+| Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                    |
+| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; semantic decoding pending                                                                                                                                                                                                                                    |
+| Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                      |
 
 Public BSC, Bitcoin, and Solana endpoints in `.env.example` are development fallbacks. Rate-limited responses do not count
 as chain-validation failures, and a successful health probe alone does not validate semantic
@@ -473,24 +494,24 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                                                             | Scope                                                                                                                           |
-| ------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Reproducible install/build     | Pass                                                                      | locked npm install in production container; all packages/API/web                                                                |
-| Unit tests                     | 315 pass                                                                  | 41 files across schemas, adapters, data quality, ingestion, storage, workers and API runtime                                    |
-| Integration tests              | 38 environment-free; 18 real PostgreSQL pass; 54 latest completed CI pass | lifetime/head/projection checkpoint guards and corrupt-state rejection are deterministic; prior all-store suite passes          |
-| Restart regression             | Pass                                                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                         |
-| Coverage gate                  | Pass                                                                      | current local: 81.95% statements, 76.19% branches, 89.80% functions, 82.87% lines on 353 tests; 21 opt-in durable tests skipped |
-| Chromium E2E                   | 10 pass                                                                   | desktop and Pixel 7 include projection paging, exact/latest lifetime replay, Unknown and storage-failure rendering              |
-| Formatting / ESLint / types    | Pass                                                                      | full repository                                                                                                                 |
-| Dependency vulnerability audit | Pass                                                                      | 0 vulnerabilities across the complete npm dependency graph                                                                      |
-| Dependency license allowlist   | Pass                                                                      | production dependency graph                                                                                                     |
-| CycloneDX SBOM                 | Pass                                                                      | npm dependency graph                                                                                                            |
-| Compose model                  | Pass                                                                      | rendered default topology                                                                                                       |
-| Docker image build/start       | Pass                                                                      | API, web, ingest worker, semantic worker, PostgreSQL, ClickHouse; service images also validated by Compose                      |
-| Database bootstrap             | Pass                                                                      | PostgreSQL 001–010/triggers and ClickHouse Raw Fact schema/migration                                                            |
-| Runtime/browser smoke          | Pass                                                                      | API/web health, proxy, security headers, desktop/mobile render                                                                  |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope                                 | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending   |
-| Remote CI                      | Pass                                                                      | CI/CodeQL pass on immutable `12fc47d`: 365 tests, 10 Chromium flows and six production container targets                        |
+| Check                          | Latest result                                                   | Scope                                                                                                                              |
+| ------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible install/build     | Pass                                                            | locked npm install in production container; all packages/API/web                                                                   |
+| Unit tests                     | 333 pass                                                        | 43 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                       |
+| Integration tests              | 38 environment-free; durable suites pass in latest completed CI | lifetime/head/projection checkpoint guards and corrupt-state rejection are deterministic; prior all-store suite passes             |
+| Restart regression             | Pass                                                            | same-anchor recapture persists across repository/API restart without Snapshot collision                                            |
+| Coverage gate                  | Pass                                                            | current local: 82.08% statements, 76.19% branches, 90.01% functions, 83.15% lines on 371 tests; 21 opt-in durable tests skipped    |
+| Chromium E2E                   | 10 pass                                                         | desktop and Pixel 7 include projection paging, exact/latest lifetime replay, Unknown and storage-failure rendering                 |
+| Formatting / ESLint / types    | Pass                                                            | full repository                                                                                                                    |
+| Dependency vulnerability audit | Pass                                                            | 0 vulnerabilities across the complete npm dependency graph                                                                         |
+| Dependency license allowlist   | Pass                                                            | production dependency graph                                                                                                        |
+| CycloneDX SBOM                 | Pass                                                            | npm dependency graph                                                                                                               |
+| Compose model                  | Pass                                                            | rendered default topology                                                                                                          |
+| Docker image build/start       | Pass                                                            | API, web, ingest worker, semantic worker, PostgreSQL, ClickHouse; service images also validated by Compose                         |
+| Database bootstrap             | Pass                                                            | PostgreSQL 001–010/triggers and ClickHouse Raw Fact schema/migration                                                               |
+| Runtime/browser smoke          | Pass                                                            | API/web health, proxy, security headers, desktop/mobile render                                                                     |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope                       | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending      |
+| Remote CI                      | Pass                                                            | CI/CodeQL pass on immutable `23b3306`: 385 tests at 83.74/77.99/92.22/84.78 coverage, 10 Chromium flows and six production targets |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

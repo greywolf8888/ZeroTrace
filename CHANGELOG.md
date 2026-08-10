@@ -94,6 +94,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;
+- deterministic claim-allocation and terminal-action audits with versioned error budgets, movable
+  custody, multi-hop action, share-unit, cadence, and incomplete-coverage semantics;
+- finalized, range-bounded EVM ERC-20 Transfer Evidence plus strict Snapshot-pinned
+  EOA/Safe/generic-contract custody observations, with no signing or chain-write path;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,

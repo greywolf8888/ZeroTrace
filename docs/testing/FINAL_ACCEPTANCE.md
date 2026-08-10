@@ -58,6 +58,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400150) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31362400149) pass on immutable
       continuous Flap lifetime-head capability commit `12fc47d`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232227) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232232) pass on immutable
+      claim-audit kernel commit `23b3306`
 
 ## Evidence and data
 
@@ -122,7 +125,10 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       Evidence rejection and Unknown exclusion from numeric denominators
 - [x] Deterministic FFT-style claim-allocation and terminal-action kernel with fake-burn,
       removable-LP, controller-return, multi-hop and incomplete-coverage tests
-- [ ] Live claim extraction, durable report replay, API/UI Claim Audit and named FFT reconciliation
+- [x] Finalized range-bounded EVM ERC-20 Transfer Evidence and EOA/Safe/generic-contract custody
+      observation, including one named FFT single-source window
+- [ ] Same-Snapshot action derivation, independent-source reconciliation, durable report replay,
+      API/UI Claim Audit and terminal named FFT conclusion
 - [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
 

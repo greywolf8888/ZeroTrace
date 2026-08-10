@@ -230,8 +230,16 @@ outflows, controller returns, share-unit adherence and cadence are separate obse
 policy promise such as “no exit” cannot be presented as a technical lock. Incomplete source/history
 coverage keeps Actual, deviation and verification percentage Unknown rather than zero.
 
-The current kernel has adversarial FFT-style tests but is not yet wired to general EVM semantic
-extraction, durable claim storage, API, UI, or the named FFT terminal run.
+A clean EVM observation adapter now supplies finalized, range-bounded ERC-20 Transfer facts with
+per-log Evidence and strict address/topic/range/duplicate/lineage checks. It also inspects EOA,
+generic-contract, and Safe-compatible custody at one numeric Snapshot using bytecode, proxy
+singleton, version, owners, threshold and nonce reads. Unsupported contract authority remains
+Unknown. The adapter does not copy or link Safe's LGPL implementation and performs no signing or
+write call. Durable claim storage, restart-safe wide-range orchestration, action derivation, API/UI,
+independent-source reconciliation, and the terminal FFT report remain pending.
+Endpoint failover and timestamp anchoring may add provenance IDs but do not raise claim-observation
+source coverage; it remains `0.5` until a separate reconciler repeats the complete result against an
+independent source.
 
 ## Read query sequence
 

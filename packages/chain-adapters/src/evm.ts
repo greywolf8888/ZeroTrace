@@ -54,6 +54,7 @@ export interface EvmLogRecord {
   address: string;
   blockHash: string;
   blockNumber: string;
+  blockTimestamp?: string | undefined;
   transactionHash: string;
   transactionIndex: string;
   logIndex: string;

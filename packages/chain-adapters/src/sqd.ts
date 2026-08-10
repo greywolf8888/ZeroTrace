@@ -1634,6 +1634,7 @@ export class SqdEvmLogReader implements EvmLogReader {
         fromBlock,
         toBlock,
         fields: {
+          block: { timestamp: true },
           log: {
             logIndex: true,
             transactionIndex: true,
@@ -1647,6 +1648,13 @@ export class SqdEvmLogReader implements EvmLogReader {
       },
       (block) => {
         const blockHash = sqdLogHash(block.header.hash, 'block hash');
+        if (block.header.timestamp === null) {
+          throw new ProviderError(
+            'INVALID_RESPONSE',
+            'SQD EVM log block timestamp is unavailable.',
+          );
+        }
+        const blockTimestamp = new Date(block.header.timestamp * 1_000).toISOString();
         for (const item of sqdEvmLogsFromBlock(this.#source.dataset, block)) {
           const payload = item.payload;
           if (typeof payload.address !== 'string') {
@@ -1676,6 +1684,7 @@ export class SqdEvmLogReader implements EvmLogReader {
             address: logAddress,
             blockHash,
             blockNumber: `0x${block.header.number.toString(16)}`,
+            blockTimestamp,
             transactionHash,
             transactionIndex,
             logIndex,

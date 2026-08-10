@@ -1321,6 +1321,8 @@ export const ClaimCustodyObservationSchema = z.object({
   threshold: z.number().int().positive().optional(),
   ownerCount: z.number().int().positive().optional(),
   executedTransactions: z.number().int().nonnegative().optional(),
+  implementationAddress: z.string().min(1).optional(),
+  implementationVersion: z.string().min(1).optional(),
   evidenceIds: z.array(z.string().min(1)).min(1),
 });
 export type ClaimCustodyObservation = z.infer<typeof ClaimCustodyObservationSchema>;
