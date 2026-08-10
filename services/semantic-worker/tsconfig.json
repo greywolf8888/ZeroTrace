@@ -9,6 +9,7 @@
   "references": [
     { "path": "../../packages/schemas" },
     { "path": "../../packages/evidence" },
+    { "path": "../../packages/data-quality" },
     { "path": "../../packages/storage" },
     { "path": "../../packages/chain-adapters" },
     { "path": "../../packages/platform-adapters" }
