@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   EvmLedgerAdapter,
+  ProviderError,
   type EvmContractCreationReader,
   type EvmLogReader,
   type JsonRpcTransport,
@@ -9,13 +10,17 @@ import {
   type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
 import { EvidenceLedger } from '@zerotrace/evidence';
+import type { JsonValue } from '@zerotrace/schemas';
 import { encodeAbiParameters, toEventSelector, type AbiParameter } from 'viem';
 
 import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   discoverFlapEventHistory,
+  type FlapOriginCheckpointRun,
+  type FlapOriginCheckpointStore,
   inspectFlapEventTransaction,
   inspectFlapTokenOrigin,
+  inspectFlapTokenOriginRestartSafe,
 } from './index.js';
 
 const token = `0x${'a'.repeat(40)}`;
@@ -214,6 +219,68 @@ function fixture(logs: readonly unknown[], returnedBlockHash = blockHash) {
         writeEvidence,
       }),
   };
+}
+
+class MemoryFlapOriginCheckpointStore implements FlapOriginCheckpointStore {
+  run: FlapOriginCheckpointRun | undefined;
+  readonly failures: string[] = [];
+  readonly advances: number[] = [];
+
+  async begin(input: {
+    fromBlock: number;
+    initialState: JsonValue;
+  }): Promise<FlapOriginCheckpointRun> {
+    this.run ??= {
+      id: '11111111-1111-4111-8111-111111111111',
+      status: 'RUNNING',
+      nextBlock: input.fromBlock,
+      state: input.initialState,
+      evidenceIds: [],
+    };
+    return this.run;
+  }
+
+  async advance(
+    id: string,
+    input: {
+      expectedNextBlock: number;
+      completedToBlock: number;
+      state: JsonValue;
+      evidenceIds: readonly string[];
+    },
+  ): Promise<FlapOriginCheckpointRun> {
+    if (this.run?.id !== id || this.run.status !== 'RUNNING') throw new Error('missing run');
+    if (this.run.nextBlock !== input.expectedNextBlock) throw new Error('stale cursor');
+    this.run = {
+      ...this.run,
+      nextBlock: input.completedToBlock + 1,
+      state: input.state,
+      evidenceIds: [...input.evidenceIds],
+    };
+    this.advances.push(this.run.nextBlock);
+    return this.run;
+  }
+
+  async finish(
+    id: string,
+    input: { state: JsonValue; evidenceIds: readonly string[] },
+  ): Promise<FlapOriginCheckpointRun> {
+    if (this.run?.id !== id) throw new Error('missing run');
+    if (this.run.status === 'REQUESTED_RANGE_COMPLETE') return this.run;
+    this.run = {
+      ...this.run,
+      status: 'REQUESTED_RANGE_COMPLETE',
+      state: input.state,
+      evidenceIds: [...input.evidenceIds],
+    };
+    return this.run;
+  }
+
+  async recordFailure(id: string, errorCode: string): Promise<FlapOriginCheckpointRun> {
+    if (this.run?.id !== id) throw new Error('missing run');
+    this.failures.push(errorCode);
+    return this.run;
+  }
 }
 
 describe('Flap transaction-local event inspection', () => {
@@ -553,6 +620,85 @@ describe('Flap token contract origin', () => {
     ]);
     expect(result.evidence.at(-1)?.kind).toBe('DERIVED_FEATURE');
     expect(context.ledger.drilldown(result.evidence.at(-1)?.id ?? '')).toHaveLength(8);
+  });
+
+  it('resumes a failed multi-chunk origin scan and replays a terminal checkpoint without providers', async () => {
+    const context = fixture([eventLog(tokenCreated(), 0)]);
+    const checkpoints = new MemoryFlapOriginCheckpointStore();
+    const queries: Array<{ fromBlock: string; toBlock: string }> = [];
+    let secondChunkAttempts = 0;
+    const reader: EvmContractCreationReader = {
+      getContractCreationsObservation: async (query) => {
+        queries.push({ fromBlock: query.fromBlock, toBlock: query.toBlock });
+        if (query.fromBlock === '17' && secondChunkAttempts++ === 0) {
+          throw new ProviderError('HTTP_ERROR', 'Transient SQD fixture outage.');
+        }
+        const value = query.fromBlock === '16' ? [creation()] : [];
+        return {
+          endpointId: 'sqd:binance-mainnet',
+          value,
+          coverage: {
+            fromBlock: query.fromBlock,
+            toBlock: query.toBlock,
+            nextBlock: (BigInt(query.toBlock) + 1n).toString(),
+            finalizedHead: '17',
+            responseBlockCount: value.length,
+            requestCount: 1,
+            completion: 'REQUESTED_RANGE_COMPLETE',
+          },
+        };
+      },
+    };
+    const options = {
+      adapter: context.adapter,
+      creationReader: reader,
+      token,
+      fromBlock: '16',
+      toBlock: '17',
+      chunkSize: 1,
+      deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+      writeEvidence: context.writeEvidence,
+      checkpoints,
+    };
+
+    await expect(inspectFlapTokenOriginRestartSafe(options)).rejects.toMatchObject({
+      code: 'HTTP_ERROR',
+    });
+    expect(checkpoints.run).toMatchObject({ status: 'RUNNING', nextBlock: 17 });
+    expect(checkpoints.failures).toEqual(['HTTP_ERROR']);
+    expect(checkpoints.advances).toEqual([17]);
+
+    const resumed = await inspectFlapTokenOriginRestartSafe(options);
+    expect(resumed.origin).toMatchObject({
+      state: 'known',
+      value: { creationTrace: { blockNumber: '16', traceAddress: [0, 1] } },
+    });
+    expect(checkpoints.run).toMatchObject({
+      status: 'REQUESTED_RANGE_COMPLETE',
+      nextBlock: 18,
+    });
+    expect(checkpoints.advances).toEqual([17, 18]);
+    expect(queries).toEqual([
+      { fromBlock: '16', toBlock: '16' },
+      { fromBlock: '17', toBlock: '17' },
+      { fromBlock: '17', toBlock: '17' },
+    ]);
+
+    const providerCallCount = context.transport.calls.length;
+    const terminalReplay = await inspectFlapTokenOriginRestartSafe({
+      ...options,
+      creationReader: {
+        getContractCreationsObservation: () => {
+          throw new Error('terminal replay reached provider');
+        },
+      },
+      writeEvidence: async () => {
+        throw new Error('terminal replay attempted Evidence write');
+      },
+    });
+    expect(terminalReplay).toEqual(resumed);
+    expect(context.transport.calls).toHaveLength(providerCallCount);
+    expect(queries).toHaveLength(3);
   });
 
   it('returns bounded negative Evidence without claiming the token has no origin', async () => {

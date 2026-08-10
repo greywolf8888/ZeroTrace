@@ -380,9 +380,12 @@ topic filter. Both paths exact-receipt replay each candidate through BSC RPC bef
 chronology; every discovery log must reproduce field-for-field from that receipt. Range completeness
 and token-lifetime completeness are separate fields: even a 100%
 requested-range scan retains Unknown lifetime coverage and zero terminal history coverage.
-A generic restart-safe semantic checkpoint repository is now available, but the Flap discovery
-runner has not yet been wired to it. Deployment-origin continuous execution and cross-range
-lifecycle projection therefore remain later stages.
+When PostgreSQL is configured, the Flap origin API binds this repository to execution. It persists
+each exact completed chunk only after its range Evidence exists, resumes from the stored next-block
+cursor and original upper Snapshot, records a safe failure category, and atomically stores the final
+Evidence-bearing origin result after complete coverage. A terminal replay reads that result without
+calling SQD/BSC RPC or writing Evidence again. The synchronous API remains deliberately range-capped;
+a dedicated deployment-origin scheduler and cross-range event-history projection remain later stages.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.

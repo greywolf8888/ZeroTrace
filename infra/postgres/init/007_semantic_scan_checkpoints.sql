@@ -86,6 +86,7 @@ BEGIN
       OR NEW.state <> OLD.state
       OR NEW.evidence_ids <> OLD.evidence_ids
     )
+    AND NEW.status <> 'REQUESTED_RANGE_COMPLETE'
   THEN
     RAISE EXCEPTION 'Semantic scan state may change only with a forward cursor';
   END IF;

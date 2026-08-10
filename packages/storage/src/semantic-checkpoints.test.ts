@@ -140,7 +140,10 @@ describe('PostgreSQL semantic scan checkpoints', () => {
       state: { creations: [{ block: 4 }] },
       evidenceIds: [evidenceB, evidenceA, evidenceB],
     });
-    const finished = await repository.finish(scanId);
+    const finished = await repository.finish(scanId, {
+      state: { creations: [{ block: 4 }] },
+      evidenceIds: [evidenceA, evidenceB],
+    });
     expect(finished).toMatchObject({
       status: 'REQUESTED_RANGE_COMPLETE',
       nextBlock: 20,

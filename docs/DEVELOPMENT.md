@@ -67,7 +67,9 @@ Database initialization is automatic on a new Compose volume:
 The SQL is copied into small project image stages instead of bind-mounted. This keeps initialization
 reliable from Windows workspaces whose paths contain Unicode characters.
 
-The default full Compose path configures durable PostgreSQL Evidence/Snapshot persistence. For
+The default full Compose path configures durable PostgreSQL Evidence/Snapshot persistence and
+semantic checkpoints. The Flap origin API uses those checkpoints for chunk resume and terminal
+result replay; without PostgreSQL it remains a bounded, process-local request. For
 host-side watch mode, either leave `POSTGRES_URL` blank for an explicitly ephemeral development
 ledger, or start PostgreSQL and set:
 
@@ -114,7 +116,8 @@ or broadcast interface.
 
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
-migrations; do not delete a developer's volumes to simulate migration.
+migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
+local upgrade commands, including migration `007`, are in [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration
 

@@ -337,9 +337,10 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add bounded Flap Portal discovery through finalized SQD/RPC log sources with exact log/receipt replay
 - [x] Add bounded finalized SQD contract-origin proof with exact Flap receipt/Snapshot replay
 - [x] Add durable generic semantic-scan state and contiguous coverage checkpoints
+- [x] Bind the Flap origin API to restart-safe chunk progress and terminal-result replay
 - [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets
 - [ ] Add continuous scheduling, live/unfinalized handling, rollback/replay and independent-provider validation
-- [ ] Wire the Flap origin/history runner to durable checkpoints, then add deployment-origin continuous indexing and complete lifecycle reconstruction
+- [ ] Add a dedicated deployment-origin scheduler and bind Flap event-history projection to durable checkpoints
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs

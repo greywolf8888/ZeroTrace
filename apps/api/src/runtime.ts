@@ -29,6 +29,7 @@ import {
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
   PostgresIngestionCheckpointRepository,
+  PostgresSemanticScanCheckpointRepository,
   RawArtifactStore,
   type EvidenceRepository,
   type DataQualityStorageHealth,
@@ -47,6 +48,7 @@ export interface AppRuntime {
   solanaAdapter?: SolanaLedgerAdapter;
   evidenceLedger: EvidenceLedger;
   evidenceRepository?: EvidenceRepository;
+  semanticCheckpoints?: PostgresSemanticScanCheckpointRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -408,6 +410,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const semanticCheckpoints =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresSemanticScanCheckpointRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -427,6 +438,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
         ? dataQualityRepository.close()
         : undefined,
       checkpoints?.close(),
+      semanticCheckpoints?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -448,6 +460,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     },
     close,
     ...(evidenceRepository === undefined ? {} : { evidenceRepository }),
+    ...(semanticCheckpoints === undefined ? {} : { semanticCheckpoints }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

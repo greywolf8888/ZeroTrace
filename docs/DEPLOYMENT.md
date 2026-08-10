@@ -149,6 +149,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/005_data_quality.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/006_snapshot_observation_identity.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/007_semantic_scan_checkpoints.sql
 ```
 
 PowerShell equivalent:
@@ -158,10 +160,12 @@ Get-Content -Raw infra/postgres/init/005_data_quality.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/006_snapshot_observation_identity.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/007_semantic_scan_checkpoints.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 
-Then confirm `dataQuality.storage.status` is `UP`. Never delete a persistent volume as a migration
-strategy.
+Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`. Never delete a
+persistent volume as a migration strategy.
 
 ## Shutdown
 

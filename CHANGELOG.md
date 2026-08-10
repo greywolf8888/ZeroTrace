@@ -57,6 +57,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - durable generic PostgreSQL semantic-scan checkpoints with immutable identity, canonical state
   hashes, cumulative Evidence IDs, bounded contiguous cursor advancement, idempotent restart, and
   append-preserving terminal history;
+- restart-safe Flap origin execution that persists each exact completed chunk, resumes after a safe
+  provider/storage failure, atomically stores the terminal Evidence result, fails readiness when the
+  checkpoint schema is unavailable, and performs no provider call or Evidence write on terminal replay;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;

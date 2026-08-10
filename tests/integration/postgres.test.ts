@@ -414,18 +414,24 @@ postgresDescribe('PostgreSQL semantic scan checkpoint integration', () => {
       state: secondState,
       evidenceIds: [evidenceA, evidenceB],
     });
-    const completed = await checkpoints.finish(started.id);
+    const terminalState = {
+      ...secondState,
+      result: { origin: 'UNKNOWN', reason: 'INSUFFICIENT_DATA' },
+    };
+    const completed = await checkpoints.finish(started.id, {
+      state: terminalState,
+      evidenceIds: [evidenceA, evidenceB],
+    });
     expect(completed).toMatchObject({
       status: 'REQUESTED_RANGE_COMPLETE',
       nextBlock: 20,
       lastErrorCode: null,
+      state: terminalState,
       completedAt: expect.any(String),
     });
     await expect(
-      checkpoints.advance(started.id, {
-        expectedNextBlock: 10,
-        completedToBlock: 19,
-        state: secondState,
+      checkpoints.finish(started.id, {
+        state: terminalState,
         evidenceIds: [evidenceA, evidenceB],
       }),
     ).resolves.toEqual(completed);

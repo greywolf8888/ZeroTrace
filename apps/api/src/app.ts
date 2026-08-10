@@ -25,8 +25,10 @@ import {
   discoverFlapEventHistory,
   inspectFlapEventTransaction,
   inspectFlapTokenOrigin,
+  inspectFlapTokenOriginRestartSafe,
   inspectFlapToken,
   quoteFlapSell,
+  type InspectFlapTokenOriginOptions,
 } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
@@ -543,6 +545,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   };
   type RuntimeStorageHealth =
     | StorageHealth
+    | Awaited<ReturnType<NonNullable<AppRuntime['semanticCheckpoints']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -554,15 +557,26 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     if (storageCache !== undefined && storageCache.expiresAt > Date.now()) {
       return storageCache.value;
     }
-    const value: RuntimeStorageHealth =
-      runtime.evidenceRepository === undefined
-        ? {
-            status: 'EPHEMERAL',
-            backend: 'MEMORY',
-            durable: false,
-            checkedAt: new Date().toISOString(),
-          }
-        : await runtime.evidenceRepository.health();
+    let value: RuntimeStorageHealth;
+    if (runtime.evidenceRepository === undefined) {
+      value = {
+        status: 'EPHEMERAL',
+        backend: 'MEMORY',
+        durable: false,
+        checkedAt: new Date().toISOString(),
+      };
+    } else {
+      const [evidence, semanticCheckpoints] = await Promise.all([
+        runtime.evidenceRepository.health(),
+        runtime.semanticCheckpoints?.health(),
+      ]);
+      value =
+        evidence.status === 'DOWN'
+          ? evidence
+          : semanticCheckpoints?.status === 'DOWN'
+            ? semanticCheckpoints
+            : evidence;
+    }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
   };
@@ -888,9 +902,11 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           ? 'BSC_PROVIDER_REQUIRED'
           : runtime.sqdBscCreationReader === undefined
             ? 'SQD_PROVIDER_REQUIRED'
-            : 'IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION',
+            : runtime.semanticCheckpoints === undefined
+              ? 'IMPLEMENTED_EPHEMERAL_PENDING_REAL_CHAIN_VALIDATION'
+              : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
         detail:
-          'A synchronous, range-limited finalized SQD create-trace search validates multi-response continuation metadata and rebinds a unique result to the exact BSC receipt, TokenCreated event, and Snapshot. Empty bounded ranges produce negative Evidence but never imply lifetime absence; durable wide-range checkpoints remain pending.',
+          'A synchronous, range-limited finalized SQD create-trace search validates multi-response continuation metadata and rebinds a unique result to the exact BSC receipt, TokenCreated event, and Snapshot. When PostgreSQL is configured, every bounded chunk and terminal result resumes through immutable semantic checkpoints. Empty bounded ranges produce negative Evidence but never imply lifetime absence; the dedicated deployment-origin scheduler remains pending.',
       },
       {
         id: 'flap-bsc-sell-preview',
@@ -1536,7 +1552,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           evidence: [],
         });
       }
-      return inspectFlapTokenOrigin({
+      const originOptions: InspectFlapTokenOriginOptions = {
         adapter,
         creationReader,
         token: params.token,
@@ -1546,7 +1562,13 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
         ...(query.chunkSize === undefined ? {} : { chunkSize: query.chunkSize }),
-      });
+      };
+      return runtime.semanticCheckpoints === undefined
+        ? inspectFlapTokenOrigin(originOptions)
+        : inspectFlapTokenOriginRestartSafe({
+            ...originOptions,
+            checkpoints: runtime.semanticCheckpoints,
+          });
     },
   );
 

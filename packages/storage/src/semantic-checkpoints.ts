@@ -49,6 +49,11 @@ export interface AdvanceSemanticScanInput {
   evidenceIds: readonly string[];
 }
 
+export interface FinishSemanticScanInput {
+  state: JsonValue;
+  evidenceIds: readonly string[];
+}
+
 export interface SemanticCheckpointOptions {
   connectionString: string;
   maxConnections?: number;
@@ -507,22 +512,46 @@ export class PostgresSemanticScanCheckpointRepository {
     }
   }
 
-  async finish(id: string): Promise<SemanticScanRun> {
+  async finish(id: string, input?: FinishSemanticScanInput): Promise<SemanticScanRun> {
     scanId(id);
+    const finalState = input === undefined ? undefined : inputJson(input.state, 'state');
+    const finalStateHash = finalState === undefined ? undefined : hashPayload(finalState);
+    const finalEvidenceIds =
+      input === undefined ? undefined : canonicalEvidenceIds(input.evidenceIds);
     try {
       const result = await this.#pool.query(
         `UPDATE semantic_scan_runs
          SET status = 'REQUESTED_RANGE_COMPLETE',
              completed_at = now(),
-             last_error_code = NULL
+             last_error_code = NULL,
+             state_hash = COALESCE($2, state_hash),
+             state = COALESCE($3::jsonb, state),
+             evidence_ids = COALESCE($4::text[], evidence_ids)
          WHERE id = $1::uuid AND status = 'RUNNING' AND next_block = to_block + 1
          RETURNING id::text`,
-        [id],
+        [
+          id,
+          finalStateHash ?? null,
+          finalState === undefined ? null : canonicalJson(finalState),
+          finalEvidenceIds ?? null,
+        ],
       );
       const updatedId = result.rows[0]?.id;
       if (typeof updatedId === 'string') return await this.#required(updatedId);
       const existing = await this.get(id);
-      if (existing?.status === 'REQUESTED_RANGE_COMPLETE') return existing;
+      if (existing?.status === 'REQUESTED_RANGE_COMPLETE') {
+        if (
+          finalStateHash !== undefined &&
+          (existing.stateHash !== finalStateHash ||
+            canonicalJson(existing.evidenceIds) !== canonicalJson(finalEvidenceIds))
+        ) {
+          throw new SemanticCheckpointError(
+            'SEMANTIC_CHECKPOINT_CONFLICT',
+            'Completed semantic scan conflicts with the requested terminal state.',
+          );
+        }
+        return existing;
+      }
       throw new SemanticCheckpointError(
         existing === undefined ? 'SEMANTIC_CHECKPOINT_NOT_FOUND' : 'SEMANTIC_CHECKPOINT_CONFLICT',
         'Semantic scan cannot complete before its requested range is contiguous.',

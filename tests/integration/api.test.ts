@@ -17,6 +17,10 @@ import {
   type ChainAnchorReader,
 } from '@zerotrace/data-quality';
 import { createEvidence, EvidenceLedger, hashPayload } from '@zerotrace/evidence';
+import type {
+  FlapOriginCheckpointRun,
+  FlapOriginCheckpointStore,
+} from '@zerotrace/platform-adapters';
 import {
   knownValue,
   unknownValue,
@@ -1047,6 +1051,40 @@ describe('ZeroTrace API contract', () => {
     });
   });
 
+  it('fails readiness when durable semantic checkpoints are not initialized', async () => {
+    const runtime = runtimeWithEvm();
+    runtime.evidenceRepository = repository({
+      health: vi.fn(async () => ({
+        status: 'UP',
+        backend: 'POSTGRES',
+        durable: true,
+        checkedAt: new Date().toISOString(),
+      })),
+    });
+    runtime.semanticCheckpoints = {
+      health: vi.fn(async () => ({
+        status: 'DOWN',
+        backend: 'POSTGRES',
+        durable: true,
+        checkedAt: new Date().toISOString(),
+        errorCode: 'SEMANTIC_CHECKPOINT_NOT_INITIALIZED',
+      })),
+    } as unknown as NonNullable<AppRuntime['semanticCheckpoints']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const ready = await app.inject({ method: 'GET', url: '/health/ready' });
+    expect(ready.statusCode).toBe(503);
+    expect(ready.json()).toMatchObject({
+      status: 'DEGRADED',
+      storage: {
+        status: 'DOWN',
+        durable: true,
+        errorCode: 'SEMANTIC_CHECKPOINT_NOT_INITIALIZED',
+      },
+    });
+  });
+
   it('normalizes Bitcoin and Solana subject state with evidence', async () => {
     const runtime = runtimeWithAllLedgers();
     const app = await createApp({ config, runtime, logger: false });
@@ -1632,6 +1670,48 @@ describe('ZeroTrace API contract', () => {
 
   it('resolves a bounded Flap contract origin from SQD and exact BSC receipt Evidence', async () => {
     const runtime = runtimeWithAllLedgers();
+    let checkpointRun: FlapOriginCheckpointRun | undefined;
+    const semanticCheckpoints: FlapOriginCheckpointStore = {
+      begin: async (input) => {
+        checkpointRun ??= {
+          id: '11111111-1111-4111-8111-111111111111',
+          status: 'RUNNING',
+          nextBlock: input.fromBlock,
+          state: input.initialState,
+          evidenceIds: [],
+        };
+        return checkpointRun;
+      },
+      advance: async (id, input) => {
+        if (checkpointRun?.id !== id || checkpointRun.nextBlock !== input.expectedNextBlock) {
+          throw new Error('stale test checkpoint');
+        }
+        checkpointRun = {
+          ...checkpointRun,
+          nextBlock: input.completedToBlock + 1,
+          state: input.state,
+          evidenceIds: [...input.evidenceIds],
+        };
+        return checkpointRun;
+      },
+      finish: async (id, input) => {
+        if (checkpointRun?.id !== id) throw new Error('missing test checkpoint');
+        checkpointRun = {
+          ...checkpointRun,
+          status: 'REQUESTED_RANGE_COMPLETE',
+          state: input.state,
+          evidenceIds: [...input.evidenceIds],
+        };
+        return checkpointRun;
+      },
+      recordFailure: async () => {
+        if (checkpointRun === undefined) throw new Error('missing test checkpoint');
+        return checkpointRun;
+      },
+    };
+    runtime.semanticCheckpoints = semanticCheckpoints as unknown as NonNullable<
+      AppRuntime['semanticCheckpoints']
+    >;
     runtime.evmAdapters.set(
       56,
       new EvmLedgerAdapter(
@@ -1717,6 +1797,14 @@ describe('ZeroTrace API contract', () => {
     });
     expect(drilldown.statusCode, drilldown.body).toBe(200);
     expect(drilldown.json().nodes).toHaveLength(7);
+
+    const terminalReplay = await app.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/origin?chainId=eip155:56&platform=flap&fromBlock=16&toBlock=16`,
+    });
+    expect(terminalReplay.statusCode, terminalReplay.body).toBe(200);
+    expect(terminalReplay.json()).toEqual(response.json());
+    expect(sqdCreations).toHaveBeenCalledOnce();
   });
 
   it('returns a fixed-block Flap previewSell quote without inventing fee or impact fields', async () => {

@@ -638,26 +638,33 @@ identity changes, Evidence removal, same-cursor state replacement, oversized chu
 completion, terminal mutation and deletion. The named Docker project and volume were removed after
 the run.
 
-This is storage acceptance, not continuous Flap acceptance. The Flap origin/history runner is not
-yet bound to this repository, no deployment-origin lifetime scan was executed, and no FFT request or
-conclusion was made.
+The Flap origin API is now bound to the repository whenever PostgreSQL is configured. A deterministic
+two-chunk scan persisted the first chunk, recorded a safe `HTTP_ERROR`, resumed at the second chunk
+without re-reading the upper anchor or first range, then atomically stored the exact terminal result.
+A third identical request returned the stored result without any SQD/BSC RPC call or Evidence write.
+API integration also proves the durable path is selected and `/health/ready` fails when migration
+`007` is unavailable.
+
+This is restart and replay acceptance, not continuous Flap lifetime acceptance. The synchronous API
+remains range-capped, no deployment-origin scheduler or durable event-history projection exists, no
+FFT request was made, and no FFT conclusion is claimed.
 
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 256 unit, 29 environment-free integration, build, license and zero-vulnerability audit; 14 PostgreSQL tests also passed separately           |
-| local `test:coverage`    | pass: 285 tests, 17 opt-in durable skips; 83.94% statements, 75.74% branches, 92.07% functions, 84.97% lines                                                                |
-| branch `test:coverage`   | latest completed pass: 294 tests; 86.47% statements, 78.31% branches, 95.53% functions, 87.54% lines                                                                        |
+| local non-browser gates  | pass: format, lint, typecheck, 257 unit, 30 environment-free integration, build, license and zero-vulnerability audit; 14 PostgreSQL tests also passed separately           |
+| local `test:coverage`    | pass: 287 tests, 17 opt-in durable skips; 83.83% statements, 75.80% branches, 92.37% functions, 84.80% lines                                                                |
+| branch `test:coverage`   | latest completed pass: 302 tests; 86.49% statements, 78.28% branches, 95.60% functions, 87.54% lines                                                                        |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                         |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |
 | `docker compose config`  | pass                                                                                                                                                                        |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                          |
-| branch GitHub Actions CI | [latest completed pass on `911691c`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31346637708): 294 tests, 10 Chromium E2E, and five production container targets |
-| branch CodeQL            | [latest completed pass on `911691c`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31346637703): JavaScript and TypeScript analysis                                |
+| branch GitHub Actions CI | [latest completed pass on `40d33e8`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31348886022): 302 tests, 10 Chromium E2E, and five production container targets |
+| branch CodeQL            | [latest completed pass on `40d33e8`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31348886023): JavaScript and TypeScript analysis                                |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
-and MinIO services. All 43 integration tests passed and the workflow removed its named volumes. The
+and MinIO services. All 46 integration tests passed and the workflow removed its named volumes. The
 current local semantic-checkpoint batch additionally passed all 14 PostgreSQL tests on a fresh
 disposable image; ClickHouse and MinIO were not rerun locally for this storage-only batch.
 

@@ -132,6 +132,7 @@ describe('application runtime wiring', () => {
       baseConfig({ postgresUrl: 'postgresql://zerotrace:secret@postgres.example/zerotrace' }),
     );
     expect(runtime.evidenceRepository).toBeDefined();
+    expect(runtime.semanticCheckpoints).toBeDefined();
     expect(runtime.dataQualityStorage).toBeDefined();
     expect(runtime.dataQuality.durable).toBe(true);
     await runtime.close?.();
