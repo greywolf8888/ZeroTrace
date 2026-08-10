@@ -113,7 +113,6 @@ describe('EVM claim observations', () => {
         sourceSet: ['sqd:bsc'],
         modelVersion: 'erc20-claim-transfer-v1.0.0',
         confidence: 0.95,
-        evidenceIds: [expect.stringMatching(/^ev_[0-9a-f]{24}$/)],
       },
       transfers: [
         {
@@ -125,7 +124,13 @@ describe('EVM claim observations', () => {
         },
       ],
     });
+    expect(result.metadata.evidenceIds).toHaveLength(2);
+    expect(result.metadata.evidenceIds).toEqual(result.evidence.map((item) => item.id).sort());
     expect(result.evidence[0]).toMatchObject({
+      kind: 'PROVIDER_OBSERVATION',
+      finality: 'finalized',
+    });
+    expect(result.evidence[1]).toMatchObject({
       kind: 'LOG',
       blockOrSlot: '90',
       finality: 'finalized',
@@ -135,6 +140,34 @@ describe('EVM claim observations', () => {
       fromBlock: '90',
       toBlock: '100',
       topics: [ERC20_TRANSFER_TOPIC],
+    });
+  });
+
+  it('retains source Evidence for a complete range with no observed transfers', async () => {
+    const result = await collectErc20ClaimTransfers({
+      tokenAddress: transferLog().address,
+      fromBlock: '90',
+      toBlock: '100',
+      snapshot,
+      logReader: {
+        getLogsObservation: vi.fn().mockResolvedValue({ value: [], endpointId: 'sqd:bsc' }),
+      },
+      now: () => '2026-08-10T00:00:02.000Z',
+    });
+
+    expect(result.transfers).toEqual([]);
+    expect(result.evidence).toHaveLength(1);
+    expect(result.evidence[0]).toMatchObject({
+      kind: 'PROVIDER_OBSERVATION',
+      source: 'sqd:bsc',
+      finality: 'finalized',
+      summary: 'Finalized ERC-20 Transfer range query returned no observations.',
+    });
+    expect(result.metadata).toMatchObject({
+      dataCoverage: 1,
+      historyCoverage: 1,
+      sourceCoverage: 0.5,
+      evidenceIds: [result.evidence[0]?.id],
     });
   });
 

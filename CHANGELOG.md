@@ -101,6 +101,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - deterministic Snapshot-bounded claim-address flow summaries with observed-versus-actual totals,
   counterparty ranking, self-transfer isolation, share-unit checks, and Unknown instead of a fake
   zero ratio when no deposits are observed;
+- custody-first same-Snapshot EVM claim-address orchestration with canonical source/derived Evidence,
+  plus explicit provider-observation Evidence for every scanned Transfer range including empty results;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,

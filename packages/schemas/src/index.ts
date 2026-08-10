@@ -1405,6 +1405,24 @@ export const ClaimAddressFlowSummarySchema = z.object({
 });
 export type ClaimAddressFlowSummary = z.infer<typeof ClaimAddressFlowSummarySchema>;
 
+export const EvmClaimAddressObservationSchema = z.object({
+  tokenAddress: z.string().min(1),
+  address: z.string().min(1),
+  fromBlock: UnsignedQuantityStringSchema,
+  toBlock: UnsignedQuantityStringSchema,
+  window: ClaimWindowSchema,
+  custody: ClaimCustodyObservationSchema,
+  custodyMetadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+    message: 'Claim custody observation requires a replayable chain Snapshot.',
+  }),
+  flow: ClaimAddressFlowSummarySchema,
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+    message: 'EVM claim address observation requires a replayable chain Snapshot.',
+  }),
+});
+export type EvmClaimAddressObservation = z.infer<typeof EvmClaimAddressObservationSchema>;
+
 export const ClaimCadenceAssessmentSchema = z.object({
   expectedSeconds: UnsignedQuantityStringSchema,
   observedActions: z.number().int().nonnegative(),

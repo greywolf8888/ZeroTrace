@@ -129,6 +129,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       observation, including one named FFT single-source window
 - [x] Deterministic Snapshot-time-bounded address-flow aggregation with observed lower bounds,
       coverage-gated Actual values and no-flow `Unknown(NOT_APPLICABLE)` share adherence
+- [x] Custody-first same-Snapshot EVM composition with persisted source/terminal Evidence and
+      provider-observation Evidence for empty or non-empty Transfer query chunks
 - [ ] Same-Snapshot action derivation, independent-source reconciliation, durable report replay,
       API/UI Claim Audit and terminal named FFT conclusion
 - [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`

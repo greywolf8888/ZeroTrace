@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                      |
 | Production acceptance            | **No**                                                                                                          |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                  |
-| Unit tests                       | **338 passing across 44 files**                                                                                 |
+| Unit tests                       | **343 passing across 45 files**                                                                                 |
 | Integration tests                | **38 environment-free plus 18 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                                                    |
-| Remote CI                        | **Pass on immutable development commit `47b62e1`; protected main `3372a5a`**                                    |
-| Coverage                         | **Current local: 82.14% statements / 76.21% branches / 90.19% functions / 83.23% lines**                        |
+| Remote CI                        | **Pass on immutable development commit `578c71d`; protected main `3372a5a`**                                    |
+| Coverage                         | **Current local: 82.18% statements / 76.27% branches / 90.27% functions / 83.27% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed                              |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap segments, exact lifetime and append-only finalized heads wired  |
 
@@ -149,6 +149,9 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31382413410) passed on immutable
   EVM claim-observation commit `47b62e1`, including the finalized Transfer collector, strict
   official-registry Safe classification, browser flows, dependency gates and all production targets.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31383622159) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31383621973) passed on immutable
+  claim-flow-summary commit `578c71d`, including all production targets and security analysis.
 
 ### Read-only chain foundation
 
@@ -382,7 +385,9 @@ The only allowed status vocabulary in this ledger is:
   now produces `Unknown(NOT_APPLICABLE)` instead of a fabricated zero adherence ratio;
 - finalized EVM claim observations now decode chunked ERC-20 Transfer logs into per-log Evidence,
   preserve block time, reject malformed, duplicate, removed, out-of-range and target-lineage
-  records, and expose coverage only after the complete requested range returns;
+  records, and expose coverage only after the complete requested range returns. Every chunk now
+  retains a source query observation, including an empty result, so zero observed transfers never
+  stand without Evidence;
 - strict Snapshot-pinned custody reads distinguish EOA, unsupported generic contract and
   Safe-compatible multisig. Safe version, singleton, owner count, threshold and nonce are retained;
   no Safe or EOA is treated as irreversible custody;
@@ -390,12 +395,18 @@ The only allowed status vocabulary in this ledger is:
   counterparties, first/last observations, self-transfers and share-unit adherence. Actual totals
   remain Unknown until data, history and source coverage are all complete; the summary never labels
   a counterparty as a dividend, burn, controller or entity;
+- a composed EVM observer captures finalized custody first, persists it, then performs the potentially
+  long Transfer scan against the identical timestamped Snapshot. It writes raw source Evidence before
+  one derived terminal root, fails before scanning when custody is unavailable, and keeps composite
+  historical custody coverage at zero because one point-in-time authority read is not a historical
+  control proof;
 - thirteen deterministic engine/summary tests plus two Schema Contract tests cover normal 20/40/40 execution,
   bounded policy validation, shortfall, fake burn custody,
   multi-hop burn, removable LP/controller return, pension Safe/no-exit, incomplete coverage and
   invalid/unanchored inputs, Snapshot time bounds, case identity and no-flow Unknown behavior. Seven
-  focused EVM observation tests cover decoding, exact timestamp fallback, range/lineage/canonicality
-  failures, EOA, Safe and generic-contract Unknown behavior;
+  focused tests cover decoding, exact timestamp fallback, range/lineage/canonicality failures, EOA,
+  Safe, generic-contract Unknown behavior, empty-range Evidence, custody-first ordering and
+  fail-closed Snapshot requirements;
 - a named live BSC scan from `2026-08-02T00:00:00Z` through finalized block `115107095` decoded
   13,591 FFT Transfer logs. The behavioral pension-wallet candidate
   `0x8d50a68b4f9ada119d198d6472eaf0cB6dB302d9` received 123 transfers from 109 senders,
@@ -476,7 +487,7 @@ The only allowed status vocabulary in this ledger is:
 - complete control-right extraction and revocation/validity windows;
 - launch lifecycle, reserve state, migration and multi-market reconstruction;
 - multi-route RV with taxes, gas, fees, price impact, execution failures and historical calibration;
-- claim-language extraction, restart-safe wide-range orchestration, action-path derivation,
+- claim-language extraction, restart-safe durable wide-range scheduling, action-path derivation,
   independent-source reconciliation, durable report/API/UI, timeline generation, comparison/export,
   collaboration and analyst overrides;
 - production authorization, tenancy, audit logs, retention, backup and privacy controls.
@@ -507,10 +518,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                                                   | Scope                                                                                                                           |
 | ------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                                            | locked npm install in production container; all packages/API/web                                                                |
-| Unit tests                     | 338 pass                                                        | 44 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                    |
+| Unit tests                     | 343 pass                                                        | 45 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                    |
 | Integration tests              | 38 environment-free; durable suites pass in latest completed CI | lifetime/head/projection checkpoint guards and corrupt-state rejection are deterministic; prior all-store suite passes          |
 | Restart regression             | Pass                                                            | same-anchor recapture persists across repository/API restart without Snapshot collision                                         |
-| Coverage gate                  | Pass                                                            | current local: 82.14% statements, 76.21% branches, 90.19% functions, 83.23% lines on 376 tests; 21 opt-in durable tests skipped |
+| Coverage gate                  | Pass                                                            | current local: 82.18% statements, 76.27% branches, 90.27% functions, 83.27% lines on 381 tests; 21 opt-in durable tests skipped |
 | Chromium E2E                   | 10 pass                                                         | desktop and Pixel 7 include projection paging, exact/latest lifetime replay, Unknown and storage-failure rendering              |
 | Formatting / ESLint / types    | Pass                                                            | full repository                                                                                                                 |
 | Dependency vulnerability audit | Pass                                                            | 0 vulnerabilities across the complete npm dependency graph                                                                      |
@@ -521,7 +532,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                                            | PostgreSQL 001–010/triggers and ClickHouse Raw Fact schema/migration                                                            |
 | Runtime/browser smoke          | Pass                                                            | API/web health, proxy, security headers, desktop/mobile render                                                                  |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope                       | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending   |
-| Remote CI                      | Pass                                                            | CI/CodeQL pass on immutable `47b62e1`; full matrix, 10 Chromium flows and six production targets                                |
+| Remote CI                      | Pass                                                            | CI/CodeQL pass on immutable `578c71d`; full matrix, 10 Chromium flows and six production targets                                |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

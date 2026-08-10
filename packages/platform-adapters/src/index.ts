@@ -8,6 +8,7 @@ export * from './flap-lifetime-extension.js';
 export * from './flap-lifetime.js';
 export * from './flap-origin.js';
 export * from './claim-evm.js';
+export * from './claim-evm-observation.js';
 
 export type PlatformRole = 'LAUNCH_MECHANISM' | 'EXECUTION_PLATFORM' | 'LABEL_PROVIDER';
 export type AdapterImplementationStatus =

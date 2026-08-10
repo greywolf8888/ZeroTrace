@@ -890,19 +890,41 @@ Snapshot/duplicate handling. This code has not yet been persisted or exposed by 
 does not convert the FFT dispatcher into a dividend, controller, entity, burn or other terminal
 action.
 
+## Custody-first same-Snapshot EVM composition (2026-08-10)
+
+The composed EVM observer now requires one finalized Snapshot with block time, captures custody at
+that numeric block first, writes the custody Evidence, and only then begins the potentially long
+ERC-20 Transfer range scan. This ordering closes the failure mode seen in the first FFT experiment,
+where public RPC state for the target block was already pruned by the time a long historical scan
+finished. If custody capture fails, the history source and Evidence writer are not called.
+
+Each Transfer query chunk now produces a direct `PROVIDER_OBSERVATION` Evidence node containing its
+exact address/topic/range and returned log identities. An empty response therefore retains replay
+provenance rather than becoming an unevidenced absence. Per-log Evidence remains separate. After
+source nodes are written, one `DERIVED_FEATURE` terminal node links custody, range and log Evidence
+and binds the address-flow report to the exact Snapshot. Composite `historyCoverage` remains zero:
+the Transfer window may be complete, but one current custody read does not establish historical
+authority across that window.
+
+Four orchestration tests prove custody-before-scan order, canonical derived edges, source coverage,
+EOA movability, flow Unknown semantics, provider short-circuiting, timestamped-Snapshot gating and
+pre-provider time/block validation. An additional collector regression proves that a complete empty
+range still has source Evidence. This is deterministic acceptance only; the newly ordered path has
+not yet been rerun against FFT, and it still performs no dividend/action attribution.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                              |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 338 unit, 38 environment-free integration and build; dependency license/audit gates green                            |
-| local `test:coverage`    | pass: 376 tests, 21 opt-in durable skips; 82.14% statements, 76.21% branches, 90.19% functions, 83.23% lines                                        |
+| local non-browser gates  | pass: format, lint, typecheck, 343 unit, 38 environment-free integration and build; dependency license/audit gates green                            |
+| local `test:coverage`    | pass: 381 tests, 21 opt-in durable skips; 82.18% statements, 76.27% branches, 90.27% functions, 83.27% lines                                        |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                    |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure      |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                              |
 | `docker compose config`  | pass                                                                                                                                                |
 | production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000 |
-| branch GitHub Actions CI | [pass on `47b62e1`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31382413359): full CI matrix, Chromium and all production targets        |
-| branch CodeQL            | [pass on `47b62e1`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31382413410): JavaScript and TypeScript analysis                         |
+| branch GitHub Actions CI | [pass on `578c71d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31383622159): full CI matrix, Chromium and all production targets        |
+| branch CodeQL            | [pass on `578c71d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31383621973): JavaScript and TypeScript analysis                         |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

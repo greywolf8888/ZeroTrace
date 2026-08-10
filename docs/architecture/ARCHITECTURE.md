@@ -243,8 +243,12 @@ per-log Evidence and strict address/topic/range/duplicate/lineage checks. It als
 generic-contract, and Safe-compatible custody at one numeric Snapshot using bytecode, proxy
 singleton, version, owners, threshold and nonce reads. Unsupported contract authority remains
 Unknown. The adapter does not copy or link Safe's LGPL implementation and performs no signing or
-write call. Durable claim storage, restart-safe wide-range orchestration, action derivation, API/UI,
-independent-source reconciliation, and the terminal FFT report remain pending.
+write call. A composed observer captures and persists custody before starting the long range scan,
+then binds Transfer flow and a derived terminal Evidence root to the identical finalized timestamped
+Snapshot. Every query chunk retains source Evidence even when its result is empty. Composite history
+coverage remains zero because current custody is not historical authority coverage. Durable report
+storage, restart-safe scheduling, action derivation, API/UI, independent-source reconciliation, and
+the terminal FFT report remain pending.
 Endpoint failover and timestamp anchoring may add provenance IDs but do not raise claim-observation
 source coverage; it remains `0.5` until a separate reconciler repeats the complete result against an
 independent source.

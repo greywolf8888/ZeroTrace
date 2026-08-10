@@ -550,16 +550,47 @@ export async function collectErc20ClaimTransfers(options: {
   }
   const observedAt = (options.now ?? (() => new Date().toISOString()))();
   const logs: Array<{ log: EvmLogRecord; source: string }> = [];
+  const queryEvidence: Evidence[] = [];
   const sourceSet = new Set<string>();
   for (let cursor = fromBlock; cursor <= toBlock; cursor += BigInt(maxBlocksPerRequest)) {
     const end = cursor + BigInt(maxBlocksPerRequest) - 1n;
+    const requestedEnd = end < toBlock ? end : toBlock;
     const observation = await options.logReader.getLogsObservation({
       address: tokenAddress,
       fromBlock: cursor.toString(),
-      toBlock: (end < toBlock ? end : toBlock).toString(),
+      toBlock: requestedEnd.toString(),
       topics: [ERC20_TRANSFER_TOPIC],
     });
     sourceSet.add(observation.endpointId);
+    queryEvidence.push(
+      createEvidence({
+        ledger: 'EVM',
+        chainId: snapshot.chainId,
+        kind: 'PROVIDER_OBSERVATION',
+        source: observation.endpointId,
+        locator: `erc20-transfer-range:${tokenAddress}:${cursor.toString()}-${requestedEnd.toString()}`,
+        payload: {
+          query: {
+            address: tokenAddress,
+            fromBlock: cursor.toString(),
+            toBlock: requestedEnd.toString(),
+            topics: [ERC20_TRANSFER_TOPIC],
+          },
+          resultCount: observation.value.length,
+          resultIdentities: observation.value.map((log) => ({
+            blockHash: log.blockHash,
+            transactionHash: log.transactionHash,
+            logIndex: log.logIndex,
+          })),
+        },
+        summary:
+          observation.value.length === 0
+            ? 'Finalized ERC-20 Transfer range query returned no observations.'
+            : 'Finalized ERC-20 Transfer range query returned observations for strict decoding.',
+        observedAt,
+        finality: 'finalized',
+      }),
+    );
     logs.push(...observation.value.map((log) => ({ log, source: observation.endpointId })));
     if (logs.length > maxTransfers) {
       throw new ProviderError(
@@ -570,7 +601,7 @@ export async function collectErc20ClaimTransfers(options: {
   }
   const timestampCache = new Map<string, string>();
   const identities = new Set<string>();
-  const evidence: Evidence[] = [];
+  const evidence: Evidence[] = [...queryEvidence];
   const transfers: AssetTransferObservation[] = [];
   logs.sort((left, right) => {
     const blockOrder =
