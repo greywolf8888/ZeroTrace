@@ -47,6 +47,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - exact finalized-block ERC-20 burn conservation with parent/target `totalSupply`, complete
   target-block mint/burn logs, one-to-one Evidence-linked actions, contradiction/no-action states,
   read-only API composition and responsive Claim Audit review;
+- finalized BSC SQD zero-address Transfer candidate discovery across bounded long ranges, with
+  sparse event-query Evidence, exact-block promotion targets, responsive review and explicit
+  `Unknown(NOT_QUERIED)` for silent/custom supply changes;
 - Fastify API with OpenAPI, health, capability truth, metrics, and analysis endpoints;
 - Snapshot/Evidence-backed ledger query API with pending, mempool, null, and unavailable observations
   kept distinct from confirmed facts;

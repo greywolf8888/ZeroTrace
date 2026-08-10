@@ -76,6 +76,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31408082373) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31408085955) pass on immutable
       claim-declaration review commit `e1294c4`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31413974058) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31413973830) pass on immutable
+      burn-certificate commit `8fcef01`
 
 ## Evidence and data
 
@@ -165,7 +168,10 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Exact finalized-block ERC-20 burn action derivation with adjacent `totalSupply`, complete
       mint/burn Transfer conservation, contradiction/no-action states, Evidence replay, API/UI and
       one named FFT Alchemy no-action certificate
-- [ ] Automated durable capture scheduling, wide-range action discovery, reviewed-draft promotion,
+- [x] Finalized BSC SQD long-range zero-address Transfer candidate discovery with bounded sparse
+      queries, terminal Evidence, responsive API/UI and silent-supply state retained as Unknown
+- [ ] Automated durable candidate promotion/capture scheduling, silent-supply discovery,
+      reviewed-draft promotion,
       independent-source reconciliation, complete Claim Audit and terminal named FFT conclusion
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
@@ -185,6 +191,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       readiness, human-review gate and Unknown pension-address rendering
 - [x] Responsive exact-block burn certificate review on desktop/mobile with status, supply/event
       arithmetic, generated actions and terminal Evidence
+- [x] Responsive burn-candidate range review with event scope, candidate blocks, terminal Evidence
+      and explicit silent-supply Unknown on desktop/mobile
 - [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance

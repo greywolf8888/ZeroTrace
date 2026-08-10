@@ -1158,21 +1158,50 @@ or written to the repository. The successful certificate has `sourceCoverage=0.5
 provider. Wide-range silent-supply analysis, independent-provider reconciliation, official wallet
 attribution, reviewed-draft promotion and terminal FFT acceptance remain open.
 
+## Burn candidate range acceptance (2026-08-11)
+
+Model `erc20-burn-candidate-discovery-v1.0.0` adds a bounded long-range discovery layer before the
+exact-block certificate. It reuses SQD `binance-mainnet` with sparse finalized continuation and
+queries both indexed zero-address directions. Only non-zero `to=0x0` Transfers become candidate
+blocks; same-block mint totals are retained as context. Every query, returned log and terminal
+result is canonical Evidence bound to the finalized range-end Snapshot.
+
+The Schema and platform tests cover multiple burns in one block, same-block mint context, ordered
+multi-block candidates, zero-amount exclusion, no-candidate ranges, ambiguous zero-to-zero events,
+the 5,000,000-block budget, canonical Evidence and replay tampering. API integration exercises the
+real runtime composition. Chromium desktop and Pixel 7 render the event scope, candidate count,
+terminal Evidence and explicit `Unknown(NOT_QUERIED)` silent-supply state.
+
+`historyCoverage=1` and `dataCoverage=1` refer only to
+`ERC20_ZERO_ADDRESS_TRANSFER_EVENTS`. An empty result is named `NO_EVENT_CANDIDATES`; it is not a
+statement that `totalSupply` never changed through custom or silent storage writes. Durable
+promotion scheduling, all-block silent-supply discovery, independent-source reconciliation and
+terminal FFT acceptance remain open.
+
+The production discovery path was then replayed against FFT over the exact inclusive range
+`113485950-115154970`. Alchemy supplied the finalized range-end Snapshot at hash
+`0x428fae3cf1516692f1a1fa9a46f2ecaeddf627e890466c82ff68367d32427ddb`; SQD completed four sparse
+direction/chunk queries in about nine minutes. The validated result was `NO_EVENT_CANDIDATES`, with
+zero non-zero zero-address events, zero candidate blocks and five Evidence nodes. Terminal Evidence
+is `ev_b938c11599c5735884f5e376`. Silent supply-change detection remained
+`Unknown(NOT_QUERIED)`. The Alchemy credential was injected process-locally from the user attachment
+and was neither printed nor persisted.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 383 unit, 47 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 386 unit, 48 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                                               |
-| local `test:coverage`    | pass: 430 tests, 22 opt-in durable skips; 82.86% statements, 76.74% branches, 91.41% functions, 83.99% lines                                                                 |
+| local `test:coverage`    | pass: 434 tests, 22 opt-in durable skips; 82.89% statements, 76.82% branches, 91.49% functions, 83.98% lines                                                                 |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
-| `npm run test:e2e`       | pass: 16 Chromium tests across desktop and Pixel 7, including burn conservation, Claim Declaration, migrated-market scenarios, Claim Report, replay and Unknown              |
+| `npm run test:e2e`       | pass: 18 Chromium tests across desktop and Pixel 7, including burn range/certificate, Claim Declaration, migrated-market scenarios, Claim Report, replay and Unknown         |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
 | `docker compose config`  | pass                                                                                                                                                                         |
 | production Compose smoke | pass: production API/Web images, seven-service healthy stack, non-destructive 001-011 upgrade, live/ready/read-only health; prior worker targets remain accepted             |
-| branch GitHub Actions CI | [pass on `e1294c4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31408082373): full CI matrix, structural model gate, 14 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `e1294c4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31408085955): JavaScript and TypeScript analysis                                                  |
+| branch GitHub Actions CI | [pass on `8fcef01`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31413974058): full CI matrix, structural model gate, 16 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `8fcef01`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31413973830): JavaScript and TypeScript analysis                                                  |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

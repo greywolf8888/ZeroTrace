@@ -34,6 +34,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest` | latest immutable EVM Claim Report; provider-free replay          |
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`    | exact content-addressed EVM Claim Report replay                  |
 | POST   | `/api/v1/claims/declarations/parse`                           | compile public wording into Evidence-bound human-review drafts   |
+| POST   | `/api/v1/claims/EVM/:token/burn-candidates`                   | finalized BSC zero-address Transfer candidate-range discovery    |
 | POST   | `/api/v1/claims/EVM/:token/burn-conservation`                 | exact-block ERC-20 supply/mint/burn conservation certificate     |
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
@@ -72,6 +73,25 @@ a year and timezone produces a warning. Every draft has `requiresHumanReview: tr
 does not assert that a declaration is true, perform chain verification, promote a draft to an audit
 rule, or initiate any transaction.
 
+### ERC-20 burn candidate discovery
+
+`POST /api/v1/claims/EVM/:token/burn-candidates` accepts BSC `chainId=eip155:56`, ordered
+`fromBlock`/`toBlock`, and optional bounded request/transfer/candidate limits. The range may contain
+at most 5,000,000 blocks and must end at the finalized Snapshot fetched from BSC RPC. The current
+implementation requires the configured SQD `binance-mainnet` reader and uses sparse, finalized,
+address/topic-filtered ranges of at most 1,000,000 blocks per query.
+
+The discovery reads only non-zero ERC-20 `Transfer` events whose sender or destination is the zero
+address. It groups `to=0x0` events by finalized block, retains same-block mint-event totals, and
+persists every range query, returned log, and terminal result as Evidence. `CANDIDATES_DISCOVERED`
+means the listed blocks need the exact-block endpoint below; `NO_EVENT_CANDIDATES` means the
+complete event query returned none.
+
+This endpoint never turns an empty event result into proof that supply was unchanged. Custom or
+silent storage-level supply changes are returned as `Unknown(NOT_QUERIED)`. It does not perform
+automatic candidate promotion, all-block `totalSupply` scanning, attribution, signing, swaps or
+transaction broadcast.
+
 ### ERC-20 burn conservation
 
 `POST /api/v1/claims/EVM/:token/burn-conservation` accepts `chainId`, a positive finalized
@@ -87,8 +107,8 @@ exactly conserved block with no burn is `NOT_APPLICABLE`, not a missing value or
 conclusion. Cross-block logs, incomplete queries, malformed supply responses, non-adjacent lineage,
 zero-to-zero events and unfinalized Snapshots fail closed.
 
-This certificate covers one block only. It does not prove a whole announcement window is complete,
-discover candidate blocks, establish who controls an address, or classify a transfer into an EOA,
+This certificate covers one block only. Candidate blocks can be found through the event-only range
+endpoint above, but it does not establish who controls an address or classify a transfer into an EOA,
 Safe, treasury, pension or publicity-named “burn wallet” as irreversible. The endpoint is strictly
 read-only and requires a configured EVM provider with parent-block state availability.
 

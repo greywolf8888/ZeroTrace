@@ -241,8 +241,9 @@ export function createRuntime(config: AppConfig): AppRuntime {
       ? undefined
       : new SqdEvmLogReader({
           source: sqdBscSource,
-          maxRangeBlocks: 10_000,
+          maxRangeBlocks: 1_000_000,
           maxResults: 25_000,
+          includeAllBlocks: false,
         });
   const sqdBscCreationReader =
     sqdBscSource === undefined

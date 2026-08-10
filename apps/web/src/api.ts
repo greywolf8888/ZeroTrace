@@ -692,6 +692,29 @@ export interface EvmClaimBurnConservationResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface EvmClaimBurnCandidateDiscoveryResponse {
+  report: {
+    tokenAddress: string;
+    fromBlock: string;
+    toBlock: string;
+    coverageScope: 'ERC20_ZERO_ADDRESS_TRANSFER_EVENTS';
+    status: 'CANDIDATES_DISCOVERED' | 'NO_EVENT_CANDIDATES';
+    zeroAddressEventCount: number;
+    burnCandidateCount: number;
+    candidates: Array<{
+      blockNumber: string;
+      blockHash: string;
+      burnTransferIds: string[];
+      mintedEventAmount: string;
+      burnedEventAmount: string;
+    }>;
+    silentSupplyChangeDetection: KnowledgeValue<boolean>;
+    terminalEvidenceId: string;
+    metadata: AnalysisMetadata;
+  };
+  evidence: EvidenceRecord[];
+}
+
 interface ClaimFlowAggregate {
   observedAmount: string;
   actualAmount: KnowledgeValue<string>;
@@ -936,6 +959,19 @@ export const api = {
       {
         method: 'POST',
         body: JSON.stringify({ chainId, blockNumber }),
+      },
+    ),
+  discoverClaimBurnCandidates: (
+    token: string,
+    fromBlock: string,
+    toBlock: string,
+    chainId = 'eip155:56',
+  ) =>
+    requestJson<EvmClaimBurnCandidateDiscoveryResponse>(
+      `/api/v1/claims/EVM/${encodeURIComponent(token)}/burn-candidates`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ chainId, fromBlock, toBlock }),
       },
     ),
   exitRace: (payload: unknown) =>

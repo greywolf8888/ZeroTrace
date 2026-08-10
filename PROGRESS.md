@@ -15,12 +15,12 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                      |
 | Production acceptance            | **No**                                                                                                          |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                  |
-| Unit tests                       | **383 passing across 50 files**                                                                                 |
+| Unit tests                       | **386 passing across 51 files**                                                                                 |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                      |
-| Integration tests                | **47 environment-free plus 19 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
-| Real-browser E2E                 | **16 passing: Chromium desktop and Pixel 7**                                                                    |
-| Remote CI                        | **Pass on immutable claim-declaration commit `e1294c4`: CI, Chromium, production images, and CodeQL**           |
-| Coverage                         | **Current local: 82.86% statements / 76.74% branches / 91.41% functions / 83.99% lines**                        |
+| Integration tests                | **48 environment-free plus 19 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
+| Real-browser E2E                 | **18 passing: Chromium desktop and Pixel 7**                                                                    |
+| Remote CI                        | **Pass on immutable burn-certificate commit `8fcef01`: CI, Chromium, production images, and CodeQL**            |
+| Coverage                         | **Current local: 82.89% statements / 76.82% branches / 91.49% functions / 83.98% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion, named Flap history/origin and FFT market slices passed                        |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap history/lifetime, accepted heads and EVM Claim Reports wired    |
 
@@ -33,23 +33,23 @@ The only allowed status vocabulary in this ledger is:
 `IMPLEMENTED_AND_VERIFIED`, `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`,
 `PARTIALLY_IMPLEMENTED`, `BLOCKED_EXTERNAL`, and `NOT_IMPLEMENTED`.
 
-| Architecture domain                  | Status                                      | Current boundary                                                                                                                                                                    |
-| ------------------------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed                                                                                                      |
-| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass and endpoint comparison work; forced outage drill pending                                                                                       |
-| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                                                                                |
-| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | height/hash/previous-hash Esplora anchor; public best-chain smoke passed                                                                                                            |
-| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor and minimum-context account smoke passed                                                                                                               |
-| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity and generic semantic checkpoints work; general scheduling and rollback/replay remain                                                                 |
-| Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                                                                        |
-| Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; independent real-source reconciliation and entity calibration remain                                                           |
-| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline plus exact structural Precision/False-Merge gates work; real-world calibration and temporal graph are absent                                                  |
-| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; full FFT lifecycle and other platforms remain |
-| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview and verified Pancake V2 buy/exit-size scenarios work; fork execution, additional routes, gas and executable capacity remain      |
-| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                                                            |
-| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports and exact-block supply-conserved burn actions work; wide-range discovery, scheduling and terminal FFT remain        |
-| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger, Evidence, health, claim declaration/report and burn-certificate review plus migrated-Flap market/scenario panels work; terminal investigation is absent               |
-| Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                       |
+| Architecture domain                  | Status                                      | Current boundary                                                                                                                                                                                      |
+| ------------------------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed                                                                                                                        |
+| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass and endpoint comparison work; forced outage drill pending                                                                                                         |
+| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                                                                                                  |
+| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | height/hash/previous-hash Esplora anchor; public best-chain smoke passed                                                                                                                              |
+| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor and minimum-context account smoke passed                                                                                                                                 |
+| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity and generic semantic checkpoints work; general scheduling and rollback/replay remain                                                                                   |
+| Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                                                                                          |
+| Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; independent real-source reconciliation and entity calibration remain                                                                             |
+| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline plus exact structural Precision/False-Merge gates work; real-world calibration and temporal graph are absent                                                                    |
+| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; full FFT lifecycle and other platforms remain                   |
+| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview and verified Pancake V2 buy/exit-size scenarios work; fork execution, additional routes, gas and executable capacity remain                        |
+| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                                                                              |
+| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, SQD event candidates and exact-block supply-conserved burn actions work; silent-supply discovery, scheduling and terminal FFT remain |
+| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger, Evidence, health, claim declaration/report, burn-range/certificate review and migrated-Flap market/scenario panels work; terminal investigation is absent                               |
+| Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                                         |
 
 ## Completed
 
@@ -441,6 +441,14 @@ The only allowed status vocabulary in this ledger is:
   exact `before + mint - burn = after` conservation can emit one-to-one Evidence-linked `BURN`
   actions; contradictions and conserved no-burn blocks emit no action. The read-only API and
   desktop/mobile Claim Audit UI expose the certificate and terminal Evidence;
+- BSC range model `erc20-burn-candidate-discovery-v1.0.0` reuses finalized sparse SQD queries for
+  both zero-address topic directions, groups non-zero burn-event blocks, retains same-block mint
+  context and persists the query/log/terminal Evidence graph. Empty event results do not cover
+  silent/custom supply changes, which remain `Unknown(NOT_QUERIED)` in API and responsive UI;
+- the production range path replayed FFT blocks `113485950-115154970` against finalized range-end
+  hash `0x428fae3cf1516692f1a1fa9a46f2ecaeddf627e890466c82ff68367d32427ddb`. Four SQD queries completed
+  with no non-zero zero-address event candidates; terminal Evidence is
+  `ev_b938c11599c5735884f5e376`, while silent-supply coverage remains Unknown;
 - seventeen deterministic engine/summary tests plus two Schema Contract tests cover normal 20/40/40 execution,
   bounded policy validation, shortfall, fake burn custody,
   multi-hop burn, path chronology/actor integrity, mixed-asset and duplicate-observation rejection,
@@ -616,7 +624,7 @@ The only allowed status vocabulary in this ledger is:
   Flap/Pancake V2 point-in-time slice;
 - multi-route sell RV beyond the initial Pancake V2 route, with fork-observed taxes, gas, capacity,
   execution failures and historical calibration;
-- reviewed-draft promotion, restart-safe durable wide-range action discovery/capture,
+- reviewed-draft promotion, restart-safe durable candidate promotion/capture and silent-supply discovery,
   independent-source reconciliation, complete Claim Audit, timeline generation,
   comparison/export, collaboration and analyst overrides;
 - production authorization, tenancy, audit logs, retention, backup and privacy controls.
@@ -644,25 +652,25 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                                        | Scope                                                                                                                                      |
-| ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reproducible install/build     | Pass                                                 | locked npm install in production container; all packages/API/web                                                                           |
-| Unit tests                     | 383 pass                                             | 50 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                               |
-| Integration tests              | 47 environment-free plus 19 real PostgreSQL pass     | burn conservation, claim declaration/CORS, Pancake market, Claim Report API and lifetime/head/projection guards are deterministic          |
-| Model evaluation tests         | 1 pass                                               | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                             |
-| Restart regression             | Pass                                                 | same-anchor recapture persists across repository/API restart without Snapshot collision                                                    |
-| Coverage gate                  | Pass                                                 | current local: 82.86% statements, 76.74% branches, 91.41% functions, 83.99% lines on 430 tests; 22 opt-in durable tests skipped            |
-| Chromium E2E                   | 16 pass                                              | desktop and Pixel 7 include burn conservation, Claim Declaration, migrated-market scenarios, Claim Report, replay and Unknown rendering    |
-| Formatting / ESLint / types    | Pass                                                 | full repository                                                                                                                            |
-| Dependency vulnerability audit | Pass                                                 | 0 vulnerabilities across the complete npm dependency graph                                                                                 |
-| Dependency license allowlist   | Pass                                                 | production dependency graph                                                                                                                |
-| CycloneDX SBOM                 | Pass                                                 | npm dependency graph                                                                                                                       |
-| Compose model                  | Pass                                                 | rendered default topology                                                                                                                  |
-| Docker image build/start       | Pass                                                 | API, web, ingest worker, semantic worker, PostgreSQL, ClickHouse; service images also validated by Compose                                 |
-| Database bootstrap             | Pass                                                 | fresh bootstrap previously passed; current persistent Compose volume was backed up and upgraded non-destructively from 001–002 through 011 |
-| Runtime/browser smoke          | Pass                                                 | production API/Web images built; seven-service Compose stack, live/ready/read-only health and desktop/mobile render passed                 |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope            | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending              |
-| Remote CI                      | Pass on immutable claim-declaration commit `e1294c4` | CI/CodeQL green; full matrix, structural model gate, 14 Chromium flows and six production targets                                          |
+| Check                          | Latest result                                       | Scope                                                                                                                                      |
+| ------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reproducible install/build     | Pass                                                | locked npm install in production container; all packages/API/web                                                                           |
+| Unit tests                     | 386 pass                                            | 51 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                               |
+| Integration tests              | 48 environment-free plus 19 real PostgreSQL pass    | burn range/certificate, claim declaration/CORS, Pancake market, Claim Report API and lifetime/head/projection guards are deterministic     |
+| Model evaluation tests         | 1 pass                                              | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                             |
+| Restart regression             | Pass                                                | same-anchor recapture persists across repository/API restart without Snapshot collision                                                    |
+| Coverage gate                  | Pass                                                | current local: 82.89% statements, 76.82% branches, 91.49% functions, 83.98% lines on 434 tests; 22 opt-in durable tests skipped            |
+| Chromium E2E                   | 18 pass                                             | desktop and Pixel 7 include burn range/certificate, Claim Declaration, migrated-market scenarios, Claim Report, replay and Unknown         |
+| Formatting / ESLint / types    | Pass                                                | full repository                                                                                                                            |
+| Dependency vulnerability audit | Pass                                                | 0 vulnerabilities across the complete npm dependency graph                                                                                 |
+| Dependency license allowlist   | Pass                                                | production dependency graph                                                                                                                |
+| CycloneDX SBOM                 | Pass                                                | npm dependency graph                                                                                                                       |
+| Compose model                  | Pass                                                | rendered default topology                                                                                                                  |
+| Docker image build/start       | Pass                                                | API, web, ingest worker, semantic worker, PostgreSQL, ClickHouse; service images also validated by Compose                                 |
+| Database bootstrap             | Pass                                                | fresh bootstrap previously passed; current persistent Compose volume was backed up and upgraded non-destructively from 001–002 through 011 |
+| Runtime/browser smoke          | Pass                                                | production API/Web images built; seven-service Compose stack, live/ready/read-only health and desktop/mobile render passed                 |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope           | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending              |
+| Remote CI                      | Pass on immutable burn-certificate commit `8fcef01` | CI/CodeQL green; full matrix, structural model gate, 16 Chromium flows and six production targets                                          |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

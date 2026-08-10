@@ -1694,6 +1694,71 @@ test('shows a supply-conserved burn action without treating the zero address as 
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
 
+test('keeps a complete burn-event range distinct from silent supply-change coverage', async ({
+  page,
+}) => {
+  const terminalEvidenceId = 'ev_abcdefabcdefabcdefabcdef';
+  await page.route('**/api/v1/claims/EVM/*/burn-candidates', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        report: {
+          tokenAddress: bscTokenAddress,
+          fromBlock: '113485950',
+          toBlock: '115154970',
+          coverageScope: 'ERC20_ZERO_ADDRESS_TRANSFER_EVENTS',
+          status: 'NO_EVENT_CANDIDATES',
+          zeroAddressEventCount: 0,
+          burnCandidateCount: 0,
+          candidates: [],
+          silentSupplyChangeDetection: {
+            state: 'unknown',
+            reason: 'NOT_QUERIED',
+            detail:
+              'This run covers zero-address Transfer events only. Storage-level or silent totalSupply changes require a separate all-block state analysis.',
+          },
+          terminalEvidenceId,
+          metadata: {
+            snapshot: null,
+            dataCoverage: 1,
+            sourceCoverage: 0.5,
+            historyCoverage: 1,
+            simulationCoverage: 0,
+            freshness: '2026-08-10T16:44:39.000Z',
+            sourceSet: ['sqd:binance-mainnet'],
+            modelVersion: 'erc20-burn-candidate-discovery-v1.0.0',
+            confidence: 0.98,
+            evidenceIds: [terminalEvidenceId],
+          },
+        },
+        evidence: [],
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  const panel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Burn Candidate Range' }),
+  });
+  await panel.getByLabel('Candidate token address').fill(bscTokenAddress);
+  await panel.getByLabel('From block').fill('113485950');
+  await panel.getByLabel('To block').fill('115154970');
+  await panel.getByRole('button', { name: 'Discover burn candidates' }).click();
+
+  await expect(panel).toContainText('No Event Candidates');
+  await expect(panel).toContainText('ERC20_ZERO_ADDRESS_TRANSFER_EVENTS');
+  await expect(panel).toContainText('Unknown');
+  await expect(panel).toContainText('This is not proof that totalSupply never changed silently');
+  await expect(panel).toContainText(terminalEvidenceId);
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
 test('keeps scenario execution gated and exposes provider availability', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Scenario Lab' }).click();

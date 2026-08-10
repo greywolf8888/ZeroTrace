@@ -24,6 +24,7 @@ import {
   FLAP_TOKEN_ORIGIN_MAX_CHUNKS,
   FLAP_TOKEN_ORIGIN_MODEL_VERSION,
   PLATFORM_REGISTRY,
+  discoverErc20BurnCandidates,
   discoverFlapEventHistory,
   inspectFlapEventTransaction,
   observeEvmClaimBurnBlock,
@@ -150,6 +151,33 @@ const ClaimBurnRequestSchema = z.object({
   blockNumber: z.string().regex(/^[1-9]\d*$/),
   maxTransfers: z.number().int().min(1).max(25_000).optional(),
 });
+
+const ClaimBurnDiscoveryRequestSchema = z
+  .object({
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    fromBlock: z.string().regex(/^(0|[1-9]\d*)$/),
+    toBlock: z.string().regex(/^[1-9]\d*$/),
+    maxBlocksPerRequest: z.number().int().min(1).max(1_000_000).optional(),
+    maxTransfers: z.number().int().min(1).max(100_000).optional(),
+    maxCandidates: z.number().int().min(1).max(10_000).optional(),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    if (toBlock < fromBlock) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Burn candidate range must be ordered.',
+      });
+    } else if (toBlock - fromBlock + 1n > 5_000_000n) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Burn candidate range may contain at most 5000000 blocks.',
+      });
+    }
+  });
 
 const FlapEventTransactionParamsSchema = LaunchInspectionParamsSchema.extend({
   transactionHash: z
@@ -2470,6 +2498,74 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       });
       const evidence = await addEvidence(runtime, result.evidence);
       return { ...result, evidence };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/:ledger/:token/burn-candidates',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const input = ClaimBurnDiscoveryRequestSchema.parse(request.body);
+      const numericChainId = Number(input.chainId.slice('eip155:'.length));
+      if (!Number.isSafeInteger(numericChainId)) {
+        return reply
+          .code(400)
+          .send(errorResponse(request, 'INVALID_CHAIN_ID', 'Invalid EIP-155 chain ID.', false));
+      }
+      const adapter = runtime.evmAdapters.get(numericChainId);
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured EVM provider is required for burn candidate discovery.',
+              true,
+            ),
+          );
+      }
+      if (numericChainId !== 56 || runtime.sqdBscLogReader === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'HISTORY_PROVIDER_UNCONFIGURED',
+              'The current long-range burn candidate path requires the BSC SQD dataset.',
+              true,
+            ),
+          );
+      }
+      const anchor = await adapter.readAnchorAt(input.toBlock);
+      if (anchor.snapshot.ledger !== 'EVM' || anchor.snapshot.finality !== 'finalized') {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FINALIZED_PROVIDER_REQUIRED',
+              'Burn candidate discovery requires a finalized range-end Snapshot.',
+              true,
+            ),
+          );
+      }
+      return discoverErc20BurnCandidates({
+        tokenAddress: params.token,
+        fromBlock: input.fromBlock,
+        toBlock: input.toBlock,
+        snapshot: anchor.snapshot,
+        logReader: runtime.sqdBscLogReader,
+        blockReader: adapter,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.maxBlocksPerRequest === undefined
+          ? {}
+          : { maxBlocksPerRequest: input.maxBlocksPerRequest }),
+        ...(input.maxTransfers === undefined ? {} : { maxTransfers: input.maxTransfers }),
+        ...(input.maxCandidates === undefined ? {} : { maxCandidates: input.maxCandidates }),
+      });
     },
   );
 

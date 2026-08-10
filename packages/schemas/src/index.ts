@@ -1735,6 +1735,128 @@ export const EvmClaimBurnConservationSchema = z
   });
 export type EvmClaimBurnConservation = z.infer<typeof EvmClaimBurnConservationSchema>;
 
+export const EvmClaimBurnCandidateBlockSchema = z.object({
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  burnTransferIds: z.array(z.string().min(1)).min(1),
+  mintedEventAmount: UnsignedQuantityStringSchema,
+  burnedEventAmount: UnsignedQuantityStringSchema,
+});
+export type EvmClaimBurnCandidateBlock = z.infer<typeof EvmClaimBurnCandidateBlockSchema>;
+
+export const EvmClaimBurnCandidateDiscoverySchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    coverageScope: z.literal('ERC20_ZERO_ADDRESS_TRANSFER_EVENTS'),
+    status: z.enum(['CANDIDATES_DISCOVERED', 'NO_EVENT_CANDIDATES']),
+    zeroAddressEventCount: z.number().int().nonnegative(),
+    burnCandidateCount: z.number().int().nonnegative(),
+    candidates: z.array(EvmClaimBurnCandidateBlockSchema),
+    silentSupplyChangeDetection: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('erc20-burn-candidate-discovery-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const snapshot = value.metadata.snapshot;
+    const expectedStatus =
+      value.candidates.length === 0 ? 'NO_EVENT_CANDIDATES' : 'CANDIDATES_DISCOVERED';
+    if (toBlock < fromBlock) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Burn candidate discovery range must be ordered.',
+      });
+    }
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.toBlock ||
+      value.metadata.freshness !== snapshot.blockTimestamp
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Burn candidate discovery must bind the finalized range-end Snapshot.',
+      });
+    }
+    if (value.metadata.dataCoverage !== 1 || value.metadata.historyCoverage !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Burn candidate discovery requires complete event-query coverage.',
+      });
+    }
+    if (
+      value.status !== expectedStatus ||
+      value.burnCandidateCount !== value.candidates.length ||
+      value.zeroAddressEventCount <
+        value.candidates.reduce((total, candidate) => total + candidate.burnTransferIds.length, 0)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Burn candidate discovery counts and status are inconsistent.',
+      });
+    }
+    if (value.silentSupplyChangeDetection.state !== 'unknown') {
+      context.addIssue({
+        code: 'custom',
+        path: ['silentSupplyChangeDetection'],
+        message: 'Event-only discovery cannot claim silent supply-change coverage.',
+      });
+    }
+    const candidateBlocks = new Set<string>();
+    const transferIds = new Set<string>();
+    let previousBlock: bigint | undefined;
+    for (const candidate of value.candidates) {
+      const block = BigInt(candidate.blockNumber);
+      const invalidTransferIdentity = candidate.burnTransferIds.some((id) => {
+        if (transferIds.has(id)) return true;
+        transferIds.add(id);
+        return false;
+      });
+      if (
+        block < fromBlock ||
+        block > toBlock ||
+        (previousBlock !== undefined && block <= previousBlock) ||
+        candidateBlocks.has(candidate.blockNumber) ||
+        invalidTransferIdentity ||
+        BigInt(candidate.burnedEventAmount) <= 0n ||
+        (snapshot?.ledger === 'EVM' &&
+          candidate.blockNumber === snapshot.blockNumber &&
+          candidate.blockHash.toLowerCase() !== snapshot.blockHash.toLowerCase())
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['candidates'],
+          message: 'Burn candidates must be unique, ordered, in-range, and Snapshot-consistent.',
+        });
+        break;
+      }
+      candidateBlocks.add(candidate.blockNumber);
+      previousBlock = block;
+    }
+    if (
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      new Set(value.metadata.evidenceIds).size !== value.metadata.evidenceIds.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message: 'Burn candidate discovery requires unique metadata and terminal Evidence.',
+      });
+    }
+  });
+export type EvmClaimBurnCandidateDiscovery = z.infer<typeof EvmClaimBurnCandidateDiscoverySchema>;
+
 export const ClaimCustodyObservationSchema = z.object({
   address: z.string().min(1),
   kind: ClaimCustodyKindSchema,

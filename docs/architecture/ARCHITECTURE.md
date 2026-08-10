@@ -316,7 +316,14 @@ block without a burn is `NOT_APPLICABLE`. Both produce no actions. A zero-addres
 is therefore never sufficient burn proof for an arbitrary custom token. The certificate's complete
 history coverage applies to that one block, not an announcement window.
 
-Automated capture scheduling, wide-range candidate discovery/promotion, independent-source
+Candidate discovery is a separate event-only layer. The BSC implementation uses finalized sparse
+SQD `binance-mainnet` queries for both indexed zero-address directions, groups non-zero `to=0x0`
+events by block, retains same-block mint context, and persists every query/log plus a terminal
+Evidence node. Complete history/data coverage applies only to the declared
+`ERC20_ZERO_ADDRESS_TRANSFER_EVENTS` scope. Silent/custom supply changes remain
+`Unknown(NOT_QUERIED)` even when no event candidate exists.
+
+Automated candidate promotion/capture scheduling, silent-supply discovery, independent-source
 reconciliation, official wallet attribution and the terminal FFT report remain pending.
 Endpoint failover and timestamp anchoring may add provenance IDs but do not raise claim-observation
 source coverage; it remains `0.5` until a separate reconciler repeats the complete result against an

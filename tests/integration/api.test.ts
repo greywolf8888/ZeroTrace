@@ -257,6 +257,33 @@ class BurnConservationTransport implements JsonRpcTransport {
   }
 }
 
+class BurnDiscoveryAnchorTransport implements JsonRpcTransport {
+  readonly endpointId = 'bsc-burn-discovery-anchor';
+
+  async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+    return (await this.requestSourced<T>(method, params)).value;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    _options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    if (method !== 'eth_getBlockByNumber' || params[0] !== '0x6e') {
+      throw new Error(`Unexpected burn-discovery anchor method ${method}`);
+    }
+    return {
+      value: {
+        number: '0x6e',
+        hash: `0x${'f'.repeat(64)}`,
+        parentHash: `0x${'e'.repeat(64)}`,
+        timestamp: '0x65c95abc',
+      } as T,
+      endpointId: this.endpointId,
+    };
+  }
+}
+
 class FakeRestTransport implements RestTransport {
   readonly endpointId = 'bitcoin-esplora';
   readonly #responses: Record<string, unknown>;
@@ -3324,6 +3351,99 @@ describe('ZeroTrace API contract', () => {
     });
     expect(invalidGenesis.statusCode).toBe(400);
     expect(invalidGenesis.json().error.code).toBe('INVALID_REQUEST');
+  });
+
+  it('discovers long-range zero-address burn candidates without claiming silent supply coverage', async () => {
+    const evm = new EvmLedgerAdapter(
+      {
+        id: 'bsc-rpc',
+        chainId: 56,
+        chainName: 'BNB Smart Chain',
+        snapshotBlockTag: 'finalized',
+      },
+      new BurnDiscoveryAnchorTransport(),
+    );
+    const evidenceLedger = new EvidenceLedger();
+    const burner = `0x${'2'.repeat(40)}`;
+    const sqdBscLogReader = {
+      endpointId: 'sqd:binance-mainnet',
+      getLogsObservation: vi.fn().mockImplementation((query) => {
+        const toZero = query.topics?.[2] === `0x${'0'.repeat(64)}`;
+        return Promise.resolve({
+          endpointId: 'sqd:binance-mainnet',
+          value: toZero
+            ? [
+                {
+                  address: fixtureFlapToken,
+                  blockHash: `0x${105n.toString(16).padStart(64, '0')}`,
+                  blockNumber: '0x69',
+                  blockTimestamp: '2026-08-10T00:00:15.000Z',
+                  transactionHash: `0x${'5'.repeat(64)}`,
+                  transactionIndex: '0x1',
+                  logIndex: '0x2',
+                  data: `0x${100n.toString(16).padStart(64, '0')}`,
+                  topics: [
+                    ERC20_TRANSFER_TOPIC,
+                    `0x${'0'.repeat(24)}${burner.slice(2)}`,
+                    `0x${'0'.repeat(64)}`,
+                  ],
+                  removed: false,
+                  raw: { fixture: true },
+                },
+              ]
+            : [],
+        });
+      }),
+    };
+    const runtime: AppRuntime = {
+      providerRegistry: new ProviderRegistry([evm]),
+      evmAdapters: new Map([[56, evm]]),
+      sqdBscLogReader,
+      evidenceLedger,
+      dataQuality: testDataQuality(evidenceLedger),
+      ingestionStorage: {},
+    };
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/burn-candidates`,
+      payload: { chainId: 'eip155:56', fromBlock: '100', toBlock: '110' },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    const body = response.json();
+    expect(body.report).toMatchObject({
+      status: 'CANDIDATES_DISCOVERED',
+      coverageScope: 'ERC20_ZERO_ADDRESS_TRANSFER_EVENTS',
+      zeroAddressEventCount: 1,
+      burnCandidateCount: 1,
+      silentSupplyChangeDetection: { state: 'unknown', reason: 'NOT_QUERIED' },
+      candidates: [{ blockNumber: '105', burnedEventAmount: '100' }],
+    });
+    expect(body.evidence).toHaveLength(4);
+    const terminal = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${body.report.terminalEvidenceId}`,
+    });
+    expect(terminal.statusCode, terminal.body).toBe(200);
+    expect(terminal.json().sourceEvidenceIds).toHaveLength(3);
+
+    const invalidRange = await app.inject({
+      method: 'POST',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/burn-candidates`,
+      payload: { chainId: 'eip155:56', fromBlock: '111', toBlock: '110' },
+    });
+    expect(invalidRange.statusCode).toBe(400);
+    expect(invalidRange.json().error.code).toBe('INVALID_REQUEST');
+
+    const oversizedRange = await app.inject({
+      method: 'POST',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/burn-candidates`,
+      payload: { chainId: 'eip155:56', fromBlock: '0', toBlock: '5000000' },
+    });
+    expect(oversizedRange.statusCode).toBe(400);
+    expect(oversizedRange.json().error.code).toBe('INVALID_REQUEST');
   });
 
   it('replays latest and exact durable Claim Reports without provider access', async () => {

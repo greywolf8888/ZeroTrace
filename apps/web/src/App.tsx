@@ -5,6 +5,7 @@ import {
   type ClaimDeclarationParseResponse,
   type Capability,
   type ClaimReportResponse,
+  type EvmClaimBurnCandidateDiscoveryResponse,
   type EvmClaimBurnConservationResponse,
   type EvidenceRecord,
   type FlapConfigurationField,
@@ -900,6 +901,179 @@ function ClaimBurnConservationPanel() {
   );
 }
 
+function ClaimBurnCandidateDiscoveryPanel() {
+  const [token, setToken] = useState('');
+  const [fromBlock, setFromBlock] = useState('');
+  const [toBlock, setToBlock] = useState('');
+  const [result, setResult] = useState<EvmClaimBurnCandidateDiscoveryResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const validToken = /^0x[0-9a-fA-F]{40}$/.test(token);
+  const validFrom = /^(0|[1-9]\d*)$/.test(fromBlock);
+  const validTo = /^[1-9]\d*$/.test(toBlock);
+  const ordered = validFrom && validTo && BigInt(fromBlock) <= BigInt(toBlock);
+
+  async function discoverCandidates(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validToken || !ordered) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(await api.discoverClaimBurnCandidates(token, fromBlock, toBlock));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Burn candidate discovery failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const report = result?.report;
+  return (
+    <section className="panel subject-panel quote-panel" aria-labelledby="burn-discovery-heading">
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Long-range event discovery</span>
+          <h3 id="burn-discovery-heading">Burn Candidate Range</h3>
+        </div>
+        <span className="snapshot-badge">BSC SQD · read-only</span>
+      </div>
+      <p className="panel-copy">
+        Search a finalized range for non-zero ERC-20 Transfers to the zero address. Each candidate
+        still needs the exact-block conservation certificate above. Silent or custom supply changes
+        are outside this event query and remain Unknown.
+      </p>
+      <form
+        className="quote-form claim-burn-form"
+        onSubmit={(event) => void discoverCandidates(event)}
+      >
+        <div className="claim-burn-field">
+          <label htmlFor="claim-burn-discovery-token">Candidate token address</label>
+          <input
+            id="claim-burn-discovery-token"
+            spellCheck={false}
+            placeholder="0x…"
+            value={token}
+            onChange={(event) => setToken(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field claim-burn-block-field">
+          <label htmlFor="claim-burn-discovery-from">From block</label>
+          <input
+            id="claim-burn-discovery-from"
+            inputMode="numeric"
+            placeholder="113485950"
+            value={fromBlock}
+            onChange={(event) => setFromBlock(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field claim-burn-block-field">
+          <label htmlFor="claim-burn-discovery-to">To block</label>
+          <input
+            id="claim-burn-discovery-to"
+            inputMode="numeric"
+            placeholder="115154970"
+            value={toBlock}
+            onChange={(event) => setToBlock(event.target.value.trim())}
+          />
+        </div>
+        <button
+          className="secondary-button"
+          type="submit"
+          disabled={busy || !validToken || !ordered}
+        >
+          {busy ? 'Discovering…' : 'Discover burn candidates'}
+        </button>
+      </form>
+      {error === undefined ? null : <p className="inline-error">{error}</p>}
+      {report === undefined ? null : (
+        <div className="burn-conservation-result">
+          <div className="snapshot-strip">
+            <span
+              className={
+                report.status === 'CANDIDATES_DISCOVERED'
+                  ? 'status-chip status-degraded'
+                  : 'status-chip status-up'
+              }
+            >
+              {titleCase(report.status)}
+            </span>
+            <span>
+              <b>Range</b> {report.fromBlock}–{report.toBlock}
+            </span>
+            <span>
+              <b>Terminal Evidence</b> <code>{report.terminalEvidenceId}</code>
+            </span>
+          </div>
+          <div className="fact-grid burn-fact-grid">
+            <div className="fact-row">
+              <span>Zero-address events</span>
+              <strong>{report.zeroAddressEventCount}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Candidate blocks</span>
+              <strong>{report.burnCandidateCount}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Coverage scope</span>
+              <code>{report.coverageScope}</code>
+            </div>
+            <div className="fact-row">
+              <span>Silent supply changes</span>
+              <KnowledgeDisplay data={report.silentSupplyChangeDetection} />
+            </div>
+          </div>
+          <div className="alert alert-warning">
+            <strong>Event-only boundary</strong>
+            <span>
+              {report.silentSupplyChangeDetection.state === 'unknown'
+                ? report.silentSupplyChangeDetection.detail
+                : 'Silent supply-change coverage must remain Unknown for this query.'}
+            </span>
+          </div>
+          {report.candidates.length === 0 ? (
+            <p className="panel-copy">
+              No zero-address burn candidate was observed in the complete event query. This is not
+              proof that totalSupply never changed silently.
+            </p>
+          ) : (
+            <div className="claim-draft-list">
+              {report.candidates.map((candidate) => (
+                <article
+                  className="claim-draft-card"
+                  key={`${candidate.blockNumber}:${candidate.blockHash}`}
+                >
+                  <div className="claim-draft-heading">
+                    <div>
+                      <span className="eyebrow">Needs exact-block promotion</span>
+                      <h4>Block {candidate.blockNumber}</h4>
+                    </div>
+                    <span className="status-chip status-degraded">Candidate only</span>
+                  </div>
+                  <div className="fact-grid">
+                    <div className="fact-row">
+                      <span>Observed burn events</span>
+                      <strong>{candidate.burnedEventAmount}</strong>
+                    </div>
+                    <div className="fact-row">
+                      <span>Same-block mint events</span>
+                      <strong>{candidate.mintedEventAmount}</strong>
+                    </div>
+                    <div className="fact-row">
+                      <span>Burn Transfers</span>
+                      <strong>{candidate.burnTransferIds.length}</strong>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ClaimAuditWorkspace() {
   return (
     <>
@@ -915,6 +1089,7 @@ function ClaimAuditWorkspace() {
         <StatusPill status="HUMAN_REVIEW_REQUIRED" />
       </div>
       <ClaimDeclarationPanel />
+      <ClaimBurnCandidateDiscoveryPanel />
       <ClaimBurnConservationPanel />
     </>
   );
