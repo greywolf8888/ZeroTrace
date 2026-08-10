@@ -61,6 +61,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232227) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232232) pass on immutable
       claim-audit kernel commit `23b3306`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31396779069) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31396779896) pass on immutable
+      Flap/Pancake V2 market-scenario commit `07b3478`
 
 ## Evidence and data
 

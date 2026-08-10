@@ -1012,18 +1012,18 @@ claim-action, or terminal FFT acceptance.
 
 ## Automated verification
 
-| Command                  | Result                                                                                                                                              |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 357 unit, 42 environment-free integration and build; dependency license/audit gates green                            |
-| local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                      |
-| local `test:coverage`    | pass: 399 tests, 22 opt-in durable skips; 82.54% statements, 76.43% branches, 90.88% functions, 83.65% lines                                        |
-| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                    |
-| `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                           |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                              |
-| `docker compose config`  | pass                                                                                                                                                |
-| production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000 |
-| branch GitHub Actions CI | [pass on `301a485`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31388266666): full CI matrix, Chromium and all production targets        |
-| branch CodeQL            | [pass on `301a485`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31388266772): JavaScript and TypeScript analysis                         |
+| Command                  | Result                                                                                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| local non-browser gates  | pass: format, lint, typecheck, 357 unit, 42 environment-free integration and build; dependency license/audit gates green                              |
+| local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                        |
+| local `test:coverage`    | pass: 399 tests, 22 opt-in durable skips; 82.54% statements, 76.43% branches, 90.88% functions, 83.65% lines                                          |
+| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                      |
+| `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                             |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                |
+| `docker compose config`  | pass                                                                                                                                                  |
+| production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000   |
+| branch GitHub Actions CI | [pass on `07b3478`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31396779069): full CI matrix, 12 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `07b3478`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31396779896): JavaScript and TypeScript analysis                           |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
