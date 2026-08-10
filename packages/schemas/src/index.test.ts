@@ -271,6 +271,7 @@ describe('launch mechanism snapshots', () => {
       creator: unknown,
       lifecycle: 'PRIMARY_MARKET',
       quoteAsset: knownValue('eip155:56:native'),
+      spotPrice: knownValue('0.0000000000000002'),
       curveType: knownValue('FLAP_VIRTUAL_CONSTANT_PRODUCT'),
       realBaseReserve: unknown,
       realQuoteReserve: knownValue('10'),

@@ -115,7 +115,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
         latest replay and fail-closed reorg/regression guards
   - [x] Deterministic all-source finalized-reorg rollback to the newest verified ancestor, immutable
         suffix invalidation and immediate safe replay
-  - [ ] Named migration/FFT real-chain fixtures, forced reorg drill, lifecycle and market/RV linkage
+  - [x] Named FFT migrated Pancake V2 point-in-time market/buy-size fixture
+  - [ ] Complete FFT migration fixture, forced reorg drill, lifecycle and sell/execution RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
 - [x] Deterministic Flap fixed-block `previewSell` quote and blocked/Unknown/no-fake-zero tests
@@ -135,6 +136,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       deadlines, bounded terminal Evidence roots and richer exact-unit/share observations
 - [x] Content-addressed append-only Claim Report repository and provider-free latest/exact API/UI
       replay with same-Snapshot, canonical-hash and nested-Evidence validation
+- [x] Same-Snapshot migrated-Flap Pancake V2 pool/factory/router verification, reserve spot,
+      multi-size buy scenarios and automatic 0.10% Router/model arithmetic checks, including one
+      named FFT point-in-time run
 - [ ] Automated durable capture scheduling, same-Snapshot action derivation, independent-source
       reconciliation, complete Claim Audit and terminal named FFT conclusion
 - [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`
@@ -174,6 +178,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [ ] Bitcoin Core plus Esplora fixture suite
 - [ ] Solana archive plus dedicated RPC fixture suite
 - [ ] Named launch/migration fixtures for every declared platform/version
+- [x] Named FFT migrated Pancake V2 point-in-time market and buy-size arithmetic fixture
 - [ ] RV reconciliation against historical executable quotes
 - [ ] Run the registered
       [Flap/BSC FFT terminal acceptance](FLAP_FFT_ACCEPTANCE.md) for

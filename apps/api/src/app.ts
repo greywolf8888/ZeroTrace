@@ -28,6 +28,7 @@ import {
   inspectFlapTokenOrigin,
   inspectFlapTokenOriginRestartSafe,
   inspectFlapToken,
+  quoteFlapPancakeV2BuyScenarios,
   quoteFlapSell,
   type InspectFlapTokenOriginOptions,
 } from '@zerotrace/platform-adapters';
@@ -225,6 +226,31 @@ const FlapSellQuoteRequestSchema = z
     platform: z.literal('flap').optional(),
     token: z.string().trim().min(1).max(128),
     inputQuantity: z.string().regex(/^(?:0|[1-9]\d*)$/),
+    blockNumber: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  })
+  .strict();
+
+const FlapPancakeV2BuyScenarioRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    quoteInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
     blockNumber: z
       .string()
       .regex(/^(?:0|[1-9]\d*)$/)
@@ -1995,6 +2021,46 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
     });
   });
+
+  app.post(
+    '/api/v1/rv/flap-pancake-v2-buy-scenarios',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPancakeV2BuyScenarioRequestSchema.parse(request.body);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        const detail = 'A BNB Smart Chain read-only provider is required.';
+        return reply.code(503).send({
+          platform: 'flap',
+          token: input.token.toLowerCase(),
+          market: unavailableValue('PROVIDER_UNCONFIGURED', detail),
+          scenarios: [],
+          validation: {
+            status: 'NOT_RUN',
+            deterministicToleranceBps: '10',
+            evaluatedScenarioCount: 0,
+            failedScenarioCount: 0,
+          },
+          pensionSinkTreatment: unknownValue(
+            'INSUFFICIENT_DATA',
+            'Sending tokens to a wallet is not a burn; custody and execution Evidence are unavailable.',
+          ),
+          terminalEvidenceId: null,
+          metadata: emptyMetadata('flap-pancake-v2-pool-buy-scenarios-v0.1.0'),
+          evidence: [],
+        });
+      }
+      return quoteFlapPancakeV2BuyScenarios({
+        adapter,
+        token: input.token,
+        quoteInputs: input.quoteInputs,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+    },
+  );
 
   app.post(
     '/api/v1/data-quality/discrepancies',

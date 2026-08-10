@@ -12,9 +12,11 @@ import { encodeAbiParameters } from 'viem';
 
 import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
+  PANCAKE_V2_BSC_DEPLOYMENT,
   PLATFORM_REGISTRY,
   inferGenericLaunchMechanism,
   inspectFlapToken,
+  quoteFlapPancakeV2BuyScenarios,
   quoteFlapSell,
   type FlapDeployment,
 } from './index.js';
@@ -37,6 +39,8 @@ const flapStateV5Components = [
 const zeroAddress = `0x${'0'.repeat(40)}` as const;
 const zeroBytes32 = `0x${'0'.repeat(64)}` as const;
 const tokenAddress = `0x${'a'.repeat(40)}`;
+const poolAddress = `0x${'b'.repeat(40)}`;
+const quoteAddress = `0x${'c'.repeat(40)}`;
 
 function encodeFlapV5(overrides: Record<string, unknown> = {}) {
   return encodeAbiParameters(
@@ -139,6 +143,30 @@ function encodeFlapV8Safe(overrides: Record<string, unknown> = {}) {
   );
 }
 
+function encodeAddress(value: string) {
+  return encodeAbiParameters([{ type: 'address' }], [value as `0x${string}`]);
+}
+
+function encodeUint8(value: number) {
+  return encodeAbiParameters([{ type: 'uint8' }], [value]);
+}
+
+function encodeReserves(reserve0: bigint, reserve1: bigint) {
+  return encodeAbiParameters(
+    [{ type: 'uint112' }, { type: 'uint112' }, { type: 'uint32' }],
+    [reserve0, reserve1, 123],
+  );
+}
+
+function pancakeV2AmountOut(amountIn: bigint, reserveIn: bigint, reserveOut: bigint) {
+  const amountInWithFee = amountIn * 9_975n;
+  return (amountInWithFee * reserveOut) / (reserveIn * 10_000n + amountInWithFee);
+}
+
+function encodeAmountsOut(input: bigint, output: bigint) {
+  return encodeAbiParameters([{ type: 'uint256[]' }], [[input, output]]);
+}
+
 class FlapJsonRpcTransport implements JsonRpcTransport {
   readonly endpointId = 'bsc-fixture';
   readonly calls: Array<{ method: string; params: readonly unknown[] }> = [];
@@ -210,6 +238,15 @@ function flapFixture(callResults: unknown[], deployment = FLAP_BSC_MAINNET_DEPLO
         deployment,
         token: tokenAddress,
         inputQuantity,
+        writeEvidence: async (item, sources = [], snapshot) =>
+          evidence.add(item, sources, snapshot).evidence,
+      }),
+    buyScenarios: (quoteInputs: readonly string[]) =>
+      quoteFlapPancakeV2BuyScenarios({
+        adapter,
+        deployment,
+        token: tokenAddress,
+        quoteInputs,
         writeEvidence: async (item, sources = [], snapshot) =>
           evidence.add(item, sources, snapshot).evidence,
       }),
@@ -290,6 +327,7 @@ describe('Flap read-only inspection', () => {
       platform: 'flap',
       lifecycle: 'PRIMARY_MARKET',
       quoteAsset: { state: 'known', value: 'eip155:56:native' },
+      spotPrice: { state: 'known', value: '0.0000000000000002' },
       realQuoteReserve: { state: 'known', value: '100' },
       virtualBaseReserve: { state: 'known', value: '20' },
       virtualQuoteReserve: { state: 'known', value: '10' },
@@ -483,5 +521,149 @@ describe('Flap read-only sell preview', () => {
       detail: expect.stringContaining('circulating supply'),
     });
     expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(1);
+  });
+});
+
+describe('Flap migrated Pancake V2 buy-size scenarios', () => {
+  const quoteReserve = 1_000n * 10n ** 18n;
+  const tokenReserve = 1_000_000n * 10n ** 18n;
+
+  function marketFixture(
+    options: {
+      inputs?: readonly bigint[];
+      factory?: string;
+      reserve0?: bigint;
+      reserve1?: bigint;
+      buyTaxBps?: bigint;
+    } = {},
+  ) {
+    const inputs = options.inputs ?? [100n * 10n ** 18n, 1_000n * 10n ** 18n];
+    const reserve0 = options.reserve0 ?? quoteReserve;
+    const reserve1 = options.reserve1 ?? tokenReserve;
+    const factory = options.factory ?? PANCAKE_V2_BSC_DEPLOYMENT.factory;
+    return flapFixture([
+      encodeFlapV8Safe({
+        status: 4,
+        quoteTokenAddress: quoteAddress,
+        pool: poolAddress,
+        dexId: 0,
+        buyTaxRate: options.buyTaxBps ?? 300n,
+      }),
+      encodeAddress(factory),
+      encodeAddress(quoteAddress),
+      encodeAddress(tokenAddress),
+      encodeReserves(reserve0, reserve1),
+      encodeAddress(poolAddress),
+      encodeAddress(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+      encodeUint8(18),
+      encodeUint8(18),
+      ...inputs.map((input) =>
+        encodeAmountsOut(input, pancakeV2AmountOut(input, reserve0, reserve1)),
+      ),
+    ]);
+  }
+
+  it('binds the official pair/router quote and deterministic multi-size model to one Snapshot', async () => {
+    const fixture = marketFixture();
+    const result = await fixture.buyScenarios(['100', '1000']);
+
+    expect(result.market).toMatchObject({
+      state: 'known',
+      value: {
+        venue: 'PANCAKESWAP_V2',
+        pool: poolAddress,
+        token: tokenAddress,
+        quoteAsset: quoteAddress,
+        tokenReserve: { decimal: '1000000' },
+        quoteReserve: { decimal: '1000' },
+        currentSpotPrice: '0.001',
+        dexFeeBps: '25',
+        configuredBuyTaxBps: { state: 'known', value: '300' },
+      },
+    });
+    expect(result.scenarios).toHaveLength(2);
+    expect(result.validation).toEqual({
+      status: 'PASS',
+      deterministicToleranceBps: '10',
+      evaluatedScenarioCount: 2,
+      failedScenarioCount: 0,
+    });
+    expect(result.scenarios[0]).toMatchObject({
+      quoteInput: { decimal: '100' },
+      deterministicQuoteErrorBps: '0',
+      deterministicToleranceBps: '10',
+      withinDeterministicTolerance: true,
+      executionNetTokenOutput: { state: 'unknown', reason: 'NOT_QUERIED' },
+    });
+    expect(result.scenarios[0]?.officialRouterGrossTokenOutput).toEqual(
+      result.scenarios[0]?.deterministicPoolGrossTokenOutput,
+    );
+    expect(result.scenarios[0]?.configuredTaxNetTokenOutput).toMatchObject({ state: 'known' });
+    expect(result.pensionSinkTreatment).toMatchObject({
+      state: 'unknown',
+      reason: 'INSUFFICIENT_DATA',
+      detail: expect.stringContaining('not supply burn'),
+    });
+    expect(result.metadata).toMatchObject({
+      snapshot: { blockNumber: '16' },
+      sourceCoverage: 0.5,
+      historyCoverage: 0,
+      simulationCoverage: 0.5,
+    });
+    expect(result.evidence.at(-1)?.id).toBe(result.terminalEvidenceId);
+    expect(
+      fixture.evidence.get(result.terminalEvidenceId)?.sourceEvidenceIds.length,
+    ).toBeGreaterThan(10);
+  });
+
+  it('rejects a pair whose factory identity disagrees with the official deployment', async () => {
+    const fixture = marketFixture({ factory: `0x${'d'.repeat(40)}` });
+
+    await expect(fixture.buyScenarios(['100', '1000'])).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringContaining('identities do not agree'),
+    });
+  });
+
+  it('does not read a pool when the Flap token is still in its primary market', async () => {
+    const fixture = flapFixture([encodeFlapV8Safe({ status: 1 })]);
+    const result = await fixture.buyScenarios(['100']);
+
+    expect(result.market).toMatchObject({ state: 'unavailable', reason: 'NOT_APPLICABLE' });
+    expect(result.scenarios).toEqual([]);
+    expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(1);
+  });
+
+  it('rejects a pool with a zero reserve instead of presenting a zero price', async () => {
+    const fixture = marketFixture({ reserve0: 0n });
+
+    await expect(fixture.buyScenarios(['100', '1000'])).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringContaining('reserves must be positive'),
+    });
+  });
+
+  it('rejects a quote input above the router uint256 limit before making a quote call', async () => {
+    const fixture = marketFixture({ inputs: [] });
+
+    await expect(fixture.buyScenarios([(2n ** 256n).toString()])).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringContaining('uint256 limit'),
+    });
+    expect(fixture.transport.calls.filter((call) => call.method === 'eth_call')).toHaveLength(9);
+  });
+
+  it('keeps a configured 100% tax net output known as zero but its average price Unknown', async () => {
+    const fixture = marketFixture({ buyTaxBps: 10_000n });
+    const result = await fixture.buyScenarios(['100', '1000']);
+
+    expect(result.scenarios[0]?.configuredTaxNetTokenOutput).toEqual({
+      state: 'known',
+      value: { atomic: '0', decimal: '0' },
+    });
+    expect(result.scenarios[0]?.averageConfiguredTaxBuyPrice).toMatchObject({
+      state: 'unknown',
+      reason: 'NOT_APPLICABLE',
+    });
   });
 });

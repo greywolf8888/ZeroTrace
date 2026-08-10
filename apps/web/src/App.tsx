@@ -12,6 +12,7 @@ import {
   type FlapLifetimeMaterializationResponse,
   type FlapEventTransactionResponse,
   type FlapInspectionResponse,
+  type FlapPancakeV2BuyScenarioResponse,
   type FlapSellQuoteResponse,
   type HealthResponse,
   type KnowledgeValue,
@@ -113,6 +114,13 @@ function KnowledgeDisplay({ data }: { data: KnowledgeValue<unknown> }) {
       {titleCase(data.reason ?? data.state)}
     </span>
   );
+}
+
+function TokenAmountKnowledge({ data }: { data: KnowledgeValue<{ decimal: string }> }) {
+  if (data.state === 'known' && data.value !== undefined) {
+    return <span className="knowledge-known">{data.value.decimal}</span>;
+  }
+  return <KnowledgeDisplay data={data} />;
 }
 
 function Header({
@@ -1391,6 +1399,198 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
   );
 }
 
+function FlapPancakeV2BuyScenarioPanel({
+  token,
+  blockNumber,
+}: {
+  token: string;
+  blockNumber: string;
+}) {
+  const [amounts, setAmounts] = useState('100, 1000, 10000');
+  const [result, setResult] = useState<FlapPancakeV2BuyScenarioResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const parsedInputs = amounts
+    .split(/[\s,]+/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  const inputsValid =
+    parsedInputs.length >= 1 &&
+    parsedInputs.length <= 8 &&
+    new Set(parsedInputs).size === parsedInputs.length &&
+    parsedInputs.every(
+      (value) => /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value) && !/^0(?:\.0+)?$/.test(value),
+    );
+
+  async function runScenarios(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!inputsValid) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(await api.flapPancakeV2BuyScenarios(token, parsedInputs, blockNumber));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Pancake V2 scenario query failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const market = result?.market.state === 'known' ? result.market.value : undefined;
+  return (
+    <>
+      <section
+        className="panel subject-panel quote-panel"
+        aria-labelledby="flap-buy-scenarios-heading"
+      >
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Official router quote + deterministic pool check</span>
+            <h3 id="flap-buy-scenarios-heading">Pancake V2 buy-size scenarios</h3>
+          </div>
+          <span className="snapshot-badge">Read-only, same Snapshot</span>
+        </div>
+        <p className="panel-copy">
+          Compare one to eight quote-asset buy sizes. Gross output comes from the official V2
+          router; the pool formula must stay inside the 0.1% deterministic error budget.
+        </p>
+        <form className="quote-form" onSubmit={(event) => void runScenarios(event)}>
+          <label htmlFor="flap-buy-scenario-amounts">Quote amounts (comma separated)</label>
+          <input
+            id="flap-buy-scenario-amounts"
+            inputMode="decimal"
+            placeholder="100, 1000, 10000"
+            value={amounts}
+            onChange={(event) => setAmounts(event.target.value)}
+          />
+          <button className="secondary-button" type="submit" disabled={busy || !inputsValid}>
+            {busy ? 'Reading pool…' : 'Run buy scenarios'}
+          </button>
+        </form>
+        <p className="quote-note">
+          Actual wallet receipt remains Unknown until a pinned-fork swap reproduces token tax and
+          swapback behavior. No approval, signing, transaction, or broadcast is performed.
+        </p>
+        {error === undefined ? null : (
+          <div className="alert alert-warning">
+            <strong>Buy scenarios unavailable</strong>
+            {error}
+          </div>
+        )}
+        {result === undefined ? null : market === undefined ? (
+          <div className="alert alert-warning">
+            <strong>DEX market unavailable</strong>
+            <KnowledgeDisplay data={result.market} />
+          </div>
+        ) : (
+          <>
+            <div className="fact-grid quote-facts">
+              <div className="fact-row">
+                <span>Venue</span>
+                <strong>{market.venue}</strong>
+              </div>
+              <div className="fact-row">
+                <span>Current spot price</span>
+                <strong>{market.currentSpotPrice}</strong>
+              </div>
+              <div className="fact-row">
+                <span>Quote reserve</span>
+                <strong>{market.quoteReserve.decimal}</strong>
+              </div>
+              <div className="fact-row">
+                <span>Token reserve</span>
+                <strong>{market.tokenReserve.decimal}</strong>
+              </div>
+              <div className="fact-row">
+                <span>DEX fee bps</span>
+                <strong>{market.dexFeeBps}</strong>
+              </div>
+              <div className="fact-row">
+                <span>Configured buy tax bps</span>
+                <KnowledgeDisplay data={market.configuredBuyTaxBps} />
+              </div>
+              <div className="fact-row">
+                <span>Automatic quote check</span>
+                <StatusPill
+                  status={`${result.validation.status} · ${result.validation.failedScenarioCount} failed`}
+                />
+              </div>
+            </div>
+            <div className="table-scroll scenario-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Quote in</th>
+                    <th>Router gross token</th>
+                    <th>Configured-tax estimate</th>
+                    <th>Execution net</th>
+                    <th>Average estimate</th>
+                    <th>Post-buy spot</th>
+                    <th>Price move</th>
+                    <th>Quote check</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.scenarios.map((scenario) => (
+                    <tr key={scenario.quoteInput.atomic}>
+                      <td>{scenario.quoteInput.decimal}</td>
+                      <td>{scenario.officialRouterGrossTokenOutput.decimal}</td>
+                      <td>
+                        <TokenAmountKnowledge data={scenario.configuredTaxNetTokenOutput} />
+                      </td>
+                      <td>
+                        <TokenAmountKnowledge data={scenario.executionNetTokenOutput} />
+                      </td>
+                      <td>
+                        <KnowledgeDisplay data={scenario.averageConfiguredTaxBuyPrice} />
+                      </td>
+                      <td>{scenario.modeledPostBuySpotPrice}</td>
+                      <td>{scenario.modeledPriceChangeBps} bps</td>
+                      <td>
+                        <StatusPill
+                          status={
+                            scenario.withinDeterministicTolerance
+                              ? `PASS ${scenario.deterministicQuoteErrorBps} BPS`
+                              : `FAIL ${scenario.deterministicQuoteErrorBps} BPS`
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="alert alert-warning pension-boundary">
+              <strong>Pension-wallet boundary</strong>
+              {result.pensionSinkTreatment.detail ??
+                'A wallet transfer is not treated as a supply burn or irreversible sink.'}
+            </div>
+            <div className="snapshot-strip">
+              <span>
+                <b>Pool</b> {shortId(market.pool)}
+              </span>
+              <span>
+                <b>Block</b> {String(result.metadata.snapshot?.blockNumber ?? 'Unknown')}
+              </span>
+              <span>
+                <b>Terminal Evidence</b> {shortId(result.terminalEvidenceId ?? 'Unavailable')}
+              </span>
+            </div>
+          </>
+        )}
+      </section>
+      {result === undefined || result.evidence.length === 0 ? null : (
+        <EvidencePanel
+          evidence={result.evidence}
+          eyebrow="Pool identity → reserves → official router → deterministic check"
+          title="Pancake V2 scenario Evidence"
+        />
+      )}
+    </>
+  );
+}
+
 function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse }) {
   const launch = inspection.launch;
   const [sellAmount, setSellAmount] = useState('');
@@ -1446,6 +1646,7 @@ function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse })
                 ['Platform version', launch.platformVersion],
                 ['Portal', launch.factoryOrProgram],
                 ['Quote asset', launch.quoteAsset],
+                ['Spot price', launch.spotPrice],
                 ['Curve type', launch.curveType],
                 ['Real quote reserve', launch.realQuoteReserve],
                 ['Virtual base reserve', launch.virtualBaseReserve],
@@ -1488,7 +1689,13 @@ function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse })
       </section>
       <FlapEventTransactionPanel token={inspection.token} />
       <ClaimReportPanel token={inspection.token} />
-      {launch === null ? null : (
+      {launch?.lifecycle === 'DEX_TRADING' ? (
+        <FlapPancakeV2BuyScenarioPanel
+          token={inspection.token}
+          blockNumber={launch.sourceBlockOrSlot}
+        />
+      ) : null}
+      {launch?.lifecycle !== 'PRIMARY_MARKET' ? null : (
         <section className="panel subject-panel quote-panel">
           <div className="panel-header">
             <div>

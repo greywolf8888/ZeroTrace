@@ -34,6 +34,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest` | latest immutable EVM Claim Report; provider-free replay          |
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`    | exact content-addressed EVM Claim Report replay                  |
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
+| POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
 | POST   | `/api/v1/data-quality/discrepancies`                          | typed error-budget and discrepancy audit                         |
 | GET    | `/api/v1/evidence/:id`                                        | Evidence node, source edges, and bound Snapshot                  |
 | GET    | `/api/v1/evidence/:id/drilldown`                              | restart-safe derived/source Evidence traversal                   |
@@ -101,6 +102,11 @@ another version. Returned fields include deployment/interface revision, lifecycl
 virtual reserves, circulating/remaining supply, graduation threshold, progress, tax state, pool,
 Snapshot, coverage, confidence, and source-linked Evidence. Fields not exposed by that interface,
 including current sell capacity and LP rights, remain typed Unknown.
+
+`spotPrice` is Known only while the Portal lifecycle makes its 18-decimal price field applicable.
+For a migrated `DEX` token, the Portal field is explicitly `Unknown(NOT_APPLICABLE)` even when its
+raw value is zero; ZeroTrace never presents that zero as the market price. The migrated market price
+must come from an identified DEX pool at the same Snapshot.
 
 No token bytecode yields negative Evidence and `platformMatch=false`; it does not produce a
 plausible launch record. This endpoint performs no approval, signing, swap, or broadcast operation.
@@ -212,6 +218,35 @@ The output and input remain atomic strings. Nominal value, decimals-normalized a
 independent price impact, and complete fee breakdown remain Unknown until separate same-Snapshot
 sources are implemented. The endpoint uses `eth_call` only and cannot sign, approve, swap, or
 broadcast.
+
+`POST /api/v1/rv/flap-pancake-v2-buy-scenarios` accepts `chainId=eip155:56`, a canonical EVM
+`token`, one to eight positive plain-decimal `quoteInputs`, optional `platform=flap`, and optional
+decimal `blockNumber`. It is applicable only when the same-Snapshot Flap inspection reports `DEX`,
+DEX ID `0`, a non-native quote token and a pool address.
+
+At one numeric finalized block the adapter verifies pool/factory/router bytecode, `pair.factory`,
+`token0`, `token1`, `getReserves`, official-factory `getPair`, router `factory`, and both token
+`decimals`. The pool and router must match the versioned official Pancake V2 BSC registry. Each
+input receives an official read-only router `getAmountsOut` quote plus a clean-room
+constant-product recomputation using the documented fixed 25 bps V2 fee. Every field has Contract
+State Evidence and the terminal result links the complete derivation graph.
+
+The response separates raw-reserve spot price, official-router gross output, deterministic formula
+output, configured-buy-tax net estimate, average modeled acquisition price, post-buy pool price and
+price change. Actual execution-net receipt remains `Unknown(NOT_QUERIED)` until a pinned-fork swap
+simulates fee-on-transfer and swapback behavior. Every scenario reports its deterministic quote
+error and the top-level `validation` is `PASS`, `FAIL`, or `NOT_RUN`.
+
+The deterministic tolerance is `10 bps` (`0.1%`). A larger mismatch sets the modeled tax-net value
+to `Unknown(CONFLICTING_SOURCES)` rather than choosing one quote. `sourceCoverage=0.5` represents one
+live chain-state operator plus official registries; repeated reads through that operator do not
+inflate independence. `historyCoverage=0` and `simulationCoverage=0.5` make clear that this is a
+point-in-time pool/router model, not historical or execution-complete RV.
+
+Sending bought tokens to a pension or treasury wallet is never treated as a burn. The response
+keeps `pensionSinkTreatment=Unknown(INSUFFICIENT_DATA)` and counts no extra price effect beyond the
+modeled pool buy until custody and transfer execution are separately evidenced. The route performs
+only bytecode reads and `eth_call`; it cannot approve, sign, swap, or broadcast.
 
 ### Typed discrepancy audit
 

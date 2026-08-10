@@ -70,6 +70,9 @@ The current foundation includes:
   Evidence rather than lifetime absence;
 - fixed-block Flap `previewSell` quotes whose provider-returned atomic proceeds and derivation
   Evidence remain separate from unqueried nominal price, fee breakdown and price impact;
+- migrated-Flap Pancake V2 market inspection that verifies pool, factory, router, pair identity,
+  reserves and decimals at one Snapshot, then compares official `getAmountsOut` with a clean-room
+  25 bps pool model across one to eight buy sizes;
 - an Evidence-grounded typed discrepancy engine with exact-state checks, exact-decimal error
   budgets, warning bands, coverage gates, and explicit Unknown exclusion from numeric denominators;
 - request-scoped provider provenance across failover pools, with dynamic head/tip/slot anchors
@@ -163,8 +166,8 @@ distributed workflows remain open work. Read
 | Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                                                                                                    |
 | Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending                                                                                                                                      |
 | Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                                                                                                                                                               |
-| Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap current state, exact transaction decode, durable origin/history, exact lifetime materialization, continuous accepted heads, deterministic rollback and provider-free replay work; real reorg/FFT validation and other adapters pending                              |
-| Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels plus Flap Portal sell preview work; DEX routing, decomposition, gas and capacity pending                                                                                                                                              |
+| Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                  |
+| Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal sell preview, and verified Pancake V2 buy-size/spot models work; pinned-fork execution, DEX sell routes, gas, capacity and multi-route RV remain                                                                         |
 | Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Deterministic allocation/action kernel, target-indexed Transfer/Safe observation, live same-Snapshot FFT address flow and durable provider-free Claim Report replay work; official attribution, action semantics, capture scheduling and terminal FFT acceptance pending |
 | Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                     |
 
@@ -270,6 +273,22 @@ changed, the worker appends an Evidence-backed invalidation, rolls canonical sta
 verified ancestor, and immediately re-enters materialization/extension. Any unavailable or
 disagreeing source defers recovery without choosing a majority. Forced real-reorg and independent-
 operator acceptance remain pending.
+
+For a Flap token that has migrated to PancakeSwap V2, the read-only market endpoint verifies the
+documented BSC factory and router, pool identity, reserves, decimals, and bytecode at the inspection
+Snapshot before quoting one to eight buy sizes:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v1/rv/flap-pancake-v2-buy-scenarios \
+  -H 'content-type: application/json' \
+  -d '{"chainId":"eip155:56","token":"0xdcfb441a1f38802820a4e7b4cc8aab37833c7777","quoteInputs":["100","1000","10000"]}'
+```
+
+The response keeps reserve spot, official Router gross output, the configured-tax estimate, and
+actual execution-net output separate. It automatically checks the clean-room pool calculation
+against `getAmountsOut` with a `10` bps deterministic budget. Actual tax/swapback execution remains
+Unknown until a pinned-fork execution probe exists, and a transfer to a movable pension wallet is
+custody—not a supply burn or an extra price effect.
 
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
@@ -455,11 +474,12 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets
 - [x] Add Snapshot/Evidence-gated claim-allocation and terminal-action audit kernels
 - [x] Add finalized target-indexed EVM Transfer/custody observation and live same-Snapshot FFT address-flow composition
+- [x] Add same-Snapshot Pancake V2 spot and multi-size Flap buy scenarios with automatic 0.10% arithmetic checks
 - [ ] Add live/unfinalized policy, forced real-reorg drills and independently operated provider validation
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs
-- [ ] Reconstruct launch/market lifecycle and multi-route realizable value with fees, tax, gas and capacity
+- [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
 - [ ] Add claim-language extraction, durable capture scheduling, action semantics and terminal FFT audit
 - [ ] Complete search, timeline, evidence graph, comparison, scenario and export workflows in the UI
@@ -467,8 +487,10 @@ This roadmap describes implementation progress rather than product marketing pha
 
 The named terminal real-chain acceptance target is Flap/BSC token FFT at
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`; its error budget and automatic discrepancy rules are
-defined in [the FFT acceptance specification](docs/testing/FLAP_FFT_ACCEPTANCE.md). Registration of
-that target is not a claim that the unfinished Flap/entity/RV stack has already analyzed it.
+defined in [the FFT acceptance specification](docs/testing/FLAP_FFT_ACCEPTANCE.md). One named
+same-Snapshot Pancake V2 spot/buy-size slice now passes its deterministic arithmetic check; this is
+not a terminal FFT conclusion because independent-source, execution, sell-RV, entity and claim-action
+gates remain open.
 
 Exact percentages, test counts, and external validation gates live in [PROGRESS.md](PROGRESS.md).
 

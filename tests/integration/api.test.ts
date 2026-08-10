@@ -17,9 +17,10 @@ import {
   type ChainAnchorReader,
 } from '@zerotrace/data-quality';
 import { createEvidence, EvidenceLedger, hashPayload } from '@zerotrace/evidence';
-import type {
-  FlapOriginCheckpointRun,
-  FlapOriginCheckpointStore,
+import {
+  PANCAKE_V2_BSC_DEPLOYMENT,
+  type FlapOriginCheckpointRun,
+  type FlapOriginCheckpointStore,
 } from '@zerotrace/platform-adapters';
 import {
   knownValue,
@@ -276,6 +277,8 @@ const fixtureBitcoinTransactionId = 'c'.repeat(64);
 const fixtureSolanaSignature =
   '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
 const fixtureFlapToken = `0x${'a'.repeat(40)}`;
+const fixtureFlapPool = `0x${'b'.repeat(40)}`;
+const fixtureFlapQuoteAsset = `0x${'c'.repeat(40)}`;
 const fixtureFlapEventTransactionHash = `0x${'7'.repeat(64)}`;
 
 function fixtureFlapCreationReceipt() {
@@ -329,7 +332,7 @@ function fixtureFlapCreationReceipt() {
   };
 }
 
-function fixtureFlapV8SafeResult() {
+function fixtureFlapV8SafeResult(overrides: Record<string, unknown> = {}) {
   return encodeAbiParameters(
     [
       {
@@ -376,9 +379,34 @@ function fixtureFlapV8SafeResult() {
         progress: 750_000_000_000_000_000n,
         lpFeeProfile: 0,
         dexId: 0,
+        ...overrides,
       },
     ],
   );
+}
+
+function fixtureAddressResult(value: string) {
+  return encodeAbiParameters([{ type: 'address' }], [value as `0x${string}`]);
+}
+
+function fixtureDecimalsResult(value: number) {
+  return encodeAbiParameters([{ type: 'uint8' }], [value]);
+}
+
+function fixtureReservesResult(reserve0: bigint, reserve1: bigint) {
+  return encodeAbiParameters(
+    [{ type: 'uint112' }, { type: 'uint112' }, { type: 'uint32' }],
+    [reserve0, reserve1, 123],
+  );
+}
+
+function fixturePancakeAmountOut(amountIn: bigint, reserveIn: bigint, reserveOut: bigint) {
+  const amountInWithFee = amountIn * 9_975n;
+  return (amountInWithFee * reserveOut) / (reserveIn * 10_000n + amountInWithFee);
+}
+
+function fixtureAmountsOutResult(input: bigint, output: bigint) {
+  return encodeAbiParameters([{ type: 'uint256[]' }], [[input, output]]);
 }
 
 function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccount): AppRuntime {
@@ -1545,6 +1573,7 @@ describe('ZeroTrace API contract', () => {
       },
       launch: {
         lifecycle: 'PRIMARY_MARKET',
+        spotPrice: { state: 'known', value: '0.000000000000002' },
         circulatingSupply: { state: 'known', value: '750' },
         remainingSupply: { state: 'known', value: '250' },
         progress: { state: 'known', value: '0.75' },
@@ -2322,6 +2351,123 @@ describe('ZeroTrace API contract', () => {
     });
     expect(drilldown.statusCode, drilldown.body).toBe(200);
     expect(drilldown.json().nodes).toHaveLength(7);
+  });
+
+  it('returns same-Snapshot Pancake V2 spot and multi-size buy scenarios for migrated Flap tokens', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const quoteReserve = 1_000n * 10n ** 18n;
+    const tokenReserve = 1_000_000n * 10n ** 18n;
+    const quoteInputs = [100n * 10n ** 18n, 1_000n * 10n ** 18n];
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new FlapQuoteTransport([
+          fixtureFlapV8SafeResult({
+            status: 4,
+            quoteTokenAddress: fixtureFlapQuoteAsset,
+            pool: fixtureFlapPool,
+            dexId: 0,
+          }),
+          fixtureAddressResult(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+          fixtureAddressResult(fixtureFlapQuoteAsset),
+          fixtureAddressResult(fixtureFlapToken),
+          fixtureReservesResult(quoteReserve, tokenReserve),
+          fixtureAddressResult(fixtureFlapPool),
+          fixtureAddressResult(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+          fixtureDecimalsResult(18),
+          fixtureDecimalsResult(18),
+          ...quoteInputs.map((input) =>
+            fixtureAmountsOutResult(
+              input,
+              fixturePancakeAmountOut(input, quoteReserve, tokenReserve),
+            ),
+          ),
+        ]),
+      ),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-buy-scenarios',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        quoteInputs: ['100', '1000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      platform: 'flap',
+      token: fixtureFlapToken,
+      market: {
+        state: 'known',
+        value: {
+          pool: fixtureFlapPool,
+          quoteAsset: fixtureFlapQuoteAsset,
+          currentSpotPrice: '0.001',
+          dexFeeBps: '25',
+        },
+      },
+      scenarios: [
+        {
+          quoteInput: { decimal: '100' },
+          deterministicQuoteErrorBps: '0',
+          withinDeterministicTolerance: true,
+          executionNetTokenOutput: { state: 'unknown', reason: 'NOT_QUERIED' },
+        },
+        { quoteInput: { decimal: '1000' } },
+      ],
+      validation: { status: 'PASS', evaluatedScenarioCount: 2, failedScenarioCount: 0 },
+      pensionSinkTreatment: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      metadata: {
+        snapshot: { chainId: 'eip155:56', blockNumber: '16' },
+        modelVersion: 'flap-pancake-v2-pool-buy-scenarios-v0.1.0',
+        sourceCoverage: 0.5,
+        simulationCoverage: 0.5,
+      },
+    });
+    const terminalId = response.json().terminalEvidenceId;
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${terminalId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes.length).toBeGreaterThan(15);
+  });
+
+  it('keeps Flap Pancake V2 scenarios explicitly unavailable without a BSC provider', async () => {
+    const app = await createApp({ config, runtime: runtimeWithAllLedgers(), logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-buy-scenarios',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        quoteInputs: ['100'],
+      },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({
+      market: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
+      scenarios: [],
+      validation: { status: 'NOT_RUN', evaluatedScenarioCount: 0, failedScenarioCount: 0 },
+      terminalEvidenceId: null,
+      evidence: [],
+    });
   });
 
   it('keeps Solana account absence known without coercing unavailable fields to zero', async () => {

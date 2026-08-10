@@ -215,6 +215,20 @@ in order and reports deterministic distributions. Multi-route liquidity, transfe
 fees, gas, slippage limits, reverts, bridges, CEX assumptions, and historical execution calibration
 remain terminal requirements.
 
+The first migrated-market composition binds Flap inspection and PancakeSwap V2 reads to one
+finalized BSC Snapshot. A versioned official deployment registry supplies the expected factory,
+router, fee, and documentation provenance; the adapter then verifies bytecode, `pair.factory()`,
+`token0`, `token1`, `getPair`, router factory, decimals, and positive reserves on chain. Each requested
+buy size records the official router `getAmountsOut` result and an independently implemented
+constant-product result using exact integers and the documented 25 bps fee. Their atomic output is
+automatically checked against a versioned 10 bps deterministic budget. A configured Flap buy-tax
+estimate is kept separate from both gross output and actual execution-net output. Until a pinned-fork
+swap observes token tax, swapback, gas, and failure behavior, actual execution remains Unknown. A
+transfer into movable pension-wallet custody is neither an irreversible burn nor a second pool
+impact; this boundary is returned explicitly rather than encoded as a price adjustment. One RPC
+operator plus official documentation yields source coverage `0.5`, not independent-source
+acceptance.
+
 ### Claim verification
 
 The first deterministic claim kernel accepts human- or agent-structured rules separately from chain
@@ -513,8 +527,11 @@ Flap realizable-value preview is a distinct provider-observation layer, not a re
 deterministic RV engine. It reuses the inspection Snapshot and calls the official view-only
 `previewSell` interface at that exact block. The raw output is Contract State Evidence; a separate
 derived Evidence node exposes the atomic realizable value. Nominal price, decimals, impact, fee
-decomposition, gas, route capacity and migrated-DEX execution remain Unknown until independently
-evidenced. A revert or unsupported lifecycle cannot become a zero quote.
+decomposition, gas, route capacity and migrated-DEX sell execution remain Unknown until
+independently evidenced. The initial migrated PancakeSwap V2 buy-side slice above supplies verified
+point-in-time reserves, spot, gross route output, configured-tax estimates and modeled post-buy spot;
+it does not turn those values into a complete sell-RV conclusion. A revert or unsupported lifecycle
+cannot become a zero quote.
 
 The Data Quality domain also owns a typed discrepancy engine. It compares Evidence-grounded actual
 and reference observations only when both resolve to the same canonical ledger/position/hash and

@@ -716,6 +716,7 @@ export const LaunchMechanismSnapshotSchema = z.object({
   creator: OptionalStringKnowledgeSchema,
   lifecycle: LaunchLifecycleSchema,
   quoteAsset: OptionalStringKnowledgeSchema,
+  spotPrice: OptionalDecimalKnowledgeSchema,
   curveType: OptionalStringKnowledgeSchema,
   realBaseReserve: OptionalDecimalKnowledgeSchema,
   realQuoteReserve: OptionalDecimalKnowledgeSchema,
@@ -1209,6 +1210,130 @@ export const RealizableValuePointSchema = z.object({
   metadata: AnalysisMetadataSchema,
 });
 export type RealizableValuePoint = z.infer<typeof RealizableValuePointSchema>;
+
+export const FlapPancakeV2TokenAmountSchema = z.object({
+  atomic: UnsignedQuantityStringSchema,
+  decimal: DecimalStringSchema,
+});
+export type FlapPancakeV2TokenAmount = z.infer<typeof FlapPancakeV2TokenAmountSchema>;
+
+export const FlapPancakeV2MarketSchema = z.object({
+  venue: z.literal('PANCAKESWAP_V2'),
+  chainId: z.literal('eip155:56'),
+  pool: z.string().regex(/^0x[0-9a-f]{40}$/),
+  factory: z.string().regex(/^0x[0-9a-f]{40}$/),
+  router: z.string().regex(/^0x[0-9a-f]{40}$/),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  quoteAsset: z.string().regex(/^0x[0-9a-f]{40}$/),
+  token0: z.string().regex(/^0x[0-9a-f]{40}$/),
+  token1: z.string().regex(/^0x[0-9a-f]{40}$/),
+  tokenDecimals: z.number().int().min(0).max(255),
+  quoteDecimals: z.number().int().min(0).max(255),
+  tokenReserve: FlapPancakeV2TokenAmountSchema,
+  quoteReserve: FlapPancakeV2TokenAmountSchema,
+  currentSpotPriceWad: UnsignedQuantityStringSchema,
+  currentSpotPrice: DecimalStringSchema,
+  dexFeeBps: UnsignedQuantityStringSchema,
+  configuredBuyTaxBps: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  pairTimestampLast: UnsignedQuantityStringSchema,
+  sourceRevision: z.string().min(1),
+});
+export type FlapPancakeV2Market = z.infer<typeof FlapPancakeV2MarketSchema>;
+
+export const FlapPancakeV2BuyScenarioPointSchema = z.object({
+  quoteInput: FlapPancakeV2TokenAmountSchema,
+  officialRouterGrossTokenOutput: FlapPancakeV2TokenAmountSchema,
+  deterministicPoolGrossTokenOutput: FlapPancakeV2TokenAmountSchema,
+  configuredTaxNetTokenOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  executionNetTokenOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  averageGrossBuyPrice: knowledgeValueSchema(DecimalStringSchema),
+  averageConfiguredTaxBuyPrice: knowledgeValueSchema(DecimalStringSchema),
+  modeledPostBuySpotPrice: DecimalStringSchema,
+  modeledPriceChangeBps: DecimalStringSchema,
+  deterministicQuoteErrorBps: DecimalStringSchema,
+  deterministicToleranceBps: DecimalStringSchema,
+  withinDeterministicTolerance: z.boolean(),
+  assumption: z.string().min(1),
+});
+export type FlapPancakeV2BuyScenarioPoint = z.infer<typeof FlapPancakeV2BuyScenarioPointSchema>;
+
+export const FlapPancakeV2BuyScenarioResultSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    market: knowledgeValueSchema(FlapPancakeV2MarketSchema),
+    scenarios: z.array(FlapPancakeV2BuyScenarioPointSchema).max(8),
+    validation: z.object({
+      status: z.enum(['PASS', 'FAIL', 'NOT_RUN']),
+      deterministicToleranceBps: DecimalStringSchema,
+      evaluatedScenarioCount: z.number().int().nonnegative(),
+      failedScenarioCount: z.number().int().nonnegative(),
+    }),
+    pensionSinkTreatment: knowledgeValueSchema(z.string().min(1)),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+      message: 'Flap Pancake V2 buy scenarios require a replayable chain Snapshot.',
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.evidence.some((item) => item.id === value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message:
+          'Flap Pancake V2 buy scenarios must bind their terminal Evidence to one BSC Snapshot.',
+      });
+    }
+    if (value.market.state === 'known') {
+      const market = value.market.value;
+      const pairMatches =
+        (market.token0 === market.token && market.token1 === market.quoteAsset) ||
+        (market.token1 === market.token && market.token0 === market.quoteAsset);
+      const failedScenarioCount = value.scenarios.filter(
+        (scenario) => !scenario.withinDeterministicTolerance,
+      ).length;
+      if (
+        market.token !== value.token ||
+        !pairMatches ||
+        value.scenarios.length === 0 ||
+        market.tokenReserve.atomic === '0' ||
+        market.quoteReserve.atomic === '0' ||
+        value.validation.status === 'NOT_RUN' ||
+        value.validation.evaluatedScenarioCount !== value.scenarios.length ||
+        value.validation.failedScenarioCount !== failedScenarioCount ||
+        (failedScenarioCount === 0
+          ? value.validation.status !== 'PASS'
+          : value.validation.status !== 'FAIL')
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['market'],
+          message:
+            'A known Flap Pancake V2 market requires matching pair identities, positive reserves and scenarios.',
+        });
+      }
+    } else if (
+      value.scenarios.length !== 0 ||
+      value.validation.status !== 'NOT_RUN' ||
+      value.validation.evaluatedScenarioCount !== 0 ||
+      value.validation.failedScenarioCount !== 0
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['scenarios'],
+        message: 'Unavailable or unknown Flap Pancake V2 markets cannot contain scenarios.',
+      });
+    }
+  });
+export type FlapPancakeV2BuyScenarioResult = z.infer<typeof FlapPancakeV2BuyScenarioResultSchema>;
 
 export const ClaimStatusSchema = z.enum([
   'VERIFIED',

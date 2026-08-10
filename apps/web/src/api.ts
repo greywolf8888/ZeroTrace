@@ -204,6 +204,7 @@ export interface LaunchMechanismSnapshot {
   factoryOrProgram: KnowledgeValue<string>;
   lifecycle: string;
   quoteAsset: KnowledgeValue<string>;
+  spotPrice: KnowledgeValue<string>;
   curveType: KnowledgeValue<string>;
   realQuoteReserve: KnowledgeValue<string>;
   virtualBaseReserve: KnowledgeValue<string>;
@@ -252,6 +253,62 @@ export interface FlapSellQuoteResponse {
     route: string[];
     metadata: AnalysisMetadata;
   };
+  evidence: EvidenceRecord[];
+}
+
+export interface FlapTokenAmount {
+  atomic: string;
+  decimal: string;
+}
+
+export interface FlapPancakeV2BuyScenarioResponse {
+  platform: 'flap';
+  token: string;
+  market: KnowledgeValue<{
+    venue: 'PANCAKESWAP_V2';
+    chainId: 'eip155:56';
+    pool: string;
+    factory: string;
+    router: string;
+    token: string;
+    quoteAsset: string;
+    token0: string;
+    token1: string;
+    tokenDecimals: number;
+    quoteDecimals: number;
+    tokenReserve: FlapTokenAmount;
+    quoteReserve: FlapTokenAmount;
+    currentSpotPriceWad: string;
+    currentSpotPrice: string;
+    dexFeeBps: string;
+    configuredBuyTaxBps: KnowledgeValue<string>;
+    pairTimestampLast: string;
+    sourceRevision: string;
+  }>;
+  scenarios: Array<{
+    quoteInput: FlapTokenAmount;
+    officialRouterGrossTokenOutput: FlapTokenAmount;
+    deterministicPoolGrossTokenOutput: FlapTokenAmount;
+    configuredTaxNetTokenOutput: KnowledgeValue<FlapTokenAmount>;
+    executionNetTokenOutput: KnowledgeValue<FlapTokenAmount>;
+    averageGrossBuyPrice: KnowledgeValue<string>;
+    averageConfiguredTaxBuyPrice: KnowledgeValue<string>;
+    modeledPostBuySpotPrice: string;
+    modeledPriceChangeBps: string;
+    deterministicQuoteErrorBps: string;
+    deterministicToleranceBps: string;
+    withinDeterministicTolerance: boolean;
+    assumption: string;
+  }>;
+  validation: {
+    status: 'PASS' | 'FAIL' | 'NOT_RUN';
+    deterministicToleranceBps: string;
+    evaluatedScenarioCount: number;
+    failedScenarioCount: number;
+  };
+  pensionSinkTreatment: KnowledgeValue<string>;
+  terminalEvidenceId: string | null;
+  metadata: AnalysisMetadata;
   evidence: EvidenceRecord[];
 }
 
@@ -651,6 +708,17 @@ export const api = {
         platform: 'flap',
         token,
         inputQuantity,
+        blockNumber,
+      }),
+    }),
+  flapPancakeV2BuyScenarios: (token: string, quoteInputs: readonly string[], blockNumber: string) =>
+    requestJson<FlapPancakeV2BuyScenarioResponse>('/api/v1/rv/flap-pancake-v2-buy-scenarios', {
+      method: 'POST',
+      body: JSON.stringify({
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token,
+        quoteInputs,
         blockNumber,
       }),
     }),

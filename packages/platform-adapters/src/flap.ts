@@ -450,6 +450,22 @@ function unknownNotQueried(detail: string) {
   return unknownValue('NOT_QUERIED', detail);
 }
 
+function portalSpotPrice(state: FlapTokenState): KnowledgeValue<string> {
+  if (state.status.state !== 'known') {
+    return unknownValue(
+      'UNSUPPORTED',
+      'The Portal token status is newer than this decoder, so its price field cannot be interpreted.',
+    );
+  }
+  if (state.status.value === 'TRADABLE' || state.status.value === 'IN_DUEL') {
+    return knownValue(wadDecimal(BigInt(state.priceWad)));
+  }
+  return unknownValue(
+    'NOT_APPLICABLE',
+    'The Flap Portal price field is not a DEX market price; migrated tokens require an evidenced pool quote.',
+  );
+}
+
 function buildLaunch(
   state: FlapTokenState,
   token: string,
@@ -476,6 +492,7 @@ function buildLaunch(
     creator: unknownNotQueried('Creator requires the versioned TokenCreated event history.'),
     lifecycle: lifecycle(state.status),
     quoteAsset: knownValue(quoteAsset),
+    spotPrice: portalSpotPrice(state),
     curveType: knownValue('FLAP_VIRTUAL_CONSTANT_PRODUCT'),
     realBaseReserve: unknownNotQueried('Portal inspection does not expose a real base reserve.'),
     realQuoteReserve: knownValue(state.reserve),

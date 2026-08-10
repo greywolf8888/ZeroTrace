@@ -205,6 +205,7 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
           },
           lifecycle: 'PRIMARY_MARKET',
           quoteAsset: { state: 'known', value: 'eip155:56:native' },
+          spotPrice: { state: 'known', value: '0.0025' },
           curveType: { state: 'known', value: 'FLAP_VIRTUAL_CONSTANT_PRODUCT' },
           realQuoteReserve: { state: 'known', value: '1250000000000000000' },
           virtualBaseReserve: { state: 'known', value: '100000000000000000000' },
@@ -972,6 +973,304 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(
     page.getByText('Flap sell preview normalized into a realizable-value observation.'),
   ).toBeVisible();
+});
+
+test('renders migrated Flap spot price and buy-size scenarios without calling custody a burn', async ({
+  page,
+}) => {
+  const quoteAsset = '0x55d398326f99059ff775485246999027b3197955';
+  const pool = '0xe374af9818c4359374996f86a734fc39eb04d949';
+  const terminalEvidenceId = 'ev_1234567890abcdef12345678';
+  await page.route('**/api/v1/subjects/EVM/**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        subject: {
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          type: 'ADDRESS',
+          id: bscTokenAddress,
+          normalizedId: bscTokenAddress,
+          validation: 'STRUCTURALLY_VALID',
+          confidence: 1,
+        },
+        facts: {
+          nativeBalanceWei: { state: 'known', value: '0' },
+          bytecodePresent: { state: 'known', value: true },
+        },
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '115128697',
+            blockHash: `0x${'8'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 1,
+          sourceCoverage: 0.5,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: '2026-08-10T13:00:00.000Z',
+          sourceSet: ['bsc-rpc-fixture'],
+          modelVersion: 'evm-subject-query-v0.1.0',
+          confidence: 1,
+          evidenceIds: [],
+        },
+        evidence: [],
+      }),
+    });
+  });
+  await page.route('**/api/v1/launches/EVM/**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        deployment: {
+          portal: '0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0',
+          documentedVersion: 'v5.14.16',
+          sourceRevision: 'flap-sh/FlapVaultExample@0a6ad1b',
+        },
+        platformMatch: { state: 'known', value: true },
+        launch: {
+          platform: 'flap',
+          platformVersion: { state: 'known', value: 'v5.14.16' },
+          deploymentId: { state: 'known', value: 'eip155:56:portal' },
+          factoryOrProgram: {
+            state: 'known',
+            value: '0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0',
+          },
+          lifecycle: 'DEX_TRADING',
+          quoteAsset: { state: 'known', value: quoteAsset },
+          spotPrice: {
+            state: 'unknown',
+            reason: 'NOT_APPLICABLE',
+            detail: 'Portal price is not the DEX market price.',
+          },
+          curveType: { state: 'known', value: 'FLAP_VIRTUAL_CONSTANT_PRODUCT' },
+          realQuoteReserve: { state: 'known', value: '0' },
+          virtualBaseReserve: { state: 'known', value: '107036752000000000000000000' },
+          virtualQuoteReserve: { state: 'known', value: '3837000000000000000000' },
+          circulatingSupply: { state: 'known', value: '1000000000000000000000000000' },
+          remainingSupply: { state: 'known', value: '0' },
+          progress: { state: 'known', value: '1' },
+          graduationThreshold: { state: 'known', value: '800000000000000000000000000' },
+          currentSellCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
+          taxModel: { state: 'known', value: 'FLAP_TAX_V3' },
+          buyTaxBps: { state: 'known', value: '300' },
+          sellTaxBps: { state: 'known', value: '300' },
+          migrationPool: { state: 'known', value: pool },
+          lpLocked: { state: 'unknown', reason: 'NOT_QUERIED' },
+          lpBurned: { state: 'unknown', reason: 'NOT_QUERIED' },
+          sourceBlockOrSlot: '115128697',
+          sourceVersion: 'flap:getTokenV8Safe:flap-sh/FlapVaultExample@0a6ad1b',
+          evidenceIds: ['ev_flap_dex'],
+        },
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '115128697',
+            blockHash: `0x${'8'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 0.7,
+          sourceCoverage: 0.5,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: '2026-08-10T13:00:00.000Z',
+          sourceSet: ['bsc-rpc-fixture'],
+          modelVersion: 'flap-inspector-getTokenV8Safe-v0.1.0',
+          confidence: 0.95,
+          evidenceIds: ['ev_flap_dex'],
+        },
+        evidence: [
+          {
+            id: 'ev_flap_dex',
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:flap-inspector',
+            locator: `flap:${bscTokenAddress}@115128697`,
+            payloadHash: '8'.repeat(64),
+            observedAt: '2026-08-10T13:00:00.000Z',
+            blockOrSlot: '115128697',
+            finality: 'finalized',
+            summary: 'Migrated Flap launch mechanism normalized from Portal state.',
+          },
+        ],
+      }),
+    });
+  });
+  await page.route('**/api/v1/rv/flap-pancake-v2-buy-scenarios', async (route) => {
+    const point = (
+      quoteInput: string,
+      gross: string,
+      net: string,
+      average: string,
+      postPrice: string,
+      priceMove: string,
+    ) => ({
+      quoteInput: { atomic: `${quoteInput}000000000000000000`, decimal: quoteInput },
+      officialRouterGrossTokenOutput: { atomic: gross.replace('.', ''), decimal: gross },
+      deterministicPoolGrossTokenOutput: { atomic: gross.replace('.', ''), decimal: gross },
+      configuredTaxNetTokenOutput: {
+        state: 'known',
+        value: { atomic: net.replace('.', ''), decimal: net },
+      },
+      executionNetTokenOutput: {
+        state: 'unknown',
+        reason: 'NOT_QUERIED',
+        detail: 'Pinned-fork execution has not run.',
+      },
+      averageGrossBuyPrice: { state: 'known', value: average },
+      averageConfiguredTaxBuyPrice: { state: 'known', value: average },
+      modeledPostBuySpotPrice: postPrice,
+      modeledPriceChangeBps: priceMove,
+      deterministicQuoteErrorBps: '0',
+      deterministicToleranceBps: '10',
+      withinDeterministicTolerance: true,
+      assumption: 'Pool-only exact-input model.',
+    });
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        market: {
+          state: 'known',
+          value: {
+            venue: 'PANCAKESWAP_V2',
+            chainId: 'eip155:56',
+            pool,
+            factory: '0xca143ce32fe78f1f7019d7d551a6402fc5350c73',
+            router: '0x10ed43c718714eb63d5aa57b78b54704e256024e',
+            token: bscTokenAddress,
+            quoteAsset,
+            token0: quoteAsset,
+            token1: bscTokenAddress,
+            tokenDecimals: 18,
+            quoteDecimals: 18,
+            tokenReserve: {
+              atomic: '73899426572496252333612006',
+              decimal: '73899426.572496252333612006',
+            },
+            quoteReserve: {
+              atomic: '30546942096796964000250',
+              decimal: '30546.94209679696400025',
+            },
+            currentSpotPriceWad: '413358773223814',
+            currentSpotPrice: '0.000413358773223814',
+            dexFeeBps: '25',
+            configuredBuyTaxBps: { state: 'known', value: '300' },
+            pairTimestampLast: '1786366800',
+            sourceRevision: 'pancakeswap-v2-bsc-registry-and-fee@2026-08-10',
+          },
+        },
+        scenarios: [
+          point(
+            '100',
+            '240530.618355934388100371',
+            '233314.699805256356457359',
+            '0.000428605675',
+            '0.000416057',
+            '65.28',
+          ),
+          point(
+            '1000',
+            '2336851.537264944410055320',
+            '2266745.991147',
+            '0.00044116',
+            '0.00044075',
+            '662.6',
+          ),
+          point(
+            '10000',
+            '18191299.377995940224635248',
+            '17645560.396656',
+            '0.00056675',
+            '0.000721',
+            '7444.2',
+          ),
+        ],
+        validation: {
+          status: 'PASS',
+          deterministicToleranceBps: '10',
+          evaluatedScenarioCount: 3,
+          failedScenarioCount: 0,
+        },
+        pensionSinkTreatment: {
+          state: 'unknown',
+          reason: 'INSUFFICIENT_DATA',
+          detail:
+            'A transfer to the pension wallet is movable custody, not supply burn. The displayed post-buy price counts only the pool trade and no extra sink effect.',
+        },
+        terminalEvidenceId,
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '115128697',
+            blockHash: `0x${'8'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 0.85,
+          sourceCoverage: 0.67,
+          historyCoverage: 0,
+          simulationCoverage: 0.5,
+          freshness: '2026-08-10T13:00:00.000Z',
+          sourceSet: ['bsc-rpc-fixture', 'pancakeswap-official-v2-registry@2026-08-10'],
+          modelVersion: 'flap-pancake-v2-pool-buy-scenarios-v0.1.0',
+          confidence: 0.96,
+          evidenceIds: [terminalEvidenceId],
+        },
+        evidence: [
+          {
+            id: terminalEvidenceId,
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:flap-pancake-v2-pool-buy-scenarios-v0.1.0',
+            locator: `rv:flap-pancake-v2-buy:${bscTokenAddress}@115128697`,
+            payloadHash: '9'.repeat(64),
+            observedAt: '2026-08-10T13:00:00.000Z',
+            blockOrSlot: '115128697',
+            finality: 'finalized',
+            summary:
+              'Pancake V2 spot price and buy-size scenarios derived from same-Snapshot state.',
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
+  await page.getByLabel('Network').selectOption('bsc');
+  await page.getByRole('button', { name: 'Trace' }).click();
+  await page.getByRole('button', { name: 'Inspect' }).click();
+
+  await expect(page.getByText('Dex Trading')).toBeVisible();
+  await expect(page.getByText('Spot Price')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap realizable sell preview' })).toHaveCount(0);
+  const scenarioPanel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Pancake V2 buy-size scenarios' }),
+  });
+  await expect(scenarioPanel).toBeVisible();
+  await page.getByRole('button', { name: 'Run buy scenarios' }).click();
+  await expect(scenarioPanel).toContainText('0.000413358773223814');
+  await expect(scenarioPanel).toContainText('240530.618355934388100371');
+  await expect(scenarioPanel).toContainText('Pass · 0 Failed');
+  await expect(scenarioPanel).toContainText('Not Queried');
+  await expect(scenarioPanel).toContainText('movable custody, not supply burn');
+  await expect(scenarioPanel.getByText(/Pass 0 Bps/).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pancake V2 scenario Evidence' })).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
 
 test('keeps scenario execution gated and exposes provider availability', async ({ page }) => {

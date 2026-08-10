@@ -18,10 +18,12 @@ entity analysis, realizable-value routing, and automatic discrepancy engine are 
 then, a generic address or transaction read is foundation evidence only and cannot be presented as
 an FFT product conclusion.
 
-Implementation note: the deterministic same-Snapshot discrepancy core and the class budgets below
-are implemented. The FFT terminal run remains gated by event/configuration history, semantic market
-and route reconstruction, controller/control-right analysis, corpus-level entity calibration, and
-complete multi-route realizable value.
+Implementation note: the deterministic same-Snapshot discrepancy core, class budgets, target-indexed
+claim-address observation, immutable report replay, and the first migrated Pancake V2 spot/buy-size
+slice are implemented. One named FFT market run is recorded below. The FFT terminal run remains
+gated by complete event/migration history, independent-source reconciliation, pinned-fork tax and
+swapback execution, sell-route capacity/gas, controller/control-right analysis, claim-action
+semantics, corpus-level entity calibration, and complete multi-route realizable value.
 
 ## Authoritative inputs
 
@@ -84,6 +86,44 @@ Exact state conflicts, block/hash conflicts, negative reserves, impossible suppl
 wrong pool/token identity, or a missing Evidence edge are failures. Provider outage, pruned history,
 and absent calibration labels are explicit inconclusive gates. No majority vote may convert a
 same-block source conflict into truth.
+
+## Partial market acceptance: 2026-08-10
+
+The production market composition was executed read-only against FFT and accepted the following one
+operator/one Snapshot result. This is a completed point-in-time market slice, not the terminal
+acceptance artifact.
+
+| Field                | Accepted observation                                                                                                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Snapshot             | finalized BSC block `115131838`, hash `0x04d1d1986cc969ac95e1acd6f3bae677a7934fff10758a628207e5e0c1ae22ef`, timestamp `2026-08-10T13:51:07.000Z`                                                         |
+| Market               | PancakeSwap V2 pool `0xe374af9818c4359374996f86a734fc39eb04d949`, verified against official factory `0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73` and Router `0x10ED43C718714eb63d5aA57B78B54704E256024E` |
+| Reserves             | `74891827.839354821963347306` FFT and `30143.481700747512234533` BSC USDT                                                                                                                                |
+| Current reserve spot | `0.000402493604047242` USDT/FFT                                                                                                                                                                          |
+| Fee/tax inputs       | documented V2 fee `25` bps; Flap inspection reported configured buy tax `300` bps                                                                                                                        |
+| Automatic check      | `PASS`; three scenarios evaluated, zero failed, `10` bps budget, observed error `0` bps                                                                                                                  |
+| Provenance           | 21 Evidence nodes; terminal Evidence `ev_c1d282e77439383f0b8495b2`; source coverage `0.5`                                                                                                                |
+
+| Quote input |       Router/model gross FFT |   Configured-tax estimate FFT | Average configured-tax price |  Modeled post-buy spot |         Spot move |
+| ----------: | ---------------------------: | ----------------------------: | ---------------------------: | ---------------------: | ----------------: |
+|    100 USDT |  `247012.617596385988641107` |   `239602.239068494408981873` |       `0.000417358370225468` | `0.000405165202846288` |    `66.37618` bps |
+|  1,000 USDT | `2398915.968277365381597299` |   `2326948.48922904442014938` |       `0.000429747372848513` |  `0.00042960726637845` |  `673.642066` bps |
+| 10,000 USDT | `18620993.39326804405720477` | `18062363.591470002735488626` |       `0.000553637399078962` | `0.000713397661433456` | `7724.447152` bps |
+
+The Router output and independently implemented 25 bps integer model matched exactly at atomic-unit
+precision. The configured-tax column is a policy/configuration estimate, not a simulated receipt:
+actual execution-net remains `Unknown(NOT_QUERIED)` until a pinned-fork execution observes transfer
+tax and swapback behavior. The live run used one chain operator plus official documentation, so it
+does not pass the independent-source gate. Host DNS interception caused the production SSRF guard to
+reject the public RPC hostname after it resolved into a private range; validation therefore used a
+test-only direct-fetch transport while retaining the production ledger adapter, market composition,
+Evidence ledger, read-only calls, and same-Snapshot checks. The production SSRF policy was not
+weakened.
+
+Sending acquired FFT to the behavioral pension-wallet candidate is modeled as a subsequent transfer
+into movable custody, not an irreversible burn and not a second AMM trade. It therefore does not
+create an extra automatic spot-price effect. Technical custody, individual membership withdrawal,
+weekly dividend execution, controller identity, and official wallet attribution remain separate
+Evidence questions.
 
 ## Required output
 

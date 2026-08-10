@@ -434,11 +434,13 @@ CodeQL, dependency/license/SBOM gates, Compose validation, and all five producti
 The requested Flap/BSC FFT contract
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` is registered in the
 [terminal acceptance specification](FLAP_FFT_ACCEPTANCE.md). Official deployment, inspection,
-event-indexing, and bonding-curve documentation has been located, but no FFT product conclusion is
-recorded because entity calibration, Flap event/migration history, market reconstruction, and
-complete multi-route RV are not implemented. The specification uses zero tolerance for exact chain state, field-class error
-budgets for derived values, Brier/ECE gates for entity probabilities, and excludes Unknown from
-numeric error denominators.
+event-indexing, bonding-curve and migrated-market sources have been located. Later entries in this
+record accept one same-Snapshot custody/flow observation and one point-in-time Pancake V2 market/buy
+slice, but no terminal FFT product conclusion is recorded because entity calibration, complete
+event/migration history, independent-source reconciliation and multi-route sell/execution RV remain
+unfinished. The specification uses zero tolerance for exact chain state, field-class error budgets
+for derived values, Brier/ECE gates for entity probabilities, and excludes Unknown from numeric error
+denominators.
 
 ### Deterministic Flap Portal inspection slice
 
@@ -972,15 +974,51 @@ its data directory removed.
 This is durable observation replay, not automatic capture, official pension-wallet attribution,
 dividend/action proof, independent-source reconciliation, market pricing or terminal FFT acceptance.
 
+## FFT Pancake V2 market and buy-size validation (2026-08-10)
+
+The production Flap/Pancake V2 market composition executed read-only for FFT at finalized BSC block
+`115131838`, hash `0x04d1d1986cc969ac95e1acd6f3bae677a7934fff10758a628207e5e0c1ae22ef`, block time
+`2026-08-10T13:51:07.000Z`, captured at `2026-08-10T13:51:06.371Z`. At the identical Snapshot it
+verified pool `0xe374af9818c4359374996f86a734fc39eb04d949`, official factory
+`0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73`, official Router
+`0x10ED43C718714eb63d5AA57B78B54704E256024E`, pair identity, token ordering, bytecode, 18-decimal
+FFT/BSC-USDT assets and positive reserves.
+
+The pool held `74891827.839354821963347306` FFT and `30143.481700747512234533` USDT, producing a
+reserve spot of `0.000402493604047242` USDT/FFT. With the documented 25 bps Pancake V2 fee and the
+Flap inspection's configured 300 bps buy tax, the accepted scenarios were:
+
+|       Input |       Router/model gross FFT |   Configured-tax estimate FFT | Modeled post-buy spot USDT/FFT |              Move |
+| ----------: | ---------------------------: | ----------------------------: | -----------------------------: | ----------------: |
+|    100 USDT |  `247012.617596385988641107` |   `239602.239068494408981873` |         `0.000405165202846288` |    `66.37618` bps |
+|  1,000 USDT | `2398915.968277365381597299` |   `2326948.48922904442014938` |          `0.00042960726637845` |  `673.642066` bps |
+| 10,000 USDT | `18620993.39326804405720477` | `18062363.591470002735488626` |         `0.000713397661433456` | `7724.447152` bps |
+
+The official Router and clean-room integer model matched exactly for all three gross outputs: `0`
+bps observed error against the `10` bps deterministic budget, validation `PASS`, three evaluated and
+zero failed. Terminal Evidence `ev_c1d282e77439383f0b8495b2` closed a 21-node drilldown. Data
+coverage was `0.85`, source coverage `0.5`, simulation coverage `0.5`, and confidence `0.96`.
+Source coverage intentionally counts the one chain operator once even though it produced multiple
+named RPC Evidence observations.
+
+The production SSRF guard correctly rejected the public BSC hostname when this host's DNS
+interception resolved it to a private/reserved address. The live validation therefore supplied a
+test-only direct-fetch transport to the production `EvmLedgerAdapter`, market composition and
+`EvidenceLedger`; it did not change production networking policy or add a production bypass. Actual
+execution-net is `Unknown(NOT_QUERIED)` because no pinned-fork swap observed tax/swapback behavior.
+Pension-wallet transfer remains `Unknown(INSUFFICIENT_DATA)` for pricing and is treated as movable
+custody rather than burn. This run is not independent-provider, sell-route, gas/capacity, entity,
+claim-action, or terminal FFT acceptance.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                              |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 351 unit, 40 environment-free integration and build; dependency license/audit gates green                            |
+| local non-browser gates  | pass: format, lint, typecheck, 357 unit, 42 environment-free integration and build; dependency license/audit gates green                            |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                      |
-| local `test:coverage`    | pass: 391 tests, 22 opt-in durable skips; 82.33% statements, 76.49% branches, 90.53% functions, 83.42% lines                                        |
+| local `test:coverage`    | pass: 399 tests, 22 opt-in durable skips; 82.54% statements, 76.43% branches, 90.88% functions, 83.65% lines                                        |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                    |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Claim Report, projection/lifetime replay, Unknown and storage failure                 |
+| `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                           |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                              |
 | `docker compose config`  | pass                                                                                                                                                |
 | production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000 |
