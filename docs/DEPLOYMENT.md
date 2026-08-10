@@ -13,7 +13,7 @@ parent-history continuity detection, and Evidence-linked Data Quality Alerts are
 
 ```bash
 docker compose config --quiet
-docker compose build api web ingest-worker postgres clickhouse
+docker compose build api web ingest-worker flap-origin-worker postgres clickhouse
 ```
 
 The API image runs as the unprivileged Node user and is pruned of test, build, and development-log
@@ -61,6 +61,18 @@ log/trace/state-diff, Bitcoin input/output, or Solana instruction/log/balance/to
 tables. These records retain provider shape and do not claim semantic transfer or protocol decoding.
 The worker is restart-safe for the same dataset/range/query identity and does not contain any
 chain-write operation. Scheduling and continuous-head following are not yet supplied.
+
+Run a wide, restart-safe Flap creation-origin scan through the separate semantic profile:
+
+```bash
+docker compose --profile semantic run --rm flap-origin-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 999999 --chunk-size 1000000
+```
+
+This one-shot worker requires initialized PostgreSQL Evidence and semantic checkpoint schemas. It
+persists completed chunks and a terminal Evidence-bearing result, but it is not a scheduler and does
+not project continuous event history.
 
 ## Health and smoke checks
 

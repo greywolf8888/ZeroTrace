@@ -197,6 +197,21 @@ Solana instructions/logs/native balances/token balances/rewards as applicable. E
 `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`; only materialized tables receive numeric counts.
 The worker accepts bounded finalized ranges only, claims no protocol decoding, and has no signing or
 broadcast interface.
+
+Wide Flap contract-origin scans use a separate durable one-shot worker. Every completed SQD chunk is
+committed to PostgreSQL with its Snapshot and Evidence IDs, so the identical command resumes at the
+next uncommitted block and a completed command replays without provider access:
+
+```bash
+docker compose --profile semantic run --rm flap-origin-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 999999 --chunk-size 1000000
+```
+
+Replace the zero address and range with an explicitly selected token and finalized inclusive range.
+This establishes only origin coverage inside that range. It does not claim lifetime event coverage,
+continuous scheduling, or a complete launch/market/RV conclusion.
+
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
 
@@ -225,6 +240,15 @@ After starting PostgreSQL, ClickHouse, and MinIO, a host-side finalized range ca
 
 ```bash
 npm run ingest -- --dataset bitcoin-mainnet --from 0 --to 100
+```
+
+After starting PostgreSQL and setting `POSTGRES_URL`, the same durable Flap origin worker can run on
+the host:
+
+```bash
+npm run flap:origin -- \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 999999 --chunk-size 1000000
 ```
 
 Typed read-only ledger records are available without any signing path:
@@ -309,6 +333,7 @@ packages/
   storage/              PostgreSQL, ClickHouse and object-artifact repositories
 services/
   ingest-worker/        Bounded finalized-range worker CLI
+  semantic-worker/      Durable Flap origin-scan worker CLI
 infra/
   postgres/init/        Relational/evidence schema
   clickhouse/init/      Raw fact and metric schema
@@ -338,9 +363,10 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add bounded finalized SQD contract-origin proof with exact Flap receipt/Snapshot replay
 - [x] Add durable generic semantic-scan state and contiguous coverage checkpoints
 - [x] Bind the Flap origin API to restart-safe chunk progress and terminal-result replay
+- [x] Add a one-shot deployment-origin worker with durable chunk resume and safe terminal replay
 - [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets
 - [ ] Add continuous scheduling, live/unfinalized handling, rollback/replay and independent-provider validation
-- [ ] Add a dedicated deployment-origin scheduler and bind Flap event-history projection to durable checkpoints
+- [ ] Add a deployment-origin scheduler and bind Flap event-history projection to durable checkpoints
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs

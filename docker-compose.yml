@@ -117,6 +117,38 @@ services:
         condition: service_healthy
     networks: [zerotrace]
 
+  flap-origin-worker:
+    profiles: [semantic]
+    build:
+      context: .
+      target: semantic-worker
+    environment:
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+    command:
+      - --token
+      - ${FLAP_ORIGIN_TOKEN:-}
+      - --from
+      - ${FLAP_ORIGIN_FROM_BLOCK:-0}
+      - --to
+      - ${FLAP_ORIGIN_TO_BLOCK:-0}
+      - --chunk-size
+      - ${FLAP_ORIGIN_CHUNK_SIZE:-1000000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [zerotrace]
+
   postgres:
     image: zerotrace-postgres:17.10
     build:

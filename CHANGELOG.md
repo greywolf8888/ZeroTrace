@@ -60,6 +60,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - restart-safe Flap origin execution that persists each exact completed chunk, resumes after a safe
   provider/storage failure, atomically stores the terminal Evidence result, fails readiness when the
   checkpoint schema is unavailable, and performs no provider call or Evidence write on terminal replay;
+- read-only host and Compose Flap origin worker entrypoints for wide bounded scans, with durable
+  storage preflight, exact-identity resume, credential-free summaries, and safe failure codes;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;

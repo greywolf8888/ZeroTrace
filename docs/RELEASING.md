@@ -37,7 +37,7 @@ branch.
    npm run test:e2e
    npm run sbom
    docker compose config --quiet
-   docker compose build api web ingest-worker postgres clickhouse
+   docker compose build api web ingest-worker flap-origin-worker postgres clickhouse
    ```
 
 5. Run named real-chain fixtures for every capability claimed as validated.

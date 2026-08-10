@@ -89,7 +89,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
   - [x] Multi-response SQD continuation metadata and deterministic multi-chunk origin coverage
   - [x] Generic durable semantic-scan checkpoint storage
   - [x] Restart-safe Flap origin API binding with chunk resume, atomic terminal result and provider-free terminal replay
-  - [ ] Dedicated deployment-origin worker/scheduler and durable event-history projection
+  - [x] One-shot deployment-origin worker with storage preflight, bounded chunk resume and safe output
+  - [ ] Continuous deployment-origin scheduler and durable event-history projection
   - [ ] Deployment-origin continuous Flap history, named migration/FFT fixtures, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels

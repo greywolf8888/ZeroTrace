@@ -66,6 +66,9 @@
 - the checkpointed Flap origin runner resumes only from a validated Snapshot/chunk/Evidence state,
   records safe failure codes, atomically stores the complete terminal result, and replays a terminal
   request without invoking the chain/SQD providers or the Evidence writer;
+- the semantic worker rejects write-like/unknown CLI arguments, unsafe ranges and non-HTTPS
+  providers, fails closed before provider access when durable storage is unavailable, and exposes
+  only categorized errors or a bounded terminal summary;
 - transaction-profile ingestion validates EVM hash, Bitcoin txid, and Solana signature identities,
   rejects duplicate/malformed records, and writes every transaction before advancing its block;
 - ledger-record ingestion validates EVM log, trace-address and changed-state identities; Bitcoin

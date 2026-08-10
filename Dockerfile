@@ -5,6 +5,7 @@ COPY package.json package-lock.json tsconfig.json tsconfig.base.json tsconfig.pa
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY services/ingest-worker/package.json services/ingest-worker/package.json
+COPY services/semantic-worker/package.json services/semantic-worker/package.json
 COPY packages/schemas/package.json packages/schemas/package.json
 COPY packages/identifiers/package.json packages/identifiers/package.json
 COPY packages/evidence/package.json packages/evidence/package.json
@@ -48,6 +49,17 @@ COPY --from=build /app/services/ingest-worker/dist ./services/ingest-worker/dist
 COPY --from=build /app/packages ./packages
 USER node
 ENTRYPOINT ["node", "services/ingest-worker/dist/src/cli.js"]
+
+FROM node:24.11.1-alpine AS semantic-worker
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build /app/package.json /app/package-lock.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/services/semantic-worker/package.json ./services/semantic-worker/package.json
+COPY --from=build /app/services/semantic-worker/dist ./services/semantic-worker/dist
+COPY --from=build /app/packages ./packages
+USER node
+ENTRYPOINT ["node", "services/semantic-worker/dist/src/cli.js"]
 
 FROM nginx:1.29-alpine AS web
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

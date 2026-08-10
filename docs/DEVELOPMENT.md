@@ -114,6 +114,33 @@ table reports `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`, with null rath
 outside materialized coverage. It is a chain-read worker and contains no private-key, signing, swap,
 or broadcast interface.
 
+## Durable Flap origin scans
+
+The semantic worker can cover an inclusive origin range larger than the synchronous API cap while
+keeping every provider request bounded to `FLAP_ORIGIN_CHUNK_SIZE` (maximum 1,000,000 blocks). Start
+PostgreSQL, set a host-side `POSTGRES_URL`, and run:
+
+```bash
+npm run flap:origin -- \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 999999 --chunk-size 1000000
+```
+
+The Compose equivalent is:
+
+```bash
+docker compose --profile semantic run --rm flap-origin-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 999999 --chunk-size 1000000
+```
+
+The CLI accepts only token/range/chunk arguments. It preflights both the append-only Evidence schema
+and semantic checkpoint migration `007`, reads finalized SQD BSC creation traces, verifies a unique
+candidate against the exact BSC receipt Snapshot, and emits one credential-free JSON summary. A
+failed chunk records only a safe error category. Re-run the exact identity to resume; changing any
+identity field starts a separate immutable scan. A complete bounded origin is not continuous token
+history and does not turn lifetime coverage into Known.
+
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive

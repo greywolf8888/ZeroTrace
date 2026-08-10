@@ -384,8 +384,10 @@ When PostgreSQL is configured, the Flap origin API binds this repository to exec
 each exact completed chunk only after its range Evidence exists, resumes from the stored next-block
 cursor and original upper Snapshot, records a safe failure category, and atomically stores the final
 Evidence-bearing origin result after complete coverage. A terminal replay reads that result without
-calling SQD/BSC RPC or writing Evidence again. The synchronous API remains deliberately range-capped;
-a dedicated deployment-origin scheduler and cross-range event-history projection remain later stages.
+calling SQD/BSC RPC or writing Evidence again. The synchronous API remains deliberately range-capped.
+The separate `semantic-worker` CLI can execute a wider inclusive range as bounded chunks and resume
+the identical identity after interruption. It remains a one-shot worker; continuous scheduling and
+the cross-range event-history projection remain later stages.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.

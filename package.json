@@ -15,13 +15,14 @@
     "services/*"
   ],
   "scripts": {
-    "build": "npm run build:packages && npm run build -w @zerotrace/api && npm run build -w @zerotrace/web && npm run build -w @zerotrace/ingest-worker",
+    "build": "npm run build:packages && npm run build -w @zerotrace/api && npm run build -w @zerotrace/web && npm run build -w @zerotrace/ingest-worker && npm run build -w @zerotrace/semantic-worker",
     "build:packages": "tsc -b tsconfig.packages.json",
     "clean": "tsc -b --clean",
     "dev": "npm run build:packages && concurrently --kill-others --names packages,api,web \"tsc -b tsconfig.packages.json --watch --preserveWatchOutput\" \"npm run dev -w @zerotrace/api\" \"npm run dev -w @zerotrace/web\"",
     "dev:api": "npm run build:packages && npm run dev -w @zerotrace/api",
     "dev:web": "npm run dev -w @zerotrace/web",
     "ingest": "npm run build:packages && npm run build -w @zerotrace/ingest-worker && npm run start -w @zerotrace/ingest-worker --",
+    "flap:origin": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start -w @zerotrace/semantic-worker --",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "health": "node scripts/healthcheck.mjs",
