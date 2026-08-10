@@ -333,7 +333,8 @@ The only allowed status vocabulary in this ledger is:
 - clean HTTP SQD Portal adapter for finalized Ethereum, BNB Smart Chain, Bitcoin, and Solana
   datasets; no GPL Portal client package is linked into the Apache-2.0 core;
 - bounded JSONL streaming with strict dataset/query fields, range and response limits, timeout,
-  retry, pacing, continuation, DNS/host policy, and unsafe-integer preservation;
+  retry, pacing, continuation, DNS/host policy, and unsafe-integer preservation; the clean adapter
+  accepts SQD's observed `text/plain` JSONL media type without weakening JSONL validation;
 - content-addressed raw artifact envelopes in a versioned S3-compatible bucket with exact
   read-after-write integrity verification;
 - canonical Evidence/Snapshot persistence before idempotent `ReplacingMergeTree` ClickHouse Raw

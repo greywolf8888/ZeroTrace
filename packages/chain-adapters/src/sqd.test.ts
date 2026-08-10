@@ -36,7 +36,7 @@ function block(number: number, suffix = number.toString(16)): SqdFinalizedBlock 
 
 function jsonlResponse(
   blocks: readonly SqdFinalizedBlock[],
-  options: { chunks?: readonly string[]; finalizedHead?: number } = {},
+  options: { chunks?: readonly string[]; contentType?: string; finalizedHead?: number } = {},
 ): Response {
   const encoded = `${blocks.map((item) => JSON.stringify(item)).join('\n')}\n`;
   const chunks = options.chunks ?? [encoded];
@@ -49,7 +49,7 @@ function jsonlResponse(
   return new Response(stream, {
     status: 200,
     headers: {
-      'content-type': 'application/jsonl',
+      'content-type': options.contentType ?? 'application/jsonl',
       ...(options.finalizedHead === undefined
         ? {}
         : { 'x-sqd-finalized-head-number': String(options.finalizedHead) }),
@@ -321,6 +321,27 @@ describe('SqdPortalClient', () => {
     );
 
     expect(result).toMatchObject({ requests: 2, retries: 1, blocks: 1 });
+  });
+
+  it('accepts provider JSONL served as text/plain while preserving strict parsing', async () => {
+    const validFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonlResponse([block(10)], { contentType: 'text/plain; charset=utf-8' }));
+
+    await expect(
+      client(validFetch).readFinalizedRange({ fromBlock: 10, toBlock: 10 }, vi.fn()),
+    ).resolves.toMatchObject({ blocks: 1, requests: 1 });
+    expect(validFetch.mock.calls[0]?.[1]?.headers).toMatchObject({
+      accept: expect.stringContaining('text/plain'),
+    });
+
+    const malformedFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('{bad}\n', { headers: { 'content-type': 'text/plain' } }));
+    await expect(
+      client(malformedFetch).readFinalizedRange({ fromBlock: 10, toBlock: 10 }, vi.fn()),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    expect(malformedFetch).toHaveBeenCalledOnce();
   });
 
   it('does not retry malformed evidence or hide a consumer write failure', async () => {

@@ -172,6 +172,12 @@ the same disposable services, confirming stale rows do not create false pass/fai
 The clean HTTP SQD adapter read finalized data for each supported dataset and the complete pipeline
 persisted and replayed one canonical block/slot through real PostgreSQL, ClickHouse, and MinIO:
 
+A later filtered BNB Smart Chain production probe received a successful SQD finalized stream as
+newline-delimited JSON with `Content-Type: text/plain`. The adapter now accepts that provider-observed
+media type while retaining the same bounded UTF-8 decoder, strict per-line JSON/object validation,
+range checks, continuity checks, and non-retryable malformed-Evidence behavior. Unit coverage proves
+both valid `text/plain; charset=utf-8` JSONL acceptance and malformed `text/plain` rejection.
+
 | Dataset            | Position | Evidence ID                   | Raw Fact ID                                                        |
 | ------------------ | -------: | ----------------------------- | ------------------------------------------------------------------ |
 | `ethereum-mainnet` |        0 | `ev_2267648e57999ea5a34df53a` | `05c0c4f8a0688a64b5052470798de63fa06aa62b88091eb3060268ae3312ee8f` |

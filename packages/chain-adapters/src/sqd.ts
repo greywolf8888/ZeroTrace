@@ -1140,7 +1140,7 @@ export class SqdPortalClient {
     const response = await this.#fetch('finalized-stream', {
       method: 'POST',
       headers: {
-        accept: 'application/jsonl, application/x-ndjson, application/json',
+        accept: 'application/jsonl, application/x-ndjson, application/json, text/plain',
         'content-type': 'application/json',
       },
       body: JSON.stringify(query),
@@ -1155,7 +1155,8 @@ export class SqdPortalClient {
       !contentType.includes('application/jsonl') &&
       !contentType.includes('application/x-ndjson') &&
       !contentType.includes('application/ndjson') &&
-      !contentType.includes('application/json')
+      !contentType.includes('application/json') &&
+      !contentType.includes('text/plain')
     ) {
       throw new ProviderError('INVALID_RESPONSE', 'SQD finalized stream content type is invalid.');
     }
