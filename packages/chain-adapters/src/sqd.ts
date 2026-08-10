@@ -946,12 +946,39 @@ function parseMetadata(body: string, expectedDataset: SqdDataset): SqdDatasetMet
   };
 }
 
-async function readBoundedText(response: Response, maximum: number): Promise<string> {
+async function readWithDeadline<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  cancel: () => Promise<void>,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          reject(new ProviderError('TIMEOUT', 'SQD response body timed out.', { retryable: true }));
+          void cancel().catch(() => undefined);
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+async function readBoundedText(
+  response: Response,
+  maximum: number,
+  timeoutMs: number,
+): Promise<string> {
   const declared = Number(response.headers.get('content-length') ?? 0);
   if (Number.isFinite(declared) && declared > maximum) {
     throw new ProviderError('INVALID_RESPONSE', 'SQD response exceeds the size limit.');
   }
-  const body = await response.text();
+  const body = await readWithDeadline(response.text(), timeoutMs, async () => {
+    await response.body?.cancel();
+  });
   if (Buffer.byteLength(body) > maximum) {
     throw new ProviderError('INVALID_RESPONSE', 'SQD response exceeds the size limit.');
   }
@@ -980,7 +1007,11 @@ export class SqdPortalClient {
         const response = await this.#fetch('metadata', { method: 'GET' });
         if (!response.ok) throw responseError(response, this.#options.nowImplementation());
         return parseMetadata(
-          await readBoundedText(response, Math.min(this.#options.maxResponseBytes, 1_000_000)),
+          await readBoundedText(
+            response,
+            Math.min(this.#options.maxResponseBytes, 1_000_000),
+            this.#options.timeoutMs,
+          ),
           this.dataset,
         );
       } catch (error) {
@@ -1166,6 +1197,7 @@ export class SqdPortalClient {
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8', { fatal: true });
+    const responseDeadline = Date.now() + this.#options.timeoutMs;
     let buffered = '';
     let bytes = 0;
     let responseBlocks = 0;
@@ -1217,7 +1249,15 @@ export class SqdPortalClient {
 
     try {
       for (;;) {
-        const chunk = await reader.read();
+        const remaining = responseDeadline - Date.now();
+        if (remaining <= 0) {
+          throw new ProviderError('TIMEOUT', 'SQD response body timed out.', {
+            retryable: true,
+          });
+        }
+        const chunk = await readWithDeadline(reader.read(), remaining, async () => {
+          await reader.cancel();
+        });
         if (chunk.done) break;
         bytes += chunk.value.byteLength;
         if (bytes > this.#options.maxResponseBytes) {
@@ -1305,6 +1345,7 @@ export interface SqdEvmLogReaderOptions {
   source: SqdPortalClient;
   maxRangeBlocks?: number;
   maxResults?: number;
+  includeAllBlocks?: boolean;
 }
 
 export interface SqdEvmContractCreationReaderOptions {
@@ -1582,6 +1623,7 @@ export class SqdEvmLogReader implements EvmLogReader {
   readonly #source: SqdPortalClient;
   readonly #maxRangeBlocks: number;
   readonly #maxResults: number;
+  readonly #includeAllBlocks: boolean;
   #metadataPromise: Promise<SqdDatasetMetadata> | undefined;
 
   constructor(options: SqdEvmLogReaderOptions) {
@@ -1597,6 +1639,7 @@ export class SqdEvmLogReader implements EvmLogReader {
       1_000_000,
     );
     this.#maxResults = requireInteger(options.maxResults ?? 25_000, 'maxResults', 1, 1_000_000);
+    this.#includeAllBlocks = options.includeAllBlocks ?? true;
   }
 
   async getLogsObservation(query: EvmLogQuery): Promise<TransportObservation<EvmLogRecord[]>> {
@@ -1633,6 +1676,7 @@ export class SqdEvmLogReader implements EvmLogReader {
       {
         fromBlock,
         toBlock,
+        includeAllBlocks: this.#includeAllBlocks,
         fields: {
           block: { timestamp: true },
           log: {
@@ -1704,9 +1748,9 @@ export class SqdEvmLogReader implements EvmLogReader {
     );
     if (
       summary.completion !== 'REQUESTED_RANGE_COMPLETE' ||
-      summary.lastBlock !== toBlock ||
       summary.nextBlock !== toBlock + 1 ||
-      summary.blocks !== toBlock - fromBlock + 1
+      (this.#includeAllBlocks &&
+        (summary.lastBlock !== toBlock || summary.blocks !== toBlock - fromBlock + 1))
     ) {
       throw new ProviderError(
         'HTTP_ERROR',

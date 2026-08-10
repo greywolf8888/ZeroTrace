@@ -21,6 +21,7 @@ export interface ClaimAddressFlowSummaryInput {
   metadata: AnalysisMetadata;
   comparison?: 'CASE_SENSITIVE' | 'CASE_INSENSITIVE' | undefined;
   shareUnit?: string | undefined;
+  coverageEvidenceIds?: string[] | undefined;
   topCounterpartyLimit?: number | undefined;
 }
 
@@ -246,12 +247,38 @@ export function summarizeClaimAddressFlows(
       : inflows.filter(
           (item) => parseAtomic(item.transfer.amount, 'transfer amount') % shareUnit === 0n,
         ).length;
+  const exactUnitDeposits =
+    shareUnit === undefined
+      ? 0
+      : inflows.filter((item) => parseAtomic(item.transfer.amount, 'transfer amount') === shareUnit)
+          .length;
+  const observedWholeShares =
+    shareUnit === undefined
+      ? 0n
+      : inflows.reduce((total, item) => {
+          const amount = parseAtomic(item.transfer.amount, 'transfer amount');
+          return amount % shareUnit === 0n ? total + amount / shareUnit : total;
+        }, 0n);
+  const nonMultipleObservedAmount =
+    shareUnit === undefined
+      ? 0n
+      : inflows.reduce((total, item) => {
+          const amount = parseAtomic(item.transfer.amount, 'transfer amount');
+          return amount % shareUnit === 0n ? total : total + amount;
+        }, 0n);
   const selfTransferAmount = selfTransfers.reduce(
     (total, item) => total + parseAtomic(item.amount, 'self-transfer amount'),
     0n,
   );
+  const coverageEvidenceIds = unique(input.coverageEvidenceIds ?? metadata.evidenceIds);
+  if (coverageEvidenceIds.length === 0) {
+    throw new Error('Claim flow summary requires coverage Evidence.');
+  }
+  if (coverageEvidenceIds.some((id) => !metadata.evidenceIds.includes(id))) {
+    throw new Error('Claim flow coverage Evidence must belong to the source metadata.');
+  }
   const evidenceIds = unique([
-    ...metadata.evidenceIds,
+    ...coverageEvidenceIds,
     ...directional.flatMap((item) => item.transfer.evidenceIds),
     ...selfTransfers.flatMap((item) => item.evidenceIds),
   ]);
@@ -266,8 +293,11 @@ export function summarizeClaimAddressFlows(
         : {
             unit: shareUnit.toString(),
             observedDeposits: inflows.length,
+            exactUnitDeposits,
             exactMultipleDeposits,
             nonMultipleDeposits: inflows.length - exactMultipleDeposits,
+            observedWholeShares: observedWholeShares.toString(),
+            nonMultipleObservedAmount: nonMultipleObservedAmount.toString(),
             exactMultipleCoverage:
               inflows.length === 0
                 ? unknownValue(

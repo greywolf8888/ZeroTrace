@@ -6,7 +6,7 @@ import {
   type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
 import type { AssetTransferObservation, CustodyObservation } from '@zerotrace/claim-audit';
-import { createEvidence } from '@zerotrace/evidence';
+import { canonicalJson, createEvidence } from '@zerotrace/evidence';
 import {
   AnalysisMetadataSchema,
   EvmSnapshotSchema,
@@ -508,6 +508,7 @@ function blockTime(value: string): string {
 
 export async function collectErc20ClaimTransfers(options: {
   tokenAddress: string;
+  subjectAddress?: string | undefined;
   fromBlock: string;
   toBlock: string;
   snapshot: EvmSnapshot;
@@ -523,6 +524,13 @@ export async function collectErc20ClaimTransfers(options: {
     throw new Error('ERC-20 claim transfer collection requires a finalized Snapshot.');
   }
   const tokenAddress = normalizeAddress(options.tokenAddress, 'token address');
+  const subjectAddress =
+    options.subjectAddress === undefined
+      ? undefined
+      : normalizeAddress(options.subjectAddress, 'subject address');
+  if (!/^(0|[1-9]\d*)$/.test(options.fromBlock) || !/^(0|[1-9]\d*)$/.test(options.toBlock)) {
+    throw new Error('ERC-20 claim transfer range must use unsigned integer strings.');
+  }
   const fromBlock = BigInt(options.fromBlock);
   const toBlock = BigInt(options.toBlock);
   if (fromBlock < 0n || toBlock < fromBlock || toBlock > BigInt(snapshot.blockNumber)) {
@@ -544,54 +552,112 @@ export async function collectErc20ClaimTransfers(options: {
   if (!Number.isSafeInteger(maxTransfers) || maxTransfers < 1 || maxTransfers > 1_000_000) {
     throw new Error('maxTransfers must be between 1 and 1000000.');
   }
-  const requiredRequests = (toBlock - fromBlock) / BigInt(maxBlocksPerRequest) + 1n;
+  const requestVariants = subjectAddress === undefined ? 1n : 2n;
+  const requiredRequests =
+    ((toBlock - fromBlock) / BigInt(maxBlocksPerRequest) + 1n) * requestVariants;
   if (requiredRequests > BigInt(maxRequests)) {
     throw new Error('ERC-20 claim transfer range exceeds the configured request budget.');
   }
   const observedAt = (options.now ?? (() => new Date().toISOString()))();
-  const logs: Array<{ log: EvmLogRecord; source: string }> = [];
+  const logs: Array<{
+    log: EvmLogRecord;
+    source: string;
+    direction: 'ALL' | 'FROM' | 'TO';
+  }> = [];
+  const crossQueryLogs = new Map<string, string>();
   const queryEvidence: Evidence[] = [];
   const sourceSet = new Set<string>();
   for (let cursor = fromBlock; cursor <= toBlock; cursor += BigInt(maxBlocksPerRequest)) {
     const end = cursor + BigInt(maxBlocksPerRequest) - 1n;
     const requestedEnd = end < toBlock ? end : toBlock;
-    const observation = await options.logReader.getLogsObservation({
-      address: tokenAddress,
-      fromBlock: cursor.toString(),
-      toBlock: requestedEnd.toString(),
-      topics: [ERC20_TRANSFER_TOPIC],
-    });
-    sourceSet.add(observation.endpointId);
-    queryEvidence.push(
-      createEvidence({
-        ledger: 'EVM',
-        chainId: snapshot.chainId,
-        kind: 'PROVIDER_OBSERVATION',
-        source: observation.endpointId,
-        locator: `erc20-transfer-range:${tokenAddress}:${cursor.toString()}-${requestedEnd.toString()}`,
-        payload: {
-          query: {
-            address: tokenAddress,
-            fromBlock: cursor.toString(),
-            toBlock: requestedEnd.toString(),
-            topics: [ERC20_TRANSFER_TOPIC],
+    const indexedSubject =
+      subjectAddress === undefined ? undefined : `0x${'0'.repeat(24)}${subjectAddress.slice(2)}`;
+    const queries =
+      indexedSubject === undefined
+        ? [{ direction: 'ALL' as const, topics: [ERC20_TRANSFER_TOPIC] as const }]
+        : [
+            {
+              direction: 'FROM' as const,
+              topics: [ERC20_TRANSFER_TOPIC, indexedSubject, null] as const,
+            },
+            {
+              direction: 'TO' as const,
+              topics: [ERC20_TRANSFER_TOPIC, null, indexedSubject] as const,
+            },
+          ];
+    for (const query of queries) {
+      const observation = await options.logReader.getLogsObservation({
+        address: tokenAddress,
+        fromBlock: cursor.toString(),
+        toBlock: requestedEnd.toString(),
+        topics: query.topics,
+      });
+      sourceSet.add(observation.endpointId);
+      queryEvidence.push(
+        createEvidence({
+          ledger: 'EVM',
+          chainId: snapshot.chainId,
+          kind: 'PROVIDER_OBSERVATION',
+          source: observation.endpointId,
+          locator: `erc20-transfer-range:${tokenAddress}:${cursor.toString()}-${requestedEnd.toString()}:${query.direction.toLowerCase()}`,
+          payload: {
+            query: {
+              address: tokenAddress,
+              fromBlock: cursor.toString(),
+              toBlock: requestedEnd.toString(),
+              topics: query.topics,
+            },
+            resultCount: observation.value.length,
+            resultIdentities: observation.value.map((log) => ({
+              blockHash: log.blockHash,
+              transactionHash: log.transactionHash,
+              logIndex: log.logIndex,
+            })),
           },
-          resultCount: observation.value.length,
-          resultIdentities: observation.value.map((log) => ({
-            blockHash: log.blockHash,
-            transactionHash: log.transactionHash,
-            logIndex: log.logIndex,
-          })),
-        },
-        summary:
-          observation.value.length === 0
-            ? 'Finalized ERC-20 Transfer range query returned no observations.'
-            : 'Finalized ERC-20 Transfer range query returned observations for strict decoding.',
-        observedAt,
-        finality: 'finalized',
-      }),
-    );
-    logs.push(...observation.value.map((log) => ({ log, source: observation.endpointId })));
+          summary:
+            observation.value.length === 0
+              ? 'Finalized ERC-20 Transfer range query returned no observations.'
+              : 'Finalized ERC-20 Transfer range query returned observations for strict decoding.',
+          observedAt,
+          finality: 'finalized',
+        }),
+      );
+      const responseIdentities = new Set<string>();
+      for (const log of observation.value) {
+        const identity = `${log.transactionHash.toLowerCase()}:${log.logIndex.toLowerCase()}`;
+        if (responseIdentities.has(identity)) {
+          throw new ProviderError(
+            'INVALID_RESPONSE',
+            'ERC-20 transfer query response contains duplicates.',
+          );
+        }
+        responseIdentities.add(identity);
+        const fingerprint = canonicalJson({
+          address: log.address,
+          blockHash: log.blockHash,
+          blockNumber: log.blockNumber,
+          blockTimestamp: log.blockTimestamp ?? null,
+          transactionHash: log.transactionHash,
+          transactionIndex: log.transactionIndex,
+          logIndex: log.logIndex,
+          data: log.data,
+          topics: log.topics,
+          removed: log.removed,
+        });
+        const existing = crossQueryLogs.get(identity);
+        if (existing !== undefined) {
+          if (existing !== fingerprint) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'Overlapping ERC-20 transfer queries returned conflicting records.',
+            );
+          }
+          continue;
+        }
+        crossQueryLogs.set(identity, fingerprint);
+        logs.push({ log, source: observation.endpointId, direction: query.direction });
+      }
+    }
     if (logs.length > maxTransfers) {
       throw new ProviderError(
         'INVALID_RESPONSE',
@@ -658,6 +724,26 @@ export async function collectErc20ClaimTransfers(options: {
     }
     identities.add(identity);
     const decoded = decodeTransfer(log);
+    if (
+      subjectAddress !== undefined &&
+      ((item.direction === 'FROM' && decoded.from !== subjectAddress) ||
+        (item.direction === 'TO' && decoded.to !== subjectAddress))
+    ) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Transfer log disagrees with the requested subject topic direction.',
+      );
+    }
+    if (
+      subjectAddress !== undefined &&
+      decoded.from !== subjectAddress &&
+      decoded.to !== subjectAddress
+    ) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Transfer log falls outside the requested subject filter.',
+      );
+    }
     let timestamp = log.blockTimestamp;
     if (timestamp === undefined) {
       const cached = timestampCache.get(position);

@@ -131,6 +131,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       coverage-gated Actual values and no-flow `Unknown(NOT_APPLICABLE)` share adherence
 - [x] Custody-first same-Snapshot EVM composition with persisted source/terminal Evidence and
       provider-observation Evidence for empty or non-empty Transfer query chunks
+- [x] Strict target-indexed `from`/`to` collection, self-transfer deduplication, hard SQD body
+      deadlines, bounded terminal Evidence roots and richer exact-unit/share observations
 - [ ] Same-Snapshot action derivation, independent-source reconciliation, durable report replay,
       API/UI Claim Audit and terminal named FFT conclusion
 - [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`

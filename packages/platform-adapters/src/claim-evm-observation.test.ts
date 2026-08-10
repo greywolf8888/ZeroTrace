@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { type EvmLogRecord } from '@zerotrace/chain-adapters';
+import { type EvmLogQuery, type EvmLogRecord } from '@zerotrace/chain-adapters';
 import { EvidenceLedger } from '@zerotrace/evidence';
 
 import { ERC20_TRANSFER_TOPIC, type EvmClaimReadAdapter } from './claim-evm.js';
@@ -58,9 +58,12 @@ describe('same-Snapshot EVM claim address observation', () => {
       readSourced: vi.fn(),
     };
     const logReader = {
-      getLogsObservation: vi.fn().mockImplementation(async () => {
+      getLogsObservation: vi.fn().mockImplementation(async (query: EvmLogQuery) => {
         order.push('logs');
-        return { value: [transferLog()], endpointId: 'sqd:bsc' };
+        return {
+          value: query.topics?.[1] === null ? [transferLog()] : [],
+          endpointId: 'sqd:bsc',
+        };
       }),
     };
     const ledger = new EvidenceLedger();
@@ -87,7 +90,7 @@ describe('same-Snapshot EVM claim address observation', () => {
       now: () => '2026-08-10T00:00:02.000Z',
     });
 
-    expect(order).toEqual(['custody', 'logs']);
+    expect(order).toEqual(['custody', 'logs', 'logs']);
     expect(result.report).toMatchObject({
       tokenAddress: token,
       address: subject,
@@ -118,12 +121,13 @@ describe('same-Snapshot EVM claim address observation', () => {
     expect(result.evidence.map((item) => item.kind)).toEqual([
       'CONTRACT_STATE',
       'PROVIDER_OBSERVATION',
+      'PROVIDER_OBSERVATION',
       'LOG',
       'DERIVED_FEATURE',
     ]);
     const terminal = ledger.get(result.report.terminalEvidenceId);
     expect(terminal?.snapshot).toEqual(snapshot);
-    expect(terminal?.sourceEvidenceIds).toHaveLength(3);
+    expect(terminal?.sourceEvidenceIds).toHaveLength(4);
     expect(result.report.metadata.evidenceIds).toEqual(
       [...(terminal?.sourceEvidenceIds ?? []), result.report.terminalEvidenceId].sort(),
     );

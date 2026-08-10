@@ -103,6 +103,11 @@ All notable changes to ZeroTrace will be documented here. The project follows
   zero ratio when no deposits are observed;
 - custody-first same-Snapshot EVM claim-address orchestration with canonical source/derived Evidence,
   plus explicit provider-observation Evidence for every scanned Transfer range including empty results;
+- address-indexed EVM claim scans with strict cross-direction deduplication, bounded terminal Evidence
+  roots, hard SQD response-body deadlines and explicit sparse-filter coverage that leaves continuous
+  all-block Flap scanning unchanged by default;
+- richer pension-share observations for exact-unit deposits, exact-multiple whole shares and
+  non-multiple amounts without promoting observed values to coverage-complete Actual values;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,

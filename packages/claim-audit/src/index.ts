@@ -129,8 +129,11 @@ export interface ClaimAuditFinding {
 export interface ShareUnitAssessment {
   unit: string;
   observedDeposits: number;
+  exactUnitDeposits: number;
   exactMultipleDeposits: number;
   nonMultipleDeposits: number;
+  observedWholeShares: string;
+  nonMultipleObservedAmount: string;
   exactMultipleCoverage: KnowledgeValue<number>;
 }
 
@@ -389,11 +392,25 @@ function shareUnitAssessment(
   const exactMultipleDeposits = deposits.filter(
     (deposit) => parseAtomic(deposit.amount, 'transfer.amount') % unit === 0n,
   ).length;
+  const exactUnitDeposits = deposits.filter(
+    (deposit) => parseAtomic(deposit.amount, 'transfer.amount') === unit,
+  ).length;
+  const observedWholeShares = deposits.reduce((total, deposit) => {
+    const amount = parseAtomic(deposit.amount, 'transfer.amount');
+    return amount % unit === 0n ? total + amount / unit : total;
+  }, 0n);
+  const nonMultipleObservedAmount = deposits.reduce((total, deposit) => {
+    const amount = parseAtomic(deposit.amount, 'transfer.amount');
+    return amount % unit === 0n ? total : total + amount;
+  }, 0n);
   return {
     unit: claim.shareUnit,
     observedDeposits: deposits.length,
+    exactUnitDeposits,
     exactMultipleDeposits,
     nonMultipleDeposits: deposits.length - exactMultipleDeposits,
+    observedWholeShares: observedWholeShares.toString(),
+    nonMultipleObservedAmount: nonMultipleObservedAmount.toString(),
     exactMultipleCoverage:
       deposits.length === 0
         ? unknownValue('NOT_APPLICABLE', 'No observed deposits are available for this ratio.')

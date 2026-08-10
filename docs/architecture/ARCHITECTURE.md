@@ -239,14 +239,21 @@ EVM address matching defaults to case-insensitive canonical identity, while Bitc
 remain case-sensitive unless the caller explicitly chooses otherwise.
 
 A clean EVM observation adapter now supplies finalized, range-bounded ERC-20 Transfer facts with
-per-log Evidence and strict address/topic/range/duplicate/lineage checks. It also inspects EOA,
+per-log Evidence and strict address/topic/range/duplicate/lineage checks. Address-scoped collection
+uses separate indexed `from` and `to` topic queries, verifies every decoded result against the
+requested direction, and admits the same log twice only when both query records are byte-for-byte
+canonical matches (the self-transfer case). It also inspects EOA,
 generic-contract, and Safe-compatible custody at one numeric Snapshot using bytecode, proxy
 singleton, version, owners, threshold and nonce reads. Unsupported contract authority remains
 Unknown. The adapter does not copy or link Safe's LGPL implementation and performs no signing or
 write call. A composed observer captures and persists custody before starting the long range scan,
 then binds Transfer flow and a derived terminal Evidence root to the identical finalized timestamped
-Snapshot. Every query chunk retains source Evidence even when its result is empty. Composite history
-coverage remains zero because current custody is not historical authority coverage. Durable report
+Snapshot. Every query chunk retains source Evidence even when its result is empty. The derived root
+links those coverage observations and only target-relevant Transfer Evidence, keeping the terminal
+graph bounded without weakening replay provenance. SQD response headers and streaming bodies share
+a hard response deadline; sparse filtered reads are explicit while continuous Flap scans retain
+gap-free all-block coverage by default. Composite history coverage remains zero because current
+custody is not historical authority coverage. Durable report
 storage, restart-safe scheduling, action derivation, API/UI, independent-source reconciliation, and
 the terminal FFT report remain pending.
 Endpoint failover and timestamp anchoring may add provenance IDs but do not raise claim-observation

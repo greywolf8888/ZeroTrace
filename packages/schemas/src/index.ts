@@ -1365,8 +1365,11 @@ export const ClaimAuditFindingSchema = z.object({
 export const ClaimShareUnitAssessmentSchema = z.object({
   unit: UnsignedQuantityStringSchema,
   observedDeposits: z.number().int().nonnegative(),
+  exactUnitDeposits: z.number().int().nonnegative(),
   exactMultipleDeposits: z.number().int().nonnegative(),
   nonMultipleDeposits: z.number().int().nonnegative(),
+  observedWholeShares: UnsignedQuantityStringSchema,
+  nonMultipleObservedAmount: UnsignedQuantityStringSchema,
   exactMultipleCoverage: knowledgeValueSchema(CoverageRatioSchema),
 });
 

@@ -163,7 +163,7 @@ distributed workflows remain open work. Read
 | Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                                                                                                                                  |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap current state, exact transaction decode, durable origin/history, exact lifetime materialization, continuous accepted heads, deterministic rollback and provider-free replay work; real reorg/FFT validation and other adapters pending |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels plus Flap Portal sell preview work; DEX routing, decomposition, gas and capacity pending                                                                                                                 |
-| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Deterministic allocation/action kernel plus finalized Transfer, custody and same-Snapshot address-flow observation work; action attribution, durable API/UI and terminal FFT replay pending                                                 |
+| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Deterministic allocation/action kernel plus target-indexed Transfer, Safe custody and live same-Snapshot FFT address-flow observation work; official attribution, action semantics, durable API/UI and terminal FFT replay pending          |
 | Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                        |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
@@ -452,7 +452,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add append-only multi-source Flap finalized-reorg rollback with safe branch replay
 - [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets
 - [x] Add Snapshot/Evidence-gated claim-allocation and terminal-action audit kernels
-- [x] Add finalized EVM Transfer/custody observation and custody-first same-Snapshot address-flow composition
+- [x] Add finalized target-indexed EVM Transfer/custody observation and live same-Snapshot FFT address-flow composition
 - [ ] Add live/unfinalized policy, forced real-reorg drills and independently operated provider validation
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation

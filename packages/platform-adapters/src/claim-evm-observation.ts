@@ -147,7 +147,7 @@ export async function observeEvmClaimAddress(
   boundedInteger(options.maxTransfers, 25_000, 1, 1_000_000, 'maxTransfers');
   const blocksPerRequest = BigInt(options.maxBlocksPerRequest ?? 50_000);
   const requestBudget = BigInt(options.maxRequests ?? 1_000);
-  if ((toBlock - fromBlock) / blocksPerRequest + 1n > requestBudget) {
+  if (((toBlock - fromBlock) / blocksPerRequest + 1n) * 2n > requestBudget) {
     throw new Error('EVM claim address block range exceeds the configured request budget.');
   }
 
@@ -167,6 +167,7 @@ export async function observeEvmClaimAddress(
 
   const collection = await collectErc20ClaimTransfers({
     tokenAddress,
+    subjectAddress: address,
     fromBlock: options.fromBlock,
     toBlock: options.toBlock,
     snapshot,
@@ -195,6 +196,9 @@ export async function observeEvmClaimAddress(
     transfers: collection.transfers,
     metadata: collection.metadata,
     shareUnit: options.shareUnit,
+    coverageEvidenceIds: collection.evidence
+      .filter((item) => item.kind === 'PROVIDER_OBSERVATION')
+      .map((item) => item.id),
     topCounterpartyLimit: options.topCounterpartyLimit,
   });
   const sourceEvidenceIds = sortedUnique([

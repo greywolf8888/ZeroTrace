@@ -86,8 +86,11 @@ describe('claim address flow summary', () => {
     expect(result.shareUnitAssessment).toEqual({
       unit: '1000000',
       observedDeposits: 2,
+      exactUnitDeposits: 1,
       exactMultipleDeposits: 1,
       nonMultipleDeposits: 1,
+      observedWholeShares: '1',
+      nonMultipleObservedAmount: '1500000',
       exactMultipleCoverage: { state: 'known', value: 0.5 },
     });
     expect(result).toMatchObject({
@@ -179,5 +182,26 @@ describe('claim address flow summary', () => {
         transfers: [],
       }),
     ).toThrow('must not extend beyond the Snapshot');
+  });
+
+  it('requires coverage Evidence rooted in the source metadata', () => {
+    expect(() =>
+      summarizeClaimAddressFlows({
+        address: 'vault',
+        window,
+        metadata,
+        transfers: [],
+        coverageEvidenceIds: [],
+      }),
+    ).toThrow('requires coverage Evidence');
+    expect(() =>
+      summarizeClaimAddressFlows({
+        address: 'vault',
+        window,
+        metadata,
+        transfers: [],
+        coverageEvidenceIds: ['ev_unrelated'],
+      }),
+    ).toThrow('must belong to the source metadata');
   });
 });

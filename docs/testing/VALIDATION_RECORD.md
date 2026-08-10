@@ -864,12 +864,12 @@ registry. Evidence `ev_e6d2e09c7071ef941a71ae18` has payload hash
 contradicts a technical-lock interpretation; it does not identify the owners or establish the
 candidate's official social attribution.
 
-An attempted custody replay at the later transfer Snapshot failed with `missing trie node` on one
-public endpoint and `not supported` on the second. Therefore the two observations are not yet
-composed into a same-Snapshot Claim Audit, public RPC archive capability is unavailable, and all
-allocation/dividend/action conclusions remain pending or Unknown. The supplied community statement
-is claim input, not chain proof; no public official source exposing the pension address was accepted
-in this batch.
+An initial custody replay at the later transfer Snapshot failed with `missing trie node` on one
+public endpoint and `not supported` on the second. The later custody-first composition recorded
+below avoided that race by pinning current custody before the range scan. Public RPC archive
+capability remains unavailable, and all allocation/dividend/action conclusions remain pending or
+Unknown. The supplied community statement is claim input, not chain proof; no public official source
+exposing the pension address was accepted in this batch.
 
 ## Snapshot-bounded claim address-flow derivation (2026-08-10)
 
@@ -884,9 +884,10 @@ share-unit denominator is `Unknown(NOT_APPLICABLE)` rather than numeric zero.
 The derivation rejects duplicate observations, invalid atomic amounts, ranges after an EVM/Solana
 Snapshot block time and individual observations after that Snapshot. EVM comparison defaults to
 case-insensitive canonical identity and normalizes counterparty identity deterministically; Bitcoin
-and Solana stay case-sensitive unless explicitly overridden. Four focused tests cover complete
+and Solana stay case-sensitive unless explicitly overridden. Five focused tests cover complete
 observed flow, incomplete-source/no-flow semantics, time-window and case behavior, and fail-closed
-Snapshot/duplicate handling. This code has not yet been persisted or exposed by the API/UI, and it
+Snapshot/duplicate handling plus coverage-Evidence membership. This code has not yet been persisted
+or exposed by the API/UI, and it
 does not convert the FFT dispatcher into a dividend, controller, entity, burn or other terminal
 action.
 
@@ -901,30 +902,66 @@ finished. If custody capture fails, the history source and Evidence writer are n
 Each Transfer query chunk now produces a direct `PROVIDER_OBSERVATION` Evidence node containing its
 exact address/topic/range and returned log identities. An empty response therefore retains replay
 provenance rather than becoming an unevidenced absence. Per-log Evidence remains separate. After
-source nodes are written, one `DERIVED_FEATURE` terminal node links custody, range and log Evidence
-and binds the address-flow report to the exact Snapshot. Composite `historyCoverage` remains zero:
+source nodes are written, one `DERIVED_FEATURE` terminal node links custody, query coverage and
+target-relevant log Evidence and binds the address-flow report to the exact Snapshot. Composite
+`historyCoverage` remains zero:
 the Transfer window may be complete, but one current custody read does not establish historical
 authority across that window.
 
 Four orchestration tests prove custody-before-scan order, canonical derived edges, source coverage,
 EOA movability, flow Unknown semantics, provider short-circuiting, timestamped-Snapshot gating and
-pre-provider time/block validation. An additional collector regression proves that a complete empty
-range still has source Evidence. This is deterministic acceptance only; the newly ordered path has
-not yet been rerun against FFT, and it still performs no dividend/action attribution.
+pre-provider time/block validation. Collector regressions prove that a complete empty range still
+has source Evidence and that indexed sender/recipient queries accept one identical self-transfer
+only once. It still performs no dividend/action attribution.
+
+### Live same-Snapshot FFT composition
+
+The custody-first observer subsequently completed one live, finalized run for FFT and the behavioral
+candidate. The exact replay anchor was block `115117033`, hash
+`0x70d237c08125931915cde4a775ca8e4830044003068bbfa17af3f0756e4ad700`, block time
+`2026-08-10T12:00:02.000Z`, captured at `2026-08-10T12:00:01.404Z`. The token's `18` decimals were
+read on chain at that block. The official BNB Chain public RPC supplied the pinned custody state and
+SQD `binance-mainnet` supplied the finalized Transfer window.
+
+At that identical Snapshot the candidate was Safe 1.3.0 implementation
+`0x3e5c63644e683549055b9be8653de26e0b4cd36e`, threshold 4-of-6, nonce 11, with
+`canMoveFunds=Known(true)`. Custody Evidence was `ev_373de48c776eebea7c51996e`. The requested
+window observed 123 inflows from 109 counterparties totaling 176,000,010 FFT and 10 outflows to one
+counterparty totaling 24,507,000 FFT. Its first and last inflows were
+`2026-08-03T09:36:09.000Z` and `2026-08-10T07:00:48.000Z`; its first and last outflows were
+`2026-08-04T11:20:42.000Z` and `2026-08-10T10:17:50.000Z`. The only top outflow counterparty was
+`0x343e8a70b212816a5582a880b9cd4c3278c4f360`. The 1,000,000 FFT rule had 107 exact-multiple
+deposits and 16 non-multiple deposits (`0.8699186991869918` observed adherence); the earlier
+complete-window derivation counted 71 deposits exactly equal to one unit.
+
+Composite data coverage was `1`, source coverage `0.5`, historical custody coverage `0`, and
+confidence `0.95`. Terminal Evidence `ev_a6a115563867c6dfcbcca54b` bound the same-Snapshot result.
+Observed amounts are therefore accepted lower bounds, but Actual totals remain
+`Unknown(INSUFFICIENT_DATA)`. A movable Safe and recorded outflows refute an irrecoverable-burn or
+technical-lock interpretation for the wallet; they do not prove whether individual pension members
+can exit, who controlled an action, or whether an outflow was a dividend.
+
+The follow-up implementation now requests only indexed `from` and `to` topics for the subject,
+rejects direction mismatches and conflicting duplicate records, retains explicit empty-query
+Evidence, and bounds the terminal root to coverage queries plus relevant transfers. SQD metadata and
+stream bodies now have hard deadlines; sparse filtered coverage is explicit and does not change the
+gap-free default used by continuous Flap scans. All focused deterministic tests pass. A live rerun
+of this optimized path exceeded the current outer process execution limit before returning a
+terminal result, so it is not recorded as a second accepted run.
 
 ## Automated verification
 
 | Command                  | Result                                                                                                                                              |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 343 unit, 38 environment-free integration and build; dependency license/audit gates green                            |
-| local `test:coverage`    | pass: 381 tests, 21 opt-in durable skips; 82.18% statements, 76.27% branches, 90.27% functions, 83.27% lines                                        |
+| local non-browser gates  | pass: format, lint, typecheck, 348 unit, 38 environment-free integration and build; dependency license/audit gates green                            |
+| local `test:coverage`    | pass: 386 tests, 21 opt-in durable skips; 82.30% statements, 76.49% branches, 90.38% functions, 83.39% lines                                        |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                    |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure      |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                              |
 | `docker compose config`  | pass                                                                                                                                                |
 | production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000 |
-| branch GitHub Actions CI | [pass on `578c71d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31383622159): full CI matrix, Chromium and all production targets        |
-| branch CodeQL            | [pass on `578c71d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31383621973): JavaScript and TypeScript analysis                         |
+| branch GitHub Actions CI | [pass on `d6a7c1f`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31384624840): full CI matrix, Chromium and all production targets        |
+| branch CodeQL            | [pass on `d6a7c1f`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31384624768): JavaScript and TypeScript analysis                         |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

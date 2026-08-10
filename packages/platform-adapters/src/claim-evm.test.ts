@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ProviderError, type EvmLogRecord } from '@zerotrace/chain-adapters';
+import { ProviderError, type EvmLogQuery, type EvmLogRecord } from '@zerotrace/chain-adapters';
 import type { ChainAnchorRead } from '@zerotrace/schemas';
 import { encodeAbiParameters, type Address } from 'viem';
 
@@ -171,6 +171,87 @@ describe('EVM claim observations', () => {
     });
   });
 
+  it('filters one subject in both topic directions and deduplicates self-transfers', async () => {
+    const subject = `0x${'5'.repeat(40)}`;
+    const other = `0x${'6'.repeat(40)}`;
+    const incoming = transferLog();
+    const outgoing = transferLog({
+      transactionHash: `0x${'7'.repeat(64)}`,
+      logIndex: '0x3',
+      topics: [ERC20_TRANSFER_TOPIC, indexed(subject), indexed(other)],
+    });
+    const self = transferLog({
+      transactionHash: `0x${'8'.repeat(64)}`,
+      logIndex: '0x4',
+      topics: [ERC20_TRANSFER_TOPIC, indexed(subject), indexed(subject)],
+    });
+    const getLogsObservation = vi.fn().mockImplementation(async (query: EvmLogQuery) => ({
+      value: query.topics?.[1] === null ? [incoming, self] : [outgoing, self],
+      endpointId: 'sqd:bsc',
+    }));
+    const result = await collectErc20ClaimTransfers({
+      tokenAddress: incoming.address,
+      subjectAddress: subject,
+      fromBlock: '90',
+      toBlock: '100',
+      snapshot,
+      logReader: { getLogsObservation },
+    });
+
+    expect(getLogsObservation).toHaveBeenCalledTimes(2);
+    expect(result.transfers).toHaveLength(3);
+    expect(
+      result.transfers.filter((item) => item.from === subject && item.to === subject),
+    ).toHaveLength(1);
+    expect(result.evidence.filter((item) => item.kind === 'PROVIDER_OBSERVATION')).toHaveLength(2);
+    expect(result.evidence.filter((item) => item.kind === 'LOG')).toHaveLength(3);
+  });
+
+  it('rejects subject-direction disagreement and conflicting overlapping query records', async () => {
+    const subject = `0x${'5'.repeat(40)}`;
+    const incoming = transferLog();
+    await expect(
+      collectErc20ClaimTransfers({
+        tokenAddress: incoming.address,
+        subjectAddress: subject,
+        fromBlock: '90',
+        toBlock: '100',
+        snapshot,
+        logReader: {
+          getLogsObservation: vi.fn().mockResolvedValue({
+            value: [incoming],
+            endpointId: 'sqd:bsc',
+          }),
+        },
+      }),
+    ).rejects.toThrow('requested subject topic direction');
+
+    const self = transferLog({
+      transactionHash: `0x${'8'.repeat(64)}`,
+      logIndex: '0x4',
+      topics: [ERC20_TRANSFER_TOPIC, indexed(subject), indexed(subject)],
+    });
+    const conflictingSelf = transferLog({
+      ...self,
+      data: `0x${401n.toString(16).padStart(64, '0')}`,
+    });
+    await expect(
+      collectErc20ClaimTransfers({
+        tokenAddress: self.address,
+        subjectAddress: subject,
+        fromBlock: '90',
+        toBlock: '100',
+        snapshot,
+        logReader: {
+          getLogsObservation: vi.fn().mockImplementation(async (query: EvmLogQuery) => ({
+            value: [query.topics?.[1] === null ? conflictingSelf : self],
+            endpointId: 'sqd:bsc',
+          })),
+        },
+      }),
+    ).rejects.toThrow('conflicting records');
+  });
+
   it('uses an exact finalized block anchor when the log source omits time', async () => {
     const log = transferLog({ blockTimestamp: undefined });
     const logReader = {
@@ -274,6 +355,18 @@ describe('EVM claim observations', () => {
         },
       }),
     ).rejects.toThrow('outside the requested range');
+
+    const getLogsObservation = vi.fn();
+    await expect(
+      collectErc20ClaimTransfers({
+        tokenAddress: log.address,
+        fromBlock: '',
+        toBlock: '90',
+        snapshot,
+        logReader: { getLogsObservation },
+      }),
+    ).rejects.toThrow('unsigned integer strings');
+    expect(getLogsObservation).not.toHaveBeenCalled();
   });
 
   it('rejects removed logs and target-height lineage disagreement', async () => {

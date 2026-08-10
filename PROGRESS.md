@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                      |
 | Production acceptance            | **No**                                                                                                          |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                  |
-| Unit tests                       | **343 passing across 45 files**                                                                                 |
+| Unit tests                       | **348 passing across 45 files**                                                                                 |
 | Integration tests                | **38 environment-free plus 18 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                                                    |
-| Remote CI                        | **Pass on immutable development commit `578c71d`; protected main `3372a5a`**                                    |
-| Coverage                         | **Current local: 82.18% statements / 76.27% branches / 90.27% functions / 83.27% lines**                        |
+| Remote CI                        | **Pass on immutable development commit `d6a7c1f`; protected main `3372a5a`**                                    |
+| Coverage                         | **Current local: 82.30% statements / 76.49% branches / 90.38% functions / 83.39% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed                              |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap segments, exact lifetime and append-only finalized heads wired  |
 
@@ -152,6 +152,10 @@ The only allowed status vocabulary in this ledger is:
 - [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31383622159) and
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31383621973) passed on immutable
   claim-flow-summary commit `578c71d`, including all production targets and security analysis.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31384624840) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31384624768) passed on immutable
+  same-Snapshot claim-composition commit `d6a7c1f`, including all production targets and security
+  analysis.
 
 ### Read-only chain foundation
 
@@ -392,7 +396,8 @@ The only allowed status vocabulary in this ledger is:
   Safe-compatible multisig. Safe version, singleton, owner count, threshold and nonce are retained;
   no Safe or EOA is treated as irreversible custody;
 - deterministic same-Snapshot address-flow summaries report observed inflow/outflow lower bounds,
-  counterparties, first/last observations, self-transfers and share-unit adherence. Actual totals
+  counterparties, first/last observations, self-transfers, exact-unit deposits, whole shares from
+  exact multiples, non-multiple amounts and share-unit adherence. Actual totals
   remain Unknown until data, history and source coverage are all complete; the summary never labels
   a counterparty as a dividend, burn, controller or entity;
 - a composed EVM observer captures finalized custody first, persists it, then performs the potentially
@@ -400,6 +405,10 @@ The only allowed status vocabulary in this ledger is:
   one derived terminal root, fails before scanning when custody is unavailable, and keeps composite
   historical custody coverage at zero because one point-in-time authority read is not a historical
   control proof;
+- address-scoped history uses separate indexed sender/recipient topics, verifies decoded direction,
+  deduplicates identical self-transfers, rejects conflicting overlaps, and gives the SQD response
+  body a hard total deadline. Sparse filtered coverage is opt-in; continuous Flap readers remain
+  gap-free by default. Terminal roots retain chunk query Evidence plus only relevant target flows;
 - thirteen deterministic engine/summary tests plus two Schema Contract tests cover normal 20/40/40 execution,
   bounded policy validation, shortfall, fake burn custody,
   multi-hop burn, removable LP/controller return, pension Safe/no-exit, incomplete coverage and
@@ -413,9 +422,15 @@ The only allowed status vocabulary in this ledger is:
   including 71 exact 1,000,000 FFT transfers and 176,000,010 FFT total, then sent 24,507,000 FFT
   through one dispatcher. This is single-SQD-source chain observation, not official wallet
   attribution or an independently reconciled conclusion;
-- a separate finalized custody read classified that candidate as a Safe 1.3.0, 4-of-6 multisig
-  with nonce 11 and therefore movable funds. Exact same-Snapshot composition, durable reports,
-  action-path attribution, API/UI and FFT terminal replay remain pending.
+- the composed observer subsequently passed a live single-source run at finalized Snapshot block
+  `115117033`, hash `0x70d237c08125931915cde4a775ca8e4830044003068bbfa17af3f0756e4ad700`.
+  At that same Snapshot the candidate was Safe 1.3.0, 4-of-6, nonce 11 and movable; the bounded
+  2 August window observed 176,000,010 FFT inflow across 123 transfers and 24,507,000 FFT outflow
+  across 10 transfers. Composite `historyCoverage` remains zero and source coverage `0.5`, so
+  technical custody and observed flows are accepted while official wallet attribution, Actual
+  totals, dividend/action meaning, durable reports, API/UI, market/RV and terminal FFT acceptance
+  remain pending. A post-run indexed-scan optimization passes deterministic tests; its live rerun
+  exceeded the current outer execution window and is not claimed as accepted.
 
 ### Runtime and developer experience
 
@@ -494,19 +509,19 @@ The only allowed status vocabulary in this ledger is:
 
 ## Pending real-chain validation
 
-| Validation             | Requirement                                                                                                               | Status                                                                                                                                                                                                                                                                                                      |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                                                                      |
-| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Height/hash/previous-hash public Esplora read passed; Core reconciliation pending                                                                                                                                                                                                                           |
-| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                                                                                                              |
-| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Pending                                                                                                                                                                                                                                                                                                     |
-| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction passed; continuous accepted-head and deterministic rollback mechanics work, while forced real reorg, FFT/migration fixtures and other platforms remain pending                                                                                      |
-| Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Named finalized FFT Transfer coverage and Safe-custody observations passed against one SQD source and one public RPC; official pension-wallet attribution, same-Snapshot action composition, independent reconciliation, market routes, entity calibration and complete RV still gate a terminal conclusion |
-| RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels plus Flap fixed-block Portal preview pass tests; independent quotes, DEX routes, fee/impact/gas/capacity and history pending                                                                                                                                                          |
-| Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic all-source disagreement, suffix rollback and replay tests plus live common-position BSC continuity passed; forced real reorg/outage and independent operators pending                                                                                                                         |
-| Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                    |
-| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; semantic decoding pending                                                                                                                                                                                                                                    |
-| Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                      |
+| Validation             | Requirement                                                                                                               | Status                                                                                                                                                                                                                                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                                                                                    |
+| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Height/hash/previous-hash public Esplora read passed; Core reconciliation pending                                                                                                                                                                                                                                         |
+| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                                                                                                                            |
+| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Pending                                                                                                                                                                                                                                                                                                                   |
+| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction passed; continuous accepted-head and deterministic rollback mechanics work, while forced real reorg, FFT/migration fixtures and other platforms remain pending                                                                                                    |
+| Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Named finalized FFT Transfer coverage and same-Snapshot Safe/flow composition passed against one SQD source plus one official public RPC; official pension-wallet attribution, terminal-action derivation, independent reconciliation, market routes, entity calibration and complete RV still gate a terminal conclusion |
+| RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels plus Flap fixed-block Portal preview pass tests; independent quotes, DEX routes, fee/impact/gas/capacity and history pending                                                                                                                                                                        |
+| Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic all-source disagreement, suffix rollback and replay tests plus live common-position BSC continuity passed; forced real reorg/outage and independent operators pending                                                                                                                                       |
+| Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                                  |
+| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; semantic decoding pending                                                                                                                                                                                                                                                  |
+| Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                                    |
 
 Public BSC, Bitcoin, and Solana endpoints in `.env.example` are development fallbacks. Rate-limited responses do not count
 as chain-validation failures, and a successful health probe alone does not validate semantic
@@ -518,10 +533,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                                                   | Scope                                                                                                                           |
 | ------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                                            | locked npm install in production container; all packages/API/web                                                                |
-| Unit tests                     | 343 pass                                                        | 45 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                    |
+| Unit tests                     | 348 pass                                                        | 45 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                    |
 | Integration tests              | 38 environment-free; durable suites pass in latest completed CI | lifetime/head/projection checkpoint guards and corrupt-state rejection are deterministic; prior all-store suite passes          |
 | Restart regression             | Pass                                                            | same-anchor recapture persists across repository/API restart without Snapshot collision                                         |
-| Coverage gate                  | Pass                                                            | current local: 82.18% statements, 76.27% branches, 90.27% functions, 83.27% lines on 381 tests; 21 opt-in durable tests skipped |
+| Coverage gate                  | Pass                                                            | current local: 82.30% statements, 76.49% branches, 90.38% functions, 83.39% lines on 386 tests; 21 opt-in durable tests skipped |
 | Chromium E2E                   | 10 pass                                                         | desktop and Pixel 7 include projection paging, exact/latest lifetime replay, Unknown and storage-failure rendering              |
 | Formatting / ESLint / types    | Pass                                                            | full repository                                                                                                                 |
 | Dependency vulnerability audit | Pass                                                            | 0 vulnerabilities across the complete npm dependency graph                                                                      |
@@ -532,7 +547,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                                            | PostgreSQL 001–010/triggers and ClickHouse Raw Fact schema/migration                                                            |
 | Runtime/browser smoke          | Pass                                                            | API/web health, proxy, security headers, desktop/mobile render                                                                  |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope                       | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending   |
-| Remote CI                      | Pass                                                            | CI/CodeQL pass on immutable `578c71d`; full matrix, 10 Chromium flows and six production targets                                |
+| Remote CI                      | Pass                                                            | CI/CodeQL pass on immutable `d6a7c1f`; full matrix, 10 Chromium flows and six production targets                                |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

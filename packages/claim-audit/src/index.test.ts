@@ -286,8 +286,11 @@ describe('deterministic claim audit', () => {
     expect(item?.verifiedPercent).toEqual({ state: 'known', value: '0' });
     expect(item?.shareUnitAssessment).toMatchObject({
       observedDeposits: 2,
+      exactUnitDeposits: 1,
       exactMultipleDeposits: 1,
       nonMultipleDeposits: 1,
+      observedWholeShares: '1',
+      nonMultipleObservedAmount: '900000',
       exactMultipleCoverage: { state: 'known', value: 0.5 },
     });
     expect(item?.findings.map((finding) => finding.code)).toEqual(
@@ -317,8 +320,11 @@ describe('deterministic claim audit', () => {
 
     expect(result.items[0]?.shareUnitAssessment).toMatchObject({
       observedDeposits: 0,
+      exactUnitDeposits: 0,
       exactMultipleDeposits: 0,
       nonMultipleDeposits: 0,
+      observedWholeShares: '0',
+      nonMultipleObservedAmount: '0',
       exactMultipleCoverage: { state: 'unknown', reason: 'NOT_APPLICABLE' },
     });
     expect(result.items[0]?.shareUnitAssessment?.exactMultipleCoverage).not.toEqual({
