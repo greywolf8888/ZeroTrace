@@ -1064,13 +1064,32 @@ real-world gate requires Snapshot-bound prediction Evidence, label source refere
 labeled cases per probability axis, Brier `<= 0.15`, and ECE `<= 0.05`; missing cases or denominators
 produce `INSUFFICIENT_DATA`. Therefore entity calibration and terminal FFT acceptance remain open.
 
+## Claim Audit input-integrity validation (2026-08-10)
+
+Claim Audit model `claim-audit-v1.1.0` now rejects an audit before calculation when its rules mix
+asset IDs, action IDs repeat, normalized custody addresses collide, or a rule window, Transfer or
+action occurs after the Snapshot time bound. For timestamped EVM/Solana Snapshots the bound is the
+earlier of block time and capture time; other Snapshot types conservatively use capture time.
+
+Terminal-action tests also verify that a direct observation is rooted exactly at the claim
+destination and a multi-hop action uses unique contiguous Transfer edges, the destination as actor
+and path root, non-decreasing edge time, and no edge after the action observation. Invalid paths are
+not credited; under complete coverage the action amount remains known zero only because the bounded
+scan is complete, not because missing data was coerced. Incomplete coverage continues to return
+`Unknown(INSUFFICIENT_DATA)`.
+
+The focused Claim Audit suite passed 12 tests; the complete unit suite passed 369 tests and the
+coverage run passed 413 tests with 22 opt-in durable tests skipped. No provider endpoint, fixture,
+or manually supplied action was added to a production route in this batch. Same-Snapshot action
+derivation and terminal FFT Claim Audit remain pending.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 366 unit, 44 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 369 unit, 44 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                                               |
-| local `test:coverage`    | pass: 410 tests, 22 opt-in durable skips; 82.55% statements, 76.46% branches, 90.98% functions, 83.63% lines                                                                 |
+| local `test:coverage`    | pass: 413 tests, 22 opt-in durable skips; 82.60% statements, 76.50% branches, 91.01% functions, 83.69% lines                                                                 |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
 | `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                                                    |

@@ -135,6 +135,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       Evidence rejection and Unknown exclusion from numeric denominators
 - [x] Deterministic FFT-style claim-allocation and terminal-action kernel with fake-burn,
       removable-LP, controller-return, multi-hop and incomplete-coverage tests
+- [x] Claim Audit v1.1 fail-closed single-asset, duplicate-observation, Snapshot-time and
+      chronological actor/path integrity gates
 - [x] Finalized range-bounded EVM ERC-20 Transfer Evidence and EOA/Safe/generic-contract custody
       observation, including one named FFT single-source window
 - [x] Deterministic Snapshot-time-bounded address-flow aggregation with observed lower bounds,

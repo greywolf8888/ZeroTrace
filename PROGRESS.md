@@ -15,12 +15,12 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                      |
 | Production acceptance            | **No**                                                                                                          |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                  |
-| Unit tests                       | **366 passing across 47 files**                                                                                 |
+| Unit tests                       | **369 passing across 47 files**                                                                                 |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                      |
 | Integration tests                | **44 environment-free plus 19 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **12 passing: Chromium desktop and Pixel 7**                                                                    |
 | Remote CI                        | **Pass on immutable Entity-evaluation commit `399d797`: CI, Chromium, production images, and CodeQL**           |
-| Coverage                         | **Current local: 82.55% statements / 76.46% branches / 90.98% functions / 83.63% lines**                        |
+| Coverage                         | **Current local: 82.60% statements / 76.50% branches / 91.01% functions / 83.69% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion, named Flap history/origin and FFT market slices passed                        |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap history/lifetime, accepted heads and EVM Claim Reports wired    |
 
@@ -390,6 +390,9 @@ The only allowed status vocabulary in this ledger is:
   engine version silently;
 - Evidence-linked direct and bounded multi-hop terminal actions distinguish wallet receipt from
   buyback, irreversible burn, liquidity addition, LP control, lock custody and dividend execution;
+- Claim Audit v1.1 rejects mixed-asset batches, duplicate action IDs, duplicate normalized custody
+  addresses, future windows/observations and non-chronological or actor-mismatched terminal paths
+  before they can be credited or double-counted;
 - EOA/Safe custody is never treated as an irreversible burn, controller-return paths and
   controller-withdrawable LP are explicit findings, and a movable Safe plus observed outflow can
   contradict a claimed technical no-exit guarantee;
@@ -424,10 +427,11 @@ The only allowed status vocabulary in this ledger is:
   matching canonical hash, and terminal plus nested Evidence IDs that are present in the report
   metadata. The latest/exact API and desktop/mobile UI replay PostgreSQL only and never start a
   provider call or chain action;
-- thirteen deterministic engine/summary tests plus two Schema Contract tests cover normal 20/40/40 execution,
+- seventeen deterministic engine/summary tests plus two Schema Contract tests cover normal 20/40/40 execution,
   bounded policy validation, shortfall, fake burn custody,
-  multi-hop burn, removable LP/controller return, pension Safe/no-exit, incomplete coverage and
-  invalid/unanchored inputs, Snapshot time bounds, case identity and no-flow Unknown behavior. Seven
+  multi-hop burn, path chronology/actor integrity, mixed-asset and duplicate-observation rejection,
+  removable LP/controller return, pension Safe/no-exit, incomplete coverage and invalid/unanchored
+  inputs, Snapshot time bounds, case identity and no-flow Unknown behavior. Seven
   focused tests cover decoding, exact timestamp fallback, range/lineage/canonicality failures, EOA,
   Safe, generic-contract Unknown behavior, empty-range Evidence, custody-first ordering and
   fail-closed Snapshot requirements;
@@ -629,11 +633,11 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                                        | Scope                                                                                                                           |
 | ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                                 | locked npm install in production container; all packages/API/web                                                                |
-| Unit tests                     | 366 pass                                             | 47 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                    |
+| Unit tests                     | 369 pass                                             | 47 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                    |
 | Integration tests              | 44 environment-free plus 19 real PostgreSQL pass     | Pancake buy/exit market, Claim Report API plus lifetime/head/projection guards and corrupt-state rejection are deterministic    |
 | Model evaluation tests         | 1 pass                                               | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                  |
 | Restart regression             | Pass                                                 | same-anchor recapture persists across repository/API restart without Snapshot collision                                         |
-| Coverage gate                  | Pass                                                 | current local: 82.55% statements, 76.46% branches, 90.98% functions, 83.63% lines on 410 tests; 22 opt-in durable tests skipped |
+| Coverage gate                  | Pass                                                 | current local: 82.60% statements, 76.50% branches, 91.01% functions, 83.69% lines on 413 tests; 22 opt-in durable tests skipped |
 | Chromium E2E                   | 12 pass                                              | desktop and Pixel 7 include migrated-market scenarios, Claim Report, projection/lifetime replay and Unknown rendering           |
 | Formatting / ESLint / types    | Pass                                                 | full repository                                                                                                                 |
 | Dependency vulnerability audit | Pass                                                 | 0 vulnerabilities across the complete npm dependency graph                                                                      |

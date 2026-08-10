@@ -263,6 +263,13 @@ outflows, controller returns, share-unit adherence and cadence are separate obse
 policy promise such as “no exit” cannot be presented as a technical lock. Incomplete source/history
 coverage keeps Actual, deviation and verification percentage Unknown rather than zero.
 
+Claim Audit v1.1 fails closed before calculation when one batch mixes assets, action identities or
+normalized custody addresses are duplicated, or any claim window, transfer or action occurs after
+the Snapshot time bound. A direct action must be rooted at the claimed destination. A multi-hop
+action additionally requires a unique, contiguous, actor-rooted transfer path in non-decreasing
+time order, with every edge no later than the action observation. Invalid paths are not partially
+credited and cannot inflate an observed action amount.
+
 A Snapshot-time-bounded address-flow derivation aggregates only the supplied normalized Transfer
 observations. It exposes observed inflow/outflow lower bounds, unique and ranked counterparties,
 self-transfers, time boundaries and share-unit adherence without assigning dividend, controller,

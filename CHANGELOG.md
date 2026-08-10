@@ -37,6 +37,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - exact fixed-point Entity Resolution evaluation with versioned controller/coordination precision,
   Service Hub/CoinJoin false-merge, Brier/ECE and minimum-corpus gates, plus a test-only structural
   golden corpus and standalone CI command;
+- fail-closed Claim Audit v1.1 input isolation for single-asset batches, normalized custody and
+  action identity, Snapshot time bounds, and chronological actor-bound terminal paths;
 - Fastify API with OpenAPI, health, capability truth, metrics, and analysis endpoints;
 - Snapshot/Evidence-backed ledger query API with pending, mempool, null, and unavailable observations
   kept distinct from confirmed facts;
