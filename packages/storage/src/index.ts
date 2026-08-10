@@ -13,6 +13,7 @@ export * from './clickhouse.js';
 export * from './ingestion-checkpoints.js';
 export * from './semantic-checkpoints.js';
 export * from './data-quality.js';
+export * from './flap-history.js';
 
 type DatabaseRow = Record<string, unknown>;
 

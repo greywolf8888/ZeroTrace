@@ -144,7 +144,8 @@ history and does not turn lifetime coverage into Known.
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migration `007`, are in [Deployment](DEPLOYMENT.md#database-lifecycle).
+local upgrade commands, including migrations `007` and `008`, are in
+[Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration
 

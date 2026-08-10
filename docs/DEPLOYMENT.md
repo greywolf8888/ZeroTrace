@@ -163,6 +163,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/006_snapshot_observation_identity.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/007_semantic_scan_checkpoints.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/008_flap_history_projection.sql
 ```
 
 PowerShell equivalent:
@@ -173,6 +175,8 @@ Get-Content -Raw infra/postgres/init/005_data_quality.sql |
 Get-Content -Raw infra/postgres/init/006_snapshot_observation_identity.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/007_semantic_scan_checkpoints.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/008_flap_history_projection.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

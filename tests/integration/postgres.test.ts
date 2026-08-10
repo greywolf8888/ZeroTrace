@@ -4,9 +4,11 @@ import { randomUUID } from 'node:crypto';
 
 import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
 import { createEvidence } from '@zerotrace/evidence';
+import { FlapEventHistorySchema, unknownValue } from '@zerotrace/schemas';
 import {
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
+  PostgresFlapHistoryProjectionRepository,
   PostgresIngestionCheckpointRepository,
   PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
@@ -475,6 +477,184 @@ postgresDescribe('PostgreSQL semantic scan checkpoint integration', () => {
     ).rejects.toMatchObject({ code: 'SEMANTIC_CHECKPOINT_CONFLICT' });
     await expect(checkpoints.finish(run.id)).rejects.toMatchObject({
       code: 'SEMANTIC_CHECKPOINT_CONFLICT',
+    });
+  });
+});
+
+postgresDescribe('PostgreSQL Flap history projection integration', () => {
+  const token = '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777';
+  const historySnapshot = {
+    ledger: 'EVM' as const,
+    chainId: 'eip155:56',
+    blockNumber: '19',
+    blockHash: `0x${'8'.repeat(64)}`,
+    parentBlockHash: `0x${'7'.repeat(64)}`,
+    finality: 'finalized' as const,
+    capturedAt: '2026-08-10T01:00:00.000Z',
+    providerVersions: { 'bsc-rpc@test.example': 'evm-ledger-v0.1.0' },
+    adapterVersions: { evm: 'evm-ledger-v0.1.0' },
+    configHash: '6'.repeat(64),
+    entityModelVersion: 'entity-model-unapplied',
+    labelSnapshot: 'labels-unapplied',
+  };
+  const rangeEvidence = createEvidence({
+    ledger: 'EVM',
+    chainId: historySnapshot.chainId,
+    kind: 'PROVIDER_OBSERVATION',
+    source: 'sqd:binance-mainnet',
+    locator: 'flap-portal-logs:portal:0-19',
+    payload: { logs: [] },
+    observedAt: historySnapshot.capturedAt,
+    blockOrSlot: historySnapshot.blockNumber,
+    finality: historySnapshot.finality,
+    summary: 'PostgreSQL Flap history range Evidence.',
+  });
+  const modelVersion = 'flap-bounded-event-history-v1';
+  const terminalEvidence = createEvidence({
+    ledger: 'EVM',
+    chainId: historySnapshot.chainId,
+    kind: 'NEGATIVE_EVIDENCE',
+    source: `zerotrace:${modelVersion}`,
+    locator: `flap-event-history:${token}:0-19`,
+    payload: { token, chronology: [] },
+    observedAt: historySnapshot.capturedAt,
+    blockOrSlot: historySnapshot.blockNumber,
+    finality: historySnapshot.finality,
+    summary: 'PostgreSQL Flap history terminal Evidence.',
+    sourceEvidenceIds: [rangeEvidence.id],
+  });
+  const history = FlapEventHistorySchema.parse({
+    platform: 'flap',
+    token,
+    requestedRange: { fromBlock: '0', toBlock: '19', chunkSize: 10, chunkCount: 2 },
+    requestedRangeCoverage: 1,
+    lifetimeCoverage: unknownValue('INSUFFICIENT_DATA'),
+    chronology: [],
+    transactions: [],
+    unrecognizedPortalLogCount: 0,
+    metadata: {
+      snapshot: historySnapshot,
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 0,
+      simulationCoverage: 0,
+      freshness: historySnapshot.capturedAt,
+      sourceSet: ['bsc-rpc@test.example', 'sqd:binance-mainnet'],
+      modelVersion,
+      confidence: 0.95,
+      evidenceIds: [rangeEvidence.id, terminalEvidence.id].sort(),
+    },
+    evidence: [rangeEvidence, terminalEvidence],
+  });
+
+  let evidence: PostgresEvidenceRepository;
+  let checkpoints: PostgresSemanticScanCheckpointRepository;
+  let projection: PostgresFlapHistoryProjectionRepository;
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    checkpoints = new PostgresSemanticScanCheckpointRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    projection = new PostgresFlapHistoryProjectionRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), checkpoints.close(), projection.close()]);
+  });
+
+  it('stores each Evidence-backed segment before cursor advance and rejects mutation', async () => {
+    await evidence.put(rangeEvidence, [], historySnapshot);
+    await evidence.put(terminalEvidence, [rangeEvidence.id], historySnapshot);
+    const run = await checkpoints.begin({
+      scanType: 'FLAP_EVENT_HISTORY',
+      source: 'sqd:binance-mainnet',
+      ledger: 'EVM',
+      chainId: historySnapshot.chainId,
+      subject: token,
+      fromBlock: 0,
+      toBlock: 19,
+      chunkSize: 20,
+      identity: { modelVersion, testRunId: checkpointTestRunId },
+      initialState: { segmentCount: 0 },
+    });
+    const stored = await projection.putSegment({ scanId: run.id, result: history });
+    await expect(projection.putSegment({ scanId: run.id, result: history })).resolves.toEqual(
+      stored,
+    );
+    await projection.close();
+    projection = new PostgresFlapHistoryProjectionRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(projection.listSegments(run.id)).resolves.toEqual([stored]);
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query(
+          `INSERT INTO flap_history_segments (
+            id, scan_id, chain_id, token, from_block, to_block, result_hash, result,
+            snapshot_hash, terminal_evidence_id, evidence_ids, source_set, model_version,
+            transaction_count, unrecognized_portal_log_count
+          ) SELECT
+            $2, scan_id, chain_id, token, from_block, to_block, result_hash, result,
+            snapshot_hash, terminal_evidence_id,
+            ARRAY(
+              SELECT item
+              FROM unnest(ARRAY[$3, source.terminal_evidence_id]) item
+              ORDER BY item
+            ), source_set,
+            model_version, transaction_count, unrecognized_portal_log_count
+          FROM flap_history_segments source WHERE id = $1`,
+          [stored.id, `fhs_${'f'.repeat(24)}`, `ev_${'f'.repeat(24)}`],
+        ),
+      ).rejects.toThrow(/missing Evidence/);
+    } finally {
+      await pool.end();
+    }
+
+    await checkpoints.advance(run.id, {
+      expectedNextBlock: 0,
+      completedToBlock: 19,
+      state: { segmentCount: 1, lastSegmentId: stored.id },
+      evidenceIds: stored.evidenceIds,
+    });
+    await checkpoints.finish(run.id, {
+      state: { segmentCount: 1, lastSegmentId: stored.id },
+      evidenceIds: stored.evidenceIds,
+    });
+    await expect(projection.putSegment({ scanId: run.id, result: history })).resolves.toEqual(
+      stored,
+    );
+
+    const immutablePool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        immutablePool.query('UPDATE flap_history_segments SET result = result WHERE id = $1', [
+          stored.id,
+        ]),
+      ).rejects.toThrow(/mutation is forbidden/);
+      await expect(
+        immutablePool.query('DELETE FROM flap_history_segments WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/mutation is forbidden/);
+    } finally {
+      await immutablePool.end();
+    }
+  });
+
+  it('reports migration-backed projection health', async () => {
+    await expect(projection.health()).resolves.toMatchObject({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
     });
   });
 });

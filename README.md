@@ -362,6 +362,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add bounded Flap Portal discovery through finalized SQD/RPC log sources with exact log/receipt replay
 - [x] Add bounded finalized SQD contract-origin proof with exact Flap receipt/Snapshot replay
 - [x] Add durable generic semantic-scan state and contiguous coverage checkpoints
+- [x] Add immutable, Evidence-backed Flap history segment projection storage
 - [x] Bind the Flap origin API to restart-safe chunk progress and terminal-result replay
 - [x] Add a one-shot deployment-origin worker with durable chunk resume and safe terminal replay
 - [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets

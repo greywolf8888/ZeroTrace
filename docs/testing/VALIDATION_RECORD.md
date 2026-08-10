@@ -653,12 +653,29 @@ built successfully and ran `--help` as the unprivileged `node` user. Continuous 
 scheduling and durable event-history projection still do not exist. No FFT request was made, and no
 FFT conclusion is claimed.
 
+### Immutable Flap history segment projection
+
+PostgreSQL migration `008_flap_history_projection` adds an append-only projection for bounded Flap
+history results. Each segment is linked to a `FLAP_EVENT_HISTORY` semantic scan and may be inserted
+only at that run's exact current cursor for one configured chunk. The repository verifies the
+content-addressed segment/result/Snapshot identities, canonical source and Evidence sets, terminal
+Evidence root, model version and full typed result on every read. An identical stored segment is a
+no-op replay; a conflict fails closed. Ordered scan pagination is available without loading an
+unbounded lifetime result into one checkpoint JSON value.
+
+Three focused repository tests passed. A fresh PostgreSQL 17.10 image applied migrations `001-008`;
+all 16 PostgreSQL integration tests passed. The database rejected a segment referencing missing
+Evidence plus any segment update or deletion, while exact replay continued to work before and after
+checkpoint completion. The disposable project and volume were removed. The segment repository is
+validated storage infrastructure; the cross-range scanner, API binding, continuous scheduler and
+FFT lifetime projection remain pending.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                     |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 264 unit, 30 environment-free integration, build, license and zero-vulnerability audit; 14 PostgreSQL tests also passed separately          |
-| local `test:coverage`    | pass: 294 tests, 17 opt-in durable skips; 83.38% statements, 75.65% branches, 91.60% functions, 84.36% lines                                                               |
+| local non-browser gates  | pass: format, lint, typecheck, 267 unit, 30 environment-free integration, build, license and zero-vulnerability audit; 16 PostgreSQL tests also passed separately          |
+| local `test:coverage`    | pass: 297 tests, 19 opt-in durable skips; 83.31% statements, 75.77% branches, 91.59% functions, 84.28% lines                                                               |
 | branch `test:coverage`   | latest completed pass: 311 tests; 85.68% statements, 77.99% branches, 94.77% functions, 86.66% lines                                                                       |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                        |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                     |
@@ -669,9 +686,9 @@ FFT conclusion is claimed.
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 47 integration tests passed and the workflow removed its named volumes. The
-current local semantic-worker batch additionally passed all 14 PostgreSQL tests on a fresh
-disposable image and built the sixth production target; ClickHouse and MinIO were not rerun locally
-for this PostgreSQL/worker-only batch.
+current local projection batch additionally passed all 16 PostgreSQL tests on a fresh disposable
+image. ClickHouse and MinIO were not rerun locally for this PostgreSQL-only module; the full
+environment-free gates were rerun before its push.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

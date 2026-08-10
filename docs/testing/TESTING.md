@@ -63,6 +63,9 @@
 - semantic-scan checkpoints hash-verify JSON state, retain cumulative Evidence IDs, reject stale or
   oversized cursor advances and coverage gaps, resume after repository restart, and prohibit
   terminal mutation or deletion in PostgreSQL;
+- Flap history segments must align with the live semantic cursor, cover exactly one configured
+  chunk, reference existing canonical Evidence, hash-replay identically, page in range order, and
+  reject update/delete in PostgreSQL;
 - the checkpointed Flap origin runner resumes only from a validated Snapshot/chunk/Evidence state,
   records safe failure codes, atomically stores the complete terminal result, and replays a terminal
   request without invoking the chain/SQD providers or the Evidence writer;

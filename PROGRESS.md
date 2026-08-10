@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                        |
 | Production acceptance            | **No**                                                                                                            |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                    |
-| Unit tests                       | **264 passing across 28 files**                                                                                   |
-| Integration tests                | **30 environment-free plus 14 real PostgreSQL passing; latest completed remote baseline has 47 passing**          |
+| Unit tests                       | **267 passing across 29 files**                                                                                   |
+| Integration tests                | **30 environment-free plus 16 real PostgreSQL passing; latest completed remote baseline has 47 passing**          |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                                                      |
 | Remote CI                        | **Pass on immutable development commit `768e116`; protected main `3372a5a`**                                      |
-| Coverage                         | **Current local: 83.38% statements / 75.65% branches / 91.60% functions / 84.36% lines**                          |
+| Coverage                         | **Current local: 83.31% statements / 75.77% branches / 91.59% functions / 84.28% lines**                          |
 | Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed                                |
 | Durable evidence/history         | Raw execution/state, anchor/alert provenance and generic semantic checkpoints wired; semantic projections pending |
 
@@ -263,6 +263,11 @@ The only allowed status vocabulary in this ledger is:
   bounded chunks. Host and Compose entrypoints preflight Evidence plus migration `007`, resume only
   the exact token/range/chunk identity, and emit a credential-free terminal summary. It is one-shot,
   not continuous scheduling or lifetime event-history projection;
+- migration `008` and a dedicated repository now persist each bounded Flap history result as an
+  immutable, content-hashed segment linked to its semantic scan and terminal Evidence. Database
+  guards require the segment to begin at the live cursor, cover exactly one configured chunk, retain
+  canonical existing Evidence/source sets, and reject update/delete. Pagination and exact idempotent
+  replay work; the scanning runner and API projection binding are the next dependency;
 - the sampled public BSC RPC rejected historical `eth_getCode` at older heights and is not treated as
   archive-capable. This does not block finalized SQD creation discovery, but archive state remains an
   explicit acceptance gap.
@@ -322,7 +327,7 @@ The only allowed status vocabulary in this ledger is:
 - immutable real-chain fixture corpus and independently operated provider reconciliation;
 - real-source discrepancy reconciliation and a labeled entity-probability corpus for Brier/ECE
   calibration;
-- a continuous deployment-origin scheduler and durable Flap event-history projection, followed by
+- a continuous deployment-origin scheduler and Flap event-history projection runner/API, followed by
   cross-range creation/configuration/migration lifecycle reconstruction;
 - complete OpenAPI request/response schemas beyond the current endpoint metadata.
 
@@ -390,24 +395,24 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                                                             | Scope                                                                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Reproducible install/build     | Pass                                                                      | locked npm install in production container; all packages/API/web                                                                     |
-| Unit tests                     | 264 pass                                                                  | 28 files across schemas, adapters, data quality, ingestion, storage, workers and API runtime                                         |
-| Integration tests              | 30 environment-free; 14 real PostgreSQL pass; 47 latest completed CI pass | origin resume/terminal replay and checkpoint health are deterministic; real PostgreSQL guards and latest remote all-store suite pass |
-| Restart regression             | Pass                                                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                              |
-| Coverage gate                  | Pass                                                                      | current local: 83.38% statements, 75.65% branches, 91.60% functions, 84.36% lines on 294 tests; 17 opt-in durable tests skipped      |
-| Chromium E2E                   | 10 pass                                                                   | five flows each on desktop and Pixel 7, including Flap state/event/default/Evidence/Unknown rendering                                |
-| Formatting / ESLint / types    | Pass                                                                      | full repository                                                                                                                      |
-| Dependency vulnerability audit | Pass                                                                      | 0 vulnerabilities across the complete npm dependency graph                                                                           |
-| Dependency license allowlist   | Pass                                                                      | production dependency graph                                                                                                          |
-| CycloneDX SBOM                 | Pass                                                                      | npm dependency graph                                                                                                                 |
-| Compose model                  | Pass                                                                      | rendered default topology                                                                                                            |
-| Docker image build/start       | Pass                                                                      | API, web, ingest worker, semantic worker, PostgreSQL, ClickHouse; service images also validated by Compose                           |
-| Database bootstrap             | Pass                                                                      | PostgreSQL 001–007/triggers and ClickHouse Raw Fact schema/migration                                                                 |
-| Runtime/browser smoke          | Pass                                                                      | API/web health, proxy, security headers, desktop/mobile render                                                                       |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope                                 | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending        |
-| Remote CI                      | Pass                                                                      | CI/CodeQL pass on immutable `768e116`: 311 tests, 10 Chromium flows and six container targets                                        |
+| Check                          | Latest result                                                             | Scope                                                                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible install/build     | Pass                                                                      | locked npm install in production container; all packages/API/web                                                                |
+| Unit tests                     | 267 pass                                                                  | 29 files across schemas, adapters, data quality, ingestion, storage, workers and API runtime                                    |
+| Integration tests              | 30 environment-free; 16 real PostgreSQL pass; 47 latest completed CI pass | segment/checkpoint guards and replay are deterministic; real PostgreSQL and latest remote all-store suites pass                 |
+| Restart regression             | Pass                                                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                         |
+| Coverage gate                  | Pass                                                                      | current local: 83.31% statements, 75.77% branches, 91.59% functions, 84.28% lines on 297 tests; 19 opt-in durable tests skipped |
+| Chromium E2E                   | 10 pass                                                                   | five flows each on desktop and Pixel 7, including Flap state/event/default/Evidence/Unknown rendering                           |
+| Formatting / ESLint / types    | Pass                                                                      | full repository                                                                                                                 |
+| Dependency vulnerability audit | Pass                                                                      | 0 vulnerabilities across the complete npm dependency graph                                                                      |
+| Dependency license allowlist   | Pass                                                                      | production dependency graph                                                                                                     |
+| CycloneDX SBOM                 | Pass                                                                      | npm dependency graph                                                                                                            |
+| Compose model                  | Pass                                                                      | rendered default topology                                                                                                       |
+| Docker image build/start       | Pass                                                                      | API, web, ingest worker, semantic worker, PostgreSQL, ClickHouse; service images also validated by Compose                      |
+| Database bootstrap             | Pass                                                                      | PostgreSQL 001–008/triggers and ClickHouse Raw Fact schema/migration                                                            |
+| Runtime/browser smoke          | Pass                                                                      | API/web health, proxy, security headers, desktop/mobile render                                                                  |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope                                 | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending   |
+| Remote CI                      | Pass                                                                      | CI/CodeQL pass on immutable `768e116`: 311 tests, 10 Chromium flows and six container targets                                   |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

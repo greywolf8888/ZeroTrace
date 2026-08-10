@@ -313,14 +313,14 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                                           | Current state                                                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion and generic semantic-scan checkpoint repositories wired; other repositories pending |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending       |
-| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                            |
-| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                               |
-| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                           |
-| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                  |
+| Store            | Intended authority                                                                                                           | Current state                                                                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, and immutable Flap history segments wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                |
+| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                     |
+| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                                        |
+| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                    |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                           |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, ingestion-run,
 and semantic-scan-run tables include append-only or monotonic guards. Semantic checkpoints bind an
@@ -331,6 +331,13 @@ Deferred database constraints reject inferred Evidence without a source edge and
 without Evidence. Repositories verify canonical IDs, Snapshot identity, idempotent conflicts, and
 transactional writes. ClickHouse Raw Facts bind Evidence and artifact references and use explicit
 logical deduplication; metric tables enforce a knowledge-state/value consistency constraint.
+
+Flap history projection segments are append-only bounded results keyed to one semantic scan UUID.
+An insert must begin at that running scan's exact cursor and cover precisely one configured chunk.
+The stored result, Snapshot hash, terminal Evidence root, cumulative canonical Evidence IDs, source
+set and model version are hash-validated on every read. Writing the segment before advancing the
+checkpoint makes a crash at that boundary safely replayable: the identical segment is idempotent,
+while any conflicting result fails closed. Segment update and deletion are database-forbidden.
 
 The worker exposes explicit `block-headers`, `transactions`, and `ledger-records` profiles. The last
 profile materializes transactions plus EVM logs/traces/state diffs, Bitcoin inputs/outputs, or Solana
@@ -385,9 +392,10 @@ each exact completed chunk only after its range Evidence exists, resumes from th
 cursor and original upper Snapshot, records a safe failure category, and atomically stores the final
 Evidence-bearing origin result after complete coverage. A terminal replay reads that result without
 calling SQD/BSC RPC or writing Evidence again. The synchronous API remains deliberately range-capped.
-The separate `semantic-worker` CLI can execute a wider inclusive range as bounded chunks and resume
+The separate `semantic-worker` CLI can execute a wider origin range as bounded chunks and resume
 the identical identity after interruption. It remains a one-shot worker; continuous scheduling and
-the cross-range event-history projection remain later stages.
+the cross-range event-history projection runner/API remain later stages. The projection's immutable
+PostgreSQL segment store exists, but the bounded history scanner is not yet bound to it.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.
