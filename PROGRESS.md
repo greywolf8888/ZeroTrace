@@ -19,7 +19,7 @@ completed feature.
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                |
 | Integration tests                | **58 environment-free plus 22 real-storage passing; 80 with PostgreSQL, ClickHouse and object store enabled**             |
 | Real-browser E2E                 | **22 passing: Chromium desktop and Pixel 7**                                                                              |
-| Remote CI                        | **Pass on immutable reconciliation commit `e6087c4`: CI, Chromium, production images, and CodeQL**                        |
+| Remote CI                        | **Pass on supply-continuity commit `2d115c3`: CI, 22 Chromium flows, production images, and CodeQL**                      |
 | Coverage                         | **Current local: 82.76% statements / 77.26% branches / 91.66% functions / 83.94% lines**                                  |
 | Real-chain validation            | Four-chain anchors/raw ingestion, Flap history/origin, FFT market and bounded independent-source supply continuity passed |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap history/lifetime, accepted heads and EVM Claim Reports wired              |
@@ -723,25 +723,25 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                                     | Scope                                                                                                                                      |
-| ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reproducible install/build     | Pass                                              | locked npm install in production container; all packages/API/web                                                                           |
-| Unit tests                     | 412 pass                                          | 59 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                               |
-| Integration tests              | 58 environment-free plus 22 real-storage pass     | 80 total with PostgreSQL, ClickHouse and object store; supply replay and multi-source market/RV guards are deterministic                   |
-| Model evaluation tests         | 1 pass                                            | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                             |
-| Restart regression             | Pass                                              | same-anchor recapture persists across repository/API restart without Snapshot collision                                                    |
-| Coverage gate                  | Pass                                              | current local: 82.76% statements, 77.26% branches, 91.66% functions, 83.94% lines on 470 tests; 22 opt-in durable tests skipped            |
-| Chromium E2E                   | 22 pass                                           | desktop and Pixel 7 include supply continuity, multi-source market/RV, burn, Claim Declaration/Report and Unknown                          |
-| Formatting / ESLint / types    | Pass                                              | full repository                                                                                                                            |
-| Dependency vulnerability audit | Pass                                              | 0 vulnerabilities across the complete npm dependency graph                                                                                 |
-| Dependency license allowlist   | Pass                                              | production dependency graph                                                                                                                |
-| CycloneDX SBOM                 | Pass                                              | npm dependency graph                                                                                                                       |
-| Compose model                  | Pass                                              | rendered default topology                                                                                                                  |
-| Docker image build/start       | Pass                                              | API, web, ingest/semantic/supply workers, PostgreSQL and ClickHouse; production supply replay passed with invalid provider credentials     |
-| Database bootstrap             | Pass                                              | fresh bootstrap previously passed; current persistent Compose volume was backed up and upgraded non-destructively from 001–002 through 011 |
-| Runtime/browser smoke          | Pass                                              | rebuilt API/Web healthy/read-only; 26-node supply Evidence drilldown and unmocked FFT supply UI replay passed                              |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope         | four anchors/pipelines plus scoped Alchemy/BNB market reconciliation passed; archive/forced-reorg scope pending                            |
-| Remote CI                      | Pass on immutable reconciliation commit `e6087c4` | CI/CodeQL green; full matrix, structural model gate, 20 Chromium flows and six production targets                                          |
+| Check                          | Latest result                                 | Scope                                                                                                                                      |
+| ------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reproducible install/build     | Pass                                          | locked npm install in production container; all packages/API/web                                                                           |
+| Unit tests                     | 412 pass                                      | 59 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                               |
+| Integration tests              | 58 environment-free plus 22 real-storage pass | 80 total with PostgreSQL, ClickHouse and object store; supply replay and multi-source market/RV guards are deterministic                   |
+| Model evaluation tests         | 1 pass                                        | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                             |
+| Restart regression             | Pass                                          | same-anchor recapture persists across repository/API restart without Snapshot collision                                                    |
+| Coverage gate                  | Pass                                          | current local: 82.76% statements, 77.26% branches, 91.66% functions, 83.94% lines on 470 tests; 22 opt-in durable tests skipped            |
+| Chromium E2E                   | 22 pass                                       | desktop and Pixel 7 include supply continuity, multi-source market/RV, burn, Claim Declaration/Report and Unknown                          |
+| Formatting / ESLint / types    | Pass                                          | full repository                                                                                                                            |
+| Dependency vulnerability audit | Pass                                          | 0 vulnerabilities across the complete npm dependency graph                                                                                 |
+| Dependency license allowlist   | Pass                                          | production dependency graph                                                                                                                |
+| CycloneDX SBOM                 | Pass                                          | npm dependency graph                                                                                                                       |
+| Compose model                  | Pass                                          | rendered default topology                                                                                                                  |
+| Docker image build/start       | Pass                                          | API, web, ingest/semantic/supply workers, PostgreSQL and ClickHouse; production supply replay passed with invalid provider credentials     |
+| Database bootstrap             | Pass                                          | fresh bootstrap previously passed; current persistent Compose volume was backed up and upgraded non-destructively from 001–002 through 011 |
+| Runtime/browser smoke          | Pass                                          | rebuilt API/Web healthy/read-only; 26-node supply Evidence drilldown and unmocked FFT supply UI replay passed                              |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines plus scoped Alchemy/BNB market reconciliation passed; archive/forced-reorg scope pending                            |
+| Remote CI                      | Pass on supply-continuity commit `2d115c3`    | CI/CodeQL green; full matrix, structural model gate, 22 Chromium flows and production targets                                              |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

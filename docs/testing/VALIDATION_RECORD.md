@@ -1283,19 +1283,19 @@ zero, the table was non-destructively renamed to
 `raw_chain_facts_legacy_pre_evidence_20260811`, the current initialization SQL was reapplied, and
 both tables remained present. No legacy row was discarded or assigned fabricated Evidence.
 
-| Command                  | Result                                                                                                                                                                       |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 412 unit, 58 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
-| local durable stores     | pass: PostgreSQL migrations `001-011`, canonical ClickHouse and versioned object store; all 80 integration tests passed                                                      |
-| local `test:coverage`    | pass: 470 tests, 22 opt-in durable skips; 82.76% statements, 77.26% branches, 91.66% functions, 83.94% lines                                                                 |
-| `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
-| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
-| `npm run test:e2e`       | pass: 22 Chromium tests across desktop and Pixel 7, including supply continuity, multi-source market/RV, burn, Claim Declaration/Report and Unknown                          |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
-| `docker compose config`  | pass                                                                                                                                                                         |
-| production Compose smoke | pass: rebuilt API/Web healthy and read-only; same-operator capability truth plus 91-node durable FFT Evidence replay passed                                                  |
-| branch GitHub Actions CI | [pass on `e6087c4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31427784207): full CI matrix, structural model gate, 20 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `e6087c4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31427784193): JavaScript and TypeScript analysis                                                  |
+| Command                  | Result                                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| local non-browser gates  | pass: format, lint, typecheck, 412 unit, 58 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                   |
+| local durable stores     | pass: PostgreSQL migrations `001-011`, canonical ClickHouse and versioned object store; all 80 integration tests passed                                                  |
+| local `test:coverage`    | pass: 470 tests, 22 opt-in durable skips; 82.76% statements, 77.26% branches, 91.66% functions, 83.94% lines                                                             |
+| `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                        |
+| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                         |
+| `npm run test:e2e`       | pass: 22 Chromium tests across desktop and Pixel 7, including supply continuity, multi-source market/RV, burn, Claim Declaration/Report and Unknown                      |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                   |
+| `docker compose config`  | pass                                                                                                                                                                     |
+| production Compose smoke | pass: rebuilt API/Web healthy and read-only; same-operator capability truth plus 91-node durable FFT Evidence replay passed                                              |
+| branch GitHub Actions CI | [pass on `2d115c3`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31433097623): full CI matrix, structural model gate, 22 Chromium flows and production targets |
+| branch CodeQL            | [pass on `2d115c3`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31433098888): JavaScript and TypeScript analysis                                              |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
