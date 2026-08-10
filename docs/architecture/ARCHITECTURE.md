@@ -229,6 +229,15 @@ impact; this boundary is returned explicitly rather than encoded as a price adju
 operator plus official documentation yields source coverage `0.5`, not independent-source
 acceptance.
 
+The exit-size composition reuses that complete market certificate and checks the official Router in
+the token-to-quote direction. For each size it separates marginal-price nominal value, full-input
+Router gross output, a configured sell-tax pool estimate, and the unobserved settlement balance
+delta. Average exit price, post-sell spot, price impact and shared quote-reserve consumption are
+modeled explicitly. The configured-tax branch assumes the reported sell tax is removed before the
+pair; it does not assert dynamic-tax, exemption, swapback or settlement behavior. A Router/formula
+mismatch beyond 10 bps withholds every configured-tax result. Executable capacity remains Unknown
+until a Snapshot-pinned fork tests max-sell, blacklist/whitelist, gas and reverts.
+
 ### Claim verification
 
 The first deterministic claim kernel accepts human- or agent-structured rules separately from chain
@@ -529,9 +538,10 @@ deterministic RV engine. It reuses the inspection Snapshot and calls the officia
 derived Evidence node exposes the atomic realizable value. Nominal price, decimals, impact, fee
 decomposition, gas, route capacity and migrated-DEX sell execution remain Unknown until
 independently evidenced. The initial migrated PancakeSwap V2 buy-side slice above supplies verified
-point-in-time reserves, spot, gross route output, configured-tax estimates and modeled post-buy spot;
-it does not turn those values into a complete sell-RV conclusion. A revert or unsupported lifecycle
-cannot become a zero quote.
+point-in-time reserves, spot, gross route output, configured-tax estimates and modeled post-buy spot.
+The companion sell slice supplies nominal/gross/configured-tax exit estimates and liquidity impact,
+but it does not turn them into execution-complete RV. A revert or unsupported lifecycle cannot
+become a zero quote.
 
 The Data Quality domain also owns a typed discrepancy engine. It compares Evidence-grounded actual
 and reference observations only when both resolve to the same canonical ledger/position/hash and

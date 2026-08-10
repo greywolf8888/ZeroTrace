@@ -1235,6 +1235,7 @@ export const FlapPancakeV2MarketSchema = z.object({
   currentSpotPrice: DecimalStringSchema,
   dexFeeBps: UnsignedQuantityStringSchema,
   configuredBuyTaxBps: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  configuredSellTaxBps: knowledgeValueSchema(UnsignedQuantityStringSchema),
   pairTimestampLast: UnsignedQuantityStringSchema,
   sourceRevision: z.string().min(1),
 });
@@ -1334,6 +1335,107 @@ export const FlapPancakeV2BuyScenarioResultSchema = z
     }
   });
 export type FlapPancakeV2BuyScenarioResult = z.infer<typeof FlapPancakeV2BuyScenarioResultSchema>;
+
+export const FlapPancakeV2SellScenarioPointSchema = z.object({
+  tokenInput: FlapPancakeV2TokenAmountSchema,
+  nominalSpotQuoteValue: FlapPancakeV2TokenAmountSchema,
+  officialRouterGrossQuoteOutput: FlapPancakeV2TokenAmountSchema,
+  deterministicPoolGrossQuoteOutput: FlapPancakeV2TokenAmountSchema,
+  configuredTaxTokenInputToPool: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  configuredTaxNetQuoteOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  executionNetQuoteOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  averageGrossExitPrice: knowledgeValueSchema(DecimalStringSchema),
+  averageConfiguredTaxExitPrice: knowledgeValueSchema(DecimalStringSchema),
+  modeledGrossPostSellSpotPrice: DecimalStringSchema,
+  modeledConfiguredTaxPostSellSpotPrice: knowledgeValueSchema(DecimalStringSchema),
+  grossPriceImpactBps: DecimalStringSchema,
+  configuredTotalExitHaircutBps: knowledgeValueSchema(DecimalStringSchema),
+  grossQuoteReserveConsumedBps: DecimalStringSchema,
+  configuredTaxQuoteReserveConsumedBps: knowledgeValueSchema(DecimalStringSchema),
+  deterministicQuoteErrorBps: DecimalStringSchema,
+  deterministicToleranceBps: DecimalStringSchema,
+  withinDeterministicTolerance: z.boolean(),
+  assumption: z.string().min(1),
+});
+export type FlapPancakeV2SellScenarioPoint = z.infer<typeof FlapPancakeV2SellScenarioPointSchema>;
+
+export const FlapPancakeV2SellScenarioResultSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    market: knowledgeValueSchema(FlapPancakeV2MarketSchema),
+    scenarios: z.array(FlapPancakeV2SellScenarioPointSchema).max(8),
+    validation: z.object({
+      status: z.enum(['PASS', 'FAIL', 'NOT_RUN']),
+      deterministicToleranceBps: DecimalStringSchema,
+      evaluatedScenarioCount: z.number().int().nonnegative(),
+      failedScenarioCount: z.number().int().nonnegative(),
+    }),
+    executionCapacity: knowledgeValueSchema(z.string().min(1)),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+      message: 'Flap Pancake V2 sell scenarios require a replayable chain Snapshot.',
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.evidence.some((item) => item.id === value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message:
+          'Flap Pancake V2 sell scenarios must bind their terminal Evidence to one BSC Snapshot.',
+      });
+    }
+    if (value.market.state === 'known') {
+      const market = value.market.value;
+      const pairMatches =
+        (market.token0 === market.token && market.token1 === market.quoteAsset) ||
+        (market.token1 === market.token && market.token0 === market.quoteAsset);
+      const failedScenarioCount = value.scenarios.filter(
+        (scenario) => !scenario.withinDeterministicTolerance,
+      ).length;
+      if (
+        market.token !== value.token ||
+        !pairMatches ||
+        market.tokenReserve.atomic === '0' ||
+        market.quoteReserve.atomic === '0' ||
+        value.scenarios.length === 0 ||
+        value.validation.status === 'NOT_RUN' ||
+        value.validation.evaluatedScenarioCount !== value.scenarios.length ||
+        value.validation.failedScenarioCount !== failedScenarioCount ||
+        (failedScenarioCount === 0
+          ? value.validation.status !== 'PASS'
+          : value.validation.status !== 'FAIL')
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['market'],
+          message:
+            'A known Flap Pancake V2 market requires matching sell scenarios and validation counts.',
+        });
+      }
+    } else if (
+      value.scenarios.length !== 0 ||
+      value.validation.status !== 'NOT_RUN' ||
+      value.validation.evaluatedScenarioCount !== 0 ||
+      value.validation.failedScenarioCount !== 0
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['scenarios'],
+        message: 'Unavailable or unknown Flap Pancake V2 markets cannot contain sell scenarios.',
+      });
+    }
+  });
+export type FlapPancakeV2SellScenarioResult = z.infer<typeof FlapPancakeV2SellScenarioResultSchema>;
 
 export const ClaimStatusSchema = z.enum([
   'VERIFIED',

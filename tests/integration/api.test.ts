@@ -2470,6 +2470,126 @@ describe('ZeroTrace API contract', () => {
     });
   });
 
+  it('returns same-Snapshot Pancake V2 sell RV layers without presenting estimates as execution', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const quoteReserve = 1_000n * 10n ** 18n;
+    const tokenReserve = 1_000_000n * 10n ** 18n;
+    const certificationInput = 1n * 10n ** 18n;
+    const tokenInputs = [1_000n * 10n ** 18n, 10_000n * 10n ** 18n];
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new FlapQuoteTransport([
+          fixtureFlapV8SafeResult({
+            status: 4,
+            quoteTokenAddress: fixtureFlapQuoteAsset,
+            pool: fixtureFlapPool,
+            dexId: 0,
+          }),
+          fixtureAddressResult(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+          fixtureAddressResult(fixtureFlapQuoteAsset),
+          fixtureAddressResult(fixtureFlapToken),
+          fixtureReservesResult(quoteReserve, tokenReserve),
+          fixtureAddressResult(fixtureFlapPool),
+          fixtureAddressResult(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+          fixtureDecimalsResult(18),
+          fixtureDecimalsResult(18),
+          fixtureAmountsOutResult(
+            certificationInput,
+            fixturePancakeAmountOut(certificationInput, quoteReserve, tokenReserve),
+          ),
+          ...tokenInputs.map((input) =>
+            fixtureAmountsOutResult(
+              input,
+              fixturePancakeAmountOut(input, tokenReserve, quoteReserve),
+            ),
+          ),
+        ]),
+      ),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-sell-scenarios',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        tokenInputs: ['1000', '10000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      market: {
+        state: 'known',
+        value: {
+          currentSpotPrice: '0.001',
+          configuredSellTaxBps: { state: 'known', value: '700' },
+        },
+      },
+      scenarios: [
+        {
+          tokenInput: { decimal: '1000' },
+          nominalSpotQuoteValue: { decimal: '1' },
+          withinDeterministicTolerance: true,
+          configuredTaxTokenInputToPool: { state: 'known', value: { decimal: '930' } },
+          configuredTaxNetQuoteOutput: { state: 'known' },
+          executionNetQuoteOutput: { state: 'unknown', reason: 'NOT_QUERIED' },
+        },
+        { tokenInput: { decimal: '10000' } },
+      ],
+      validation: { status: 'PASS', evaluatedScenarioCount: 2, failedScenarioCount: 0 },
+      executionCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
+      metadata: {
+        snapshot: { chainId: 'eip155:56', blockNumber: '16' },
+        modelVersion: 'flap-pancake-v2-pool-sell-scenarios-v0.1.0',
+        sourceCoverage: 0.5,
+        simulationCoverage: 0.5,
+      },
+    });
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${response.json().terminalEvidenceId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes.length).toBeGreaterThan(18);
+  });
+
+  it('keeps Flap Pancake V2 sell scenarios unavailable without a BSC provider', async () => {
+    const app = await createApp({ config, runtime: runtimeWithAllLedgers(), logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-sell-scenarios',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        tokenInputs: ['1000'],
+      },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toMatchObject({
+      market: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
+      scenarios: [],
+      validation: { status: 'NOT_RUN' },
+      executionCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
+      terminalEvidenceId: null,
+      evidence: [],
+    });
+  });
+
   it('keeps Solana account absence known without coercing unavailable fields to zero', async () => {
     const app = await createApp({ config, runtime: runtimeWithAllLedgers(null), logger: false });
     apps.push(app);

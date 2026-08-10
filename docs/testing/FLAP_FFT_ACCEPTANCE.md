@@ -19,8 +19,8 @@ then, a generic address or transaction read is foundation evidence only and cann
 an FFT product conclusion.
 
 Implementation note: the deterministic same-Snapshot discrepancy core, class budgets, target-indexed
-claim-address observation, immutable report replay, and the first migrated Pancake V2 spot/buy-size
-slice are implemented. One named FFT market run is recorded below. The FFT terminal run remains
+claim-address observation, immutable report replay, and the first migrated Pancake V2 buy/exit-size
+slices are implemented. Named FFT market and partial-RV runs are recorded below. The terminal run remains
 gated by complete event/migration history, independent-source reconciliation, pinned-fork tax and
 swapback execution, sell-route capacity/gas, controller/control-right analysis, claim-action
 semantics, corpus-level entity calibration, and complete multi-route realizable value.
@@ -124,6 +124,31 @@ into movable custody, not an irreversible burn and not a second AMM trade. It th
 create an extra automatic spot-price effect. Technical custody, individual membership withdrawal,
 weekly dividend execution, controller identity, and official wallet attribution remain separate
 Evidence questions.
+
+### Partial exit/RV acceptance: 2026-08-10
+
+A later read-only run pinned finalized block `115137197`, hash
+`0x600b38f896ddc58ceac21169a1c285aef495bce92bbbb67b80249a86c672db75`, timestamp
+`2026-08-10T14:31:19.000Z`. The verified pool contained
+`74586827.793161266597497691` FFT and `30267.053563947710181207` USDT; reserve spot was
+`0.000405796230507108` USDT/FFT and Flap inspection reported a configured 300 bps sell tax.
+
+| FFT exit input |      Nominal at spot USDT |         Router gross USDT | Configured-tax estimate USDT | Average configured-tax exit |         Post-sell spot | Quote reserve consumed |
+| -------------: | ------------------------: | ------------------------: | ---------------------------: | --------------------------: | ---------------------: | ---------------------: |
+|      1,000,000 |  `405.796230507108956541` |  `399.439762336147983189` |     `387.610030249454467789` |      `0.000387610030249454` | `0.000395456564368927` |        `128.06335` bps |
+|      5,000,000 | `2028.981152535544782706` | `1897.055669041575774379` |    `1843.610572166868587816` |      `0.000368722114433373` | `0.000357811908927055` |       `609.114649` bps |
+|     10,000,000 | `4057.962305071089565413` | `3570.332704241699971628` |    `3475.522007411636832561` |      `0.000347552200741163` | `0.000317861429336053` |      `1148.285544` bps |
+
+Router gross output matched the independent 25 bps integer model at atomic precision for all three
+sizes (`0` bps error, validation `PASS`, 10 bps budget). Terminal Evidence
+`ev_9627b639672d93ae97fef938` closes 23 nodes. Coverage is data `0.9`, source `0.5`, history `0`,
+simulation `0.5`, with confidence `0.94`.
+
+The nominal column is explicitly not RV. The configured-tax column assumes 3% is removed before the
+pair; it is not a wallet settlement observation. Actual execution-net and executable capacity remain
+`Unknown(NOT_QUERIED)` until a pinned fork tests dynamic tax, exemptions, max-sell,
+blacklist/whitelist, swapback, gas, reverts, and final balance delta. This partial result therefore
+does not satisfy the terminal multi-route sell requirement.
 
 ## Required output
 

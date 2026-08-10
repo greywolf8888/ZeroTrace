@@ -17,6 +17,7 @@ import {
   inferGenericLaunchMechanism,
   inspectFlapToken,
   quoteFlapPancakeV2BuyScenarios,
+  quoteFlapPancakeV2SellScenarios,
   quoteFlapSell,
   type FlapDeployment,
 } from './index.js';
@@ -247,6 +248,15 @@ function flapFixture(callResults: unknown[], deployment = FLAP_BSC_MAINNET_DEPLO
         deployment,
         token: tokenAddress,
         quoteInputs,
+        writeEvidence: async (item, sources = [], snapshot) =>
+          evidence.add(item, sources, snapshot).evidence,
+      }),
+    sellScenarios: (tokenInputs: readonly string[]) =>
+      quoteFlapPancakeV2SellScenarios({
+        adapter,
+        deployment,
+        token: tokenAddress,
+        tokenInputs,
         writeEvidence: async (item, sources = [], snapshot) =>
           evidence.add(item, sources, snapshot).evidence,
       }),
@@ -524,45 +534,49 @@ describe('Flap read-only sell preview', () => {
   });
 });
 
+const pancakeQuoteReserve = 1_000n * 10n ** 18n;
+const pancakeTokenReserve = 1_000_000n * 10n ** 18n;
+
+function marketFixture(
+  options: {
+    inputs?: readonly bigint[];
+    factory?: string;
+    reserve0?: bigint;
+    reserve1?: bigint;
+    buyTaxBps?: bigint;
+    sellTaxBps?: bigint;
+    extraCallResults?: readonly unknown[];
+  } = {},
+) {
+  const inputs = options.inputs ?? [100n * 10n ** 18n, 1_000n * 10n ** 18n];
+  const reserve0 = options.reserve0 ?? pancakeQuoteReserve;
+  const reserve1 = options.reserve1 ?? pancakeTokenReserve;
+  const factory = options.factory ?? PANCAKE_V2_BSC_DEPLOYMENT.factory;
+  return flapFixture([
+    encodeFlapV8Safe({
+      status: 4,
+      quoteTokenAddress: quoteAddress,
+      pool: poolAddress,
+      dexId: 0,
+      buyTaxRate: options.buyTaxBps ?? 300n,
+      sellTaxRate: options.sellTaxBps ?? 700n,
+    }),
+    encodeAddress(factory),
+    encodeAddress(quoteAddress),
+    encodeAddress(tokenAddress),
+    encodeReserves(reserve0, reserve1),
+    encodeAddress(poolAddress),
+    encodeAddress(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+    encodeUint8(18),
+    encodeUint8(18),
+    ...inputs.map((input) =>
+      encodeAmountsOut(input, pancakeV2AmountOut(input, reserve0, reserve1)),
+    ),
+    ...(options.extraCallResults ?? []),
+  ]);
+}
+
 describe('Flap migrated Pancake V2 buy-size scenarios', () => {
-  const quoteReserve = 1_000n * 10n ** 18n;
-  const tokenReserve = 1_000_000n * 10n ** 18n;
-
-  function marketFixture(
-    options: {
-      inputs?: readonly bigint[];
-      factory?: string;
-      reserve0?: bigint;
-      reserve1?: bigint;
-      buyTaxBps?: bigint;
-    } = {},
-  ) {
-    const inputs = options.inputs ?? [100n * 10n ** 18n, 1_000n * 10n ** 18n];
-    const reserve0 = options.reserve0 ?? quoteReserve;
-    const reserve1 = options.reserve1 ?? tokenReserve;
-    const factory = options.factory ?? PANCAKE_V2_BSC_DEPLOYMENT.factory;
-    return flapFixture([
-      encodeFlapV8Safe({
-        status: 4,
-        quoteTokenAddress: quoteAddress,
-        pool: poolAddress,
-        dexId: 0,
-        buyTaxRate: options.buyTaxBps ?? 300n,
-      }),
-      encodeAddress(factory),
-      encodeAddress(quoteAddress),
-      encodeAddress(tokenAddress),
-      encodeReserves(reserve0, reserve1),
-      encodeAddress(poolAddress),
-      encodeAddress(PANCAKE_V2_BSC_DEPLOYMENT.factory),
-      encodeUint8(18),
-      encodeUint8(18),
-      ...inputs.map((input) =>
-        encodeAmountsOut(input, pancakeV2AmountOut(input, reserve0, reserve1)),
-      ),
-    ]);
-  }
-
   it('binds the official pair/router quote and deterministic multi-size model to one Snapshot', async () => {
     const fixture = marketFixture();
     const result = await fixture.buyScenarios(['100', '1000']);
@@ -664,6 +678,105 @@ describe('Flap migrated Pancake V2 buy-size scenarios', () => {
     expect(result.scenarios[0]?.averageConfiguredTaxBuyPrice).toMatchObject({
       state: 'unknown',
       reason: 'NOT_APPLICABLE',
+    });
+  });
+});
+
+describe('Flap migrated Pancake V2 sell-size scenarios', () => {
+  const marketCertificationInput = 1n * 10n ** 18n;
+
+  function sellFixture(
+    tokenInputs: readonly bigint[],
+    options: { sellTaxBps?: bigint; grossOutputDelta?: bigint } = {},
+  ) {
+    return marketFixture({
+      inputs: [marketCertificationInput],
+      ...(options.sellTaxBps === undefined ? {} : { sellTaxBps: options.sellTaxBps }),
+      extraCallResults: tokenInputs.map((input) =>
+        encodeAmountsOut(
+          input,
+          pancakeV2AmountOut(input, pancakeTokenReserve, pancakeQuoteReserve) +
+            (options.grossOutputDelta ?? 0n),
+        ),
+      ),
+    });
+  }
+
+  it('separates nominal, Router gross, configured-tax estimate and actual execution Unknown', async () => {
+    const tokenInputs = [1_000n * 10n ** 18n, 10_000n * 10n ** 18n];
+    const fixture = sellFixture(tokenInputs);
+    const result = await fixture.sellScenarios(['1000', '10000']);
+
+    expect(result.market).toMatchObject({
+      state: 'known',
+      value: {
+        currentSpotPrice: '0.001',
+        configuredSellTaxBps: { state: 'known', value: '700' },
+      },
+    });
+    expect(result.validation).toEqual({
+      status: 'PASS',
+      deterministicToleranceBps: '10',
+      evaluatedScenarioCount: 2,
+      failedScenarioCount: 0,
+    });
+    expect(result.scenarios[0]).toMatchObject({
+      tokenInput: { decimal: '1000' },
+      nominalSpotQuoteValue: { decimal: '1' },
+      deterministicQuoteErrorBps: '0',
+      withinDeterministicTolerance: true,
+      configuredTaxTokenInputToPool: { state: 'known', value: { decimal: '930' } },
+      configuredTaxNetQuoteOutput: { state: 'known' },
+      executionNetQuoteOutput: { state: 'unknown', reason: 'NOT_QUERIED' },
+    });
+    expect(
+      BigInt(result.scenarios[0]?.officialRouterGrossQuoteOutput.atomic ?? '0'),
+    ).toBeGreaterThan(
+      BigInt(
+        result.scenarios[0]?.configuredTaxNetQuoteOutput.state === 'known'
+          ? result.scenarios[0].configuredTaxNetQuoteOutput.value.atomic
+          : '0',
+      ),
+    );
+    expect(result.executionCapacity).toMatchObject({
+      state: 'unknown',
+      reason: 'NOT_QUERIED',
+      detail: expect.stringContaining('pinned-fork'),
+    });
+    expect(result.metadata).toMatchObject({
+      snapshot: { blockNumber: '16' },
+      sourceCoverage: 0.5,
+      historyCoverage: 0,
+      simulationCoverage: 0.5,
+      modelVersion: 'flap-pancake-v2-pool-sell-scenarios-v0.1.0',
+    });
+    expect(result.evidence.at(-1)?.id).toBe(result.terminalEvidenceId);
+  });
+
+  it('fails the automatic check and withholds configured-tax estimates on a Router mismatch', async () => {
+    const tokenInput = 1_000n * 10n ** 18n;
+    const expected = pancakeV2AmountOut(tokenInput, pancakeTokenReserve, pancakeQuoteReserve);
+    const fixture = sellFixture([tokenInput], { grossOutputDelta: expected / 100n });
+    const result = await fixture.sellScenarios(['1000']);
+
+    expect(result.validation).toMatchObject({ status: 'FAIL', failedScenarioCount: 1 });
+    expect(result.scenarios[0]).toMatchObject({
+      withinDeterministicTolerance: false,
+      configuredTaxNetQuoteOutput: { state: 'unknown', reason: 'CONFLICTING_SOURCES' },
+      executionNetQuoteOutput: { state: 'unknown', reason: 'NOT_QUERIED' },
+    });
+  });
+
+  it('keeps a configured 100% sell tax as a zero estimate without calling it execution proof', async () => {
+    const tokenInput = 1_000n * 10n ** 18n;
+    const fixture = sellFixture([tokenInput], { sellTaxBps: 10_000n });
+    const result = await fixture.sellScenarios(['1000']);
+
+    expect(result.scenarios[0]).toMatchObject({
+      configuredTaxTokenInputToPool: { state: 'known', value: { atomic: '0', decimal: '0' } },
+      configuredTaxNetQuoteOutput: { state: 'known', value: { atomic: '0', decimal: '0' } },
+      averageConfiguredTaxExitPrice: { state: 'known', value: '0' },
+      executionNetQuoteOutput: { state: 'unknown', reason: 'NOT_QUERIED' },
     });
   });
 });

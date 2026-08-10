@@ -261,30 +261,33 @@ export interface FlapTokenAmount {
   decimal: string;
 }
 
+export interface FlapPancakeV2Market {
+  venue: 'PANCAKESWAP_V2';
+  chainId: 'eip155:56';
+  pool: string;
+  factory: string;
+  router: string;
+  token: string;
+  quoteAsset: string;
+  token0: string;
+  token1: string;
+  tokenDecimals: number;
+  quoteDecimals: number;
+  tokenReserve: FlapTokenAmount;
+  quoteReserve: FlapTokenAmount;
+  currentSpotPriceWad: string;
+  currentSpotPrice: string;
+  dexFeeBps: string;
+  configuredBuyTaxBps: KnowledgeValue<string>;
+  configuredSellTaxBps: KnowledgeValue<string>;
+  pairTimestampLast: string;
+  sourceRevision: string;
+}
+
 export interface FlapPancakeV2BuyScenarioResponse {
   platform: 'flap';
   token: string;
-  market: KnowledgeValue<{
-    venue: 'PANCAKESWAP_V2';
-    chainId: 'eip155:56';
-    pool: string;
-    factory: string;
-    router: string;
-    token: string;
-    quoteAsset: string;
-    token0: string;
-    token1: string;
-    tokenDecimals: number;
-    quoteDecimals: number;
-    tokenReserve: FlapTokenAmount;
-    quoteReserve: FlapTokenAmount;
-    currentSpotPriceWad: string;
-    currentSpotPrice: string;
-    dexFeeBps: string;
-    configuredBuyTaxBps: KnowledgeValue<string>;
-    pairTimestampLast: string;
-    sourceRevision: string;
-  }>;
+  market: KnowledgeValue<FlapPancakeV2Market>;
   scenarios: Array<{
     quoteInput: FlapTokenAmount;
     officialRouterGrossTokenOutput: FlapTokenAmount;
@@ -307,6 +310,38 @@ export interface FlapPancakeV2BuyScenarioResponse {
     failedScenarioCount: number;
   };
   pensionSinkTreatment: KnowledgeValue<string>;
+  terminalEvidenceId: string | null;
+  metadata: AnalysisMetadata;
+  evidence: EvidenceRecord[];
+}
+
+export interface FlapPancakeV2SellScenarioResponse {
+  platform: 'flap';
+  token: string;
+  market: KnowledgeValue<FlapPancakeV2Market>;
+  scenarios: Array<{
+    tokenInput: FlapTokenAmount;
+    nominalSpotQuoteValue: FlapTokenAmount;
+    officialRouterGrossQuoteOutput: FlapTokenAmount;
+    deterministicPoolGrossQuoteOutput: FlapTokenAmount;
+    configuredTaxTokenInputToPool: KnowledgeValue<FlapTokenAmount>;
+    configuredTaxNetQuoteOutput: KnowledgeValue<FlapTokenAmount>;
+    executionNetQuoteOutput: KnowledgeValue<FlapTokenAmount>;
+    averageGrossExitPrice: KnowledgeValue<string>;
+    averageConfiguredTaxExitPrice: KnowledgeValue<string>;
+    modeledGrossPostSellSpotPrice: string;
+    modeledConfiguredTaxPostSellSpotPrice: KnowledgeValue<string>;
+    grossPriceImpactBps: string;
+    configuredTotalExitHaircutBps: KnowledgeValue<string>;
+    grossQuoteReserveConsumedBps: string;
+    configuredTaxQuoteReserveConsumedBps: KnowledgeValue<string>;
+    deterministicQuoteErrorBps: string;
+    deterministicToleranceBps: string;
+    withinDeterministicTolerance: boolean;
+    assumption: string;
+  }>;
+  validation: FlapPancakeV2BuyScenarioResponse['validation'];
+  executionCapacity: KnowledgeValue<string>;
   terminalEvidenceId: string | null;
   metadata: AnalysisMetadata;
   evidence: EvidenceRecord[];
@@ -719,6 +754,21 @@ export const api = {
         platform: 'flap',
         token,
         quoteInputs,
+        blockNumber,
+      }),
+    }),
+  flapPancakeV2SellScenarios: (
+    token: string,
+    tokenInputs: readonly string[],
+    blockNumber: string,
+  ) =>
+    requestJson<FlapPancakeV2SellScenarioResponse>('/api/v1/rv/flap-pancake-v2-sell-scenarios', {
+      method: 'POST',
+      body: JSON.stringify({
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token,
+        tokenInputs,
         blockNumber,
       }),
     }),

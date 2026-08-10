@@ -118,7 +118,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
         latest replay and fail-closed reorg/regression guards
   - [x] Deterministic all-source finalized-reorg rollback to the newest verified ancestor, immutable
         suffix invalidation and immediate safe replay
-  - [x] Named FFT migrated Pancake V2 point-in-time market/buy-size fixture
+  - [x] Named FFT migrated Pancake V2 point-in-time buy/exit-size market fixtures
   - [ ] Complete FFT migration fixture, forced reorg drill, lifecycle and sell/execution RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
@@ -142,6 +142,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Same-Snapshot migrated-Flap Pancake V2 pool/factory/router verification, reserve spot,
       multi-size buy scenarios and automatic 0.10% Router/model arithmetic checks, including one
       named FFT point-in-time run
+- [x] Same-Snapshot Pancake V2 nominal/gross/configured-tax exit-size scenarios with price impact,
+      quote-reserve consumption, automatic Router/model checks and one named FFT partial-RV run
 - [ ] Automated durable capture scheduling, same-Snapshot action derivation, independent-source
       reconciliation, complete Claim Audit and terminal named FFT conclusion
 - [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`
@@ -181,7 +183,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [ ] Bitcoin Core plus Esplora fixture suite
 - [ ] Solana archive plus dedicated RPC fixture suite
 - [ ] Named launch/migration fixtures for every declared platform/version
-- [x] Named FFT migrated Pancake V2 point-in-time market and buy-size arithmetic fixture
+- [x] Named FFT migrated Pancake V2 point-in-time market plus buy/exit-size arithmetic fixtures
 - [ ] RV reconciliation against historical executable quotes
 - [ ] Run the registered
       [Flap/BSC FFT terminal acceptance](FLAP_FFT_ACCEPTANCE.md) for

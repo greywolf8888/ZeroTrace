@@ -1010,13 +1010,40 @@ Pension-wallet transfer remains `Unknown(INSUFFICIENT_DATA)` for pricing and is 
 custody rather than burn. This run is not independent-provider, sell-route, gas/capacity, entity,
 claim-action, or terminal FFT acceptance.
 
+## FFT Pancake V2 exit-size and partial-RV validation (2026-08-10)
+
+The companion token-to-quote run captured finalized BSC block `115137197`, hash
+`0x600b38f896ddc58ceac21169a1c285aef495bce92bbbb67b80249a86c672db75`, parent
+`0x04b5caa497d203de2fa5b96354cbf4aea54046c2578f0a15f30d1b5afed9a3af`, block time
+`2026-08-10T14:31:19.000Z`, captured at `2026-08-10T14:31:19.012Z`. The same production market
+certificate verified the official Pancake V2 identities and observed
+`74586827.793161266597497691` FFT plus `30267.053563947710181207` USDT reserves, reserve spot
+`0.000405796230507108` USDT/FFT and configured sell tax `300` bps.
+
+|  Input FFT |         Nominal spot USDT |         Router gross USDT | Configured-tax pool estimate USDT | Total exit haircut | Quote reserve consumed |
+| ---------: | ------------------------: | ------------------------: | --------------------------------: | -----------------: | ---------------------: |
+|  1,000,000 |  `405.796230507108956541` |  `399.439762336147983189` |          `387.610030249454467789` |   `448.160896` bps |        `128.06335` bps |
+|  5,000,000 | `2028.981152535544782706` | `1897.055669041575774379` |         `1843.610572166868587816` |   `913.614106` bps |       `609.114649` bps |
+| 10,000,000 | `4057.962305071089565413` | `3570.332704241699971628` |         `3475.522007411636832561` |  `1435.302385` bps |      `1148.285544` bps |
+
+All Router gross outputs matched the clean-room 25 bps model exactly (`0` bps error against the 10
+bps budget). Terminal Evidence `ev_9627b639672d93ae97fef938` closed 23 nodes; data/source/history/
+simulation coverage was `0.9/0.5/0/0.5` and confidence `0.94`. The live path again used the
+test-only direct transport because local DNS interception activates production SSRF rejection; no
+production bypass was added.
+
+Nominal value is not RV, and the configured-tax result is still not wallet settlement. Actual
+execution-net and executable capacity are `Unknown(NOT_QUERIED)` until a pinned fork tests dynamic
+tax, exemptions, max-sell, blacklist/whitelist, swapback, gas, reverts and the final balance delta.
+This is one route and one chain operator, not independent-source or terminal FFT acceptance.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 357 unit, 42 environment-free integration and build; dependency license/audit gates green                              |
+| local non-browser gates  | pass: format, lint, typecheck, 360 unit, 44 environment-free integration and build; dependency license/audit gates green                              |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                        |
-| local `test:coverage`    | pass: 399 tests, 22 opt-in durable skips; 82.54% statements, 76.43% branches, 90.88% functions, 83.65% lines                                          |
+| local `test:coverage`    | pass: 404 tests, 22 opt-in durable skips; 82.40% statements, 76.29% branches, 90.80% functions, 83.47% lines                                          |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                      |
 | `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                             |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                |

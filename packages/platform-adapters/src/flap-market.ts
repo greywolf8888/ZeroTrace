@@ -7,6 +7,7 @@ import { createEvidence } from '@zerotrace/evidence';
 import {
   AnalysisMetadataSchema,
   FlapPancakeV2BuyScenarioResultSchema,
+  FlapPancakeV2SellScenarioResultSchema,
   knownValue,
   unavailableValue,
   unknownValue,
@@ -16,6 +17,8 @@ import {
   type FlapPancakeV2BuyScenarioPoint,
   type FlapPancakeV2BuyScenarioResult,
   type FlapPancakeV2Market,
+  type FlapPancakeV2SellScenarioPoint,
+  type FlapPancakeV2SellScenarioResult,
   type FlapPancakeV2TokenAmount,
   type KnowledgeValue,
 } from '@zerotrace/schemas';
@@ -37,6 +40,7 @@ const DETERMINISTIC_TOLERANCE_BPS = 10n;
 const MAX_UINT256 = 2n ** 256n - 1n;
 
 export const FLAP_PANCAKE_V2_BUY_MODEL_VERSION = 'flap-pancake-v2-pool-buy-scenarios-v0.1.0';
+export const FLAP_PANCAKE_V2_SELL_MODEL_VERSION = 'flap-pancake-v2-pool-sell-scenarios-v0.1.0';
 
 export interface PancakeV2Deployment {
   chainId: 'eip155:56';
@@ -289,6 +293,7 @@ function metadata(options: {
   sourceCoverage: number;
   simulationCoverage: number;
   confidence: number;
+  modelVersion?: string;
 }): AnalysisMetadata {
   const sources = [...new Set(options.sourceSet)].sort();
   return AnalysisMetadataSchema.parse({
@@ -299,7 +304,7 @@ function metadata(options: {
     simulationCoverage: options.simulationCoverage,
     freshness: options.snapshot.capturedAt,
     sourceSet: sources,
-    modelVersion: FLAP_PANCAKE_V2_BUY_MODEL_VERSION,
+    modelVersion: options.modelVersion ?? FLAP_PANCAKE_V2_BUY_MODEL_VERSION,
     confidence: options.confidence,
     evidenceIds: [...new Set(options.evidenceIds)],
   });
@@ -889,6 +894,7 @@ export async function quoteFlapPancakeV2BuyScenarios(options: {
     ),
     dexFeeBps: pancake.feeBps,
     configuredBuyTaxBps: state.buyTaxBps,
+    configuredSellTaxBps: state.sellTaxBps,
     pairTimestampLast: reservesRead.value.timestamp.toString(),
     sourceRevision: pancake.sourceRevision,
   };
@@ -960,6 +966,395 @@ export async function quoteFlapPancakeV2BuyScenarios(options: {
       sourceCoverage: 0.5,
       simulationCoverage: 0.5,
       confidence: validation.status === 'PASS' ? 0.96 : 0.5,
+    }),
+    evidence,
+  });
+}
+
+function averageExitPrice(
+  quoteOutput: bigint,
+  tokenInput: bigint,
+  quoteDecimals: number,
+  tokenDecimals: number,
+): string {
+  return ratioDecimal(
+    quoteOutput * power10(tokenDecimals),
+    tokenInput * power10(quoteDecimals),
+    PRICE_SCALE,
+  );
+}
+
+function sellPriceImpactBps(
+  quoteOutput: bigint,
+  tokenInput: bigint,
+  quoteReserve: bigint,
+  tokenReserve: bigint,
+): string {
+  const reference = tokenInput * quoteReserve;
+  const realized = quoteOutput * tokenReserve;
+  if (realized >= reference) return '0';
+  return ratioDecimal((reference - realized) * BPS_DENOMINATOR, reference, 6);
+}
+
+function reserveConsumedBps(quoteOutput: bigint, quoteReserve: bigint): string {
+  return ratioDecimal(quoteOutput * BPS_DENOMINATOR, quoteReserve, 6);
+}
+
+function postSellSpotPrice(
+  tokenReserve: bigint,
+  quoteReserve: bigint,
+  tokenInputToPool: bigint,
+  quoteOutput: bigint,
+  tokenDecimals: number,
+  quoteDecimals: number,
+): string {
+  return ratioDecimal(
+    (quoteReserve - quoteOutput) * power10(tokenDecimals),
+    (tokenReserve + tokenInputToPool) * power10(quoteDecimals),
+    PRICE_SCALE,
+  );
+}
+
+async function finalizeSellUnavailable(options: {
+  marketCertificate: FlapPancakeV2BuyScenarioResult;
+  writeEvidence: FlapEvidenceWriter;
+}): Promise<FlapPancakeV2SellScenarioResult> {
+  const snapshot = options.marketCertificate.metadata.snapshot;
+  const supportingEvidence = options.marketCertificate.evidence.at(-1);
+  if (snapshot === null || snapshot.ledger !== 'EVM' || supportingEvidence === undefined) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Flap DEX sell scenario availability requires market Evidence and an EVM Snapshot.',
+    );
+  }
+  const validation = {
+    status: 'NOT_RUN' as const,
+    deterministicToleranceBps: DETERMINISTIC_TOLERANCE_BPS.toString(),
+    evaluatedScenarioCount: 0,
+    failedScenarioCount: 0,
+  };
+  const executionCapacity = unknownValue(
+    'NOT_QUERIED',
+    'Max-sell, blacklist, dynamic-tax, swapback, gas and revert capacity require pinned-fork execution.',
+  );
+  const sourceEvidenceIds = [supportingEvidence.id];
+  const terminal = await options.writeEvidence(
+    createEvidence({
+      ledger: 'EVM',
+      chainId: snapshot.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: `zerotrace:${FLAP_PANCAKE_V2_SELL_MODEL_VERSION}`,
+      locator: `rv:flap-pancake-v2-sell:${options.marketCertificate.token}@${snapshot.blockNumber}`,
+      payload: {
+        market: options.marketCertificate.market,
+        scenarios: [],
+        validation,
+        executionCapacity,
+      },
+      observedAt: snapshot.capturedAt,
+      blockOrSlot: snapshot.blockNumber,
+      finality: snapshot.finality,
+      summary: 'Flap token is not eligible for a Pancake V2 DEX sell-size scenario.',
+      sourceEvidenceIds,
+    }),
+    sourceEvidenceIds,
+    snapshot,
+  );
+  const evidence = [...options.marketCertificate.evidence, terminal];
+  return FlapPancakeV2SellScenarioResultSchema.parse({
+    platform: 'flap',
+    token: options.marketCertificate.token,
+    market: options.marketCertificate.market,
+    scenarios: [],
+    validation,
+    executionCapacity,
+    terminalEvidenceId: terminal.id,
+    metadata: metadata({
+      snapshot,
+      sourceSet: options.marketCertificate.metadata.sourceSet,
+      evidenceIds: evidence.map((item) => item.id),
+      dataCoverage: 0.3,
+      sourceCoverage: 0.5,
+      simulationCoverage: 0,
+      confidence: 0.98,
+      modelVersion: FLAP_PANCAKE_V2_SELL_MODEL_VERSION,
+    }),
+    evidence,
+  });
+}
+
+export async function quoteFlapPancakeV2SellScenarios(options: {
+  adapter: EvmLedgerAdapter;
+  token: string;
+  tokenInputs: readonly string[];
+  deployment: FlapDeployment;
+  pancakeDeployment?: PancakeV2Deployment;
+  writeEvidence: FlapEvidenceWriter;
+  blockNumber?: string;
+}): Promise<FlapPancakeV2SellScenarioResult> {
+  if (options.tokenInputs.length === 0 || options.tokenInputs.length > 8) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Pancake V2 sell scenarios require one to eight inputs.',
+    );
+  }
+  const normalizedInputs = options.tokenInputs.map(decimalInput);
+
+  // The existing buy-side composition performs the complete same-Snapshot deployment, pair,
+  // reserve, decimal, and Router/formula certification. A one-quote-asset forward probe also
+  // prevents a sell-only result from trusting a Router that disagrees in the opposite direction.
+  const marketCertificate = await quoteFlapPancakeV2BuyScenarios({
+    adapter: options.adapter,
+    token: options.token,
+    quoteInputs: ['1'],
+    deployment: options.deployment,
+    writeEvidence: options.writeEvidence,
+    ...(options.pancakeDeployment === undefined
+      ? {}
+      : { pancakeDeployment: options.pancakeDeployment }),
+    ...(options.blockNumber === undefined ? {} : { blockNumber: options.blockNumber }),
+  });
+  if (marketCertificate.market.state !== 'known') {
+    return finalizeSellUnavailable({
+      marketCertificate,
+      writeEvidence: options.writeEvidence,
+    });
+  }
+
+  const snapshot = marketCertificate.metadata.snapshot;
+  if (snapshot === null || snapshot.ledger !== 'EVM') {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Flap Pancake V2 sell scenarios require the certified EVM Snapshot.',
+    );
+  }
+  const market = marketCertificate.market.value;
+  const blockTag = `0x${BigInt(snapshot.blockNumber).toString(16)}`;
+  const tokenReserve = BigInt(market.tokenReserve.atomic);
+  const quoteReserve = BigInt(market.quoteReserve.atomic);
+  const atomicInputs = normalizedInputs.map((input) => toAtomic(input, market.tokenDecimals));
+  if (new Set(atomicInputs.map(String)).size !== atomicInputs.length) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Pancake V2 sell inputs must be unique after token decimal normalization.',
+    );
+  }
+
+  const quoteReads: Array<ObservedCall<readonly bigint[]>> = [];
+  const scenarios: FlapPancakeV2SellScenarioPoint[] = [];
+  for (const tokenInputAtomic of atomicInputs) {
+    const quoteRead = await observeContractCall({
+      adapter: options.adapter,
+      to: market.router,
+      data: encodeFunctionData({
+        abi: GET_AMOUNTS_OUT_ABI,
+        functionName: 'getAmountsOut',
+        args: [
+          tokenInputAtomic,
+          [market.token as `0x${string}`, market.quoteAsset as `0x${string}`],
+        ],
+      }),
+      method: `router.getAmountsOut:sell:${tokenInputAtomic.toString()}`,
+      blockTag,
+      snapshot,
+      writeEvidence: options.writeEvidence,
+      decode: (raw) =>
+        decodeFunctionResult({
+          abi: GET_AMOUNTS_OUT_ABI,
+          functionName: 'getAmountsOut',
+          data: raw as `0x${string}`,
+        }),
+    });
+    const [observedInput, officialOutput, ...extraOutputs] = quoteRead.value;
+    if (
+      observedInput !== tokenInputAtomic ||
+      officialOutput === undefined ||
+      extraOutputs.length !== 0
+    ) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Pancake V2 sell quote did not preserve the exact two-asset path and input.',
+      );
+    }
+    const formulaOutput = formulaAmountOut(tokenInputAtomic, tokenReserve, quoteReserve);
+    if (formulaOutput >= quoteReserve || officialOutput >= quoteReserve) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Pancake V2 sell quote exceeds the quote reserve.',
+      );
+    }
+    const quoteWithinTolerance = withinTolerance(officialOutput, formulaOutput);
+    let configuredTaxTokenInputToPool: KnowledgeValue<FlapPancakeV2TokenAmount>;
+    let configuredTaxNetQuoteOutput: KnowledgeValue<FlapPancakeV2TokenAmount>;
+    let averageConfiguredTaxExitPrice: KnowledgeValue<string>;
+    let modeledConfiguredTaxPostSellSpotPrice: KnowledgeValue<string>;
+    let configuredTotalExitHaircutBps: KnowledgeValue<string>;
+    let configuredTaxQuoteReserveConsumedBps: KnowledgeValue<string>;
+    if (!quoteWithinTolerance) {
+      const detail =
+        'The official router quote and deterministic pool formula exceed the 0.1% error budget.';
+      configuredTaxTokenInputToPool = unknownValue('CONFLICTING_SOURCES', detail);
+      configuredTaxNetQuoteOutput = unknownValue('CONFLICTING_SOURCES', detail);
+      averageConfiguredTaxExitPrice = unknownValue('CONFLICTING_SOURCES', detail);
+      modeledConfiguredTaxPostSellSpotPrice = unknownValue('CONFLICTING_SOURCES', detail);
+      configuredTotalExitHaircutBps = unknownValue('CONFLICTING_SOURCES', detail);
+      configuredTaxQuoteReserveConsumedBps = unknownValue('CONFLICTING_SOURCES', detail);
+    } else if (market.configuredSellTaxBps.state !== 'known') {
+      const unresolvedTax = market.configuredSellTaxBps;
+      const detail =
+        unresolvedTax.detail ?? 'Flap inspection did not resolve a configured sell-tax rate.';
+      const unresolved = <T>(): KnowledgeValue<T> =>
+        unresolvedTax.state === 'unknown'
+          ? unknownValue(unresolvedTax.reason, detail)
+          : unavailableValue(unresolvedTax.reason, detail);
+      configuredTaxTokenInputToPool = unresolved();
+      configuredTaxNetQuoteOutput = unresolved();
+      averageConfiguredTaxExitPrice = unresolved();
+      modeledConfiguredTaxPostSellSpotPrice = unresolved();
+      configuredTotalExitHaircutBps = unresolved();
+      configuredTaxQuoteReserveConsumedBps = unresolved();
+    } else {
+      const taxBps = BigInt(market.configuredSellTaxBps.value);
+      const tokenInputToPool = (tokenInputAtomic * (BPS_DENOMINATOR - taxBps)) / BPS_DENOMINATOR;
+      const configuredOutput = formulaAmountOut(tokenInputToPool, tokenReserve, quoteReserve);
+      configuredTaxTokenInputToPool = knownValue(amount(tokenInputToPool, market.tokenDecimals));
+      configuredTaxNetQuoteOutput = knownValue(amount(configuredOutput, market.quoteDecimals));
+      averageConfiguredTaxExitPrice = knownValue(
+        averageExitPrice(
+          configuredOutput,
+          tokenInputAtomic,
+          market.quoteDecimals,
+          market.tokenDecimals,
+        ),
+      );
+      modeledConfiguredTaxPostSellSpotPrice = knownValue(
+        postSellSpotPrice(
+          tokenReserve,
+          quoteReserve,
+          tokenInputToPool,
+          configuredOutput,
+          market.tokenDecimals,
+          market.quoteDecimals,
+        ),
+      );
+      configuredTotalExitHaircutBps = knownValue(
+        sellPriceImpactBps(configuredOutput, tokenInputAtomic, quoteReserve, tokenReserve),
+      );
+      configuredTaxQuoteReserveConsumedBps = knownValue(
+        reserveConsumedBps(configuredOutput, quoteReserve),
+      );
+    }
+
+    scenarios.push({
+      tokenInput: amount(tokenInputAtomic, market.tokenDecimals),
+      nominalSpotQuoteValue: amount(
+        (tokenInputAtomic * quoteReserve) / tokenReserve,
+        market.quoteDecimals,
+      ),
+      officialRouterGrossQuoteOutput: amount(officialOutput, market.quoteDecimals),
+      deterministicPoolGrossQuoteOutput: amount(formulaOutput, market.quoteDecimals),
+      configuredTaxTokenInputToPool,
+      configuredTaxNetQuoteOutput,
+      executionNetQuoteOutput: unknownValue(
+        'NOT_QUERIED',
+        'Actual settlement balance delta requires a pinned fork swap including tax, swapback, max-sell, blacklist, gas and revert behavior.',
+      ),
+      averageGrossExitPrice: knownValue(
+        averageExitPrice(
+          officialOutput,
+          tokenInputAtomic,
+          market.quoteDecimals,
+          market.tokenDecimals,
+        ),
+      ),
+      averageConfiguredTaxExitPrice,
+      modeledGrossPostSellSpotPrice: postSellSpotPrice(
+        tokenReserve,
+        quoteReserve,
+        tokenInputAtomic,
+        formulaOutput,
+        market.tokenDecimals,
+        market.quoteDecimals,
+      ),
+      modeledConfiguredTaxPostSellSpotPrice,
+      grossPriceImpactBps: sellPriceImpactBps(
+        officialOutput,
+        tokenInputAtomic,
+        quoteReserve,
+        tokenReserve,
+      ),
+      configuredTotalExitHaircutBps,
+      grossQuoteReserveConsumedBps: reserveConsumedBps(officialOutput, quoteReserve),
+      configuredTaxQuoteReserveConsumedBps,
+      deterministicQuoteErrorBps: quoteErrorBps(officialOutput, formulaOutput),
+      deterministicToleranceBps: DETERMINISTIC_TOLERANCE_BPS.toString(),
+      withinDeterministicTolerance: quoteWithinTolerance,
+      assumption:
+        'Gross Router/model uses the full token input. The configured-tax estimate assumes the reported sell tax is removed before the pair and excludes swapback, dynamic tax, exemptions, gas and reverts.',
+    });
+    quoteReads.push(quoteRead);
+  }
+
+  const failedScenarioCount = scenarios.filter(
+    (scenario) => !scenario.withinDeterministicTolerance,
+  ).length;
+  const validation = {
+    status: failedScenarioCount === 0 ? ('PASS' as const) : ('FAIL' as const),
+    deterministicToleranceBps: DETERMINISTIC_TOLERANCE_BPS.toString(),
+    evaluatedScenarioCount: scenarios.length,
+    failedScenarioCount,
+  };
+  const executionCapacity = unknownValue(
+    'NOT_QUERIED',
+    'Pool reserve consumption is modeled per scenario, but executable max-sell, blacklist, dynamic-tax, swapback, gas and revert capacity require pinned-fork execution.',
+  );
+  const sourceEvidenceIds = [
+    marketCertificate.terminalEvidenceId,
+    ...quoteReads.map((item) => item.evidence.id),
+  ];
+  const terminal = await options.writeEvidence(
+    createEvidence({
+      ledger: 'EVM',
+      chainId: snapshot.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: `zerotrace:${FLAP_PANCAKE_V2_SELL_MODEL_VERSION}`,
+      locator: `rv:flap-pancake-v2-sell:${market.token}:${atomicInputs.join(',')}@${snapshot.blockNumber}`,
+      payload: { market, scenarios, validation, executionCapacity },
+      observedAt: snapshot.capturedAt,
+      blockOrSlot: snapshot.blockNumber,
+      finality: snapshot.finality,
+      summary:
+        'Pancake V2 nominal, gross and configured-tax sell scenarios derived from certified same-Snapshot market state.',
+      sourceEvidenceIds,
+    }),
+    sourceEvidenceIds,
+    snapshot,
+  );
+  const evidence = [
+    ...marketCertificate.evidence,
+    ...quoteReads.map((item) => item.evidence),
+    terminal,
+  ];
+  return FlapPancakeV2SellScenarioResultSchema.parse({
+    platform: 'flap',
+    token: market.token,
+    market: marketCertificate.market,
+    scenarios,
+    validation,
+    executionCapacity,
+    terminalEvidenceId: terminal.id,
+    metadata: metadata({
+      snapshot,
+      sourceSet: [
+        ...marketCertificate.metadata.sourceSet,
+        ...quoteReads.map((item) => item.observation.endpointId),
+      ],
+      evidenceIds: evidence.map((item) => item.id),
+      dataCoverage: 0.9,
+      sourceCoverage: 0.5,
+      simulationCoverage: 0.5,
+      confidence: validation.status === 'PASS' ? 0.94 : 0.5,
+      modelVersion: FLAP_PANCAKE_V2_SELL_MODEL_VERSION,
     }),
     evidence,
   });

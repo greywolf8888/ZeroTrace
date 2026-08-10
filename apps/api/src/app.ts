@@ -29,6 +29,7 @@ import {
   inspectFlapTokenOriginRestartSafe,
   inspectFlapToken,
   quoteFlapPancakeV2BuyScenarios,
+  quoteFlapPancakeV2SellScenarios,
   quoteFlapSell,
   type InspectFlapTokenOriginOptions,
 } from '@zerotrace/platform-adapters';
@@ -242,6 +243,31 @@ const FlapPancakeV2BuyScenarioRequestSchema = z
       .trim()
       .regex(/^0x[0-9a-fA-F]{40}$/),
     quoteInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
+    blockNumber: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  })
+  .strict();
+
+const FlapPancakeV2SellScenarioRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    tokenInputs: z
       .array(
         z
           .string()
@@ -2054,6 +2080,46 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         adapter,
         token: input.token,
         quoteInputs: input.quoteInputs,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+    },
+  );
+
+  app.post(
+    '/api/v1/rv/flap-pancake-v2-sell-scenarios',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPancakeV2SellScenarioRequestSchema.parse(request.body);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        const detail = 'A BNB Smart Chain read-only provider is required.';
+        return reply.code(503).send({
+          platform: 'flap',
+          token: input.token.toLowerCase(),
+          market: unavailableValue('PROVIDER_UNCONFIGURED', detail),
+          scenarios: [],
+          validation: {
+            status: 'NOT_RUN',
+            deterministicToleranceBps: '10',
+            evaluatedScenarioCount: 0,
+            failedScenarioCount: 0,
+          },
+          executionCapacity: unknownValue(
+            'NOT_QUERIED',
+            'Pinned-fork sell-capacity validation requires a configured BNB Smart Chain provider.',
+          ),
+          terminalEvidenceId: null,
+          metadata: emptyMetadata('flap-pancake-v2-pool-sell-scenarios-v0.1.0'),
+          evidence: [],
+        });
+      }
+      return quoteFlapPancakeV2SellScenarios({
+        adapter,
+        token: input.token,
+        tokenInputs: input.tokenInputs,
         deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
         writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),

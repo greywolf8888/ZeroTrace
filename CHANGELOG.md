@@ -46,6 +46,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - same-Snapshot migrated-Flap Pancake V2 market verification and multi-size buy scenarios with
   official Router cross-checks, automatic 0.10% deterministic error checks, configured-tax versus
   actual-execution separation, Evidence drilldown, and responsive UI;
+- multi-size Pancake V2 exit scenarios that separate nominal spot value, Router gross output,
+  configured sell-tax estimates and unqueried execution settlement, with modeled average exit,
+  price impact, quote-reserve consumption, automatic checks and Evidence-backed UI;
 - exact-receipt Flap `TokenCreated`, configuration, staging and migration event decoding with
   source-tagged official defaults, future-enum Unknown states, replay Evidence, API, and responsive UI;
 - bounded, chunked Flap Portal event-log discovery with strict log validation, exact receipt replay,
@@ -158,9 +161,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   are persisted and strict raw ledger queries are exposed; Flap BSC current Portal state and a
   caller-supplied event transaction, restart-safe bounded event-range projections with worker/API/UI
   replay, bounded creation-origin proofs, one-Snapshot lifetime materialization, and incremental
-  accepted finalized heads and an initial migrated Pancake V2 point-in-time buy-side market are
-  decoded, but complete lifecycle reconstruction, other launchpads, multi-route sell execution,
-  transfer-tax execution, gas and capacity are not implemented;
+  accepted finalized heads and initial migrated Pancake V2 point-in-time buy/exit-size markets are
+  decoded, but complete lifecycle reconstruction, other launchpads, multi-route/fork sell execution,
+  transfer-tax settlement, gas and executable capacity are not implemented;
 - common-position endpoint reconciliation, Flap finalized-head scheduling and deterministic
   rollback/replay are implemented, but forced real-reorg and independently operated provider
   acceptance are not;

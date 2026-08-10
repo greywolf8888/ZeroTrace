@@ -35,6 +35,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`    | exact content-addressed EVM Claim Report replay                  |
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
+| POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                   | migrated Flap Pancake V2 nominal/gross/tax exit-size model       |
 | POST   | `/api/v1/data-quality/discrepancies`                          | typed error-budget and discrepancy audit                         |
 | GET    | `/api/v1/evidence/:id`                                        | Evidence node, source edges, and bound Snapshot                  |
 | GET    | `/api/v1/evidence/:id/drilldown`                              | restart-safe derived/source Evidence traversal                   |
@@ -247,6 +248,23 @@ Sending bought tokens to a pension or treasury wallet is never treated as a burn
 keeps `pensionSinkTreatment=Unknown(INSUFFICIENT_DATA)` and counts no extra price effect beyond the
 modeled pool buy until custody and transfer execution are separately evidenced. The route performs
 only bytecode reads and `eth_call`; it cannot approve, sign, swap, or broadcast.
+
+`POST /api/v1/rv/flap-pancake-v2-sell-scenarios` accepts the same chain, platform, token and optional
+block fields plus one to eight positive decimal `tokenInputs`. It reuses the complete same-Snapshot
+market certificate, including a one-quote-asset forward Router/formula probe, then reads the
+official Router in the token-to-quote direction for every exit size.
+
+Each result keeps four values distinct: marginal-price nominal value, full-input Router gross
+quote, the configured sell-tax pool estimate, and actual settlement output. The first three are
+derived from the verified reserves and Portal configuration; actual settlement remains
+`Unknown(NOT_QUERIED)` until a pinned fork measures the receiving wallet's balance delta. The
+response also reports average configured-tax exit price, modeled post-sell spot, price impact and
+quote-reserve consumption. A 10 bps Router/formula mismatch withholds every configured-tax field as
+`Unknown(CONFLICTING_SOURCES)`.
+
+`executionCapacity` remains `Unknown(NOT_QUERIED)` because reserve math cannot prove max-sell,
+blacklist/whitelist, dynamic tax, fee exemptions, swapback, gas or revert behavior. The endpoint is
+read-only and never approves, transfers, swaps, signs or broadcasts.
 
 ### Typed discrepancy audit
 

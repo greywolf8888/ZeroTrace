@@ -975,12 +975,13 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   ).toBeVisible();
 });
 
-test('renders migrated Flap spot price and buy-size scenarios without calling custody a burn', async ({
+test('renders migrated Flap buy and exit scenarios without calling custody a burn or RV complete', async ({
   page,
 }) => {
   const quoteAsset = '0x55d398326f99059ff775485246999027b3197955';
   const pool = '0xe374af9818c4359374996f86a734fc39eb04d949';
   const terminalEvidenceId = 'ev_1234567890abcdef12345678';
+  const sellTerminalEvidenceId = 'ev_abcdef1234567890abcdef12';
   await page.route('**/api/v1/subjects/EVM/**', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -1163,6 +1164,7 @@ test('renders migrated Flap spot price and buy-size scenarios without calling cu
             currentSpotPrice: '0.000413358773223814',
             dexFeeBps: '25',
             configuredBuyTaxBps: { state: 'known', value: '300' },
+            configuredSellTaxBps: { state: 'known', value: '300' },
             pairTimestampLast: '1786366800',
             sourceRevision: 'pancakeswap-v2-bsc-registry-and-fee@2026-08-10',
           },
@@ -1243,6 +1245,168 @@ test('renders migrated Flap spot price and buy-size scenarios without calling cu
       }),
     });
   });
+  await page.route('**/api/v1/rv/flap-pancake-v2-sell-scenarios', async (route) => {
+    const point = (
+      tokenInput: string,
+      nominal: string,
+      gross: string,
+      configuredNet: string,
+      average: string,
+      postPrice: string,
+      impact: string,
+      reserveUsed: string,
+    ) => ({
+      tokenInput: { atomic: tokenInput.replace('.', ''), decimal: tokenInput },
+      nominalSpotQuoteValue: { atomic: nominal.replace('.', ''), decimal: nominal },
+      officialRouterGrossQuoteOutput: { atomic: gross.replace('.', ''), decimal: gross },
+      deterministicPoolGrossQuoteOutput: { atomic: gross.replace('.', ''), decimal: gross },
+      configuredTaxTokenInputToPool: {
+        state: 'known',
+        value: {
+          atomic: `${Math.trunc(Number(tokenInput) * 0.97)}000000000000000000`,
+          decimal: String(Number(tokenInput) * 0.97),
+        },
+      },
+      configuredTaxNetQuoteOutput: {
+        state: 'known',
+        value: { atomic: configuredNet.replace('.', ''), decimal: configuredNet },
+      },
+      executionNetQuoteOutput: {
+        state: 'unknown',
+        reason: 'NOT_QUERIED',
+        detail: 'Pinned-fork settlement balance delta has not run.',
+      },
+      averageGrossExitPrice: { state: 'known', value: average },
+      averageConfiguredTaxExitPrice: { state: 'known', value: average },
+      modeledGrossPostSellSpotPrice: postPrice,
+      modeledConfiguredTaxPostSellSpotPrice: { state: 'known', value: postPrice },
+      grossPriceImpactBps: impact,
+      configuredTotalExitHaircutBps: { state: 'known', value: impact },
+      grossQuoteReserveConsumedBps: reserveUsed,
+      configuredTaxQuoteReserveConsumedBps: { state: 'known', value: reserveUsed },
+      deterministicQuoteErrorBps: '0',
+      deterministicToleranceBps: '10',
+      withinDeterministicTolerance: true,
+      assumption: 'Configured-tax pool-only sell estimate.',
+    });
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        market: {
+          state: 'known',
+          value: {
+            venue: 'PANCAKESWAP_V2',
+            chainId: 'eip155:56',
+            pool,
+            factory: '0xca143ce32fe78f1f7019d7d551a6402fc5350c73',
+            router: '0x10ed43c718714eb63d5aa57b78b54704e256024e',
+            token: bscTokenAddress,
+            quoteAsset,
+            token0: quoteAsset,
+            token1: bscTokenAddress,
+            tokenDecimals: 18,
+            quoteDecimals: 18,
+            tokenReserve: {
+              atomic: '73899426572496252333612006',
+              decimal: '73899426.572496252333612006',
+            },
+            quoteReserve: {
+              atomic: '30546942096796964000250',
+              decimal: '30546.94209679696400025',
+            },
+            currentSpotPriceWad: '413358773223814',
+            currentSpotPrice: '0.000413358773223814',
+            dexFeeBps: '25',
+            configuredBuyTaxBps: { state: 'known', value: '300' },
+            configuredSellTaxBps: { state: 'known', value: '300' },
+            pairTimestampLast: '1786366800',
+            sourceRevision: 'pancakeswap-v2-bsc-registry-and-fee@2026-08-10',
+          },
+        },
+        scenarios: [
+          point(
+            '1000000',
+            '413.358773223814',
+            '407.366',
+            '395.312',
+            '0.000395312',
+            '0.00040277',
+            '437.1',
+            '129.41',
+          ),
+          point(
+            '5000000',
+            '2066.79386611907',
+            '1936.82',
+            '1882.11',
+            '0.000376422',
+            '0.0003632',
+            '893.5',
+            '616.12',
+          ),
+          point(
+            '10000000',
+            '4133.58773223814',
+            '3631.44',
+            '3534.21',
+            '0.000353421',
+            '0.0003198',
+            '1450.2',
+            '1157.0',
+          ),
+        ],
+        validation: {
+          status: 'PASS',
+          deterministicToleranceBps: '10',
+          evaluatedScenarioCount: 3,
+          failedScenarioCount: 0,
+        },
+        executionCapacity: {
+          state: 'unknown',
+          reason: 'NOT_QUERIED',
+          detail:
+            'Pool reserve consumption is modeled, but executable max-sell and revert capacity require a pinned-fork execution.',
+        },
+        terminalEvidenceId: sellTerminalEvidenceId,
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '115128697',
+            blockHash: `0x${'8'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 0.9,
+          sourceCoverage: 0.5,
+          historyCoverage: 0,
+          simulationCoverage: 0.5,
+          freshness: '2026-08-10T13:00:00.000Z',
+          sourceSet: ['bsc-rpc-fixture', 'pancakeswap-official-v2-registry@2026-08-10'],
+          modelVersion: 'flap-pancake-v2-pool-sell-scenarios-v0.1.0',
+          confidence: 0.94,
+          evidenceIds: [sellTerminalEvidenceId],
+        },
+        evidence: [
+          {
+            id: sellTerminalEvidenceId,
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:flap-pancake-v2-pool-sell-scenarios-v0.1.0',
+            locator: `rv:flap-pancake-v2-sell:${bscTokenAddress}@115128697`,
+            payloadHash: '7'.repeat(64),
+            observedAt: '2026-08-10T13:00:00.000Z',
+            blockOrSlot: '115128697',
+            finality: 'finalized',
+            summary:
+              'Pancake V2 nominal, gross and configured-tax sell scenarios derived from certified same-Snapshot market state.',
+          },
+        ],
+      }),
+    });
+  });
 
   await page.goto('/');
   await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
@@ -1265,6 +1429,19 @@ test('renders migrated Flap spot price and buy-size scenarios without calling cu
   await expect(scenarioPanel).toContainText('movable custody, not supply burn');
   await expect(scenarioPanel.getByText(/Pass 0 Bps/).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Pancake V2 scenario Evidence' })).toBeVisible();
+
+  const exitPanel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Pancake V2 exit-size scenarios' }),
+  });
+  await expect(exitPanel).toBeVisible();
+  await page.getByRole('button', { name: 'Run exit scenarios' }).click();
+  await expect(exitPanel).toContainText('Configured sell tax bps');
+  await expect(exitPanel).toContainText('413.358773223814');
+  await expect(exitPanel).toContainText('395.312');
+  await expect(exitPanel).toContainText('Not Queried');
+  await expect(exitPanel).toContainText('Execution capacity remains Unknown');
+  await expect(exitPanel.getByText(/Pass 0 Bps/).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pancake V2 exit Evidence' })).toBeVisible();
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
