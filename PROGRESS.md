@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                      |
 | Production acceptance            | **No**                                                                                                          |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                  |
-| Unit tests                       | **315 passing across 41 files**                                                                                 |
+| Unit tests                       | **326 passing across 42 files**                                                                                 |
 | Integration tests                | **38 environment-free plus 18 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                                                    |
-| Remote CI                        | **Pass on immutable development commit `12fc47d`; protected main `3372a5a`**                                    |
-| Coverage                         | **Current local: 81.95% statements / 76.19% branches / 89.80% functions / 82.87% lines**                        |
+| Remote CI                        | **Pass on immutable development commit `cdcf97b`; protected main `3372a5a`**                                    |
+| Coverage                         | **Current local: 82.02% statements / 76.21% branches / 89.83% functions / 83.05% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed                              |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap segments, exact lifetime and append-only finalized heads wired  |
 
@@ -46,6 +46,7 @@ The only allowed status vocabulary in this ledger is:
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, continuous lifetime heads and deterministic rollback work; forced real reorg/FFT and other platforms remain |
 | Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels and Flap Portal preview work; DEX routes, fee/impact decomposition, gas and capacity remain                                            |
 | Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                                                  |
+| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Snapshot/Evidence-gated allocation and terminal-action kernel with versioned tolerances; chain extraction, persistence, API and UI remain                                 |
 | Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger results, Evidence and anchor Data Health work; terminal investigation is absent                                                                              |
 | Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                             |
 
@@ -356,6 +357,26 @@ The only allowed status vocabulary in this ledger is:
   records. This validates provider-shaped observations, not semantic transaction or protocol
   normalization.
 
+### Claim verification foundation
+
+- deterministic FFT-style percentage allocation audits compare declared Expected amounts with
+  observed and coverage-complete Actual amounts using integer arithmetic;
+- a versioned default policy treats up to `50` bps amount deviation as verified and up to `500` bps
+  as partially verified; callers may supply stricter bounded policy values without changing the
+  engine version silently;
+- Evidence-linked direct and bounded multi-hop terminal actions distinguish wallet receipt from
+  buyback, irreversible burn, liquidity addition, LP control, lock custody and dividend execution;
+- EOA/Safe custody is never treated as an irreversible burn, controller-return paths and
+  controller-withdrawable LP are explicit findings, and a movable Safe plus observed outflow can
+  contradict a claimed technical no-exit guarantee;
+- declared share-unit adherence and payout cadence are measured separately; incomplete windows keep
+  Actual and cadence Unknown while retaining observed lower bounds;
+- eight deterministic engine tests plus two Schema Contract tests cover normal 20/40/40 execution,
+  bounded policy validation, shortfall, fake burn custody,
+  multi-hop burn, removable LP/controller return, pension Safe/no-exit, incomplete coverage and
+  invalid/unanchored inputs. Live chain extraction, durable reports, API/UI and FFT terminal replay
+  remain pending.
+
 ### Runtime and developer experience
 
 - Fastify API with OpenAPI UI, liveness/readiness/full health, capability truth, metrics, search,
@@ -425,7 +446,8 @@ The only allowed status vocabulary in this ledger is:
 - complete control-right extraction and revocation/validity windows;
 - launch lifecycle, reserve state, migration and multi-market reconstruction;
 - multi-route RV with taxes, gas, fees, price impact, execution failures and historical calibration;
-- claim/timeline generation, comparison, report/export, collaboration and analyst-override UI;
+- claim extraction, chain-observation adapters, durable report/API/UI, timeline generation,
+  comparison/export, collaboration and analyst overrides;
 - production authorization, tenancy, audit logs, retention, backup and privacy controls.
 
 ## Pending real-chain validation

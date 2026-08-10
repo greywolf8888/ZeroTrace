@@ -120,6 +120,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       derived, quote/RV, aggregate, freshness and API/UI classes
 - [x] Exact-decimal class budgets, warning bands, zero-reference handling, coverage gates, missing
       Evidence rejection and Unknown exclusion from numeric denominators
+- [x] Deterministic FFT-style claim-allocation and terminal-action kernel with fake-burn,
+      removable-LP, controller-return, multi-hop and incomplete-coverage tests
+- [ ] Live claim extraction, durable report replay, API/UI Claim Audit and named FFT reconciliation
 - [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
 

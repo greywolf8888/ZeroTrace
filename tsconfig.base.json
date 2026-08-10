@@ -31,6 +31,7 @@
       "@zerotrace/chain-adapters": ["./packages/chain-adapters/src/index.ts"],
       "@zerotrace/platform-adapters": ["./packages/platform-adapters/src/index.ts"],
       "@zerotrace/entity-engine": ["./packages/entity-engine/src/index.ts"],
+      "@zerotrace/claim-audit": ["./packages/claim-audit/src/index.ts"],
       "@zerotrace/rv": ["./packages/rv/src/index.ts"]
     }
   }

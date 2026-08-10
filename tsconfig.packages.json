@@ -10,6 +10,7 @@
     { "path": "./packages/chain-adapters" },
     { "path": "./packages/platform-adapters" },
     { "path": "./packages/entity-engine" },
+    { "path": "./packages/claim-audit" },
     { "path": "./packages/rv" }
   ]
 }

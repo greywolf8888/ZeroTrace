@@ -1216,6 +1216,191 @@ export const ClaimStatusSchema = z.enum([
   'CONTRADICTED',
   'INSUFFICIENT_DATA',
 ]);
+export type ClaimStatus = z.infer<typeof ClaimStatusSchema>;
+
+export const ClaimExpectedActionSchema = z.enum([
+  'RECEIVE',
+  'DISTRIBUTE',
+  'BUYBACK',
+  'BURN',
+  'ADD_LIQUIDITY',
+  'LOCK',
+  'PAY_DIVIDEND',
+]);
+export const ClaimWalletRoleSchema = z.enum([
+  'TAX_RECEIVER',
+  'COMMUNITY_FUND',
+  'BUYBACK_BURN',
+  'BUYBACK_LIQUIDITY',
+  'PENSION_VAULT',
+  'DIVIDEND_DISTRIBUTOR',
+  'OTHER',
+]);
+export const ClaimCustodyKindSchema = z.enum([
+  'IRRECOVERABLE_BURN',
+  'SAFE_MULTISIG',
+  'TIMELOCK',
+  'EOA',
+  'CONTRACT',
+  'LP_POOL',
+  'UNKNOWN',
+]);
+export const ClaimObservedActionTypeSchema = z.enum([
+  'BUYBACK',
+  'BURN',
+  'ADD_LIQUIDITY',
+  'LP_LOCK',
+  'DIVIDEND',
+]);
+export const ClaimLiquidityControlSchema = z.enum([
+  'LP_IRRECOVERABLE',
+  'LP_TIMELOCKED',
+  'LP_EXTERNAL',
+  'LP_CONTROLLER',
+  'UNKNOWN',
+]);
+
+const ClaimBpsSchema = UnsignedQuantityStringSchema.refine((value) => BigInt(value) <= 10_000n, {
+  message: 'Basis points may not exceed 10000.',
+});
+
+export const ClaimWindowSchema = z
+  .object({ from: IsoDateTimeSchema, to: IsoDateTimeSchema })
+  .refine((value) => Date.parse(value.from) <= Date.parse(value.to), {
+    message: 'Claim window must not end before it begins.',
+  });
+
+export const ClaimRuleSchema = z.object({
+  id: z.string().min(1),
+  assetId: z.string().min(1),
+  sourceAddress: z.string().min(1),
+  destinationAddress: z.string().min(1),
+  role: ClaimWalletRoleSchema,
+  expectedAction: ClaimExpectedActionSchema,
+  expectedShareBps: ClaimBpsSchema.optional(),
+  window: ClaimWindowSchema,
+  shareUnit: UnsignedQuantityStringSchema.refine((value) => BigInt(value) > 0n, {
+    message: 'Share unit must be positive.',
+  }).optional(),
+  noExit: z.boolean().optional(),
+  cadenceSeconds: UnsignedQuantityStringSchema.refine((value) => BigInt(value) > 0n, {
+    message: 'Cadence must be positive.',
+  }).optional(),
+  claimEvidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type ClaimRule = z.infer<typeof ClaimRuleSchema>;
+
+export const ClaimTransferObservationSchema = z.object({
+  id: z.string().min(1),
+  from: z.string().min(1),
+  to: z.string().min(1),
+  amount: UnsignedQuantityStringSchema,
+  observedAt: IsoDateTimeSchema,
+  transactionId: z.string().min(1),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type ClaimTransferObservation = z.infer<typeof ClaimTransferObservationSchema>;
+
+export const ClaimActionObservationSchema = z.object({
+  id: z.string().min(1),
+  type: ClaimObservedActionTypeSchema,
+  actor: z.string().min(1),
+  amount: UnsignedQuantityStringSchema,
+  observedAt: IsoDateTimeSchema,
+  transferIds: z.array(z.string().min(1)),
+  path: z.array(z.string().min(1)).min(1),
+  liquidityControl: ClaimLiquidityControlSchema.optional(),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type ClaimActionObservation = z.infer<typeof ClaimActionObservationSchema>;
+
+export const ClaimCustodyObservationSchema = z.object({
+  address: z.string().min(1),
+  kind: ClaimCustodyKindSchema,
+  canMoveFunds: knowledgeValueSchema(z.boolean()),
+  threshold: z.number().int().positive().optional(),
+  ownerCount: z.number().int().positive().optional(),
+  executedTransactions: z.number().int().nonnegative().optional(),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type ClaimCustodyObservation = z.infer<typeof ClaimCustodyObservationSchema>;
+
+export const ClaimAuditPolicySchema = z
+  .object({
+    verifiedAmountToleranceBps: ClaimBpsSchema,
+    partialAmountToleranceBps: ClaimBpsSchema,
+    maximumAttributionHops: z.number().int().min(0).max(8),
+  })
+  .refine(
+    (value) => BigInt(value.verifiedAmountToleranceBps) <= BigInt(value.partialAmountToleranceBps),
+    { message: 'Verified tolerance may not exceed partial tolerance.' },
+  );
+export type ClaimAuditPolicy = z.infer<typeof ClaimAuditPolicySchema>;
+
+export const ClaimAuditFindingCodeSchema = z.enum([
+  'ALLOCATION_WITHIN_TOLERANCE',
+  'ALLOCATION_DEVIATION',
+  'ACTION_OBSERVED',
+  'ACTION_NOT_OBSERVED',
+  'CLAIMED_BURN_IS_MOVABLE_CUSTODY',
+  'LP_REMAINS_CONTROLLER_WITHDRAWABLE',
+  'OUTFLOW_OBSERVED',
+  'FLOW_RETURNED_TO_CONTROLLER',
+  'POLICY_LOCK_NOT_TECHNICAL_LOCK',
+  'SHARE_UNIT_DEVIATION',
+  'CADENCE_NOT_YET_PROVABLE',
+  'COVERAGE_INCOMPLETE',
+]);
+
+export const ClaimAuditFindingSchema = z.object({
+  code: ClaimAuditFindingCodeSchema,
+  severity: z.enum(['INFO', 'WARNING', 'CRITICAL']),
+  message: z.string().min(1),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const ClaimShareUnitAssessmentSchema = z.object({
+  unit: UnsignedQuantityStringSchema,
+  observedDeposits: z.number().int().nonnegative(),
+  exactMultipleDeposits: z.number().int().nonnegative(),
+  nonMultipleDeposits: z.number().int().nonnegative(),
+  exactMultipleCoverage: CoverageRatioSchema,
+});
+
+export const ClaimCadenceAssessmentSchema = z.object({
+  expectedSeconds: UnsignedQuantityStringSchema,
+  observedActions: z.number().int().nonnegative(),
+  observedIntervalsSeconds: z.array(UnsignedQuantityStringSchema),
+  status: ClaimStatusSchema,
+});
+
+export const ClaimRuleAuditSchema = z.object({
+  claim: ClaimRuleSchema,
+  status: ClaimStatusSchema,
+  expectedAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  observedReceivedAmount: UnsignedQuantityStringSchema,
+  actualReceivedAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  observedActionAmount: UnsignedQuantityStringSchema,
+  actualActionAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  observedOutflowAmount: UnsignedQuantityStringSchema,
+  deviationBps: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  verifiedPercent: knowledgeValueSchema(DecimalStringSchema),
+  custody: knowledgeValueSchema(ClaimCustodyKindSchema),
+  shareUnitAssessment: ClaimShareUnitAssessmentSchema.nullable(),
+  cadenceAssessment: ClaimCadenceAssessmentSchema.nullable(),
+  findings: z.array(ClaimAuditFindingSchema),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const ClaimAuditReportSchema = z.object({
+  status: ClaimStatusSchema,
+  policy: ClaimAuditPolicySchema,
+  items: z.array(ClaimRuleAuditSchema).min(1),
+  metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+    message: 'Claim audit report requires a replayable chain Snapshot.',
+  }),
+});
+export type ClaimAuditReport = z.infer<typeof ClaimAuditReportSchema>;
 
 export const ApiErrorSchema = z.object({
   error: z.object({

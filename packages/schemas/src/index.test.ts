@@ -5,6 +5,8 @@ import {
   AnalysisSnapshotSchema,
   AnchorReconciliationResultSchema,
   ChainAnchorReadSchema,
+  ClaimAuditPolicySchema,
+  ClaimRuleSchema,
   FlapLifetimeMaterializationSchema,
   FlapLifetimeRollbackSchema,
   LaunchMechanismSnapshotSchema,
@@ -495,6 +497,46 @@ describe('Flap lifetime rollback', () => {
           ...rollback.metadata,
           snapshot: { ...rollback.metadata.snapshot, blockHash: `0x${'0'.repeat(64)}` },
         },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('claim audit contracts', () => {
+  const claim = {
+    id: 'community-allocation',
+    assetId: 'eip155:56:token',
+    sourceAddress: 'tax-receiver',
+    destinationAddress: 'community-fund',
+    role: 'COMMUNITY_FUND',
+    expectedAction: 'DISTRIBUTE',
+    expectedShareBps: '2000',
+    window: {
+      from: '2026-08-01T00:00:00.000Z',
+      to: '2026-08-10T00:00:00.000Z',
+    },
+    claimEvidenceIds: ['ev_claim'],
+  };
+
+  it('accepts an Evidence-linked bounded claim and rejects impossible percentages', () => {
+    expect(ClaimRuleSchema.safeParse(claim).success).toBe(true);
+    expect(ClaimRuleSchema.safeParse({ ...claim, expectedShareBps: '10001' }).success).toBe(false);
+    expect(ClaimRuleSchema.safeParse({ ...claim, claimEvidenceIds: [] }).success).toBe(false);
+  });
+
+  it('requires the verified error band to be no wider than the partial band', () => {
+    expect(
+      ClaimAuditPolicySchema.safeParse({
+        verifiedAmountToleranceBps: '50',
+        partialAmountToleranceBps: '500',
+        maximumAttributionHops: 4,
+      }).success,
+    ).toBe(true);
+    expect(
+      ClaimAuditPolicySchema.safeParse({
+        verifiedAmountToleranceBps: '501',
+        partialAmountToleranceBps: '500',
+        maximumAttributionHops: 4,
       }).success,
     ).toBe(false);
   });

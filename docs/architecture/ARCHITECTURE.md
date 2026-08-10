@@ -195,8 +195,10 @@ unchanged and direct-parent extensions as Known continuous. When observations sk
 re-reads the former position: the same historical hash is `HISTORICAL_MATCH`; a replacement is
 `REORG_DETECTED`; a lower reported head is `SOURCE_REGRESSION`; and a failed check is explicitly
 unavailable. Reorg/regression alerts link the prior, current, optional historical-check, and derived
-Evidence. This detects and records a change; automatic chain-state rollback/replay is not yet
-implemented.
+Evidence. Flap lifetime heads additionally verify every successful participant at stored accepted
+positions, invalidate the exact divergent suffix and replay from the newest evidenced common
+ancestor. This automatic rollback is currently Flap-specific; general multi-chain semantic rollback
+remains open.
 
 ### Entity relationship
 
@@ -212,6 +214,24 @@ disabled or impossible sell as unavailable. The seeded exit-race simulation muta
 in order and reports deterministic distributions. Multi-route liquidity, transfer taxes, protocol
 fees, gas, slippage limits, reverts, bridges, CEX assumptions, and historical execution calibration
 remain terminal requirements.
+
+### Claim verification
+
+The first deterministic claim kernel accepts human- or agent-structured rules separately from chain
+observations. A rule identifies the asset, source, destination, role, percentage, terminal action and
+time window. The engine requires a replayable chain Snapshot and Evidence IDs, uses integer atomic
+amounts, and reports observed lower bounds separately from coverage-complete Actual values.
+
+Percentage allocation uses a versioned tolerance policy (`50` bps verified, `500` bps partially
+verified by default). Receipt at a wallet does not prove buyback, burn or LP addition. Burn requires
+irrecoverable custody or an Evidence-linked bounded action path; EOA and Safe multisig custody remain
+movable. Liquidity addition retains an independent LP-control result. Safe threshold/ownership,
+outflows, controller returns, share-unit adherence and cadence are separate observations, so a
+policy promise such as “no exit” cannot be presented as a technical lock. Incomplete source/history
+coverage keeps Actual, deviation and verification percentage Unknown rather than zero.
+
+The current kernel has adversarial FFT-style tests but is not yet wired to general EVM semantic
+extraction, durable claim storage, API, UI, or the named FFT terminal run.
 
 ## Read query sequence
 
