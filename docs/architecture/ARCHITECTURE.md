@@ -393,9 +393,15 @@ cursor and original upper Snapshot, records a safe failure category, and atomica
 Evidence-bearing origin result after complete coverage. A terminal replay reads that result without
 calling SQD/BSC RPC or writing Evidence again. The synchronous API remains deliberately range-capped.
 The separate `semantic-worker` CLI can execute a wider origin range as bounded chunks and resume
-the identical identity after interruption. It remains a one-shot worker; continuous scheduling and
-the cross-range event-history projection runner/API remain later stages. The projection's immutable
-PostgreSQL segment store exists, but the bounded history scanner is not yet bound to it.
+the identical identity after interruption. It remains a one-shot worker. The event-history
+projection runner binds the existing bounded scanner to a generic semantic checkpoint plus immutable
+PostgreSQL segments. Each segment must be Evidence-complete before its cursor advances. If a process
+stops after the insert but before the advance, the next run may adopt only the one exact segment at
+that cursor; future, overlapping, or identity-conflicting segments fail closed. After exact requested
+coverage it writes a single terminal Evidence root and typed projection summary. Terminal replay
+uses the stored checkpoint result without provider or Evidence writes. Requested-range coverage can
+be complete while lifetime coverage remains Unknown and terminal `historyCoverage` remains zero.
+Continuous scheduling plus worker/API projection binding remain later stages.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.

@@ -909,6 +909,36 @@ export const FlapEventHistorySchema = z.object({
 });
 export type FlapEventHistory = z.infer<typeof FlapEventHistorySchema>;
 
+export const FlapHistoryProjectionSegmentSchema = z.object({
+  id: z.string().regex(/^fhs_[0-9a-f]{24}$/),
+  fromBlock: UnsignedQuantityStringSchema,
+  toBlock: UnsignedQuantityStringSchema,
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  transactionCount: z.number().int().nonnegative(),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+});
+export type FlapHistoryProjectionSegment = z.infer<typeof FlapHistoryProjectionSegmentSchema>;
+
+export const FlapEventHistoryProjectionSchema = z.object({
+  platform: z.literal('flap'),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  requestedRange: z.object({
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    segmentSize: z.number().int().positive(),
+    segmentCount: z.number().int().positive(),
+  }),
+  requestedRangeCoverage: CoverageRatioSchema,
+  lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+  segments: z.array(FlapHistoryProjectionSegmentSchema).min(1).max(5_000),
+  transactionCount: z.number().int().nonnegative(),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  metadata: AnalysisMetadataSchema,
+  evidence: z.array(EvidenceSchema).min(1),
+});
+export type FlapEventHistoryProjection = z.infer<typeof FlapEventHistoryProjectionSchema>;
+
 export const EvmTracePositionSchema = z.object({
   transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
   blockNumber: UnsignedQuantityStringSchema,

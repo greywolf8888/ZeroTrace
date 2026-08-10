@@ -2,9 +2,21 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Pool } from 'pg';
 import { randomUUID } from 'node:crypto';
 
+import {
+  EvmLedgerAdapter,
+  type JsonRpcTransport,
+  type TransportObservation,
+  type TransportReadOptions,
+} from '@zerotrace/chain-adapters';
 import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
 import { createEvidence } from '@zerotrace/evidence';
 import { FlapEventHistorySchema, unknownValue } from '@zerotrace/schemas';
+import {
+  FLAP_BSC_MAINNET_DEPLOYMENT,
+  FLAP_HISTORY_MODEL_VERSION,
+  projectFlapEventHistoryRestartSafe,
+  type FlapHistorySegmentExecutor,
+} from '@zerotrace/platform-adapters';
 import {
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
@@ -16,6 +28,22 @@ import {
 const connectionString = process.env.TEST_POSTGRES_URL;
 const postgresDescribe = connectionString === undefined ? describe.skip : describe;
 const checkpointTestRunId = randomUUID();
+
+class IntegrationNoNetworkTransport implements JsonRpcTransport {
+  readonly endpointId = 'bsc-rpc@test.example';
+
+  request<T>(_method: string, _params: readonly unknown[] = []): Promise<T> {
+    throw new Error('PostgreSQL projection integration reached the network.');
+  }
+
+  requestSourced<T>(
+    _method: string,
+    _params: readonly unknown[] = [],
+    _options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    throw new Error('PostgreSQL projection integration reached the sourced network.');
+  }
+}
 
 const snapshot = {
   ledger: 'EVM' as const,
@@ -647,6 +675,175 @@ postgresDescribe('PostgreSQL Flap history projection integration', () => {
       ).rejects.toThrow(/mutation is forbidden/);
     } finally {
       await immutablePool.end();
+    }
+  });
+
+  it('recovers the cross-range runner when a segment commits before its cursor advance', async () => {
+    const runnerToken = `0x${randomUUID().replaceAll('-', '').padEnd(40, '0')}`;
+    const adapter = new EvmLedgerAdapter(
+      {
+        id: 'bsc-rpc@test.example',
+        chainId: 56,
+        chainName: 'BNB Smart Chain',
+        snapshotBlockTag: 'finalized',
+      },
+      new IntegrationNoNetworkTransport(),
+    );
+    const calls: string[] = [];
+    const executeSegment: FlapHistorySegmentExecutor = async (options) => {
+      calls.push(`${options.fromBlock}-${options.toBlock}`);
+      const blockHash = BigInt(options.toBlock).toString(16).padStart(64, '0');
+      const parentHash = (BigInt(options.toBlock) - 1n).toString(16).padStart(64, '0');
+      const segmentSnapshot = {
+        ledger: 'EVM' as const,
+        chainId: 'eip155:56',
+        blockNumber: options.toBlock,
+        blockHash: `0x${blockHash}`,
+        parentBlockHash: `0x${parentHash}`,
+        finality: 'finalized' as const,
+        capturedAt: '2026-08-10T02:00:00.000Z',
+        providerVersions: {
+          'bsc-rpc@test.example': 'evm-ledger-v0.1.0',
+          'sqd:binance-mainnet': 'sqd-finalized-v1',
+        },
+        adapterVersions: { evm: 'evm-ledger-v0.1.0' },
+        configHash: '5'.repeat(64),
+        entityModelVersion: 'entity-model-unapplied',
+        labelSnapshot: 'labels-unapplied',
+      };
+      const observation = await options.writeEvidence(
+        createEvidence({
+          ledger: 'EVM',
+          chainId: segmentSnapshot.chainId,
+          kind: 'PROVIDER_OBSERVATION',
+          source: 'sqd:binance-mainnet',
+          locator: `postgres-flap-logs:${options.fromBlock}-${options.toBlock}`,
+          payload: { logs: [] },
+          observedAt: segmentSnapshot.capturedAt,
+          blockOrSlot: segmentSnapshot.blockNumber,
+          finality: segmentSnapshot.finality,
+          summary: 'PostgreSQL runner bounded log Evidence.',
+        }),
+        [],
+        segmentSnapshot,
+      );
+      const terminal = await options.writeEvidence(
+        createEvidence({
+          ledger: 'EVM',
+          chainId: segmentSnapshot.chainId,
+          kind: 'NEGATIVE_EVIDENCE',
+          source: `zerotrace:${FLAP_HISTORY_MODEL_VERSION}`,
+          locator:
+            `flap-event-history:${options.token}:` + `${options.fromBlock}-${options.toBlock}`,
+          payload: { token: options.token, chronology: [] },
+          observedAt: segmentSnapshot.capturedAt,
+          blockOrSlot: segmentSnapshot.blockNumber,
+          finality: segmentSnapshot.finality,
+          summary: 'PostgreSQL runner bounded negative Evidence.',
+          sourceEvidenceIds: [observation.id],
+        }),
+        [observation.id],
+        segmentSnapshot,
+      );
+      return FlapEventHistorySchema.parse({
+        platform: 'flap',
+        token: options.token,
+        requestedRange: {
+          fromBlock: options.fromBlock,
+          toBlock: options.toBlock,
+          chunkSize: options.chunkSize,
+          chunkCount: Number(BigInt(options.toBlock) - BigInt(options.fromBlock) + 1n),
+        },
+        requestedRangeCoverage: 1,
+        lifetimeCoverage: unknownValue('INSUFFICIENT_DATA'),
+        chronology: [],
+        transactions: [],
+        unrecognizedPortalLogCount: 0,
+        metadata: {
+          snapshot: segmentSnapshot,
+          dataCoverage: 1,
+          sourceCoverage: 1,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: segmentSnapshot.capturedAt,
+          sourceSet: ['bsc-rpc@test.example', 'sqd:binance-mainnet'],
+          modelVersion: FLAP_HISTORY_MODEL_VERSION,
+          confidence: 0.95,
+          evidenceIds: [observation.id, terminal.id].sort(),
+        },
+        evidence: [observation, terminal],
+      });
+    };
+    const writeEvidence = async (
+      item: Parameters<typeof evidence.put>[0],
+      sources: readonly string[] = [],
+      boundSnapshot?: Parameters<typeof evidence.put>[2],
+    ) => (await evidence.put(item, sources, boundSnapshot)).evidence;
+    let failAdvance = true;
+    const interruptedCheckpoints = {
+      begin: checkpoints.begin.bind(checkpoints),
+      advance: async (...args: Parameters<typeof checkpoints.advance>) => {
+        if (failAdvance) {
+          failAdvance = false;
+          const error = new Error('PostgreSQL integration cursor interruption') as Error & {
+            code: string;
+          };
+          error.code = 'SEMANTIC_CHECKPOINT_UNAVAILABLE';
+          throw error;
+        }
+        return checkpoints.advance(...args);
+      },
+      finish: checkpoints.finish.bind(checkpoints),
+      recordFailure: checkpoints.recordFailure.bind(checkpoints),
+    };
+    const options = {
+      adapter,
+      logReader: {
+        endpointId: 'sqd:binance-mainnet' as const,
+        getLogsObservation: () => {
+          throw new Error('Injected integration executor was bypassed.');
+        },
+      },
+      token: runnerToken,
+      fromBlock: '100',
+      toBlock: '103',
+      segmentSize: 2,
+      chunkSize: 1,
+      deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+      writeEvidence,
+      projection,
+      executeSegment,
+    };
+
+    await expect(
+      projectFlapEventHistoryRestartSafe({ ...options, checkpoints: interruptedCheckpoints }),
+    ).rejects.toMatchObject({ code: 'SEMANTIC_CHECKPOINT_UNAVAILABLE' });
+    expect(calls).toEqual(['100-101']);
+
+    const result = await projectFlapEventHistoryRestartSafe({ ...options, checkpoints });
+    expect(result.requestedRangeCoverage).toBe(1);
+    expect(result.lifetimeCoverage.state).toBe('unknown');
+    expect(result.segments.map((segment) => [segment.fromBlock, segment.toBlock])).toEqual([
+      ['100', '101'],
+      ['102', '103'],
+    ]);
+    expect(calls).toEqual(['100-101', '102-103']);
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      const persisted = await pool.query(
+        `SELECT id::text, status, next_block::text
+         FROM semantic_scan_runs
+         WHERE scan_type = 'FLAP_EVENT_HISTORY' AND subject = $1`,
+        [runnerToken],
+      );
+      expect(persisted.rows).toHaveLength(1);
+      expect(persisted.rows[0]).toMatchObject({
+        status: 'REQUESTED_RANGE_COMPLETE',
+        next_block: '104',
+      });
+      await expect(projection.listSegments(String(persisted.rows[0]?.id))).resolves.toHaveLength(2);
+    } finally {
+      await pool.end();
     }
   });
 

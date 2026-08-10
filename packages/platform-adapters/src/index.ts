@@ -3,6 +3,7 @@ import { unknownValue, type Ledger } from '@zerotrace/schemas';
 export * from './flap.js';
 export * from './flap-events.js';
 export * from './flap-history.js';
+export * from './flap-history-projection.js';
 export * from './flap-origin.js';
 
 export type PlatformRole = 'LAUNCH_MECHANISM' | 'EXECUTION_PLATFORM' | 'LABEL_PROVIDER';

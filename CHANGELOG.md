@@ -64,6 +64,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   storage preflight, exact-identity resume, credential-free summaries, and safe failure codes;
 - immutable PostgreSQL Flap history segments with bounded scan-cursor alignment, canonical
   provenance arrays, content hashes, idempotent replay, pagination, health, and mutation guards;
+- restart-safe cross-range Flap history projection with immutable segment-before-cursor ordering,
+  cursor-adjacent pending-segment adoption, strict identity revalidation, terminal Evidence, and
+  provider-free terminal replay;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;
@@ -110,9 +113,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 - finalized provider-shaped EVM execution/state, Bitcoin UTXO, and Solana execution/balance records
   are persisted and strict raw ledger queries are exposed; Flap BSC current Portal state and a
-  caller-supplied event transaction, bounded event ranges, and bounded creation-origin proofs are
-  decoded, but deployment-origin continuous history, complete lifecycle reconstruction, other
-  launchpads, and market reconstruction are not implemented;
+  caller-supplied event transaction, restart-safe bounded event-range projections, and bounded
+  creation-origin proofs are decoded, but deployment-origin continuous history, worker/API
+  projection binding, complete lifecycle reconstruction, other launchpads, and market reconstruction
+  are not implemented;
 - common-position endpoint reconciliation and reorg detection are implemented, but continuous
   scheduling, automatic rollback/replay, and independently operated provider acceptance are not;
 - entity resolution is an uncalibrated baseline;

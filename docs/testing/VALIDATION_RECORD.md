@@ -667,28 +667,53 @@ Three focused repository tests passed. A fresh PostgreSQL 17.10 image applied mi
 all 16 PostgreSQL integration tests passed. The database rejected a segment referencing missing
 Evidence plus any segment update or deletion, while exact replay continued to work before and after
 checkpoint completion. The disposable project and volume were removed. The segment repository is
-validated storage infrastructure; the cross-range scanner, API binding, continuous scheduler and
-FFT lifetime projection remain pending.
+validated storage infrastructure; the following batch binds the cross-range runner, while API
+binding, continuous scheduling and FFT lifetime projection remain pending.
+
+### Restart-safe cross-range Flap history projection
+
+The bounded Flap history scanner is now composed into a wider, restart-safe projection without
+changing its 50,000-block safety limit. A semantic scan identity binds token, chain, Portal,
+deployment/source revisions, range, segment and inner-query sizes, provider Snapshot tag and result
+limits. Every segment is validated again against that identity, its exact inclusive range, final
+Snapshot, bounded-history model, canonical SQD/source set and terminal Evidence before the semantic
+cursor advances.
+
+Three deterministic runner tests passed. One injects a failure after the first immutable segment is
+stored but before the checkpoint advance. The next run finds exactly one cursor-adjacent pending
+segment, adopts it without executing that range again, executes the second segment once, then stores
+a terminal Evidence root and typed projection summary. A third identical call returns the checkpoint
+result without reading the projection store, calling SQD/BSC RPC or writing Evidence. Non-canonical
+discovery sources fail before checkpoint creation.
+
+A fresh disposable PostgreSQL 17.10 image applied migrations `001-008`; all 17 PostgreSQL integration
+tests passed, including the same interruption boundary through the real Evidence, checkpoint and
+projection repositories. The stored run reached `REQUESTED_RANGE_COMPLETE`, `next_block=104`, and
+retained two ordered immutable segments. The named Docker project and volume were removed. This is
+requested-range projection acceptance only: lifetime coverage remains Unknown, terminal
+`historyCoverage` remains zero, and no FFT request or real-chain conclusion was made. Worker/API
+binding, continuous scheduling, origin-to-head execution and named FFT/migration validation remain
+pending.
 
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                     |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 267 unit, 30 environment-free integration, build, license and zero-vulnerability audit; 16 PostgreSQL tests also passed separately          |
-| local `test:coverage`    | pass: 297 tests, 19 opt-in durable skips; 83.31% statements, 75.77% branches, 91.59% functions, 84.28% lines                                                               |
-| branch `test:coverage`   | latest completed pass: 311 tests; 85.68% statements, 77.99% branches, 94.77% functions, 86.66% lines                                                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 270 unit, 30 environment-free integration, build, license and zero-vulnerability audit; 17 PostgreSQL tests also passed separately          |
+| local `test:coverage`    | pass: 300 tests, 20 opt-in durable skips; 83.06% statements, 75.76% branches, 91.79% functions, 83.96% lines                                                               |
+| branch `test:coverage`   | latest completed pass: 316 tests; 85.62% statements, 78.19% branches, 94.80% functions, 86.60% lines                                                                       |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                        |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                     |
 | `docker compose config`  | pass                                                                                                                                                                       |
 | production Compose smoke | pass: clean current-source semantic-worker image/non-root entrypoint plus prior live finalized ingestion and terminal replay                                               |
-| branch GitHub Actions CI | [latest completed pass on `768e116`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31352251137): 311 tests, 10 Chromium E2E, and six production container targets |
-| branch CodeQL            | [latest completed pass on `768e116`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31352251135): JavaScript and TypeScript analysis                               |
+| branch GitHub Actions CI | [latest completed pass on `213805e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31353275372): 316 tests, 10 Chromium E2E, and six production container targets |
+| branch CodeQL            | [latest completed pass on `213805e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31353275413): JavaScript and TypeScript analysis                               |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
-and MinIO services. All 47 integration tests passed and the workflow removed its named volumes. The
-current local projection batch additionally passed all 16 PostgreSQL tests on a fresh disposable
-image. ClickHouse and MinIO were not rerun locally for this PostgreSQL-only module; the full
-environment-free gates were rerun before its push.
+and MinIO services. All 49 integration tests passed and the workflow removed its named volumes. The
+current local runner batch additionally passed all 17 PostgreSQL tests on a fresh disposable image.
+ClickHouse and MinIO were not rerun locally for this PostgreSQL-only module; the full environment-free
+gates are rerun before its push.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion
