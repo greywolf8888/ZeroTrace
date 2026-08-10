@@ -1251,8 +1251,8 @@ wallet attribution and terminal FFT acceptance remain pending.
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
 | `docker compose config`  | pass                                                                                                                                                                         |
 | production Compose smoke | pass: rebuilt API/Web healthy and read-only; same-operator capability truth plus 91-node durable FFT Evidence replay passed                                                  |
-| branch GitHub Actions CI | [pass on `9a9f45e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31423240433): full CI matrix, structural model gate, 20 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `9a9f45e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31423240366): JavaScript and TypeScript analysis                                                  |
+| branch GitHub Actions CI | [pass on `e6087c4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31427784207): full CI matrix, structural model gate, 20 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `e6087c4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31427784193): JavaScript and TypeScript analysis                                                  |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

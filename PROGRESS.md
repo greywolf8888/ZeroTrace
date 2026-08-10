@@ -19,7 +19,7 @@ completed feature.
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                      |
 | Integration tests                | **55 environment-free plus 19 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **20 passing: Chromium desktop and Pixel 7**                                                                    |
-| Remote CI                        | **Pass on immutable burn-promotion commit `9a9f45e`: CI, Chromium, production images, and CodeQL**              |
+| Remote CI                        | **Pass on immutable reconciliation commit `e6087c4`: CI, Chromium, production images, and CodeQL**              |
 | Coverage                         | **Current local: 82.89% statements / 77.22% branches / 91.73% functions / 84.05% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion, Flap history/origin, FFT market and independent BSC reconciliation passed     |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap history/lifetime, accepted heads and EVM Claim Reports wired    |
@@ -726,7 +726,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                              | fresh bootstrap previously passed; current persistent Compose volume was backed up and upgraded non-destructively from 001–002 through 011 |
 | Runtime/browser smoke          | Pass                                              | rebuilt API/Web healthy/read-only; 91-node FFT Evidence replay and unmocked Chromium capability truth passed                               |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope         | four anchors/pipelines plus scoped Alchemy/BNB market reconciliation passed; archive/forced-reorg scope pending                            |
-| Remote CI                      | Pass on immutable burn-promotion commit `9a9f45e` | CI/CodeQL green; full matrix, structural model gate, 20 Chromium flows and six production targets                                          |
+| Remote CI                      | Pass on immutable reconciliation commit `e6087c4` | CI/CodeQL green; full matrix, structural model gate, 20 Chromium flows and six production targets                                          |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

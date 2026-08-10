@@ -87,6 +87,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31423240433) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31423240366) pass on immutable
       durable burn-promotion commit `9a9f45e`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31427784207) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31427784193) pass on immutable
+      independent BSC market/RV reconciliation commit `e6087c4`
 
 ## Evidence and data
 
