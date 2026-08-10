@@ -5,6 +5,7 @@
   "references": [
     { "path": "../schemas" },
     { "path": "../evidence" },
+    { "path": "../data-quality" },
     { "path": "../chain-adapters" },
     { "path": "../claim-audit" }
   ]

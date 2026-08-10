@@ -221,11 +221,11 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
       `https://eth-mainnet.g.alchemy.com/v2/${encodeURIComponent(parsed.ALCHEMY_API_KEY)}`,
     );
   }
-  const bscRpcUrls = providerUrls('BSC RPC', [
-    parsed.EVM_BSC_RPC_URLS,
-    parsed.EVM_BSC_RPC_URL,
-    parsed.BSC_RPC_URL,
-  ]);
+  const bscRpcUrls = providerUrls(
+    'BSC RPC',
+    [parsed.EVM_BSC_RPC_URLS, parsed.EVM_BSC_RPC_URL, parsed.BSC_RPC_URL],
+    parsed.ALCHEMY_API_KEY,
+  );
   const bitcoinEsploraUrls = providerUrls('Bitcoin Esplora', [
     parsed.BITCOIN_ESPLORA_URLS,
     parsed.BITCOIN_ESPLORA_URL,

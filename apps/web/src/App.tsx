@@ -17,6 +17,7 @@ import {
   type FlapEventTransactionResponse,
   type FlapInspectionResponse,
   type FlapPancakeV2BuyScenarioResponse,
+  type FlapPancakeV2ReconciliationResponse,
   type FlapPancakeV2SellScenarioResponse,
   type FlapSellQuoteResponse,
   type HealthResponse,
@@ -2151,6 +2152,252 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
   );
 }
 
+function FlapPancakeV2ReconciliationPanel({ token }: { token: string }) {
+  const [quoteAmounts, setQuoteAmounts] = useState('100, 1000, 10000');
+  const [tokenAmounts, setTokenAmounts] = useState('1000000, 5000000, 10000000');
+  const [result, setResult] = useState<FlapPancakeV2ReconciliationResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const parseAmounts = (value: string) =>
+    value
+      .split(/[\s,]+/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  const quoteInputs = parseAmounts(quoteAmounts);
+  const tokenInputs = parseAmounts(tokenAmounts);
+  const validAmountList = (values: readonly string[]) =>
+    values.length >= 1 &&
+    values.length <= 8 &&
+    new Set(values).size === values.length &&
+    values.every(
+      (value) => /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value) && !/^0(?:\.0+)?$/.test(value),
+    );
+  const inputsValid = validAmountList(quoteInputs) && validAmountList(tokenInputs);
+
+  async function runReconciliation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!inputsValid) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(await api.flapPancakeV2Reconciliation(token, quoteInputs, tokenInputs));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Multi-source reconciliation failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <section
+        className="panel subject-panel quote-panel"
+        aria-labelledby="flap-reconciliation-heading"
+      >
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Common finalized block + documented operators</span>
+            <h3 id="flap-reconciliation-heading">Independent market and RV reconciliation</h3>
+          </div>
+          <span className="snapshot-badge">Exact state · quote budget 0.5%</span>
+        </div>
+        <p className="panel-copy">
+          Re-read the complete Pancake V2 market, buy quotes and exit quotes through every
+          configured BSC source at one finalized block. Different hostnames count as independent
+          only when official endpoint documents identify different operators.
+        </p>
+        <form
+          className="quote-form reconciliation-form"
+          onSubmit={(event) => void runReconciliation(event)}
+        >
+          <div className="claim-burn-field">
+            <label htmlFor="flap-reconciliation-quote-amounts">Quote-asset buy amounts</label>
+            <input
+              id="flap-reconciliation-quote-amounts"
+              inputMode="decimal"
+              value={quoteAmounts}
+              onChange={(event) => setQuoteAmounts(event.target.value)}
+            />
+          </div>
+          <div className="claim-burn-field">
+            <label htmlFor="flap-reconciliation-token-amounts">Token exit amounts</label>
+            <input
+              id="flap-reconciliation-token-amounts"
+              inputMode="decimal"
+              value={tokenAmounts}
+              onChange={(event) => setTokenAmounts(event.target.value)}
+            />
+          </div>
+          <button className="secondary-button" type="submit" disabled={busy || !inputsValid}>
+            {busy ? 'Reconciling sources…' : 'Run independent check'}
+          </button>
+        </form>
+        <p className="quote-note">
+          This is read-only RPC replay. It never approves, signs, swaps, transfers, or broadcasts.
+        </p>
+        {error === undefined ? null : (
+          <div className="alert alert-warning reconciliation-alert">
+            <strong>Reconciliation unavailable</strong>
+            {error}
+          </div>
+        )}
+        {result === undefined ? null : (
+          <>
+            <div className="fact-grid quote-facts">
+              <div className="fact-row">
+                <span>Terminal status</span>
+                <StatusPill status={result.status} />
+              </div>
+              <div className="fact-row">
+                <span>Finalized block</span>
+                <strong>{result.blockNumber}</strong>
+              </div>
+              <div className="fact-row">
+                <span>Operator independence</span>
+                <StatusPill status={result.sourceIndependence.status} />
+              </div>
+              <div className="fact-row">
+                <span>Independence value</span>
+                <KnowledgeDisplay data={result.sourceIndependence.independence} />
+              </div>
+              <div className="fact-row">
+                <span>Operators / required</span>
+                <strong>
+                  {result.sourceIndependence.operatorCount} /{' '}
+                  {result.sourceIndependence.requiredOperators}
+                </strong>
+              </div>
+              <div className="fact-row">
+                <span>Checks</span>
+                <strong>
+                  {result.audit.summary.passed} pass · {result.audit.summary.failed} fail ·{' '}
+                  {result.audit.summary.inconclusive} inconclusive
+                </strong>
+              </div>
+            </div>
+            {result.status === 'PASS' ? null : (
+              <div
+                className={`alert ${result.status === 'FAIL' ? 'alert-error' : 'alert-warning'} reconciliation-alert`}
+              >
+                <strong>{titleCase(result.status)}</strong>
+                {result.status === 'FAIL'
+                  ? 'At least one exact state or bounded quote comparison exceeded its allowed error.'
+                  : 'The result is not a verified agreement. Unknown source ownership or incomplete coverage is not converted to a pass.'}
+              </div>
+            )}
+            <div className="table-scroll reconciliation-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Documented operator</th>
+                    <th>Buy checks</th>
+                    <th>Exit checks</th>
+                    <th>Pool</th>
+                    <th>Spot price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.sources.map((source) => {
+                    const market =
+                      source.buy.market.state === 'known' ? source.buy.market.value : undefined;
+                    return (
+                      <tr key={source.sourceId}>
+                        <td>
+                          <code>{source.sourceId}</code>
+                        </td>
+                        <td>
+                          <KnowledgeDisplay data={source.operatorId} />
+                        </td>
+                        <td>
+                          <StatusPill status={source.buy.validation.status} />
+                        </td>
+                        <td>
+                          <StatusPill status={source.sell.validation.status} />
+                        </td>
+                        <td>{market === undefined ? 'Unknown' : shortId(market.pool)}</td>
+                        <td>{market === undefined ? 'Unknown' : market.currentSpotPrice}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <details className="raw-details" open={result.status !== 'PASS'}>
+              <summary>
+                Comparison ledger ({result.audit.summary.total} checks; exact fields require zero
+                error)
+              </summary>
+              <div className="table-scroll reconciliation-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Field</th>
+                      <th>Class</th>
+                      <th>Result</th>
+                      <th>Actual</th>
+                      <th>Reference</th>
+                      <th>Error</th>
+                      <th>Pass budget</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.audit.checks.map((check) => (
+                      <tr key={check.id}>
+                        <td>
+                          <code>{check.fieldPath}</code>
+                        </td>
+                        <td>{titleCase(check.comparisonClass)}</td>
+                        <td>
+                          <StatusPill status={check.disposition} />
+                        </td>
+                        <td>
+                          <KnowledgeDisplay data={check.actual} />
+                        </td>
+                        <td>
+                          <KnowledgeDisplay data={check.reference} />
+                        </td>
+                        <td>
+                          <KnowledgeDisplay data={check.relativeErrorPct} />
+                        </td>
+                        <td>
+                          <KnowledgeDisplay data={check.passThresholdPct} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+            <div className="snapshot-strip">
+              <span>
+                <b>Block hash</b> {shortId(result.blockHash)}
+              </span>
+              <span>
+                <b>Registry Evidence</b> {shortId(result.sourceIndependence.registryEvidenceId)}
+              </span>
+              <span>
+                <b>Independence Evidence</b> {shortId(result.sourceIndependence.terminalEvidenceId)}
+              </span>
+              <span>
+                <b>Terminal Evidence</b> {shortId(result.terminalEvidenceId)}
+              </span>
+            </div>
+          </>
+        )}
+      </section>
+      {result === undefined ? null : (
+        <EvidencePanel
+          evidence={result.evidence}
+          eyebrow="Finalized anchors → official operator attestations → market and RV comparisons"
+          title="Multi-source reconciliation Evidence"
+        />
+      )}
+    </>
+  );
+}
+
 function FlapPancakeV2BuyScenarioPanel({
   token,
   blockNumber,
@@ -2636,6 +2883,7 @@ function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse })
       <ClaimReportPanel token={inspection.token} />
       {launch?.lifecycle === 'DEX_TRADING' ? (
         <>
+          <FlapPancakeV2ReconciliationPanel token={inspection.token} />
           <FlapPancakeV2BuyScenarioPanel
             token={inspection.token}
             blockNumber={launch.sourceBlockOrSlot}

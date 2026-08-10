@@ -60,6 +60,24 @@ describe('API configuration', () => {
     ).toEqual(['https://eth-mainnet.g.alchemy.com/v2/test-key-do-not-use']);
   });
 
+  it('expands the same secret-safe Alchemy placeholder for BSC reconciliation', () => {
+    const template =
+      'https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY},https://bsc-dataseed.bnbchain.org';
+    expect(loadConfig({ NODE_ENV: 'test', EVM_BSC_RPC_URLS: template }).bscRpcUrls).toEqual([
+      'https://bsc-dataseed.bnbchain.org',
+    ]);
+    expect(
+      loadConfig({
+        NODE_ENV: 'test',
+        EVM_BSC_RPC_URLS: template,
+        ALCHEMY_API_KEY: 'test-key-do-not-use',
+      }).bscRpcUrls,
+    ).toEqual([
+      'https://bnb-mainnet.g.alchemy.com/v2/test-key-do-not-use',
+      'https://bsc-dataseed.bnbchain.org',
+    ]);
+  });
+
   it('normalizes aliases, preserves fallback order, and removes duplicate endpoints', () => {
     const config = loadConfig({
       NODE_ENV: 'test',

@@ -1408,6 +1408,271 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
     });
   });
 
+  await page.route('**/api/v1/rv/flap-pancake-v2-reconciliation', async (route) => {
+    const snapshot = {
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      blockNumber: '115128697',
+      blockHash: `0x${'8'.repeat(64)}`,
+      finality: 'finalized',
+      capturedAt: '2026-08-10T13:00:00.000Z',
+    };
+    const market = {
+      venue: 'PANCAKESWAP_V2',
+      chainId: 'eip155:56',
+      pool,
+      factory: '0xca143ce32fe78f1f7019d7d551a6402fc5350c73',
+      router: '0x10ed43c718714eb63d5aa57b78b54704e256024e',
+      token: bscTokenAddress,
+      quoteAsset,
+      token0: quoteAsset,
+      token1: bscTokenAddress,
+      tokenDecimals: 18,
+      quoteDecimals: 18,
+      tokenReserve: {
+        atomic: '73899426572496252333612006',
+        decimal: '73899426.572496252333612006',
+      },
+      quoteReserve: {
+        atomic: '30546942096796964000250',
+        decimal: '30546.94209679696400025',
+      },
+      currentSpotPriceWad: '413358773223814',
+      currentSpotPrice: '0.000413358773223814',
+      dexFeeBps: '25',
+      configuredBuyTaxBps: { state: 'known', value: '300' },
+      configuredSellTaxBps: { state: 'known', value: '300' },
+      pairTimestampLast: '1786366800',
+      sourceRevision: 'pancakeswap-v2-bsc-registry-and-fee@2026-08-10',
+    };
+    const childMetadata = (sourceId: string, evidenceId: string, modelVersion: string) => ({
+      snapshot,
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 0,
+      simulationCoverage: 0.5,
+      freshness: snapshot.capturedAt,
+      sourceSet: [sourceId],
+      modelVersion,
+      confidence: 0.98,
+      evidenceIds: [evidenceId],
+    });
+    const reconciliationSource = (sourceId: string, operatorId: string, suffix: string) => ({
+      sourceId,
+      operatorId: { state: 'known', value: operatorId },
+      buy: {
+        platform: 'flap',
+        token: bscTokenAddress,
+        market: { state: 'known', value: market },
+        scenarios: [],
+        validation: {
+          status: 'PASS',
+          deterministicToleranceBps: '10',
+          evaluatedScenarioCount: 3,
+          failedScenarioCount: 0,
+        },
+        pensionSinkTreatment: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+        terminalEvidenceId: `ev_${suffix.repeat(24).slice(0, 24)}`,
+        metadata: childMetadata(
+          sourceId,
+          `ev_${suffix.repeat(24).slice(0, 24)}`,
+          'flap-pancake-v2-pool-buy-scenarios-v0.1.0',
+        ),
+        evidence: [],
+      },
+      sell: {
+        platform: 'flap',
+        token: bscTokenAddress,
+        market: { state: 'known', value: market },
+        scenarios: [],
+        validation: {
+          status: 'PASS',
+          deterministicToleranceBps: '10',
+          evaluatedScenarioCount: 3,
+          failedScenarioCount: 0,
+        },
+        executionCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
+        terminalEvidenceId: `ev_${suffix.repeat(12).slice(0, 12)}${'f'.repeat(12)}`,
+        metadata: childMetadata(
+          sourceId,
+          `ev_${suffix.repeat(12).slice(0, 12)}${'f'.repeat(12)}`,
+          'flap-pancake-v2-pool-sell-scenarios-v0.1.0',
+        ),
+        evidence: [],
+      },
+    });
+    const comparisonCheck = (
+      id: string,
+      fieldPath: string,
+      comparisonClass: 'EXACT_IDENTITY_STATE' | 'INDEPENDENT_MARKET_QUOTE_RV',
+      passThresholdPct: string,
+    ) => ({
+      id,
+      fieldPath,
+      comparisonClass,
+      disposition: 'PASS',
+      severity: comparisonClass === 'EXACT_IDENTITY_STATE' ? 'CRITICAL' : 'HIGH',
+      actual: { state: 'known', value: '30546942096796964000250' },
+      reference: { state: 'known', value: '30546942096796964000250' },
+      absoluteError: { state: 'known', value: '0' },
+      relativeErrorPct: { state: 'known', value: '0' },
+      passThresholdPct: { state: 'known', value: passThresholdPct },
+      warningThresholdPct: { state: 'known', value: passThresholdPct },
+      coverage: 1,
+      requiredCoverage: 1,
+      sourceIndependence: { state: 'known', value: true },
+      sourceIndependenceEvidenceIds: ['ev_333333333333333333333333'],
+      numericDenominatorIncluded: comparisonClass !== 'EXACT_IDENTITY_STATE',
+      sourceSet: ['bsc-rpc@bnb-mainnet.g.alchemy.com#1', 'bsc-rpc@bsc-dataseed.bnbchain.org#2'],
+      evidenceIds: ['ev_444444444444444444444444'],
+      explanationEvidenceIds: [],
+      message: 'Both source observations agree within the configured comparison budget.',
+    });
+    const evidence = [
+      {
+        id: 'ev_111111111111111111111111',
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        kind: 'ANALYST_OBSERVATION',
+        source: 'zerotrace:source-operator-registry-v1',
+        locator: 'source-operator-registry:fixture',
+        payloadHash: '1'.repeat(64),
+        observedAt: '2026-08-10T00:00:00.000Z',
+        finality: 'versioned-registry',
+        summary: 'Versioned source-operator registry compiled from official endpoint documents.',
+      },
+      {
+        id: 'ev_555555555555555555555555',
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        kind: 'DERIVED_FEATURE',
+        source: 'zerotrace:flap-pancake-v2-multi-source-reconciliation-v1.0.0',
+        locator: `flap-market-reconciliation:${bscTokenAddress}@115128697`,
+        payloadHash: '5'.repeat(64),
+        observedAt: snapshot.capturedAt,
+        blockOrSlot: snapshot.blockNumber,
+        finality: snapshot.finality,
+        summary: 'Independent market and realizable-value observations reconcile at one Snapshot.',
+      },
+    ];
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        status: 'PASS',
+        blockNumber: snapshot.blockNumber,
+        blockHash: snapshot.blockHash,
+        anchorReconciliation: {
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          status: 'AGREEMENT',
+          requiredSources: 2,
+          configuredSources: 2,
+          observedSources: 2,
+          comparisonPosition: { state: 'known', value: snapshot.blockNumber },
+          canonicalAnchor: {
+            state: 'known',
+            value: {
+              position: snapshot.blockNumber,
+              hash: snapshot.blockHash,
+              finality: snapshot.finality,
+            },
+          },
+          sourceIndependence: { state: 'unknown', reason: 'NOT_QUERIED' },
+          sources: [],
+          alerts: [],
+          metadata: childMetadata('bsc-anchor-reconciler', 'ev_222222222222222222222222', 'x'),
+        },
+        sourceIndependence: {
+          status: 'VERIFIED_INDEPENDENT',
+          independence: { state: 'known', value: true },
+          requiredOperators: 2,
+          observedSources: 2,
+          operatorCount: 2,
+          unresolvedSources: [],
+          attestations: [
+            {
+              sourceId: 'bsc-rpc@bnb-mainnet.g.alchemy.com#1',
+              hostname: 'bnb-mainnet.g.alchemy.com',
+              operatorId: 'alchemy',
+              operatorName: 'Alchemy',
+              officialSource: 'https://www.alchemy.com/docs/reference/node-supported-chains',
+              registryObservedAt: '2026-08-10T00:00:00.000Z',
+              registryRevision: 'alchemy-bnb-chain-api@2026-08-10',
+              evidenceId: 'ev_666666666666666666666666',
+            },
+            {
+              sourceId: 'bsc-rpc@bsc-dataseed.bnbchain.org#2',
+              hostname: 'bsc-dataseed.bnbchain.org',
+              operatorId: 'bnb-chain',
+              operatorName: 'BNB Chain',
+              officialSource:
+                'https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/',
+              registryObservedAt: '2026-08-10T00:00:00.000Z',
+              registryRevision: 'bnb-chain-bsc-json-rpc-endpoints@2026-08-10',
+              evidenceId: 'ev_777777777777777777777777',
+            },
+          ],
+          registryEvidenceId: 'ev_111111111111111111111111',
+          terminalEvidenceId: 'ev_333333333333333333333333',
+          evidenceIds: [
+            'ev_111111111111111111111111',
+            'ev_666666666666666666666666',
+            'ev_777777777777777777777777',
+            'ev_333333333333333333333333',
+          ],
+          modelVersion: 'source-operator-registry-v1',
+        },
+        sources: [
+          reconciliationSource('bsc-rpc@bnb-mainnet.g.alchemy.com#1', 'alchemy', 'a'),
+          reconciliationSource('bsc-rpc@bsc-dataseed.bnbchain.org#2', 'bnb-chain', 'b'),
+        ],
+        audit: {
+          status: 'PASS',
+          checks: [
+            comparisonCheck(
+              'dq_111111111111111111111111',
+              'sources[1].market.quoteReserve.atomic',
+              'EXACT_IDENTITY_STATE',
+              '0',
+            ),
+            comparisonCheck(
+              'dq_222222222222222222222222',
+              'sources[1].buy.scenarios[100].officialRouterGrossTokenOutput.atomic',
+              'INDEPENDENT_MARKET_QUOTE_RV',
+              '0.5',
+            ),
+          ],
+          summary: {
+            total: 2,
+            passed: 2,
+            warnings: 0,
+            failed: 0,
+            inconclusive: 0,
+            numericDenominator: 1,
+            coverageGaps: 0,
+          },
+          metadata: childMetadata(
+            'bsc-reconciliation',
+            'ev_444444444444444444444444',
+            'typed-discrepancy-engine-v1.0.0',
+          ),
+        },
+        terminalEvidenceId: 'ev_555555555555555555555555',
+        metadata: {
+          ...childMetadata(
+            'bsc-reconciliation',
+            'ev_555555555555555555555555',
+            'flap-pancake-v2-multi-source-reconciliation-v1.0.0',
+          ),
+          sourceSet: ['bsc-rpc@bnb-mainnet.g.alchemy.com#1', 'bsc-rpc@bsc-dataseed.bnbchain.org#2'],
+        },
+        evidence,
+      }),
+    });
+  });
+
   await page.route('**/api/v1/claims/declarations/parse', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -1494,6 +1759,20 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
   await expect(declarationPanel).toContainText('Ready For Review');
   await expect(declarationPanel).toContainText('Human review required');
   await expect(declarationPanel).toContainText('ev_9876543210abcdef98765432');
+  const reconciliationPanel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Independent market and RV reconciliation' }),
+  });
+  await expect(reconciliationPanel).toBeVisible();
+  await reconciliationPanel.getByRole('button', { name: 'Run independent check' }).click();
+  await expect(reconciliationPanel.getByText('Pass', { exact: true }).first()).toBeVisible();
+  await expect(reconciliationPanel).toContainText('Verified Independent');
+  await expect(reconciliationPanel).toContainText('2 / 2');
+  await expect(reconciliationPanel).toContainText('bsc-rpc@bnb-mainnet.g.alchemy.com#1');
+  await expect(reconciliationPanel).toContainText('bsc-rpc@bsc-dataseed.bnbchain.org#2');
+  await expect(reconciliationPanel).toContainText('0.000413358773223814');
+  await expect(
+    page.getByRole('heading', { name: 'Multi-source reconciliation Evidence' }),
+  ).toBeVisible();
   const scenarioPanel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: 'Pancake V2 buy-size scenarios' }),
   });

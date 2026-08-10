@@ -40,6 +40,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
 | POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                   | migrated Flap Pancake V2 nominal/gross/tax exit-size model       |
+| POST   | `/api/v1/rv/flap-pancake-v2-reconciliation`                   | common-block multi-source market and RV discrepancy certificate  |
 | POST   | `/api/v1/data-quality/discrepancies`                          | typed error-budget and discrepancy audit                         |
 | GET    | `/api/v1/evidence/:id`                                        | Evidence node, source edges, and bound Snapshot                  |
 | GET    | `/api/v1/evidence/:id/drilldown`                              | restart-safe derived/source Evidence traversal                   |
@@ -337,6 +338,33 @@ quote-reserve consumption. A 10 bps Router/formula mismatch withholds every conf
 `executionCapacity` remains `Unknown(NOT_QUERIED)` because reserve math cannot prove max-sell,
 blacklist/whitelist, dynamic tax, fee exemptions, swapback, gas or revert behavior. The endpoint is
 read-only and never approves, transfers, swaps, signs or broadcasts.
+
+`POST /api/v1/rv/flap-pancake-v2-reconciliation` accepts the same BSC token plus one to eight
+positive `quoteInputs` and one to eight positive `tokenInputs`. It does not accept a caller-selected
+block. The API first reconciles every configured BSC adapter at the lowest common finalized
+position. Fewer than two usable adapters returns HTTP 503; a block/hash disagreement returns HTTP
+409 with the complete anchor result and no market read.
+
+After anchor agreement, each adapter independently reruns the complete Flap/Pancake V2 market
+certificate and both scenario families at the canonical numeric block. Exact deployment, pool,
+asset, decimal, reserve, spot, fee, tax and timestamp fields require zero mismatch. Official Router
+gross outputs use the typed independent-market/RV budget: pass at `<=0.50%`, warning through
+`1.00%`, and fail above that. Deterministic model outputs remain exact comparisons because the same
+versioned code must reproduce the same integers.
+
+Source independence is a separate Evidence-backed decision. Version
+`source-operator-registry-v1` currently maps the documented Alchemy BSC hostname to operator
+`alchemy` and the documented BNB Chain public hostnames to `bnb-chain`. Every attestation links its
+official document plus a versioned registry root. Unknown host ownership produces
+`INCONCLUSIVE`; two BNB Chain hostnames produce `SAME_OPERATOR`; neither can become a false pass.
+Only complete agreement across at least two documented operators can return `PASS` or
+`PASS_WITH_WARNINGS`.
+
+The response includes the common block/hash, anchor reconciliation, operator attestations, every
+child buy/sell certificate, all typed discrepancy checks, coverage, three terminal Evidence roots,
+and a full Evidence graph. `executionNetTokenOutput`, `executionNetQuoteOutput`, executable
+capacity, gas, reverts and dynamic token behavior remain Unknown until separate pinned-fork
+execution exists. The endpoint performs only read-only JSON-RPC calls.
 
 ### Typed discrepancy audit
 

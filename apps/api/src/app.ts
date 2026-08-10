@@ -7,7 +7,11 @@ import { z, ZodError } from 'zod';
 
 import { ProviderError } from '@zerotrace/chain-adapters';
 import { parseEvmClaimDeclaration } from '@zerotrace/claim-audit';
-import { auditDiscrepancies, DISCREPANCY_MODEL_VERSION } from '@zerotrace/data-quality';
+import {
+  auditDiscrepancies,
+  DISCREPANCY_MODEL_VERSION,
+  resolveSourceOperators,
+} from '@zerotrace/data-quality';
 import { resolveEntityRelationship } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
@@ -33,6 +37,7 @@ import {
   inspectFlapToken,
   quoteFlapPancakeV2BuyScenarios,
   quoteFlapPancakeV2SellScenarios,
+  reconcileFlapPancakeV2Market,
   quoteFlapSell,
   replayErc20BurnPromotionResult,
   type InspectFlapTokenOriginOptions,
@@ -369,6 +374,37 @@ const FlapPancakeV2SellScenarioRequestSchema = z
       .string()
       .regex(/^(?:0|[1-9]\d*)$/)
       .optional(),
+  })
+  .strict();
+
+const FlapPancakeV2ReconciliationRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    quoteInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
+    tokenInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
   })
   .strict();
 
@@ -1071,6 +1107,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   const dataQualityReady = Object.values(dataQualityConfiguredSources).some(
     (count) => count >= options.config.dataQualityMinSources,
   );
+  const bscReconciliationSources =
+    runtime.evmSourceAdapters?.get(56)?.map((adapter) => adapter.sourceId) ?? [];
+  const bscOperatorResolution = resolveSourceOperators(bscReconciliationSources);
+  const bscReconciliationStatus =
+    bscReconciliationSources.length < options.config.dataQualityMinSources
+      ? 'TWO_BSC_ENDPOINTS_REQUIRED'
+      : bscOperatorResolution.independence.state !== 'known'
+        ? 'IMPLEMENTED_OPERATOR_REGISTRY_INCOMPLETE'
+        : bscOperatorResolution.independence.value
+          ? 'IMPLEMENTED_OPERATOR_INDEPENDENCE_CONFIGURED'
+          : 'IMPLEMENTED_SAME_OPERATOR_INCONCLUSIVE';
 
   app.get('/api/v1/capabilities', { schema: { tags: ['system'] } }, async () => ({
     readOnly: true,
@@ -1207,6 +1254,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         status: 'IMPLEMENTED_DETERMINISTIC',
         detail:
           'Evidence-grounded same-Snapshot comparisons enforce zero mismatch for exact state, exact-decimal typed budgets for derived/quote/aggregate values, warning bands, coverage gates, and Unknown exclusion from numeric denominators.',
+      },
+      {
+        id: 'flap-pancake-v2-multi-source-reconciliation',
+        status: bscReconciliationStatus,
+        detail:
+          'Each reconciled BSC endpoint independently reruns the complete Flap/Pancake V2 market, buy and sell certificate at one agreed finalized block. Exact state and typed 0.50% market/RV budgets fail closed; source independence becomes Known only for endpoints matched by the versioned official operator registry.',
       },
       {
         id: 'finalized-historical-ingestion',
@@ -2233,6 +2286,52 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
         ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+    },
+  );
+
+  app.post(
+    '/api/v1/rv/flap-pancake-v2-reconciliation',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPancakeV2ReconciliationRequestSchema.parse(request.body);
+      const sourceAdapters = runtime.evmSourceAdapters?.get(56) ?? [];
+      if (sourceAdapters.length < options.config.dataQualityMinSources) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'MULTIPLE_BSC_ENDPOINTS_REQUIRED',
+              `At least ${options.config.dataQualityMinSources} separately configured BSC endpoints are required.`,
+              true,
+            ),
+          );
+      }
+      const anchorReconciliation = await runtime.dataQuality.inspect('EVM', 'eip155:56');
+      if (anchorReconciliation.status !== 'AGREEMENT') {
+        const unavailable = ['UNAVAILABLE', 'INSUFFICIENT_SOURCES'].includes(
+          anchorReconciliation.status,
+        );
+        return reply.code(unavailable ? 503 : 409).send({
+          ...errorResponse(
+            request,
+            `ANCHOR_${anchorReconciliation.status}`,
+            'BSC endpoints did not establish one common finalized block identity.',
+            unavailable,
+          ),
+          anchorReconciliation,
+        });
+      }
+      return reconcileFlapPancakeV2Market({
+        sourceAdapters,
+        anchorReconciliation,
+        token: input.token,
+        quoteInputs: input.quoteInputs,
+        tokenInputs: input.tokenInputs,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
       });
     },
   );

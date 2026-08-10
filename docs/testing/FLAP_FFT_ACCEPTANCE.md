@@ -18,12 +18,13 @@ entity analysis, realizable-value routing, and automatic discrepancy engine are 
 then, a generic address or transaction read is foundation evidence only and cannot be presented as
 an FFT product conclusion.
 
-Implementation note: the deterministic same-Snapshot discrepancy core, class budgets, target-indexed
-claim-address observation, immutable report replay, and the first migrated Pancake V2 buy/exit-size
-slices are implemented. Named FFT market and partial-RV runs are recorded below. The terminal run remains
-gated by complete event/migration history, independent-source reconciliation, pinned-fork tax and
-swapback execution, sell-route capacity/gas, controller/control-right analysis, claim-action
-semantics, corpus-level entity calibration, and complete multi-route realizable value.
+Implementation note: the deterministic same-Snapshot discrepancy core, class budgets,
+target-indexed claim-address observation, immutable report replay, migrated Pancake V2 buy/exit
+slices, and the scoped Alchemy/BNB Chain independent market reconciliation are implemented. Named
+FFT market and partial-RV runs are recorded below. The terminal run remains gated by complete
+event/migration history, independent claim-flow reconciliation, pinned-fork tax and swapback
+execution, sell-route capacity/gas, controller/control-right analysis, claim-action semantics,
+corpus-level entity calibration, and complete multi-route realizable value.
 
 ## Authoritative inputs
 
@@ -149,6 +150,28 @@ pair; it is not a wallet settlement observation. Actual execution-net and execut
 `Unknown(NOT_QUERIED)` until a pinned fork tests dynamic tax, exemptions, max-sell,
 blacklist/whitelist, swapback, gas, reverts, and final balance delta. This partial result therefore
 does not satisfy the terminal multi-route sell requirement.
+
+## Scoped independent-source acceptance: 2026-08-11
+
+The complete current-market certificate was rerun through Alchemy and BNB Chain at one common
+finalized block. Official endpoint documents resolved the two safe hostname-only source IDs to two
+distinct operators under `source-operator-registry-v1`; two BNB Chain endpoints or any unregistered
+hostname remain inconclusive by contract.
+
+At block `115179695`, hash
+`0x7054294e11db4811df556d2c85835420181b670cf8049e024a161ea67905af89`, all 37 exact and bounded
+market/buy/exit comparisons passed with zero warnings, failures, inconclusive results or coverage
+gaps. A second PostgreSQL-backed run at block `115180163`, hash
+`0xb834c88b35c1a92dfe5d9c69af079825aa78832b048d591af96bc5d429df0279`, also passed 37/37.
+Its 91-node graph reloaded after the provider-configured API stopped: terminal Evidence
+`ev_fde8795ff3b8bf6671535f21`, independence Evidence `ev_e540983d3bd41ef0a3370c8b`, registry
+Evidence `ev_b8f129251ea6679da7b83f1b`.
+
+This satisfies the independent-source gate for the current Pancake V2 market and modeled route
+quotes. Exact prices and three buy/exit scenarios are recorded in
+[VALIDATION_RECORD.md](VALIDATION_RECORD.md#fft-independent-market-and-rv-reconciliation-2026-08-11).
+It does not convert configured-tax estimates into execution facts and does not close the historical,
+multi-route, fork-settlement, claim, entity or full lifecycle requirements below.
 
 ## Required output
 

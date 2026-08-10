@@ -1242,17 +1242,17 @@ wallet attribution and terminal FFT acceptance remain pending.
 
 | Command                  | Result                                                                                                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 395 unit, 50 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 400 unit, 55 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                                               |
-| local `test:coverage`    | pass: 445 tests, 22 opt-in durable skips; 82.67% statements, 76.75% branches, 91.54% functions, 83.80% lines                                                                 |
+| local `test:coverage`    | pass: 455 tests, 22 opt-in durable skips; 82.89% statements, 77.22% branches, 91.73% functions, 84.05% lines                                                                 |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
-| `npm run test:e2e`       | pass: 20 Chromium tests across desktop and Pixel 7, including burn promotion/range/certificate, Claim Declaration, migrated-market scenarios, Claim Report and Unknown       |
+| `npm run test:e2e`       | pass: 20 Chromium tests across desktop and Pixel 7, including multi-source market/RV review, burn workflows, Claim Declaration/Report and Unknown                            |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
 | `docker compose config`  | pass                                                                                                                                                                         |
-| production Compose smoke | pass: production API/Web images, seven-service healthy stack, non-destructive 001-011 upgrade, live/ready/read-only health; prior worker targets remain accepted             |
-| branch GitHub Actions CI | [pass on `af8fee3`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31417036285): full CI matrix, structural model gate, 18 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `af8fee3`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31417036283): JavaScript and TypeScript analysis                                                  |
+| production Compose smoke | pass: rebuilt API/Web healthy and read-only; same-operator capability truth plus 91-node durable FFT Evidence replay passed                                                  |
+| branch GitHub Actions CI | [pass on `9a9f45e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31423240433): full CI matrix, structural model gate, 20 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `9a9f45e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31423240366): JavaScript and TypeScript analysis                                                  |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
@@ -1279,3 +1279,58 @@ entries; BSC, Bitcoin and Solana were `UP`, while Ethereum remained explicitly `
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion
 evidence; protected `main` has not yet received this development batch.
+
+## FFT independent market and RV reconciliation (2026-08-11)
+
+The production reconciliation route was executed read-only for FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` through two officially documented BSC
+operators: `bnb-mainnet.g.alchemy.com` resolved to Alchemy and
+`bsc-dataseed.bnbchain.org` resolved to BNB Chain. The user-supplied Alchemy credential was read
+process-locally from the attachment, was not printed or persisted, and was removed from the parent
+environment. Because this host resolves provider domains through a private-range interception
+proxy, only the temporary validation process used `ALLOW_PRIVATE_PROVIDER_URLS=true`; repository and
+Compose defaults remain fail-closed.
+
+The first complete run reconciled finalized block `115179695`, hash
+`0x7054294e11db4811df556d2c85835420181b670cf8049e024a161ea67905af89`. Source independence was
+`VERIFIED_INDEPENDENT`; all 37 comparisons passed with zero warnings, failures, inconclusive checks
+or coverage gaps. Fifteen numeric comparisons entered the error denominator. Exact market identity,
+decimals, reserves, fees, taxes, pair timestamp and deterministic outputs had zero mismatch; the
+independent Router quote/RV checks stayed within the 0.50% budget.
+
+The Pancake V2 pool was `0xe374af9818c4359374996f86a734fc39eb04d949` against BSC USDT
+`0x55d398326f99059ff775485246999027b3197955`. It held
+`73,660,551.823833706703241137` FFT and `30,650.325089732606316067` USDT, producing reserve spot
+`0.00041610230076793` USDT/FFT.
+
+| Buy input (USDT) | Router gross FFT            | Configured 300 bps tax estimate | Modeled post-buy spot |
+| ---------------- | --------------------------- | ------------------------------- | --------------------- |
+| 100              | 238947.060226229359049905   | 231778.648419442478278407       | 0.000418818482498961  |
+| 1,000            | 2321688.780696396579854181  | 2252038.117275504682458555      | 0.000443661753770791  |
+| 10,000           | 18086353.840118338881877371 | 17543763.224914788715421049     | 0.000731460400051912  |
+
+| Exit input (FFT) | Nominal spot USDT       | Router gross USDT       | Configured-tax USDT     | Modeled post-sell spot |
+| ---------------- | ----------------------- | ----------------------- | ----------------------- | ---------------------- |
+| 1,000,000        | 416.102300767930795232  | 409.516435670612827086  | 397.390227530496510151  | 0.00040536930416399    |
+| 5,000,000        | 2080.511503839653976161 | 1943.703535434754583708 | 1888.986155432972203033 | 0.000366337240869684   |
+| 10,000,000       | 4161.023007679307952322 | 3655.58648329449500842  | 3558.651829953946931547 | 0.000324993928987318   |
+
+These buy values model acquisition before transferring tokens into pension custody. Such a transfer
+does not change pool reserves, does not reduce `totalSupply`, and is not counted as a second burn or
+price impact. The configured-tax figures apply the Portal-reported 300 bps configuration to the
+verified pool model; they are not execution receipts. Actual wallet receipt, settlement delta,
+dynamic tax/swapback, max-sell, blacklist, gas, reverts and executable capacity all remain
+`Unknown(NOT_QUERIED)` until a pinned-fork execution exists.
+
+The run was repeated against PostgreSQL at finalized block `115180163`, hash
+`0xb834c88b35c1a92dfe5d9c69af079825aa78832b048d591af96bc5d429df0279`. It again passed 37/37.
+Registry Evidence `ev_b8f129251ea6679da7b83f1b`, independence Evidence
+`ev_e540983d3bd41ef0a3370c8b`, and terminal Evidence `ev_fde8795ff3b8bf6671535f21` close a
+91-node drilldown. The provider-configured process was stopped; a new API process with no Alchemy
+credential or BSC provider pool then loaded the same 91 nodes from PostgreSQL, proving provider-free
+Evidence replay.
+
+This closes the scoped independent-source gate for current Flap/Pancake V2 market and modeled RV.
+It does not close historical executable-quote calibration, fork settlement, additional routes,
+official pension-wallet attribution, complete claim flows, entity calibration, archive retention,
+forced-reorg behavior or terminal FFT acceptance.

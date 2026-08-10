@@ -45,6 +45,7 @@ import type { AppConfig } from './config.js';
 export interface AppRuntime {
   providerRegistry: ProviderRegistry;
   evmAdapters: Map<number, EvmLedgerAdapter>;
+  evmSourceAdapters?: Map<number, EvmLedgerAdapter[]>;
   sqdBscLogReader?: EvmLogReader;
   sqdBscCreationReader?: EvmContractCreationReader;
   bitcoinAdapter?: BitcoinUtxoLedgerAdapter;
@@ -152,6 +153,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
   const providers: Array<EvmLedgerAdapter | BitcoinUtxoLedgerAdapter | SolanaLedgerAdapter> = [];
   const unconfigured = [];
   const evmAdapters = new Map<number, EvmLedgerAdapter>();
+  const evmSourceAdapters = new Map<number, EvmLedgerAdapter[]>();
   const ethereumAnchorReaders: ChainAnchorReader[] = [];
   const bscAnchorReaders: ChainAnchorReader[] = [];
   const bitcoinAnchorReaders: ChainAnchorReader[] = [];
@@ -188,11 +190,13 @@ export function createRuntime(config: AppConfig): AppRuntime {
     );
     providers.push(adapter);
     evmAdapters.set(chainId, adapter);
+    const sourceAdapters: EvmLedgerAdapter[] = [];
     for (const transport of transports) {
       const anchorAdapter = new EvmLedgerAdapter(
         { id, chainId, chainName, snapshotBlockTag },
         transport,
       );
+      sourceAdapters.push(anchorAdapter);
       anchorReaders.push({
         sourceId: transport.endpointId,
         ledger: 'EVM',
@@ -201,6 +205,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
         readAt: (position) => anchorAdapter.readAnchorAt(position),
       });
     }
+    evmSourceAdapters.set(chainId, sourceAdapters);
   };
 
   addEvm(
@@ -486,6 +491,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       unconfigured.map((item) => ({ ...item, capabilities: [...item.capabilities] })),
     ),
     evmAdapters,
+    evmSourceAdapters,
     ...(sqdBscLogReader === undefined ? {} : { sqdBscLogReader }),
     ...(sqdBscCreationReader === undefined ? {} : { sqdBscCreationReader }),
     evidenceLedger,

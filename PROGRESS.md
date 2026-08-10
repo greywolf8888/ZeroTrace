@@ -11,17 +11,17 @@ completed feature.
 
 | Measure                          | Current state                                                                                                   |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Terminal architecture completion | **17% estimated**                                                                                               |
+| Terminal architecture completion | **18% estimated**                                                                                               |
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                      |
 | Production acceptance            | **No**                                                                                                          |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                  |
-| Unit tests                       | **395 passing across 54 files**                                                                                 |
+| Unit tests                       | **400 passing across 55 files**                                                                                 |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                      |
-| Integration tests                | **50 environment-free plus 19 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
+| Integration tests                | **55 environment-free plus 19 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **20 passing: Chromium desktop and Pixel 7**                                                                    |
-| Remote CI                        | **Pass on immutable burn-candidate commit `af8fee3`: CI, Chromium, production images, and CodeQL**              |
-| Coverage                         | **Current local: 82.67% statements / 76.75% branches / 91.54% functions / 83.80% lines**                        |
-| Real-chain validation            | Four-chain anchors/raw ingestion, named Flap history/origin and FFT market slices passed                        |
+| Remote CI                        | **Pass on immutable burn-promotion commit `9a9f45e`: CI, Chromium, production images, and CodeQL**              |
+| Coverage                         | **Current local: 82.89% statements / 77.22% branches / 91.73% functions / 84.05% lines**                        |
+| Real-chain validation            | Four-chain anchors/raw ingestion, Flap history/origin, FFT market and independent BSC reconciliation passed     |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap history/lifetime, accepted heads and EVM Claim Reports wired    |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
@@ -42,13 +42,13 @@ The only allowed status vocabulary in this ledger is:
 | Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor and minimum-context account smoke passed                                                                                                                                     |
 | Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity and generic semantic checkpoints work; general scheduling and rollback/replay remain                                                                                       |
 | Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                                                                                              |
-| Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; independent real-source reconciliation and entity calibration remain                                                                                 |
+| Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; scoped Alchemy/BNB market reconciliation passed, while other domains and entity calibration remain                                                   |
 | Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline plus exact structural Precision/False-Merge gates work; real-world calibration and temporal graph are absent                                                                        |
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; full FFT lifecycle and other platforms remain                       |
-| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview and verified Pancake V2 buy/exit-size scenarios work; fork execution, additional routes, gas and executable capacity remain                            |
+| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios and two-operator market reconciliation work; fork execution, additional routes, gas and capacity remain                            |
 | Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                                                                                  |
 | Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, SQD event candidates and durable exact-block burn promotion work; silent-supply discovery, continuous scheduling and terminal FFT remain |
-| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger, Evidence, health, claim declaration/report, burn-range/promotion/certificate review and migrated-Flap market/scenario panels work; terminal investigation is absent                         |
+| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger, Evidence, health, claim/burn review, migrated-market scenarios and multi-source discrepancy panels work; terminal investigation remains incomplete                                          |
 | Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                                             |
 
 ## Completed
@@ -564,6 +564,49 @@ The only allowed status vocabulary in this ledger is:
   `0.9/0.5/0/0.5`; confidence is `0.94`. Actual settlement and executable capacity remain
   `Unknown(NOT_QUERIED)`, so these values are not presented as completed trades or terminal RV.
 
+### Independent Flap/Pancake V2 market and RV reconciliation
+
+- `source-operator-registry-v1` records official hostname/operator attestations for Alchemy BSC and
+  BNB Chain. The registry root, each matched official document and the independence decision are
+  immutable Evidence; an unregistered hostname remains Unknown and two BNB Chain endpoints remain
+  `SAME_OPERATOR`, never a false independent pass;
+- the API selects one common finalized BSC block through anchor reconciliation, then reruns the
+  complete Flap/Pancake V2 market plus all requested buy and exit points through every source.
+  Identity, bytecode-derived configuration, assets, decimals, reserves, spot, fees and taxes require
+  zero mismatch. Independent Router quote/RV observations pass at `<=0.50%`, warn through `1.00%`
+  and fail above the typed budget;
+- a `PASS` requires both a passing discrepancy audit and at least two officially documented
+  operators. Anchor disagreement returns HTTP 409 before market reads; insufficient adapters return
+  HTTP 503; same-operator or unresolved ownership produces `INCONCLUSIVE` with coverage `0.5`;
+- API integration tests cover verified independence, same-operator endpoints, fully unregistered
+  operators with registry-root drilldown, exact reserve conflict and anchor disagreement. The
+  responsive analyst panel passed Chromium desktop and Pixel 7 E2E with no page overflow;
+- a live read-only FFT run at finalized BSC block `115179695`, hash
+  `0x7054294e11db4811df556d2c85835420181b670cf8049e024a161ea67905af89`, compared
+  `bnb-mainnet.g.alchemy.com` (`alchemy`) with `bsc-dataseed.bnbchain.org` (`bnb-chain`). All `37/37`
+  checks passed with zero warnings, failures, inconclusive checks or coverage gaps. The pool held
+  `73,660,551.823833706703241137` FFT and `30,650.325089732606316067` USDT; reserve spot was
+  `0.00041610230076793` USDT/FFT;
+- at that Snapshot, 100 / 1,000 / 10,000 USDT produced Router gross outputs of
+  `238947.060226229359049905` / `2321688.780696396579854181` /
+  `18086353.840118338881877371` FFT. The configured 300 bps tax estimates were
+  `231778.648419442478278407` / `2252038.117275504682458555` /
+  `17543763.224914788715421049` FFT. These are modeled pool outputs, not observed wallet receipts;
+- 1,000,000 / 5,000,000 / 10,000,000 FFT had nominal spot values of
+  `416.102300767930795232` / `2080.511503839653976161` / `4161.023007679307952322` USDT,
+  Router gross outputs of `409.516435670612827086` / `1943.703535434754583708` /
+  `3655.58648329449500842` USDT, and configured-tax estimates of
+  `397.390227530496510151` / `1888.986155432972203033` / `3558.651829953946931547` USDT;
+- the acceptance run was repeated with PostgreSQL Evidence persistence at block `115180163`, hash
+  `0xb834c88b35c1a92dfe5d9c69af079825aa78832b048d591af96bc5d429df0279`. It again passed
+  `37/37`; terminal Evidence `ev_fde8795ff3b8bf6671535f21`, independence Evidence
+  `ev_e540983d3bd41ef0a3370c8b` and registry Evidence `ev_b8f129251ea6679da7b83f1b` formed a
+  91-node drilldown that replayed after stopping the provider-configured API and starting a new
+  provider-free process against PostgreSQL;
+- execution-net buy receipt, execution-net sell settlement, gas, reverts, dynamic token tax,
+  max-sell and executable capacity remain `Unknown(NOT_QUERIED)`. This closes the scoped independent
+  market/RV source gate, not the full FFT terminal acceptance.
+
 ### Runtime and developer experience
 
 - Fastify API with OpenAPI UI, liveness/readiness/full health, capability truth, metrics, search,
@@ -589,9 +632,10 @@ The only allowed status vocabulary in this ledger is:
 - durable PostgreSQL repositories for subjects, analysis results, entities, control rights,
   launches, scenarios, labels, and analyst overrides;
 - live/unfinalized policy plus forced real-provider rollback/replay drills;
-- immutable real-chain fixture corpus and independently operated provider reconciliation;
-- real-source discrepancy reconciliation and a Snapshot/Evidence-backed real-world entity corpus
-  with at least 100 labels per axis for Brier/ECE calibration;
+- immutable real-chain fixture corpus and independently operated reconciliation beyond the scoped
+  BSC market/RV path;
+- Snapshot/Evidence-backed real-world entity corpus with at least 100 labels per axis for Brier/ECE
+  calibration;
 - independent-operator validation and archive-grade real-chain acceptance for the repeated Flap
   finalized-head scheduler;
 - complete OpenAPI request/response schemas beyond the current endpoint metadata.
@@ -637,25 +681,25 @@ The only allowed status vocabulary in this ledger is:
 - multi-route sell RV beyond the initial Pancake V2 route, with fork-observed taxes, gas, capacity,
   execution failures and historical calibration;
 - reviewed-draft promotion, continuous candidate-capture scheduling beyond the restart-safe worker,
-  silent-supply discovery, independent-source reconciliation, complete Claim Audit, timeline generation,
-  comparison/export, collaboration and analyst overrides;
+  silent-supply discovery, independent claim-flow and non-market reconciliation, complete Claim
+  Audit, timeline generation, comparison/export, collaboration and analyst overrides;
 - production authorization, tenancy, audit logs, retention, backup and privacy controls.
 
 ## Pending real-chain validation
 
-| Validation             | Requirement                                                                                                               | Status                                                                                                                                                                                                                                                                                                                                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                                                                                                                                            |
-| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Height/hash/previous-hash public Esplora read passed; Core reconciliation pending                                                                                                                                                                                                                                                                                                 |
-| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                                                                                                                                                                                    |
-| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Test-only structural golden passes exact Precision/False-Merge gates; Snapshot/Evidence-backed real-world labels and calibration remain pending                                                                                                                                                                                                                                   |
-| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction and the named FFT migrated Pancake V2 point-in-time market passed; complete FFT migration history, forced real reorg and other platforms remain pending                                                                                                                                                                   |
-| Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Transfer/Safe, Pancake V2 buy/exit, one Alchemy exact-block burn certificate and durable two-segment promotion replay passed; the published burn wallet is movable EOA custody and the 2 Aug-to-head zero-address candidate range was empty. Official attribution, wide-range silent-supply proof, fork settlement, independence and calibration still gate a terminal conclusion |
-| RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels, Portal preview and named FFT Pancake V2 buy/exit Router/model checks pass; actual fork settlement, independent quotes, additional routes, gas/executable capacity and history remain pending                                                                                                                                                               |
-| Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic all-source disagreement, suffix rollback and replay tests plus live common-position BSC continuity passed; forced real reorg/outage and independent operators pending                                                                                                                                                                                               |
-| Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                                                                                          |
-| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; semantic decoding pending                                                                                                                                                                                                                                                                                                          |
-| Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                                                                                            |
+| Validation             | Requirement                                                                                                               | Status                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                                                                                                                   |
+| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Height/hash/previous-hash public Esplora read passed; Core reconciliation pending                                                                                                                                                                                                                                                                        |
+| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                                                                                                                                                           |
+| Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Test-only structural golden passes exact Precision/False-Merge gates; Snapshot/Evidence-backed real-world labels and calibration remain pending                                                                                                                                                                                                          |
+| Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction and the named FFT migrated Pancake V2 point-in-time market passed; complete FFT migration history, forced real reorg and other platforms remain pending                                                                                                                                          |
+| Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Transfer/Safe, buy/exit, durable burn promotion and live Alchemy + BNB Chain 37-check market/RV reconciliation passed; the published burn wallet is movable EOA custody and the 2 Aug-to-head zero-address candidate range was empty. Official attribution, silent-supply proof, fork settlement and entity calibration still gate a terminal conclusion |
+| RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels, Portal preview, named FFT buy/exit Router/model checks and two-operator same-block reconciliation pass; actual fork settlement, additional routes, gas/executable capacity and history remain pending                                                                                                                             |
+| Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic disagreement/rollback tests, live common-position BSC continuity and scoped Alchemy/BNB market reconciliation passed; forced real reorg/outage and archive-grade acceptance remain pending                                                                                                                                                 |
+| Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                                                                 |
+| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; semantic decoding pending                                                                                                                                                                                                                                                                                 |
+| Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                                                                   |
 
 Public BSC, Bitcoin, and Solana endpoints in `.env.example` are development fallbacks. Rate-limited responses do not count
 as chain-validation failures, and a successful health probe alone does not validate semantic
@@ -667,12 +711,12 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                                     | Scope                                                                                                                                      |
 | ------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Reproducible install/build     | Pass                                              | locked npm install in production container; all packages/API/web                                                                           |
-| Unit tests                     | 395 pass                                          | 54 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                               |
-| Integration tests              | 50 environment-free plus 19 real PostgreSQL pass  | durable burn promotion/replay, burn range/certificate, Claim Report API and lifetime/head/projection guards are deterministic              |
+| Unit tests                     | 400 pass                                          | 55 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                               |
+| Integration tests              | 55 environment-free plus 19 real PostgreSQL pass  | multi-source market/RV, burn, Claim Report and lifetime/head/projection guards are deterministic                                           |
 | Model evaluation tests         | 1 pass                                            | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                             |
 | Restart regression             | Pass                                              | same-anchor recapture persists across repository/API restart without Snapshot collision                                                    |
-| Coverage gate                  | Pass                                              | current local: 82.67% statements, 76.75% branches, 91.54% functions, 83.80% lines on 445 tests; 22 opt-in durable tests skipped            |
-| Chromium E2E                   | 20 pass                                           | desktop and Pixel 7 include burn promotion/range/certificate, Claim Declaration, migrated-market scenarios, Claim Report and Unknown       |
+| Coverage gate                  | Pass                                              | current local: 82.89% statements, 77.22% branches, 91.73% functions, 84.05% lines on 455 tests; 22 opt-in durable tests skipped            |
+| Chromium E2E                   | 20 pass                                           | desktop and Pixel 7 include multi-source market/RV, burn, Claim Declaration/Report and Unknown                                             |
 | Formatting / ESLint / types    | Pass                                              | full repository                                                                                                                            |
 | Dependency vulnerability audit | Pass                                              | 0 vulnerabilities across the complete npm dependency graph                                                                                 |
 | Dependency license allowlist   | Pass                                              | production dependency graph                                                                                                                |
@@ -680,9 +724,9 @@ correctness. Exact local smoke observations and limitations are in
 | Compose model                  | Pass                                              | rendered default topology                                                                                                                  |
 | Docker image build/start       | Pass                                              | API, web, ingest worker, semantic worker, PostgreSQL, ClickHouse; service images also validated by Compose                                 |
 | Database bootstrap             | Pass                                              | fresh bootstrap previously passed; current persistent Compose volume was backed up and upgraded non-destructively from 001–002 through 011 |
-| Runtime/browser smoke          | Pass                                              | rebuilt API/Web/semantic images; seven-service health, live FFT API replay, old-state rejection and unmocked Chromium panel passed         |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope         | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending              |
-| Remote CI                      | Pass on immutable burn-candidate commit `af8fee3` | CI/CodeQL green; full matrix, structural model gate, 18 Chromium flows and six production targets                                          |
+| Runtime/browser smoke          | Pass                                              | rebuilt API/Web healthy/read-only; 91-node FFT Evidence replay and unmocked Chromium capability truth passed                               |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope         | four anchors/pipelines plus scoped Alchemy/BNB market reconciliation passed; archive/forced-reorg scope pending                            |
+| Remote CI                      | Pass on immutable burn-promotion commit `9a9f45e` | CI/CodeQL green; full matrix, structural model gate, 20 Chromium flows and six production targets                                          |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

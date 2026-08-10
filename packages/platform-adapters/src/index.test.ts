@@ -348,7 +348,7 @@ describe('Flap read-only inspection', () => {
       currentSellCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
     });
     expect(result.evidence.map((item) => item.kind)).toEqual([
-      'PROVIDER_OBSERVATION',
+      'OFFICIAL_DOCUMENT',
       'CONTRACT_STATE',
       'CONTRACT_STATE',
       'CONTRACT_STATE',
@@ -479,7 +479,7 @@ describe('Flap read-only sell preview', () => {
       },
     });
     expect(result.evidence.map((item) => item.kind)).toEqual([
-      'PROVIDER_OBSERVATION',
+      'OFFICIAL_DOCUMENT',
       'CONTRACT_STATE',
       'CONTRACT_STATE',
       'CONTRACT_STATE',

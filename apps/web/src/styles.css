@@ -768,6 +768,8 @@ tbody tr:hover {
 
 .status-up,
 .status-agreement,
+.status-pass,
+.status-verified-independent,
 .status-implemented,
 .status-implemented-durable,
 .status-implemented-baseline,
@@ -779,6 +781,7 @@ tbody tr:hover {
 
 .status-down,
 .status-disagreement,
+.status-fail,
 .status-execution-blocked {
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 25%, var(--border));
@@ -786,6 +789,10 @@ tbody tr:hover {
 
 .status-degraded,
 .status-partial,
+.status-warning,
+.status-pass-with-warnings,
+.status-inconclusive,
+.status-same-operator,
 .status-insufficient-sources,
 .status-rate-limited,
 .status-provider-required,
@@ -1074,6 +1081,19 @@ tbody tr:hover {
   padding: 18px;
 }
 
+.reconciliation-form {
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+  align-items: end;
+}
+
+.reconciliation-form > button {
+  min-height: 42px;
+}
+
+.reconciliation-alert {
+  margin: 14px 18px;
+}
+
 .quote-form label {
   grid-column: 1 / -1;
   color: var(--text-secondary);
@@ -1236,6 +1256,20 @@ tbody tr:hover {
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 0.68rem;
   white-space: nowrap;
+}
+
+.reconciliation-table {
+  border-top: 1px solid var(--border);
+}
+
+.reconciliation-table td {
+  max-width: 360px;
+  vertical-align: top;
+}
+
+.reconciliation-table code {
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .pension-boundary {
@@ -1636,6 +1670,10 @@ footer a {
   }
 
   .quote-form {
+    grid-template-columns: 1fr;
+  }
+
+  .reconciliation-form {
     grid-template-columns: 1fr;
   }
 

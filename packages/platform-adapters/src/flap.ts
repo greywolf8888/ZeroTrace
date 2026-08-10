@@ -632,18 +632,15 @@ export async function inspectFlapToken(options: {
     createEvidence({
       ledger: 'EVM',
       chainId: deployment.chainId,
-      kind: 'PROVIDER_OBSERVATION',
+      kind: 'OFFICIAL_DOCUMENT',
       source: `flap-official-registry@${deployment.registryObservedAt.slice(0, 10)}`,
       sourceUri: deployment.officialSource,
-      locator: `flap-deployment:${portal}@${snapshot.blockNumber}`,
+      locator: `flap-deployment:${portal}:${deployment.sourceRevision}`,
       payload: deployment,
       observedAt: deployment.registryObservedAt,
-      blockOrSlot: snapshot.blockNumber,
-      finality: snapshot.finality,
       summary: 'Official Flap deployment/version registry observation selected for this query.',
     }),
     [],
-    snapshot,
   );
   const portalCodeEvidence = await writeEvidence(
     createEvidence({

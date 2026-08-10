@@ -544,18 +544,15 @@ export async function quoteFlapPancakeV2BuyScenarios(options: {
     createEvidence({
       ledger: 'EVM',
       chainId: snapshot.chainId,
-      kind: 'PROVIDER_OBSERVATION',
+      kind: 'OFFICIAL_DOCUMENT',
       source: `pancakeswap-official-v2-registry@${pancake.registryObservedAt.slice(0, 10)}`,
       sourceUri: pancake.factorySource,
-      locator: `pancakeswap-v2-bsc:${factory}:${router}@${snapshot.blockNumber}`,
+      locator: `pancakeswap-v2-bsc:${factory}:${router}:${pancake.sourceRevision}`,
       payload: pancake,
       observedAt: pancake.registryObservedAt,
-      blockOrSlot: snapshot.blockNumber,
-      finality: snapshot.finality,
       summary: 'Official Pancake V2 BSC factory, router and fixed-fee registry selected.',
     }),
     [],
-    snapshot,
   );
 
   const codeReads = [];

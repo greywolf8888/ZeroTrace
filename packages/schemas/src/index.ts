@@ -93,6 +93,7 @@ export const EvidenceKindSchema = z.enum([
   'MEMPOOL',
   'CONTRACT_STATE',
   'PROGRAM_STATE',
+  'OFFICIAL_DOCUMENT',
   'PROVIDER_OBSERVATION',
   'DERIVED_FEATURE',
   'NEGATIVE_EVIDENCE',
@@ -449,6 +450,73 @@ export const AnchorReconciliationResultSchema = z.object({
   metadata: z.lazy(() => AnalysisMetadataSchema),
 });
 export type AnchorReconciliationResult = z.infer<typeof AnchorReconciliationResultSchema>;
+
+export const SourceOperatorAttestationSchema = z.object({
+  sourceId: z.string().min(1),
+  hostname: z.string().min(1),
+  operatorId: z.string().min(1),
+  operatorName: z.string().min(1),
+  officialSource: z.url(),
+  registryObservedAt: IsoDateTimeSchema,
+  registryRevision: z.string().min(1),
+  evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type SourceOperatorAttestation = z.infer<typeof SourceOperatorAttestationSchema>;
+
+export const SourceIndependenceAssessmentSchema = z
+  .object({
+    status: z.enum(['VERIFIED_INDEPENDENT', 'SAME_OPERATOR', 'INCONCLUSIVE']),
+    independence: knowledgeValueSchema(z.boolean()),
+    requiredOperators: z.number().int().min(2),
+    observedSources: z.number().int().nonnegative(),
+    operatorCount: z.number().int().nonnegative(),
+    unresolvedSources: z.array(z.string().min(1)),
+    attestations: z.array(SourceOperatorAttestationSchema),
+    registryEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    modelVersion: z.literal('source-operator-registry-v1'),
+  })
+  .superRefine((value, context) => {
+    const sourceIds = value.attestations.map((item) => item.sourceId);
+    const operatorIds = new Set(value.attestations.map((item) => item.operatorId));
+    const expectedStatus =
+      value.independence.state !== 'known'
+        ? 'INCONCLUSIVE'
+        : value.independence.value
+          ? 'VERIFIED_INDEPENDENT'
+          : 'SAME_OPERATOR';
+    const expectedEvidenceIds = [
+      value.registryEvidenceId,
+      ...value.attestations.map((item) => item.evidenceId),
+      value.terminalEvidenceId,
+    ].sort();
+    const actualEvidenceIds = [...value.evidenceIds].sort();
+    if (
+      value.status !== expectedStatus ||
+      value.observedSources !== sourceIds.length + value.unresolvedSources.length ||
+      value.operatorCount !== operatorIds.size ||
+      new Set(sourceIds).size !== sourceIds.length ||
+      new Set(value.unresolvedSources).size !== value.unresolvedSources.length ||
+      value.unresolvedSources.some((source) => sourceIds.includes(source)) ||
+      expectedEvidenceIds.length !== new Set(expectedEvidenceIds).size ||
+      expectedEvidenceIds.length !== actualEvidenceIds.length ||
+      expectedEvidenceIds.some((id, index) => id !== actualEvidenceIds[index]) ||
+      (value.status === 'VERIFIED_INDEPENDENT' &&
+        (value.operatorCount < value.requiredOperators || value.unresolvedSources.length > 0)) ||
+      (value.status === 'SAME_OPERATOR' &&
+        (value.observedSources < 2 ||
+          value.operatorCount !== 1 ||
+          value.unresolvedSources.length > 0))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Source independence status, operator counts, and Evidence must be consistent.',
+      });
+    }
+  });
+export type SourceIndependenceAssessment = z.infer<typeof SourceIndependenceAssessmentSchema>;
 
 export const AnalysisMetadataSchema = z.object({
   snapshot: AnalysisSnapshotSchema.nullable(),
@@ -1436,6 +1504,101 @@ export const FlapPancakeV2SellScenarioResultSchema = z
     }
   });
 export type FlapPancakeV2SellScenarioResult = z.infer<typeof FlapPancakeV2SellScenarioResultSchema>;
+
+export const FlapPancakeV2ReconciliationSourceSchema = z.object({
+  sourceId: z.string().min(1),
+  operatorId: knowledgeValueSchema(z.string().min(1)),
+  buy: FlapPancakeV2BuyScenarioResultSchema,
+  sell: FlapPancakeV2SellScenarioResultSchema,
+});
+export type FlapPancakeV2ReconciliationSource = z.infer<
+  typeof FlapPancakeV2ReconciliationSourceSchema
+>;
+
+export const FlapPancakeV2ReconciliationResultSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    status: DiscrepancyAuditStatusSchema,
+    blockNumber: UnsignedQuantityStringSchema,
+    blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+    anchorReconciliation: AnchorReconciliationResultSchema,
+    sourceIndependence: SourceIndependenceAssessmentSchema,
+    sources: z.array(FlapPancakeV2ReconciliationSourceSchema).min(2).max(8),
+    audit: DiscrepancyAuditResultSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('flap-pancake-v2-multi-source-reconciliation-v1.0.0'),
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    const canonical = value.anchorReconciliation.canonicalAnchor;
+    const sourceIds = value.sources.map((source) => source.sourceId);
+    const expectedStatus =
+      value.audit.status === 'FAIL'
+        ? 'FAIL'
+        : value.audit.status === 'PASS' &&
+            value.sourceIndependence.independence.state === 'known' &&
+            value.sourceIndependence.independence.value
+          ? 'PASS'
+          : value.audit.status === 'PASS_WITH_WARNINGS' &&
+              value.sourceIndependence.independence.state === 'known' &&
+              value.sourceIndependence.independence.value
+            ? 'PASS_WITH_WARNINGS'
+            : 'INCONCLUSIVE';
+    const invalidChild = value.sources.some((source) => {
+      const buySnapshot = source.buy.metadata.snapshot;
+      const sellSnapshot = source.sell.metadata.snapshot;
+      return (
+        source.buy.token !== value.token ||
+        source.sell.token !== value.token ||
+        buySnapshot === null ||
+        buySnapshot.ledger !== 'EVM' ||
+        buySnapshot.blockNumber !== value.blockNumber ||
+        buySnapshot.blockHash.toLowerCase() !== value.blockHash ||
+        sellSnapshot === null ||
+        sellSnapshot.ledger !== 'EVM' ||
+        sellSnapshot.blockNumber !== value.blockNumber ||
+        sellSnapshot.blockHash.toLowerCase() !== value.blockHash ||
+        !source.buy.metadata.sourceSet.includes(source.sourceId) ||
+        !source.sell.metadata.sourceSet.includes(source.sourceId)
+      );
+    });
+    if (
+      value.status !== expectedStatus ||
+      value.anchorReconciliation.status !== 'AGREEMENT' ||
+      canonical.state !== 'known' ||
+      (canonical.state === 'known' &&
+        (canonical.value.position !== value.blockNumber ||
+          canonical.value.hash.toLowerCase() !== value.blockHash)) ||
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockNumber !== value.blockNumber ||
+      snapshot.blockHash.toLowerCase() !== value.blockHash ||
+      value.metadata.freshness !== snapshot.capturedAt ||
+      new Set(sourceIds).size !== sourceIds.length ||
+      sourceIds.some((source) => !value.metadata.sourceSet.includes(source)) ||
+      sourceIds.some((source) => !value.anchorReconciliation.metadata.sourceSet.includes(source)) ||
+      invalidChild ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(value.sourceIndependence.terminalEvidenceId) ||
+      !value.evidence.some((evidence) => evidence.id === value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message:
+          'Multi-source market reconciliation requires an agreed finalized Snapshot, complete source replay, and terminal Evidence.',
+      });
+    }
+  });
+export type FlapPancakeV2ReconciliationResult = z.infer<
+  typeof FlapPancakeV2ReconciliationResultSchema
+>;
 
 export const ClaimStatusSchema = z.enum([
   'VERIFIED',

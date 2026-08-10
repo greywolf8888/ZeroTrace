@@ -347,6 +347,92 @@ export interface FlapPancakeV2SellScenarioResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface SourceIndependenceAssessment {
+  status: 'VERIFIED_INDEPENDENT' | 'SAME_OPERATOR' | 'INCONCLUSIVE';
+  independence: KnowledgeValue<boolean>;
+  requiredOperators: number;
+  observedSources: number;
+  operatorCount: number;
+  unresolvedSources: string[];
+  attestations: Array<{
+    sourceId: string;
+    hostname: string;
+    operatorId: string;
+    operatorName: string;
+    officialSource: string;
+    registryObservedAt: string;
+    registryRevision: string;
+    evidenceId: string;
+  }>;
+  registryEvidenceId: string;
+  terminalEvidenceId: string;
+  evidenceIds: string[];
+  modelVersion: 'source-operator-registry-v1';
+}
+
+export interface DiscrepancyCheckResult {
+  id: string;
+  fieldPath: string;
+  comparisonClass:
+    | 'EXACT_IDENTITY_STATE'
+    | 'CONSERVATION'
+    | 'DETERMINISTIC_DERIVED'
+    | 'INDEPENDENT_MARKET_QUOTE_RV'
+    | 'HOLDER_ENTITY_AGGREGATE'
+    | 'FRESHNESS'
+    | 'API_UI_PARITY';
+  disposition: 'PASS' | 'WARNING' | 'FAIL' | 'INCONCLUSIVE';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  actual: KnowledgeValue<string | boolean>;
+  reference: KnowledgeValue<string | boolean>;
+  absoluteError: KnowledgeValue<string>;
+  relativeErrorPct: KnowledgeValue<string>;
+  passThresholdPct: KnowledgeValue<string>;
+  warningThresholdPct: KnowledgeValue<string>;
+  coverage: number;
+  requiredCoverage: number;
+  sourceIndependence: KnowledgeValue<boolean>;
+  sourceIndependenceEvidenceIds: string[];
+  numericDenominatorIncluded: boolean;
+  sourceSet: string[];
+  evidenceIds: string[];
+  explanationEvidenceIds: string[];
+  message: string;
+}
+
+export interface FlapPancakeV2ReconciliationResponse {
+  platform: 'flap';
+  token: string;
+  status: 'PASS' | 'PASS_WITH_WARNINGS' | 'FAIL' | 'INCONCLUSIVE';
+  blockNumber: string;
+  blockHash: string;
+  anchorReconciliation: AnchorReconciliationResult;
+  sourceIndependence: SourceIndependenceAssessment;
+  sources: Array<{
+    sourceId: string;
+    operatorId: KnowledgeValue<string>;
+    buy: FlapPancakeV2BuyScenarioResponse;
+    sell: FlapPancakeV2SellScenarioResponse;
+  }>;
+  audit: {
+    status: 'PASS' | 'PASS_WITH_WARNINGS' | 'FAIL' | 'INCONCLUSIVE';
+    checks: DiscrepancyCheckResult[];
+    summary: {
+      total: number;
+      passed: number;
+      warnings: number;
+      failed: number;
+      inconclusive: number;
+      numericDenominator: number;
+      coverageGaps: number;
+    };
+    metadata: AnalysisMetadata;
+  };
+  terminalEvidenceId: string;
+  metadata: AnalysisMetadata;
+  evidence: EvidenceRecord[];
+}
+
 export interface FlapConfigurationField {
   value: KnowledgeValue<string>;
   source: 'EVENT' | 'OFFICIAL_DEFAULT' | 'NOT_APPLICABLE';
@@ -902,6 +988,21 @@ export const api = {
         token,
         tokenInputs,
         blockNumber,
+      }),
+    }),
+  flapPancakeV2Reconciliation: (
+    token: string,
+    quoteInputs: readonly string[],
+    tokenInputs: readonly string[],
+  ) =>
+    requestJson<FlapPancakeV2ReconciliationResponse>('/api/v1/rv/flap-pancake-v2-reconciliation', {
+      method: 'POST',
+      body: JSON.stringify({
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token,
+        quoteInputs,
+        tokenInputs,
       }),
     }),
   flapEventTransaction: (token: string, transactionHash: string) => {

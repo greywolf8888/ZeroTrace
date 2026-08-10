@@ -321,7 +321,7 @@ Important values:
 | `PROVIDER_CIRCUIT_*`                  | consecutive-failure threshold and half-open reset delay                          |
 | `PROVIDER_CACHE_TTL_MS/MAX_ENTRIES`   | process-local TTL/LRU response cache; zero TTL disables stored responses         |
 | `DATA_QUALITY_MIN_SOURCES`            | minimum matching endpoint observations; integer 2-20, default 2                  |
-| `ALCHEMY_API_KEY` / `ETH_RPC_URL`     | optional Ethereum key and read-only URL/template                                 |
+| `ALCHEMY_API_KEY` / `ETH_RPC_URL`     | optional Alchemy key and read-only URL/template                                  |
 | `EVM_*_RPC_URLS`                      | ordered, comma-separated EVM provider pools                                      |
 | `EVM_*_SNAPSHOT_TAG`                  | `finalized`, `safe`, or `latest`; defaults to `finalized` per configured network |
 | `EVM_*_REQUESTS_PER_SECOND`           | per-endpoint request pacing; zero disables internal pacing                       |
@@ -356,6 +356,18 @@ visible as `cacheBypasses` in provider diagnostics. Fixed block/slot reads may u
 Keep EVM snapshot tags at `finalized` for normal analysis. Selecting `safe` or `latest` is an
 explicit freshness/finality tradeoff; the chosen value remains in the persisted Snapshot and
 Evidence metadata.
+
+The BSC URL list also expands `${ALCHEMY_API_KEY}`. The keyless `.env.example` endpoints are both
+documented as BNB Chain-operated, so they can test endpoint agreement but the market/RV
+reconciliation returns `SAME_OPERATOR`/`INCONCLUSIVE`. To test the documented independence gate,
+set the key locally and use:
+
+```dotenv
+EVM_BSC_RPC_URLS=https://bnb-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY},https://bsc-dataseed.bnbchain.org
+```
+
+Source IDs retain only safe hostnames. The key and URL path are not returned by the API or stored in
+Evidence.
 
 Each comma-separated provider URL creates a separate anchor observation source. The data-quality
 service compares those sources at a common block/slot and requires at least

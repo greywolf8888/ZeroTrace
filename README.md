@@ -76,6 +76,9 @@ The current foundation includes:
 - same-Snapshot Pancake V2 exit-size analysis that separates nominal spot value, Router gross
   output, configured sell-tax estimates and actual settlement Unknown while reporting modeled
   average exit price, price impact and shared quote-reserve consumption;
+- complete multi-source Flap/Pancake V2 market, buy and exit reconciliation at one common finalized
+  block, with a versioned official operator registry, exact-state zero-error checks, a 0.50%
+  independent quote/RV budget, and inconclusive results when operator ownership is unverified;
 - an Evidence-grounded typed discrepancy engine with exact-state checks, exact-decimal error
   budgets, warning bands, coverage gates, and explicit Unknown exclusion from numeric denominators;
 - request-scoped provider provenance across failover pools, with dynamic head/tip/slot anchors
@@ -321,14 +324,30 @@ The configured-tax result is a deterministic pool estimate, not an execution cla
 settlement and executable capacity remain Unknown until a pinned-fork swap tests tax, swapback,
 max-sell, blacklist, gas and revert behavior.
 
+Use the multi-source endpoint to rerun the complete market plus both scenario families through every
+configured BSC adapter at one automatically reconciled finalized block:
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v1/rv/flap-pancake-v2-reconciliation \
+  -H 'content-type: application/json' \
+  -d '{"chainId":"eip155:56","token":"0xdcfb441a1f38802820a4e7b4cc8aab37833c7777","quoteInputs":["100","1000","10000"],"tokenInputs":["1000000","5000000","10000000"]}'
+```
+
+The result is `PASS` only when the block/hash anchors agree, every exact identity/state field agrees,
+the bounded quote/RV checks pass, and official endpoint documentation resolves at least two distinct
+operators. Two BNB Chain public hostnames therefore remain `SAME_OPERATOR`/`INCONCLUSIVE`; configure
+the documented Alchemy BSC URL template plus a BNB Chain endpoint to exercise the verified-
+independence gate. Credentials are expanded locally and never appear in source IDs or Evidence.
+
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
 
 Public BNB Smart Chain, Bitcoin, and Solana endpoints are development fallbacks and can be
 rate-limited. Ethereum remains unconfigured until a local Alchemy key or another read-only RPC is
 provided. The example config supplies two BSC endpoints for endpoint-level comparison; ZeroTrace
-does not infer operator independence from hostnames. Configure dedicated, independently operated
-archive-grade endpoints before production validation.
+does not infer operator independence from hostnames. The market/RV reconciler can verify the
+documented Alchemy and BNB Chain operators, but archive-grade retention, forced-reorg operation and
+other network/provider combinations still require production validation.
 
 ### Local development
 
@@ -512,7 +531,8 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add BSC SQD long-range zero-address burn-candidate discovery with explicit silent-supply Unknown
 - [x] Add restart-safe burn-candidate promotion, exact-block certificates and provider-free API/UI replay
 - [x] Add same-Snapshot Pancake V2 spot plus multi-size Flap buy/exit scenarios with automatic 0.10% arithmetic checks
-- [ ] Add live/unfinalized policy, forced real-reorg drills and independently operated provider validation
+- [x] Add complete common-finalized-block Flap/Pancake V2 multi-source reconciliation with official operator attestations and typed 0%/0.50% budgets
+- [ ] Add live/unfinalized policy, archive-grade coverage and forced real-reorg drills across independent operators
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, real-world calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs
@@ -526,8 +546,9 @@ The named terminal real-chain acceptance target is Flap/BSC token FFT at
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`; its error budget and automatic discrepancy rules are
 defined in [the FFT acceptance specification](docs/testing/FLAP_FFT_ACCEPTANCE.md). Named
 same-Snapshot Pancake V2 buy/exit-size slices now pass their deterministic arithmetic checks; this is
-not a terminal FFT conclusion because independent-source, fork settlement, multi-route RV,
-real-world entity calibration and claim-action gates remain open.
+not a terminal FFT conclusion. A later live Alchemy + BNB Chain run passes the independent-source
+market/RV gate, while fork settlement, multi-route RV, real-world entity calibration and
+claim-action gates remain open.
 
 Exact percentages, test counts, and external validation gates live in [PROGRESS.md](PROGRESS.md).
 

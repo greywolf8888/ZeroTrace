@@ -6,10 +6,10 @@ The repository supports a reproducible local/staging topology. It is **not produ
 Evidence/Snapshot persistence, bounded finalized raw-ledger ingestion, restart-safe bounded Flap
 history projection, and incremental finalized Flap lifetime heads are wired; authentication/
 authorization, remaining durable repositories, general continuous semantic history,
-independent-operator and forced real-reorg acceptance, backup recovery, load testing, and terminal
-real-chain acceptance remain incomplete. Common-position endpoint reconciliation, parent-history
-continuity detection, append-only Flap rollback/replay, and Evidence-linked Data Quality Alerts are
-implemented.
+archive-grade independent-operator and forced real-reorg acceptance, backup recovery, load testing,
+and terminal real-chain acceptance remain incomplete. Common-position endpoint reconciliation,
+parent-history continuity detection, append-only Flap rollback/replay, Evidence-linked Data Quality
+Alerts, and scoped Alchemy/BNB Chain market-RV reconciliation are implemented.
 
 ## Build
 
@@ -169,6 +169,12 @@ Expected invariants:
 - capability output marks signing, broadcasting, and key storage as `FORBIDDEN`;
 - missing capabilities return 501 rather than fabricated data;
 - the UI renders provider failures and Unknown values visibly.
+
+For the Flap/Pancake V2 market reconciliation capability, configure at least two BSC endpoints
+whose operators appear in the versioned registry. The two keyless Compose defaults are both BNB
+Chain-operated and intentionally yield `SAME_OPERATOR`/`INCONCLUSIVE`. A local Alchemy endpoint plus
+a BNB Chain endpoint can satisfy the scoped independence gate, but does not by itself satisfy
+archive retention, outage, load, or forced-reorg acceptance.
 
 ## Production requirements not supplied by Compose
 

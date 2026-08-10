@@ -1,11 +1,11 @@
 # Third-party Dependencies
 
-Inventory date: **2026-08-10**
+Inventory date: **2026-08-11**
 
-The 2026-08-10 current-state Snapshot, request-provenance, and anchor-reconciliation/continuity
-hardening uses the existing clean HTTP adapters, `pg` client, and Node.js built-ins; it adds no
-third-party runtime package or copied upstream code. `@zerotrace/data-quality` is an internal
-workspace package.
+The current-state Snapshot, request-provenance, anchor reconciliation, and 2026-08-11 BSC
+operator-attestation/market-reconciliation work use the existing clean HTTP adapters, `pg` client,
+and Node.js built-ins; they add no third-party runtime package or copied upstream code.
+`@zerotrace/data-quality` is an internal workspace package reused by the platform adapter.
 
 Direct versions are pinned in manifests or container configuration. Transitive npm components are
 captured by `npm run sbom` in CycloneDX JSON and checked by `npm run license:check`.

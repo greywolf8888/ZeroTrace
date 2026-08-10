@@ -162,6 +162,49 @@ class FlapQuoteTransport implements JsonRpcTransport {
   }
 }
 
+class ReconciledFlapQuoteTransport implements JsonRpcTransport {
+  readonly endpointId: string;
+  readonly #callResults: unknown[];
+  readonly #blockHash: string;
+
+  constructor(endpointId: string, callResults: unknown[], blockHash = `0x${'6'.repeat(64)}`) {
+    this.endpointId = endpointId;
+    this.#callResults = [...callResults];
+    this.#blockHash = blockHash;
+  }
+
+  async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+    return (await this.requestSourced<T>(method, params)).value;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    _params: readonly unknown[] = [],
+    _options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    if (method === 'eth_getBlockByNumber') {
+      return {
+        value: {
+          number: '0x10',
+          hash: this.#blockHash,
+          parentHash: `0x${'5'.repeat(64)}`,
+          timestamp: '0x65',
+        } as T,
+        endpointId: this.endpointId,
+      };
+    }
+    if (method === 'eth_getCode') {
+      return { value: '0x6000' as T, endpointId: this.endpointId };
+    }
+    if (method === 'eth_call') {
+      const value = this.#callResults.shift();
+      if (value === undefined) throw new Error('Reconciliation fixture exhausted call results.');
+      return { value: value as T, endpointId: this.endpointId };
+    }
+    throw new Error(`Unexpected reconciliation fixture method ${method}`);
+  }
+}
+
 class FlapEventTransport implements JsonRpcTransport {
   readonly endpointId = 'bsc-event-fixture';
 
@@ -494,6 +537,101 @@ function fixturePancakeAmountOut(amountIn: bigint, reserveIn: bigint, reserveOut
 
 function fixtureAmountsOutResult(input: bigint, output: bigint) {
   return encodeAbiParameters([{ type: 'uint256[]' }], [[input, output]]);
+}
+
+function reconciliationMarketCalls(
+  quoteReserve: bigint,
+  tokenReserve: bigint,
+  quoteInput: bigint,
+  tokenInput: bigint,
+) {
+  const marketReads = () => [
+    fixtureFlapV8SafeResult({
+      status: 4,
+      quoteTokenAddress: fixtureFlapQuoteAsset,
+      pool: fixtureFlapPool,
+      dexId: 0,
+    }),
+    fixtureAddressResult(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+    fixtureAddressResult(fixtureFlapQuoteAsset),
+    fixtureAddressResult(fixtureFlapToken),
+    fixtureReservesResult(quoteReserve, tokenReserve),
+    fixtureAddressResult(fixtureFlapPool),
+    fixtureAddressResult(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+    fixtureDecimalsResult(18),
+    fixtureDecimalsResult(18),
+  ];
+  const sellCertificationInput = 1n * 10n ** 18n;
+  return [
+    ...marketReads(),
+    fixtureAmountsOutResult(
+      quoteInput,
+      fixturePancakeAmountOut(quoteInput, quoteReserve, tokenReserve),
+    ),
+    ...marketReads(),
+    fixtureAmountsOutResult(
+      sellCertificationInput,
+      fixturePancakeAmountOut(sellCertificationInput, quoteReserve, tokenReserve),
+    ),
+    fixtureAmountsOutResult(
+      tokenInput,
+      fixturePancakeAmountOut(tokenInput, tokenReserve, quoteReserve),
+    ),
+  ];
+}
+
+function configureReconciliationRuntime(
+  runtime: AppRuntime,
+  options: {
+    sourceIds: readonly string[];
+    quoteReserve: bigint;
+    tokenReserves: readonly bigint[];
+    quoteInput: bigint;
+    tokenInput: bigint;
+    blockHashes?: readonly string[];
+  },
+): EvmLedgerAdapter[] {
+  const adapters = options.sourceIds.map((sourceId, index) => {
+    const tokenReserve = options.tokenReserves[index];
+    if (tokenReserve === undefined) throw new Error('Each reconciliation source needs reserves.');
+    return new EvmLedgerAdapter(
+      {
+        id: 'bsc-rpc',
+        chainId: 56,
+        chainName: 'BNB Smart Chain',
+        snapshotBlockTag: 'finalized',
+      },
+      new ReconciledFlapQuoteTransport(
+        sourceId,
+        reconciliationMarketCalls(
+          options.quoteReserve,
+          tokenReserve,
+          options.quoteInput,
+          options.tokenInput,
+        ),
+        options.blockHashes?.[index],
+      ),
+    );
+  });
+  runtime.evmAdapters.set(56, adapters[0] as EvmLedgerAdapter);
+  runtime.evmSourceAdapters = new Map([[56, adapters]]);
+  runtime.dataQuality = testDataQuality(runtime.evidenceLedger, [
+    { ledger: 'EVM', chainId: 'eip155:1', readers: [] },
+    {
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      readers: adapters.map((adapter) => ({
+        sourceId: adapter.sourceId,
+        ledger: 'EVM' as const,
+        chainId: 'eip155:56',
+        readHead: () => adapter.readHeadAnchor(),
+        readAt: (position: string) => adapter.readAnchorAt(position),
+      })),
+    },
+    { ledger: 'BITCOIN', chainId: 'bitcoin-mainnet', readers: [] },
+    { ledger: 'SOLANA', chainId: 'solana-mainnet', readers: [] },
+  ]);
+  return adapters;
 }
 
 function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccount): AppRuntime {
@@ -1701,7 +1839,7 @@ describe('ZeroTrace API contract', () => {
       },
     });
     expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
-      'PROVIDER_OBSERVATION',
+      'OFFICIAL_DOCUMENT',
       'CONTRACT_STATE',
       'CONTRACT_STATE',
       'CONTRACT_STATE',
@@ -2451,7 +2589,7 @@ describe('ZeroTrace API contract', () => {
       },
     });
     expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
-      'PROVIDER_OBSERVATION',
+      'OFFICIAL_DOCUMENT',
       'CONTRACT_STATE',
       'CONTRACT_STATE',
       'CONTRACT_STATE',
@@ -2702,6 +2840,268 @@ describe('ZeroTrace API contract', () => {
       executionCapacity: { state: 'unknown', reason: 'NOT_QUERIED' },
       terminalEvidenceId: null,
       evidence: [],
+    });
+  });
+
+  it('reconciles complete Flap market, buy and sell certificates across documented operators', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const quoteReserve = 1_000n * 10n ** 18n;
+    const tokenReserve = 1_000_000n * 10n ** 18n;
+    const quoteInput = 100n * 10n ** 18n;
+    const tokenInput = 1_000n * 10n ** 18n;
+    const sourceIds = [
+      'bsc-rpc@bnb-mainnet.g.alchemy.com#1',
+      'bsc-rpc@bsc-dataseed.bnbchain.org#2',
+    ];
+    configureReconciliationRuntime(runtime, {
+      sourceIds,
+      quoteReserve,
+      tokenReserves: [tokenReserve, tokenReserve],
+      quoteInput,
+      tokenInput,
+    });
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const capabilities = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
+        id: 'flap-pancake-v2-multi-source-reconciliation',
+        status: 'IMPLEMENTED_OPERATOR_INDEPENDENCE_CONFIGURED',
+      }),
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-reconciliation',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        quoteInputs: ['100'],
+        tokenInputs: ['1000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      platform: 'flap',
+      token: fixtureFlapToken,
+      status: 'PASS',
+      blockNumber: '16',
+      sourceIndependence: {
+        status: 'VERIFIED_INDEPENDENT',
+        independence: { state: 'known', value: true },
+        observedSources: 2,
+        operatorCount: 2,
+      },
+      sources: [
+        { sourceId: sourceIds[0], operatorId: { state: 'known', value: 'alchemy' } },
+        { sourceId: sourceIds[1], operatorId: { state: 'known', value: 'bnb-chain' } },
+      ],
+      audit: {
+        status: 'PASS',
+        summary: { failed: 0, inconclusive: 0 },
+      },
+      metadata: { sourceCoverage: 1 },
+    });
+    expect(
+      response
+        .json()
+        .audit.checks.filter(
+          (check: { comparisonClass: string }) =>
+            check.comparisonClass === 'INDEPENDENT_MARKET_QUOTE_RV',
+        ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          disposition: 'PASS',
+          sourceIndependence: { state: 'known', value: true },
+          relativeErrorPct: { state: 'known', value: '0' },
+        }),
+      ]),
+    );
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${response.json().terminalEvidenceId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes.length).toBeGreaterThan(40);
+  });
+
+  it('keeps repeated endpoints from one documented operator inconclusive', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const sourceIds = [
+      'bsc-rpc@bsc-dataseed.bnbchain.org#1',
+      'bsc-rpc@bsc-dataseed-public.bnbchain.org#2',
+    ];
+    configureReconciliationRuntime(runtime, {
+      sourceIds,
+      quoteReserve: 1_000n * 10n ** 18n,
+      tokenReserves: [1_000_000n * 10n ** 18n, 1_000_000n * 10n ** 18n],
+      quoteInput: 100n * 10n ** 18n,
+      tokenInput: 1_000n * 10n ** 18n,
+    });
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const capabilities = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
+        id: 'flap-pancake-v2-multi-source-reconciliation',
+        status: 'IMPLEMENTED_SAME_OPERATOR_INCONCLUSIVE',
+      }),
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-reconciliation',
+      payload: {
+        chainId: 'eip155:56',
+        token: fixtureFlapToken,
+        quoteInputs: ['100'],
+        tokenInputs: ['1000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: 'INCONCLUSIVE',
+      sourceIndependence: {
+        status: 'SAME_OPERATOR',
+        independence: { state: 'known', value: false },
+        operatorCount: 1,
+      },
+      audit: { status: 'INCONCLUSIVE', summary: { failed: 0, inconclusive: 2 } },
+      metadata: { sourceCoverage: 0.5 },
+    });
+  });
+
+  it('keeps unregistered endpoint operators unknown with replayable registry Evidence', async () => {
+    const runtime = runtimeWithAllLedgers();
+    configureReconciliationRuntime(runtime, {
+      sourceIds: ['bsc-rpc@rpc-one.example#1', 'bsc-rpc@rpc-two.example#2'],
+      quoteReserve: 1_000n * 10n ** 18n,
+      tokenReserves: [1_000_000n * 10n ** 18n, 1_000_000n * 10n ** 18n],
+      quoteInput: 100n * 10n ** 18n,
+      tokenInput: 1_000n * 10n ** 18n,
+    });
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const capabilities = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
+        id: 'flap-pancake-v2-multi-source-reconciliation',
+        status: 'IMPLEMENTED_OPERATOR_REGISTRY_INCOMPLETE',
+      }),
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-reconciliation',
+      payload: {
+        chainId: 'eip155:56',
+        token: fixtureFlapToken,
+        quoteInputs: ['100'],
+        tokenInputs: ['1000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: 'INCONCLUSIVE',
+      sourceIndependence: {
+        status: 'INCONCLUSIVE',
+        independence: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+        operatorCount: 0,
+        unresolvedSources: ['bsc-rpc@rpc-one.example#1', 'bsc-rpc@rpc-two.example#2'],
+        attestations: [],
+      },
+      audit: { status: 'INCONCLUSIVE', summary: { failed: 0, inconclusive: 2 } },
+      metadata: { sourceCoverage: 0.5 },
+    });
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${response.json().sourceIndependence.terminalEvidenceId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(
+      drilldown
+        .json()
+        .nodes.some(
+          (node: { evidence: { id: string } }) =>
+            node.evidence.id === response.json().sourceIndependence.registryEvidenceId,
+        ),
+    ).toBe(true);
+  });
+
+  it('fails exact market state when agreed providers return conflicting reserves', async () => {
+    const runtime = runtimeWithAllLedgers();
+    configureReconciliationRuntime(runtime, {
+      sourceIds: ['bsc-rpc@bnb-mainnet.g.alchemy.com#1', 'bsc-rpc@bsc-dataseed.bnbchain.org#2'],
+      quoteReserve: 1_000n * 10n ** 18n,
+      tokenReserves: [1_000_000n * 10n ** 18n, 1_000_001n * 10n ** 18n],
+      quoteInput: 100n * 10n ** 18n,
+      tokenInput: 1_000n * 10n ** 18n,
+    });
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-reconciliation',
+      payload: {
+        chainId: 'eip155:56',
+        token: fixtureFlapToken,
+        quoteInputs: ['100'],
+        tokenInputs: ['1000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: 'FAIL',
+      sourceIndependence: { status: 'VERIFIED_INDEPENDENT' },
+      audit: { status: 'FAIL' },
+    });
+    expect(
+      response
+        .json()
+        .audit.checks.find((check: { fieldPath: string }) =>
+          check.fieldPath.endsWith('.market.tokenReserve.atomic'),
+        ),
+    ).toMatchObject({ disposition: 'FAIL', severity: 'CRITICAL' });
+  });
+
+  it('refuses market reads when BSC anchors disagree', async () => {
+    const runtime = runtimeWithAllLedgers();
+    configureReconciliationRuntime(runtime, {
+      sourceIds: ['bsc-rpc@bnb-mainnet.g.alchemy.com#1', 'bsc-rpc@bsc-dataseed.bnbchain.org#2'],
+      quoteReserve: 1_000n * 10n ** 18n,
+      tokenReserves: [1_000_000n * 10n ** 18n, 1_000_000n * 10n ** 18n],
+      quoteInput: 100n * 10n ** 18n,
+      tokenInput: 1_000n * 10n ** 18n,
+      blockHashes: [`0x${'6'.repeat(64)}`, `0x${'7'.repeat(64)}`],
+    });
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-reconciliation',
+      payload: {
+        chainId: 'eip155:56',
+        token: fixtureFlapToken,
+        quoteInputs: ['100'],
+        tokenInputs: ['1000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(409);
+    expect(response.json()).toMatchObject({
+      error: { code: 'ANCHOR_DISAGREEMENT', retryable: false },
+      anchorReconciliation: { status: 'DISAGREEMENT' },
     });
   });
 

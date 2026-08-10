@@ -92,6 +92,8 @@ describe('application runtime wiring', () => {
       }),
     );
     expect([...runtime.evmAdapters.keys()]).toEqual([1, 56]);
+    expect(runtime.evmSourceAdapters?.get(1)).toHaveLength(2);
+    expect(runtime.evmSourceAdapters?.get(56)).toHaveLength(1);
     expect(runtime.bitcoinAdapter?.config.id).toBe('bitcoin-esplora');
     expect(runtime.solanaAdapter?.config.commitment).toBe('finalized');
     expect(runtime.sqdBscLogReader).toBeDefined();

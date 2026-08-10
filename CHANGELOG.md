@@ -23,6 +23,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   Snapshot anchors, including visible bypass counters;
 - parent-linked EVM, Bitcoin, and Solana anchors plus common-position, multi-endpoint reconciliation
   with explicit agreement, disagreement, insufficient-source, and unavailable states;
+- versioned official BSC source-operator attestations plus complete common-finalized-block
+  Flap/Pancake V2 market, buy and exit reconciliation, with exact-state and 0.50% independent
+  quote/RV discrepancy budgets, strict inconclusive states, API, responsive UI and browser coverage;
 - per-source continuity checks for unchanged/direct extensions, historical gaps, detected reorgs,
   source regression, and unavailable verification, without majority truth selection;
 - Evidence-linked, append-only PostgreSQL chain-anchor observations and Data Quality Alerts, with

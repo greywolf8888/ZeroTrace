@@ -113,6 +113,9 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
 - typed discrepancy audits require same-Snapshot Evidence, use exact-decimal class budgets, keep
   insufficient coverage and Unknown outside numeric denominators, and refuse to score independent
   quote/RV comparisons unless source independence is positively verified;
+- BSC market reconciliation covers two documented operators, two hostnames owned by one operator,
+  entirely unregistered operators, exact reserve conflict, and anchor disagreement before market
+  reads; every inconclusive operator decision retains the versioned registry Evidence root;
 - UI displays Unknown and read-only state without placeholder data.
 
 ## Real-chain fixture rules
@@ -152,7 +155,7 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - typed Solana transaction rendering with Snapshot, Evidence, and humanized field names;
 - Flap fixed-block state, transaction-local creation/default provenance, bounded range/lifetime
   history coverage, durable projection pagination, exact lifetime materialization replay, sell
-  preview, Unknown preservation and Evidence rendering;
+  preview, multi-source market/RV discrepancy review, Unknown preservation and Evidence rendering;
 - anchor-reconciliation status, common-position/operator-independence explanation, four configured
   chain targets, and process-local data-quality storage truth;
 - mobile viewport layout;

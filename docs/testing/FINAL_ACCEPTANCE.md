@@ -14,6 +14,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Parent-linked EVM/Bitcoin/Solana anchors, common-position endpoint reconciliation, typed
       disagreement/insufficient states, and Evidence-linked continuity alerts are implemented and
       deterministically tested
+- [x] Complete Flap/Pancake V2 market, buy and exit reconciliation works across officially
+      documented Alchemy and BNB Chain operators at one common finalized Snapshot
 - [x] Strict EVM/Bitcoin/Solana block and transaction plus Bitcoin outpoint queries bind confirmed
       records to exact Snapshots and pending/mempool/null observations to evidenced uncertainty
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
@@ -82,6 +84,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31417036285) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31417036283) pass on immutable
       burn-candidate discovery commit `af8fee3`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31423240433) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31423240366) pass on immutable
+      durable burn-promotion commit `9a9f45e`
 
 ## Evidence and data
 
@@ -166,6 +171,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       named FFT point-in-time run
 - [x] Same-Snapshot Pancake V2 nominal/gross/configured-tax exit-size scenarios with price impact,
       quote-reserve consumption, automatic Router/model checks and one named FFT partial-RV run
+- [x] Versioned BSC source-operator registry, official-document attestations, exact-state zero-error
+      checks, 0.50% independent quote/RV budgets, API/UI and provider-free Evidence replay
 - [x] Exact Entity Precision/False-Merge evaluator plus a test-only structural golden corpus covering
       high-confidence same-controller, coordination, independence, Service Hub, CoinJoin and abstention
 - [x] Exact finalized-block ERC-20 burn action derivation with adjacent `totalSupply`, complete
@@ -175,9 +182,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       queries, terminal Evidence, responsive API/UI and silent-supply state retained as Unknown
 - [x] Restart-safe bounded burn-candidate promotion with exact-block certificates before cursor
       advancement, terminal Evidence, provider-free API/UI replay and corrupt-state rejection
-- [ ] Continuous candidate-capture scheduling, silent-supply discovery,
-      reviewed-draft promotion,
-      independent-source reconciliation, complete Claim Audit and terminal named FFT conclusion
+- [ ] Continuous candidate-capture scheduling, silent-supply discovery, reviewed-draft promotion,
+      independent claim-flow reconciliation, complete Claim Audit and terminal named FFT conclusion
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
@@ -225,6 +231,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [ ] Solana archive plus dedicated RPC fixture suite
 - [ ] Named launch/migration fixtures for every declared platform/version
 - [x] Named FFT migrated Pancake V2 point-in-time market plus buy/exit-size arithmetic fixtures
+- [x] Named live FFT Alchemy + BNB Chain common-finalized-block market/RV reconciliation: 37/37
+      checks passed and the 91-node terminal Evidence graph replayed from PostgreSQL after restart
 - [ ] RV reconciliation against historical executable quotes
 - [ ] Run the registered
       [Flap/BSC FFT terminal acceptance](FLAP_FFT_ACCEPTANCE.md) for

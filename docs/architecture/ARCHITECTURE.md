@@ -248,6 +248,21 @@ pair; it does not assert dynamic-tax, exemption, swapback or settlement behavior
 mismatch beyond 10 bps withholds every configured-tax result. Executable capacity remains Unknown
 until a Snapshot-pinned fork tests max-sell, blacklist/whitelist, gas and reverts.
 
+The multi-source reconciliation composition is stricter than endpoint pooling. It first obtains an
+`AGREEMENT` anchor at one common finalized BSC position, then reruns the entire market certificate,
+all requested buy points and all requested sell points through each source adapter. Exact chain and
+market state has a zero-error budget; independently observed Router quote/RV fields use the typed
+0.50% pass and 1.00% warning budgets. A failure in one exact reserve, identity, fee or tax field
+fails the certificate rather than selecting a majority.
+
+Organizational independence is established by `source-operator-registry-v1`, a versioned registry
+whose entries cite official endpoint documentation and produce immutable attestation Evidence.
+Hostnames alone are never independence proof. All sources must resolve, and at least two distinct
+documented operators must participate, before source coverage reaches `1` and a passing discrepancy
+audit can become a terminal `PASS`. Same-operator or unregistered sources remain explicitly
+`INCONCLUSIVE`. The registry root, operator assessment and final reconciliation each have separate
+Evidence nodes so the decision can be replayed and updated without rewriting chain facts.
+
 ### Claim verification
 
 Public statements enter through a separate declaration compiler before they can become audit rules.

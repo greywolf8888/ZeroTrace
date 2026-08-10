@@ -25,6 +25,7 @@ import {
 } from '@zerotrace/schemas';
 
 export * from './discrepancy.js';
+export * from './source-independence.js';
 
 export const DATA_QUALITY_MODEL_VERSION = 'anchor-reconciliation-v1';
 
@@ -338,6 +339,16 @@ export class AnchorDataQualityService {
     });
     this.#inflight = operation;
     return operation;
+  }
+
+  inspect(ledger: Ledger, chainId: string): Promise<AnchorReconciliationResult> {
+    const target = this.#targets.find(
+      (candidate) => candidate.ledger === ledger && candidate.chainId === chainId,
+    );
+    if (target === undefined) {
+      throw new Error(`Anchor reconciliation target ${ledger}:${chainId} is not configured.`);
+    }
+    return this.#inspectTarget(target);
   }
 
   async #persistRead(
