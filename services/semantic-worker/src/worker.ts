@@ -84,8 +84,8 @@ export interface BscProviderConfig {
   retryMaxDelayMs: number;
 }
 
-export function createBscTransport(config: BscProviderConfig): JsonRpcTransport {
-  const transports = config.bscRpcUrls.map(
+export function createBscTransports(config: BscProviderConfig): JsonRpcTransport[] {
+  return config.bscRpcUrls.map(
     (url, index) =>
       new SafeJsonRpcTransport({
         endpointId: endpointId(url, index, config.bscRpcUrls.length),
@@ -100,6 +100,10 @@ export function createBscTransport(config: BscProviderConfig): JsonRpcTransport 
         },
       }),
   );
+}
+
+export function createBscTransport(config: BscProviderConfig): JsonRpcTransport {
+  const transports = createBscTransports(config);
   const first = transports[0];
   if (first === undefined) throw new Error('A BSC read provider is required.');
   return transports.length === 1 ? first : new FailoverJsonRpcTransport('bsc-rpc', transports);
