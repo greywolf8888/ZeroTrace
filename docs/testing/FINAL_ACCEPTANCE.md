@@ -67,6 +67,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399771001) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399770876) pass on immutable
       Pancake V2 exit-scenario commit `27c296d`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31402343560) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31402343611) pass on immutable
+      Entity Precision/Calibration evaluation commit `399d797`
 
 ## Evidence and data
 

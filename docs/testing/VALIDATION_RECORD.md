@@ -1066,19 +1066,19 @@ produce `INSUFFICIENT_DATA`. Therefore entity calibration and terminal FFT accep
 
 ## Automated verification
 
-| Command                  | Result                                                                                                                                                |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 366 unit, 44 environment-free integration, 1 model-eval and build; dependency license/audit gates green                |
-| local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                        |
-| local `test:coverage`    | pass: 410 tests, 22 opt-in durable skips; 82.55% statements, 76.46% branches, 90.98% functions, 83.63% lines                                          |
-| `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                     |
-| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                      |
-| `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                             |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                |
-| `docker compose config`  | pass                                                                                                                                                  |
-| production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000   |
-| branch GitHub Actions CI | [pass on `27c296d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399771001): full CI matrix, 12 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `27c296d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399770876): JavaScript and TypeScript analysis                           |
+| Command                  | Result                                                                                                                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| local non-browser gates  | pass: format, lint, typecheck, 366 unit, 44 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
+| local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                                               |
+| local `test:coverage`    | pass: 410 tests, 22 opt-in durable skips; 82.55% statements, 76.46% branches, 90.98% functions, 83.63% lines                                                                 |
+| `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
+| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
+| `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                                                    |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
+| `docker compose config`  | pass                                                                                                                                                                         |
+| production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000                          |
+| branch GitHub Actions CI | [pass on `399d797`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31402343560): full CI matrix, structural model gate, 12 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `399d797`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31402343611): JavaScript and TypeScript analysis                                                  |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
