@@ -3,9 +3,10 @@
 ## Current deployment classification
 
 The repository supports a reproducible local/staging topology. It is **not production-approved**:
-Evidence/Snapshot persistence, bounded finalized raw-ledger ingestion, and restart-safe bounded Flap
-history projection are wired; authentication/authorization, remaining durable repositories,
-continuous semantic history, independent-provider acceptance, automatic reorg rollback/replay,
+Evidence/Snapshot persistence, bounded finalized raw-ledger ingestion, restart-safe bounded Flap
+history projection, and incremental finalized Flap lifetime heads are wired; authentication/
+authorization, remaining durable repositories, general continuous semantic history,
+independent-operator acceptance, automatic reorg rollback/replay,
 backup recovery, load testing, and terminal real-chain acceptance remain incomplete. Common-position endpoint reconciliation,
 parent-history continuity detection, and Evidence-linked Data Quality Alerts are implemented.
 
@@ -13,7 +14,8 @@ parent-history continuity detection, and Evidence-linked Data Quality Alerts are
 
 ```bash
 docker compose config --quiet
-docker compose build api web ingest-worker flap-origin-worker flap-history-worker postgres clickhouse
+docker compose build api web ingest-worker flap-origin-worker flap-history-worker \
+  flap-lifetime-worker flap-lifetime-head-worker postgres clickhouse
 ```
 
 The API image runs as the unprivileged Node user and is pruned of test, build, and development-log
@@ -114,8 +116,26 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/materializations/<scan-id>?cha
 
 The endpoint and UI do not contact providers. A running checkpoint exposes progress but no terminal
 conclusion; a corrupt completed result fails closed. This one-shot proof can establish exact
-lifetime coverage at one Snapshot, but it is not continuous finalized-head scheduling or automatic
-reorg replay.
+lifetime coverage at one Snapshot.
+
+Maintain accepted finalized lifetime heads continuously:
+
+```bash
+docker compose --profile semantic up --build flap-lifetime-head-worker
+```
+
+Set `FLAP_LIFETIME_HEAD_TOKEN`, two or more `EVM_BSC_RPC_URLS`, and an optional
+`FLAP_LIFETIME_HEAD_INTERVAL_MS`. This service requires migrations `001-009`. It reconciles a common
+finalized BSC target, appends only the missing delta after Evidence-proving the stored predecessor,
+and emits credential-free complete/deferred JSON events. The latest accepted state is available at:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56&platform=flap
+```
+
+`FLAP_LIFETIME_HEAD_MAX_CYCLES` is for bounded tests and operations only; blank means continuous.
+Provider disagreement and retryable outages defer advancement. A finalized reorg is recorded and
+stops the worker because automatic rollback/replay is not yet accepted.
 
 ## Health and smoke checks
 
@@ -132,7 +152,7 @@ Expected invariants:
 - `/health/live` returns HTTP 200, `status: UP`, and `readOnly: true`;
 - readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
-- missing or unhealthy Flap projection migration `008` returns readiness HTTP 503 when PostgreSQL
+- missing or unhealthy Flap projection/head migrations `008`/`009` return readiness HTTP 503 when PostgreSQL
   is configured;
 - `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
 - `/health` and `/api/v1/data-quality/anchors` distinguish agreement, disagreement, insufficient
@@ -210,6 +230,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/007_semantic_scan_checkpoints.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/008_flap_history_projection.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/009_flap_lifetime_heads.sql
 ```
 
 PowerShell equivalent:
@@ -222,6 +244,8 @@ Get-Content -Raw infra/postgres/init/006_snapshot_observation_identity.sql |
 Get-Content -Raw infra/postgres/init/007_semantic_scan_checkpoints.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/008_flap_history_projection.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/009_flap_lifetime_heads.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

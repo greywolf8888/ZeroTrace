@@ -152,6 +152,18 @@ The endpoint performs no SQD or RPC call. It returns `503` when durable checkpoi
 configured, `404` for a mismatched token/scan identity, and fails closed with a checkpoint conflict
 for corrupt completed state. This is stored point-in-time proof replay, not continuous scheduling.
 
+`GET /api/v1/launches/EVM/:token/history/lifetime/heads/latest?chainId=eip155:56&platform=flap`
+returns the latest accepted INITIAL or EXTENSION row from the append-only lifetime-head chain. It
+includes sequence, predecessor ID, scan ID, exact finalized target/hash, typed lifetime state,
+freshness/model metadata and terminal Evidence. The API performs no provider request and re-validates
+stored rows through the lifetime schema and canonical hashes in the repository.
+
+An absent token head returns `404` and remains Unknown; unconfigured or unhealthy migration `009`
+storage returns `503`. The endpoint never falls back to a one-shot scan, never converts absence to
+zero, and never triggers scheduling. Extensions are accepted only after the worker has persisted
+multi-endpoint target agreement, direct or historical predecessor continuity, complete delta
+history, and the new terminal Evidence root.
+
 `GET /api/v1/launches/EVM/:token/origin?chainId=eip155:56&platform=flap&fromBlock=...&toBlock=...`
 searches at most 1,000,000 finalized BSC blocks through SQD's `createResultAddress` trace filter.
 The route requires both `SQD_PORTAL_URL` and a BSC RPC provider. A unique successful create trace is

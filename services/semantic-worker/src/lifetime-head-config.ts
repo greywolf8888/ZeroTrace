@@ -45,7 +45,7 @@ export function loadFlapLifetimeHeadWorkerConfig(
     'DATA_QUALITY_MIN_SOURCES',
     2,
     2,
-    16,
+    20,
   );
   if (lifetime.bscRpcUrls.length < requiredSources) {
     throw new Error('Continuous Flap lifetime heads require enough distinct BSC RPC URLs.');

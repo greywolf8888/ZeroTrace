@@ -52,6 +52,9 @@
   `CROSS_SOURCE_DISAGREEMENT` alert; a failed source remains unavailable, not a zero or agreement.
 - continuity tests cover first observation, unchanged/direct extension, historical gap verification,
   same-position replacement, source regression, unavailable checks, and in-flight deduplication.
+- Flap lifetime-head tests cover first materialization, unchanged replay, exact delta-only extension,
+  multi-source direct/historical continuity, provider deferral, finalized conflict alerts, durable
+  predecessor/sequence guards, provider-free API replay, and desktop/mobile UI rendering.
 - Solana account quantities remain lossless decimal strings. Only explicit `value: null` means a
   Known non-existent account; missing or malformed values never become zero.
 - PostgreSQL writes are transactional and idempotent; Evidence, Snapshot, and derivation edges remain
@@ -111,7 +114,8 @@ Do not make public tests depend on a floating chain head. Capture immutable evid
 terms permit it. Credentialed smoke tests must be opt-in and skip with a visible reason when secrets
 are absent.
 
-`tests/integration/postgres.test.ts` requires explicit `TEST_POSTGRES_URL`.
+`tests/integration/postgres.test.ts` and
+`tests/integration/flap-lifetime-heads-postgres.test.ts` require explicit `TEST_POSTGRES_URL`.
 `tests/integration/ingestion-storage.test.ts` additionally requires `TEST_CLICKHOUSE_URL`,
 `TEST_OBJECT_STORE_ENDPOINT`, `TEST_OBJECT_STORE_ACCESS_KEY`, and
 `TEST_OBJECT_STORE_SECRET_KEY`. Use only initialized disposable services. CI builds the repository's

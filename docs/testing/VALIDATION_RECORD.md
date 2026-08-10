@@ -763,23 +763,62 @@ target-to-target continuity, reorg rollback/replay, semantic market/RV/entity li
 acceptance remain pending. No request was made for FFT
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, and no FFT conclusion is claimed.
 
+## Continuous Flap accepted-head acceptance — 2026-08-10
+
+The accepted-head layer extends the point-in-time proof without rewriting it. The typed extension
+runner scans only `(accepted target + 1) -> reconciled target`, requires a Known continuity proof,
+and links predecessor lifetime Evidence, continuity Evidence, delta-history Evidence and the new
+Snapshot into one terminal root. Unit tests cover first materialization, unchanged replay, exact
+delta extension, direct and historical continuity, incomplete delta rejection, source regression,
+provider deferral, same-height replacement and finalized conflict alerts.
+
+Migration `009_flap_lifetime_heads.sql` was applied with migrations `001-009` to a fresh disposable
+PostgreSQL 17.10 image under isolated Compose project `zt_lifetime_migration`. The existing 17
+PostgreSQL integration tests passed, followed by the dedicated lifetime-head repository test, for
+18 passing real-PostgreSQL tests in this batch. The repository revalidated completed semantic scans,
+source and scan type, token, target, Snapshot, result hash, terminal Evidence, predecessor and
+sequence. Database triggers rejected update/delete and divergent or stale append attempts. The
+temporary container and volume were removed after the run.
+
+The continuous worker reconciles one common finalized BSC position across a configurable endpoint
+quorum, persists direct or historical predecessor checks, and advances the append-only head only
+after exact delta completion. Retryable provider or storage states produce a deferred cycle without
+advancement. A proven finalized replacement creates a critical Data Quality Alert and stops the
+worker; automatic rollback/replay is deliberately not claimed. The production semantic-worker image
+built and the lifetime-head CLI printed help successfully without provider access. Compose rendered
+the opt-in service with migrations `001-009`.
+
+The provider-free latest-head endpoint was exercised for a complete stored head, unconfigured
+storage and absent head. Desktop and Pixel 7 Chromium exercised the latest sequence, predecessor,
+continuity, target Snapshot and terminal Evidence alongside the existing lifetime/projection flows.
+Local acceptance passed 306 unit tests across 40 files, 38 environment-free integration tests and 10
+Chromium tests. Coverage passed 344 tests with 21 opt-in durable skips at 81.92% statements, 76.06%
+branches, 89.51% functions and 82.84% lines.
+
+This acceptance is deterministic and storage-backed; it is not a named token conclusion. Endpoint
+quorum does not prove operator independence, the BSC sources were not certified archive-grade, and
+no live repeated-head run or forced reorg drill was accepted in this batch. Automatic rollback,
+market/RV/entity linkage, independent-source validation and the terminal FFT run remain pending. No
+request was made for FFT `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, and no FFT conclusion is
+claimed.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                    |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 288 unit, 36 environment-free integration and build; prior dependency gates and 17 PostgreSQL tests remain green                           |
-| local `test:coverage`    | pass: 324 tests, 20 opt-in durable skips; 82.72% statements, 76.04% branches, 91.16% functions, 83.63% lines                                                              |
+| local non-browser gates  | pass: format, lint, typecheck, 306 unit, 38 environment-free integration and build; dependency gates and 18 PostgreSQL tests green                                        |
+| local `test:coverage`    | pass: 344 tests, 21 opt-in durable skips; 81.92% statements, 76.06% branches, 89.51% functions, 82.84% lines                                                              |
 | branch `test:coverage`   | pass on `cfce7f9`: 329 tests; 84.98% statements, 77.92% branches, 94.44% functions, 85.90% lines                                                                          |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact lifetime replay, Unknown and storage failure                                   |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure                            |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                    |
 | `docker compose config`  | pass                                                                                                                                                                      |
-| production Compose smoke | pass: current lifetime CLI build/help and rendered three-service semantic profile; prior locked semantic image ran as UID 1000                                            |
+| production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000                       |
 | branch GitHub Actions CI | [pass on `b887be7`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31358180186): 344 tests, 84.73/78.09/94.01/85.65 coverage, 10 Chromium, six production targets |
 | branch CodeQL            | [pass on `b887be7`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31358180189): JavaScript and TypeScript analysis                                               |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
-current local runner batch additionally passed all 17 PostgreSQL tests on a fresh disposable image.
+current local runner batch additionally passed all 18 PostgreSQL tests on a fresh disposable image.
 ClickHouse and MinIO were not rerun locally for this PostgreSQL/API/UI-only module; the complete
 environment-free, browser, dependency, SBOM and Compose gates were rerun before its push.
 

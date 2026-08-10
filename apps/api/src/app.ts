@@ -959,7 +959,18 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? 'DURABLE_STORAGE_REQUIRED'
             : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
         detail:
-          'A one-shot worker composes official SQD dataset-start metadata, unique Flap deployment origin, and immutable origin-to-target event history at one exact finalized BSC Snapshot. Lifetime coverage is Known only when every child proof is complete; this API replays the composite checkpoint by scan ID without contacting providers. Repeated-head scheduling remains pending.',
+          'A one-shot worker composes official SQD dataset-start metadata, unique Flap deployment origin, and immutable origin-to-target event history at one exact finalized BSC Snapshot. Lifetime coverage is Known only when every child proof is complete; this API replays the composite checkpoint by scan ID without contacting providers.',
+      },
+      {
+        id: 'flap-lifetime-heads',
+        status:
+          runtime.semanticCheckpoints === undefined ||
+          runtime.flapHistoryProjection === undefined ||
+          runtime.flapLifetimeHeads === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A continuous read-only worker reconciles a finalized BSC endpoint quorum, accepts one exact INITIAL lifetime materialization, then appends only Evidence-proven continuous deltas. Regression, disagreement, incomplete history and finalized hash conflicts cannot advance the append-only head. The latest accepted state replays without providers; automatic reorg rollback and independent-operator acceptance remain pending.',
       },
       {
         id: 'flap-token-origin',
@@ -971,7 +982,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               ? 'IMPLEMENTED_EPHEMERAL_PENDING_REAL_CHAIN_VALIDATION'
               : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
         detail:
-          'A synchronous, range-limited finalized SQD create-trace search validates multi-response continuation metadata and rebinds a unique result to the exact BSC receipt, TokenCreated event, and Snapshot. When PostgreSQL is configured, every bounded chunk and terminal result resumes through immutable semantic checkpoints. Empty bounded ranges produce negative Evidence but never imply lifetime absence; the dedicated deployment-origin scheduler remains pending.',
+          'A synchronous, range-limited finalized SQD create-trace search validates multi-response continuation metadata and rebinds a unique result to the exact BSC receipt, TokenCreated event, and Snapshot. When PostgreSQL is configured, every bounded chunk and terminal result resumes through immutable semantic checkpoints. Empty bounded ranges produce negative Evidence but never imply lifetime absence; the continuous lifetime scheduler composes this primitive only after exact coverage.',
       },
       {
         id: 'flap-bsc-sell-preview',

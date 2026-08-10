@@ -210,13 +210,41 @@ run. Replay the stored composite result through the UI or:
 GET /api/v1/launches/EVM/<token>/history/lifetime/materializations/<scan-id>?chainId=eip155:56&platform=flap
 ```
 
-The replay endpoint reads only PostgreSQL. The worker is one-shot; repeated finalized-head
-scheduling, reorg replay and FFT terminal acceptance remain separate gates.
+The replay endpoint reads only PostgreSQL. The worker is one-shot.
+
+## Continuous Flap lifetime heads
+
+The fourth semantic-worker entrypoint maintains one append-only accepted lifetime chain. It requires
+at least `DATA_QUALITY_MIN_SOURCES` distinct BSC RPC URLs, reconciles their common finalized
+position, and then either accepts an INITIAL materialization, returns UNCHANGED, or appends an
+EXTENSION that scans only the missing block interval:
+
+```bash
+npm run flap:lifetime:heads -- \
+  --token 0x0000000000000000000000000000000000000000 \
+  --interval-ms 60000
+```
+
+`--max-cycles` is a bounded test/operations control; omit it for normal continuous operation. The
+same service is available as `flap-lifetime-head-worker` in the `semantic` Compose profile. Each
+extension links the previous lifetime terminal Evidence, target reconciliation Evidence,
+per-provider historical predecessor checks when the target is not a direct child, delta projection
+Evidence, and one new terminal root. Migration `009_flap_lifetime_heads` rejects non-completed scans,
+forked predecessors, out-of-order sequences, target/Snapshot conflicts and mutation.
+
+Retryable provider or storage failures defer the cycle using a credential-free error code. Endpoint
+disagreement, regression, incomplete coverage or an accepted finalized hash conflict cannot advance
+the head. A finalized reorg stops the worker; automatic rollback/replay and FFT terminal acceptance
+remain separate gates. Replay the latest accepted state without providers through:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56&platform=flap
+```
 
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` and `008`, are in
+local upgrade commands, including migrations `007` through `009`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration
@@ -254,6 +282,7 @@ Important values:
 | `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                        |
 | `FLAP_HISTORY_*`                      | Compose defaults for the bounded event-history projection worker                 |
 | `FLAP_LIFETIME_*`                     | Compose defaults for exact point-in-time lifetime materialization                |
+| `FLAP_LIFETIME_HEAD_*`                | continuous worker token, interval and optional bounded cycle count               |
 | `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present   |
 | `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests  |
 | `CLICKHOUSE_URL` / credentials        | Raw Fact HTTP origin and optional separately supplied credentials                |

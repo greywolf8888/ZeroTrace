@@ -409,7 +409,8 @@ returning a page; a corrupt or unavailable projection fails closed. The analyst 
 credential-free scan ID emitted by the worker and renders requested-range progress separately from
 Unknown lifetime coverage. Neither surface starts a provider scan. Requested-range coverage can be
 complete while lifetime coverage remains Unknown and terminal `historyCoverage` remains zero.
-Continuous deployment-origin-to-finalized-head scheduling remains a later stage.
+Continuous deployment-origin-to-finalized-head scheduling is implemented by the accepted-head layer
+described below; general multi-chain scheduling remains a later stage.
 
 The lifetime materializer composes those two child scans into one immutable, point-in-time semantic
 identity. It first binds official SQD dataset-start metadata and one exact finalized BSC target,
@@ -419,8 +420,22 @@ that complete conjunction may emit `lifetimeCoverage=known/true` and `historyCov
 or ambiguous origin remains Unknown; incomplete coverage, identity drift or Snapshot mismatch fails
 closed. The composite advances once after both child results exist, so an interruption before final
 checkpoint completion can finish without recomputation. Its API and UI replay only stored state.
-Repeated-head scheduling, target-to-target continuity, reorg rollback/replay and terminal FFT
-acceptance remain later stages.
+Repeated finalized-head scheduling builds on that materialization. Migration
+`009_flap_lifetime_heads` stores one append-only sequence per token: an INITIAL exact result followed
+only by EXTENSION rows linked to the current predecessor. Both application and database layers bind
+the completed semantic scan, target block/hash, Snapshot hash, result hash, terminal Evidence and
+predecessor scan/target/hash/Evidence. Concurrent or forked appends cannot create a second accepted
+sequence.
+
+Before each append, the worker reconciles a common finalized BSC position across the configured RPC
+quorum. A direct-child target inherits the reconciled parent identity; a larger gap additionally
+re-reads the accepted predecessor position from the participating sources and persists those checks.
+The resulting continuity root links predecessor lifetime Evidence, target anchor observations and
+historical checks. Only `known/true` continuity plus 100% delta projection can append. Same-height
+hash change, regression, disagreement, incomplete history and provider-down states never advance
+the head. A detected finalized reorg creates a critical Data Quality Alert and stops the worker;
+automatic rollback/replay, independent-operator acceptance and terminal FFT validation remain later
+stages. The API/UI latest-head path is provider-free and cannot initiate a scan.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.
@@ -432,7 +447,8 @@ A unique trace is not trusted alone. ZeroTrace joins its parent transaction, val
 address, successful result bytecode and creator, then replays the exact BSC receipt and block. The
 contract origin becomes Known only when the trace position, official Portal creator, `TokenCreated`
 event and Snapshot agree. Empty or ambiguous bounded ranges remain Unknown. This establishes an
-origin primitive but does not yet establish continuous token-lifetime history.
+origin primitive; it establishes continuous token-lifetime history only when composed into an
+accepted exact lifetime head.
 
 Flap realizable-value preview is a distinct provider-observation layer, not a replacement for the
 deterministic RV engine. It reuses the inspection Snapshot and calls the official view-only

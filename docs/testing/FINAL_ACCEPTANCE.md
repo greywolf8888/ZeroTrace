@@ -102,8 +102,10 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
   - [x] Exact point-in-time lifetime materialization from official SQD dataset start through one
         finalized target, with origin/history child scan linkage, restart-safe composite checkpoint,
         provider-free API/UI replay and strict Known/Unknown/Snapshot gates
-  - [ ] Continuous deployment-origin-to-finalized-head scheduler
-  - [ ] Deployment-origin continuous Flap history, named migration/FFT fixtures, lifecycle and market/RV linkage
+  - [x] Continuous deployment-origin-to-finalized-head scheduler with multi-endpoint finalized
+        reconciliation, append-only INITIAL/EXTENSION heads, exact delta projection, provider-free
+        latest replay and fail-closed reorg/regression guards
+  - [ ] Named migration/FFT real-chain fixtures, automatic reorg rollback/replay, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
 - [x] Deterministic Flap fixed-block `previewSell` quote and blocked/Unknown/no-fake-zero tests
@@ -122,6 +124,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       rendered explicitly and no provider-triggering path
 - [x] Flap lifetime scan-ID replay surface with origin/history child provenance, exact finalized
       target, terminal Evidence root, explicit running/Unknown states and corrupt-result rejection
+- [x] Latest accepted Flap lifetime-head replay with sequence, predecessor/continuity, target and
+      terminal Evidence in API plus desktop/mobile UI
 - [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance

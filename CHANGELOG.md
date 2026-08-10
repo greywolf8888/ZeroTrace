@@ -77,6 +77,15 @@ All notable changes to ZeroTrace will be documented here. The project follows
   child work;
 - a read-only `flap:lifetime` host/Compose worker plus token-bound provider-free API and analyst UI
   replay of composite progress, origin/history child scan IDs and terminal Evidence;
+- typed incremental Flap lifetime extensions that scan only the predecessor-to-target delta and
+  require a Known Evidence-backed continuity proof;
+- immutable PostgreSQL `flap_lifetime_heads` INITIAL/EXTENSION chains with completed-scan,
+  predecessor, sequence, Snapshot/result hash, terminal Evidence and mutation guards;
+- a continuous read-only Flap lifetime-head worker with multi-RPC common-position reconciliation,
+  direct/historical predecessor verification, retryable deferral, finalized-reorg stop behavior,
+  Compose/host entrypoints, and credential-free cycle summaries;
+- provider-free latest accepted Flap lifetime-head API and desktop/mobile UI replay with sequence,
+  continuity, target and terminal Evidence visibility;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;
@@ -124,11 +133,11 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - finalized provider-shaped EVM execution/state, Bitcoin UTXO, and Solana execution/balance records
   are persisted and strict raw ledger queries are exposed; Flap BSC current Portal state and a
   caller-supplied event transaction, restart-safe bounded event-range projections with worker/API/UI
-  replay, bounded creation-origin proofs, and one-Snapshot lifetime materialization are decoded, but
-  repeated finalized-head scheduling, complete lifecycle reconstruction, other launchpads, and
+  replay, bounded creation-origin proofs, one-Snapshot lifetime materialization, and incremental
+  accepted finalized heads are decoded, but complete lifecycle reconstruction, other launchpads, and
   market reconstruction are not implemented;
-- common-position endpoint reconciliation and reorg detection are implemented, but continuous
-  scheduling, automatic rollback/replay, and independently operated provider acceptance are not;
+- common-position endpoint reconciliation, Flap finalized-head scheduling and reorg detection are
+  implemented, but automatic rollback/replay and independently operated provider acceptance are not;
 - entity resolution is an uncalibrated baseline;
 - Ethereum, BSC, Bitcoin, and Solana current-state smoke checks pass; archive history, forced
   real-provider failover, load, reorg, provider reconciliation, and production deployment validation
