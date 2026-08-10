@@ -4,6 +4,7 @@ export * from './flap.js';
 export * from './flap-events.js';
 export * from './flap-history.js';
 export * from './flap-history-projection.js';
+export * from './flap-lifetime-extension.js';
 export * from './flap-lifetime.js';
 export * from './flap-origin.js';
 

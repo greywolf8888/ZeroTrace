@@ -1044,6 +1044,86 @@ export const FlapLifetimeMaterializationSchema = z
   });
 export type FlapLifetimeMaterialization = z.infer<typeof FlapLifetimeMaterializationSchema>;
 
+export const FlapLifetimeContinuityProofSchema = z.object({
+  status: z.enum(['DIRECT_EXTENSION', 'HISTORICAL_MATCH']),
+  continuous: knowledgeValueSchema(z.boolean()),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(2),
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type FlapLifetimeContinuityProof = z.infer<typeof FlapLifetimeContinuityProofSchema>;
+
+export const FlapLifetimeExtensionSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    dataset: z.literal('binance-mainnet'),
+    datasetStartBlock: UnsignedQuantityStringSchema,
+    targetBlock: UnsignedQuantityStringSchema,
+    predecessor: z.object({
+      scanId: z.string().uuid(),
+      targetBlock: UnsignedQuantityStringSchema,
+      targetHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+      terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    }),
+    originScanId: z.string().uuid(),
+    origin: knowledgeValueSchema(FlapTokenOriginValueSchema),
+    continuity: FlapLifetimeContinuityProofSchema,
+    historyProjection: FlapLifetimeHistorySummarySchema,
+    lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema,
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      snapshot.blockNumber !== value.targetBlock ||
+      snapshot.finality !== 'finalized'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Flap lifetime extension must use the exact finalized BSC target Snapshot.',
+      });
+    }
+    if (value.lifetimeCoverage.state !== 'known' || value.lifetimeCoverage.value !== true) return;
+    const predecessorTarget = BigInt(value.predecessor.targetBlock);
+    const target = BigInt(value.targetBlock);
+    if (
+      value.origin.state !== 'known' ||
+      target <= predecessorTarget ||
+      value.historyProjection.fromBlock !== (predecessorTarget + 1n).toString() ||
+      value.historyProjection.toBlock !== value.targetBlock ||
+      value.historyProjection.requestedRangeCoverage !== 1 ||
+      value.continuity.continuous.state !== 'known' ||
+      value.continuity.continuous.value !== true ||
+      !value.continuity.evidenceIds.includes(value.continuity.terminalEvidenceId) ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      !value.metadata.evidenceIds.includes(value.predecessor.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(value.continuity.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(value.historyProjection.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['lifetimeCoverage'],
+        message:
+          'Known Flap lifetime extension requires a Known predecessor, continuous target chain, and complete predecessor-target delta history.',
+      });
+    }
+  });
+export type FlapLifetimeExtension = z.infer<typeof FlapLifetimeExtensionSchema>;
+
+export const FlapLifetimeStateSchema = z.union([
+  FlapLifetimeMaterializationSchema,
+  FlapLifetimeExtensionSchema,
+]);
+export type FlapLifetimeState = z.infer<typeof FlapLifetimeStateSchema>;
+
 export const RealizableValuePointSchema = z.object({
   inputQuantity: DecimalStringSchema,
   nominalValue: knowledgeValueSchema(DecimalStringSchema),

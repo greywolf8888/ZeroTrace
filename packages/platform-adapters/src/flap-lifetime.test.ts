@@ -27,6 +27,7 @@ import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   FLAP_HISTORY_PROJECTION_MODEL_VERSION,
   FLAP_TOKEN_ORIGIN_MODEL_VERSION,
+  extendFlapLifetimeRestartSafe,
   materializeFlapLifetimeRestartSafe,
   type FlapEventHistoryProjectionRun,
   type FlapEvidenceWriter,
@@ -42,6 +43,7 @@ const transactionHash = `0x${'3'.repeat(64)}`;
 const originScanId = '11111111-1111-4111-8111-111111111111';
 const historyScanId = '22222222-2222-4222-8222-222222222222';
 const materializationScanId = '33333333-3333-4333-8333-333333333333';
+const extensionScanId = '44444444-4444-4444-8444-444444444444';
 
 class NoNetworkTransport implements JsonRpcTransport {
   readonly endpointId = 'bsc-lifetime-fixture';
@@ -65,12 +67,14 @@ class MemoryCheckpointStore implements FlapOriginCheckpointStore {
   readonly advances: number[] = [];
   failNextFinish = false;
 
+  constructor(readonly scanId = materializationScanId) {}
+
   async begin(input: {
     fromBlock: number;
     initialState: JsonValue;
   }): Promise<FlapOriginCheckpointRun> {
     this.run ??= {
-      id: materializationScanId,
+      id: this.scanId,
       status: 'RUNNING',
       nextBlock: input.fromBlock,
       state: input.initialState,
@@ -254,14 +258,14 @@ function originRun(anchor: ChainAnchorRead, known: boolean): FlapTokenOriginRun 
   return { scanId: originScanId, result };
 }
 
-function historyRun(anchor: ChainAnchorRead): FlapEventHistoryProjectionRun {
+function historyRun(anchor: ChainAnchorRead, fromBlock = '100'): FlapEventHistoryProjectionRun {
   const terminal = createEvidence({
     ledger: 'EVM',
     chainId: 'eip155:56',
     kind: 'DERIVED_FEATURE',
     source: `zerotrace:${FLAP_HISTORY_PROJECTION_MODEL_VERSION}`,
-    locator: `flap-event-history-projection:${token}:100-${anchor.anchor.position}`,
-    payload: { token, fromBlock: '100', toBlock: anchor.anchor.position },
+    locator: `flap-event-history-projection:${token}:${fromBlock}-${anchor.anchor.position}`,
+    payload: { token, fromBlock, toBlock: anchor.anchor.position },
     observedAt: anchor.snapshot.capturedAt,
     blockOrSlot: anchor.anchor.position,
     finality: 'finalized',
@@ -272,7 +276,7 @@ function historyRun(anchor: ChainAnchorRead): FlapEventHistoryProjectionRun {
     platform: 'flap',
     token,
     requestedRange: {
-      fromBlock: '100',
+      fromBlock,
       toBlock: anchor.anchor.position,
       segmentSize: 2,
       segmentCount: 2,
@@ -285,7 +289,7 @@ function historyRun(anchor: ChainAnchorRead): FlapEventHistoryProjectionRun {
     segments: [
       {
         id: `fhs_${'1'.repeat(24)}`,
-        fromBlock: '100',
+        fromBlock,
         toBlock: anchor.anchor.position,
         terminalEvidenceId: terminal.id,
         transactionCount: 3,
@@ -504,5 +508,127 @@ describe('restart-safe Flap lifetime materialization', () => {
     expect(originCalls).toBe(1);
     expect(historyCalls).toBe(1);
     expect(context.checkpoints.run?.status).toBe('REQUESTED_RANGE_COMPLETE');
+  });
+});
+
+describe('restart-safe incremental Flap lifetime extension', () => {
+  async function predecessor() {
+    const context = fixture();
+    return materializeFlapLifetimeRestartSafe({
+      ...context.options,
+      executeOrigin: async () => originRun(context.anchor, true),
+      executeHistory: async () => historyRun(context.anchor),
+    });
+  }
+
+  function continuity() {
+    const previous = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'BLOCK',
+      source: 'bsc-lifetime-fixture',
+      locator: 'anchor:103',
+      payload: { block: '103' },
+      blockOrSlot: '103',
+      finality: 'finalized',
+      observedAt: '2026-08-10T00:00:00.000Z',
+      summary: 'Fixture predecessor anchor.',
+    });
+    const current = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'BLOCK',
+      source: 'bsc-lifetime-fixture',
+      locator: 'anchor:105',
+      payload: { block: '105' },
+      blockOrSlot: '105',
+      finality: 'finalized',
+      observedAt: '2026-08-10T00:01:00.000Z',
+      summary: 'Fixture current anchor.',
+    });
+    const terminal = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace-data-quality',
+      locator: 'anchor-continuity:bsc-lifetime-fixture:103:105',
+      payload: { status: 'HISTORICAL_MATCH' },
+      blockOrSlot: '105',
+      finality: 'finalized',
+      observedAt: '2026-08-10T00:01:00.000Z',
+      summary: 'Fixture finalized anchor continuity.',
+      sourceEvidenceIds: [previous.id, current.id],
+    });
+    return {
+      status: 'HISTORICAL_MATCH' as const,
+      continuous: knownValue(true),
+      evidenceIds: [previous.id, current.id, terminal.id].sort(),
+      terminalEvidenceId: terminal.id,
+    };
+  }
+
+  it('extends a Known predecessor with only the continuous target delta', async () => {
+    const prior = await predecessor();
+    const context = fixture();
+    const anchor = targetAnchor('105');
+    const checkpoints = new MemoryCheckpointStore(extensionScanId);
+    const historyCalls: string[] = [];
+    const extension = await extendFlapLifetimeRestartSafe({
+      adapter: context.options.adapter,
+      logReader: context.options.logReader,
+      token,
+      deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+      predecessor: prior,
+      continuity: continuity(),
+      targetAnchor: anchor,
+      checkpoints,
+      projection: context.options.projection,
+      writeEvidence: context.options.writeEvidence,
+      executeHistory: async (options) => {
+        historyCalls.push(`${options.fromBlock}-${options.toBlock}`);
+        return historyRun(anchor, options.fromBlock);
+      },
+    });
+
+    expect(extension.scanId).toBe(extensionScanId);
+    expect(historyCalls).toEqual(['104-105']);
+    expect(extension.result).toMatchObject({
+      targetBlock: '105',
+      predecessor: {
+        scanId: materializationScanId,
+        targetBlock: '103',
+        terminalEvidenceId: prior.result.terminalEvidenceId,
+      },
+      originScanId,
+      continuity: { status: 'HISTORICAL_MATCH', continuous: { state: 'known', value: true } },
+      historyProjection: { fromBlock: '104', toBlock: '105', requestedRangeCoverage: 1 },
+      lifetimeCoverage: { state: 'known', value: true },
+      metadata: { dataCoverage: 1, historyCoverage: 1, confidence: 0.98 },
+    });
+    expect(checkpoints).toMatchObject({ advances: [106], failures: [] });
+  });
+
+  it('rejects non-Known continuity before creating an extension checkpoint', async () => {
+    const prior = await predecessor();
+    const context = fixture();
+    const checkpoints = new MemoryCheckpointStore(extensionScanId);
+    await expect(
+      extendFlapLifetimeRestartSafe({
+        adapter: context.options.adapter,
+        logReader: context.options.logReader,
+        token,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        predecessor: prior,
+        continuity: {
+          ...continuity(),
+          continuous: unknownValue('INSUFFICIENT_DATA', 'Continuity check is incomplete.'),
+        },
+        targetAnchor: targetAnchor('105'),
+        checkpoints,
+        projection: context.options.projection,
+        writeEvidence: context.options.writeEvidence,
+      }),
+    ).rejects.toThrow('Flap lifetime extension requires Known target-chain continuity.');
+    expect(checkpoints.run).toBeUndefined();
   });
 });
