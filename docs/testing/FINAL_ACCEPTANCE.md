@@ -64,6 +64,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31396779069) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31396779896) pass on immutable
       Flap/Pancake V2 market-scenario commit `07b3478`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399771001) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399770876) pass on immutable
+      Pancake V2 exit-scenario commit `27c296d`
 
 ## Evidence and data
 

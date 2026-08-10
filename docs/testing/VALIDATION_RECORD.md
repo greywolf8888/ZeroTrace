@@ -1049,8 +1049,8 @@ This is one route and one chain operator, not independent-source or terminal FFT
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                |
 | `docker compose config`  | pass                                                                                                                                                  |
 | production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000   |
-| branch GitHub Actions CI | [pass on `07b3478`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31396779069): full CI matrix, 12 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `07b3478`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31396779896): JavaScript and TypeScript analysis                           |
+| branch GitHub Actions CI | [pass on `27c296d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399771001): full CI matrix, 12 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `27c296d`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399770876): JavaScript and TypeScript analysis                           |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

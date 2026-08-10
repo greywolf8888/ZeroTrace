@@ -18,7 +18,7 @@ completed feature.
 | Unit tests                       | **360 passing across 46 files**                                                                                 |
 | Integration tests                | **44 environment-free plus 19 real PostgreSQL passing; latest completed remote all-store suite has 54 passing** |
 | Real-browser E2E                 | **12 passing: Chromium desktop and Pixel 7**                                                                    |
-| Remote CI                        | **Pass on immutable market commit `07b3478`: CI, Chromium, production images, and CodeQL**                      |
+| Remote CI                        | **Pass on immutable exit-scenario commit `27c296d`: CI, Chromium, production images, and CodeQL**               |
 | Coverage                         | **Current local: 82.40% statements / 76.29% branches / 90.80% functions / 83.47% lines**                        |
 | Real-chain validation            | Four-chain anchors/raw ingestion, named Flap history/origin and FFT market slices passed                        |
 | Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap history/lifetime, accepted heads and EVM Claim Reports wired    |
@@ -156,6 +156,10 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31384624768) passed on immutable
   same-Snapshot claim-composition commit `d6a7c1f`, including all production targets and security
   analysis.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399771001) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31399770876) passed on immutable
+  Pancake V2 exit-scenario commit `27c296d`: 404 coverage tests, 12 browser flows and all six
+  production container targets.
 
 ### Read-only chain foundation
 
@@ -612,7 +616,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                             | fresh PostgreSQL 16 applied 001–011/triggers; ClickHouse Raw Fact schema/migration passed in prior all-store run                |
 | Runtime/browser smoke          | Pass                                             | API/web health, proxy, security headers, desktop/mobile render                                                                  |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope        | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending   |
-| Remote CI                      | Pass on immutable market commit `07b3478`        | CI/CodeQL green; full matrix, 12 Chromium flows and six production targets                                                      |
+| Remote CI                      | Pass on immutable exit-scenario commit `27c296d` | CI/CodeQL green; full matrix, 12 Chromium flows and six production targets                                                      |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
