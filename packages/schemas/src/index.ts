@@ -2208,6 +2208,232 @@ export const EvmClaimBurnPromotionSchema = z
   });
 export type EvmClaimBurnPromotion = z.infer<typeof EvmClaimBurnPromotionSchema>;
 
+export const EvmSupplyContinuityChangeSchema = z
+  .object({
+    blockNumber: UnsignedQuantityStringSchema,
+    blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    parentBlockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    totalSupplyBefore: UnsignedQuantityStringSchema,
+    totalSupplyAfter: UnsignedQuantityStringSchema,
+    supplyDelta: QuantityStringSchema,
+    mintedEventAmount: UnsignedQuantityStringSchema,
+    burnedEventAmount: UnsignedQuantityStringSchema,
+    eventNetSupplyDelta: QuantityStringSchema,
+    reconciliationStatus: z.enum(['EVENT_CONSERVED', 'UNEXPLAINED']),
+    certificateStatus: ClaimBurnConservationStatusSchema,
+    certificateTerminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  })
+  .superRefine((value, context) => {
+    const before = BigInt(value.totalSupplyBefore);
+    const after = BigInt(value.totalSupplyAfter);
+    const delta = after - before;
+    const eventDelta = BigInt(value.mintedEventAmount) - BigInt(value.burnedEventAmount);
+    const expectedStatus = delta === eventDelta ? 'EVENT_CONSERVED' : 'UNEXPLAINED';
+    if (
+      delta === 0n ||
+      value.supplyDelta !== delta.toString() ||
+      value.eventNetSupplyDelta !== eventDelta.toString() ||
+      value.reconciliationStatus !== expectedStatus ||
+      (expectedStatus === 'UNEXPLAINED' && value.certificateStatus !== 'CONTRADICTED') ||
+      (expectedStatus === 'EVENT_CONSERVED' && value.certificateStatus === 'CONTRADICTED')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['reconciliationStatus'],
+        message: 'Supply-continuity change arithmetic and event reconciliation must agree.',
+      });
+    }
+  });
+export type EvmSupplyContinuityChange = z.infer<typeof EvmSupplyContinuityChangeSchema>;
+
+export const EvmSupplyContinuitySegmentSchema = z
+  .object({
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    sampleCount: z.number().int().min(2),
+    startTotalSupply: UnsignedQuantityStringSchema,
+    endTotalSupply: UnsignedQuantityStringSchema,
+    supplyChangeCount: z.number().int().nonnegative(),
+    eventConservedChangeCount: z.number().int().nonnegative(),
+    unexplainedChangeCount: z.number().int().nonnegative(),
+    changes: z.array(EvmSupplyContinuityChangeSchema),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    snapshot: EvmSnapshotSchema,
+    sourceSet: z.array(z.string().min(1)).min(1),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const expectedSamples = Number(toBlock - fromBlock + 2n);
+    const eventConserved = value.changes.filter(
+      (change) => change.reconciliationStatus === 'EVENT_CONSERVED',
+    ).length;
+    const unexplained = value.changes.length - eventConserved;
+    let previous: bigint | undefined;
+    const invalidChange = value.changes.some((change) => {
+      const block = BigInt(change.blockNumber);
+      const invalid =
+        block < fromBlock ||
+        block > toBlock ||
+        (previous !== undefined && block <= previous) ||
+        (block === toBlock && change.blockHash.toLowerCase() !== value.snapshot.blockHash);
+      previous = block;
+      return invalid;
+    });
+    if (
+      fromBlock < 1n ||
+      toBlock < fromBlock ||
+      !Number.isSafeInteger(expectedSamples) ||
+      value.sampleCount !== expectedSamples ||
+      value.supplyChangeCount !== value.changes.length ||
+      value.eventConservedChangeCount !== eventConserved ||
+      value.unexplainedChangeCount !== unexplained ||
+      value.snapshot.ledger !== 'EVM' ||
+      value.snapshot.finality !== 'finalized' ||
+      value.snapshot.blockTimestamp === undefined ||
+      value.snapshot.blockNumber !== value.toBlock ||
+      new Set(value.sourceSet).size !== value.sourceSet.length ||
+      [...value.sourceSet].sort().some((source, index) => source !== value.sourceSet[index]) ||
+      invalidChange
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['changes'],
+        message: 'Supply-continuity segment range, samples, changes, and Snapshot must agree.',
+      });
+    }
+  });
+export type EvmSupplyContinuitySegment = z.infer<typeof EvmSupplyContinuitySegmentSchema>;
+
+export const EvmSupplyContinuitySchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    coverageScope: z.literal('ERC20_TOTAL_SUPPLY_EVERY_FINALIZED_BLOCK_WITH_EVENT_RECONCILIATION'),
+    status: z.enum([
+      'VERIFIED_NO_CHANGE',
+      'VERIFIED_EVENT_CONSERVED_CHANGES',
+      'UNEXPLAINED_SUPPLY_CHANGE',
+      'INCONCLUSIVE_SOURCE_INDEPENDENCE',
+    ]),
+    segmentCount: z.number().int().positive(),
+    scannedBlockCount: z.number().int().positive(),
+    supplySampleCount: z.number().int().min(2),
+    initialTotalSupply: UnsignedQuantityStringSchema,
+    finalTotalSupply: UnsignedQuantityStringSchema,
+    netSupplyDelta: QuantityStringSchema,
+    supplyChangeCount: z.number().int().nonnegative(),
+    eventConservedChangeCount: z.number().int().nonnegative(),
+    unexplainedChangeCount: z.number().int().nonnegative(),
+    segments: z.array(EvmSupplyContinuitySegmentSchema).min(1),
+    sourceIndependence: SourceIndependenceAssessmentSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('erc20-supply-continuity-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const snapshot = value.metadata.snapshot;
+    const changes = value.segments.flatMap((segment) => segment.changes);
+    let nextBlock = fromBlock;
+    let sampleCount = 0;
+    const sourceSet = new Set<string>();
+    for (const [index, segment] of value.segments.entries()) {
+      if (BigInt(segment.fromBlock) !== nextBlock) {
+        context.addIssue({
+          code: 'custom',
+          path: ['segments', index],
+          message: 'Supply-continuity segments must be contiguous.',
+        });
+      }
+      nextBlock = BigInt(segment.toBlock) + 1n;
+      sampleCount += segment.sampleCount - (index === 0 ? 0 : 1);
+      segment.sourceSet.forEach((source) => sourceSet.add(source));
+    }
+    const eventConserved = changes.filter(
+      (change) => change.reconciliationStatus === 'EVENT_CONSERVED',
+    ).length;
+    const unexplained = changes.length - eventConserved;
+    const independentlyVerified =
+      value.sourceIndependence.independence.state === 'known' &&
+      value.sourceIndependence.independence.value;
+    const expectedStatus =
+      unexplained > 0
+        ? 'UNEXPLAINED_SUPPLY_CHANGE'
+        : !independentlyVerified
+          ? 'INCONCLUSIVE_SOURCE_INDEPENDENCE'
+          : changes.length === 0
+            ? 'VERIFIED_NO_CHANGE'
+            : 'VERIFIED_EVENT_CONSERVED_CHANGES';
+    const expectedEvidenceIds = [
+      ...value.segments.map((segment) => segment.terminalEvidenceId),
+      ...value.sourceIndependence.evidenceIds,
+      value.terminalEvidenceId,
+    ].sort();
+    const actualEvidenceIds = [...value.metadata.evidenceIds].sort();
+    const expectedScannedBlocks = toBlock - fromBlock + 1n;
+    if (
+      fromBlock < 1n ||
+      toBlock < fromBlock ||
+      expectedScannedBlocks > BigInt(Number.MAX_SAFE_INTEGER) ||
+      nextBlock !== toBlock + 1n ||
+      value.segmentCount !== value.segments.length ||
+      value.scannedBlockCount !== Number(expectedScannedBlocks) ||
+      value.supplySampleCount !== sampleCount ||
+      value.initialTotalSupply !== value.segments[0]?.startTotalSupply ||
+      value.finalTotalSupply !== value.segments.at(-1)?.endTotalSupply ||
+      value.netSupplyDelta !==
+        (BigInt(value.finalTotalSupply) - BigInt(value.initialTotalSupply)).toString() ||
+      value.supplyChangeCount !== changes.length ||
+      value.eventConservedChangeCount !== eventConserved ||
+      value.unexplainedChangeCount !== unexplained ||
+      value.status !== expectedStatus
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Supply-continuity aggregate range, arithmetic, and status must agree.',
+      });
+    }
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.toBlock ||
+      snapshot.blockHash.toLowerCase() !==
+        value.segments.at(-1)?.snapshot.blockHash.toLowerCase() ||
+      value.metadata.freshness !== snapshot.blockTimestamp ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      value.metadata.sourceCoverage !== (independentlyVerified ? 1 : 0.5) ||
+      value.metadata.confidence !== (independentlyVerified ? 1 : 0.5) ||
+      [...sourceSet].sort().some((source, index) => source !== value.metadata.sourceSet[index]) ||
+      sourceSet.size !== value.metadata.sourceSet.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Supply-continuity metadata must bind complete scoped coverage and source truth.',
+      });
+    }
+    if (
+      expectedEvidenceIds.length !== new Set(expectedEvidenceIds).size ||
+      expectedEvidenceIds.length !== actualEvidenceIds.length ||
+      expectedEvidenceIds.some((id, index) => id !== actualEvidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'evidenceIds'],
+        message: 'Supply-continuity metadata must contain each terminal Evidence identity once.',
+      });
+    }
+  });
+export type EvmSupplyContinuity = z.infer<typeof EvmSupplyContinuitySchema>;
+
 export const ClaimCustodyObservationSchema = z.object({
   address: z.string().min(1),
   kind: ClaimCustodyKindSchema,

@@ -1235,19 +1235,62 @@ scan was rejected with HTTP 502. An unmocked headed Chromium session then replay
 the rebuilt Web container and rendered both segment Evidence IDs, the terminal root and Unknown
 boundary. The focused panel screenshot is retained under ignored local test output, not committed as
 product data.
-Continuous scheduling, all-block silent-supply analysis, independent reconciliation, official
-wallet attribution and terminal FFT acceptance remain pending.
+Continuous scheduling, complete all-block history, official wallet attribution and terminal FFT
+acceptance remain pending.
+
+## FFT bounded all-block supply continuity (2026-08-11)
+
+Model `erc20-supply-continuity-v1.0.0` adds the complementary path that event-only discovery could
+not cover. It reads `totalSupply()` by EIP-1898 canonical block hash at the parent of the requested
+range and every finalized block inside it. A segment advances only after all configured sources
+agree on block/hash/parent/timestamp/supply. Every detected transition must also pass the existing
+complete same-block mint/burn conservation certificate. Deterministic tests cover independent and
+same-operator status, exact source conflict before advancement, durable terminal replay, worker
+storage preflight, argument boundaries, API identity/storage failures and desktop/mobile rendering.
+
+The first older-block live probe was intentionally retained as an availability finding: Alchemy
+returned historical state while the BNB Chain public endpoint returned JSON-RPC `-32000` / `missing
+trie node`. The scanner returned `RPC_ERROR` and did not advance the checkpoint. This is provider
+retention failure, not unchanged supply.
+
+A recent independent-source run then completed FFT blocks `115188144-115188147` under scan
+`0ee1a747-0d83-4cad-a5ab-3aaf0e2a3981`. Alchemy and BNB Chain returned identical finalized block
+identities and five supply samples across four transitions. Initial and final atomic supply were
+both `1000000000000000000000000000` (`1,000,000,000` FFT at the separately observed 18 decimals),
+with net delta `0`, zero supply-change blocks and status `VERIFIED_NO_CHANGE`. The registry resolved
+two distinct operators; terminal Evidence is `ev_5074fef4eb70f879c3e2e48d`.
+
+The identical command was rerun with an intentionally invalid Alchemy credential. It returned the
+same scan ID, counts, status and terminal Evidence in 1.6 seconds, proving the completed result was
+replayed from PostgreSQL without RPC or SQD access. The credential supplied by the user was loaded
+process-locally, never printed, persisted or committed. This acceptance is exact-range only and
+does not prove the 2 August-to-head history, wallet attribution, burn irreversibility, dividend
+semantics or terminal FFT conclusions.
+
+The production semantic-worker image repeated that invalid-credential replay successfully. Rebuilt
+API/Web containers were healthy and read-only; the API returned the same scan/status/Evidence from
+PostgreSQL, terminal Evidence drilldown traversed 26 stored nodes, and an unmocked Chromium session
+rendered the verified status and terminal root in Claim Audit. Top-level health remained
+`DEGRADED` because the local provider DNS policy reported three sources down and one unconfigured;
+durable storage was `UP`, and the provider degradation was not converted to a supply result.
 
 ## Automated verification
 
+Before the current full-store run, the persistent local ClickHouse volume exposed a pre-Evidence
+empty `MergeTree` `raw_chain_facts` table with no `fact_id`. The three all-store tests correctly
+failed `CLICKHOUSE_NOT_INITIALIZED` / `NO_SUCH_COLUMN_IN_TABLE`. After confirming its row count was
+zero, the table was non-destructively renamed to
+`raw_chain_facts_legacy_pre_evidence_20260811`, the current initialization SQL was reapplied, and
+both tables remained present. No legacy row was discarded or assigned fabricated Evidence.
+
 | Command                  | Result                                                                                                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 400 unit, 55 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
-| local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                                               |
-| local `test:coverage`    | pass: 455 tests, 22 opt-in durable skips; 82.89% statements, 77.22% branches, 91.73% functions, 84.05% lines                                                                 |
+| local non-browser gates  | pass: format, lint, typecheck, 412 unit, 58 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
+| local durable stores     | pass: PostgreSQL migrations `001-011`, canonical ClickHouse and versioned object store; all 80 integration tests passed                                                      |
+| local `test:coverage`    | pass: 470 tests, 22 opt-in durable skips; 82.76% statements, 77.26% branches, 91.66% functions, 83.94% lines                                                                 |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
-| `npm run test:e2e`       | pass: 20 Chromium tests across desktop and Pixel 7, including multi-source market/RV review, burn workflows, Claim Declaration/Report and Unknown                            |
+| `npm run test:e2e`       | pass: 22 Chromium tests across desktop and Pixel 7, including supply continuity, multi-source market/RV, burn, Claim Declaration/Report and Unknown                          |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
 | `docker compose config`  | pass                                                                                                                                                                         |
 | production Compose smoke | pass: rebuilt API/Web healthy and read-only; same-operator capability truth plus 91-node durable FFT Evidence replay passed                                                  |

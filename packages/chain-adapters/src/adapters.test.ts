@@ -293,6 +293,16 @@ describe('capability probes and snapshots', () => {
       method: 'eth_call',
       params: [{ to: `0x${'1'.repeat(40)}`, data: '0x1234' }, '0x10'],
     });
+    await expect(
+      adapter.callObservationAtBlockHash(`0x${'1'.repeat(40)}`, '0x1234', `0x${'a'.repeat(64)}`),
+    ).resolves.toMatchObject({ value: `0x${'0'.repeat(63)}1` });
+    expect(transport.calls.at(-1)).toEqual({
+      method: 'eth_call',
+      params: [
+        { to: `0x${'1'.repeat(40)}`, data: '0x1234' },
+        { blockHash: `0x${'a'.repeat(64)}`, requireCanonical: true },
+      ],
+    });
     await expect(adapter.call(`0x${'1'.repeat(40)}`, '1234', '0x10')).rejects.toMatchObject({
       code: 'INVALID_RESPONSE',
     });
@@ -301,7 +311,10 @@ describe('capability probes and snapshots', () => {
     });
     expect(transport.calls.at(-1)).toEqual({
       method: 'eth_call',
-      params: [{ to: `0x${'1'.repeat(40)}`, data: '0x1234' }, '0x10'],
+      params: [
+        { to: `0x${'1'.repeat(40)}`, data: '0x1234' },
+        { blockHash: `0x${'a'.repeat(64)}`, requireCanonical: true },
+      ],
     });
     expect(transport.calls[0]).toEqual({
       method: 'eth_getBlockByNumber',

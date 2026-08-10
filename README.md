@@ -115,6 +115,10 @@ The current foundation includes:
 - a restart-safe BSC burn-promotion worker that checkpoints complete event segments, certifies every
   candidate with exact-block supply conservation before cursor advancement, and exposes strict
   PostgreSQL-only API/UI replay by scan ID;
+- a bounded all-block BSC supply-continuity worker that compares EIP-1898 `totalSupply` reads from
+  every configured source at every finalized transition, requires exact source agreement before
+  advancing, reconciles each detected change with complete same-block mint/burn events, and exposes
+  provider-free PostgreSQL/API/UI replay;
 - exact point-in-time Flap lifetime materialization that composes official SQD dataset-start
   metadata, a unique deployment-origin proof, and immutable origin-to-finalized-target history;
   `Known(true)` is emitted only when every child range and Snapshot agrees, with provider-free
@@ -189,7 +193,7 @@ distributed workflows remain open work. Read
 | Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                               |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                                                                   |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, and verified Pancake V2 buy/exit-size models work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                  |
-| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, SQD zero-address discovery, durable exact-block candidate promotion, live FFT observations and Claim Report replay work; silent-supply discovery, continuous scheduling, official attribution and terminal FFT acceptance pending |
+| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, live FFT observations and Claim Report replay work; complete historical backfill, continuous scheduling, official attribution and terminal FFT acceptance pending |
 | Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                      |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
@@ -231,6 +235,22 @@ Solana instructions/logs/native balances/token balances/rewards as applicable. E
 `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`; only materialized tables receive numeric counts.
 The worker accepts bounded finalized ranges only, claims no protocol decoding, and has no signing or
 broadcast interface.
+
+To prove ERC-20 supply continuity over one explicit BSC range, configure two independently operated
+archive-capable RPC endpoints and run the isolated one-shot profile:
+
+```bash
+docker compose --profile supply-continuity run --rm supply-continuity-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 100000000 --to 100000127 --segment-size 128
+```
+
+The worker samples `block - 1` plus every block in the requested inclusive range. A verified result
+requires exact block/hash/state agreement and two operators recognized by the versioned official
+registry. Any source conflict fails before checkpoint advancement; an event-unexplained state
+change is retained as an explicit contradiction and never becomes a burn action. A completed scan replays without RPC/SQD access at
+`GET /api/v1/claims/EVM/<token>/supply-continuity/<scan-id>`. Completion covers only the requested
+range; it is not lifetime proof or evidence that a publicity-named custody wallet is a burn.
 
 Wide Flap contract-origin scans use a separate durable one-shot worker. Every completed SQD chunk is
 committed to PostgreSQL with its Snapshot and Evidence IDs, so the identical command resumes at the
@@ -485,7 +505,7 @@ packages/
   storage/              PostgreSQL, ClickHouse and object-artifact repositories
 services/
   ingest-worker/        Bounded finalized-range worker CLI
-  semantic-worker/      Durable Flap and ERC-20 burn-promotion worker CLIs
+  semantic-worker/      Durable Flap, ERC-20 burn-promotion and supply-continuity worker CLIs
 infra/
   postgres/init/        Relational/evidence schema
   clickhouse/init/      Raw fact and metric schema
@@ -530,6 +550,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add exact-block ERC-20 total-supply/mint-burn conservation, Evidence replay, API and responsive Claim Audit UI
 - [x] Add BSC SQD long-range zero-address burn-candidate discovery with explicit silent-supply Unknown
 - [x] Add restart-safe burn-candidate promotion, exact-block certificates and provider-free API/UI replay
+- [x] Add bounded multi-source all-block ERC-20 supply continuity with change certificates and provider-free replay
 - [x] Add same-Snapshot Pancake V2 spot plus multi-size Flap buy/exit scenarios with automatic 0.10% arithmetic checks
 - [x] Add complete common-finalized-block Flap/Pancake V2 multi-source reconciliation with official operator attestations and typed 0%/0.50% budgets
 - [ ] Add live/unfinalized policy, archive-grade coverage and forced real-reorg drills across independent operators
@@ -538,7 +559,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
-- [ ] Add continuous capture scheduling, silent-supply discovery, reviewed-draft promotion and terminal FFT audit
+- [ ] Backfill complete supply history and add continuous capture scheduling, reviewed-draft promotion and terminal FFT audit
 - [ ] Complete search, timeline, evidence graph, comparison, scenario and export workflows in the UI
 - [ ] Run archive-grade, multi-provider, real-chain fixtures and production load/failure testing
 

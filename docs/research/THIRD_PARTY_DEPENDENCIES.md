@@ -2,9 +2,10 @@
 
 Inventory date: **2026-08-11**
 
-The current-state Snapshot, request-provenance, anchor reconciliation, and 2026-08-11 BSC
-operator-attestation/market-reconciliation work use the existing clean HTTP adapters, `pg` client,
-and Node.js built-ins; they add no third-party runtime package or copied upstream code.
+The current-state Snapshot, request-provenance, anchor reconciliation, 2026-08-11 BSC
+operator-attestation/market-reconciliation, and EIP-1898 all-block supply-continuity work use the
+existing clean HTTP adapters, pinned `viem`, `pg` client, and Node.js built-ins; they add no
+third-party runtime package or copied upstream code.
 `@zerotrace/data-quality` is an internal workspace package reused by the platform adapter.
 
 Direct versions are pinned in manifests or container configuration. Transitive npm components are

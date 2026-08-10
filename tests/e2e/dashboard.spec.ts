@@ -2150,6 +2150,139 @@ test('replays a durable burn promotion without converting scoped coverage into s
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
 
+test('replays independently verified all-block supply continuity without extending its range', async ({
+  page,
+}) => {
+  const scanId = '99999999-9999-4999-8999-999999999999';
+  const segmentEvidenceId = 'ev_000000000000000000000085';
+  const terminalEvidenceId = 'ev_000000000000000000000086';
+  const sourceSet = ['bsc-rpc@bnb-mainnet.g.alchemy.com#1', 'bsc-rpc@bsc-dataseed.bnbchain.org#2'];
+  await page.route('**/api/v1/claims/EVM/*/supply-continuity/*', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        scan: {
+          id: scanId,
+          status: 'REQUESTED_RANGE_COMPLETE',
+          token: bscTokenAddress,
+          requestedRange: { fromBlock: '115180000', toBlock: '115180255', segmentSize: 256 },
+          nextBlock: '115180256',
+          requestedRangeCoverage: 1,
+          lastErrorCode: null,
+          updatedAt: '2026-08-11T02:01:00.000Z',
+        },
+        terminalResult: {
+          tokenAddress: bscTokenAddress,
+          fromBlock: '115180000',
+          toBlock: '115180255',
+          coverageScope: 'ERC20_TOTAL_SUPPLY_EVERY_FINALIZED_BLOCK_WITH_EVENT_RECONCILIATION',
+          status: 'VERIFIED_NO_CHANGE',
+          segmentCount: 1,
+          scannedBlockCount: 256,
+          supplySampleCount: 257,
+          initialTotalSupply: '1000000000000000000000000000',
+          finalTotalSupply: '1000000000000000000000000000',
+          netSupplyDelta: '0',
+          supplyChangeCount: 0,
+          eventConservedChangeCount: 0,
+          unexplainedChangeCount: 0,
+          segments: [
+            {
+              fromBlock: '115180000',
+              toBlock: '115180255',
+              sampleCount: 257,
+              startTotalSupply: '1000000000000000000000000000',
+              endTotalSupply: '1000000000000000000000000000',
+              supplyChangeCount: 0,
+              eventConservedChangeCount: 0,
+              unexplainedChangeCount: 0,
+              changes: [],
+              terminalEvidenceId: segmentEvidenceId,
+              snapshot: {},
+              sourceSet,
+            },
+          ],
+          sourceIndependence: {
+            status: 'VERIFIED_INDEPENDENT',
+            independence: { state: 'known', value: true },
+            requiredOperators: 2,
+            observedSources: 2,
+            operatorCount: 2,
+            unresolvedSources: [],
+            attestations: [
+              {
+                sourceId: sourceSet[0],
+                hostname: 'bnb-mainnet.g.alchemy.com',
+                operatorId: 'alchemy',
+                operatorName: 'Alchemy',
+                officialSource: 'https://www.alchemy.com/docs/reference/node-supported-chains',
+                registryObservedAt: '2026-08-11T00:00:00.000Z',
+                registryRevision: 'alchemy-bnb-chain-api@2026-08-11',
+                evidenceId: 'ev_000000000000000000000082',
+              },
+              {
+                sourceId: sourceSet[1],
+                hostname: 'bsc-dataseed.bnbchain.org',
+                operatorId: 'bnb-chain',
+                operatorName: 'BNB Chain',
+                officialSource:
+                  'https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/',
+                registryObservedAt: '2026-08-11T00:00:00.000Z',
+                registryRevision: 'bnb-chain-bsc-json-rpc-endpoints@2026-08-11',
+                evidenceId: 'ev_000000000000000000000083',
+              },
+            ],
+            registryEvidenceId: 'ev_000000000000000000000081',
+            terminalEvidenceId: 'ev_000000000000000000000084',
+            evidenceIds: [],
+            modelVersion: 'source-operator-registry-v1',
+          },
+          terminalEvidenceId,
+          metadata: {
+            snapshot: null,
+            dataCoverage: 1,
+            sourceCoverage: 1,
+            historyCoverage: 1,
+            simulationCoverage: 0,
+            freshness: '2026-08-11T01:59:57.000Z',
+            sourceSet,
+            modelVersion: 'erc20-supply-continuity-v1.0.0',
+            confidence: 1,
+            evidenceIds: [segmentEvidenceId, terminalEvidenceId],
+          },
+        },
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  const panel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'All-block Supply Continuity' }),
+  });
+  await panel.getByLabel('Supply token address').fill(bscTokenAddress);
+  await panel.getByLabel('Supply scan ID').fill(scanId);
+  await panel.getByRole('button', { name: 'Replay supply proof' }).click();
+
+  await expect(panel.getByText('Verified No Change', { exact: true }).first()).toBeVisible();
+  await expect(panel).toContainText('256');
+  await expect(panel).toContainText('257');
+  await expect(panel).toContainText(
+    'No totalSupply change occurred inside this exact fully sampled range',
+  );
+  await expect(panel).toContainText('This does not describe blocks outside the range');
+  await expect(panel).toContainText('Alchemy');
+  await expect(panel).toContainText('BNB Chain');
+  await expect(panel).toContainText(segmentEvidenceId);
+  await expect(panel).toContainText(terminalEvidenceId);
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
 test('keeps scenario execution gated and exposes provider availability', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Scenario Lab' }).click();

@@ -141,6 +141,23 @@ invalidation and immediately re-enters safe materialization/extension. Historica
 unavailability never selects a branch. Forced real-reorg and independent-operator acceptance remain
 deployment gates.
 
+Run a bounded all-block ERC-20 supply-continuity scan as an isolated one-shot service:
+
+```bash
+docker compose --profile supply-continuity run --rm supply-continuity-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 100000000 --to 100000127 --segment-size 128
+```
+
+Set `SUPPLY_CONTINUITY_TOKEN`, `SUPPLY_CONTINUITY_FROM_BLOCK`,
+`SUPPLY_CONTINUITY_TO_BLOCK`, `SUPPLY_CONTINUITY_SEGMENT_SIZE` and optionally
+`SUPPLY_CONTINUITY_MAX_TRANSFERS` for Compose defaults. The service requires PostgreSQL migrations
+for Evidence and semantic checkpoints, SQD for changed-block event conservation, and one or more
+BSC RPC endpoints with EIP-1898/historical-state support. Exact state conflicts cannot advance the
+cursor. Operator independence is verified only through the versioned official registry; endpoint
+count alone is insufficient. The service is read-only, exits after one range, accepts no signing
+material and does not schedule itself.
+
 ## Health and smoke checks
 
 ```bash
@@ -279,6 +296,16 @@ Get-Content -Raw infra/postgres/init/011_evm_claim_reports.sql |
 Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`; a missing Claim
 Report migration surfaces as `storage.errorCode=CLAIM_REPORT_NOT_INITIALIZED`. Never delete a
 persistent volume as a migration strategy.
+
+Early development ClickHouse volumes may contain a pre-Evidence `raw_chain_facts` table using
+`MergeTree` and lacking `fact_id`, `schema_version`, `evidence_id`, and `raw_artifact_ref`. Do not
+invent those values for legacy rows. Inspect `SHOW CREATE TABLE zerotrace.raw_chain_facts` and
+`SELECT count()` first. If the table is empty, rename it to a dated `raw_chain_facts_legacy_*`
+backup and reapply `infra/clickhouse/init/001_raw_facts.sql`; this preserves the old table while
+creating the canonical `ReplacingMergeTree`. If it contains rows, export and retain them under the
+legacy schema for explicit provenance review instead of silently coercing them into current Raw
+Facts. Automated production migration for this legacy development schema remains an operations
+gate.
 
 ## Shutdown
 

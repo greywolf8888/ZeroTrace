@@ -78,7 +78,7 @@ function observation(
   };
 }
 
-async function sourceIndependenceAssessment(options: {
+export async function attestBscSourceIndependence(options: {
   sourceIds: readonly string[];
   snapshot: AnalysisSnapshot;
   writeEvidence: FlapEvidenceWriter;
@@ -476,7 +476,7 @@ export async function reconcileFlapPancakeV2Market(options: {
     );
   }
 
-  const independence = await sourceIndependenceAssessment({
+  const independence = await attestBscSourceIndependence({
     sourceIds,
     snapshot,
     writeEvidence: options.writeEvidence,

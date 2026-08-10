@@ -173,6 +173,20 @@ quotes. Exact prices and three buy/exit scenarios are recorded in
 It does not convert configured-tax estimates into execution facts and does not close the historical,
 multi-route, fork-settlement, claim, entity or full lifecycle requirements below.
 
+## Scoped all-block supply acceptance: 2026-08-11
+
+The supply-continuity worker sampled FFT `totalSupply()` at the parent plus every finalized block in
+`115188144-115188147`. Alchemy and BNB Chain agreed exactly on five canonical block/state samples
+and were attributed to two operators by the versioned registry. Initial and final supply were
+`1000000000000000000000000000` atomic units, net delta was zero, and terminal status was
+`VERIFIED_NO_CHANGE` with Evidence `ev_5074fef4eb70f879c3e2e48d`. A replay using an intentionally
+invalid Alchemy credential returned the same durable result.
+
+The zero is valid only for those four transitions. An older BNB public-node probe returned `missing
+trie node`, so no conclusion is emitted for that unavailable history. The result neither changes
+the pension Safe from movable custody into a burn nor proves deployment-to-head supply continuity.
+Independent archive-capable backfill and continuous scheduling remain terminal gates.
+
 ## Required output
 
 The terminal acceptance artifact must contain:

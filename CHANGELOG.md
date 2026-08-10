@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- bounded restart-safe BSC ERC-20 all-block `totalSupply` continuity scanning with canonical
+  EIP-1898 reads, exact multi-source state reconciliation, complete changed-block mint/burn
+  certificates, official operator-independence attestations, durable Evidence/checkpoints,
+  provider-free API/UI replay, Compose profile and live FFT interval validation;
 - runnable npm workspace for API, web, and domain packages;
 - canonical multi-ledger snapshot, knowledge, evidence, entity, control, launch, and RV schemas;
 - checksum-aware EVM, Bitcoin, and Solana identifier parsing;

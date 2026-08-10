@@ -43,6 +43,9 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   missed, circuits recover through half-open, and failover remains on the last healthy endpoint.
 - dynamic ledger anchors bypass stored TTL entries without overwriting normal cached values, and
   diagnostics count the bypasses;
+- all-block ERC-20 supply continuity cannot advance on source/hash/state disagreement, cannot mark
+  same-operator agreement verified, and cannot emit a conserved change without complete same-block
+  mint/burn reconciliation;
 - each concurrent/failover response retains the endpoint that actually produced it; Snapshot
   providers, Evidence source, and metadata source sets include all anchor/state endpoints;
 - Evidence IDs change when source, locator, block/slot, or observation time changes even when the

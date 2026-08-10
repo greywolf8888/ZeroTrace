@@ -344,8 +344,21 @@ every candidate against its exact finalized block, persists the Evidence graph, 
 advances the semantic cursor. A completed checkpoint can be replayed through PostgreSQL-only API/UI
 paths; a partial or structurally inconsistent checkpoint has no terminal result and fails closed.
 This is scoped event/candidate proof, so silent-supply coverage remains Unknown. Continuous capture
-scheduling, silent-supply discovery, independent-source reconciliation, official wallet attribution
-and the terminal FFT report remain pending.
+scheduling, complete historical supply coverage, official wallet attribution and the terminal FFT
+report remain pending.
+
+Silent/custom supply discovery has a separate bounded all-block path. The
+`erc20-supply-continuity-v1.0.0` worker samples `totalSupply()` at `from - 1` and every finalized
+block through `to` using EIP-1898 canonical block-hash calls. All configured BSC sources must return
+the same block identity, parent, timestamp and supply before a segment can advance. Any supply
+transition invokes the complete exact-block mint/burn conservation certificate above; an
+unexplained transition is retained as an explicit terminal contradiction. Every raw anchor/state
+read, segment, source-operator attestation and terminal derivation is Evidence-linked and stored in
+a restart-safe semantic checkpoint. `VERIFIED_*` requires at least two officially registered
+operators; same-operator or unresolved endpoints remain `INCONCLUSIVE_SOURCE_INDEPENDENCE` even
+when their values agree. API/UI replay reads only the completed PostgreSQL state. The coverage scope
+is the exact requested range and never implies deployment-to-head, continuous, ownership or wallet-
+attribution coverage.
 Endpoint failover and timestamp anchoring may add provenance IDs but do not raise claim-observation
 source coverage; it remains `0.5` until a separate reconciler repeats the complete result against an
 independent source.

@@ -210,6 +210,45 @@ state without providers. A running scan has `terminalResult: null`; structural c
 closed. Scoped zero-address event/candidate completion never changes silent supply detection from
 `Unknown(NOT_QUERIED)`.
 
+## Durable ERC-20 all-block supply continuity
+
+Use this one-shot worker when the question is whether ERC-20 `totalSupply()` changed anywhere in a
+specific finalized BSC interval, including custom changes that emit no zero-address `Transfer`:
+
+```bash
+npm run claims:supply:scan -- \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 100000000 --to 100000127 --segment-size 128
+```
+
+The Compose equivalent is isolated from the default stack:
+
+```bash
+docker compose --profile supply-continuity run --rm supply-continuity-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 100000000 --to 100000127 --segment-size 128
+```
+
+Configure `EVM_BSC_RPC_URLS` with one to eight archive-capable read endpoints. A verified result
+requires at least two endpoints attributed to distinct operators by the versioned registry. The
+worker uses EIP-1898 block-hash state calls and samples the parent of `--from` plus every block
+through `--to`; the inclusive transition range is capped at 32,768 blocks, 32 segments and 1,024
+transitions per segment. Every changed block additionally requires a complete SQD mint/burn event
+query and exact conservation certificate. Conflicts and partial reads record failure without
+advancing the checkpoint.
+
+The terminal JSON contains no credential and includes a stable scan ID. Re-run the identical
+command to resume or replay, or use the PostgreSQL-only API/UI path:
+
+```text
+GET /api/v1/claims/EVM/<token>/supply-continuity/<scan-id>
+```
+
+The BNB Chain public endpoint can retain less historical state than an archive service; a
+`missing trie node` is an unavailable-provider result, not unchanged supply. Select a recent range
+or an archive-capable independent endpoint. Do not enable `ALLOW_PRIVATE_PROVIDER_URLS` outside a
+deliberately isolated local environment.
+
 ## Exact Flap lifetime materialization
 
 The third semantic-worker entrypoint composes the two durable primitives at one finalized BSC

@@ -40,6 +40,7 @@ import {
   reconcileFlapPancakeV2Market,
   quoteFlapSell,
   replayErc20BurnPromotionResult,
+  replayErc20SupplyContinuityResult,
   type InspectFlapTokenOriginOptions,
 } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
@@ -159,6 +160,10 @@ const ClaimBurnRequestSchema = z.object({
 });
 
 const ClaimBurnPromotionParamsSchema = ClaimBurnParamsSchema.extend({
+  scanId: z.uuid(),
+});
+
+const ClaimSupplyContinuityParamsSchema = ClaimBurnParamsSchema.extend({
   scanId: z.uuid(),
 });
 
@@ -1198,6 +1203,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             : 'IMPLEMENTED_DURABLE_PENDING_INDEPENDENT_VALIDATION',
         detail:
           'A read-only BSC worker checkpoints complete zero-address event segments only after every candidate has an exact-block totalSupply/Transfer conservation certificate. Scan-ID API/UI replay uses PostgreSQL only, rejects corrupt state, and keeps silent supply-change detection Unknown.',
+      },
+      {
+        id: 'erc20-supply-continuity',
+        status:
+          runtime.semanticCheckpoints === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : (runtime.evmSourceAdapters?.get(56)?.length ?? 0) < 2
+              ? 'IMPLEMENTED_DURABLE_INCONCLUSIVE_SOURCE_COVERAGE'
+              : 'IMPLEMENTED_DURABLE_OPERATOR_REGISTRY_GATED',
+        detail:
+          'A read-only BSC worker samples ERC-20 totalSupply at every finalized block transition with EIP-1898 canonical block-hash calls, compares every configured source exactly, and reconciles each supply change against complete same-block mint/burn Transfer Evidence before checkpoint advancement. Verified status additionally requires two officially registered operators; completed scan replay is provider-free.',
       },
       {
         id: 'flap-lifetime-materialization',
@@ -2721,6 +2737,67 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           );
       }
       const terminalResult = replayErc20BurnPromotionResult(run);
+      const totalBlocks = run.toBlock - run.fromBlock + 1;
+      const completedBlocks = Math.min(Math.max(run.nextBlock - run.fromBlock, 0), totalBlocks);
+      return {
+        scan: {
+          id: run.id,
+          status: run.status,
+          token: run.subject,
+          requestedRange: {
+            fromBlock: String(run.fromBlock),
+            toBlock: String(run.toBlock),
+            segmentSize: run.chunkSize,
+          },
+          nextBlock: String(run.nextBlock),
+          requestedRangeCoverage: completedBlocks / totalBlocks,
+          lastErrorCode: run.lastErrorCode,
+          updatedAt: run.updatedAt,
+        },
+        terminalResult,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/supply-continuity/:scanId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimSupplyContinuityParamsSchema.parse(request.params);
+      const checkpoints = runtime.semanticCheckpoints;
+      if (checkpoints === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SUPPLY_CONTINUITY_REPLAY_UNAVAILABLE',
+              'Durable supply-continuity storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const run = await checkpoints.get(params.scanId);
+      if (
+        run === undefined ||
+        run.scanType !== 'ERC20_SUPPLY_CONTINUITY' ||
+        run.source !== 'multi-source:bsc-rpc+sqd' ||
+        run.ledger !== 'EVM' ||
+        run.chainId !== 'eip155:56' ||
+        run.subject !== params.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SUPPLY_CONTINUITY_NOT_FOUND',
+              'The requested supply-continuity scan was not found.',
+              false,
+            ),
+          );
+      }
+      const terminalResult = replayErc20SupplyContinuityResult(run);
       const totalBlocks = run.toBlock - run.fromBlock + 1;
       const completedBlocks = Math.min(Math.max(run.nextBlock - run.fromBlock, 0), totalBlocks);
       return {

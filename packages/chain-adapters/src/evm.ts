@@ -355,6 +355,10 @@ function requireBlockTag(value: string): string {
   return value;
 }
 
+function requireCanonicalBlockHash(value: string): string {
+  return requireHash(value, 'call block hash');
+}
+
 export interface EvmAdapterConfig {
   id: string;
   chainId: number;
@@ -507,6 +511,25 @@ export class EvmLedgerAdapter {
     const observation = await this.readSourced<unknown>('eth_call', [
       request,
       requireBlockTag(blockTag),
+    ]);
+    return { ...observation, value: requireHexData(observation.value, 'call result') };
+  }
+
+  async callObservationAtBlockHash(
+    to: string,
+    data: string,
+    blockHash: string,
+  ): Promise<TransportObservation<string>> {
+    const request = {
+      to: requireAddress(to, 'call target'),
+      data: requireHexData(data, 'call data'),
+    };
+    const observation = await this.readSourced<unknown>('eth_call', [
+      request,
+      {
+        blockHash: requireCanonicalBlockHash(blockHash),
+        requireCanonical: true,
+      },
     ]);
     return { ...observation, value: requireHexData(observation.value, 'call result') };
   }

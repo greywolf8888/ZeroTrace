@@ -185,7 +185,10 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       queries, terminal Evidence, responsive API/UI and silent-supply state retained as Unknown
 - [x] Restart-safe bounded burn-candidate promotion with exact-block certificates before cursor
       advancement, terminal Evidence, provider-free API/UI replay and corrupt-state rejection
-- [ ] Continuous candidate-capture scheduling, silent-supply discovery, reviewed-draft promotion,
+- [x] Bounded all-block supply-continuity scanning with EIP-1898 canonical reads, exact multi-source
+      reconciliation, changed-block certificates, operator gate, provider-free replay and a named
+      independent-source FFT interval
+- [ ] Complete historical supply backfill, continuous candidate capture, reviewed-draft promotion,
       independent claim-flow reconciliation, complete Claim Audit and terminal named FFT conclusion
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
@@ -209,6 +212,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       and explicit silent-supply Unknown on desktop/mobile
 - [x] Responsive durable burn-promotion replay with exact progress, certificate counts, terminal
       Evidence, partial-result suppression and silent-supply Unknown on desktop/mobile
+- [x] Responsive all-block supply-continuity replay with exact range/sample/change counts,
+      independent-operator attestations, terminal Evidence and no range overclaim on desktop/mobile
 - [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance

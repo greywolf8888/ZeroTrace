@@ -932,6 +932,11 @@ tbody tr:hover {
   border-color: color-mix(in srgb, var(--warning) 25%, var(--border));
 }
 
+.alert-success {
+  background: color-mix(in srgb, var(--success) 7%, var(--surface));
+  border-color: color-mix(in srgb, var(--success) 25%, var(--border));
+}
+
 .api-alert {
   margin-top: 0;
   margin-bottom: 16px;

@@ -1153,6 +1153,12 @@ describe('ZeroTrace API contract', () => {
         status: 'DURABLE_STORAGE_REQUIRED',
       }),
     );
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
+        id: 'erc20-supply-continuity',
+        status: 'DURABLE_STORAGE_REQUIRED',
+      }),
+    );
 
     const chains = await app.inject({ method: 'GET', url: '/api/v1/chains' });
     expect(chains.json().chains).toEqual(
@@ -3987,6 +3993,256 @@ describe('ZeroTrace API contract', () => {
     });
     expect(response.statusCode).toBe(503);
     expect(response.json().error.code).toBe('BURN_PROMOTION_REPLAY_UNAVAILABLE');
+  });
+
+  it('replays a completed all-block ERC-20 supply-continuity result without providers', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const scanId = '99999999-9999-4999-8999-999999999999';
+    const sourceSet = [
+      'bsc-rpc@bnb-mainnet.g.alchemy.com#1',
+      'bsc-rpc@bsc-dataseed.bnbchain.org#2',
+    ];
+    const registryEvidenceId = 'ev_000000000000000000000081';
+    const firstAttestationId = 'ev_000000000000000000000082';
+    const secondAttestationId = 'ev_000000000000000000000083';
+    const independenceEvidenceId = 'ev_000000000000000000000084';
+    const segmentEvidenceId = 'ev_000000000000000000000085';
+    const terminalEvidenceId = 'ev_000000000000000000000086';
+    const evidenceIds = [
+      registryEvidenceId,
+      firstAttestationId,
+      secondAttestationId,
+      independenceEvidenceId,
+      segmentEvidenceId,
+      terminalEvidenceId,
+    ];
+    const snapshot = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      blockNumber: '102',
+      blockHash: `0x${'3'.repeat(64)}`,
+      parentBlockHash: `0x${'2'.repeat(64)}`,
+      finality: 'finalized' as const,
+      capturedAt: '2026-08-11T02:00:00.000Z',
+      blockTimestamp: '2026-08-11T01:59:57.000Z',
+      providerVersions: Object.fromEntries(sourceSet.map((source) => [source, 'json-rpc'])),
+      adapterVersions: { evm: '0.1.0' },
+      configHash: '4'.repeat(64),
+      entityModelVersion: 'entity-model-unapplied',
+      labelSnapshot: 'labels-unapplied',
+    };
+    const sourceIndependence = {
+      status: 'VERIFIED_INDEPENDENT',
+      independence: { state: 'known', value: true },
+      requiredOperators: 2,
+      observedSources: 2,
+      operatorCount: 2,
+      unresolvedSources: [],
+      attestations: [
+        {
+          sourceId: sourceSet[0],
+          hostname: 'bnb-mainnet.g.alchemy.com',
+          operatorId: 'alchemy',
+          operatorName: 'Alchemy',
+          officialSource: 'https://www.alchemy.com/docs/reference/node-supported-chains',
+          registryObservedAt: '2026-08-11T00:00:00.000Z',
+          registryRevision: 'alchemy-bnb-chain-api@2026-08-11',
+          evidenceId: firstAttestationId,
+        },
+        {
+          sourceId: sourceSet[1],
+          hostname: 'bsc-dataseed.bnbchain.org',
+          operatorId: 'bnb-chain',
+          operatorName: 'BNB Chain',
+          officialSource:
+            'https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/',
+          registryObservedAt: '2026-08-11T00:00:00.000Z',
+          registryRevision: 'bnb-chain-bsc-json-rpc-endpoints@2026-08-11',
+          evidenceId: secondAttestationId,
+        },
+      ],
+      registryEvidenceId,
+      terminalEvidenceId: independenceEvidenceId,
+      evidenceIds: [
+        registryEvidenceId,
+        firstAttestationId,
+        secondAttestationId,
+        independenceEvidenceId,
+      ],
+      modelVersion: 'source-operator-registry-v1',
+    };
+    const segment = {
+      fromBlock: '100',
+      toBlock: '102',
+      sampleCount: 4,
+      startTotalSupply: '1000000000',
+      endTotalSupply: '1000000000',
+      supplyChangeCount: 0,
+      eventConservedChangeCount: 0,
+      unexplainedChangeCount: 0,
+      changes: [],
+      terminalEvidenceId: segmentEvidenceId,
+      snapshot,
+      sourceSet,
+    };
+    const result = {
+      tokenAddress: fixtureFlapToken,
+      fromBlock: '100',
+      toBlock: '102',
+      coverageScope: 'ERC20_TOTAL_SUPPLY_EVERY_FINALIZED_BLOCK_WITH_EVENT_RECONCILIATION',
+      status: 'VERIFIED_NO_CHANGE',
+      segmentCount: 1,
+      scannedBlockCount: 3,
+      supplySampleCount: 4,
+      initialTotalSupply: '1000000000',
+      finalTotalSupply: '1000000000',
+      netSupplyDelta: '0',
+      supplyChangeCount: 0,
+      eventConservedChangeCount: 0,
+      unexplainedChangeCount: 0,
+      segments: [segment],
+      sourceIndependence,
+      terminalEvidenceId,
+      metadata: {
+        snapshot,
+        dataCoverage: 1,
+        sourceCoverage: 1,
+        historyCoverage: 1,
+        simulationCoverage: 0,
+        freshness: snapshot.blockTimestamp,
+        sourceSet,
+        modelVersion: 'erc20-supply-continuity-v1.0.0',
+        confidence: 1,
+        evidenceIds,
+      },
+    };
+    const now = '2026-08-11T02:01:00.000Z';
+    const get = vi.fn(async () => ({
+      id: scanId,
+      scanType: 'ERC20_SUPPLY_CONTINUITY',
+      source: 'multi-source:bsc-rpc+sqd',
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      subject: fixtureFlapToken,
+      fromBlock: 100,
+      toBlock: 102,
+      chunkSize: 3,
+      identityHash: '5'.repeat(64),
+      identity: {},
+      status: 'REQUESTED_RANGE_COMPLETE' as const,
+      nextBlock: 103,
+      stateHash: '6'.repeat(64),
+      state: {
+        version: 'erc20-supply-continuity-checkpoint-v1',
+        segments: [segment],
+        snapshot,
+        sourceSet,
+        result,
+      },
+      evidenceIds,
+      lastErrorCode: null,
+      startedAt: now,
+      updatedAt: now,
+      completedAt: now,
+    }));
+    runtime.semanticCheckpoints = { get } as unknown as NonNullable<
+      AppRuntime['semanticCheckpoints']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/supply-continuity/${scanId}`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      scan: { id: scanId, requestedRangeCoverage: 1, nextBlock: '103' },
+      terminalResult: {
+        status: 'VERIFIED_NO_CHANGE',
+        scannedBlockCount: 3,
+        supplySampleCount: 4,
+        sourceIndependence: { status: 'VERIFIED_INDEPENDENT' },
+        terminalEvidenceId,
+      },
+    });
+    expect(get).toHaveBeenCalledWith(scanId);
+
+    const wrongToken = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/0x${'b'.repeat(40)}/supply-continuity/${scanId}`,
+    });
+    expect(wrongToken.statusCode).toBe(404);
+    expect(wrongToken.json().error.code).toBe('SUPPLY_CONTINUITY_NOT_FOUND');
+  });
+
+  it('reports supply-continuity replay as unavailable without PostgreSQL', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/claims/EVM/${fixtureFlapToken}/supply-continuity/` +
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe('SUPPLY_CONTINUITY_REPLAY_UNAVAILABLE');
+  });
+
+  it('returns durable supply-continuity progress without inventing a terminal result', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const scanId = 'abababab-abab-4bab-8bab-abababababab';
+    runtime.semanticCheckpoints = {
+      get: vi.fn(async () => ({
+        id: scanId,
+        scanType: 'ERC20_SUPPLY_CONTINUITY',
+        source: 'multi-source:bsc-rpc+sqd',
+        ledger: 'EVM' as const,
+        chainId: 'eip155:56',
+        subject: fixtureFlapToken,
+        fromBlock: 100,
+        toBlock: 102,
+        chunkSize: 2,
+        identityHash: '5'.repeat(64),
+        identity: {},
+        status: 'RUNNING' as const,
+        nextBlock: 100,
+        stateHash: '6'.repeat(64),
+        state: {
+          version: 'erc20-supply-continuity-checkpoint-v1',
+          segments: [],
+          snapshot: null,
+          sourceSet: [],
+          result: null,
+        },
+        evidenceIds: [],
+        lastErrorCode: 'RPC_ERROR',
+        startedAt: '2026-08-11T02:01:00.000Z',
+        updatedAt: '2026-08-11T02:02:00.000Z',
+        completedAt: null,
+      })),
+    } as unknown as NonNullable<AppRuntime['semanticCheckpoints']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/supply-continuity/${scanId}`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      scan: {
+        id: scanId,
+        status: 'RUNNING',
+        requestedRangeCoverage: 0,
+        nextBlock: '100',
+        lastErrorCode: 'RPC_ERROR',
+      },
+      terminalResult: null,
+    });
   });
 
   it('replays latest and exact durable Claim Reports without provider access', async () => {

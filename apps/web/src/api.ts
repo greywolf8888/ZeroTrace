@@ -849,6 +849,69 @@ export interface EvmClaimBurnPromotionReplayResponse {
   };
 }
 
+export interface EvmSupplyContinuityReplayResponse {
+  scan: {
+    id: string;
+    status: 'RUNNING' | 'REQUESTED_RANGE_COMPLETE';
+    token: string;
+    requestedRange: { fromBlock: string; toBlock: string; segmentSize: number };
+    nextBlock: string;
+    requestedRangeCoverage: number;
+    lastErrorCode: string | null;
+    updatedAt: string;
+  };
+  terminalResult: null | {
+    tokenAddress: string;
+    fromBlock: string;
+    toBlock: string;
+    coverageScope: 'ERC20_TOTAL_SUPPLY_EVERY_FINALIZED_BLOCK_WITH_EVENT_RECONCILIATION';
+    status:
+      | 'VERIFIED_NO_CHANGE'
+      | 'VERIFIED_EVENT_CONSERVED_CHANGES'
+      | 'UNEXPLAINED_SUPPLY_CHANGE'
+      | 'INCONCLUSIVE_SOURCE_INDEPENDENCE';
+    segmentCount: number;
+    scannedBlockCount: number;
+    supplySampleCount: number;
+    initialTotalSupply: string;
+    finalTotalSupply: string;
+    netSupplyDelta: string;
+    supplyChangeCount: number;
+    eventConservedChangeCount: number;
+    unexplainedChangeCount: number;
+    segments: Array<{
+      fromBlock: string;
+      toBlock: string;
+      sampleCount: number;
+      startTotalSupply: string;
+      endTotalSupply: string;
+      supplyChangeCount: number;
+      eventConservedChangeCount: number;
+      unexplainedChangeCount: number;
+      changes: Array<{
+        blockNumber: string;
+        blockHash: string;
+        parentBlockHash: string;
+        totalSupplyBefore: string;
+        totalSupplyAfter: string;
+        supplyDelta: string;
+        mintedEventAmount: string;
+        burnedEventAmount: string;
+        eventNetSupplyDelta: string;
+        reconciliationStatus: 'EVENT_CONSERVED' | 'UNEXPLAINED';
+        certificateStatus: 'VERIFIED' | 'CONTRADICTED' | 'NOT_APPLICABLE';
+        certificateTerminalEvidenceId: string;
+      }>;
+      terminalEvidenceId: string;
+      snapshot: Record<string, unknown>;
+      sourceSet: string[];
+    }>;
+    sourceIndependence: SourceIndependenceAssessment;
+    terminalEvidenceId: string;
+    metadata: AnalysisMetadata;
+  };
+}
+
 interface ClaimFlowAggregate {
   observedAmount: string;
   actualAmount: KnowledgeValue<string>;
@@ -1126,6 +1189,10 @@ export const api = {
   replayClaimBurnPromotion: (token: string, scanId: string) =>
     requestJson<EvmClaimBurnPromotionReplayResponse>(
       `/api/v1/claims/EVM/${encodeURIComponent(token)}/burn-promotions/${encodeURIComponent(scanId)}`,
+    ),
+  replaySupplyContinuity: (token: string, scanId: string) =>
+    requestJson<EvmSupplyContinuityReplayResponse>(
+      `/api/v1/claims/EVM/${encodeURIComponent(token)}/supply-continuity/${encodeURIComponent(scanId)}`,
     ),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {

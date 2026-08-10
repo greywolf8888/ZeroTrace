@@ -37,6 +37,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | POST   | `/api/v1/claims/EVM/:token/burn-candidates`                   | finalized BSC zero-address Transfer candidate-range discovery    |
 | POST   | `/api/v1/claims/EVM/:token/burn-conservation`                 | exact-block ERC-20 supply/mint/burn conservation certificate     |
 | GET    | `/api/v1/claims/EVM/:token/burn-promotions/:id`               | provider-free durable candidate-promotion replay                 |
+| GET    | `/api/v1/claims/EVM/:token/supply-continuity/:id`             | provider-free all-block supply-continuity replay                 |
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
 | POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                   | migrated Flap Pancake V2 nominal/gross/tax exit-size model       |
@@ -128,6 +129,21 @@ This certificate covers one block only. Candidate blocks can be found through th
 endpoint above, but it does not establish who controls an address or classify a transfer into an EOA,
 Safe, treasury, pension or publicity-named “burn wallet” as irreversible. The endpoint is strictly
 read-only and requires a configured EVM provider with parent-block state availability.
+
+### ERC-20 supply continuity replay
+
+`GET /api/v1/claims/EVM/:token/supply-continuity/:scanId` reads a completed or running semantic
+checkpoint from PostgreSQL and performs no RPC or SQD request. It validates the BSC scan type,
+canonical token, exact range, cursor, schema and Evidence identity on every request. A missing or
+wrong-token scan is `404`; unavailable durable storage is `503`; corrupt terminal state fails closed.
+
+A terminal result reports exact transition/sample counts, initial/final supply, signed net delta,
+all supply-change certificates, source-operator attestations, coverage, freshness, Snapshot, model
+version and Evidence IDs. `VERIFIED_NO_CHANGE` and `VERIFIED_EVENT_CONSERVED_CHANGES` require at
+least two officially registered independent RPC operators. Agreement from the same operator or an
+unregistered host is `INCONCLUSIVE_SOURCE_INDEPENDENCE`; an event-unexplained state transition is
+`UNEXPLAINED_SUPPLY_CHANGE`. No state is converted to zero. This endpoint cannot start a scan or
+perform any chain write, and the conclusion never extends outside the stored requested range.
 
 ### EVM Claim Report replay
 
