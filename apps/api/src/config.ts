@@ -9,7 +9,11 @@ const EnvironmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().default('0.0.0.0'),
   API_PORT: z.coerce.number().int().min(1).max(65_535).default(8080),
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  CORS_ORIGIN: z
+    .string()
+    .default(
+      'http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173',
+    ),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   REQUEST_TIMEOUT_MS: z.coerce.number().int().min(100).max(120_000).default(8_000),
   HEALTH_CACHE_TTL_MS: z.coerce.number().int().min(0).max(300_000).default(15_000),

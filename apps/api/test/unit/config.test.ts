@@ -15,6 +15,12 @@ describe('API configuration', () => {
     expect(config.ethereumSnapshotTag).toBe('finalized');
     expect(config.bscSnapshotTag).toBe('finalized');
     expect(config.dataQualityMinSources).toBe(2);
+    expect(config.corsOrigins).toEqual([
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:4173',
+      'http://127.0.0.1:4173',
+    ]);
   });
 
   it('allows an explicit EVM snapshot finality without accepting pending state', () => {

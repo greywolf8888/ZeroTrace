@@ -6,6 +6,7 @@ import { Counter, Registry, collectDefaultMetrics } from 'prom-client';
 import { z, ZodError } from 'zod';
 
 import { ProviderError } from '@zerotrace/chain-adapters';
+import { parseEvmClaimDeclaration } from '@zerotrace/claim-audit';
 import { auditDiscrepancies, DISCREPANCY_MODEL_VERSION } from '@zerotrace/data-quality';
 import { resolveEntityRelationship } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
@@ -233,6 +234,42 @@ const FlapSellQuoteRequestSchema = z
       .optional(),
   })
   .strict();
+
+const ClaimDeclarationParseRequestSchema = z
+  .object({
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    assetId: z
+      .string()
+      .trim()
+      .regex(/^eip155:[1-9]\d*:erc20:0x[0-9a-fA-F]{40}$/),
+    text: z.string().trim().min(1).max(100_000),
+    sourceUri: z
+      .url()
+      .max(2_048)
+      .refine((value) => /^https?:\/\//i.test(value), {
+        message: 'Claim declaration sourceUri must use HTTP(S).',
+      })
+      .optional(),
+    auditWindow: z
+      .object({
+        from: z.iso.datetime({ offset: true }),
+        to: z.iso.datetime({ offset: true }),
+      })
+      .refine((window) => Date.parse(window.from) <= Date.parse(window.to), {
+        message: 'Audit window must not end before it begins.',
+      })
+      .optional(),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (!input.assetId.startsWith(`${input.chainId}:`)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['assetId'],
+        message: 'Claim declaration assetId must belong to the requested EVM chain.',
+      });
+    }
+  });
 
 const FlapPancakeV2BuyScenarioRequestSchema = z
   .object({
@@ -563,6 +600,13 @@ export interface CreateAppOptions {
   logger?: boolean;
 }
 
+class CorsOriginError extends Error {
+  constructor() {
+    super('Origin is not allowed.');
+    this.name = 'CorsOriginError';
+  }
+}
+
 export async function createApp(options: CreateAppOptions): Promise<FastifyInstance> {
   const runtime = options.runtime ?? createRuntime(options.config);
   const ownsRuntime = options.runtime === undefined;
@@ -584,7 +628,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   await app.register(cors, {
     origin: (origin, callback) => {
       if (origin === undefined || options.config.corsOrigins.includes(origin)) callback(null, true);
-      else callback(new Error('Origin is not allowed.'), false);
+      else callback(new CorsOriginError(), false);
     },
     methods: ['GET', 'POST', 'OPTIONS'],
   });
@@ -849,6 +893,11 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   };
 
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof CorsOriginError) {
+      return reply
+        .code(403)
+        .send(errorResponse(request, 'CORS_ORIGIN_DENIED', error.message, false));
+    }
     if (error instanceof ZodError) {
       return reply.code(400).send({
         ...errorResponse(request, 'INVALID_REQUEST', 'Request validation failed.', false),
@@ -2384,6 +2433,25 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         },
         evidence: [derived],
       };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/declarations/parse',
+    { schema: { tags: ['intelligence'] } },
+    async (request) => {
+      const input = ClaimDeclarationParseRequestSchema.parse(request.body);
+      const result = parseEvmClaimDeclaration({
+        text: input.text,
+        chainId: input.chainId,
+        assetId: input.assetId,
+        source: 'api:user-submitted-claim-declaration',
+        observedAt: new Date().toISOString(),
+        ...(input.sourceUri === undefined ? {} : { sourceUri: input.sourceUri }),
+        ...(input.auditWindow === undefined ? {} : { auditWindow: input.auditWindow }),
+      });
+      const evidence = await addEvidence(runtime, result.evidence);
+      return { ...result, evidence };
     },
   );
 

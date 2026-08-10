@@ -1408,6 +1408,62 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
     });
   });
 
+  await page.route('**/api/v1/claims/declarations/parse', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        parserVersion: 'claim-declaration-parser-v1.0.0',
+        documentHash: '9'.repeat(64),
+        assetId: `eip155:56:erc20:${bscTokenAddress}`,
+        evidence: {
+          id: 'ev_9876543210abcdef98765432',
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          kind: 'ANALYST_OBSERVATION',
+          source: 'api:user-submitted-claim-declaration',
+          locator: `claim-declaration:${'9'.repeat(64)}`,
+          payloadHash: 'a'.repeat(64),
+          observedAt: '2026-08-10T15:00:00.000Z',
+          summary: 'Off-chain claim declaration; it is not a chain fact.',
+        },
+        drafts: [
+          {
+            id: 'cld_1234567890abcdef12345678',
+            assetId: `eip155:56:erc20:${bscTokenAddress}`,
+            role: 'COMMUNITY_FUND',
+            expectedAction: 'DISTRIBUTE',
+            sourceAddress: {
+              state: 'known',
+              value: '0x8231bb4e2891e85e79f28f0816ede7aeaab06af1',
+            },
+            destinationAddress: {
+              state: 'known',
+              value: '0x412dfd5ac528c05ab78cd005385bc51759e29e46',
+            },
+            expectedShareBps: { state: 'known', value: '2000' },
+            shareUnitTokens: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            noExit: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            cadenceSeconds: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            window: {
+              state: 'known',
+              value: {
+                from: '2026-08-02T00:00:00.000Z',
+                to: '2026-08-10T00:00:00.000Z',
+              },
+            },
+            matchedText: '社区建设基金（20%）\n0x412DFD5Ac528C05ab78cd005385bC51759e29e46',
+            missingFields: [],
+            chainVerifyReadiness: 'READY_FOR_REVIEW',
+            requiresHumanReview: true,
+            claimEvidenceIds: ['ev_9876543210abcdef98765432'],
+          },
+        ],
+        unmatchedAddresses: [],
+        warnings: [],
+      }),
+    });
+  });
+
   await page.goto('/');
   await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
   await page.getByLabel('Network').selectOption('bsc');
@@ -1417,6 +1473,27 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
   await expect(page.getByText('Dex Trading')).toBeVisible();
   await expect(page.getByText('Spot Price')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Flap realizable sell preview' })).toHaveCount(0);
+  const declarationPanel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Claim Declaration Review' }),
+  });
+  await expect(declarationPanel).toContainText('Declaration ≠ chain fact');
+  await declarationPanel
+    .getByLabel('Announcement text')
+    .fill(
+      '税费接收总钱包（100%）\n0x8231Bb4E2891e85E79f28f0816EDE7AeAab06af1\n' +
+        '社区建设基金（20%）\n0x412DFD5Ac528C05ab78cd005385bC51759e29e46',
+    );
+  await declarationPanel
+    .getByLabel('Audit window start (optional, ISO 8601 with timezone)')
+    .fill('2026-08-02T00:00:00.000Z');
+  await declarationPanel
+    .getByLabel('Audit window end (optional, ISO 8601 with timezone)')
+    .fill('2026-08-10T00:00:00.000Z');
+  await declarationPanel.getByRole('button', { name: 'Compile review drafts' }).click();
+  await expect(declarationPanel).toContainText('Community Fund');
+  await expect(declarationPanel).toContainText('Ready For Review');
+  await expect(declarationPanel).toContainText('Human review required');
+  await expect(declarationPanel).toContainText('ev_9876543210abcdef98765432');
   const scenarioPanel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: 'Pancake V2 buy-size scenarios' }),
   });
@@ -1442,6 +1519,81 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
   await expect(exitPanel).toContainText('Execution capacity remains Unknown');
   await expect(exitPanel.getByText(/Pass 0 Bps/).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Pancake V2 exit Evidence' })).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
+test('compiles a public pension statement as a human-review draft without inventing an address', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/claims/declarations/parse', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        parserVersion: 'claim-declaration-parser-v1.0.0',
+        documentHash: 'b'.repeat(64),
+        assetId: `eip155:56:erc20:${bscTokenAddress}`,
+        evidence: {
+          id: 'ev_abcdefabcdefabcdefabcdef',
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          kind: 'ANALYST_OBSERVATION',
+          source: 'api:user-submitted-claim-declaration',
+          locator: `claim-declaration:${'b'.repeat(64)}`,
+          payloadHash: 'c'.repeat(64),
+          observedAt: '2026-08-10T15:00:00.000Z',
+          summary: 'Off-chain claim declaration; it is not a chain fact.',
+        },
+        drafts: [
+          {
+            id: 'cld_abcdefabcdefabcdefabcdef',
+            assetId: `eip155:56:erc20:${bscTokenAddress}`,
+            role: 'PENSION_VAULT',
+            expectedAction: 'LOCK',
+            sourceAddress: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+            destinationAddress: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+            expectedShareBps: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            shareUnitTokens: { state: 'known', value: '1000000' },
+            noExit: { state: 'known', value: true },
+            cadenceSeconds: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            window: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+            matchedText: '养老钱包打入100w币为1股，不可退出，每周分红，8月2号开始。',
+            missingFields: ['sourceAddress', 'destinationAddress', 'window'],
+            chainVerifyReadiness: 'INCOMPLETE',
+            requiresHumanReview: true,
+            claimEvidenceIds: ['ev_abcdefabcdefabcdefabcdef'],
+          },
+        ],
+        unmatchedAddresses: [],
+        warnings: [
+          'A month/day fragment was not converted into an audit boundary without an explicit year and timezone.',
+        ],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  await expect(page.getByRole('heading', { name: 'Claim Audit' })).toBeVisible();
+  await page.getByLabel('BSC token address').fill(bscTokenAddress);
+  await page
+    .getByLabel('Announcement text')
+    .fill('养老钱包打入100w币为1股，不可退出，每周分红，8月2号开始。');
+  await page.getByRole('button', { name: 'Compile review drafts' }).click();
+  await expect(page.getByText('Declaration ≠ chain fact')).toBeVisible();
+  await expect(page.getByText('Pension Vault')).toBeVisible();
+  await expect(page.getByText('1,000,000')).toHaveCount(0);
+  await expect(page.getByText('1000000', { exact: true })).toBeVisible();
+  await expect(page.getByText('Incomplete', { exact: true })).toBeVisible();
+  await expect(page.getByText('Insufficient Data').first()).toBeVisible();
+  await expect(page.getByText('Human review required', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(/month\/day fragment was not converted into an audit boundary/i),
+  ).toBeVisible();
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNo
 
 import {
   api,
+  type ClaimDeclarationParseResponse,
   type Capability,
   type ClaimReportResponse,
   type EvidenceRecord,
@@ -23,12 +24,13 @@ import {
   type SubjectResponse,
 } from './api.js';
 
-type View = 'overview' | 'search' | 'scenario' | 'health';
+type View = 'overview' | 'search' | 'claims' | 'scenario' | 'health';
 type Theme = 'dark' | 'light';
 
 const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
   { id: 'overview', label: 'Market Reality', marker: 'MR' },
   { id: 'search', label: 'Intelligence Search', marker: 'IS' },
+  { id: 'claims', label: 'Claim Audit', marker: 'CA' },
   { id: 'scenario', label: 'Scenario Lab', marker: 'SL' },
   { id: 'health', label: 'Data Health', marker: 'DH' },
 ];
@@ -531,6 +533,230 @@ function EvidencePanel({
         </details>
       ))}
     </section>
+  );
+}
+
+function ClaimDeclarationPanel({ token }: { token?: string | undefined }) {
+  const [tokenInput, setTokenInput] = useState(token ?? '');
+  const [text, setText] = useState('');
+  const [windowFrom, setWindowFrom] = useState('');
+  const [windowTo, setWindowTo] = useState('');
+  const [result, setResult] = useState<ClaimDeclarationParseResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const activeToken = token ?? tokenInput;
+  const validToken = /^0x[0-9a-fA-F]{40}$/.test(activeToken);
+  const hasWindow = windowFrom.length > 0 || windowTo.length > 0;
+  const parsedFrom = Date.parse(windowFrom);
+  const parsedTo = Date.parse(windowTo);
+  const validWindow =
+    !hasWindow ||
+    (windowFrom.length > 0 &&
+      windowTo.length > 0 &&
+      Number.isFinite(parsedFrom) &&
+      Number.isFinite(parsedTo) &&
+      parsedFrom <= parsedTo);
+
+  async function parseDeclaration(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (text.trim().length === 0 || !validWindow || !validToken) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(
+        await api.parseClaimDeclaration(
+          activeToken,
+          text,
+          hasWindow ? { from: windowFrom, to: windowTo } : undefined,
+        ),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Claim declaration parsing failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section
+      className="panel subject-panel quote-panel"
+      aria-labelledby="claim-declaration-heading"
+    >
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Off-chain statement compiler</span>
+          <h3 id="claim-declaration-heading">Claim Declaration Review</h3>
+        </div>
+        <span className="snapshot-badge">Declaration ≠ chain fact</span>
+      </div>
+      <p className="panel-copy">
+        Paste a public announcement to create Evidence-linked review drafts. Missing addresses,
+        exact dates, token decimals, or action proof remain Unknown and cannot enter Chain Verify.
+      </p>
+      <form
+        className="quote-form claim-declaration-form"
+        onSubmit={(event) => void parseDeclaration(event)}
+      >
+        {token === undefined ? (
+          <>
+            <label htmlFor="claim-declaration-token">BSC token address</label>
+            <input
+              id="claim-declaration-token"
+              spellCheck={false}
+              placeholder="0x…"
+              value={tokenInput}
+              onChange={(event) => setTokenInput(event.target.value.trim())}
+            />
+          </>
+        ) : null}
+        <label htmlFor="claim-declaration-text">Announcement text</label>
+        <textarea
+          id="claim-declaration-text"
+          placeholder="Paste the original tax, burn, liquidity, treasury, pension, or dividend statement"
+          value={text}
+          maxLength={100_000}
+          onChange={(event) => setText(event.target.value)}
+        />
+        <label htmlFor="claim-window-from">
+          Audit window start (optional, ISO 8601 with timezone)
+        </label>
+        <input
+          id="claim-window-from"
+          spellCheck={false}
+          placeholder="2026-08-02T00:00:00+08:00"
+          value={windowFrom}
+          onChange={(event) => setWindowFrom(event.target.value.trim())}
+        />
+        <label htmlFor="claim-window-to">Audit window end (optional, ISO 8601 with timezone)</label>
+        <input
+          id="claim-window-to"
+          spellCheck={false}
+          placeholder="2026-08-10T23:59:59+08:00"
+          value={windowTo}
+          onChange={(event) => setWindowTo(event.target.value.trim())}
+        />
+        <button
+          className="secondary-button"
+          type="submit"
+          disabled={busy || text.trim().length === 0 || !validWindow || !validToken}
+        >
+          {busy ? 'Compiling…' : 'Compile review drafts'}
+        </button>
+      </form>
+      {!validWindow ? (
+        <p className="inline-error">
+          Supply both timezone-qualified boundaries and keep the end at or after the start.
+        </p>
+      ) : null}
+      {error === undefined ? null : <p className="inline-error">{error}</p>}
+      {result === undefined ? null : (
+        <>
+          <div className="snapshot-strip">
+            <span>
+              <b>Parser</b> {result.parserVersion}
+            </span>
+            <span>
+              <b>Drafts</b> {result.drafts.length}
+            </span>
+            <span>
+              <b>Analyst Evidence</b> <code>{result.evidence.id}</code>
+            </span>
+          </div>
+          {result.warnings.length === 0 ? null : (
+            <div className="claim-warning-list" role="status">
+              {result.warnings.map((warning) => (
+                <p key={warning}>{warning}</p>
+              ))}
+            </div>
+          )}
+          {result.drafts.length === 0 ? (
+            <div className="empty-state compact-empty">
+              <strong>No supported declaration found</strong>
+              <span>The source text is preserved as Analyst Evidence without invented rules.</span>
+            </div>
+          ) : (
+            <div className="claim-draft-list">
+              {result.drafts.map((draft) => (
+                <article className="claim-draft-card" key={draft.id}>
+                  <div className="claim-draft-heading">
+                    <div>
+                      <span className="eyebrow">{titleCase(draft.role)}</span>
+                      <h4>{titleCase(draft.expectedAction)}</h4>
+                    </div>
+                    <span
+                      className={
+                        draft.chainVerifyReadiness === 'READY_FOR_REVIEW'
+                          ? 'status-chip status-up'
+                          : 'status-chip status-degraded'
+                      }
+                    >
+                      {titleCase(draft.chainVerifyReadiness)}
+                    </span>
+                  </div>
+                  <div className="fact-grid">
+                    <div className="fact-row">
+                      <span>Source</span>
+                      <KnowledgeDisplay data={draft.sourceAddress} />
+                    </div>
+                    <div className="fact-row">
+                      <span>Destination</span>
+                      <KnowledgeDisplay data={draft.destinationAddress} />
+                    </div>
+                    <div className="fact-row">
+                      <span>Expected share bps</span>
+                      <KnowledgeDisplay data={draft.expectedShareBps} />
+                    </div>
+                    <div className="fact-row">
+                      <span>Share unit (tokens)</span>
+                      <KnowledgeDisplay data={draft.shareUnitTokens} />
+                    </div>
+                    <div className="fact-row">
+                      <span>No-exit wording</span>
+                      <KnowledgeDisplay data={draft.noExit} />
+                    </div>
+                    <div className="fact-row">
+                      <span>Cadence seconds</span>
+                      <KnowledgeDisplay data={draft.cadenceSeconds} />
+                    </div>
+                  </div>
+                  <div className="claim-draft-footer">
+                    <span>
+                      Missing:{' '}
+                      {draft.missingFields.length === 0 ? 'none' : draft.missingFields.join(', ')}
+                    </span>
+                    <span>Human review required</span>
+                  </div>
+                  <details className="raw-details">
+                    <summary>Matched declaration text</summary>
+                    <pre>{draft.matchedText}</pre>
+                  </details>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function ClaimAuditWorkspace() {
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">Public statement → review draft → Chain Verify</span>
+          <h1>Claim Audit</h1>
+          <p>
+            Compile tax, treasury, burn, liquidity, pension, and dividend announcements without
+            treating promotional language as an on-chain result.
+          </p>
+        </div>
+        <StatusPill status="HUMAN_REVIEW_REQUIRED" />
+      </div>
+      <ClaimDeclarationPanel />
+    </>
   );
 }
 
@@ -1881,6 +2107,7 @@ function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse })
         )}
       </section>
       <FlapEventTransactionPanel token={inspection.token} />
+      <ClaimDeclarationPanel token={inspection.token} />
       <ClaimReportPanel token={inspection.token} />
       {launch?.lifecycle === 'DEX_TRADING' ? (
         <>
@@ -2597,6 +2824,7 @@ export function App() {
       );
     }
     if (view === 'scenario') return <ScenarioLab />;
+    if (view === 'claims') return <ClaimAuditWorkspace />;
     if (view === 'health') {
       return <DataHealth health={health} refresh={() => void refreshCore()} busy={loadingCore} />;
     }

@@ -676,6 +676,28 @@ describe('ZeroTrace API contract', () => {
     expect(response.json()).toMatchObject({ status: 'UP', readOnly: true });
   });
 
+  it('allows configured browser origins and rejects other origins without a 500', async () => {
+    const app = await createApp({ config, runtime: runtimeWithEvm(), logger: false });
+    apps.push(app);
+    const allowed = await app.inject({
+      method: 'GET',
+      url: '/health/live',
+      headers: { origin: 'http://localhost:5173' },
+    });
+    const denied = await app.inject({
+      method: 'GET',
+      url: '/health/live',
+      headers: { origin: 'https://untrusted.example' },
+    });
+
+    expect(allowed.statusCode, allowed.body).toBe(200);
+    expect(allowed.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    expect(denied.statusCode, denied.body).toBe(403);
+    expect(denied.json()).toMatchObject({
+      error: { code: 'CORS_ORIGIN_DENIED', retryable: false },
+    });
+  });
+
   it('classifies identifiers without doing a network lookup', async () => {
     const app = await createApp({ config, runtime: runtimeWithEvm(), logger: false });
     apps.push(app);
@@ -3087,6 +3109,96 @@ describe('ZeroTrace API contract', () => {
       kind: 'SNAPSHOT_INCOMPATIBLE',
       evidenceIds: [wrongHash.id],
     });
+  });
+
+  it('parses user-supplied claim declarations into persisted Analyst Evidence and review drafts', async () => {
+    const runtime = runtimeWithEvm();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/claims/declarations/parse',
+      payload: {
+        chainId: 'eip155:56',
+        assetId: 'eip155:56:erc20:0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
+        text:
+          '税费接收总钱包（100%）\n0x8231Bb4E2891e85E79f28f0816EDE7AeAab06af1\n' +
+          '社区建设基金（20%）\n0x412DFD5Ac528C05ab78cd005385bC51759e29e46',
+        auditWindow: {
+          from: '2026-08-02T00:00:00.000Z',
+          to: '2026-08-10T00:00:00.000Z',
+        },
+      },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const body = response.json();
+    expect(body.evidence).toMatchObject({
+      kind: 'ANALYST_OBSERVATION',
+      source: 'api:user-submitted-claim-declaration',
+      chainId: 'eip155:56',
+    });
+    expect(body.drafts).toHaveLength(2);
+    expect(body.drafts[1]).toMatchObject({
+      role: 'COMMUNITY_FUND',
+      sourceAddress: {
+        state: 'known',
+        value: '0x8231bb4e2891e85e79f28f0816ede7aeaab06af1',
+      },
+      destinationAddress: {
+        state: 'known',
+        value: '0x412dfd5ac528c05ab78cd005385bc51759e29e46',
+      },
+      expectedShareBps: { state: 'known', value: '2000' },
+      chainVerifyReadiness: 'READY_FOR_REVIEW',
+      requiresHumanReview: true,
+    });
+
+    const evidence = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${body.evidence.id}`,
+    });
+    expect(evidence.statusCode, evidence.body).toBe(200);
+    expect(evidence.json()).toMatchObject({
+      evidence: { id: body.evidence.id, kind: 'ANALYST_OBSERVATION' },
+      sourceEvidenceIds: [],
+    });
+
+    const wrongChain = await app.inject({
+      method: 'POST',
+      url: '/api/v1/claims/declarations/parse',
+      payload: {
+        chainId: 'eip155:56',
+        assetId: 'eip155:1:erc20:token',
+        text: '社区建设基金（20%）',
+      },
+    });
+    expect(wrongChain.statusCode).toBe(400);
+    expect(wrongChain.json().error.code).toBe('INVALID_REQUEST');
+
+    const unsafeSource = await app.inject({
+      method: 'POST',
+      url: '/api/v1/claims/declarations/parse',
+      payload: {
+        chainId: 'eip155:56',
+        assetId: 'eip155:56:erc20:0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
+        text: '社区建设基金（20%）',
+        sourceUri: 'javascript:alert(1)',
+      },
+    });
+    expect(unsafeSource.statusCode).toBe(400);
+    expect(unsafeSource.json().error.code).toBe('INVALID_REQUEST');
+
+    const invalidAsset = await app.inject({
+      method: 'POST',
+      url: '/api/v1/claims/declarations/parse',
+      payload: {
+        chainId: 'eip155:56',
+        assetId: 'eip155:56:erc20:not-an-address',
+        text: '社区建设基金（20%）',
+      },
+    });
+    expect(invalidAsset.statusCode).toBe(400);
+    expect(invalidAsset.json().error.code).toBe('INVALID_REQUEST');
   });
 
   it('replays latest and exact durable Claim Reports without provider access', async () => {

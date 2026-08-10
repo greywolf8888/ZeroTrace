@@ -39,6 +39,11 @@ All notable changes to ZeroTrace will be documented here. The project follows
   golden corpus and standalone CI command;
 - fail-closed Claim Audit v1.1 input isolation for single-asset batches, normalized custody and
   action identity, Snapshot time bounds, and chronological actor-bound terminal paths;
+- deterministic public claim-declaration compilation for tax receiver, community fund, buyback
+  burn, buyback liquidity, pension-vault and weekly dividend wording, with Analyst Evidence,
+  explicit Unknown fields and mandatory human review;
+- read-only claim-declaration parsing API and responsive Claim Audit workspace, including local
+  dev/preview CORS coverage and explicit `403 CORS_ORIGIN_DENIED` diagnostics;
 - Fastify API with OpenAPI, health, capability truth, metrics, and analysis endpoints;
 - Snapshot/Evidence-backed ledger query API with pending, mempool, null, and unavailable observations
   kept distinct from confirmed facts;

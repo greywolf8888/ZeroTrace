@@ -13,6 +13,7 @@
     { "path": "../../packages/data-quality" },
     { "path": "../../packages/storage" },
     { "path": "../../packages/chain-adapters" },
+    { "path": "../../packages/claim-audit" },
     { "path": "../../packages/platform-adapters" },
     { "path": "../../packages/entity-engine" },
     { "path": "../../packages/rv" }

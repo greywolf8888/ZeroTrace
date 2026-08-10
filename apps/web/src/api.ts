@@ -631,6 +631,35 @@ export interface ClaimReportResponse {
   };
 }
 
+export interface ClaimDeclarationDraft {
+  id: string;
+  assetId: string;
+  role: string;
+  expectedAction: string;
+  sourceAddress: KnowledgeValue<string>;
+  destinationAddress: KnowledgeValue<string>;
+  expectedShareBps: KnowledgeValue<string>;
+  shareUnitTokens: KnowledgeValue<string>;
+  noExit: KnowledgeValue<boolean>;
+  cadenceSeconds: KnowledgeValue<string>;
+  window: KnowledgeValue<{ from: string; to: string }>;
+  matchedText: string;
+  missingFields: string[];
+  chainVerifyReadiness: 'READY_FOR_REVIEW' | 'INCOMPLETE';
+  requiresHumanReview: true;
+  claimEvidenceIds: string[];
+}
+
+export interface ClaimDeclarationParseResponse {
+  parserVersion: string;
+  documentHash: string;
+  assetId: string;
+  evidence: EvidenceRecord;
+  drafts: ClaimDeclarationDraft[];
+  unmatchedAddresses: string[];
+  warnings: string[];
+}
+
 interface ClaimFlowAggregate {
   observedAmount: string;
   actualAmount: KnowledgeValue<string>;
@@ -854,6 +883,21 @@ export const api = {
         parameters.toString(),
     );
   },
+  parseClaimDeclaration: (
+    token: string,
+    text: string,
+    auditWindow?: { from: string; to: string },
+    chainId = 'eip155:56',
+  ) =>
+    requestJson<ClaimDeclarationParseResponse>('/api/v1/claims/declarations/parse', {
+      method: 'POST',
+      body: JSON.stringify({
+        chainId,
+        assetId: `${chainId}:erc20:${token.toLowerCase()}`,
+        text,
+        ...(auditWindow === undefined ? {} : { auditWindow }),
+      }),
+    }),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',

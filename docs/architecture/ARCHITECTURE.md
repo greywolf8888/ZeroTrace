@@ -250,6 +250,14 @@ until a Snapshot-pinned fork tests max-sell, blacklist/whitelist, gas and revert
 
 ### Claim verification
 
+Public statements enter through a separate declaration compiler before they can become audit rules.
+The compiler stores the submitted text as `ANALYST_OBSERVATION` Evidence and emits deterministic,
+versioned human-review drafts for tax receiver, community fund, buyback/burn, buyback/liquidity,
+pension-vault and dividend roles. A percentage becomes exact basis points; `100w`/`100万` is retained
+as 1,000,000 human token units rather than guessed atomic units. Missing addresses and exact
+timezone-qualified windows remain typed Unknown. Every draft requires human review, and neither a
+draft nor its promotional wording is a chain fact or terminal-action observation.
+
 The first deterministic claim kernel accepts human- or agent-structured rules separately from chain
 observations. A rule identifies the asset, source, destination, role, percentage, terminal action and
 time window. The engine requires a replayable chain Snapshot and Evidence IDs, uses integer atomic
@@ -299,8 +307,11 @@ result schema, identical finalized Snapshot across custody and flow, canonical r
 terminal and nested Evidence membership, and replay identity before writes and reads. Provider-free
 latest/exact API routes and the UI expose observed atomic-unit lower bounds, custody, coverage,
 Snapshot and Evidence without converting them into action meaning. Automated capture scheduling,
-action derivation, independent-source reconciliation, official wallet attribution and the terminal
-FFT report remain pending.
+reviewed-draft promotion, action derivation, independent-source reconciliation, official wallet
+attribution and the terminal FFT report remain pending. A zero-address `Transfer` alone is not
+sufficient burn proof for an arbitrary custom ERC-20; action derivation must also reconcile
+Snapshot-pinned `totalSupply` change and complete block-level mint/burn conservation before crediting
+an irreversible burn.
 Endpoint failover and timestamp anchoring may add provenance IDs but do not raise claim-observation
 source coverage; it remains `0.5` until a separate reconciler repeats the complete result against an
 independent source.

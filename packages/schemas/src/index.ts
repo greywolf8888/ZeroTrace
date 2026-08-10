@@ -1454,6 +1454,7 @@ export const ClaimExpectedActionSchema = z.enum([
   'LOCK',
   'PAY_DIVIDEND',
 ]);
+export type ClaimExpectedAction = z.infer<typeof ClaimExpectedActionSchema>;
 export const ClaimWalletRoleSchema = z.enum([
   'TAX_RECEIVER',
   'COMMUNITY_FUND',
@@ -1463,6 +1464,7 @@ export const ClaimWalletRoleSchema = z.enum([
   'DIVIDEND_DISTRIBUTOR',
   'OTHER',
 ]);
+export type ClaimWalletRole = z.infer<typeof ClaimWalletRoleSchema>;
 export const ClaimCustodyKindSchema = z.enum([
   'IRRECOVERABLE_BURN',
   'SAFE_MULTISIG',
@@ -1517,6 +1519,37 @@ export const ClaimRuleSchema = z.object({
   claimEvidenceIds: z.array(z.string().min(1)).min(1),
 });
 export type ClaimRule = z.infer<typeof ClaimRuleSchema>;
+
+export const ClaimDeclarationDraftSchema = z.object({
+  id: z.string().regex(/^cld_[0-9a-f]{24}$/),
+  assetId: z.string().min(1),
+  role: ClaimWalletRoleSchema,
+  expectedAction: ClaimExpectedActionSchema,
+  sourceAddress: knowledgeValueSchema(z.string().min(1)),
+  destinationAddress: knowledgeValueSchema(z.string().min(1)),
+  expectedShareBps: knowledgeValueSchema(ClaimBpsSchema),
+  shareUnitTokens: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  noExit: knowledgeValueSchema(z.boolean()),
+  cadenceSeconds: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  window: knowledgeValueSchema(ClaimWindowSchema),
+  matchedText: z.string().min(1),
+  missingFields: z.array(z.string().min(1)),
+  chainVerifyReadiness: z.enum(['READY_FOR_REVIEW', 'INCOMPLETE']),
+  requiresHumanReview: z.literal(true),
+  claimEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+});
+export type ClaimDeclarationDraft = z.infer<typeof ClaimDeclarationDraftSchema>;
+
+export const ClaimDeclarationParseResultSchema = z.object({
+  parserVersion: z.string().min(1),
+  documentHash: Hash256Schema,
+  assetId: z.string().min(1),
+  evidence: EvidenceSchema,
+  drafts: z.array(ClaimDeclarationDraftSchema),
+  unmatchedAddresses: z.array(z.string().min(1)),
+  warnings: z.array(z.string().min(1)),
+});
+export type ClaimDeclarationParseResult = z.infer<typeof ClaimDeclarationParseResultSchema>;
 
 export const ClaimTransferObservationSchema = z.object({
   id: z.string().min(1),

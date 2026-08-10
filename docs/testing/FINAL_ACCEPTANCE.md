@@ -70,6 +70,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31402343560) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31402343611) pass on immutable
       Entity Precision/Calibration evaluation commit `399d797`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31403902953) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31403907558) pass on immutable
+      Claim Audit input-integrity commit `c80d906`
 
 ## Evidence and data
 
@@ -137,6 +140,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       removable-LP, controller-return, multi-hop and incomplete-coverage tests
 - [x] Claim Audit v1.1 fail-closed single-asset, duplicate-observation, Snapshot-time and
       chronological actor/path integrity gates
+- [x] Deterministic public claim-declaration compiler with Analyst Evidence, exact basis points,
+      pension share-unit/no-exit/cadence extraction, explicit Unknown fields and mandatory human review
 - [x] Finalized range-bounded EVM ERC-20 Transfer Evidence and EOA/Safe/generic-contract custody
       observation, including one named FFT single-source window
 - [x] Deterministic Snapshot-time-bounded address-flow aggregation with observed lower bounds,
@@ -154,8 +159,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       quote-reserve consumption, automatic Router/model checks and one named FFT partial-RV run
 - [x] Exact Entity Precision/False-Merge evaluator plus a test-only structural golden corpus covering
       high-confidence same-controller, coordination, independence, Service Hub, CoinJoin and abstention
-- [ ] Automated durable capture scheduling, same-Snapshot action derivation, independent-source
-      reconciliation, complete Claim Audit and terminal named FFT conclusion
+- [ ] Automated durable capture scheduling, reviewed-draft promotion, same-Snapshot action derivation
+      with total-supply/mint-burn conservation, independent-source reconciliation, complete Claim
+      Audit and terminal named FFT conclusion
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
@@ -170,6 +176,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       target, terminal Evidence root, explicit running/Unknown states and corrupt-result rejection
 - [x] Latest accepted Flap lifetime-head replay with sequence, predecessor/continuity, target and
       terminal Evidence in API plus desktop/mobile UI
+- [x] Responsive Claim Audit declaration review with no production fixtures, warnings, draft
+      readiness, human-review gate and Unknown pension-address rendering
 - [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance

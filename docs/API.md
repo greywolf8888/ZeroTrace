@@ -33,6 +33,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/launches/EVM/:token/origin`                          | bounded Flap creation-trace and exact receipt origin proof       |
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest` | latest immutable EVM Claim Report; provider-free replay          |
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`    | exact content-addressed EVM Claim Report replay                  |
+| POST   | `/api/v1/claims/declarations/parse`                           | compile public wording into Evidence-bound human-review drafts   |
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
 | POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                   | migrated Flap Pancake V2 nominal/gross/tax exit-size model       |
@@ -55,6 +56,20 @@ Current-state subject reads establish a ledger-specific anchor before reading th
 
 Solana's explicit `value: null` is a Known non-existent account. A missing, stale, malformed, or
 provider-failed response remains Unknown/unavailable and is never converted to a zero balance.
+
+### Claim declaration review
+
+`POST /api/v1/claims/declarations/parse` accepts an EVM `chainId`, chain-bound ERC-20 `assetId`, the
+original public statement, an optional source URI, and an optional exact ISO 8601 audit window with
+timezone. The server records the text as `ANALYST_OBSERVATION` Evidence and returns deterministic
+drafts for supported tax, treasury, burn, liquidity, pension and dividend roles.
+
+Percentages are represented as exact basis points. Pension wording such as `100w` or `100万` is a
+human token count and is not converted to atomic units until verified token decimals are available.
+Missing wallet addresses, exact dates or allocation values remain typed Unknown; a month/day without
+a year and timezone produces a warning. Every draft has `requiresHumanReview: true`. This endpoint
+does not assert that a declaration is true, perform chain verification, promote a draft to an audit
+rule, or initiate any transaction.
 
 ### EVM Claim Report replay
 

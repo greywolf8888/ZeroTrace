@@ -1083,21 +1083,45 @@ coverage run passed 413 tests with 22 opt-in durable tests skipped. No provider 
 or manually supplied action was added to a production route in this batch. Same-Snapshot action
 derivation and terminal FFT Claim Audit remain pending.
 
+## Claim declaration review acceptance (2026-08-11)
+
+The deterministic `claim-declaration-parser-v1.0.0` compiler was exercised with the supplied FFT
+community wording. It emitted six mandatory-human-review drafts: tax receiver, community fund,
+buyback burn, buyback liquidity, pension vault and dividend distributor. The four explicitly
+published addresses were normalized into their matching roles; the allocation rules were preserved
+as `10000`, `2000`, `4000` and `4000` basis points. Pension wording was retained as 1,000,000 human
+token units per share with `noExit=true`, and weekly dividends as a 604800-second cadence.
+
+The statement did not publish a pension-wallet address, and `8月2号` did not specify a year or
+timezone. Both remain Unknown/Incomplete with an explicit date warning. The compiler did not
+substitute the previously observed behavioral candidate, did not infer token decimals, and did not
+convert the declaration into burn, dividend, lock or other chain-action proof. The submitted text is
+stored as `ANALYST_OBSERVATION` Evidence; an integration test replays that Evidence through the
+existing Evidence API.
+
+The new read-only API and Claim Audit UI passed a real local API-to-browser replay on Chromium. This
+also exposed a clean-start defect: the API allowed the dev origin on port 5173 but not the repository's
+own preview origin on port 4173, causing browser-origin requests to be reported as internal errors.
+Local dev/preview origins are now explicit for localhost and 127.0.0.1, and a disallowed origin is a
+typed `403 CORS_ORIGIN_DENIED` rather than a 500. Production deployments must still configure their
+exact public origin. No chain provider, private key, signing, swap, transaction broadcast or
+production fixture path was added.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 369 unit, 44 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 373 unit, 46 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                                               |
-| local `test:coverage`    | pass: 413 tests, 22 opt-in durable skips; 82.60% statements, 76.50% branches, 91.01% functions, 83.69% lines                                                                 |
+| local `test:coverage`    | pass: 419 tests, 22 opt-in durable skips; 82.80% statements, 76.62% branches, 91.23% functions, 83.91% lines                                                                 |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
-| `test:e2e:windows`       | pass: 12 Chromium tests across desktop and Pixel 7, including migrated-market scenarios, Claim Report, replay and Unknown                                                    |
+| `test:e2e:windows`       | pass: 14 Chromium tests across desktop and Pixel 7, including Claim Declaration, migrated-market scenarios, Claim Report, replay and Unknown                                 |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
 | `docker compose config`  | pass                                                                                                                                                                         |
 | production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000                          |
-| branch GitHub Actions CI | [pass on `399d797`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31402343560): full CI matrix, structural model gate, 12 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `399d797`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31402343611): JavaScript and TypeScript analysis                                                  |
+| branch GitHub Actions CI | [pass on `c80d906`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31403902953): full CI matrix, structural model gate, 12 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `c80d906`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31403907558): JavaScript and TypeScript analysis                                                  |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
