@@ -7,6 +7,7 @@ import {
   type ClaimReportResponse,
   type EvmClaimBurnCandidateDiscoveryResponse,
   type EvmClaimBurnConservationResponse,
+  type EvmClaimBurnPromotionReplayResponse,
   type EvidenceRecord,
   type FlapConfigurationField,
   type FlapEventHistoryResponse,
@@ -1074,6 +1075,194 @@ function ClaimBurnCandidateDiscoveryPanel() {
   );
 }
 
+function ClaimBurnPromotionReplayPanel() {
+  const [token, setToken] = useState('');
+  const [scanId, setScanId] = useState('');
+  const [result, setResult] = useState<EvmClaimBurnPromotionReplayResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const validToken = /^0x[0-9a-fA-F]{40}$/.test(token);
+  const validScanId =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(scanId);
+
+  async function replayPromotion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validToken || !validScanId) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(await api.replayClaimBurnPromotion(token, scanId));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Burn promotion replay failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const terminal = result?.terminalResult ?? null;
+  return (
+    <section className="panel subject-panel quote-panel" aria-labelledby="burn-promotion-heading">
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Durable worker replay</span>
+          <h3 id="burn-promotion-heading">Burn Promotion Certificate</h3>
+        </div>
+        <span className="snapshot-badge">PostgreSQL replay · no provider</span>
+      </div>
+      <p className="panel-copy">
+        Replay a semantic-worker scan by ID. Completed candidate blocks include exact-block supply
+        conservation; event coverage never becomes proof of silent supply changes.
+      </p>
+      <form
+        className="quote-form claim-burn-form"
+        onSubmit={(event) => void replayPromotion(event)}
+      >
+        <div className="claim-burn-field">
+          <label htmlFor="claim-burn-promotion-token">Promoted token address</label>
+          <input
+            id="claim-burn-promotion-token"
+            spellCheck={false}
+            placeholder="0x…"
+            value={token}
+            onChange={(event) => setToken(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field">
+          <label htmlFor="claim-burn-promotion-scan">Promotion scan ID</label>
+          <input
+            id="claim-burn-promotion-scan"
+            spellCheck={false}
+            placeholder="00000000-0000-4000-8000-000000000000"
+            value={scanId}
+            onChange={(event) => setScanId(event.target.value.trim())}
+          />
+        </div>
+        <button
+          className="secondary-button"
+          type="submit"
+          disabled={busy || !validToken || !validScanId}
+        >
+          {busy ? 'Replaying…' : 'Replay promotion'}
+        </button>
+      </form>
+      {error === undefined ? null : <p className="inline-error">{error}</p>}
+      {result === undefined ? null : (
+        <div className="burn-conservation-result">
+          <div className="snapshot-strip">
+            <span
+              className={
+                result.scan.status === 'REQUESTED_RANGE_COMPLETE'
+                  ? 'status-chip status-up'
+                  : 'status-chip status-degraded'
+              }
+            >
+              {titleCase(result.scan.status)}
+            </span>
+            <span>
+              <b>Range progress</b> {(result.scan.requestedRangeCoverage * 100).toFixed(2)}%
+            </span>
+            <span>
+              <b>Next block</b> {result.scan.nextBlock}
+            </span>
+          </div>
+          {terminal === null ? (
+            <div className="alert alert-warning">
+              <strong>Scan is not terminal</strong>
+              <span>
+                Resume the identical worker command. No result is inferred from partial segments.
+                {result.scan.lastErrorCode === null
+                  ? ''
+                  : ` Last bounded failure: ${result.scan.lastErrorCode}.`}
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="fact-grid burn-fact-grid">
+                <div className="fact-row">
+                  <span>Candidate blocks</span>
+                  <strong>{terminal.burnCandidateCount}</strong>
+                </div>
+                <div className="fact-row">
+                  <span>Verified candidates</span>
+                  <strong>{terminal.verifiedCandidateCount}</strong>
+                </div>
+                <div className="fact-row">
+                  <span>Contradicted candidates</span>
+                  <strong>{terminal.contradictedCandidateCount}</strong>
+                </div>
+                <div className="fact-row">
+                  <span>Verified actions</span>
+                  <strong>{terminal.verifiedActionCount}</strong>
+                </div>
+                <div className="fact-row">
+                  <span>Terminal Evidence</span>
+                  <code>{terminal.terminalEvidenceId}</code>
+                </div>
+                <div className="fact-row">
+                  <span>Silent supply changes</span>
+                  <strong>{titleCase(terminal.silentSupplyChangeDetection.state)}</strong>
+                </div>
+              </div>
+              <div className="alert alert-warning">
+                <strong>Scoped certificate</strong>
+                <span>
+                  {terminal.silentSupplyChangeDetection.state === 'unknown'
+                    ? terminal.silentSupplyChangeDetection.detail
+                    : 'Silent supply-change detection must remain Unknown.'}
+                </span>
+              </div>
+              <div className="claim-draft-list">
+                {terminal.segments.map((segment) => (
+                  <article
+                    className="claim-draft-card"
+                    key={`${segment.fromBlock}:${segment.toBlock}`}
+                  >
+                    <div className="claim-draft-heading">
+                      <div>
+                        <span className="eyebrow">Finalized event segment</span>
+                        <h4>
+                          Blocks {segment.fromBlock}–{segment.toBlock}
+                        </h4>
+                      </div>
+                      <span className="status-chip status-up">
+                        {segment.burnCandidateCount} certified
+                      </span>
+                    </div>
+                    <p className="panel-copy">
+                      Discovery Evidence <code>{segment.discoveryTerminalEvidenceId}</code>
+                    </p>
+                    {segment.certificates.map((certificate) => (
+                      <div className="fact-grid" key={certificate.terminalEvidenceId}>
+                        <div className="fact-row">
+                          <span>Certificate block</span>
+                          <strong>{certificate.blockNumber}</strong>
+                        </div>
+                        <div className="fact-row">
+                          <span>Conservation status</span>
+                          <strong>{titleCase(certificate.status)}</strong>
+                        </div>
+                        <div className="fact-row">
+                          <span>Burned event amount</span>
+                          <strong>{certificate.burnedEventAmount}</strong>
+                        </div>
+                        <div className="fact-row">
+                          <span>Certificate Evidence</span>
+                          <code>{certificate.terminalEvidenceId}</code>
+                        </div>
+                      </div>
+                    ))}
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ClaimAuditWorkspace() {
   return (
     <>
@@ -1090,6 +1279,7 @@ function ClaimAuditWorkspace() {
       </div>
       <ClaimDeclarationPanel />
       <ClaimBurnCandidateDiscoveryPanel />
+      <ClaimBurnPromotionReplayPanel />
       <ClaimBurnConservationPanel />
     </>
   );

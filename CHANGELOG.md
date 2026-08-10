@@ -50,6 +50,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - finalized BSC SQD zero-address Transfer candidate discovery across bounded long ranges, with
   sparse event-query Evidence, exact-block promotion targets, responsive review and explicit
   `Unknown(NOT_QUERIED)` for silent/custom supply changes;
+- restart-safe BSC burn-candidate promotion across bounded durable segments, with exact-block
+  supply-conservation certificates before cursor advancement, strict checkpoint replay validation,
+  read-only worker/Compose entrypoints, and PostgreSQL-only API/UI replay by scan ID;
 - Fastify API with OpenAPI, health, capability truth, metrics, and analysis endpoints;
 - Snapshot/Evidence-backed ledger query API with pending, mempool, null, and unavailable observations
   kept distinct from confirmed facts;

@@ -1759,6 +1759,118 @@ test('keeps a complete burn-event range distinct from silent supply-change cover
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
 
+test('replays a durable burn promotion without converting scoped coverage into silent proof', async ({
+  page,
+}) => {
+  const scanId = '77777777-7777-4777-8777-777777777777';
+  const discoveryEvidenceId = 'ev_000000000000000000000071';
+  const terminalEvidenceId = 'ev_000000000000000000000072';
+  const snapshot = {
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    blockNumber: '115154970',
+    blockHash: `0x${'3'.repeat(64)}`,
+    parentBlockHash: `0x${'2'.repeat(64)}`,
+    finality: 'finalized',
+    capturedAt: '2026-08-11T01:00:00.000Z',
+    blockTimestamp: '2026-08-11T00:59:57.000Z',
+    providerVersions: { 'bsc-rpc@example': 'evm-ledger-v0.1.0' },
+    adapterVersions: { evm: 'evm-ledger-v0.1.0' },
+    configHash: '4'.repeat(64),
+    entityModelVersion: 'entity-model-unapplied',
+    labelSnapshot: 'labels-unapplied',
+  };
+  await page.route('**/api/v1/claims/EVM/*/burn-promotions/*', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        scan: {
+          id: scanId,
+          status: 'REQUESTED_RANGE_COMPLETE',
+          token: bscTokenAddress,
+          requestedRange: {
+            fromBlock: '113485950',
+            toBlock: '115154970',
+            segmentSize: 1000000,
+          },
+          nextBlock: '115154971',
+          requestedRangeCoverage: 1,
+          lastErrorCode: null,
+          updatedAt: '2026-08-11T01:01:00.000Z',
+        },
+        terminalResult: {
+          tokenAddress: bscTokenAddress,
+          fromBlock: '113485950',
+          toBlock: '115154970',
+          coverageScope: 'ERC20_ZERO_ADDRESS_TRANSFER_EVENTS_WITH_EXACT_BLOCK_SUPPLY_CONSERVATION',
+          status: 'REQUESTED_RANGE_COMPLETE',
+          segmentCount: 1,
+          zeroAddressEventCount: 0,
+          burnCandidateCount: 0,
+          verifiedCandidateCount: 0,
+          contradictedCandidateCount: 0,
+          verifiedActionCount: 0,
+          segments: [
+            {
+              fromBlock: '113485950',
+              toBlock: '115154970',
+              zeroAddressEventCount: 0,
+              burnCandidateCount: 0,
+              discoveryTerminalEvidenceId: discoveryEvidenceId,
+              certificates: [],
+              snapshot,
+              sourceSet: ['bsc-rpc@example', 'sqd:binance-mainnet'],
+            },
+          ],
+          silentSupplyChangeDetection: {
+            state: 'unknown',
+            reason: 'NOT_QUERIED',
+            detail:
+              'This durable run proves zero-address event coverage and exact candidate-block conservation only. Silent totalSupply changes require an all-block state analysis.',
+          },
+          terminalEvidenceId,
+          metadata: {
+            snapshot,
+            dataCoverage: 1,
+            sourceCoverage: 0.5,
+            historyCoverage: 1,
+            simulationCoverage: 0,
+            freshness: snapshot.blockTimestamp,
+            sourceSet: ['bsc-rpc@example', 'sqd:binance-mainnet'],
+            modelVersion: 'erc20-burn-candidate-promotion-v1.0.0',
+            confidence: 0.98,
+            evidenceIds: [discoveryEvidenceId, terminalEvidenceId],
+          },
+        },
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  const panel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Burn Promotion Certificate' }),
+  });
+  await panel.getByLabel('Promoted token address').fill(bscTokenAddress);
+  await panel.getByLabel('Promotion scan ID').fill(scanId);
+  await panel.getByRole('button', { name: 'Replay promotion' }).click();
+
+  await expect(panel).toContainText('Requested Range Complete');
+  await expect(panel).toContainText('100.00%');
+  await expect(panel.getByText('Unknown', { exact: true })).toBeVisible();
+  await expect(panel).toContainText(
+    'Silent totalSupply changes require an all-block state analysis',
+  );
+  await expect(panel).toContainText(terminalEvidenceId);
+  await expect(panel).toContainText(discoveryEvidenceId);
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
 test('keeps scenario execution gated and exposes provider availability', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Scenario Lab' }).click();

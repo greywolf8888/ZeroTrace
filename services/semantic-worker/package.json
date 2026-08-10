@@ -10,10 +10,12 @@
     "dev:history": "tsx --tsconfig ../../tsconfig.base.json src/history-cli.ts",
     "dev:lifetime": "tsx --tsconfig ../../tsconfig.base.json src/lifetime-cli.ts",
     "dev:lifetime:heads": "tsx --tsconfig ../../tsconfig.base.json src/lifetime-head-cli.ts",
+    "dev:burn:promote": "tsx --tsconfig ../../tsconfig.base.json src/burn-promotion-cli.ts",
     "start": "node dist/src/cli.js",
     "start:history": "node dist/src/history-cli.js",
     "start:lifetime": "node dist/src/lifetime-cli.js",
-    "start:lifetime:heads": "node dist/src/lifetime-head-cli.js"
+    "start:lifetime:heads": "node dist/src/lifetime-head-cli.js",
+    "start:burn:promote": "node dist/src/burn-promotion-cli.js"
   },
   "dependencies": {
     "@zerotrace/chain-adapters": "*",

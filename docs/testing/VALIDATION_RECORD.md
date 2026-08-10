@@ -1187,21 +1187,72 @@ is `ev_b938c11599c5735884f5e376`. Silent supply-change detection remained
 `Unknown(NOT_QUERIED)`. The Alchemy credential was injected process-locally from the user attachment
 and was neither printed nor persisted.
 
+## Durable FFT burn-promotion acceptance (2026-08-11)
+
+Model `erc20-burn-candidate-promotion-v1.0.0` now composes long-range event discovery with exact
+candidate-block supply certificates behind the generic PostgreSQL semantic checkpoint. One run is
+bounded to five segments and 5,000,000 blocks. A segment advances only after its two indexed
+zero-address queries, all candidate certificates and their Evidence roots succeed; a partial run
+has no terminal result. Schema and worker tests cover completion, provider-free replay, interrupted
+resume, corrupted state, storage preflight, write-like argument rejection and the distinction
+between scoped event coverage and silent supply-change Unknown.
+
+The first live attempt exposed a real request-budget defect: one event segment requires two SQD
+requests because sender-zero and destination-zero are separate indexed queries. The worker failed
+before cursor advancement with zero Evidence IDs. The budget was corrected from one to two and a
+regression assertion was added. A subsequent full run exposed a provenance defect: an empty
+candidate segment listed SQD in `sourceSet` but omitted the BSC RPC that supplied the range-end
+Snapshot. The Schema now requires every Snapshot `providerVersions` source in the segment source
+set, and `snapshotSourceSetPolicy=provider-versions-v1` is part of immutable scan identity so the
+older result cannot be silently reused.
+
+The first retry of that new identity then correctly returned `SNAPSHOT_CONFLICT`: Evidence
+observation time had been fixed to block time, so a recaptured Snapshot with a new `capturedAt`
+would have attached one Evidence ID to two Snapshot identities. No cursor was advanced. The worker
+now uses the current Snapshot capture time for Evidence identity. Within one captured terminal
+state this remains idempotent; a later recapture receives a distinct immutable Evidence ID instead
+of mutating or conflicting with the earlier graph. Focused tests assert both discovery/certificate
+and terminal Evidence capture-time binding.
+
+The corrected production run completed the exact FFT range `113485950-115154970` in two durable
+segments under scan `c2b6c82f-abf6-40e4-a824-4e5b86a07485`. Final Snapshot block/hash were
+`115154970` / `0x428fae3cf1516692f1a1fa9a46f2ecaeddf627e890466c82ff68367d32427ddb`.
+The result contains zero non-zero zero-address events and therefore zero candidate certificates or
+actions. This is a known zero for the declared event scope only. Silent supply-change detection is
+`Unknown(NOT_QUERIED)`.
+
+Terminal Evidence `ev_a0cfab9b9947fc01565f4018` links the two segment roots
+`ev_88301712203c22e89effd32d` and `ev_b10cfc470d297e8f325a0734`. The final source set is
+`bsc-rpc@bsc-dataseed.bnbchain.org#1` plus `sqd:binance-mainnet`; source coverage remains `0.5`
+because endpoint presence is not independent-source reconciliation. Re-running the identical scan
+with deliberately unresolvable `rpc.invalid` and `sqd.invalid` provider URLs completed in under two
+seconds with the same scan/result/Evidence IDs, proving terminal replay used PostgreSQL only. The
+same check passed from the rebuilt production semantic-worker container in 2.4 seconds.
+
+The rebuilt production API returned this exact result from PostgreSQL with coverage `1`, two
+segments, the same terminal Evidence and `Unknown(NOT_QUERIED)`; the provenance-incomplete older
+scan was rejected with HTTP 502. An unmocked headed Chromium session then replayed the scan through
+the rebuilt Web container and rendered both segment Evidence IDs, the terminal root and Unknown
+boundary. The focused panel screenshot is retained under ignored local test output, not committed as
+product data.
+Continuous scheduling, all-block silent-supply analysis, independent reconciliation, official
+wallet attribution and terminal FFT acceptance remain pending.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 386 unit, 48 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 395 unit, 50 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                                               |
-| local `test:coverage`    | pass: 434 tests, 22 opt-in durable skips; 82.89% statements, 76.82% branches, 91.49% functions, 83.98% lines                                                                 |
+| local `test:coverage`    | pass: 445 tests, 22 opt-in durable skips; 82.67% statements, 76.75% branches, 91.54% functions, 83.80% lines                                                                 |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
-| `npm run test:e2e`       | pass: 18 Chromium tests across desktop and Pixel 7, including burn range/certificate, Claim Declaration, migrated-market scenarios, Claim Report, replay and Unknown         |
+| `npm run test:e2e`       | pass: 20 Chromium tests across desktop and Pixel 7, including burn promotion/range/certificate, Claim Declaration, migrated-market scenarios, Claim Report and Unknown       |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
 | `docker compose config`  | pass                                                                                                                                                                         |
 | production Compose smoke | pass: production API/Web images, seven-service healthy stack, non-destructive 001-011 upgrade, live/ready/read-only health; prior worker targets remain accepted             |
-| branch GitHub Actions CI | [pass on `8fcef01`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31413974058): full CI matrix, structural model gate, 16 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `8fcef01`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31413973830): JavaScript and TypeScript analysis                                                  |
+| branch GitHub Actions CI | [pass on `af8fee3`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31417036285): full CI matrix, structural model gate, 18 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `af8fee3`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31417036283): JavaScript and TypeScript analysis                                                  |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

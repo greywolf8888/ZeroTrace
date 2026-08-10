@@ -36,6 +36,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | POST   | `/api/v1/claims/declarations/parse`                           | compile public wording into Evidence-bound human-review drafts   |
 | POST   | `/api/v1/claims/EVM/:token/burn-candidates`                   | finalized BSC zero-address Transfer candidate-range discovery    |
 | POST   | `/api/v1/claims/EVM/:token/burn-conservation`                 | exact-block ERC-20 supply/mint/burn conservation certificate     |
+| GET    | `/api/v1/claims/EVM/:token/burn-promotions/:id`               | provider-free durable candidate-promotion replay                 |
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
 | POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                   | migrated Flap Pancake V2 nominal/gross/tax exit-size model       |
@@ -89,8 +90,23 @@ complete event query returned none.
 
 This endpoint never turns an empty event result into proof that supply was unchanged. Custom or
 silent storage-level supply changes are returned as `Unknown(NOT_QUERIED)`. It does not perform
-automatic candidate promotion, all-block `totalSupply` scanning, attribution, signing, swaps or
-transaction broadcast.
+candidate promotion inside the synchronous request, all-block `totalSupply` scanning, attribution,
+signing, swaps or transaction broadcast. The durable worker and replay route below compose the
+event candidates with exact-block certificates without weakening that boundary.
+
+### Durable ERC-20 burn promotion replay
+
+`GET /api/v1/claims/EVM/:token/burn-promotions/:scanId` reads one semantic checkpoint from
+PostgreSQL and performs no RPC or SQD request. The token, BSC chain, SQD source, segment cursor,
+finalized Snapshots, terminal Evidence identities, aggregate counts and complete result Schema are
+revalidated on every replay. An identity mismatch is `404`; missing storage is `503`; corrupt state
+fails closed as an invalid provider-shaped result instead of being rendered as completion.
+
+A running scan returns exact requested-range progress and `terminalResult: null`. A terminal scan
+returns every discovery segment and its exact-block `VERIFIED` or `CONTRADICTED` certificates.
+Contradicted candidates create no burn action. The terminal coverage scope is explicitly
+`ERC20_ZERO_ADDRESS_TRANSFER_EVENTS_WITH_EXACT_BLOCK_SUPPLY_CONSERVATION`; silent/custom supply
+changes stay `Unknown(NOT_QUERIED)` even when the candidate count is known zero.
 
 ### ERC-20 burn conservation
 

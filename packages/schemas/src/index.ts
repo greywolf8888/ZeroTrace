@@ -1857,6 +1857,194 @@ export const EvmClaimBurnCandidateDiscoverySchema = z
   });
 export type EvmClaimBurnCandidateDiscovery = z.infer<typeof EvmClaimBurnCandidateDiscoverySchema>;
 
+export const EvmClaimBurnPromotionCertificateSchema = z.object({
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  burnTransferIds: z.array(z.string().min(1)).min(1),
+  mintedEventAmount: UnsignedQuantityStringSchema,
+  burnedEventAmount: UnsignedQuantityStringSchema,
+  status: z.enum(['VERIFIED', 'CONTRADICTED']),
+  actionCount: z.number().int().nonnegative(),
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type EvmClaimBurnPromotionCertificate = z.infer<
+  typeof EvmClaimBurnPromotionCertificateSchema
+>;
+
+export const EvmClaimBurnPromotionSegmentSchema = z
+  .object({
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    zeroAddressEventCount: z.number().int().nonnegative(),
+    burnCandidateCount: z.number().int().nonnegative(),
+    discoveryTerminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    certificates: z.array(EvmClaimBurnPromotionCertificateSchema),
+    snapshot: EvmSnapshotSchema,
+    sourceSet: z.array(z.string().min(1)).min(1),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const transferIds = new Set<string>();
+    let previousBlock: bigint | undefined;
+    if (
+      toBlock < fromBlock ||
+      value.burnCandidateCount !== value.certificates.length ||
+      value.snapshot.blockNumber !== value.toBlock ||
+      value.snapshot.finality !== 'finalized' ||
+      value.snapshot.blockTimestamp === undefined ||
+      new Set(value.sourceSet).size !== value.sourceSet.length ||
+      [...value.sourceSet].sort().some((source, index) => source !== value.sourceSet[index]) ||
+      Object.keys(value.snapshot.providerVersions).some(
+        (source) => !value.sourceSet.includes(source),
+      )
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['burnCandidateCount'],
+        message: 'Burn promotion segment range and candidate count must be consistent.',
+      });
+    }
+    for (const certificate of value.certificates) {
+      const block = BigInt(certificate.blockNumber);
+      const duplicateTransfer = certificate.burnTransferIds.some((id) => {
+        if (transferIds.has(id)) return true;
+        transferIds.add(id);
+        return false;
+      });
+      if (
+        block < fromBlock ||
+        block > toBlock ||
+        (previousBlock !== undefined && block <= previousBlock) ||
+        duplicateTransfer ||
+        BigInt(certificate.burnedEventAmount) <= 0n ||
+        (certificate.status === 'VERIFIED'
+          ? certificate.actionCount !== certificate.burnTransferIds.length
+          : certificate.actionCount !== 0)
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['certificates'],
+          message:
+            'Burn promotion certificates must be ordered, unique, in-range, and action-consistent.',
+        });
+        break;
+      }
+      previousBlock = block;
+    }
+  });
+export type EvmClaimBurnPromotionSegment = z.infer<typeof EvmClaimBurnPromotionSegmentSchema>;
+
+export const EvmClaimBurnPromotionSchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    coverageScope: z.literal(
+      'ERC20_ZERO_ADDRESS_TRANSFER_EVENTS_WITH_EXACT_BLOCK_SUPPLY_CONSERVATION',
+    ),
+    status: z.literal('REQUESTED_RANGE_COMPLETE'),
+    segmentCount: z.number().int().positive(),
+    zeroAddressEventCount: z.number().int().nonnegative(),
+    burnCandidateCount: z.number().int().nonnegative(),
+    verifiedCandidateCount: z.number().int().nonnegative(),
+    contradictedCandidateCount: z.number().int().nonnegative(),
+    verifiedActionCount: z.number().int().nonnegative(),
+    segments: z.array(EvmClaimBurnPromotionSegmentSchema).min(1),
+    silentSupplyChangeDetection: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('erc20-burn-candidate-promotion-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const snapshot = value.metadata.snapshot;
+    let nextBlock = fromBlock;
+    const terminalEvidenceIds: string[] = [];
+    const sourceSet = new Set<string>();
+    const certificates = value.segments.flatMap((segment) => {
+      if (BigInt(segment.fromBlock) !== nextBlock) {
+        context.addIssue({
+          code: 'custom',
+          path: ['segments'],
+          message: 'Burn promotion segments must be contiguous.',
+        });
+      }
+      nextBlock = BigInt(segment.toBlock) + 1n;
+      terminalEvidenceIds.push(
+        segment.discoveryTerminalEvidenceId,
+        ...segment.certificates.map((certificate) => certificate.terminalEvidenceId),
+      );
+      segment.sourceSet.forEach((source) => sourceSet.add(source));
+      return segment.certificates;
+    });
+    terminalEvidenceIds.push(value.terminalEvidenceId);
+    const verified = certificates.filter((item) => item.status === 'VERIFIED');
+    const contradicted = certificates.filter((item) => item.status === 'CONTRADICTED');
+    if (
+      toBlock < fromBlock ||
+      nextBlock !== toBlock + 1n ||
+      value.segmentCount !== value.segments.length ||
+      value.zeroAddressEventCount !==
+        value.segments.reduce((total, segment) => total + segment.zeroAddressEventCount, 0) ||
+      value.burnCandidateCount !== certificates.length ||
+      value.verifiedCandidateCount !== verified.length ||
+      value.contradictedCandidateCount !== contradicted.length ||
+      value.verifiedActionCount !==
+        verified.reduce((total, certificate) => total + certificate.actionCount, 0)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['segments'],
+        message: 'Burn promotion range and aggregate counts are inconsistent.',
+      });
+    }
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.toBlock ||
+      snapshot.blockHash.toLowerCase() !==
+        value.segments.at(-1)?.snapshot.blockHash.toLowerCase() ||
+      value.metadata.freshness !== snapshot.blockTimestamp ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      [...sourceSet].sort().some((source, index) => source !== value.metadata.sourceSet[index]) ||
+      sourceSet.size !== value.metadata.sourceSet.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Burn promotion must bind complete scoped coverage to its final Snapshot.',
+      });
+    }
+    if (value.silentSupplyChangeDetection.state !== 'unknown') {
+      context.addIssue({
+        code: 'custom',
+        path: ['silentSupplyChangeDetection'],
+        message: 'Event promotion cannot claim silent supply-change coverage.',
+      });
+    }
+    const expectedEvidenceIds = [...new Set(terminalEvidenceIds)].sort();
+    const actualEvidenceIds = [...value.metadata.evidenceIds].sort();
+    if (
+      expectedEvidenceIds.length !== terminalEvidenceIds.length ||
+      expectedEvidenceIds.length !== actualEvidenceIds.length ||
+      expectedEvidenceIds.some((id, index) => id !== actualEvidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'evidenceIds'],
+        message:
+          'Burn promotion metadata must contain each terminal Evidence identity exactly once.',
+      });
+    }
+  });
+export type EvmClaimBurnPromotion = z.infer<typeof EvmClaimBurnPromotionSchema>;
+
 export const ClaimCustodyObservationSchema = z.object({
   address: z.string().min(1),
   kind: ClaimCustodyKindSchema,

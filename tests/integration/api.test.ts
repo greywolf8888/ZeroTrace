@@ -1009,6 +1009,12 @@ describe('ZeroTrace API contract', () => {
         status: 'STORAGE_REQUIRED',
       }),
     );
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
+        id: 'erc20-burn-candidate-promotion',
+        status: 'DURABLE_STORAGE_REQUIRED',
+      }),
+    );
 
     const chains = await app.inject({ method: 'GET', url: '/api/v1/chains' });
     expect(chains.json().chains).toEqual(
@@ -3444,6 +3450,143 @@ describe('ZeroTrace API contract', () => {
     });
     expect(oversizedRange.statusCode).toBe(400);
     expect(oversizedRange.json().error.code).toBe('INVALID_REQUEST');
+  });
+
+  it('replays a completed durable burn promotion without provider access', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const scanId = '77777777-7777-4777-8777-777777777777';
+    const discoveryEvidenceId = 'ev_000000000000000000000071';
+    const terminalEvidenceId = 'ev_000000000000000000000072';
+    const snapshot = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      blockNumber: '103',
+      blockHash: `0x${'3'.repeat(64)}`,
+      parentBlockHash: `0x${'2'.repeat(64)}`,
+      finality: 'finalized' as const,
+      capturedAt: '2026-08-11T01:00:00.000Z',
+      blockTimestamp: '2026-08-11T00:59:57.000Z',
+      providerVersions: { 'bsc-rpc@example': 'evm-ledger-v0.1.0' },
+      adapterVersions: { evm: 'evm-ledger-v0.1.0' },
+      configHash: '4'.repeat(64),
+      entityModelVersion: 'entity-model-unapplied',
+      labelSnapshot: 'labels-unapplied',
+    };
+    const segment = {
+      fromBlock: '100',
+      toBlock: '103',
+      zeroAddressEventCount: 0,
+      burnCandidateCount: 0,
+      discoveryTerminalEvidenceId: discoveryEvidenceId,
+      certificates: [],
+      snapshot,
+      sourceSet: ['bsc-rpc@example', 'sqd:binance-mainnet'],
+    };
+    const result = {
+      tokenAddress: fixtureFlapToken,
+      fromBlock: '100',
+      toBlock: '103',
+      coverageScope: 'ERC20_ZERO_ADDRESS_TRANSFER_EVENTS_WITH_EXACT_BLOCK_SUPPLY_CONSERVATION',
+      status: 'REQUESTED_RANGE_COMPLETE',
+      segmentCount: 1,
+      zeroAddressEventCount: 0,
+      burnCandidateCount: 0,
+      verifiedCandidateCount: 0,
+      contradictedCandidateCount: 0,
+      verifiedActionCount: 0,
+      segments: [segment],
+      silentSupplyChangeDetection: { state: 'unknown', reason: 'NOT_QUERIED' },
+      terminalEvidenceId,
+      metadata: {
+        snapshot,
+        dataCoverage: 1,
+        sourceCoverage: 0.5,
+        historyCoverage: 1,
+        simulationCoverage: 0,
+        freshness: snapshot.blockTimestamp,
+        sourceSet: ['bsc-rpc@example', 'sqd:binance-mainnet'],
+        modelVersion: 'erc20-burn-candidate-promotion-v1.0.0',
+        confidence: 0.98,
+        evidenceIds: [discoveryEvidenceId, terminalEvidenceId],
+      },
+    };
+    const now = '2026-08-11T01:01:00.000Z';
+    const get = vi.fn(async () => ({
+      id: scanId,
+      scanType: 'ERC20_BURN_CANDIDATE_PROMOTION',
+      source: 'sqd:binance-mainnet',
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      subject: fixtureFlapToken,
+      fromBlock: 100,
+      toBlock: 103,
+      chunkSize: 4,
+      identityHash: '5'.repeat(64),
+      identity: {},
+      status: 'REQUESTED_RANGE_COMPLETE' as const,
+      nextBlock: 104,
+      stateHash: '6'.repeat(64),
+      state: {
+        version: 'erc20-burn-candidate-promotion-checkpoint-v1',
+        segments: [segment],
+        snapshot,
+        sourceSet: ['bsc-rpc@example', 'sqd:binance-mainnet'],
+        result,
+      },
+      evidenceIds: [discoveryEvidenceId, terminalEvidenceId],
+      lastErrorCode: null,
+      startedAt: now,
+      updatedAt: now,
+      completedAt: now,
+    }));
+    runtime.semanticCheckpoints = { get } as unknown as NonNullable<
+      AppRuntime['semanticCheckpoints']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/burn-promotions/${scanId}`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      scan: {
+        id: scanId,
+        status: 'REQUESTED_RANGE_COMPLETE',
+        requestedRangeCoverage: 1,
+        nextBlock: '104',
+      },
+      terminalResult: {
+        status: 'REQUESTED_RANGE_COMPLETE',
+        burnCandidateCount: 0,
+        silentSupplyChangeDetection: { state: 'unknown', reason: 'NOT_QUERIED' },
+        terminalEvidenceId,
+      },
+    });
+    expect(get).toHaveBeenCalledWith(scanId);
+
+    const wrongToken = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/0x${'b'.repeat(40)}/burn-promotions/${scanId}`,
+    });
+    expect(wrongToken.statusCode).toBe(404);
+    expect(wrongToken.json().error.code).toBe('BURN_PROMOTION_NOT_FOUND');
+  });
+
+  it('reports durable burn promotion replay as unavailable without PostgreSQL', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/claims/EVM/${fixtureFlapToken}/burn-promotions/` +
+        '88888888-8888-4888-8888-888888888888',
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe('BURN_PROMOTION_REPLAY_UNAVAILABLE');
   });
 
   it('replays latest and exact durable Claim Reports without provider access', async () => {

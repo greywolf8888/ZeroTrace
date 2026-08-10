@@ -34,6 +34,7 @@ import {
   quoteFlapPancakeV2BuyScenarios,
   quoteFlapPancakeV2SellScenarios,
   quoteFlapSell,
+  replayErc20BurnPromotionResult,
   type InspectFlapTokenOriginOptions,
 } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
@@ -150,6 +151,10 @@ const ClaimBurnRequestSchema = z.object({
   chainId: z.string().regex(/^eip155:[1-9]\d*$/),
   blockNumber: z.string().regex(/^[1-9]\d*$/),
   maxTransfers: z.number().int().min(1).max(25_000).optional(),
+});
+
+const ClaimBurnPromotionParamsSchema = ClaimBurnParamsSchema.extend({
+  scanId: z.uuid(),
 });
 
 const ClaimBurnDiscoveryRequestSchema = z
@@ -1137,6 +1142,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
         detail:
           'A one-shot worker with separately configured SQD/BSC read providers projects wider finalized ranges as immutable bounded segments, persists each segment before cursor advancement, and resumes one exact pending segment after interruption. This API replays stored scan-ID pages without providers. Requested-range completion does not imply continuous token-lifetime coverage.',
+      },
+      {
+        id: 'erc20-burn-candidate-promotion',
+        status:
+          runtime.semanticCheckpoints === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_INDEPENDENT_VALIDATION',
+        detail:
+          'A read-only BSC worker checkpoints complete zero-address event segments only after every candidate has an exact-block totalSupply/Transfer conservation certificate. Scan-ID API/UI replay uses PostgreSQL only, rejects corrupt state, and keeps silent supply-change detection Unknown.',
       },
       {
         id: 'flap-lifetime-materialization',
@@ -2566,6 +2580,67 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         ...(input.maxTransfers === undefined ? {} : { maxTransfers: input.maxTransfers }),
         ...(input.maxCandidates === undefined ? {} : { maxCandidates: input.maxCandidates }),
       });
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/burn-promotions/:scanId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnPromotionParamsSchema.parse(request.params);
+      const checkpoints = runtime.semanticCheckpoints;
+      if (checkpoints === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'BURN_PROMOTION_REPLAY_UNAVAILABLE',
+              'Durable burn promotion storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const run = await checkpoints.get(params.scanId);
+      if (
+        run === undefined ||
+        run.scanType !== 'ERC20_BURN_CANDIDATE_PROMOTION' ||
+        run.source !== 'sqd:binance-mainnet' ||
+        run.ledger !== 'EVM' ||
+        run.chainId !== 'eip155:56' ||
+        run.subject !== params.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'BURN_PROMOTION_NOT_FOUND',
+              'The requested burn promotion scan was not found.',
+              false,
+            ),
+          );
+      }
+      const terminalResult = replayErc20BurnPromotionResult(run);
+      const totalBlocks = run.toBlock - run.fromBlock + 1;
+      const completedBlocks = Math.min(Math.max(run.nextBlock - run.fromBlock, 0), totalBlocks);
+      return {
+        scan: {
+          id: run.id,
+          status: run.status,
+          token: run.subject,
+          requestedRange: {
+            fromBlock: String(run.fromBlock),
+            toBlock: String(run.toBlock),
+            segmentSize: run.chunkSize,
+          },
+          nextBlock: String(run.nextBlock),
+          requestedRangeCoverage: completedBlocks / totalBlocks,
+          lastErrorCode: run.lastErrorCode,
+          updatedAt: run.updatedAt,
+        },
+        terminalResult,
+      };
     },
   );
 

@@ -715,6 +715,54 @@ export interface EvmClaimBurnCandidateDiscoveryResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface EvmClaimBurnPromotionReplayResponse {
+  scan: {
+    id: string;
+    status: 'RUNNING' | 'REQUESTED_RANGE_COMPLETE';
+    token: string;
+    requestedRange: { fromBlock: string; toBlock: string; segmentSize: number };
+    nextBlock: string;
+    requestedRangeCoverage: number;
+    lastErrorCode: string | null;
+    updatedAt: string;
+  };
+  terminalResult: null | {
+    tokenAddress: string;
+    fromBlock: string;
+    toBlock: string;
+    coverageScope: 'ERC20_ZERO_ADDRESS_TRANSFER_EVENTS_WITH_EXACT_BLOCK_SUPPLY_CONSERVATION';
+    status: 'REQUESTED_RANGE_COMPLETE';
+    segmentCount: number;
+    zeroAddressEventCount: number;
+    burnCandidateCount: number;
+    verifiedCandidateCount: number;
+    contradictedCandidateCount: number;
+    verifiedActionCount: number;
+    segments: Array<{
+      fromBlock: string;
+      toBlock: string;
+      zeroAddressEventCount: number;
+      burnCandidateCount: number;
+      discoveryTerminalEvidenceId: string;
+      certificates: Array<{
+        blockNumber: string;
+        blockHash: string;
+        burnTransferIds: string[];
+        mintedEventAmount: string;
+        burnedEventAmount: string;
+        status: 'VERIFIED' | 'CONTRADICTED';
+        actionCount: number;
+        terminalEvidenceId: string;
+      }>;
+      snapshot: Record<string, unknown>;
+      sourceSet: string[];
+    }>;
+    silentSupplyChangeDetection: KnowledgeValue<boolean>;
+    terminalEvidenceId: string;
+    metadata: AnalysisMetadata;
+  };
+}
+
 interface ClaimFlowAggregate {
   observedAmount: string;
   actualAmount: KnowledgeValue<string>;
@@ -973,6 +1021,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ chainId, fromBlock, toBlock }),
       },
+    ),
+  replayClaimBurnPromotion: (token: string, scanId: string) =>
+    requestJson<EvmClaimBurnPromotionReplayResponse>(
+      `/api/v1/claims/EVM/${encodeURIComponent(token)}/burn-promotions/${encodeURIComponent(scanId)}`,
     ),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {

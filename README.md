@@ -109,6 +109,9 @@ The current foundation includes:
 - finalized BSC SQD range discovery that searches only the zero-address Transfer event surface,
   persists query/log/terminal Evidence, returns candidate blocks for exact certification, and keeps
   silent or custom supply changes explicitly Unknown;
+- a restart-safe BSC burn-promotion worker that checkpoints complete event segments, certifies every
+  candidate with exact-block supply conservation before cursor advancement, and exposes strict
+  PostgreSQL-only API/UI replay by scan ID;
 - exact point-in-time Flap lifetime materialization that composes official SQD dataset-start
   metadata, a unique deployment-origin proof, and immutable origin-to-finalized-target history;
   `Known(true)` is emitted only when every child range and Snapshot agrees, with provider-free
@@ -175,16 +178,16 @@ distributed workflows remain open work. Read
 
 ## Chain and platform scope
 
-| Domain             | Terminal scope                                                                                | Current repository state                                                                                                                                                                                                                                                                                                                                                     |
-| ------------------ | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound block/transaction queries, anchor reconciliation and finalized raw execution/state; archive/semantic validation pending                                                                                                                                                                                                                                       |
-| Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                                                                                                                                                                                                        |
-| Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending                                                                                                                                                                                                                                          |
-| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                                                                                  |
-| Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                                                                                                                      |
-| Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, and verified Pancake V2 buy/exit-size models work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                     |
-| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, deterministic allocation/action kernel, target-indexed Transfer/Safe observation, SQD zero-address candidate discovery, exact-block supply-conserved burn derivation, live FFT observations and durable Claim Report replay work; silent-supply discovery, promotion scheduling, official attribution and terminal FFT acceptance pending |
-| Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                                                                         |
+| Domain             | Terminal scope                                                                                | Current repository state                                                                                                                                                                                                                                                                                                  |
+| ------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound block/transaction queries, anchor reconciliation and finalized raw execution/state; archive/semantic validation pending                                                                                                                                                                                    |
+| Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                                                                                                                                                     |
+| Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending                                                                                                                                                                                       |
+| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                               |
+| Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                                                                   |
+| Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, and verified Pancake V2 buy/exit-size models work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                  |
+| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, SQD zero-address discovery, durable exact-block candidate promotion, live FFT observations and Claim Report replay work; silent-supply discovery, continuous scheduling, official attribution and terminal FFT acceptance pending |
+| Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                      |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
 execution/label observation source; it is not a launchpad and can never merge entities by itself.
@@ -463,7 +466,7 @@ packages/
   storage/              PostgreSQL, ClickHouse and object-artifact repositories
 services/
   ingest-worker/        Bounded finalized-range worker CLI
-  semantic-worker/      Durable Flap origin and event-history worker CLIs
+  semantic-worker/      Durable Flap and ERC-20 burn-promotion worker CLIs
 infra/
   postgres/init/        Relational/evidence schema
   clickhouse/init/      Raw fact and metric schema
@@ -507,6 +510,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add finalized target-indexed EVM Transfer/custody observation and live same-Snapshot FFT address-flow composition
 - [x] Add exact-block ERC-20 total-supply/mint-burn conservation, Evidence replay, API and responsive Claim Audit UI
 - [x] Add BSC SQD long-range zero-address burn-candidate discovery with explicit silent-supply Unknown
+- [x] Add restart-safe burn-candidate promotion, exact-block certificates and provider-free API/UI replay
 - [x] Add same-Snapshot Pancake V2 spot plus multi-size Flap buy/exit scenarios with automatic 0.10% arithmetic checks
 - [ ] Add live/unfinalized policy, forced real-reorg drills and independently operated provider validation
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
@@ -514,7 +518,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
-- [ ] Add durable capture/promotion scheduling, silent-supply discovery, reviewed-draft promotion and terminal FFT audit
+- [ ] Add continuous capture scheduling, silent-supply discovery, reviewed-draft promotion and terminal FFT audit
 - [ ] Complete search, timeline, evidence graph, comparison, scenario and export workflows in the UI
 - [ ] Run archive-grade, multi-provider, real-chain fixtures and production load/failure testing
 

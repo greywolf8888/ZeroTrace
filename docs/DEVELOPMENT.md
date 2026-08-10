@@ -177,6 +177,39 @@ Pagination reads only stored segments. It performs no SQD/RPC request, and compl
 coverage still leaves token-lifetime coverage Unknown until continuous deployment-origin-to-head
 orchestration is proven.
 
+## Durable ERC-20 burn-candidate promotion
+
+The burn-promotion entrypoint turns bounded BSC zero-address event discovery into restart-safe
+exact-block certificates. A segment is not checkpointed until SQD discovery is complete and every
+candidate has a finalized parent/target `totalSupply` plus complete target-block `Transfer`
+conservation result:
+
+```bash
+npm run claims:burn:promote -- \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 999999 --segment-size 1000000
+```
+
+The isolated Compose profile is equivalent:
+
+```bash
+docker compose --profile burn-promotion run --rm burn-promotion-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 999999 --segment-size 1000000
+```
+
+One run is limited to 5,000,000 blocks and five segments. Optional `--max-transfers` and
+`--max-candidates-per-segment` limits fail closed instead of truncating a result. The worker
+preflights append-only Evidence and semantic-checkpoint storage, emits no credentials, and returns a
+stable scan ID. Re-running the identical command resumes the first incomplete segment or replays the
+terminal checkpoint without an RPC/SQD call.
+
+With the API connected to the same PostgreSQL database, the Claim Audit UI or
+`GET /api/v1/claims/EVM/<token>/burn-promotions/<scan-id>` validates and replays progress/result
+state without providers. A running scan has `terminalResult: null`; structural corruption fails
+closed. Scoped zero-address event/candidate completion never changes silent supply detection from
+`Unknown(NOT_QUERIED)`.
+
 ## Exact Flap lifetime materialization
 
 The third semantic-worker entrypoint composes the two durable primitives at one finalized BSC
@@ -302,6 +335,7 @@ Important values:
 | `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                        |
 | `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                        |
 | `FLAP_HISTORY_*`                      | Compose defaults for the bounded event-history projection worker                 |
+| `BURN_PROMOTION_*`                    | Compose defaults for bounded durable ERC-20 candidate promotion                  |
 | `FLAP_LIFETIME_*`                     | Compose defaults for exact point-in-time lifetime materialization                |
 | `FLAP_LIFETIME_HEAD_*`                | continuous worker token, interval and optional bounded cycle count               |
 | `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present   |

@@ -323,8 +323,14 @@ Evidence node. Complete history/data coverage applies only to the declared
 `ERC20_ZERO_ADDRESS_TRANSFER_EVENTS` scope. Silent/custom supply changes remain
 `Unknown(NOT_QUERIED)` even when no event candidate exists.
 
-Automated candidate promotion/capture scheduling, silent-supply discovery, independent-source
-reconciliation, official wallet attribution and the terminal FFT report remain pending.
+The durable promotion worker divides at most 5,000,000 blocks into at most five immutable-identity
+segments. It captures a finalized range-end Snapshot, completes zero-address discovery, certifies
+every candidate against its exact finalized block, persists the Evidence graph, and only then
+advances the semantic cursor. A completed checkpoint can be replayed through PostgreSQL-only API/UI
+paths; a partial or structurally inconsistent checkpoint has no terminal result and fails closed.
+This is scoped event/candidate proof, so silent-supply coverage remains Unknown. Continuous capture
+scheduling, silent-supply discovery, independent-source reconciliation, official wallet attribution
+and the terminal FFT report remain pending.
 Endpoint failover and timestamp anchoring may add provenance IDs but do not raise claim-observation
 source coverage; it remains `0.5` until a separate reconciler repeats the complete result against an
 independent source.

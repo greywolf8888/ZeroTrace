@@ -79,6 +79,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31413974058) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31413973830) pass on immutable
       burn-certificate commit `8fcef01`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31417036285) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31417036283) pass on immutable
+      burn-candidate discovery commit `af8fee3`
 
 ## Evidence and data
 
@@ -170,7 +173,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       one named FFT Alchemy no-action certificate
 - [x] Finalized BSC SQD long-range zero-address Transfer candidate discovery with bounded sparse
       queries, terminal Evidence, responsive API/UI and silent-supply state retained as Unknown
-- [ ] Automated durable candidate promotion/capture scheduling, silent-supply discovery,
+- [x] Restart-safe bounded burn-candidate promotion with exact-block certificates before cursor
+      advancement, terminal Evidence, provider-free API/UI replay and corrupt-state rejection
+- [ ] Continuous candidate-capture scheduling, silent-supply discovery,
       reviewed-draft promotion,
       independent-source reconciliation, complete Claim Audit and terminal named FFT conclusion
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
@@ -193,6 +198,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       arithmetic, generated actions and terminal Evidence
 - [x] Responsive burn-candidate range review with event scope, candidate blocks, terminal Evidence
       and explicit silent-supply Unknown on desktop/mobile
+- [x] Responsive durable burn-promotion replay with exact progress, certificate counts, terminal
+      Evidence, partial-result suppression and silent-supply Unknown on desktop/mobile
 - [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance

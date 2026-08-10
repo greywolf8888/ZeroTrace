@@ -26,6 +26,7 @@
     "flap:history": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:history -w @zerotrace/semantic-worker --",
     "flap:lifetime": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:lifetime -w @zerotrace/semantic-worker --",
     "flap:lifetime:heads": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:lifetime:heads -w @zerotrace/semantic-worker --",
+    "claims:burn:promote": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:burn:promote -w @zerotrace/semantic-worker --",
     "eval:entity": "tsx evals/entity-resolution/run.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
