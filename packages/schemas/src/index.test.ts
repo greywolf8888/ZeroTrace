@@ -5,12 +5,102 @@ import {
   AnalysisSnapshotSchema,
   AnchorReconciliationResultSchema,
   ChainAnchorReadSchema,
+  FlapLifetimeMaterializationSchema,
   LaunchMechanismSnapshotSchema,
   ProviderHealthSchema,
   knownValue,
   unavailableValue,
   unknownValue,
 } from './index.js';
+
+const lifetimeEvidenceId = `ev_${'1'.repeat(24)}`;
+const historyEvidenceId = `ev_${'2'.repeat(24)}`;
+
+function flapLifetimeMaterialization() {
+  const capturedAt = '2026-08-10T00:00:00.000Z';
+  const snapshot = {
+    ledger: 'EVM' as const,
+    chainId: 'eip155:56',
+    blockNumber: '200',
+    blockHash: `0x${'a'.repeat(64)}`,
+    parentBlockHash: `0x${'b'.repeat(64)}`,
+    finality: 'finalized' as const,
+    capturedAt,
+    providerVersions: { 'bsc-rpc': 'json-rpc' },
+    adapterVersions: { evm: '0.1.0' },
+    configHash: 'c'.repeat(64),
+    entityModelVersion: 'entity-unapplied',
+    labelSnapshot: 'labels-unapplied',
+  };
+  return {
+    platform: 'flap' as const,
+    token: `0x${'d'.repeat(40)}`,
+    dataset: 'binance-mainnet' as const,
+    datasetStartBlock: '0',
+    targetBlock: '200',
+    originScanId: '11111111-1111-4111-8111-111111111111',
+    originSearchCoverage: 1,
+    origin: knownValue({
+      contractCreator: `0x${'e'.repeat(40)}`,
+      launchCreator: `0x${'f'.repeat(40)}`,
+      bytecodeFingerprint: '3'.repeat(64),
+      creationTrace: {
+        transactionHash: `0x${'4'.repeat(64)}`,
+        blockNumber: '100',
+        blockHash: `0x${'5'.repeat(64)}`,
+        transactionIndex: '1',
+        traceAddress: [0],
+      },
+      tokenCreatedPosition: {
+        transactionHash: `0x${'4'.repeat(64)}`,
+        blockNumber: '100',
+        blockHash: `0x${'5'.repeat(64)}`,
+        transactionIndex: '1',
+        logIndex: '2',
+      },
+      evidenceIds: [`ev_${'3'.repeat(24)}`, `ev_${'4'.repeat(24)}`],
+    }),
+    historyProjection: {
+      scanId: '22222222-2222-4222-8222-222222222222',
+      fromBlock: '100',
+      toBlock: '200',
+      segmentCount: 1,
+      transactionCount: 1,
+      unrecognizedPortalLogCount: 0,
+      requestedRangeCoverage: 1,
+      terminalEvidenceId: historyEvidenceId,
+    },
+    lifetimeCoverage: knownValue(true),
+    terminalEvidenceId: lifetimeEvidenceId,
+    metadata: {
+      snapshot,
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 1,
+      simulationCoverage: 0,
+      freshness: capturedAt,
+      sourceSet: ['bsc-rpc', 'sqd:binance-mainnet'],
+      modelVersion: 'flap-lifetime-materialization-v1',
+      confidence: 0.95,
+      evidenceIds: [historyEvidenceId, lifetimeEvidenceId],
+    },
+    evidence: [
+      {
+        id: lifetimeEvidenceId,
+        ledger: 'EVM' as const,
+        chainId: 'eip155:56',
+        kind: 'DERIVED_FEATURE' as const,
+        source: 'zerotrace:flap-lifetime-materialization-v1',
+        locator: `flap-lifetime:${`0x${'d'.repeat(40)}`}@200`,
+        payloadHash: '6'.repeat(64),
+        observedAt: capturedAt,
+        blockOrSlot: '200',
+        finality: 'finalized',
+        summary: 'Fixture lifetime materialization.',
+      },
+    ],
+  };
+}
 
 describe('knowledge values', () => {
   it('keeps known zero distinct from unknown', () => {
@@ -284,5 +374,46 @@ describe('data-quality states', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe('Flap lifetime materialization', () => {
+  it('accepts exact finalized origin-to-target coverage', () => {
+    expect(FlapLifetimeMaterializationSchema.safeParse(flapLifetimeMaterialization()).success).toBe(
+      true,
+    );
+  });
+
+  it('rejects known lifetime coverage when history is absent or ends before the target', () => {
+    const materialization = flapLifetimeMaterialization();
+    expect(
+      FlapLifetimeMaterializationSchema.safeParse({
+        ...materialization,
+        historyProjection: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      FlapLifetimeMaterializationSchema.safeParse({
+        ...materialization,
+        historyProjection: {
+          ...materialization.historyProjection,
+          toBlock: '199',
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects a target Snapshot mismatch instead of degrading it to zero coverage', () => {
+    const materialization = flapLifetimeMaterialization();
+    expect(
+      FlapLifetimeMaterializationSchema.safeParse({
+        ...materialization,
+        metadata: {
+          ...materialization.metadata,
+          snapshot: { ...materialization.metadata.snapshot, blockHash: `0x${'9'.repeat(64)}` },
+        },
+        targetBlock: '201',
+      }).success,
+    ).toBe(false);
   });
 });

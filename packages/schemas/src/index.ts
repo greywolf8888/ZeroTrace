@@ -976,6 +976,74 @@ export const FlapTokenOriginSchema = z.object({
 });
 export type FlapTokenOrigin = z.infer<typeof FlapTokenOriginSchema>;
 
+export const FlapLifetimeHistorySummarySchema = z.object({
+  scanId: z.string().uuid(),
+  fromBlock: UnsignedQuantityStringSchema,
+  toBlock: UnsignedQuantityStringSchema,
+  segmentCount: z.number().int().positive().max(5_000),
+  transactionCount: z.number().int().nonnegative(),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+  requestedRangeCoverage: CoverageRatioSchema,
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type FlapLifetimeHistorySummary = z.infer<typeof FlapLifetimeHistorySummarySchema>;
+
+export const FlapLifetimeMaterializationSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    dataset: z.literal('binance-mainnet'),
+    datasetStartBlock: UnsignedQuantityStringSchema,
+    targetBlock: UnsignedQuantityStringSchema,
+    originScanId: z.string().uuid(),
+    originSearchCoverage: CoverageRatioSchema,
+    origin: knowledgeValueSchema(FlapTokenOriginValueSchema),
+    historyProjection: FlapLifetimeHistorySummarySchema.nullable(),
+    lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema,
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot !== null &&
+      (snapshot.ledger !== 'EVM' ||
+        snapshot.chainId !== 'eip155:56' ||
+        snapshot.blockNumber !== value.targetBlock ||
+        snapshot.finality !== 'finalized')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Flap lifetime metadata must use the exact finalized BSC target Snapshot.',
+      });
+    }
+    if (value.lifetimeCoverage.state !== 'known' || value.lifetimeCoverage.value !== true) return;
+    const history = value.historyProjection;
+    if (
+      value.origin.state !== 'known' ||
+      history === null ||
+      value.originSearchCoverage !== 1 ||
+      history.requestedRangeCoverage !== 1 ||
+      history.fromBlock !== value.origin.value.creationTrace.blockNumber ||
+      history.toBlock !== value.targetBlock ||
+      snapshot === null ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(history.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['lifetimeCoverage'],
+        message:
+          'Known Flap lifetime coverage requires a unique origin and complete origin-to-target history at one finalized Snapshot.',
+      });
+    }
+  });
+export type FlapLifetimeMaterialization = z.infer<typeof FlapLifetimeMaterializationSchema>;
+
 export const RealizableValuePointSchema = z.object({
   inputQuantity: DecimalStringSchema,
   nominalValue: knowledgeValueSchema(DecimalStringSchema),

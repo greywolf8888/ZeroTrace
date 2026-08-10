@@ -851,9 +851,14 @@ function safeCheckpointFailureCode(error: unknown): string {
   return 'FLAP_ORIGIN_FAILED';
 }
 
-export async function inspectFlapTokenOriginRestartSafe(
+export interface FlapTokenOriginRun {
+  scanId: string;
+  result: FlapTokenOrigin;
+}
+
+export async function runFlapTokenOriginRestartSafe(
   options: InspectFlapTokenOriginOptions & { checkpoints: FlapOriginCheckpointStore },
-): Promise<FlapTokenOrigin> {
+): Promise<FlapTokenOriginRun> {
   const request = validateOriginRequest(options);
   const fromBlock = Number(request.fromBlock);
   const toBlock = Number(request.toBlock);
@@ -882,7 +887,7 @@ export async function inspectFlapTokenOriginRestartSafe(
       if (stored.result === null) {
         throw checkpointInvalid('Completed Flap origin checkpoint result vanished.');
       }
-      return stored.result;
+      return { scanId: run.id, result: stored.result };
     }
 
     let latestResume: FlapOriginResume | undefined =
@@ -924,7 +929,7 @@ export async function inspectFlapTokenOriginRestartSafe(
     if (replay.result === null) {
       throw checkpointInvalid('Flap origin terminal checkpoint result vanished.');
     }
-    return replay.result;
+    return { scanId: completed.id, result: replay.result };
   } catch (error) {
     if (run?.status === 'RUNNING') {
       try {
@@ -935,4 +940,10 @@ export async function inspectFlapTokenOriginRestartSafe(
     }
     throw error;
   }
+}
+
+export async function inspectFlapTokenOriginRestartSafe(
+  options: InspectFlapTokenOriginOptions & { checkpoints: FlapOriginCheckpointStore },
+): Promise<FlapTokenOrigin> {
+  return (await runFlapTokenOriginRestartSafe(options)).result;
 }
