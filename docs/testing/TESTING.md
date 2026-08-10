@@ -60,6 +60,9 @@
   idempotent; an alert without an existing Evidence edge is rejected transactionally.
 - finalized ingestion stores the raw artifact before Evidence/Raw Fact, advances checkpoints only
   after durable writes, resumes monotonically, and makes terminal replay a no-op;
+- semantic-scan checkpoints hash-verify JSON state, retain cumulative Evidence IDs, reject stale or
+  oversized cursor advances and coverage gaps, resume after repository restart, and prohibit
+  terminal mutation or deletion in PostgreSQL;
 - transaction-profile ingestion validates EVM hash, Bitcoin txid, and Solana signature identities,
   rejects duplicate/malformed records, and writes every transaction before advancing its block;
 - ledger-record ingestion validates EVM log, trace-address and changed-state identities; Bitcoin

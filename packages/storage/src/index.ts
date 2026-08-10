@@ -11,6 +11,7 @@ import {
 export * from './raw-artifacts.js';
 export * from './clickhouse.js';
 export * from './ingestion-checkpoints.js';
+export * from './semantic-checkpoints.js';
 export * from './data-quality.js';
 
 type DatabaseRow = Record<string, unknown>;

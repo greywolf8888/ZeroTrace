@@ -620,12 +620,34 @@ Coverage passed 269 tests with 15 Docker-dependent durable tests explicitly skip
 statements, 75.80% branches, 91.78% functions and 85.05% lines. All 10 Chromium desktop/mobile
 flows passed.
 
+### Durable semantic scan checkpoints
+
+PostgreSQL migration `007_semantic_scan_checkpoints` and the storage repository now preserve a
+generic semantic scan independently of any provider process. The immutable identity includes scan
+type/source/ledger/chain/subject/range/chunk/config payload; canonical hashes bind both identity and
+JSON projection state. Each advance requires the caller's exact expected cursor, covers at most one
+configured chunk, replaces state only with forward progress, retains the cumulative canonical
+Evidence ID set, and clears a prior provider error only after accepted progress. Exact retries are
+idempotent and a terminal requested-range-complete record is immutable and append-preserving.
+
+Five focused unit tests passed for resume, contiguous progress, failure recovery, idempotency,
+corruption detection, storage-health states and input validation. A freshly built disposable
+PostgreSQL 17.10 image executed migrations `001-007`; all 14 PostgreSQL integration tests passed,
+including two new semantic-checkpoint cases. The real database rejected cursor rollback, immutable
+identity changes, Evidence removal, same-cursor state replacement, oversized chunks, premature
+completion, terminal mutation and deletion. The named Docker project and volume were removed after
+the run.
+
+This is storage acceptance, not continuous Flap acceptance. The Flap origin/history runner is not
+yet bound to this repository, no deployment-origin lifetime scan was executed, and no FFT request or
+conclusion was made.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 251 unit, 29 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
-| local `test:coverage`    | pass: 280 tests, 15 durable skips; 83.97% statements, 75.90% branches, 91.99% functions, 85.03% lines                                                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 256 unit, 29 environment-free integration, build, license and zero-vulnerability audit; 14 PostgreSQL tests also passed separately           |
+| local `test:coverage`    | pass: 285 tests, 17 opt-in durable skips; 83.94% statements, 75.74% branches, 92.07% functions, 84.97% lines                                                                |
 | branch `test:coverage`   | latest completed pass: 294 tests; 86.47% statements, 78.31% branches, 95.53% functions, 87.54% lines                                                                        |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                         |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |
@@ -634,9 +656,10 @@ flows passed.
 | branch GitHub Actions CI | [latest completed pass on `911691c`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31346637708): 294 tests, 10 Chromium E2E, and five production container targets |
 | branch CodeQL            | [latest completed pass on `911691c`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31346637703): JavaScript and TypeScript analysis                                |
 
-The latest complete durable run used GitHub Actions disposable PostgreSQL, ClickHouse, and MinIO
-services. All 43 integration tests passed and the workflow removed its named volumes. The local
-Docker engine limitation remains an environment constraint, not a claimed failure or pass.
+The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
+and MinIO services. All 43 integration tests passed and the workflow removed its named volumes. The
+current local semantic-checkpoint batch additionally passed all 14 PostgreSQL tests on a fresh
+disposable image; ClickHouse and MinIO were not rerun locally for this storage-only batch.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

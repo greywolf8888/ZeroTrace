@@ -8,6 +8,7 @@ import {
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
   PostgresIngestionCheckpointRepository,
+  PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
 
 const connectionString = process.env.TEST_POSTGRES_URL;
@@ -314,6 +315,161 @@ postgresDescribe('PostgreSQL ingestion checkpoint integration', () => {
     } finally {
       await pool.end();
     }
+  });
+});
+
+postgresDescribe('PostgreSQL semantic scan checkpoint integration', () => {
+  let checkpoints: PostgresSemanticScanCheckpointRepository;
+
+  beforeAll(() => {
+    checkpoints = new PostgresSemanticScanCheckpointRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => checkpoints.close());
+
+  it('persists restart-safe semantic state with exact contiguous coverage', async () => {
+    const evidenceA = `ev_${'1'.repeat(24)}`;
+    const evidenceB = `ev_${'2'.repeat(24)}`;
+    const input = {
+      scanType: 'FLAP_CONTRACT_ORIGIN',
+      source: 'sqd:bsc-mainnet',
+      ledger: 'EVM' as const,
+      chainId: '56',
+      subject: '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
+      fromBlock: 0,
+      toBlock: 19,
+      chunkSize: 10,
+      identity: {
+        adapter: 'flap-origin-v1',
+        finalizedHead: 1_000,
+        testRunId: checkpointTestRunId,
+      },
+      initialState: { creations: [] },
+      startedAt: '2026-08-10T00:00:00.000Z',
+    };
+    const started = await checkpoints.begin(input);
+    await expect(
+      checkpoints.begin({ ...input, startedAt: '2026-08-10T01:00:00.000Z' }),
+    ).resolves.toEqual(started);
+
+    const first = await checkpoints.advance(started.id, {
+      expectedNextBlock: 0,
+      completedToBlock: 9,
+      state: { creations: [{ block: 4, transactionHash: `0x${'3'.repeat(64)}` }] },
+      evidenceIds: [evidenceB, evidenceA, evidenceA],
+    });
+    expect(first).toMatchObject({
+      nextBlock: 10,
+      status: 'RUNNING',
+      evidenceIds: [evidenceA, evidenceB],
+    });
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE semantic_scan_runs SET next_block = 9 WHERE id = $1', [started.id]),
+      ).rejects.toThrow(/cursor may not move backwards/);
+      await expect(
+        pool.query("UPDATE semantic_scan_runs SET subject = 'tampered' WHERE id = $1", [
+          started.id,
+        ]),
+      ).rejects.toThrow(/identity is immutable/);
+      await expect(
+        pool.query('UPDATE semantic_scan_runs SET evidence_ids = ARRAY[]::text[] WHERE id = $1', [
+          started.id,
+        ]),
+      ).rejects.toThrow(/Evidence IDs may not be removed/);
+      await expect(
+        pool.query(
+          `UPDATE semantic_scan_runs
+           SET state = state || '{"tampered":true}'::jsonb, state_hash = $2
+           WHERE id = $1`,
+          [started.id, 'f'.repeat(64)],
+        ),
+      ).rejects.toThrow(/state may change only with a forward cursor/);
+    } finally {
+      await pool.end();
+    }
+
+    await checkpoints.recordFailure(started.id, 'PROVIDER_DOWN');
+    await checkpoints.close();
+    checkpoints = new PostgresSemanticScanCheckpointRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(checkpoints.get(started.id)).resolves.toMatchObject({
+      nextBlock: 10,
+      lastErrorCode: 'PROVIDER_DOWN',
+    });
+
+    const secondState = {
+      creations: [{ block: 4, transactionHash: `0x${'3'.repeat(64)}` }],
+    };
+    await checkpoints.advance(started.id, {
+      expectedNextBlock: 10,
+      completedToBlock: 19,
+      state: secondState,
+      evidenceIds: [evidenceA, evidenceB],
+    });
+    const completed = await checkpoints.finish(started.id);
+    expect(completed).toMatchObject({
+      status: 'REQUESTED_RANGE_COMPLETE',
+      nextBlock: 20,
+      lastErrorCode: null,
+      completedAt: expect.any(String),
+    });
+    await expect(
+      checkpoints.advance(started.id, {
+        expectedNextBlock: 10,
+        completedToBlock: 19,
+        state: secondState,
+        evidenceIds: [evidenceA, evidenceB],
+      }),
+    ).resolves.toEqual(completed);
+
+    const immutablePool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        immutablePool.query(
+          "UPDATE semantic_scan_runs SET last_error_code = 'tampered' WHERE id = $1",
+          [started.id],
+        ),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        immutablePool.query('DELETE FROM semantic_scan_runs WHERE id = $1', [started.id]),
+      ).rejects.toThrow(/deletion is forbidden/);
+    } finally {
+      await immutablePool.end();
+    }
+  });
+
+  it('rejects oversized chunks and completion with a coverage gap', async () => {
+    const run = await checkpoints.begin({
+      scanType: 'FLAP_CONTRACT_ORIGIN',
+      source: 'sqd:bsc-mainnet',
+      ledger: 'EVM',
+      chainId: '56',
+      subject: '0xb81252503501f366b5dfb8c89fff85076d2f8888',
+      fromBlock: 30,
+      toBlock: 50,
+      chunkSize: 10,
+      identity: { adapter: 'flap-origin-v1', testRunId: checkpointTestRunId },
+      initialState: { creations: [] },
+    });
+    await expect(
+      checkpoints.advance(run.id, {
+        expectedNextBlock: 30,
+        completedToBlock: 40,
+        state: { creations: [] },
+        evidenceIds: [],
+      }),
+    ).rejects.toMatchObject({ code: 'SEMANTIC_CHECKPOINT_CONFLICT' });
+    await expect(checkpoints.finish(run.id)).rejects.toMatchObject({
+      code: 'SEMANTIC_CHECKPOINT_CONFLICT',
+    });
   });
 });
 

@@ -85,6 +85,8 @@ The current foundation includes:
 - append-only PostgreSQL Evidence/Snapshot persistence with restart-safe derivation drilldown;
 - append-only PostgreSQL chain-anchor observations and Data Quality Alerts whose Evidence links are
   enforced transactionally;
+- monotonic PostgreSQL semantic-scan checkpoints with canonical state hashes, cumulative Evidence
+  links, exact coverage cursors, bounded chunks, idempotent resume, and immutable completion;
 - restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs, Bitcoin
   inputs/outputs, and Solana instructions/logs/balances/token balances/rewards;
 - content-addressed, versioned raw artifacts, append-only Evidence/Snapshots, monotonic ingestion
@@ -334,9 +336,11 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add exact-receipt Flap creation/configuration/migration event decoding with default provenance
 - [x] Add bounded Flap Portal discovery through finalized SQD/RPC log sources with exact log/receipt replay
 - [x] Add bounded finalized SQD contract-origin proof with exact Flap receipt/Snapshot replay
+- [x] Add durable generic semantic-scan state and contiguous coverage checkpoints
 - [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets
 - [ ] Add continuous scheduling, live/unfinalized handling, rollback/replay and independent-provider validation
-- [ ] Add deployment-origin continuous Flap indexing and complete lifecycle reconstruction, then Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
+- [ ] Wire the Flap origin/history runner to durable checkpoints, then add deployment-origin continuous indexing and complete lifecycle reconstruction
+- [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, calibration datasets, analyst overrides and auditable recomputation
 - [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs
 - [ ] Reconstruct launch/market lifecycle and multi-route realizable value with fees, tax, gas and capacity

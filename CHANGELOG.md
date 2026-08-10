@@ -54,6 +54,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   event, Snapshot, Evidence graph, capability status, and API;
 - explicit creation-range completion metadata and multi-response/multi-chunk origin scanning, with
   duplicate, incomplete continuation, chunk-count and synchronous API range limits that fail closed;
+- durable generic PostgreSQL semantic-scan checkpoints with immutable identity, canonical state
+  hashes, cumulative Evidence IDs, bounded contiguous cursor advancement, idempotent restart, and
+  append-preserving terminal history;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;

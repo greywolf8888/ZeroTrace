@@ -57,6 +57,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Content-addressed evidence primitive and derivation traversal
 - [x] Durable append-only Snapshot, Evidence-node, and derivation-edge repository
 - [x] Restart-safe Evidence drilldown and real PostgreSQL constraint tests
+- [x] Durable generic semantic-scan checkpoints with hash-verified state, cumulative Evidence IDs,
+      bounded contiguous advancement, restart/idempotency tests, and immutable terminal history
 - [x] Same-anchor Snapshot recapture across repository and production API restart without identity
       collision
 - [x] Content-addressed, versioned raw payload repository for implemented ingestion records
@@ -84,8 +86,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
         creation/configuration fixture
   - [x] Sparse finalized SQD create-trace decoding and bounded origin-to-exact-receipt proof with
         deterministic positive, negative, ambiguity and mismatch coverage
-  - [x] Multi-response SQD continuation metadata and deterministic multi-chunk origin coverage;
-        wide restart-safe scanning/checkpoints remain pending
+  - [x] Multi-response SQD continuation metadata and deterministic multi-chunk origin coverage
+  - [x] Generic durable semantic-scan checkpoint storage; the Flap worker binding remains pending
   - [ ] Deployment-origin continuous Flap history, named migration/FFT fixtures, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels

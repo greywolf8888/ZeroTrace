@@ -61,7 +61,7 @@ docker compose up --build
 Database initialization is automatic on a new Compose volume:
 
 - the PostgreSQL image contains and executes `infra/postgres/init/*.sql`, including append-only
-  Evidence and restart-safe ingestion checkpoints;
+  Evidence, restart-safe ingestion checkpoints, and monotonic semantic-scan checkpoints;
 - the ClickHouse image contains and executes `infra/clickhouse/init/*.sql`.
 
 The SQL is copied into small project image stages instead of bind-mounted. This keeps initialization

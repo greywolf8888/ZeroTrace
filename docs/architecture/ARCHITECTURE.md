@@ -313,21 +313,24 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                                           | Current state                                                                                                            |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert and ingestion-checkpoint repositories wired; other repositories pending                  |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending |
-| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                      |
-| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                         |
-| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                     |
-| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                            |
+| Store            | Intended authority                                                                                                           | Current state                                                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion and generic semantic-scan checkpoint repositories wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending       |
+| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                            |
+| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                               |
+| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                           |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                  |
 
-PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, and
-ingestion-run tables include append-only or monotonic guards. Deferred database constraints reject
-inferred Evidence without a source edge and Data Quality Alerts without Evidence. Repositories
-verify canonical IDs, Snapshot identity, idempotent conflicts, and transactional writes. ClickHouse
-Raw Facts bind Evidence and artifact references and use explicit logical deduplication; metric
-tables enforce a knowledge-state/value consistency constraint.
+PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, ingestion-run,
+and semantic-scan-run tables include append-only or monotonic guards. Semantic checkpoints bind an
+immutable scan identity to canonical JSON state hashes, cumulative Evidence IDs, an exact next-block
+cursor, bounded chunk size, and a terminal requested-range-complete state. Stale writers, gaps,
+oversized chunks, cursor rollback, Evidence removal, terminal mutation, and deletion fail closed.
+Deferred database constraints reject inferred Evidence without a source edge and Data Quality Alerts
+without Evidence. Repositories verify canonical IDs, Snapshot identity, idempotent conflicts, and
+transactional writes. ClickHouse Raw Facts bind Evidence and artifact references and use explicit
+logical deduplication; metric tables enforce a knowledge-state/value consistency constraint.
 
 The worker exposes explicit `block-headers`, `transactions`, and `ledger-records` profiles. The last
 profile materializes transactions plus EVM logs/traces/state diffs, Bitcoin inputs/outputs, or Solana
@@ -377,7 +380,9 @@ topic filter. Both paths exact-receipt replay each candidate through BSC RPC bef
 chronology; every discovery log must reproduce field-for-field from that receipt. Range completeness
 and token-lifetime completeness are separate fields: even a 100%
 requested-range scan retains Unknown lifetime coverage and zero terminal history coverage.
-Deployment-origin continuous checkpoints and cross-range lifecycle projection remain later stages.
+A generic restart-safe semantic checkpoint repository is now available, but the Flap discovery
+runner has not yet been wired to it. Deployment-origin continuous execution and cross-range
+lifecycle projection therefore remain later stages.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.
