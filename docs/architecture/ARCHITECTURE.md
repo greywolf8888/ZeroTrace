@@ -230,6 +230,14 @@ outflows, controller returns, share-unit adherence and cadence are separate obse
 policy promise such as “no exit” cannot be presented as a technical lock. Incomplete source/history
 coverage keeps Actual, deviation and verification percentage Unknown rather than zero.
 
+A Snapshot-time-bounded address-flow derivation aggregates only the supplied normalized Transfer
+observations. It exposes observed inflow/outflow lower bounds, unique and ranked counterparties,
+self-transfers, time boundaries and share-unit adherence without assigning dividend, controller,
+entity, burn or other terminal-action semantics. Actual totals require complete data, history and
+source coverage; an empty share-unit denominator is `Unknown(NOT_APPLICABLE)`, never numeric zero.
+EVM address matching defaults to case-insensitive canonical identity, while Bitcoin and Solana
+remain case-sensitive unless the caller explicitly chooses otherwise.
+
 A clean EVM observation adapter now supplies finalized, range-bounded ERC-20 Transfer facts with
 per-log Evidence and strict address/topic/range/duplicate/lineage checks. It also inspects EOA,
 generic-contract, and Safe-compatible custody at one numeric Snapshot using bytecode, proxy

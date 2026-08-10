@@ -98,6 +98,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   custody, multi-hop action, share-unit, cadence, and incomplete-coverage semantics;
 - finalized, range-bounded EVM ERC-20 Transfer Evidence plus strict Snapshot-pinned
   EOA/Safe/generic-contract custody observations, with no signing or chain-write path;
+- deterministic Snapshot-bounded claim-address flow summaries with observed-versus-actual totals,
+  counterparty ranking, self-transfer isolation, share-unit checks, and Unknown instead of a fake
+  zero ratio when no deposits are observed;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,

@@ -131,7 +131,7 @@ export interface ShareUnitAssessment {
   observedDeposits: number;
   exactMultipleDeposits: number;
   nonMultipleDeposits: number;
-  exactMultipleCoverage: number;
+  exactMultipleCoverage: KnowledgeValue<number>;
 }
 
 export interface CadenceAssessment {
@@ -394,7 +394,10 @@ function shareUnitAssessment(
     observedDeposits: deposits.length,
     exactMultipleDeposits,
     nonMultipleDeposits: deposits.length - exactMultipleDeposits,
-    exactMultipleCoverage: deposits.length === 0 ? 0 : exactMultipleDeposits / deposits.length,
+    exactMultipleCoverage:
+      deposits.length === 0
+        ? unknownValue('NOT_APPLICABLE', 'No observed deposits are available for this ratio.')
+        : knownValue(exactMultipleDeposits / deposits.length),
   };
 }
 
@@ -756,3 +759,5 @@ export function auditClaims(input: ClaimAuditInput): ClaimAuditReport {
   ClaimAuditReportSchema.parse(report);
   return report;
 }
+
+export * from './flow.js';

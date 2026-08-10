@@ -871,19 +871,38 @@ allocation/dividend/action conclusions remain pending or Unknown. The supplied c
 is claim input, not chain proof; no public official source exposing the pension address was accepted
 in this batch.
 
+## Snapshot-bounded claim address-flow derivation (2026-08-10)
+
+The claim kernel now consumes normalized Transfer observations and produces a deterministic address
+summary without assigning behavioral meaning to its counterparties. It reports observed inflow and
+outflow lower bounds, unique counterparties, first/last observations, self-transfers, share-unit
+adherence and ranked counterparties. Actual totals become Known only when data, requested-history
+and source coverage are all exactly complete. A zero observed count remains a valid observation,
+while the corresponding Actual amount stays Unknown under incomplete coverage and an empty
+share-unit denominator is `Unknown(NOT_APPLICABLE)` rather than numeric zero.
+
+The derivation rejects duplicate observations, invalid atomic amounts, ranges after an EVM/Solana
+Snapshot block time and individual observations after that Snapshot. EVM comparison defaults to
+case-insensitive canonical identity and normalizes counterparty identity deterministically; Bitcoin
+and Solana stay case-sensitive unless explicitly overridden. Four focused tests cover complete
+observed flow, incomplete-source/no-flow semantics, time-window and case behavior, and fail-closed
+Snapshot/duplicate handling. This code has not yet been persisted or exposed by the API/UI, and it
+does not convert the FFT dispatcher into a dividend, controller, entity, burn or other terminal
+action.
+
 ## Automated verification
 
-| Command                  | Result                                                                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 333 unit, 38 environment-free integration and build; dependency license/audit gates green                                                  |
-| local `test:coverage`    | pass: 371 tests, 21 opt-in durable skips; 82.08% statements, 76.19% branches, 90.01% functions, 83.15% lines                                                              |
-| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                          |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure                            |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                    |
-| `docker compose config`  | pass                                                                                                                                                                      |
-| production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000                       |
-| branch GitHub Actions CI | [pass on `23b3306`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232227): 385 tests, 83.74/77.99/92.22/84.78 coverage, 10 Chromium, six production targets |
-| branch CodeQL            | [pass on `23b3306`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31379232232): JavaScript and TypeScript analysis                                               |
+| Command                  | Result                                                                                                                                              |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| local non-browser gates  | pass: format, lint, typecheck, 338 unit, 38 environment-free integration and build; dependency license/audit gates green                            |
+| local `test:coverage`    | pass: 376 tests, 21 opt-in durable skips; 82.14% statements, 76.21% branches, 90.19% functions, 83.23% lines                                        |
+| branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                    |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure      |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                              |
+| `docker compose config`  | pass                                                                                                                                                |
+| production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000 |
+| branch GitHub Actions CI | [pass on `47b62e1`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31382413359): full CI matrix, Chromium and all production targets        |
+| branch CodeQL            | [pass on `47b62e1`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31382413410): JavaScript and TypeScript analysis                         |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The

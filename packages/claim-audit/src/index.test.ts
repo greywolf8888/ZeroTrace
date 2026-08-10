@@ -288,7 +288,7 @@ describe('deterministic claim audit', () => {
       observedDeposits: 2,
       exactMultipleDeposits: 1,
       nonMultipleDeposits: 1,
-      exactMultipleCoverage: 0.5,
+      exactMultipleCoverage: { state: 'known', value: 0.5 },
     });
     expect(item?.findings.map((finding) => finding.code)).toEqual(
       expect.arrayContaining(['OUTFLOW_OBSERVED', 'POLICY_LOCK_NOT_TECHNICAL_LOCK']),
@@ -307,6 +307,24 @@ describe('deterministic claim audit', () => {
       actualReceivedAmount: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
     });
     expect(result.items[0]?.actualReceivedAmount).not.toEqual({ state: 'known', value: '0' });
+  });
+
+  it('keeps an empty share-unit denominator Not Applicable instead of numeric zero', () => {
+    const result = run({
+      claims: [claim({ id: 'pension-safe', shareUnit: '1000000' })],
+      transfers: [],
+    });
+
+    expect(result.items[0]?.shareUnitAssessment).toMatchObject({
+      observedDeposits: 0,
+      exactMultipleDeposits: 0,
+      nonMultipleDeposits: 0,
+      exactMultipleCoverage: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+    });
+    expect(result.items[0]?.shareUnitAssessment?.exactMultipleCoverage).not.toEqual({
+      state: 'known',
+      value: 0,
+    });
   });
 
   it('rejects unanchored inference, duplicate ids, and unsafe tolerance policies', () => {

@@ -127,6 +127,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       removable-LP, controller-return, multi-hop and incomplete-coverage tests
 - [x] Finalized range-bounded EVM ERC-20 Transfer Evidence and EOA/Safe/generic-contract custody
       observation, including one named FFT single-source window
+- [x] Deterministic Snapshot-time-bounded address-flow aggregation with observed lower bounds,
+      coverage-gated Actual values and no-flow `Unknown(NOT_APPLICABLE)` share adherence
 - [ ] Same-Snapshot action derivation, independent-source reconciliation, durable report replay,
       API/UI Claim Audit and terminal named FFT conclusion
 - [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`

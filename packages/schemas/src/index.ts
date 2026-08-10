@@ -1269,6 +1269,7 @@ export const ClaimWindowSchema = z
   .refine((value) => Date.parse(value.from) <= Date.parse(value.to), {
     message: 'Claim window must not end before it begins.',
   });
+export type ClaimWindow = z.infer<typeof ClaimWindowSchema>;
 
 export const ClaimRuleSchema = z.object({
   id: z.string().min(1),
@@ -1366,8 +1367,43 @@ export const ClaimShareUnitAssessmentSchema = z.object({
   observedDeposits: z.number().int().nonnegative(),
   exactMultipleDeposits: z.number().int().nonnegative(),
   nonMultipleDeposits: z.number().int().nonnegative(),
-  exactMultipleCoverage: CoverageRatioSchema,
+  exactMultipleCoverage: knowledgeValueSchema(CoverageRatioSchema),
 });
+
+export const ClaimFlowCounterpartySchema = z.object({
+  direction: z.enum(['INFLOW', 'OUTFLOW']),
+  address: z.string().min(1),
+  observedAmount: UnsignedQuantityStringSchema,
+  transferCount: z.number().int().positive(),
+  firstObservedAt: IsoDateTimeSchema,
+  lastObservedAt: IsoDateTimeSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const ClaimFlowAggregateSchema = z.object({
+  observedAmount: UnsignedQuantityStringSchema,
+  actualAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  transferCount: z.number().int().nonnegative(),
+  uniqueCounterparties: z.number().int().nonnegative(),
+  firstObservedAt: knowledgeValueSchema(IsoDateTimeSchema),
+  lastObservedAt: knowledgeValueSchema(IsoDateTimeSchema),
+  evidenceIds: z.array(z.string().min(1)),
+});
+
+export const ClaimAddressFlowSummarySchema = z.object({
+  address: z.string().min(1),
+  window: ClaimWindowSchema,
+  inflow: ClaimFlowAggregateSchema,
+  outflow: ClaimFlowAggregateSchema,
+  shareUnitAssessment: ClaimShareUnitAssessmentSchema.nullable(),
+  selfTransferCount: z.number().int().nonnegative(),
+  selfTransferObservedAmount: UnsignedQuantityStringSchema,
+  topCounterparties: z.array(ClaimFlowCounterpartySchema),
+  metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+    message: 'Claim flow summary requires a replayable chain Snapshot.',
+  }),
+});
+export type ClaimAddressFlowSummary = z.infer<typeof ClaimAddressFlowSummarySchema>;
 
 export const ClaimCadenceAssessmentSchema = z.object({
   expectedSeconds: UnsignedQuantityStringSchema,
