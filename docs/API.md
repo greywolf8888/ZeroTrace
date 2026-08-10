@@ -104,10 +104,15 @@ and chain-wide lifecycle reconstruction remain incomplete.
 `GET /api/v1/launches/EVM/:token/history?chainId=eip155:56&platform=flap&fromBlock=...&toBlock=...`
 scans at most 50,000 blocks per request. The server splits the range into bounded log queries,
 filters the versioned Portal event topic set, decodes the non-indexed token field, and then requires
-every candidate transaction to pass the exact receipt/block replay described above. An optional
-`chunkSize` is limited to 10,000 blocks; total observations are limited to 25,000 Portal logs and
-250 receipt-replayed transactions. Request count, result count, topic mismatches, removed logs,
-duplicates, out-of-range responses, and inconsistent placements fail closed.
+every candidate transaction to pass the exact receipt/block replay described above. When
+`SQD_PORTAL_URL` is configured, finalized `binance-mainnet` address/topic filtering supplies the
+range observations; strict BSC `eth_getLogs` remains the fallback. The two paths share the same
+request-scoped source provenance and fail-closed result validation. An optional `chunkSize` is
+limited to 10,000 blocks; total observations are limited to 25,000 Portal logs and 250
+receipt-replayed transactions. Request count, result count, topic mismatches, removed logs,
+duplicates, out-of-range responses, source-head shortfall, parent discontinuity, and inconsistent
+placements fail closed. Every discovered log must also match the RPC receipt's block, transaction,
+log index, address, topics, and data exactly.
 
 `requestedRangeCoverage=1` means every chunk in the requested range returned and all matching
 transactions were replayed. It does not mean full token history: `lifetimeCoverage` and metadata

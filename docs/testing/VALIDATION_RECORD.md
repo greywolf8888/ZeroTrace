@@ -546,12 +546,49 @@ Coverage passed 266 tests with 15 Docker-dependent durable tests explicitly skip
 statements, 75.43% branches, 91.55% functions and 85% lines. All 10 Chromium desktop/mobile
 flows passed, including the bounded-history range and Evidence rendering.
 
+### SQD/RPC Flap discovery cross-check
+
+The bounded discovery source was then split across independent responsibilities: finalized SQD
+`binance-mainnet` supplies strictly filtered address/topic logs, and BSC RPC supplies the exact
+transaction receipt and block used to reconstruct and bind every event. SQD dataset metadata
+reported start block `0`; the client also requires a complete parent-linked response through the
+requested end block, validates every returned filter field, and rejects duplicates or source-head
+shortfalls. Every discovered log must reproduce the RPC receipt's block, transaction, log index,
+address, topics and data field-for-field. RPC remains the strict fallback discovery source when SQD
+is not configured.
+
+Project code replayed the following named non-FFT fixture:
+
+| Field                    | Observation                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Transaction              | `0x53614caf06221b2dadee950b588ca0bad466f73e04a40c6392780f9459630459`                                                                          |
+| Block                    | `98759976`                                                                                                                                    |
+| Token                    | `0xb81252503501f366b5dfb8c89fff85076d2f8888`                                                                                                  |
+| Discovery source         | `sqd:binance-mainnet`                                                                                                                         |
+| Requested-range coverage | `1`                                                                                                                                           |
+| Chronology               | `TokenCreated`, `TokenCurveSetV2`, `TokenDexSupplyThreshSet`, `TokenVersionSet`, `TokenQuoteSet`, `TokenMigratorSet`, `TokenDexPreferenceSet` |
+| Evidence nodes           | `12`                                                                                                                                          |
+| Lifetime/history state   | lifetime `unknown`; terminal `historyCoverage: 0`                                                                                             |
+
+The host's DNS interception mapped the official BSC hostname to a private-range fake IP, so the
+first live attempt was correctly blocked by the default SSRF guard. The successful local probe used
+`allowPrivateNetworks: true` only for the two explicit HTTPS allowlisted hosts. Repository and
+example defaults remain secure and unchanged. This result accepts one bounded creation/configuration
+fixture; it is not the FFT token, a lifetime-history proof, a continuous checkpoint, an independent
+operator reconciliation, or market/RV/entity acceptance.
+
+The complete local gate for this cross-check passed formatting, lint, typecheck, 241 unit tests, 28
+API integration tests, production builds, license policy and a zero-vulnerability dependency audit.
+Coverage passed 269 tests with 15 Docker-dependent durable tests explicitly skipped at 83.93%
+statements, 75.80% branches, 91.78% functions and 85.05% lines. All 10 Chromium desktop/mobile
+flows passed.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 238 unit, 28 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
-| local `test:coverage`    | pass: 266 tests, 15 durable skips; 83.89% statements, 75.43% branches, 91.55% functions, 85% lines                                                                          |
+| local non-browser gates  | pass: format, lint, typecheck, 241 unit, 28 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
+| local `test:coverage`    | pass: 269 tests, 15 durable skips; 83.93% statements, 75.80% branches, 91.78% functions, 85.05% lines                                                                       |
 | branch `test:coverage`   | latest completed pass: 281 tests; 86.59% statements, 78.04% branches, 95.3% functions, 87.71% lines                                                                         |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                         |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |

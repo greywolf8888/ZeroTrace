@@ -841,7 +841,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           ? 'IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
           : 'BSC_PROVIDER_REQUIRED',
         detail:
-          'Bounded Portal log ranges are chunked, decoded by token, and receipt-replayed at exact block hashes. Requested-range coverage is distinct from token-lifetime coverage, which remains Unknown until deployment-origin indexing is continuous.',
+          'Bounded Portal log ranges use the finalized SQD BSC stream when configured, with strict RPC-log fallback, then decode by token and replay exact RPC receipts/block hashes. Requested-range coverage is distinct from token-lifetime coverage, which remains Unknown until deployment-origin indexing is continuous.',
       },
       {
         id: 'flap-bsc-sell-preview',
@@ -1440,6 +1440,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       }
       return discoverFlapEventHistory({
         adapter,
+        ...(runtime.sqdBscLogReader === undefined ? {} : { logReader: runtime.sqdBscLogReader }),
         token: params.token,
         fromBlock: query.fromBlock,
         toBlock: query.toBlock,

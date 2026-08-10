@@ -47,6 +47,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
   source-tagged official defaults, future-enum Unknown states, replay Evidence, API, and responsive UI;
 - bounded, chunked Flap Portal event-log discovery with strict log validation, exact receipt replay,
   requested-range versus lifetime coverage, bounded negative Evidence, API, and responsive UI;
+- finalized SQD BSC address/topic log discovery as the preferred Flap range source, with parent
+  continuity, source-head and filter validation plus field-for-field BSC RPC receipt replay;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;

@@ -72,6 +72,10 @@ export interface EvmLogQuery {
   topics?: readonly EvmLogTopicFilter[];
 }
 
+export interface EvmLogReader {
+  getLogsObservation(query: EvmLogQuery): Promise<TransportObservation<EvmLogRecord[]>>;
+}
+
 const ALLOWED_EVM_METHODS = new Set([
   'eth_chainId',
   'eth_blockNumber',

@@ -1558,6 +1558,7 @@ describe('ZeroTrace API contract', () => {
 
   it('discovers Flap events in a bounded range and keeps lifetime coverage Unknown', async () => {
     const runtime = runtimeWithAllLedgers();
+    const receipt = fixtureFlapCreationReceipt();
     runtime.evmAdapters.set(
       56,
       new EvmLedgerAdapter(
@@ -1567,9 +1568,28 @@ describe('ZeroTrace API contract', () => {
           chainName: 'BNB Smart Chain',
           snapshotBlockTag: 'finalized',
         },
-        new FlapEventTransport(fixtureFlapCreationReceipt()),
+        new FlapEventTransport(receipt),
       ),
     );
+    const sourceLog = receipt.logs[0];
+    const sqdLogs = vi.fn(async () => ({
+      endpointId: 'sqd:binance-mainnet',
+      value: [
+        {
+          address: sourceLog.address.toLowerCase(),
+          blockHash: sourceLog.blockHash,
+          blockNumber: sourceLog.blockNumber,
+          transactionHash: sourceLog.transactionHash,
+          transactionIndex: sourceLog.transactionIndex,
+          logIndex: sourceLog.logIndex,
+          data: sourceLog.data,
+          topics: sourceLog.topics,
+          removed: false as const,
+          raw: sourceLog,
+        },
+      ],
+    }));
+    runtime.sqdBscLogReader = { getLogsObservation: sqdLogs };
     const app = await createApp({ config, runtime, logger: false });
     apps.push(app);
 
@@ -1599,6 +1619,8 @@ describe('ZeroTrace API contract', () => {
       'PROVIDER_OBSERVATION',
       'DERIVED_FEATURE',
     ]);
+    expect(response.json().evidence[0].source).toBe('sqd:binance-mainnet');
+    expect(sqdLogs).toHaveBeenCalledOnce();
     const derivedId = response.json().evidence.at(-1).id;
     const drilldown = await app.inject({
       method: 'GET',

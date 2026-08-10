@@ -1,4 +1,10 @@
-import { ProviderError, type EvmLedgerAdapter, type EvmSnapshot } from '@zerotrace/chain-adapters';
+import {
+  ProviderError,
+  type EvmLedgerAdapter,
+  type EvmLogReader,
+  type EvmLogRecord,
+  type EvmSnapshot,
+} from '@zerotrace/chain-adapters';
 import { createEvidence } from '@zerotrace/evidence';
 import {
   AnalysisMetadataSchema,
@@ -114,6 +120,7 @@ function metadata(
 
 export async function discoverFlapEventHistory(options: {
   adapter: EvmLedgerAdapter;
+  logReader?: EvmLogReader;
   token: string;
   fromBlock: string;
   toBlock: string;
@@ -124,6 +131,7 @@ export async function discoverFlapEventHistory(options: {
   maxLogs?: number;
 }): Promise<FlapEventHistory> {
   const { adapter, deployment, writeEvidence } = options;
+  const logReader = options.logReader ?? adapter;
   const token = canonicalAddress(options.token, 'history token');
   const portal = canonicalAddress(deployment.portal, 'history Portal');
   if (`eip155:${adapter.config.chainId}` !== deployment.chainId) {
@@ -169,6 +177,7 @@ export async function discoverFlapEventHistory(options: {
 
   const rangeEvidence: Evidence[] = [];
   const candidates = new Map<string, CandidateTransaction>();
+  const candidateLogs = new Map<string, EvmLogRecord[]>();
   const rangeSources = new Set<string>();
   let upperSnapshot: EvmSnapshot | undefined;
   let unrecognizedPortalLogCount = 0;
@@ -186,7 +195,7 @@ export async function discoverFlapEventHistory(options: {
     }
     upperSnapshot = anchor.snapshot;
     rangeSources.add(anchor.anchor.source);
-    const observation = await adapter.getLogsObservation({
+    const observation = await logReader.getLogsObservation({
       address: portal,
       fromBlock: start.toString(),
       toBlock: end.toString(),
@@ -229,6 +238,9 @@ export async function discoverFlapEventHistory(options: {
         continue;
       }
       if (identity.token !== token) continue;
+      const discoveredLogs = candidateLogs.get(identity.transactionHash) ?? [];
+      discoveredLogs.push(log);
+      candidateLogs.set(identity.transactionHash, discoveredLogs);
       const candidate = candidates.get(identity.transactionHash);
       if (candidate === undefined) {
         candidates.set(identity.transactionHash, {
@@ -266,6 +278,7 @@ export async function discoverFlapEventHistory(options: {
       adapter,
       token,
       transactionHash: candidate.transactionHash,
+      expectedDiscoveryLogs: candidateLogs.get(candidate.transactionHash) ?? [],
       deployment,
       writeEvidence,
     });

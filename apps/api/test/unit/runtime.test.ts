@@ -82,16 +82,19 @@ describe('application runtime wiring', () => {
           'bsc.example',
           'bitcoin.example',
           'solana.example',
+          'sqd.example',
         ],
         ethereumRpcUrls: ['https://ethereum.example', 'https://ethereum-fallback.example'],
         bscRpcUrls: ['https://bsc.example'],
         bitcoinEsploraUrls: ['https://bitcoin.example/api'],
         solanaRpcUrls: ['https://solana.example'],
+        sqdPortalUrl: 'https://sqd.example',
       }),
     );
     expect([...runtime.evmAdapters.keys()]).toEqual([1, 56]);
     expect(runtime.bitcoinAdapter?.config.id).toBe('bitcoin-esplora');
     expect(runtime.solanaAdapter?.config.commitment).toBe('finalized');
+    expect(runtime.sqdBscLogReader).toBeDefined();
     expect(runtime.dataQuality.configuredSources()).toEqual({
       'eip155:1': 2,
       'eip155:56': 1,

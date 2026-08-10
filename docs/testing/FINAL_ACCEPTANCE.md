@@ -80,7 +80,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
         default provenance, Evidence drilldown, and desktop/mobile UI
   - [x] Bounded chunked Flap Portal-log discovery, exact receipt replay, range/lifetime coverage
         separation, negative Evidence, API and desktop/mobile UI
-  - [ ] Deployment-origin continuous Flap history, named real-chain fixture, lifecycle and market/RV linkage
+  - [x] Finalized SQD filtered discovery plus exact BSC RPC replay for one named non-FFT
+        creation/configuration fixture
+  - [ ] Deployment-origin continuous Flap history, named migration/FFT fixtures, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
 - [x] Deterministic Flap fixed-block `previewSell` quote and blocked/Unknown/no-fake-zero tests

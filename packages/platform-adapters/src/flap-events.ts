@@ -415,10 +415,12 @@ function decodePortalEvent(log: StrictReceiptLog): DecodedPortalEvent | undefine
   }
 }
 
-export function identifyFlapPortalEvent(log: EvmLogRecord): FlapPortalEventIdentity | undefined {
+function normalizeDiscoveryLog(log: EvmLogRecord): StrictReceiptLog {
   const firstTopic = log.topics[0];
-  if (firstTopic === undefined) return undefined;
-  const decoded = decodePortalEvent({
+  if (firstTopic === undefined) {
+    throw new ProviderError('INVALID_RESPONSE', 'Flap discovery log has no event topic.');
+  }
+  return {
     address: canonicalAddress(log.address, 'discovery log address'),
     blockHash: hash(log.blockHash, 'discovery log block hash'),
     blockNumber: BigInt(log.blockNumber).toString(),
@@ -432,7 +434,26 @@ export function identifyFlapPortalEvent(log: EvmLogRecord): FlapPortalEventIdent
     ],
     removed: false,
     raw: log.raw,
-  });
+  };
+}
+
+function sameLog(left: StrictReceiptLog, right: StrictReceiptLog): boolean {
+  return (
+    left.address === right.address &&
+    left.blockHash === right.blockHash &&
+    left.blockNumber === right.blockNumber &&
+    left.transactionHash === right.transactionHash &&
+    left.transactionIndex === right.transactionIndex &&
+    left.logIndex === right.logIndex &&
+    left.data === right.data &&
+    left.topics.length === right.topics.length &&
+    left.topics.every((topic, index) => topic === right.topics[index])
+  );
+}
+
+export function identifyFlapPortalEvent(log: EvmLogRecord): FlapPortalEventIdentity | undefined {
+  if (log.topics[0] === undefined) return undefined;
+  const decoded = decodePortalEvent(normalizeDiscoveryLog(log));
   if (decoded === undefined) return undefined;
   return {
     eventName: decoded.eventName,
@@ -726,6 +747,7 @@ export async function inspectFlapEventTransaction(options: {
   adapter: EvmLedgerAdapter;
   token: string;
   transactionHash: string;
+  expectedDiscoveryLogs?: readonly EvmLogRecord[];
   deployment: FlapDeployment;
   writeEvidence: FlapEvidenceWriter;
 }): Promise<FlapEventTransaction> {
@@ -769,6 +791,15 @@ export async function inspectFlapEventTransaction(options: {
     transactionHash: receipt.transactionHash,
     transactionIndex: receiptTransactionIndex,
   });
+  for (const expected of options.expectedDiscoveryLogs ?? []) {
+    const normalized = normalizeDiscoveryLog(expected);
+    if (!logs.some((log) => sameLog(log, normalized))) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'A discovered Flap Portal log could not be reproduced exactly from its receipt.',
+      );
+    }
+  }
   const receiptEvidence = await writeEvidence(
     createEvidence({
       ledger: 'EVM',

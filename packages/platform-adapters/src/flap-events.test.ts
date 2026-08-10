@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   EvmLedgerAdapter,
+  type EvmLogReader,
   type JsonRpcTransport,
   type TransportObservation,
   type TransportReadOptions,
@@ -433,7 +434,7 @@ describe('Flap transaction-local event inspection', () => {
 });
 
 describe('Flap bounded event-history discovery', () => {
-  function historyFixture(includeCreation = true) {
+  function historyFixture(includeCreation = true, logReader?: EvmLogReader) {
     const transport = new HistoryJsonRpcTransport(includeCreation);
     const adapter = new EvmLedgerAdapter(
       {
@@ -451,6 +452,7 @@ describe('Flap bounded event-history discovery', () => {
       discover: (fromBlock = '16', toBlock = '17') =>
         discoverFlapEventHistory({
           adapter,
+          ...(logReader === undefined ? {} : { logReader }),
           token,
           fromBlock,
           toBlock,
@@ -509,6 +511,33 @@ describe('Flap bounded event-history discovery', () => {
     });
     expect(result.lifetimeCoverage.state).toBe('unknown');
     expect(result.metadata.historyCoverage).toBe(0);
+  });
+
+  it('rejects a discovery log that the exact RPC receipt cannot reproduce', async () => {
+    const mismatchedLog = eventLog(tokenCreated(), 1) as ReturnType<typeof eventLog>;
+    const logReader: EvmLogReader = {
+      getLogsObservation: async () => ({
+        endpointId: 'sqd:binance-mainnet',
+        value: [
+          {
+            address: mismatchedLog.address,
+            blockHash: mismatchedLog.blockHash,
+            blockNumber: mismatchedLog.blockNumber,
+            transactionHash: mismatchedLog.transactionHash,
+            transactionIndex: mismatchedLog.transactionIndex,
+            logIndex: mismatchedLog.logIndex,
+            data: mismatchedLog.data,
+            topics: mismatchedLog.topics,
+            removed: false,
+            raw: mismatchedLog,
+          },
+        ],
+      }),
+    };
+
+    await expect(historyFixture(true, logReader).discover('16', '16')).rejects.toThrow(
+      'could not be reproduced exactly',
+    );
   });
 
   it('rejects invalid or operationally unbounded history requests before network access', async () => {

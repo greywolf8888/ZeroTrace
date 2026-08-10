@@ -7,6 +7,9 @@ import {
   SafeJsonRpcTransport,
   SafeRestTransport,
   SolanaLedgerAdapter,
+  SqdEvmLogReader,
+  SqdPortalClient,
+  type EvmLogReader,
   type ProviderUrlPolicy,
   type RestTransport,
   type JsonRpcTransport,
@@ -36,6 +39,7 @@ import type { AppConfig } from './config.js';
 export interface AppRuntime {
   providerRegistry: ProviderRegistry;
   evmAdapters: Map<number, EvmLedgerAdapter>;
+  sqdBscLogReader?: EvmLogReader;
   bitcoinAdapter?: BitcoinUtxoLedgerAdapter;
   solanaAdapter?: SolanaLedgerAdapter;
   evidenceLedger: EvidenceLedger;
@@ -206,6 +210,25 @@ export function createRuntime(config: AppConfig): AppRuntime {
     config.bscRequestsPerSecond,
     bscAnchorReaders,
   );
+
+  const sqdBscLogReader =
+    config.sqdPortalUrl === undefined || config.bscChainId !== 56
+      ? undefined
+      : new SqdEvmLogReader({
+          source: new SqdPortalClient({
+            portalUrl: config.sqdPortalUrl,
+            dataset: 'binance-mainnet',
+            policy: policyFor(config.sqdPortalUrl, config),
+            timeoutMs: Math.max(config.requestTimeoutMs, 30_000),
+            maxRangeBlocks: 50_000,
+            maxAttempts: config.providerResilience.maxAttempts,
+            retryBaseDelayMs: config.providerResilience.retryBaseDelayMs,
+            retryMaxDelayMs: config.providerResilience.retryMaxDelayMs,
+            requestsPerSecond: 2,
+          }),
+          maxRangeBlocks: 10_000,
+          maxResults: 25_000,
+        });
 
   let bitcoinAdapter: BitcoinUtxoLedgerAdapter | undefined;
   const bitcoinUrls = configuredUrls(config.bitcoinEsploraUrls, config.bitcoinEsploraUrl);
@@ -399,6 +422,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       unconfigured.map((item) => ({ ...item, capabilities: [...item.capabilities] })),
     ),
     evmAdapters,
+    ...(sqdBscLogReader === undefined ? {} : { sqdBscLogReader }),
     evidenceLedger,
     dataQuality,
     ingestionStorage: {

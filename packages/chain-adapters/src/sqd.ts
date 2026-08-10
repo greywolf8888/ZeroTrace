@@ -6,6 +6,8 @@ import {
 } from './security.js';
 import { parseProviderJson, type FetchImplementation } from './transport.js';
 import type { JsonValue } from '@zerotrace/schemas';
+import type { EvmLogQuery, EvmLogReader, EvmLogRecord, EvmLogTopicFilter } from './evm.js';
+import type { TransportObservation } from './transport.js';
 
 export const SQD_DATASETS = {
   'ethereum-mainnet': {
@@ -127,6 +129,7 @@ interface ResolvedOptions {
 
 interface StreamProgress {
   lastBlock: number | null;
+  lastHash: string | null;
   blocks: number;
   finalizedHead: number | null;
 }
@@ -159,6 +162,7 @@ const MAX_QUERY_BYTES = 262_144;
 const MAX_TRANSACTIONS_PER_BLOCK = 100_000;
 const MAX_LEDGER_RECORDS_PER_BLOCK = 1_000_000;
 const MAX_INSTRUCTION_ADDRESS_DEPTH = 64;
+const EVM_HEX_DATA = /^0x(?:[0-9a-fA-F]{2})*$/;
 
 const ALLOWED_FIELD_GROUPS: Record<SqdQueryType, ReadonlySet<string>> = {
   evm: new Set(['block', 'transaction', 'log', 'trace', 'stateDiff']),
@@ -990,7 +994,12 @@ export class SqdPortalClient {
       throw new RangeError(`SQD range may not exceed ${this.#options.maxRangeBlocks} blocks.`);
     }
     const baseQuery = buildQuery(this.dataset, request);
-    const progress: StreamProgress = { lastBlock: null, blocks: 0, finalizedHead: null };
+    const progress: StreamProgress = {
+      lastBlock: null,
+      lastHash: null,
+      blocks: 0,
+      finalizedHead: null,
+    };
     let cursor = request.fromBlock;
     let requests = 0;
     let retries = 0;
@@ -1143,6 +1152,7 @@ export class SqdPortalClient {
     let bytes = 0;
     let responseBlocks = 0;
     let previous = progress.lastBlock;
+    let previousHash = progress.lastHash;
 
     const consumeLine = async (rawLine: string): Promise<void> => {
       const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
@@ -1163,13 +1173,25 @@ export class SqdPortalClient {
       ) {
         throw new ProviderError('INVALID_RESPONSE', 'SQD finalized stream contains a block gap.');
       }
+      if (
+        SQD_DATASETS[this.dataset].contiguous &&
+        previousHash !== null &&
+        block.header.parentHash.toLowerCase() !== previousHash.toLowerCase()
+      ) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'SQD finalized stream contains a parent-hash discontinuity.',
+        );
+      }
       try {
         await onBlock(block);
       } catch (error) {
         throw new SqdConsumerError(error);
       }
       previous = block.header.number;
+      previousHash = block.header.hash;
       progress.lastBlock = block.header.number;
+      progress.lastHash = block.header.hash;
       progress.blocks += 1;
       responseBlocks += 1;
       if (responseBlocks > this.#options.maxRangeBlocks) {
@@ -1260,5 +1282,219 @@ export class SqdPortalClient {
           )
         : Math.min(this.#options.retryMaxDelayMs, retryAfter);
     if (delay > 0) await this.#options.sleepImplementation(delay);
+  }
+}
+
+export interface SqdEvmLogReaderOptions {
+  source: SqdPortalClient;
+  maxRangeBlocks?: number;
+  maxResults?: number;
+}
+
+function sqdLogPosition(value: string, field: string): number {
+  if (!UNSIGNED_DECIMAL.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD EVM log ${field} must be unsigned decimal.`);
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD EVM log ${field} is unsafe.`);
+  }
+  return parsed;
+}
+
+function sqdLogAddress(value: string, field: string): string {
+  if (!EVM_ADDRESS.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD EVM log ${field} is invalid.`);
+  }
+  return value.toLowerCase();
+}
+
+function sqdLogHash(value: JsonValue | undefined, field: string): string {
+  if (typeof value !== 'string' || !EVM_TRANSACTION_HASH.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD EVM log ${field} is invalid.`);
+  }
+  return value.toLowerCase();
+}
+
+function sqdLogTopics(value: JsonValue | undefined): string[] {
+  if (
+    !Array.isArray(value) ||
+    value.length > 4 ||
+    !value.every((topic) => typeof topic === 'string' && EVM_TRANSACTION_HASH.test(topic))
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', 'SQD EVM log topics are invalid.');
+  }
+  return (value as string[]).map((topic) => topic.toLowerCase());
+}
+
+function sqdLogIndex(value: JsonValue | undefined, field: string): string {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD EVM log ${field} is invalid.`);
+  }
+  return `0x${value.toString(16)}`;
+}
+
+function sqdTopicFilter(value: EvmLogTopicFilter, index: number): readonly string[] | null {
+  if (value === null) return null;
+  const alternatives = typeof value === 'string' ? [value] : value;
+  if (
+    alternatives.length === 0 ||
+    alternatives.some((topic) => !EVM_TRANSACTION_HASH.test(topic))
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD EVM topic filter ${index} is invalid.`);
+  }
+  return [...new Set(alternatives.map((topic) => topic.toLowerCase()))];
+}
+
+function matchesSqdTopics(
+  logTopics: readonly string[],
+  filters: readonly (readonly string[] | null)[],
+): boolean {
+  return filters.every((filter, index) => {
+    if (filter === null) return true;
+    const topic = logTopics[index];
+    return topic !== undefined && filter.includes(topic);
+  });
+}
+
+export class SqdEvmLogReader implements EvmLogReader {
+  readonly endpointId: string;
+  readonly #source: SqdPortalClient;
+  readonly #maxRangeBlocks: number;
+  readonly #maxResults: number;
+  #metadataPromise: Promise<SqdDatasetMetadata> | undefined;
+
+  constructor(options: SqdEvmLogReaderOptions) {
+    if (SQD_DATASETS[options.source.dataset].queryType !== 'evm') {
+      throw new RangeError('SQD EVM log reader requires an EVM dataset.');
+    }
+    this.#source = options.source;
+    this.endpointId = `sqd:${options.source.dataset}`;
+    this.#maxRangeBlocks = requireInteger(
+      options.maxRangeBlocks ?? 50_000,
+      'maxRangeBlocks',
+      1,
+      1_000_000,
+    );
+    this.#maxResults = requireInteger(options.maxResults ?? 25_000, 'maxResults', 1, 1_000_000);
+  }
+
+  async getLogsObservation(query: EvmLogQuery): Promise<TransportObservation<EvmLogRecord[]>> {
+    const fromBlock = sqdLogPosition(query.fromBlock, 'fromBlock');
+    const toBlock = sqdLogPosition(query.toBlock, 'toBlock');
+    if (toBlock < fromBlock) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM log range ends before it begins.');
+    }
+    if (toBlock - fromBlock + 1 > this.#maxRangeBlocks) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        `SQD EVM log range exceeds the configured ${this.#maxRangeBlocks}-block limit.`,
+      );
+    }
+    const address = sqdLogAddress(query.address, 'address');
+    const topics = (query.topics ?? []).map(sqdTopicFilter);
+    if (topics.length > 4) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM log queries support four topics.');
+    }
+    const metadata = await this.#metadata();
+    if (metadata.startBlock === null || fromBlock < metadata.startBlock) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'SQD dataset start coverage does not include the requested EVM log range.',
+      );
+    }
+    const filter: Record<string, unknown> = { address: [address] };
+    topics.forEach((topic, index) => {
+      if (topic !== null) filter[`topic${index}`] = topic;
+    });
+    const logs: EvmLogRecord[] = [];
+    const seen = new Set<string>();
+    const summary = await this.#source.readFinalizedRange(
+      {
+        fromBlock,
+        toBlock,
+        fields: {
+          log: {
+            logIndex: true,
+            transactionIndex: true,
+            transactionHash: true,
+            address: true,
+            topics: true,
+            data: true,
+          },
+        },
+        requests: { logs: [filter] },
+      },
+      (block) => {
+        const blockHash = sqdLogHash(block.header.hash, 'block hash');
+        for (const item of sqdEvmLogsFromBlock(this.#source.dataset, block)) {
+          const payload = item.payload;
+          if (typeof payload.address !== 'string') {
+            throw new ProviderError('INVALID_RESPONSE', 'SQD EVM log address is invalid.');
+          }
+          const logAddress = sqdLogAddress(payload.address, 'address');
+          const logTopics = sqdLogTopics(payload.topics);
+          const data = payload.data;
+          if (typeof data !== 'string' || !EVM_HEX_DATA.test(data)) {
+            throw new ProviderError('INVALID_RESPONSE', 'SQD EVM log data is invalid.');
+          }
+          if (logAddress !== address || !matchesSqdTopics(logTopics, topics)) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'SQD returned an EVM log outside the requested address or topic filter.',
+            );
+          }
+          const transactionHash = sqdLogHash(payload.transactionHash, 'transaction hash');
+          const transactionIndex = sqdLogIndex(payload.transactionIndex, 'transaction index');
+          const logIndex = sqdLogIndex(payload.logIndex, 'index');
+          const identity = `${blockHash}:${transactionHash}:${logIndex}`;
+          if (seen.has(identity)) {
+            throw new ProviderError('INVALID_RESPONSE', 'SQD returned a duplicate EVM log.');
+          }
+          seen.add(identity);
+          logs.push({
+            address: logAddress,
+            blockHash,
+            blockNumber: `0x${block.header.number.toString(16)}`,
+            transactionHash,
+            transactionIndex,
+            logIndex,
+            data: data.toLowerCase(),
+            topics: logTopics,
+            removed: false,
+            raw: payload,
+          });
+          if (logs.length > this.#maxResults) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              `SQD EVM log result exceeds the configured ${this.#maxResults}-record limit.`,
+            );
+          }
+        }
+      },
+    );
+    if (
+      summary.completion !== 'REQUESTED_RANGE_COMPLETE' ||
+      summary.lastBlock !== toBlock ||
+      summary.nextBlock !== toBlock + 1 ||
+      summary.blocks !== toBlock - fromBlock + 1
+    ) {
+      throw new ProviderError(
+        'HTTP_ERROR',
+        'SQD finalized coverage did not reach the requested EVM log range end.',
+        { retryable: true },
+      );
+    }
+    return { endpointId: this.endpointId, value: logs };
+  }
+
+  async #metadata(): Promise<SqdDatasetMetadata> {
+    this.#metadataPromise ??= this.#source.metadata();
+    try {
+      return await this.#metadataPromise;
+    } catch (error) {
+      this.#metadataPromise = undefined;
+      throw error;
+    }
   }
 }

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ProviderError } from './errors.js';
 import {
   SqdPortalClient,
+  SqdEvmLogReader,
   sqdBitcoinInputsFromBlock,
   sqdBitcoinOutputsFromBlock,
   sqdEvmLogsFromBlock,
@@ -202,6 +203,17 @@ describe('SqdPortalClient', () => {
     await expect(
       client(fetchImplementation).readFinalizedRange({ fromBlock: 10, toBlock: 12 }, vi.fn()),
     ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+
+    const parentConflict = {
+      ...block(11),
+      header: { ...block(11).header, parentHash: `0x${'f'.repeat(64)}` },
+    };
+    const parentFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonlResponse([block(10), parentConflict]));
+    await expect(
+      client(parentFetch).readFinalizedRange({ fromBlock: 10, toBlock: 11 }, vi.fn()),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 
   it('allows skipped Solana slots while preserving strictly increasing ordering', async () => {
@@ -334,6 +346,160 @@ describe('SqdPortalClient', () => {
           policy,
         }),
     ).toThrow(ProviderError);
+  });
+});
+
+describe('SqdEvmLogReader', () => {
+  it('turns a complete filtered SQD range into strict request-scoped EVM logs', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    const topic = `0x${'b'.repeat(64)}`;
+    const transactionHash = `0x${'c'.repeat(64)}`;
+    const responseBlock: SqdFinalizedBlock = {
+      ...block(10),
+      logs: [
+        {
+          logIndex: 2,
+          transactionIndex: 1,
+          transactionHash,
+          address,
+          topics: [topic],
+          data: '0x1234',
+        },
+      ],
+    };
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            dataset: 'binance-mainnet',
+            aliases: [],
+            real_time: true,
+            start_block: 0,
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(jsonlResponse([responseBlock], { finalizedHead: 10 }));
+    const source = client(fetchImplementation, { dataset: 'binance-mainnet' });
+    const reader = new SqdEvmLogReader({ source, maxRangeBlocks: 10 });
+
+    await expect(
+      reader.getLogsObservation({
+        address,
+        fromBlock: '10',
+        toBlock: '10',
+        topics: [[topic, topic]],
+      }),
+    ).resolves.toMatchObject({
+      endpointId: 'sqd:binance-mainnet',
+      value: [
+        {
+          address,
+          blockNumber: '0xa',
+          transactionHash,
+          transactionIndex: '0x1',
+          logIndex: '0x2',
+          removed: false,
+        },
+      ],
+    });
+    const request = JSON.parse(String(fetchImplementation.mock.calls[1]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    expect(request).toMatchObject({
+      type: 'evm',
+      fromBlock: 10,
+      toBlock: 10,
+      includeAllBlocks: true,
+      logs: [{ address: [address], topic0: [topic] }],
+    });
+
+    const wrongTopicFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            dataset: 'binance-mainnet',
+            aliases: [],
+            real_time: true,
+            start_block: 0,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonlResponse([
+          {
+            ...responseBlock,
+            logs: [
+              {
+                ...(responseBlock.logs as Array<Record<string, unknown>>)[0],
+                topics: [`0x${'d'.repeat(64)}`],
+              },
+            ],
+          },
+        ]),
+      );
+    await expect(
+      new SqdEvmLogReader({
+        source: client(wrongTopicFetch, { dataset: 'binance-mainnet' }),
+      }).getLogsObservation({ address, fromBlock: '10', toBlock: '10', topics: [topic] }),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+
+  it('rejects unsupported coverage and source-head shortfalls without fabricating completeness', async () => {
+    expect(
+      () =>
+        new SqdEvmLogReader({
+          source: client(vi.fn<typeof fetch>(), { dataset: 'bitcoin-mainnet' }),
+        }),
+    ).toThrow('requires an EVM dataset');
+
+    const address = `0x${'a'.repeat(40)}`;
+    const beforeStartFetch = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          dataset: 'binance-mainnet',
+          aliases: [],
+          real_time: true,
+          start_block: 11,
+        }),
+        { status: 200 },
+      ),
+    );
+    await expect(
+      new SqdEvmLogReader({
+        source: client(beforeStartFetch, { dataset: 'binance-mainnet' }),
+      }).getLogsObservation({ address, fromBlock: '10', toBlock: '10' }),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    expect(beforeStartFetch).toHaveBeenCalledOnce();
+
+    const shortfallFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            dataset: 'binance-mainnet',
+            aliases: [],
+            real_time: true,
+            start_block: 0,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 204,
+          headers: { 'x-sqd-finalized-head-number': '9' },
+        }),
+      );
+    await expect(
+      new SqdEvmLogReader({
+        source: client(shortfallFetch, { dataset: 'binance-mainnet' }),
+      }).getLogsObservation({ address, fromBlock: '10', toBlock: '10' }),
+    ).rejects.toMatchObject({ code: 'HTTP_ERROR', retryable: true });
   });
 });
 

@@ -369,12 +369,15 @@ reports zero history coverage because caller-supplied transaction decoding does 
 history. Automatic event discovery, cross-transaction lifecycle reconstruction, migration control,
 market reconstruction and sell capacity remain separate later stages.
 
-The bounded discovery layer adds strict range-limited `eth_getLogs` reads over the official Portal
-event topic set. It chunks requests, validates every returned log, decodes the non-indexed token,
-and exact-receipt replays each candidate before producing a chronology. Range completeness and
-token-lifetime completeness are separate fields: even a 100% requested-range scan retains Unknown
-lifetime coverage and zero terminal history coverage. Deployment-origin discovery, continuous
-indexing/checkpoints, and cross-range lifecycle projection remain later stages.
+The bounded discovery layer reads the official Portal address/topic set through a source interface.
+When configured it prefers SQD's finalized `binance-mainnet` stream from its declared dataset start;
+otherwise it uses strict range-limited `eth_getLogs`. SQD streams must be gap-free and parent-linked,
+must reach the requested range end, and every returned record must satisfy the requested address and
+topic filter. Both paths exact-receipt replay each candidate through BSC RPC before producing a
+chronology; every discovery log must reproduce field-for-field from that receipt. Range completeness
+and token-lifetime completeness are separate fields: even a 100%
+requested-range scan retains Unknown lifetime coverage and zero terminal history coverage.
+Deployment-origin continuous checkpoints and cross-range lifecycle projection remain later stages.
 
 Flap realizable-value preview is a distinct provider-observation layer, not a replacement for the
 deterministic RV engine. It reuses the inspection Snapshot and calls the official view-only
