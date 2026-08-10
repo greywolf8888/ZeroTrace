@@ -3,17 +3,17 @@
 ## Current deployment classification
 
 The repository supports a reproducible local/staging topology. It is **not production-approved**:
-Evidence/Snapshot persistence and bounded finalized raw-ledger ingestion are wired;
-authentication/authorization, remaining durable repositories, semantic transaction/event history,
-independent-provider acceptance, automatic reorg rollback/replay, backup recovery, load testing, and
-terminal real-chain acceptance remain incomplete. Common-position endpoint reconciliation,
+Evidence/Snapshot persistence, bounded finalized raw-ledger ingestion, and restart-safe bounded Flap
+history projection are wired; authentication/authorization, remaining durable repositories,
+continuous semantic history, independent-provider acceptance, automatic reorg rollback/replay,
+backup recovery, load testing, and terminal real-chain acceptance remain incomplete. Common-position endpoint reconciliation,
 parent-history continuity detection, and Evidence-linked Data Quality Alerts are implemented.
 
 ## Build
 
 ```bash
 docker compose config --quiet
-docker compose build api web ingest-worker flap-origin-worker postgres clickhouse
+docker compose build api web ingest-worker flap-origin-worker flap-history-worker postgres clickhouse
 ```
 
 The API image runs as the unprivileged Node user and is pruned of test, build, and development-log
@@ -74,6 +74,27 @@ This one-shot worker requires initialized PostgreSQL Evidence and semantic check
 persists completed chunks and a terminal Evidence-bearing result, but it is not a scheduler and does
 not project continuous event history.
 
+Run a wide, restart-safe Flap event-history projection through immutable bounded segments:
+
+```bash
+docker compose --profile semantic run --rm flap-history-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 99999 --segment-size 50000 --chunk-size 10000
+```
+
+This worker requires migrations `001-008`. It preflights Evidence, semantic checkpoints, and the
+projection repository before reading SQD or BSC RPC. A segment is committed before its cursor is
+advanced; the identical command resumes from a safe boundary and completed runs replay without
+provider access. The terminal JSON contains a stable scan ID. With the API connected to the same
+PostgreSQL database, retrieve stored pages at:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/projections/<scan-id>?chainId=eip155:56&platform=flap&limit=20
+```
+
+The API endpoint and UI read only immutable projection rows. They never initiate an SQD/RPC scan.
+The worker is one-shot and does not claim deployment-origin-to-head continuity or lifetime coverage.
+
 ## Health and smoke checks
 
 ```bash
@@ -89,6 +110,8 @@ Expected invariants:
 - `/health/live` returns HTTP 200, `status: UP`, and `readOnly: true`;
 - readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
+- missing or unhealthy Flap projection migration `008` returns readiness HTTP 503 when PostgreSQL
+  is configured;
 - `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
 - `/health` and `/api/v1/data-quality/anchors` distinguish agreement, disagreement, insufficient
   sources, provider unavailability, continuity state, and data-quality storage health;

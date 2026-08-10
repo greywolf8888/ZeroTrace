@@ -120,8 +120,10 @@ canonical facts, a process-local Evidence cache backed by durable PostgreSQL Sna
 and a separate finalized raw-ledger worker backed by versioned artifacts, ClickHouse Raw Facts, and
 PostgreSQL checkpoints. Strict query-time EVM/Bitcoin/Solana block and transaction records plus
 Bitcoin outpoints are Snapshot- and Evidence-bound; finalized blocks, transactions, EVM logs,
-Bitcoin inputs/outputs, and Solana instructions are also wired through ingestion. Baseline entity
-inference, two deterministic RV algorithms, API, and UI are wired. Query-time endpoint anchors are
+Bitcoin inputs/outputs, and Solana instructions are also wired through ingestion. A separate
+semantic worker persists restart-safe Flap origin checkpoints and immutable bounded-history
+segments; the API and UI replay those stored segments by scan ID without provider access. Baseline
+entity inference, two deterministic RV algorithms, API, and UI are wired. Query-time endpoint anchors are
 compared at a common position, parent continuity is checked against prior observations, and
 Evidence-linked alerts are stored when sources conflict or history changes. Provider-shaped records
 and validated EVM receipts are not transaction-level semantic normalization;
@@ -392,16 +394,22 @@ each exact completed chunk only after its range Evidence exists, resumes from th
 cursor and original upper Snapshot, records a safe failure category, and atomically stores the final
 Evidence-bearing origin result after complete coverage. A terminal replay reads that result without
 calling SQD/BSC RPC or writing Evidence again. The synchronous API remains deliberately range-capped.
-The separate `semantic-worker` CLI can execute a wider origin range as bounded chunks and resume
-the identical identity after interruption. It remains a one-shot worker. The event-history
-projection runner binds the existing bounded scanner to a generic semantic checkpoint plus immutable
-PostgreSQL segments. Each segment must be Evidence-complete before its cursor advances. If a process
-stops after the insert but before the advance, the next run may adopt only the one exact segment at
-that cursor; future, overlapping, or identity-conflicting segments fail closed. After exact requested
-coverage it writes a single terminal Evidence root and typed projection summary. Terminal replay
-uses the stored checkpoint result without provider or Evidence writes. Requested-range coverage can
-be complete while lifetime coverage remains Unknown and terminal `historyCoverage` remains zero.
-Continuous scheduling plus worker/API projection binding remain later stages.
+The separate `semantic-worker` CLIs can execute wider origin and event-history ranges as bounded
+chunks/segments and resume the identical identity after interruption. They remain one-shot workers.
+The event-history runner binds the existing bounded scanner to a generic semantic checkpoint plus
+immutable PostgreSQL segments. Each segment must be Evidence-complete before its cursor advances. If
+a process stops after the insert but before the advance, the next run may adopt only the one exact
+segment at that cursor; future, overlapping, or identity-conflicting segments fail closed. After
+exact requested coverage it writes a single terminal Evidence root and typed projection summary.
+Terminal replay uses the stored checkpoint result without provider or Evidence writes.
+
+The API exposes a token- and scan-bound paginated projection read. It revalidates checkpoint type,
+chain, source, subject, stored segment schema, hashes, Snapshot, Evidence and terminal result before
+returning a page; a corrupt or unavailable projection fails closed. The analyst UI accepts the
+credential-free scan ID emitted by the worker and renders requested-range progress separately from
+Unknown lifetime coverage. Neither surface starts a provider scan. Requested-range coverage can be
+complete while lifetime coverage remains Unknown and terminal `historyCoverage` remains zero.
+Continuous deployment-origin-to-finalized-head scheduling remains a later stage.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.

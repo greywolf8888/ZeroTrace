@@ -6,6 +6,7 @@ import {
   type EvidenceRecord,
   type FlapConfigurationField,
   type FlapEventHistoryResponse,
+  type FlapHistoryProjectionPageResponse,
   type FlapEventTransactionResponse,
   type FlapInspectionResponse,
   type FlapSellQuoteResponse,
@@ -532,8 +533,16 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
   const [historyResult, setHistoryResult] = useState<FlapEventHistoryResponse>();
   const [historyError, setHistoryError] = useState<string>();
   const [historyBusy, setHistoryBusy] = useState(false);
+  const [projectionScanId, setProjectionScanId] = useState('');
+  const [projectionResult, setProjectionResult] = useState<FlapHistoryProjectionPageResponse>();
+  const [projectionError, setProjectionError] = useState<string>();
+  const [projectionBusy, setProjectionBusy] = useState(false);
   const validTransactionHash = /^0x[0-9a-fA-F]{64}$/.test(transactionHash);
   const validHistoryRange = isValidBoundedBlockRange(historyFromBlock, historyToBlock);
+  const validProjectionScanId =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      projectionScanId,
+    );
 
   async function inspectTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -563,6 +572,27 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
     } finally {
       setHistoryBusy(false);
     }
+  }
+
+  async function loadProjection(afterBlock?: number) {
+    if (!validProjectionScanId) return;
+    setProjectionBusy(true);
+    setProjectionError(undefined);
+    if (afterBlock === undefined) setProjectionResult(undefined);
+    try {
+      setProjectionResult(await api.flapHistoryProjection(token, projectionScanId, afterBlock));
+    } catch (cause) {
+      setProjectionError(
+        cause instanceof Error ? cause.message : 'Flap history projection replay failed.',
+      );
+    } finally {
+      setProjectionBusy(false);
+    }
+  }
+
+  function replayProjection(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void loadProjection();
   }
 
   const configurationRows: Array<[string, FlapConfigurationField]> =
@@ -794,6 +824,105 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
                 ))}
               </div>
             )}
+          </>
+        )}
+      </section>
+      <section className="panel subject-panel event-history-panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Immutable segment replay</span>
+            <h3>Flap durable history projection</h3>
+          </div>
+          <span className="snapshot-badge">Read-only · 10 segments/page</span>
+        </div>
+        <form className="quote-form" onSubmit={replayProjection}>
+          <label htmlFor="flap-history-scan-id">Worker scan ID</label>
+          <input
+            id="flap-history-scan-id"
+            placeholder="00000000-0000-4000-8000-000000000000"
+            value={projectionScanId}
+            onChange={(event) => setProjectionScanId(event.target.value.trim())}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button
+            className="secondary-button"
+            type="submit"
+            disabled={projectionBusy || !validProjectionScanId}
+          >
+            {projectionBusy ? 'Loading projection…' : 'Replay projection'}
+          </button>
+        </form>
+        <p className="quote-note">
+          Paste the scan ID emitted by <code>flap:history</code>. Pages replay immutable stored
+          segments; this view does not trigger SQD/RPC scans or imply token-lifetime coverage.
+        </p>
+        {projectionError === undefined ? null : (
+          <div className="alert alert-warning">
+            <strong>Projection replay unavailable</strong>
+            {projectionError}
+          </div>
+        )}
+        {projectionResult === undefined ? null : (
+          <>
+            <div className="snapshot-strip">
+              <span>
+                <b>Status</b> {titleCase(projectionResult.scan.status)}
+              </span>
+              <span>
+                <b>Requested range</b> {projectionResult.scan.requestedRange.fromBlock}–
+                {projectionResult.scan.requestedRange.toBlock}
+              </span>
+              <span>
+                <b>Range coverage</b>{' '}
+                {Math.round(projectionResult.scan.requestedRangeCoverage * 100)}%
+              </span>
+              <span>
+                <b>Next block</b> {projectionResult.scan.nextBlock}
+              </span>
+              <span>
+                <b>Lifetime coverage</b>{' '}
+                {projectionResult.scan.terminalResult === null ? (
+                  <span className="knowledge-unknown">Not completed</span>
+                ) : (
+                  <KnowledgeDisplay data={projectionResult.scan.terminalResult.lifetimeCoverage} />
+                )}
+              </span>
+            </div>
+            {projectionResult.segments.length === 0 ? (
+              <div className="alert alert-warning">
+                <strong>No segments on this page</strong>
+                The scan may not have advanced to this cursor.
+              </div>
+            ) : (
+              <div className="fact-grid">
+                {projectionResult.segments.map((segment) => (
+                  <div className="fact-row" key={segment.id}>
+                    <span>
+                      Blocks {segment.fromBlock}–{segment.toBlock} · {segment.transactionCount}{' '}
+                      transactions
+                    </span>
+                    <code title={segment.terminalEvidenceId}>
+                      {shortId(segment.terminalEvidenceId, 10)}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            )}
+            {projectionResult.page.hasMore && projectionResult.page.nextAfterBlock !== null ? (
+              <div className="panel-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={projectionBusy}
+                  onClick={() =>
+                    void loadProjection(projectionResult.page.nextAfterBlock ?? undefined)
+                  }
+                >
+                  {projectionBusy ? 'Loading…' : 'Next stored page'}
+                </button>
+              </div>
+            ) : null}
           </>
         )}
       </section>

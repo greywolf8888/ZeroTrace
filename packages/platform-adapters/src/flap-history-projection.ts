@@ -778,9 +778,14 @@ function safeFailureCode(error: unknown): string {
   return 'FLAP_HISTORY_PROJECTION_FAILED';
 }
 
-export async function projectFlapEventHistoryRestartSafe(
+export interface FlapEventHistoryProjectionRun {
+  scanId: string;
+  result: FlapEventHistoryProjection;
+}
+
+export async function runFlapEventHistoryProjectionRestartSafe(
   options: ProjectFlapEventHistoryOptions,
-): Promise<FlapEventHistoryProjection> {
+): Promise<FlapEventHistoryProjectionRun> {
   const request = validateRequest(options);
   let run: FlapHistoryProjectionCheckpointRun | undefined;
   try {
@@ -801,7 +806,7 @@ export async function projectFlapEventHistoryRestartSafe(
       if (state.result === null) {
         throw checkpointInvalid('Completed Flap history projection result vanished.');
       }
-      return state.result;
+      return { scanId: run.id, result: state.result };
     }
     const stored = reconcileStoredSegments(
       await listAllSegments(request.projection, run.id),
@@ -855,7 +860,7 @@ export async function projectFlapEventHistoryRestartSafe(
     if (replay.result === null) {
       throw checkpointInvalid('Flap history projection terminal checkpoint result vanished.');
     }
-    return replay.result;
+    return { scanId: completed.id, result: replay.result };
   } catch (error) {
     if (run?.status === 'RUNNING') {
       try {
@@ -866,4 +871,10 @@ export async function projectFlapEventHistoryRestartSafe(
     }
     throw error;
   }
+}
+
+export async function projectFlapEventHistoryRestartSafe(
+  options: ProjectFlapEventHistoryOptions,
+): Promise<FlapEventHistoryProjection> {
+  return (await runFlapEventHistoryProjectionRestartSafe(options)).result;
 }

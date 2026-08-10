@@ -32,6 +32,8 @@ import {
 } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
+  FlapHistoryProjectionError,
+  SemanticCheckpointError,
   StorageError,
   type ObjectStoreHealth,
   type RawFactStorageHealth,
@@ -40,6 +42,7 @@ import {
 import {
   AnalysisMetadataSchema,
   DiscrepancyCheckInputSchema,
+  FlapEventHistoryProjectionSchema,
   knownValue,
   unavailableValue,
   unknownValue,
@@ -144,6 +147,15 @@ const FlapEventHistoryQuerySchema = FlapEventTransactionQuerySchema.extend({
       });
     }
   }
+});
+
+const FlapHistoryProjectionParamsSchema = LaunchInspectionParamsSchema.extend({
+  scanId: z.string().uuid(),
+});
+
+const FlapHistoryProjectionPageQuerySchema = FlapEventTransactionQuerySchema.extend({
+  afterBlock: z.coerce.number().int().nonnegative().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
 const FlapTokenOriginQuerySchema = FlapEventTransactionQuerySchema.extend({
@@ -546,6 +558,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   type RuntimeStorageHealth =
     | StorageHealth
     | Awaited<ReturnType<NonNullable<AppRuntime['semanticCheckpoints']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['flapHistoryProjection']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -566,16 +579,19 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         checkedAt: new Date().toISOString(),
       };
     } else {
-      const [evidence, semanticCheckpoints] = await Promise.all([
+      const [evidence, semanticCheckpoints, flapHistoryProjection] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
+        runtime.flapHistoryProjection?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
           ? evidence
           : semanticCheckpoints?.status === 'DOWN'
             ? semanticCheckpoints
-            : evidence;
+            : flapHistoryProjection?.status === 'DOWN'
+              ? flapHistoryProjection
+              : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -761,6 +777,23 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(503)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof FlapHistoryProjectionError) {
+      const status = error.code === 'FLAP_HISTORY_PROJECTION_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof SemanticCheckpointError) {
+      const status =
+        error.code === 'SEMANTIC_CHECKPOINT_INVALID'
+          ? 400
+          : error.code === 'SEMANTIC_CHECKPOINT_NOT_FOUND'
+            ? 404
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     const internalError = error instanceof Error ? error : new Error('Unknown thrown value');
     request.log.error(
       { message: internalError.message, name: internalError.name },
@@ -895,6 +928,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           : 'BSC_PROVIDER_REQUIRED',
         detail:
           'Bounded Portal log ranges use the finalized SQD BSC stream when configured, with strict RPC-log fallback, then decode by token and replay exact RPC receipts/block hashes. Requested-range coverage is distinct from token-lifetime coverage, which remains Unknown until deployment-origin indexing is continuous.',
+      },
+      {
+        id: 'flap-event-history-projection',
+        status:
+          runtime.semanticCheckpoints === undefined || runtime.flapHistoryProjection === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A one-shot worker with separately configured SQD/BSC read providers projects wider finalized ranges as immutable bounded segments, persists each segment before cursor advancement, and resumes one exact pending segment after interruption. This API replays stored scan-ID pages without providers. Requested-range completion does not imply continuous token-lifetime coverage.',
       },
       {
         id: 'flap-token-origin',
@@ -1514,6 +1556,123 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
         ...(query.chunkSize === undefined ? {} : { chunkSize: query.chunkSize }),
       });
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/history/projections/:scanId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = FlapHistoryProjectionParamsSchema.parse(request.params);
+      const query = FlapHistoryProjectionPageQuerySchema.parse(request.query);
+      const classification = classifyIdentifier(params.token, {
+        ledger: 'EVM',
+        type: 'ADDRESS',
+        chainId: 'eip155:56',
+      });
+      const subject = classification.candidates.find(
+        (candidate) => candidate.ledger === 'EVM' && candidate.type === 'ADDRESS',
+      );
+      if (subject === undefined) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_IDENTIFIER',
+              'A structurally valid EVM token address is required.',
+              false,
+            ),
+          );
+      }
+      const checkpoints = runtime.semanticCheckpoints;
+      const projection = runtime.flapHistoryProjection;
+      if (checkpoints === undefined || projection === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_HISTORY_PROJECTION_UNAVAILABLE',
+              'Durable Flap history projection storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const run = await checkpoints.get(params.scanId);
+      if (
+        run === undefined ||
+        run.scanType !== 'FLAP_EVENT_HISTORY' ||
+        run.source !== 'sqd:binance-mainnet' ||
+        run.ledger !== 'EVM' ||
+        run.chainId !== 'eip155:56' ||
+        run.subject !== subject.normalizedId.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_HISTORY_PROJECTION_NOT_FOUND',
+              'The requested Flap history projection was not found.',
+              false,
+            ),
+          );
+      }
+      let terminalResult = null;
+      if (run.status === 'REQUESTED_RANGE_COMPLETE') {
+        const state =
+          typeof run.state === 'object' && run.state !== null && !Array.isArray(run.state)
+            ? run.state
+            : undefined;
+        const parsed = FlapEventHistoryProjectionSchema.safeParse(state?.result);
+        if (!parsed.success) {
+          throw new FlapHistoryProjectionError(
+            'FLAP_HISTORY_PROJECTION_CONFLICT',
+            'Completed Flap history projection terminal state is invalid.',
+            { cause: parsed.error },
+          );
+        }
+        terminalResult = parsed.data;
+      }
+      const stored = await projection.listSegments(run.id, {
+        ...(query.afterBlock === undefined ? {} : { afterBlock: query.afterBlock }),
+        limit: query.limit + 1,
+      });
+      const hasMore = stored.length > query.limit;
+      const segments = stored.slice(0, query.limit);
+      const last = segments.at(-1);
+      const requestedBlocks = run.toBlock - run.fromBlock + 1;
+      const completedBlocks = Math.max(0, Math.min(requestedBlocks, run.nextBlock - run.fromBlock));
+      return {
+        scan: {
+          id: run.id,
+          status: run.status,
+          source: run.source,
+          chainId: run.chainId,
+          token: run.subject,
+          requestedRange: {
+            fromBlock: String(run.fromBlock),
+            toBlock: String(run.toBlock),
+            segmentSize: run.chunkSize,
+          },
+          nextBlock: String(run.nextBlock),
+          requestedRangeCoverage: completedBlocks / requestedBlocks,
+          evidenceIds: [...run.evidenceIds],
+          lastErrorCode: run.lastErrorCode,
+          startedAt: run.startedAt,
+          updatedAt: run.updatedAt,
+          completedAt: run.completedAt,
+          terminalResult,
+        },
+        page: {
+          afterBlock: query.afterBlock ?? null,
+          limit: query.limit,
+          hasMore,
+          nextAfterBlock: hasMore && last !== undefined ? last.fromBlock : null,
+        },
+        segments,
+      };
     },
   );
 

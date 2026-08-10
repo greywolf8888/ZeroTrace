@@ -133,6 +133,7 @@ describe('application runtime wiring', () => {
     );
     expect(runtime.evidenceRepository).toBeDefined();
     expect(runtime.semanticCheckpoints).toBeDefined();
+    expect(runtime.flapHistoryProjection).toBeDefined();
     expect(runtime.dataQualityStorage).toBeDefined();
     expect(runtime.dataQuality.durable).toBe(true);
     await runtime.close?.();

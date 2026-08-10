@@ -36,7 +36,7 @@ export const PLATFORM_REGISTRY: readonly PlatformDescriptor[] = Object.freeze([
       'https://docs.flap.sh/flap/developers/basic-and-mechanism/bonding-curve',
     ],
     integrationBoundary:
-      'Versioned Portal V8Safe/V6/V5 inspection, fixed-block previewSell, exact receipt events, bounded history, and bounded SQD contract-origin proof are wired; continuous lifetime history, tax/vault, migration control, LP ownership, DEX routes, and complete RV remain pending.',
+      'Versioned Portal V8Safe/V6/V5 inspection, fixed-block previewSell, exact receipt events, restart-safe bounded history projection with worker/API/UI replay, and bounded SQD contract-origin proof are wired; continuous lifetime history, tax/vault, migration control, LP ownership, DEX routes, and complete RV remain pending.',
   },
   {
     id: 'pump',

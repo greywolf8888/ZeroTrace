@@ -42,15 +42,16 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       typed-ledger-query development commit `5b77783`
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339918653) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31339918663) pass on immutable
-      Flap v5.14.16/V8Safe interface-alignment commit `fd1327a`; the newer event batch remains
-      pending remote validation
+      Flap v5.14.16/V8Safe interface-alignment commit `fd1327a`
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31341351857) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31341351830) pass on immutable
-      exact-receipt Flap event commit `1b6a40e`; the newer bounded-history batch remains pending
-      remote validation
+      exact-receipt Flap event commit `1b6a40e`
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31342767551) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31342767550) pass on immutable
       bounded Flap history commit `a52a78e`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31354381537) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31354381536) pass on immutable
+      restart-safe cross-range Flap projection commit `8827be4`
 
 ## Evidence and data
 
@@ -93,7 +94,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
         pending-segment adoption, terminal Evidence and provider-free terminal replay
   - [x] Restart-safe Flap origin API binding with chunk resume, atomic terminal result and provider-free terminal replay
   - [x] One-shot deployment-origin worker with storage preflight, bounded chunk resume and safe output
-  - [ ] Continuous deployment-origin scheduler and event-history projection worker/API binding
+  - [x] One-shot event-history projection worker with storage preflight, immutable segment resume,
+        provider-free paginated API replay, health gating, Compose and desktop/mobile UI boundary
+  - [ ] Continuous deployment-origin-to-finalized-head scheduler
   - [ ] Deployment-origin continuous Flap history, named migration/FFT fixtures, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
@@ -109,6 +112,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 
 - [x] Responsive no-fake-data analyst shell
 - [x] Provider health, read-only state, Unknown state, and evidence surface
+- [x] Flap scan-ID replay surface for immutable paginated history segments, with unavailable storage
+      rendered explicitly and no provider-triggering path
 - [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance

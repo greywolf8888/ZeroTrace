@@ -1060,6 +1060,13 @@ tbody tr:hover {
   color: var(--text-secondary);
 }
 
+.panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+}
+
 .quote-form {
   display: grid;
   grid-template-columns: minmax(210px, 1fr) auto;

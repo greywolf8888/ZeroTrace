@@ -5,6 +5,8 @@ const solanaSignature =
   '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
 const bscTokenAddress = `0x${'a'.repeat(40)}`;
 const bscFlapCreationTransaction = `0x${'7'.repeat(64)}`;
+const bscFlapHistoryScan = '00000000-0000-4000-8000-000000000001';
+const unavailableFlapHistoryScan = '00000000-0000-4000-8000-000000000002';
 
 test('renders capability truth and unknown values without fake market data', async ({ page }) => {
   const browserErrors: string[] = [];
@@ -412,6 +414,93 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
       }),
     });
   });
+  await page.route('**/api/v1/launches/EVM/**/history/projections/**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith(`/${unavailableFlapHistoryScan}`)) {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: {
+            code: 'DURABLE_STORAGE_UNAVAILABLE',
+            message: 'Durable history projection storage is unavailable.',
+          },
+        }),
+      });
+      return;
+    }
+    const afterBlock = url.searchParams.get('afterBlock');
+    const secondPage = afterBlock === '100000';
+    const snapshot = {
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      blockNumber: secondPage ? '199999' : '149999',
+      blockHash: `0x${secondPage ? '9'.repeat(64) : '8'.repeat(64)}`,
+      finality: 'finalized',
+    };
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        scan: {
+          id: bscFlapHistoryScan,
+          status: secondPage ? 'REQUESTED_RANGE_COMPLETE' : 'RUNNING',
+          source: 'sqd:binance-mainnet',
+          chainId: 'eip155:56',
+          token: bscTokenAddress,
+          requestedRange: {
+            fromBlock: '100000',
+            toBlock: '199999',
+            segmentSize: 50000,
+          },
+          nextBlock: secondPage ? '200000' : '150000',
+          requestedRangeCoverage: secondPage ? 1 : 0.5,
+          evidenceIds: ['ev_projection_terminal'],
+          lastErrorCode: null,
+          startedAt: '2026-08-10T00:00:00.000Z',
+          updatedAt: '2026-08-10T00:01:00.000Z',
+          completedAt: secondPage ? '2026-08-10T00:01:00.000Z' : null,
+          terminalResult: secondPage
+            ? {
+                requestedRangeCoverage: 1,
+                lifetimeCoverage: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+                terminalEvidenceId: 'ev_projection_terminal',
+                metadata: {
+                  snapshot,
+                  dataCoverage: 1,
+                  sourceCoverage: 1,
+                  historyCoverage: 0,
+                  simulationCoverage: 0,
+                  freshness: '2026-08-10T00:01:00.000Z',
+                  sourceSet: ['sqd:binance-mainnet', 'bsc-rpc-fixture'],
+                  modelVersion: 'flap-event-history-projection-v1',
+                  confidence: 0.95,
+                  evidenceIds: ['ev_projection_terminal'],
+                },
+              }
+            : null,
+        },
+        page: {
+          afterBlock: afterBlock === null ? null : Number(afterBlock),
+          limit: 10,
+          hasMore: !secondPage,
+          nextAfterBlock: secondPage ? null : 100000,
+        },
+        segments: [
+          {
+            id: secondPage ? 'fhs_second_segment' : 'fhs_first_segment',
+            scanId: bscFlapHistoryScan,
+            fromBlock: secondPage ? '150000' : '100000',
+            toBlock: secondPage ? '199999' : '149999',
+            transactionCount: secondPage ? 1 : 0,
+            unrecognizedPortalLogCount: 0,
+            terminalEvidenceId: secondPage ? 'ev_segment_second' : 'ev_segment_first',
+            createdAt: '2026-08-10T00:00:00.000Z',
+            result: {},
+          },
+        ],
+      }),
+    });
+  });
   await page.route('**/api/v1/rv/flap-sell', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -503,7 +592,9 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await page.getByLabel('From block').fill('49900000');
   await page.getByLabel('To block').fill('49900000');
   await page.getByRole('button', { name: 'Scan range' }).click();
-  const historyPanel = page.locator('.event-history-panel');
+  const historyPanel = page.locator('.event-history-panel').filter({
+    has: page.getByRole('heading', { name: 'Flap bounded event history' }),
+  });
   await expect(historyPanel).toContainText('Range coverage 100%');
   await expect(historyPanel).toContainText('Lifetime coverage Insufficient Data');
   await expect(historyPanel).toContainText('Block 49900000 · Creation Configuration');
@@ -511,6 +602,26 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(
     page.getByText('Flap event transactions discovered in the requested bounded range.'),
   ).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Flap durable history projection' }),
+  ).toBeVisible();
+  await page.getByLabel('Worker scan ID').fill(bscFlapHistoryScan);
+  await page.getByRole('button', { name: 'Replay projection' }).click();
+  const projectionPanel = page.locator('.event-history-panel').filter({
+    has: page.getByRole('heading', { name: 'Flap durable history projection' }),
+  });
+  await expect(projectionPanel).toContainText('Range coverage 50%');
+  await expect(projectionPanel).toContainText('Blocks 100000–149999 · 0 transactions');
+  await page.getByRole('button', { name: 'Next stored page' }).click();
+  await expect(projectionPanel).toContainText('Range coverage 100%');
+  await expect(projectionPanel).toContainText('Lifetime coverage Insufficient Data');
+  await expect(projectionPanel).toContainText('Blocks 150000–199999 · 1 transactions');
+
+  await page.getByLabel('Worker scan ID').fill(unavailableFlapHistoryScan);
+  await page.getByRole('button', { name: 'Replay projection' }).click();
+  await expect(page.getByText('Projection replay unavailable')).toBeVisible();
+  await expect(page.getByText('Durable history projection storage is unavailable.')).toBeVisible();
 
   await page.getByLabel('Sell amount (atomic units)').fill('1000000000000000000');
   await page.getByRole('button', { name: 'Preview sell' }).click();

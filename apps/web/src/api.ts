@@ -334,6 +334,52 @@ export interface FlapEventHistoryResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface FlapHistoryProjectionPageResponse {
+  scan: {
+    id: string;
+    status: 'RUNNING' | 'REQUESTED_RANGE_COMPLETE';
+    source: string;
+    chainId: 'eip155:56';
+    token: string;
+    requestedRange: {
+      fromBlock: string;
+      toBlock: string;
+      segmentSize: number;
+    };
+    nextBlock: string;
+    requestedRangeCoverage: number;
+    evidenceIds: string[];
+    lastErrorCode: string | null;
+    startedAt: string;
+    updatedAt: string;
+    completedAt: string | null;
+    terminalResult: {
+      requestedRangeCoverage: number;
+      lifetimeCoverage: KnowledgeValue<boolean>;
+      transactionCount: number;
+      unrecognizedPortalLogCount: number;
+      terminalEvidenceId: string;
+      metadata: AnalysisMetadata;
+    } | null;
+  };
+  page: {
+    afterBlock: number | null;
+    limit: number;
+    hasMore: boolean;
+    nextAfterBlock: number | null;
+  };
+  segments: Array<{
+    id: string;
+    fromBlock: number;
+    toBlock: number;
+    terminalEvidenceId: string;
+    transactionCount: number;
+    unrecognizedPortalLogCount: number;
+    createdAt: string;
+    result: FlapEventHistoryResponse;
+  }>;
+}
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -459,6 +505,22 @@ export const api = {
     });
     return requestJson<FlapEventHistoryResponse>(
       '/api/v1/launches/EVM/' + encodeURIComponent(token) + '/history?' + parameters.toString(),
+    );
+  },
+  flapHistoryProjection: (token: string, scanId: string, afterBlock?: number) => {
+    const parameters = new URLSearchParams({
+      chainId: 'eip155:56',
+      platform: 'flap',
+      limit: '10',
+    });
+    if (afterBlock !== undefined) parameters.set('afterBlock', String(afterBlock));
+    return requestJson<FlapHistoryProjectionPageResponse>(
+      '/api/v1/launches/EVM/' +
+        encodeURIComponent(token) +
+        '/history/projections/' +
+        encodeURIComponent(scanId) +
+        '?' +
+        parameters.toString(),
     );
   },
   exitRace: (payload: unknown) =>

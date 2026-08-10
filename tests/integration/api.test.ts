@@ -1085,6 +1085,48 @@ describe('ZeroTrace API contract', () => {
     });
   });
 
+  it('fails readiness when immutable Flap history projection storage is not initialized', async () => {
+    const runtime = runtimeWithEvm();
+    runtime.evidenceRepository = repository({
+      health: vi.fn(async () => ({
+        status: 'UP',
+        backend: 'POSTGRES',
+        durable: true,
+        checkedAt: new Date().toISOString(),
+      })),
+    });
+    runtime.semanticCheckpoints = {
+      health: vi.fn(async () => ({
+        status: 'UP',
+        backend: 'POSTGRES',
+        durable: true,
+        checkedAt: new Date().toISOString(),
+      })),
+    } as unknown as NonNullable<AppRuntime['semanticCheckpoints']>;
+    runtime.flapHistoryProjection = {
+      health: vi.fn(async () => ({
+        status: 'DOWN',
+        backend: 'POSTGRES',
+        durable: true,
+        checkedAt: new Date().toISOString(),
+        errorCode: 'FLAP_HISTORY_PROJECTION_NOT_INITIALIZED',
+      })),
+    } as unknown as NonNullable<AppRuntime['flapHistoryProjection']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const ready = await app.inject({ method: 'GET', url: '/health/ready' });
+    expect(ready.statusCode).toBe(503);
+    expect(ready.json()).toMatchObject({
+      status: 'DEGRADED',
+      storage: {
+        status: 'DOWN',
+        durable: true,
+        errorCode: 'FLAP_HISTORY_PROJECTION_NOT_INITIALIZED',
+      },
+    });
+  });
+
   it('normalizes Bitcoin and Solana subject state with evidence', async () => {
     const runtime = runtimeWithAllLedgers();
     const app = await createApp({ config, runtime, logger: false });
@@ -1666,6 +1708,161 @@ describe('ZeroTrace API contract', () => {
     });
     expect(drilldown.statusCode, drilldown.body).toBe(200);
     expect(drilldown.json().nodes).toHaveLength(6);
+  });
+
+  it('paginates a durable Flap history projection by scan ID without provider access', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const scanId = '44444444-4444-4444-8444-444444444444';
+    const now = '2026-08-10T03:00:00.000Z';
+    const get = vi.fn(async () => ({
+      id: scanId,
+      scanType: 'FLAP_EVENT_HISTORY',
+      source: 'sqd:binance-mainnet',
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      subject: fixtureFlapToken,
+      fromBlock: 100,
+      toBlock: 103,
+      chunkSize: 2,
+      identityHash: '1'.repeat(64),
+      identity: {},
+      status: 'RUNNING' as const,
+      nextBlock: 102,
+      stateHash: '2'.repeat(64),
+      state: {},
+      evidenceIds: ['ev_000000000000000000000001'],
+      lastErrorCode: null,
+      startedAt: now,
+      updatedAt: now,
+      completedAt: null,
+    }));
+    const storedSegments = [
+      {
+        id: 'fhs_000000000000000000000001',
+        scanId,
+        chainId: 'eip155:56',
+        token: fixtureFlapToken,
+        fromBlock: 100,
+        toBlock: 101,
+        resultHash: '3'.repeat(64),
+        result: { platform: 'flap', requestedRangeCoverage: 1 },
+        snapshotHash: '4'.repeat(64),
+        terminalEvidenceId: 'ev_000000000000000000000001',
+        evidenceIds: ['ev_000000000000000000000001'],
+        sourceSet: ['sqd:binance-mainnet'],
+        modelVersion: 'flap-bounded-event-history-v1',
+        transactionCount: 0,
+        unrecognizedPortalLogCount: 0,
+        createdAt: now,
+      },
+      {
+        id: 'fhs_000000000000000000000002',
+        scanId,
+        chainId: 'eip155:56',
+        token: fixtureFlapToken,
+        fromBlock: 102,
+        toBlock: 103,
+        resultHash: '5'.repeat(64),
+        result: { platform: 'flap', requestedRangeCoverage: 1 },
+        snapshotHash: '6'.repeat(64),
+        terminalEvidenceId: 'ev_000000000000000000000002',
+        evidenceIds: ['ev_000000000000000000000002'],
+        sourceSet: ['sqd:binance-mainnet'],
+        modelVersion: 'flap-bounded-event-history-v1',
+        transactionCount: 1,
+        unrecognizedPortalLogCount: 0,
+        createdAt: now,
+      },
+    ];
+    const listSegments = vi.fn(async () => storedSegments);
+    runtime.semanticCheckpoints = { get } as unknown as NonNullable<
+      AppRuntime['semanticCheckpoints']
+    >;
+    runtime.flapHistoryProjection = { listSegments } as unknown as NonNullable<
+      AppRuntime['flapHistoryProjection']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/launches/EVM/${fixtureFlapToken}/history/projections/${scanId}` +
+        '?chainId=eip155:56&platform=flap&limit=1',
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      scan: {
+        id: scanId,
+        status: 'RUNNING',
+        token: fixtureFlapToken,
+        requestedRange: { fromBlock: '100', toBlock: '103', segmentSize: 2 },
+        nextBlock: '102',
+        requestedRangeCoverage: 0.5,
+        terminalResult: null,
+      },
+      page: { afterBlock: null, limit: 1, hasMore: true, nextAfterBlock: 100 },
+      segments: [expect.objectContaining({ id: 'fhs_000000000000000000000001' })],
+    });
+    expect(get).toHaveBeenCalledWith(scanId);
+    expect(listSegments).toHaveBeenCalledWith(scanId, { limit: 2 });
+
+    const wrongToken = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/launches/EVM/0x${'b'.repeat(40)}/history/projections/${scanId}` +
+        '?chainId=eip155:56',
+    });
+    expect(wrongToken.statusCode).toBe(404);
+    expect(wrongToken.json().error.code).toBe('FLAP_HISTORY_PROJECTION_NOT_FOUND');
+  });
+
+  it('reports durable Flap history replay as unavailable without PostgreSQL', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/launches/EVM/${fixtureFlapToken}/history/projections/` +
+        '44444444-4444-4444-8444-444444444444?chainId=eip155:56',
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe('FLAP_HISTORY_PROJECTION_UNAVAILABLE');
+  });
+
+  it('fails closed before segment reads when a completed Flap projection is corrupt', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const scanId = '55555555-5555-4555-8555-555555555555';
+    const listSegments = vi.fn();
+    runtime.semanticCheckpoints = {
+      get: vi.fn(async () => ({
+        id: scanId,
+        scanType: 'FLAP_EVENT_HISTORY',
+        source: 'sqd:binance-mainnet',
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        subject: fixtureFlapToken,
+        status: 'REQUESTED_RANGE_COMPLETE',
+        state: { result: { requestedRangeCoverage: 1 } },
+      })),
+    } as unknown as NonNullable<AppRuntime['semanticCheckpoints']>;
+    runtime.flapHistoryProjection = { listSegments } as unknown as NonNullable<
+      AppRuntime['flapHistoryProjection']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/launches/EVM/${fixtureFlapToken}/history/projections/${scanId}` +
+        '?chainId=eip155:56&platform=flap',
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe('FLAP_HISTORY_PROJECTION_CONFLICT');
+    expect(listSegments).not.toHaveBeenCalled();
   });
 
   it('resolves a bounded Flap contract origin from SQD and exact BSC receipt Evidence', async () => {

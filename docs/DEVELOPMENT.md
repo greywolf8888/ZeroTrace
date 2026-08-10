@@ -67,9 +67,10 @@ Database initialization is automatic on a new Compose volume:
 The SQL is copied into small project image stages instead of bind-mounted. This keeps initialization
 reliable from Windows workspaces whose paths contain Unicode characters.
 
-The default full Compose path configures durable PostgreSQL Evidence/Snapshot persistence and
-semantic checkpoints. The Flap origin API uses those checkpoints for chunk resume and terminal
-result replay; without PostgreSQL it remains a bounded, process-local request. For
+The default full Compose path configures durable PostgreSQL Evidence/Snapshot persistence, semantic
+checkpoints, and immutable Flap history projections. The Flap origin API uses those checkpoints for
+chunk resume and terminal result replay; without PostgreSQL it remains a bounded, process-local
+request. Durable history projection replay is unavailable without PostgreSQL. For
 host-side watch mode, either leave `POSTGRES_URL` blank for an explicitly ephemeral development
 ledger, or start PostgreSQL and set:
 
@@ -141,6 +142,41 @@ failed chunk records only a safe error category. Re-run the exact identity to re
 identity field starts a separate immutable scan. A complete bounded origin is not continuous token
 history and does not turn lifetime coverage into Known.
 
+## Durable Flap event-history projections
+
+The second semantic-worker entrypoint scans a wider inclusive range as independently bounded
+segments. Each accepted segment is written immutably before the semantic cursor advances; an
+interruption at that boundary is adopted exactly once on restart without re-reading the provider.
+Start PostgreSQL, configure read-only SQD and BSC RPC endpoints, then run:
+
+```bash
+npm run flap:history -- \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 99999 --segment-size 50000 --chunk-size 10000
+```
+
+The Compose equivalent is:
+
+```bash
+docker compose --profile semantic run --rm flap-history-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 99999 --segment-size 50000 --chunk-size 10000
+```
+
+The CLI also accepts bounded `--max-transactions` and `--max-logs` values, preflights Evidence,
+semantic checkpoint migration `007`, and projection migration `008`, and emits a credential-free
+summary containing the stable scan ID. Re-run the exact identity to resume or replay a completed
+result. While the API is connected to the same PostgreSQL database, inspect immutable pages in the
+UI or call:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/projections/<scan-id>?chainId=eip155:56&platform=flap&limit=20
+```
+
+Pagination reads only stored segments. It performs no SQD/RPC request, and complete requested-range
+coverage still leaves token-lifetime coverage Unknown until continuous deployment-origin-to-head
+orchestration is proven.
+
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
@@ -180,6 +216,7 @@ Important values:
 | `SQD_PROVIDER_ALLOW_HOSTS`            | worker-only exact hostname allowlist; defaults to `portal.sqd.dev`               |
 | `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                        |
 | `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                        |
+| `FLAP_HISTORY_*`                      | Compose defaults for the bounded event-history projection worker                 |
 | `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present   |
 | `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests  |
 | `CLICKHOUSE_URL` / credentials        | Raw Fact HTTP origin and optional separately supplied credentials                |

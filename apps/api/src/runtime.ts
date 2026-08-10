@@ -28,6 +28,7 @@ import {
   DataQualityStorageError,
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
+  PostgresFlapHistoryProjectionRepository,
   PostgresIngestionCheckpointRepository,
   PostgresSemanticScanCheckpointRepository,
   RawArtifactStore,
@@ -49,6 +50,7 @@ export interface AppRuntime {
   evidenceLedger: EvidenceLedger;
   evidenceRepository?: EvidenceRepository;
   semanticCheckpoints?: PostgresSemanticScanCheckpointRepository;
+  flapHistoryProjection?: PostgresFlapHistoryProjectionRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -419,6 +421,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const flapHistoryProjection =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresFlapHistoryProjectionRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -439,6 +450,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
         : undefined,
       checkpoints?.close(),
       semanticCheckpoints?.close(),
+      flapHistoryProjection?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -461,6 +473,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     close,
     ...(evidenceRepository === undefined ? {} : { evidenceRepository }),
     ...(semanticCheckpoints === undefined ? {} : { semanticCheckpoints }),
+    ...(flapHistoryProjection === undefined ? {} : { flapHistoryProjection }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

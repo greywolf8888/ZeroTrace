@@ -1,15 +1,31 @@
 import {
-  FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
-  FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
-  FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS,
+  FLAP_HISTORY_DEFAULT_CHUNK_SIZE,
+  FLAP_HISTORY_MAX_LOGS,
+  FLAP_HISTORY_MAX_TRANSACTIONS,
+  FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+  FLAP_HISTORY_PROJECTION_MAX_RANGE_BLOCKS,
+  FLAP_HISTORY_PROJECTION_MAX_SEGMENTS,
 } from '@zerotrace/platform-adapters';
 import { getAddress } from 'viem';
 
-export interface FlapOriginWorkerConfig {
+import {
+  booleanValue,
+  configuredUrls,
+  hosts,
+  integer,
+  numberValue,
+  providerUrl,
+  required,
+} from './config.js';
+
+export interface FlapHistoryWorkerConfig {
   token: string;
   fromBlock: number;
   toBlock: number;
+  segmentSize: number;
   chunkSize: number;
+  maxTransactions: number;
+  maxLogs: number;
   bscRpcUrls: string[];
   sqdPortalUrl: string;
   providerAllowedHosts: string[];
@@ -28,15 +44,27 @@ interface Arguments {
   token?: string;
   fromBlock?: string;
   toBlock?: string;
+  segmentSize?: string;
   chunkSize?: string;
+  maxTransactions?: string;
+  maxLogs?: string;
 }
 
 function parseArguments(args: readonly string[]): Arguments {
   const result: Arguments = {};
+  const supported = new Set([
+    '--token',
+    '--from',
+    '--to',
+    '--segment-size',
+    '--chunk-size',
+    '--max-transactions',
+    '--max-logs',
+  ]);
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
-    if (!['--token', '--from', '--to', '--chunk-size'].includes(argument ?? '')) {
-      throw new Error(`Unknown Flap origin argument: ${argument ?? ''}`);
+    if (!supported.has(argument ?? '')) {
+      throw new Error(`Unknown Flap history argument: ${argument ?? ''}`);
     }
     const value = args[index + 1];
     if (value === undefined || value.startsWith('--')) {
@@ -46,97 +74,18 @@ function parseArguments(args: readonly string[]): Arguments {
     if (argument === '--token') result.token = value;
     if (argument === '--from') result.fromBlock = value;
     if (argument === '--to') result.toBlock = value;
+    if (argument === '--segment-size') result.segmentSize = value;
     if (argument === '--chunk-size') result.chunkSize = value;
+    if (argument === '--max-transactions') result.maxTransactions = value;
+    if (argument === '--max-logs') result.maxLogs = value;
   }
   return result;
 }
 
-export function integer(
-  value: string | undefined,
-  field: string,
-  fallback: number | undefined,
-  minimum: number,
-  maximum: number,
-): number {
-  const selected = value ?? (fallback === undefined ? undefined : String(fallback));
-  if (selected === undefined || !/^(?:0|[1-9][0-9]*)$/.test(selected)) {
-    throw new Error(`${field} must be an unsigned integer.`);
-  }
-  const parsed = Number(selected);
-  if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
-    throw new Error(`${field} must be between ${minimum} and ${maximum}.`);
-  }
-  return parsed;
-}
-
-export function numberValue(
-  value: string | undefined,
-  field: string,
-  fallback: number,
-  minimum: number,
-  maximum: number,
-): number {
-  const parsed = Number(value ?? fallback);
-  if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum) {
-    throw new Error(`${field} must be between ${minimum} and ${maximum}.`);
-  }
-  return parsed;
-}
-
-export function booleanValue(value: string | undefined, field: string): boolean {
-  if (value === undefined || value.trim() === '') return false;
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  throw new Error(`${field} must be true or false.`);
-}
-
-export function required(env: NodeJS.ProcessEnv, field: string): string {
-  const value = env[field]?.trim();
-  if (value === undefined || value === '') throw new Error(`${field} is required.`);
-  return value;
-}
-
-export function configuredUrls(env: NodeJS.ProcessEnv): string[] {
-  const configured =
-    env.EVM_BSC_RPC_URLS?.trim() || env.EVM_BSC_RPC_URL?.trim() || env.BSC_RPC_URL?.trim() || '';
-  const urls = configured
-    .split(',')
-    .map((value) => value.trim())
-    .filter((value) => value !== '');
-  if (urls.length === 0) {
-    throw new Error('EVM_BSC_RPC_URLS, EVM_BSC_RPC_URL, or BSC_RPC_URL is required.');
-  }
-  return [...new Set(urls)];
-}
-
-export function providerUrl(value: string, field: string, allowPrivate: boolean): URL {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error(`${field} must be a valid URL.`);
-  }
-  if (url.username !== '' || url.password !== '' || url.search !== '' || url.hash !== '') {
-    throw new Error(`${field} must not contain credentials, query parameters, or fragments.`);
-  }
-  if (url.protocol !== 'https:' && !(allowPrivate && url.protocol === 'http:')) {
-    throw new Error(`${field} must use HTTPS unless private-network development is explicit.`);
-  }
-  return url;
-}
-
-export function hosts(value: string | undefined, fallback: readonly string[]): string[] {
-  const selected = (value ?? '')
-    .split(',')
-    .map((host) => host.trim().toLowerCase())
-    .filter((host) => host !== '');
-  return selected.length === 0 ? [...new Set(fallback)].sort() : [...new Set(selected)].sort();
-}
-
-export function loadFlapOriginWorkerConfig(
+export function loadFlapHistoryWorkerConfig(
   env: NodeJS.ProcessEnv,
   args: readonly string[],
-): FlapOriginWorkerConfig {
+): FlapHistoryWorkerConfig {
   const parsed = parseArguments(args);
   const allowPrivateProviderUrls = booleanValue(
     env.ALLOW_PRIVATE_PROVIDER_URLS,
@@ -153,15 +102,42 @@ export function loadFlapOriginWorkerConfig(
   const fromBlock = integer(parsed.fromBlock, '--from', undefined, 0, Number.MAX_SAFE_INTEGER);
   const toBlock = integer(parsed.toBlock, '--to', undefined, 0, Number.MAX_SAFE_INTEGER);
   if (toBlock < fromBlock) throw new Error('--to must be greater than or equal to --from.');
-  if (toBlock - fromBlock + 1 > FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS) {
-    throw new Error(`Requested range exceeds ${FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS} blocks.`);
+  if (toBlock - fromBlock + 1 > FLAP_HISTORY_PROJECTION_MAX_RANGE_BLOCKS) {
+    throw new Error(`Requested range exceeds ${FLAP_HISTORY_PROJECTION_MAX_RANGE_BLOCKS} blocks.`);
+  }
+  const segmentSize = integer(
+    parsed.segmentSize,
+    '--segment-size',
+    FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+    1,
+    FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+  );
+  const segmentCount = Math.ceil((toBlock - fromBlock + 1) / segmentSize);
+  if (segmentCount > FLAP_HISTORY_PROJECTION_MAX_SEGMENTS) {
+    throw new Error(
+      `Requested range exceeds ${FLAP_HISTORY_PROJECTION_MAX_SEGMENTS} history segments.`,
+    );
   }
   const chunkSize = integer(
     parsed.chunkSize,
     '--chunk-size',
-    FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
+    FLAP_HISTORY_DEFAULT_CHUNK_SIZE,
     1,
-    FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
+    10_000,
+  );
+  const maxTransactions = integer(
+    parsed.maxTransactions,
+    '--max-transactions',
+    FLAP_HISTORY_MAX_TRANSACTIONS,
+    1,
+    FLAP_HISTORY_MAX_TRANSACTIONS,
+  );
+  const maxLogs = integer(
+    parsed.maxLogs,
+    '--max-logs',
+    FLAP_HISTORY_MAX_LOGS,
+    1,
+    FLAP_HISTORY_MAX_LOGS,
   );
   const bscRpcUrls = configuredUrls(env);
   const bscUrlObjects = bscRpcUrls.map((url, index) =>
@@ -173,7 +149,10 @@ export function loadFlapOriginWorkerConfig(
     token,
     fromBlock,
     toBlock,
+    segmentSize,
     chunkSize,
+    maxTransactions,
+    maxLogs,
     bscRpcUrls,
     sqdPortalUrl,
     providerAllowedHosts: hosts(

@@ -9,19 +9,19 @@ completed feature.
 
 ## Executive status
 
-| Measure                          | Current state                                                                                                                   |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal architecture completion | **16% estimated**                                                                                                               |
-| Runnable foundation              | **Yes; clean Docker build/start verified**                                                                                      |
-| Production acceptance            | **No**                                                                                                                          |
-| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                  |
-| Unit tests                       | **270 passing across 30 files**                                                                                                 |
-| Integration tests                | **30 environment-free plus 17 real PostgreSQL passing; latest completed remote baseline has 49 passing**                        |
-| Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                                                                    |
-| Remote CI                        | **Pass on immutable development commit `213805e`; protected main `3372a5a`**                                                    |
-| Coverage                         | **Current local: 83.06% statements / 75.76% branches / 91.79% functions / 83.96% lines**                                        |
-| Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed                                              |
-| Durable evidence/history         | Raw execution/state, provenance, semantic checkpoints and restart-safe Flap history segments wired; broader projections pending |
+| Measure                          | Current state                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Terminal architecture completion | **16% estimated**                                                                                                   |
+| Runnable foundation              | **Yes; clean Docker build/start verified**                                                                          |
+| Production acceptance            | **No**                                                                                                              |
+| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                      |
+| Unit tests                       | **275 passing across 32 files**                                                                                     |
+| Integration tests                | **34 environment-free plus 17 real PostgreSQL passing; latest completed remote all-store baseline has 49 passing**  |
+| Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                                                        |
+| Remote CI                        | **Pass on immutable development commit `8827be4`; protected main `3372a5a`**                                        |
+| Coverage                         | **Current local: 82.88% statements / 75.76% branches / 91.50% functions / 83.79% lines**                            |
+| Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed                                  |
+| Durable evidence/history         | Raw execution/state, provenance, semantic checkpoints, Flap history worker and provider-free paginated replay wired |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
@@ -124,6 +124,10 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31353275413) passed on immutable
   history-segment commit `213805e`: 316 tests, 85.62% statement/78.19% branch/94.80% function/86.60%
   line coverage, 10 browser flows, dependency gates, and all six production container targets.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31354381537) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31354381536) passed on immutable
+  cross-range history-projection commit `8827be4`, including the real PostgreSQL interruption/replay
+  boundary and all production container targets.
 
 ### Read-only chain foundation
 
@@ -276,7 +280,13 @@ The only allowed status vocabulary in this ledger is:
   at a time, advances the semantic cursor only after segment persistence, and adopts exactly one
   cursor-adjacent pending segment after an interrupted advance without re-reading providers. It
   produces one terminal Evidence root plus a typed projection summary while requested-range coverage
-  is complete and token-lifetime coverage remains Unknown. Worker/API binding and scheduling remain;
+  is complete and token-lifetime coverage remains Unknown;
+- a second read-only `semantic-worker` entrypoint now runs the projection with Evidence/checkpoint/
+  projection preflight and emits a credential-free scan ID. The API verifies that ID against the
+  exact token, chain, source, scan type, stored segment hashes, Snapshot/Evidence and terminal result,
+  then returns bounded pages without provider access. The desktop/mobile UI replays those immutable
+  pages and keeps requested-range progress separate from Unknown lifetime coverage. Compose exposes
+  this as the opt-in one-shot `flap-history-worker`; continuous scheduling still remains;
 - the sampled public BSC RPC rejected historical `eth_getCode` at older heights and is not treated as
   archive-capable. This does not block finalized SQD creation discovery, but archive state remains an
   explicit acceptance gap.
@@ -336,7 +346,7 @@ The only allowed status vocabulary in this ledger is:
 - immutable real-chain fixture corpus and independently operated provider reconciliation;
 - real-source discrepancy reconciliation and a labeled entity-probability corpus for Brier/ECE
   calibration;
-- a continuous deployment-origin scheduler plus Flap event-history projection worker/API binding,
+- a continuous deployment-origin-to-finalized-head scheduler over the one-shot Flap workers,
   followed by cross-range creation/configuration/migration lifecycle reconstruction;
 - complete OpenAPI request/response schemas beyond the current endpoint metadata.
 
@@ -407,11 +417,11 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                                                             | Scope                                                                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                                                      | locked npm install in production container; all packages/API/web                                                                |
-| Unit tests                     | 270 pass                                                                  | 30 files across schemas, adapters, data quality, ingestion, storage, workers and API runtime                                    |
-| Integration tests              | 30 environment-free; 17 real PostgreSQL pass; 49 latest completed CI pass | segment/checkpoint guards and replay are deterministic; real PostgreSQL and latest remote all-store suites pass                 |
+| Unit tests                     | 275 pass                                                                  | 32 files across schemas, adapters, data quality, ingestion, storage, workers and API runtime                                    |
+| Integration tests              | 34 environment-free; 17 real PostgreSQL pass; 49 latest completed CI pass | segment/checkpoint guards, API pagination and corrupt-state rejection are deterministic; real PostgreSQL/all-store suites pass  |
 | Restart regression             | Pass                                                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                         |
-| Coverage gate                  | Pass                                                                      | current local: 83.06% statements, 75.76% branches, 91.79% functions, 83.96% lines on 300 tests; 20 opt-in durable tests skipped |
-| Chromium E2E                   | 10 pass                                                                   | five flows each on desktop and Pixel 7, including Flap state/event/default/Evidence/Unknown rendering                           |
+| Coverage gate                  | Pass                                                                      | current local: 82.88% statements, 75.76% branches, 91.50% functions, 83.79% lines on 309 tests; 20 opt-in durable tests skipped |
+| Chromium E2E                   | 10 pass                                                                   | five flows each on desktop and Pixel 7, including projection pagination, Unknown and storage-failure rendering                  |
 | Formatting / ESLint / types    | Pass                                                                      | full repository                                                                                                                 |
 | Dependency vulnerability audit | Pass                                                                      | 0 vulnerabilities across the complete npm dependency graph                                                                      |
 | Dependency license allowlist   | Pass                                                                      | production dependency graph                                                                                                     |
@@ -421,7 +431,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                                                      | PostgreSQL 001–008/triggers and ClickHouse Raw Fact schema/migration                                                            |
 | Runtime/browser smoke          | Pass                                                                      | API/web health, proxy, security headers, desktop/mobile render                                                                  |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope                                 | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending   |
-| Remote CI                      | Pass                                                                      | CI/CodeQL pass on immutable `213805e`: 316 tests, 10 Chromium flows and six container targets                                   |
+| Remote CI                      | Pass                                                                      | CI/CodeQL pass on immutable `8827be4`, including real PostgreSQL projection recovery and production containers                  |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

@@ -695,25 +695,56 @@ requested-range projection acceptance only: lifetime coverage remains Unknown, t
 binding, continuous scheduling, origin-to-head execution and named FFT/migration validation remain
 pending.
 
+### Flap history worker and provider-free replay surface
+
+The cross-range runner is now bound to a second one-shot `semantic-worker` entrypoint. Its CLI
+accepts only an EVM token plus bounded range/segment/query limits, validates HTTPS/provider
+allowlists and rate/retry policy, and preflights the Evidence, semantic-checkpoint, and immutable
+projection repositories before constructing SQD or BSC RPC readers. The safe JSON summary includes
+the stable scan UUID, requested range, completed segment and transaction counts, terminal Snapshot
+and Evidence metadata, and the still-Unknown lifetime state; it contains no provider URL or
+credential.
+
+The production API opens the projection repository alongside Evidence/checkpoint storage and makes
+migration `008` part of readiness. A token- and scan-bound endpoint validates the scan type, SQD
+source, EVM/BSC identity, subject, terminal result and every stored segment before returning at most
+100 immutable rows. Cursor pagination reads PostgreSQL only. A missing repository, mismatched token,
+corrupt terminal payload, or unhealthy migration fails closed. The React workspace accepts the scan
+ID and presents range progress, stored segments, terminal Evidence IDs and Unknown lifetime coverage;
+the storage-unavailable state is explicit.
+
+Focused tests passed 48 checks across the runner, worker config/execution, API runtime and integration
+surface. The current complete unit suite passed 275 tests across 32 files, the environment-free API
+suite passed 34, and coverage passed 309 with 20 opt-in durable skips at 82.88% statements, 75.76%
+branches, 91.50% functions and 83.79% lines. The production semantic-worker image built from the
+current source, ran the history CLI help as UID 1000, and Compose rendered both semantic workers.
+Desktop and Pixel 7 browser runs verified first/next-page rendering, completed requested-range versus
+Unknown lifetime coverage, and an explicit durable-storage failure rather than fake data or a
+provider scan.
+
+This batch supplies a restart-safe bounded worker and replay surface, not a scheduler or continuous
+deployment-origin-to-finalized-head history. It does not make token lifetime, entity, market, RV, or
+FFT claims. No FFT request was made.
+
 ## Automated verification
 
-| Command                  | Result                                                                                                                                                                     |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 270 unit, 30 environment-free integration, build, license and zero-vulnerability audit; 17 PostgreSQL tests also passed separately          |
-| local `test:coverage`    | pass: 300 tests, 20 opt-in durable skips; 83.06% statements, 75.76% branches, 91.79% functions, 83.96% lines                                                               |
-| branch `test:coverage`   | latest completed pass: 316 tests; 85.62% statements, 78.19% branches, 94.80% functions, 86.60% lines                                                                       |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                        |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                     |
-| `docker compose config`  | pass                                                                                                                                                                       |
-| production Compose smoke | pass: clean current-source semantic-worker image/non-root entrypoint plus prior live finalized ingestion and terminal replay                                               |
-| branch GitHub Actions CI | [latest completed pass on `213805e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31353275372): 316 tests, 10 Chromium E2E, and six production container targets |
-| branch CodeQL            | [latest completed pass on `213805e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31353275413): JavaScript and TypeScript analysis                               |
+| Command                  | Result                                                                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| local non-browser gates  | pass: format, lint, typecheck, 275 unit, 34 environment-free integration, build, license and zero-vulnerability audit; 17 PostgreSQL tests passed separately           |
+| local `test:coverage`    | pass: 309 tests, 20 opt-in durable skips; 82.88% statements, 75.76% branches, 91.50% functions, 83.79% lines                                                           |
+| branch `test:coverage`   | latest completed pass: 316 tests; 85.62% statements, 78.19% branches, 94.80% functions, 86.60% lines                                                                   |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, Unknown lifetime and durable-storage failure                                      |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                 |
+| `docker compose config`  | pass                                                                                                                                                                   |
+| production Compose smoke | pass: clean current-source history semantic-worker image, UID 1000 CLI entrypoint and rendered dual semantic-worker profile                                            |
+| branch GitHub Actions CI | [latest completed pass on `8827be4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31354381537), including real PostgreSQL recovery and production containers |
+| branch CodeQL            | [latest completed pass on `8827be4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31354381536): JavaScript and TypeScript analysis                           |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 49 integration tests passed and the workflow removed its named volumes. The
 current local runner batch additionally passed all 17 PostgreSQL tests on a fresh disposable image.
-ClickHouse and MinIO were not rerun locally for this PostgreSQL-only module; the full environment-free
-gates are rerun before its push.
+ClickHouse and MinIO were not rerun locally for this PostgreSQL/API/UI-only module; the complete
+environment-free, browser, dependency, SBOM and Compose gates were rerun before its push.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

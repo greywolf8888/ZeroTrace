@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc -b",
     "dev": "tsx --tsconfig ../../tsconfig.base.json src/cli.ts",
-    "start": "node dist/src/cli.js"
+    "dev:history": "tsx --tsconfig ../../tsconfig.base.json src/history-cli.ts",
+    "start": "node dist/src/cli.js",
+    "start:history": "node dist/src/history-cli.js"
   },
   "dependencies": {
     "@zerotrace/chain-adapters": "*",

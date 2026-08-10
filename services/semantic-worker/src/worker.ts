@@ -57,7 +57,7 @@ export type FlapOriginExecutor = (
   resources: FlapOriginWorkerResources,
 ) => Promise<FlapOriginResult>;
 
-function policy(
+export function providerPolicy(
   allowedHosts: readonly string[],
   allowPrivateProviderUrls: boolean,
 ): ProviderUrlPolicy {
@@ -73,13 +73,13 @@ function endpointId(url: string, index: number, total: number): string {
   return `bsc-rpc@${host}${total === 1 ? '' : `#${index + 1}`}`;
 }
 
-function bscTransport(config: FlapOriginWorkerConfig): JsonRpcTransport {
+export function createBscTransport(config: FlapOriginWorkerConfig): JsonRpcTransport {
   const transports = config.bscRpcUrls.map(
     (url, index) =>
       new SafeJsonRpcTransport({
         endpointId: endpointId(url, index, config.bscRpcUrls.length),
         baseUrl: url,
-        policy: policy(config.providerAllowedHosts, config.allowPrivateProviderUrls),
+        policy: providerPolicy(config.providerAllowedHosts, config.allowPrivateProviderUrls),
         timeoutMs: config.requestTimeoutMs,
         resilience: {
           maxAttempts: config.maxAttempts,
@@ -125,7 +125,7 @@ async function executeFlapOrigin(
   const source = new SqdPortalClient({
     portalUrl: config.sqdPortalUrl,
     dataset: 'binance-mainnet',
-    policy: policy(config.sqdAllowedHosts, config.allowPrivateProviderUrls),
+    policy: providerPolicy(config.sqdAllowedHosts, config.allowPrivateProviderUrls),
     timeoutMs: config.requestTimeoutMs,
     maxRangeBlocks: config.chunkSize,
     maxAttempts: config.maxAttempts,
@@ -141,7 +141,7 @@ async function executeFlapOrigin(
         chainName: 'BNB Smart Chain',
         snapshotBlockTag: 'finalized',
       },
-      bscTransport(config),
+      createBscTransport(config),
     ),
     creationReader: new SqdEvmContractCreationReader({
       source,

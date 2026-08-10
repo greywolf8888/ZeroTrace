@@ -29,6 +29,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/launches/EVM/:token`                         | version-pinned Flap BSC current Portal-state inspection          |
 | GET    | `/api/v1/launches/EVM/:token/events/:transactionHash` | exact-receipt Flap creation/configuration/migration decoding     |
 | GET    | `/api/v1/launches/EVM/:token/history`                 | bounded Flap Portal log discovery with exact receipt replay      |
+| GET    | `/api/v1/launches/EVM/:token/history/projections/:id` | provider-free paginated replay of immutable stored segments      |
 | GET    | `/api/v1/launches/EVM/:token/origin`                  | bounded Flap creation-trace and exact receipt origin proof       |
 | POST   | `/api/v1/rv/flap-sell`                                | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/data-quality/discrepancies`                  | typed error-budget and discrepancy audit                         |
@@ -120,6 +121,19 @@ transactions were replayed. It does not mean full token history: `lifetimeCovera
 `historyCoverage` remain Unknown/zero until the Portal deployment origin is evidenced and indexing
 is continuous through the analysis Snapshot. An empty result creates bounded negative Evidence,
 not a claim that the token never emitted a Flap event.
+
+`GET /api/v1/launches/EVM/:token/history/projections/:scanId?chainId=eip155:56&platform=flap`
+replays an existing one-shot worker scan from PostgreSQL. Optional `afterBlock` is the exclusive
+segment-start cursor returned by the preceding page; `limit` defaults to 20 and is bounded
+from 1 to 100. The route validates that the UUID belongs to the exact BSC token, SQD source and Flap
+event-history scan type, re-parses a completed terminal result, and reads at most `limit + 1`
+immutable segments to determine `hasMore` and `nextAfterBlock`.
+
+This endpoint performs no SQD or RPC call. It returns `503` when durable projection storage is not
+configured or healthy, `404` for a mismatched token/scan identity, and fails closed on corrupt stored
+state. `scan.requestedRangeCoverage` reports durable cursor progress. A completed scan may report
+100% requested-range coverage while terminal lifetime coverage remains Unknown and
+`historyCoverage=0`.
 
 `GET /api/v1/launches/EVM/:token/origin?chainId=eip155:56&platform=flap&fromBlock=...&toBlock=...`
 searches at most 1,000,000 finalized BSC blocks through SQD's `createResultAddress` trace filter.
@@ -226,9 +240,10 @@ restart; without it, capability and health output explicitly report process-loca
 
 This is deliberate contract preservation, not an implementation.
 
-The implemented Flap current-state, supplied-event-transaction, and bounded-history routes above are
-the only current `/launches` exceptions. Other ledgers, platforms, deployment-origin continuous
-history, and launch queries remain unavailable rather than falling back to generic data.
+The implemented Flap current-state, supplied-event-transaction, bounded-history, stored projection
+replay, and bounded-origin routes above are the only current `/launches` exceptions. Other ledgers,
+platforms, deployment-origin continuous history, and launch queries remain unavailable rather than
+falling back to generic data.
 
 ## Knowledge values
 
