@@ -18,6 +18,7 @@ import {
 } from '@zerotrace/data-quality';
 import { createEvidence, EvidenceLedger, hashPayload } from '@zerotrace/evidence';
 import {
+  ERC20_TRANSFER_TOPIC,
   PANCAKE_V2_BSC_DEPLOYMENT,
   type FlapOriginCheckpointRun,
   type FlapOriginCheckpointStore,
@@ -194,6 +195,65 @@ class FlapEventTransport implements JsonRpcTransport {
       };
     }
     throw new Error(`Unexpected Flap event fixture method ${method}`);
+  }
+}
+
+class BurnConservationTransport implements JsonRpcTransport {
+  readonly endpointId = 'bsc-burn-fixture';
+
+  async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
+    return (await this.requestSourced<T>(method, params)).value;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    _options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    if (method === 'eth_getBlockByNumber') {
+      const tag = params[0];
+      const parent = tag === '0x63';
+      return {
+        value: {
+          number: parent ? '0x63' : '0x64',
+          hash: `0x${(parent ? 'b' : 'a').repeat(64)}`,
+          parentHash: `0x${(parent ? 'd' : 'b').repeat(64)}`,
+          timestamp: parent ? '0x65c95a7d' : '0x65c95a80',
+        } as T,
+        endpointId: 'bsc-burn-anchor',
+      };
+    }
+    if (method === 'eth_call') {
+      const tag = params[1];
+      return {
+        value: encodeAbiParameters([{ type: 'uint256' }], [tag === '0x63' ? 1_000n : 900n]) as T,
+        endpointId: 'bsc-burn-state',
+      };
+    }
+    if (method === 'eth_getLogs') {
+      const burner = `0x${'2'.repeat(40)}`;
+      return {
+        value: [
+          {
+            address: fixtureFlapToken,
+            blockHash: `0x${'a'.repeat(64)}`,
+            blockNumber: '0x64',
+            transactionHash: `0x${'3'.repeat(64)}`,
+            transactionIndex: '0x1',
+            logIndex: '0x2',
+            data: `0x${100n.toString(16).padStart(64, '0')}`,
+            topics: [
+              ERC20_TRANSFER_TOPIC,
+              `0x${'0'.repeat(24)}${burner.slice(2)}`,
+              `0x${'0'.repeat(64)}`,
+            ],
+            removed: false,
+          },
+        ] as T,
+        endpointId: 'bsc-burn-logs',
+      };
+    }
+    throw new Error(`Unexpected burn-conservation fixture method ${method}`);
   }
 }
 
@@ -3199,6 +3259,71 @@ describe('ZeroTrace API contract', () => {
     });
     expect(invalidAsset.statusCode).toBe(400);
     expect(invalidAsset.json().error.code).toBe('INVALID_REQUEST');
+  });
+
+  it('derives a persisted burn action only from exact block supply/event conservation', async () => {
+    const evm = new EvmLedgerAdapter(
+      {
+        id: 'bsc-rpc',
+        chainId: 56,
+        chainName: 'BNB Smart Chain',
+        snapshotBlockTag: 'finalized',
+      },
+      new BurnConservationTransport(),
+    );
+    const evidenceLedger = new EvidenceLedger();
+    const runtime: AppRuntime = {
+      providerRegistry: new ProviderRegistry([evm]),
+      evmAdapters: new Map([[56, evm]]),
+      evidenceLedger,
+      dataQuality: testDataQuality(evidenceLedger),
+      ingestionStorage: {},
+    };
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/burn-conservation`,
+      payload: { chainId: 'eip155:56', blockNumber: '100' },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    const body = response.json();
+    expect(body.report).toMatchObject({
+      tokenAddress: fixtureFlapToken,
+      blockNumber: '100',
+      parentBlockNumber: '99',
+      totalSupplyBefore: '1000',
+      totalSupplyAfter: '900',
+      burnedAmount: '100',
+      status: 'VERIFIED',
+      actions: [
+        {
+          type: 'BURN',
+          actor: `0x${'2'.repeat(40)}`,
+          amount: '100',
+          path: [`0x${'2'.repeat(40)}`, `0x${'0'.repeat(40)}`],
+        },
+      ],
+    });
+    expect(body.evidence).toHaveLength(5);
+    const terminal = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${body.report.terminalEvidenceId}`,
+    });
+    expect(terminal.statusCode, terminal.body).toBe(200);
+    expect(terminal.json()).toMatchObject({
+      evidence: { kind: 'DERIVED_FEATURE', blockOrSlot: '100' },
+    });
+    expect(terminal.json().sourceEvidenceIds).toHaveLength(4);
+
+    const invalidGenesis = await app.inject({
+      method: 'POST',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/burn-conservation`,
+      payload: { chainId: 'eip155:56', blockNumber: '0' },
+    });
+    expect(invalidGenesis.statusCode).toBe(400);
+    expect(invalidGenesis.json().error.code).toBe('INVALID_REQUEST');
   });
 
   it('replays latest and exact durable Claim Reports without provider access', async () => {

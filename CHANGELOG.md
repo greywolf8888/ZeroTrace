@@ -44,6 +44,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   explicit Unknown fields and mandatory human review;
 - read-only claim-declaration parsing API and responsive Claim Audit workspace, including local
   dev/preview CORS coverage and explicit `403 CORS_ORIGIN_DENIED` diagnostics;
+- exact finalized-block ERC-20 burn conservation with parent/target `totalSupply`, complete
+  target-block mint/burn logs, one-to-one Evidence-linked actions, contradiction/no-action states,
+  read-only API composition and responsive Claim Audit review;
 - Fastify API with OpenAPI, health, capability truth, metrics, and analysis endpoints;
 - Snapshot/Evidence-backed ledger query API with pending, mempool, null, and unavailable observations
   kept distinct from confirmed facts;

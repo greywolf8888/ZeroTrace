@@ -1107,21 +1107,72 @@ typed `403 CORS_ORIGIN_DENIED` rather than a 500. Production deployments must st
 exact public origin. No chain provider, private key, signing, swap, transaction broadcast or
 production fixture path was added.
 
+## FFT supply-conserved burn validation (2026-08-11)
+
+Model `erc20-burn-conservation-v1.0.0` adds a fail-closed, exact-block certificate before a
+zero-address Transfer can become a Claim Audit action. Schema, kernel, platform composition and API
+tests cover conserved mint plus multiple burns, ordinary transfers, supply/event contradictions,
+no-action blocks, incomplete coverage, cross-block logs, zero-to-zero events, malformed supply,
+wrong parent lineage and downstream Claim Audit consumption. Desktop and Pixel 7 browser flows
+exercise the real API contract through the responsive Claim Audit panel without putting fixtures in
+the production path.
+
+The first named FFT probe used the finalized 2 August boundary from the earlier claim observation.
+Four contiguous sparse SQD `binance-mainnet` queries completed the inclusive range
+`113485950-115154970` and returned no FFT `Transfer` whose indexed destination was the zero address.
+This is a complete result for that exact filter and requested range, not proof that no custom
+supply-changing code executed. No absent or incomplete provider response was counted as numeric
+zero.
+
+The public statement's buyback-burn address
+`0x0928Ecc01081CB765d349f49cfc4e78Fc8acd630` was then inspected at finalized block `115155326`,
+hash `0xd001f8df0c76a32b5139dea31fb8e5e4914050dc8323041c467d28419814f3ac`, timestamp
+`2026-08-10T16:47:20.000Z`. It had no bytecode and was classified as an EOA with
+`canMoveFunds=Known(true)`. Custody Evidence `ev_c86fc87af2444fa903aea7a3` has payload hash
+`0518f5ddcaf94bac3353f451b40586d19750b5eaa3ce909b4890b4a65d20e417`. The wallet held
+`1503182.822387066751417917` FFT, about `0.1503182822%` of the one-billion-token supply. This is
+movable custody and cannot be credited as irreversible supply burn merely because the community
+calls it a burn wallet.
+
+A separate Alchemy archive read compared the requested window boundary parent block
+`113485949`, hash `0xc7361bcf5072c77f45d1786b06863333488a0cd9bf44e87d8d185df7634a513e`, with block `115155326`.
+`totalSupply` was exactly `1000000000` FFT at both positions. The published burn wallet balance rose
+from `5845.436544272040753992` to `1503182.822387066751417917` FFT. Net supply equality does not
+exclude an intermediate mint and burn that cancel, so this comparison remains a bounded net-change
+check rather than a complete lifetime action conclusion.
+
+The exact-block model was replayed through project code at block `115155326`. Parent and target
+atomic supply were both `1000000000000000000000000000`; the complete target-block Transfer query
+was empty; minted and burned amounts were both `0`. The validated status was `NOT_APPLICABLE` with
+no actions. Terminal Evidence `ev_1065c77a6f098221f54d151a`, payload hash
+`0af50489a423041b26135225f110c06fcdb2bca7d4947a58abe59f9c3e29e15f`, links parent supply
+Evidence `ev_51473c82d86a1ef345191420`, target supply Evidence
+`ev_c39efac617386c29a72fdf9c`, and complete empty-query Evidence
+`ev_384d526d2f3183b6fd7843df` under the exact finalized Snapshot.
+
+The two BNB Chain public endpoints exposed their real archive boundary during replay: one first
+rate-limited and later returned `missing trie node`; the other returned `not supported` for the
+parent-block call. These states were retained as provider failures. The user-supplied Alchemy key
+was injected only into the validation process from the local attachment, never printed, persisted
+or written to the repository. The successful certificate has `sourceCoverage=0.5` because it is one
+provider. Wide-range silent-supply analysis, independent-provider reconciliation, official wallet
+attribution, reviewed-draft promotion and terminal FFT acceptance remain open.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 373 unit, 46 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 383 unit, 47 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                       |
 | local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                                               |
-| local `test:coverage`    | pass: 419 tests, 22 opt-in durable skips; 82.80% statements, 76.62% branches, 91.23% functions, 83.91% lines                                                                 |
+| local `test:coverage`    | pass: 430 tests, 22 opt-in durable skips; 82.86% statements, 76.74% branches, 91.41% functions, 83.99% lines                                                                 |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                            |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                             |
-| `test:e2e:windows`       | pass: 14 Chromium tests across desktop and Pixel 7, including Claim Declaration, migrated-market scenarios, Claim Report, replay and Unknown                                 |
+| `npm run test:e2e`       | pass: 16 Chromium tests across desktop and Pixel 7, including burn conservation, Claim Declaration, migrated-market scenarios, Claim Report, replay and Unknown              |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                       |
 | `docker compose config`  | pass                                                                                                                                                                         |
-| production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000                          |
-| branch GitHub Actions CI | [pass on `c80d906`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31403902953): full CI matrix, structural model gate, 12 Chromium flows and six production targets |
-| branch CodeQL            | [pass on `c80d906`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31403907558): JavaScript and TypeScript analysis                                                  |
+| production Compose smoke | pass: production API/Web images, seven-service healthy stack, non-destructive 001-011 upgrade, live/ready/read-only health; prior worker targets remain accepted             |
+| branch GitHub Actions CI | [pass on `e1294c4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31408082373): full CI matrix, structural model gate, 14 Chromium flows and six production targets |
+| branch CodeQL            | [pass on `e1294c4`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31408085955): JavaScript and TypeScript analysis                                                  |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
@@ -1129,6 +1180,21 @@ current local PostgreSQL runner passed all 19 PostgreSQL tests after applying mi
 to a fresh PostgreSQL 16.10 instance. ClickHouse and MinIO were not rerun locally for this
 PostgreSQL/API/UI-only module; the complete environment-free, browser, dependency, SBOM and Compose
 gates were rerun before its push.
+
+The current batch also built the production API and Web images and started the default seven-service
+Compose topology. Host port `5432` was already allocated, so the project PostgreSQL mapping used the
+documented environment override `55439`; no external database process was stopped. The retained
+ZeroTrace volume contained only migrations `001-002`. A custom-format `pg_dump` backup was written
+inside that project volume before the missing append-only migrations `003-011` were applied in
+order. `schema_migrations` then reported the complete `001-011` sequence and API storage health
+became `UP`.
+
+Because this host resolves public provider domains through a private-range interception proxy, the
+default `ALLOW_PRIVATE_PROVIDER_URLS=false` correctly returned provider-down readiness. A local-only
+restart enabled the documented private-network opt-in while retaining the exact hostname allowlist;
+no repository default or secret changed. PostgreSQL, ClickHouse, MinIO, Valkey, NATS, API and Web all
+became healthy. `npm run health` returned live `UP`, ready `UP`, `readOnly=true` and four provider
+entries; BSC, Bitcoin and Solana were `UP`, while Ethereum remained explicitly `UNCONFIGURED`.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

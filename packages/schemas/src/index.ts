@@ -1562,6 +1562,17 @@ export const ClaimTransferObservationSchema = z.object({
 });
 export type ClaimTransferObservation = z.infer<typeof ClaimTransferObservationSchema>;
 
+export const EvmClaimTransferObservationSchema = ClaimTransferObservationSchema.extend({
+  from: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  to: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  transactionId: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  transactionIndex: UnsignedQuantityStringSchema,
+  logIndex: UnsignedQuantityStringSchema,
+});
+export type EvmClaimTransferObservation = z.infer<typeof EvmClaimTransferObservationSchema>;
+
 export const ClaimActionObservationSchema = z.object({
   id: z.string().min(1),
   type: ClaimObservedActionTypeSchema,
@@ -1574,6 +1585,155 @@ export const ClaimActionObservationSchema = z.object({
   evidenceIds: z.array(z.string().min(1)).min(1),
 });
 export type ClaimActionObservation = z.infer<typeof ClaimActionObservationSchema>;
+
+export const ClaimBurnConservationStatusSchema = z.enum([
+  'VERIFIED',
+  'CONTRADICTED',
+  'NOT_APPLICABLE',
+]);
+export const EvmClaimBurnConservationSchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    blockNumber: UnsignedQuantityStringSchema,
+    blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    parentBlockNumber: UnsignedQuantityStringSchema,
+    parentBlockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    totalSupplyBefore: UnsignedQuantityStringSchema,
+    totalSupplyAfter: UnsignedQuantityStringSchema,
+    mintedAmount: UnsignedQuantityStringSchema,
+    burnedAmount: UnsignedQuantityStringSchema,
+    supplyDelta: QuantityStringSchema,
+    eventNetSupplyDelta: QuantityStringSchema,
+    expectedSupplyAfter: QuantityStringSchema,
+    status: ClaimBurnConservationStatusSchema,
+    candidateBurnTransferIds: z.array(z.string().min(1)),
+    actions: z.array(ClaimActionObservationSchema),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('erc20-burn-conservation-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const before = BigInt(value.totalSupplyBefore);
+    const after = BigInt(value.totalSupplyAfter);
+    const minted = BigInt(value.mintedAmount);
+    const burned = BigInt(value.burnedAmount);
+    const expectedAfter = before + minted - burned;
+    const conserved = expectedAfter === after;
+    const snapshot = value.metadata.snapshot;
+    if (BigInt(value.parentBlockNumber) + 1n !== BigInt(value.blockNumber)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['parentBlockNumber'],
+        message: 'Burn conservation requires adjacent parent and target blocks.',
+      });
+    }
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.blockNumber ||
+      snapshot.blockHash.toLowerCase() !== value.blockHash.toLowerCase() ||
+      snapshot.parentBlockHash?.toLowerCase() !== value.parentBlockHash.toLowerCase() ||
+      value.metadata.freshness !== snapshot.blockTimestamp
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Burn conservation metadata must bind the exact target and parent block.',
+      });
+    }
+    if (value.metadata.dataCoverage !== 1 || value.metadata.historyCoverage !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Burn conservation requires complete target-block data and history.',
+      });
+    }
+    if (
+      value.supplyDelta !== (after - before).toString() ||
+      value.eventNetSupplyDelta !== (minted - burned).toString() ||
+      value.expectedSupplyAfter !== expectedAfter.toString()
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['supplyDelta'],
+        message: 'Burn conservation arithmetic is inconsistent.',
+      });
+    }
+    const expectedStatus = !conserved
+      ? 'CONTRADICTED'
+      : burned === 0n
+        ? 'NOT_APPLICABLE'
+        : 'VERIFIED';
+    if (value.status !== expectedStatus) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Burn conservation status does not match the supply/event result.',
+      });
+    }
+    if (
+      new Set(value.candidateBurnTransferIds).size !== value.candidateBurnTransferIds.length ||
+      new Set(value.actions.map((action) => action.id)).size !== value.actions.length ||
+      new Set(value.metadata.evidenceIds).size !== value.metadata.evidenceIds.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actions'],
+        message: 'Burn conservation action and transfer identities must be unique.',
+      });
+    }
+    if (!value.metadata.evidenceIds.includes(value.terminalEvidenceId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message: 'Burn conservation metadata must include terminal Evidence.',
+      });
+    }
+    if ((!conserved || burned === 0n) && value.actions.length > 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actions'],
+        message: 'Burn actions require verified non-zero supply/event conservation.',
+      });
+    }
+    const mappedTransferIds = value.actions.flatMap((action) => action.transferIds);
+    const metadataEvidenceIds = new Set(value.metadata.evidenceIds);
+    const snapshotBlockTimestamp = snapshot?.ledger === 'EVM' ? snapshot.blockTimestamp : undefined;
+    if (
+      conserved &&
+      burned > 0n &&
+      (value.actions.length !== value.candidateBurnTransferIds.length ||
+        new Set(mappedTransferIds).size !== mappedTransferIds.length ||
+        value.candidateBurnTransferIds.some((id) => !mappedTransferIds.includes(id)) ||
+        value.actions.reduce((total, action) => total + BigInt(action.amount), 0n) !== burned ||
+        value.actions.some(
+          (action) =>
+            action.type !== 'BURN' ||
+            action.liquidityControl !== undefined ||
+            action.transferIds.length !== 1 ||
+            !value.candidateBurnTransferIds.includes(action.transferIds[0] ?? '') ||
+            action.path.length !== 2 ||
+            !/^0x[a-fA-F0-9]{40}$/.test(action.actor) ||
+            !action.path.every((address) => /^0x[a-fA-F0-9]{40}$/.test(address)) ||
+            action.path[0]?.toLowerCase() !== action.actor.toLowerCase() ||
+            action.path[1]?.toLowerCase() !== `0x${'0'.repeat(40)}` ||
+            action.evidenceIds.includes(value.terminalEvidenceId) ||
+            new Set(action.evidenceIds).size !== action.evidenceIds.length ||
+            action.evidenceIds.some((id) => !metadataEvidenceIds.has(id)) ||
+            action.observedAt !== snapshotBlockTimestamp,
+        ))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actions'],
+        message: 'Verified burn actions must map one-to-one to conserved zero-address transfers.',
+      });
+    }
+  });
+export type EvmClaimBurnConservation = z.infer<typeof EvmClaimBurnConservationSchema>;
 
 export const ClaimCustodyObservationSchema = z.object({
   address: z.string().min(1),

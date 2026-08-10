@@ -5,7 +5,7 @@ import {
   type TransportObservation,
   type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
-import type { AssetTransferObservation, CustodyObservation } from '@zerotrace/claim-audit';
+import type { CustodyObservation } from '@zerotrace/claim-audit';
 import { canonicalJson, createEvidence } from '@zerotrace/evidence';
 import {
   AnalysisMetadataSchema,
@@ -15,6 +15,7 @@ import {
   type AnalysisMetadata,
   type ChainAnchorRead,
   type Evidence,
+  type EvmClaimTransferObservation,
 } from '@zerotrace/schemas';
 import { decodeFunctionResult, encodeFunctionData } from 'viem';
 import type { z } from 'zod';
@@ -448,7 +449,7 @@ export interface Erc20ClaimTransferCollection {
   tokenAddress: string;
   fromBlock: string;
   toBlock: string;
-  transfers: AssetTransferObservation[];
+  transfers: EvmClaimTransferObservation[];
   evidence: Evidence[];
   metadata: AnalysisMetadata;
 }
@@ -619,6 +620,7 @@ export async function collectErc20ClaimTransfers(options: {
               ? 'Finalized ERC-20 Transfer range query returned no observations.'
               : 'Finalized ERC-20 Transfer range query returned observations for strict decoding.',
           observedAt,
+          ...(cursor === requestedEnd ? { blockOrSlot: cursor.toString() } : {}),
           finality: 'finalized',
         }),
       );
@@ -668,7 +670,7 @@ export async function collectErc20ClaimTransfers(options: {
   const timestampCache = new Map<string, string>();
   const identities = new Set<string>();
   const evidence: Evidence[] = [...queryEvidence];
-  const transfers: AssetTransferObservation[] = [];
+  const transfers: EvmClaimTransferObservation[] = [];
   logs.sort((left, right) => {
     const blockOrder =
       unsignedQuantity(left.log.blockNumber, 'Transfer block number') -
@@ -807,6 +809,13 @@ export async function collectErc20ClaimTransfers(options: {
       observedAt: normalizedTimestamp,
       transactionId: log.transactionHash.toLowerCase(),
       evidenceIds: [node.id],
+      blockNumber: position,
+      blockHash: log.blockHash.toLowerCase(),
+      transactionIndex: unsignedQuantity(
+        log.transactionIndex,
+        'Transfer transaction index',
+      ).toString(),
+      logIndex,
     });
   }
   const metadata = observationMetadata({

@@ -223,9 +223,14 @@ databases. It is not a substitute for production migrations. Before the first pe
 5. test point-in-time restore and evidence-hash reconciliation.
 
 An existing local PostgreSQL volume does not rerun image entrypoint scripts. After backing it up,
-apply the append-only anchor/alert and Snapshot-observation identity migrations explicitly:
+query `schema_migrations` and apply every missing append-only migration in numeric order. For a
+volume that currently contains only `001-002`, run:
 
 ```bash
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/003_evidence_integrity.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/004_ingestion_checkpoints.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/005_data_quality.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
@@ -245,6 +250,10 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
 PowerShell equivalent:
 
 ```powershell
+Get-Content -Raw infra/postgres/init/003_evidence_integrity.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/004_ingestion_checkpoints.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/005_data_quality.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/006_snapshot_observation_identity.sql |

@@ -5,6 +5,7 @@ import {
   type ClaimDeclarationParseResponse,
   type Capability,
   type ClaimReportResponse,
+  type EvmClaimBurnConservationResponse,
   type EvidenceRecord,
   type FlapConfigurationField,
   type FlapEventHistoryResponse,
@@ -741,6 +742,164 @@ function ClaimDeclarationPanel({ token }: { token?: string | undefined }) {
   );
 }
 
+function ClaimBurnConservationPanel() {
+  const [token, setToken] = useState('');
+  const [blockNumber, setBlockNumber] = useState('');
+  const [result, setResult] = useState<EvmClaimBurnConservationResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const validToken = /^0x[0-9a-fA-F]{40}$/.test(token);
+  const validBlock = /^[1-9]\d*$/.test(blockNumber);
+
+  async function inspectBurn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validToken || !validBlock) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(await api.inspectClaimBurnConservation(token, blockNumber));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Burn conservation inspection failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const report = result?.report;
+  const statusClass =
+    report?.status === 'VERIFIED'
+      ? 'status-chip status-up'
+      : report?.status === 'CONTRADICTED'
+        ? 'status-chip status-down'
+        : 'status-chip status-degraded';
+
+  return (
+    <section
+      className="panel subject-panel quote-panel"
+      aria-labelledby="burn-conservation-heading"
+    >
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Finalized block certificate</span>
+          <h3 id="burn-conservation-heading">Burn Supply Conservation</h3>
+        </div>
+        <span className="snapshot-badge">Zero address alone is insufficient</span>
+      </div>
+      <p className="panel-copy">
+        Compare parent/target totalSupply with every Transfer mint and burn in one finalized block.
+        This proves or rejects candidate actions for that block; it does not prove a whole window
+        has no other actions.
+      </p>
+      <form className="quote-form claim-burn-form" onSubmit={(event) => void inspectBurn(event)}>
+        <div className="claim-burn-field">
+          <label htmlFor="claim-burn-token">Burn token address</label>
+          <input
+            id="claim-burn-token"
+            spellCheck={false}
+            placeholder="0x…"
+            value={token}
+            onChange={(event) => setToken(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field claim-burn-block-field">
+          <label htmlFor="claim-burn-block">Finalized burn block</label>
+          <input
+            id="claim-burn-block"
+            inputMode="numeric"
+            placeholder="115000000"
+            value={blockNumber}
+            onChange={(event) => setBlockNumber(event.target.value.trim())}
+          />
+        </div>
+        <button
+          className="secondary-button"
+          type="submit"
+          disabled={busy || !validToken || !validBlock}
+        >
+          {busy ? 'Verifying…' : 'Verify burn conservation'}
+        </button>
+      </form>
+      {error === undefined ? null : <p className="inline-error">{error}</p>}
+      {report === undefined ? null : (
+        <div className="burn-conservation-result">
+          <div className="snapshot-strip">
+            <span className={statusClass}>{titleCase(report.status)}</span>
+            <span>
+              <b>Block</b> {report.blockNumber}
+            </span>
+            <span>
+              <b>Terminal Evidence</b> <code>{report.terminalEvidenceId}</code>
+            </span>
+          </div>
+          <div className="fact-grid burn-fact-grid">
+            <div className="fact-row">
+              <span>Supply before</span>
+              <strong>{report.totalSupplyBefore}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Supply after</span>
+              <strong>{report.totalSupplyAfter}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Mint events</span>
+              <strong>{report.mintedAmount}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Burn events</span>
+              <strong>{report.burnedAmount}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Supply delta</span>
+              <strong>{report.supplyDelta}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Event net delta</span>
+              <strong>{report.eventNetSupplyDelta}</strong>
+            </div>
+          </div>
+          <p className={report.status === 'CONTRADICTED' ? 'inline-error' : 'panel-copy'}>
+            {report.status === 'VERIFIED'
+              ? 'Supply/event conservation verified. The Evidence-linked actions are eligible for Claim Audit.'
+              : report.status === 'CONTRADICTED'
+                ? 'Supply/event conservation failed. Zero-address Transfers were not credited as burn actions.'
+                : 'The complete block is conserved and contains no non-zero burn action.'}
+          </p>
+          {report.actions.length === 0 ? null : (
+            <div className="claim-draft-list">
+              {report.actions.map((action) => (
+                <article className="claim-draft-card" key={action.id}>
+                  <div className="claim-draft-heading">
+                    <div>
+                      <span className="eyebrow">Conserved action</span>
+                      <h4>Burn {action.amount}</h4>
+                    </div>
+                    <span className="status-chip status-up">Action generated</span>
+                  </div>
+                  <div className="fact-grid">
+                    <div className="fact-row">
+                      <span>Actor</span>
+                      <code>{action.actor}</code>
+                    </div>
+                    <div className="fact-row">
+                      <span>Path</span>
+                      <code>{action.path.join(' → ')}</code>
+                    </div>
+                    <div className="fact-row">
+                      <span>Transfer</span>
+                      <code>{action.transferIds.join(', ')}</code>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ClaimAuditWorkspace() {
   return (
     <>
@@ -756,6 +915,7 @@ function ClaimAuditWorkspace() {
         <StatusPill status="HUMAN_REVIEW_REQUIRED" />
       </div>
       <ClaimDeclarationPanel />
+      <ClaimBurnConservationPanel />
     </>
   );
 }

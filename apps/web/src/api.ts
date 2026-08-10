@@ -660,6 +660,38 @@ export interface ClaimDeclarationParseResponse {
   warnings: string[];
 }
 
+export interface EvmClaimBurnConservationResponse {
+  report: {
+    tokenAddress: string;
+    blockNumber: string;
+    blockHash: string;
+    parentBlockNumber: string;
+    parentBlockHash: string;
+    totalSupplyBefore: string;
+    totalSupplyAfter: string;
+    mintedAmount: string;
+    burnedAmount: string;
+    supplyDelta: string;
+    eventNetSupplyDelta: string;
+    expectedSupplyAfter: string;
+    status: 'VERIFIED' | 'CONTRADICTED' | 'NOT_APPLICABLE';
+    candidateBurnTransferIds: string[];
+    actions: Array<{
+      id: string;
+      type: 'BURN';
+      actor: string;
+      amount: string;
+      observedAt: string;
+      transferIds: string[];
+      path: string[];
+      evidenceIds: string[];
+    }>;
+    terminalEvidenceId: string;
+    metadata: AnalysisMetadata;
+  };
+  evidence: EvidenceRecord[];
+}
+
 interface ClaimFlowAggregate {
   observedAmount: string;
   actualAmount: KnowledgeValue<string>;
@@ -898,6 +930,14 @@ export const api = {
         ...(auditWindow === undefined ? {} : { auditWindow }),
       }),
     }),
+  inspectClaimBurnConservation: (token: string, blockNumber: string, chainId = 'eip155:56') =>
+    requestJson<EvmClaimBurnConservationResponse>(
+      `/api/v1/claims/EVM/${encodeURIComponent(token)}/burn-conservation`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ chainId, blockNumber }),
+      },
+    ),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',

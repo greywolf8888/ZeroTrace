@@ -1104,6 +1104,56 @@ tbody tr:hover {
   line-height: 1.55;
 }
 
+.claim-burn-form {
+  grid-template-columns: minmax(240px, 1fr) minmax(150px, 0.4fr) auto;
+  align-items: end;
+}
+
+.claim-burn-field {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.claim-burn-field label {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.claim-burn-field input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 13px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+}
+
+.burn-conservation-result {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+}
+
+.burn-conservation-result .snapshot-strip {
+  border-top: 0;
+}
+
+.burn-fact-grid {
+  padding: 0 18px 18px;
+}
+
+.burn-conservation-result .panel-copy,
+.burn-conservation-result > .inline-error {
+  margin: 0;
+  padding: 0 18px 18px;
+}
+
+.burn-conservation-result code {
+  overflow-wrap: anywhere;
+}
+
 .claim-draft-list {
   display: grid;
   gap: 12px;
@@ -1586,6 +1636,10 @@ footer a {
   }
 
   .quote-form {
+    grid-template-columns: 1fr;
+  }
+
+  .claim-burn-form {
     grid-template-columns: 1fr;
   }
 

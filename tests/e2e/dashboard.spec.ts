@@ -1602,6 +1602,98 @@ test('compiles a public pension statement as a human-review draft without invent
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
 
+test('shows a supply-conserved burn action without treating the zero address as proof by itself', async ({
+  page,
+}) => {
+  const burner = `0x${'2'.repeat(40)}`;
+  const zeroAddress = `0x${'0'.repeat(40)}`;
+  const transferId = 'ctr_1234567890abcdef12345678';
+  const actionId = 'cba_1234567890abcdef12345678';
+  const terminalEvidenceId = 'ev_1234567890abcdef12345678';
+  await page.route('**/api/v1/claims/EVM/*/burn-conservation', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        report: {
+          tokenAddress: bscTokenAddress,
+          blockNumber: '115128700',
+          blockHash: `0x${'8'.repeat(64)}`,
+          parentBlockNumber: '115128699',
+          parentBlockHash: `0x${'7'.repeat(64)}`,
+          totalSupplyBefore: '1000000000000000000000',
+          totalSupplyAfter: '900000000000000000000',
+          mintedAmount: '0',
+          burnedAmount: '100000000000000000000',
+          supplyDelta: '-100000000000000000000',
+          eventNetSupplyDelta: '-100000000000000000000',
+          expectedSupplyAfter: '900000000000000000000',
+          status: 'VERIFIED',
+          candidateBurnTransferIds: [transferId],
+          actions: [
+            {
+              id: actionId,
+              type: 'BURN',
+              actor: burner,
+              amount: '100000000000000000000',
+              observedAt: '2026-08-10T15:00:00.000Z',
+              transferIds: [transferId],
+              path: [burner, zeroAddress],
+              evidenceIds: [terminalEvidenceId],
+            },
+          ],
+          terminalEvidenceId,
+          metadata: {
+            snapshot: {
+              ledger: 'EVM',
+              chainId: 'eip155:56',
+              blockNumber: '115128700',
+              blockHash: `0x${'8'.repeat(64)}`,
+              parentBlockHash: `0x${'7'.repeat(64)}`,
+              finality: 'finalized',
+            },
+            dataCoverage: 1,
+            sourceCoverage: 0.5,
+            historyCoverage: 1,
+            simulationCoverage: 0,
+            freshness: '2026-08-10T15:00:00.000Z',
+            sourceSet: ['bsc-rpc-fixture'],
+            modelVersion: 'erc20-burn-conservation-v1.0.0',
+            confidence: 0.98,
+            evidenceIds: [terminalEvidenceId],
+          },
+        },
+        evidence: [],
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  const panel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Burn Supply Conservation' }),
+  });
+  await expect(panel).toContainText('Zero address alone is insufficient');
+  await panel.getByLabel('Burn token address').fill(bscTokenAddress);
+  await panel.getByLabel('Finalized burn block').fill('115128700');
+  await panel.getByRole('button', { name: 'Verify burn conservation' }).click();
+
+  await expect(panel.getByText('Verified', { exact: true })).toBeVisible();
+  await expect(panel).toContainText('Supply/event conservation verified');
+  await expect(panel).toContainText('1000000000000000000000');
+  await expect(panel).toContainText('900000000000000000000');
+  await expect(panel).toContainText(terminalEvidenceId);
+  await expect(panel.getByText('Action generated', { exact: true })).toBeVisible();
+  await expect(panel).toContainText(burner);
+  await expect(panel).toContainText(`${burner} → ${zeroAddress}`);
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
 test('keeps scenario execution gated and exposes provider availability', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Scenario Lab' }).click();

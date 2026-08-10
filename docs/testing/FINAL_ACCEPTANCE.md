@@ -73,6 +73,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31403902953) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31403907558) pass on immutable
       Claim Audit input-integrity commit `c80d906`
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31408082373) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31408085955) pass on immutable
+      claim-declaration review commit `e1294c4`
 
 ## Evidence and data
 
@@ -159,9 +162,11 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       quote-reserve consumption, automatic Router/model checks and one named FFT partial-RV run
 - [x] Exact Entity Precision/False-Merge evaluator plus a test-only structural golden corpus covering
       high-confidence same-controller, coordination, independence, Service Hub, CoinJoin and abstention
-- [ ] Automated durable capture scheduling, reviewed-draft promotion, same-Snapshot action derivation
-      with total-supply/mint-burn conservation, independent-source reconciliation, complete Claim
-      Audit and terminal named FFT conclusion
+- [x] Exact finalized-block ERC-20 burn action derivation with adjacent `totalSupply`, complete
+      mint/burn Transfer conservation, contradiction/no-action states, Evidence replay, API/UI and
+      one named FFT Alchemy no-action certificate
+- [ ] Automated durable capture scheduling, wide-range action discovery, reviewed-draft promotion,
+      independent-source reconciliation, complete Claim Audit and terminal named FFT conclusion
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
@@ -178,6 +183,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       terminal Evidence in API plus desktop/mobile UI
 - [x] Responsive Claim Audit declaration review with no production fixtures, warnings, draft
       readiness, human-review gate and Unknown pension-address rendering
+- [x] Responsive exact-block burn certificate review on desktop/mobile with status, supply/event
+      arithmetic, generated actions and terminal Evidence
 - [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance

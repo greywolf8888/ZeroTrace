@@ -26,6 +26,7 @@ import {
   PLATFORM_REGISTRY,
   discoverFlapEventHistory,
   inspectFlapEventTransaction,
+  observeEvmClaimBurnBlock,
   inspectFlapTokenOrigin,
   inspectFlapTokenOriginRestartSafe,
   inspectFlapToken,
@@ -131,6 +132,23 @@ const ClaimReportByIdParamsSchema = ClaimReportParamsSchema.extend({
 
 const ClaimReportQuerySchema = z.object({
   chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+});
+
+const ClaimBurnParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  token: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+const ClaimBurnRequestSchema = z.object({
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  blockNumber: z.string().regex(/^[1-9]\d*$/),
+  maxTransfers: z.number().int().min(1).max(25_000).optional(),
 });
 
 const FlapEventTransactionParamsSchema = LaunchInspectionParamsSchema.extend({
@@ -2452,6 +2470,58 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       });
       const evidence = await addEvidence(runtime, result.evidence);
       return { ...result, evidence };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/:ledger/:token/burn-conservation',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const input = ClaimBurnRequestSchema.parse(request.body);
+      const numericChainId = Number(input.chainId.slice('eip155:'.length));
+      if (!Number.isSafeInteger(numericChainId)) {
+        return reply
+          .code(400)
+          .send(errorResponse(request, 'INVALID_CHAIN_ID', 'Invalid EIP-155 chain ID.', false));
+      }
+      const adapter = runtime.evmAdapters.get(numericChainId);
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured EVM provider is required for burn conservation.',
+              true,
+            ),
+          );
+      }
+      const anchor = await adapter.readAnchorAt(input.blockNumber);
+      if (anchor.snapshot.ledger !== 'EVM' || anchor.snapshot.finality !== 'finalized') {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FINALIZED_PROVIDER_REQUIRED',
+              'Burn conservation requires a finalized EVM Snapshot.',
+              true,
+            ),
+          );
+      }
+      const run = await observeEvmClaimBurnBlock({
+        tokenAddress: params.token,
+        snapshot: anchor.snapshot,
+        adapter,
+        logReader: adapter,
+        blockReader: adapter,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.maxTransfers === undefined ? {} : { maxTransfers: input.maxTransfers }),
+      });
+      return run;
     },
   );
 

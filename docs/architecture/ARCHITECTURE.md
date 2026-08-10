@@ -306,12 +306,18 @@ content-addressed, append-only PostgreSQL Claim Reports. The repository validate
 result schema, identical finalized Snapshot across custody and flow, canonical report hash,
 terminal and nested Evidence membership, and replay identity before writes and reads. Provider-free
 latest/exact API routes and the UI expose observed atomic-unit lower bounds, custody, coverage,
-Snapshot and Evidence without converting them into action meaning. Automated capture scheduling,
-reviewed-draft promotion, action derivation, independent-source reconciliation, official wallet
-attribution and the terminal FFT report remain pending. A zero-address `Transfer` alone is not
-sufficient burn proof for an arbitrary custom ERC-20; action derivation must also reconcile
-Snapshot-pinned `totalSupply` change and complete block-level mint/burn conservation before crediting
-an irreversible burn.
+Snapshot and Evidence without converting them into action meaning.
+
+The first action derivation path is an exact finalized-block ERC-20 burn certificate. It requires
+adjacent parent/target lineage, reads `totalSupply` at both positions, captures every target-block
+`Transfer`, and reconciles `before + mint - burn = after`. Only conserved non-zero zero-address
+transfers become one-to-one Evidence-linked burn actions. A mismatch is `CONTRADICTED`; a conserved
+block without a burn is `NOT_APPLICABLE`. Both produce no actions. A zero-address `Transfer` alone
+is therefore never sufficient burn proof for an arbitrary custom token. The certificate's complete
+history coverage applies to that one block, not an announcement window.
+
+Automated capture scheduling, wide-range candidate discovery/promotion, independent-source
+reconciliation, official wallet attribution and the terminal FFT report remain pending.
 Endpoint failover and timestamp anchoring may add provenance IDs but do not raise claim-observation
 source coverage; it remains `0.5` until a separate reconciler repeats the complete result against an
 independent source.

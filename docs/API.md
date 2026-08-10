@@ -34,6 +34,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest` | latest immutable EVM Claim Report; provider-free replay          |
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`    | exact content-addressed EVM Claim Report replay                  |
 | POST   | `/api/v1/claims/declarations/parse`                           | compile public wording into Evidence-bound human-review drafts   |
+| POST   | `/api/v1/claims/EVM/:token/burn-conservation`                 | exact-block ERC-20 supply/mint/burn conservation certificate     |
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
 | POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                   | migrated Flap Pancake V2 nominal/gross/tax exit-size model       |
@@ -70,6 +71,26 @@ Missing wallet addresses, exact dates or allocation values remain typed Unknown;
 a year and timezone produces a warning. Every draft has `requiresHumanReview: true`. This endpoint
 does not assert that a declaration is true, perform chain verification, promote a draft to an audit
 rule, or initiate any transaction.
+
+### ERC-20 burn conservation
+
+`POST /api/v1/claims/EVM/:token/burn-conservation` accepts `chainId`, a positive finalized
+`blockNumber`, and an optional bounded `maxTransfers`. It captures the exact block and parent
+lineage, reads `totalSupply` at both adjacent blocks, and requests every ERC-20 `Transfer` log from
+the target block. Parent supply, target supply, the complete log query, every candidate mint/burn
+log and the terminal derivation are persisted as a replayable Evidence graph.
+
+The result is `VERIFIED` only when `supplyBefore + minted - burned = supplyAfter` and at least one
+non-zero transfer to the zero address exists. Each verified transfer maps one-to-one to a generated
+`BURN` action. A zero-address event with unchanged supply is `CONTRADICTED` and creates no action; an
+exactly conserved block with no burn is `NOT_APPLICABLE`, not a missing value or a fabricated zero
+conclusion. Cross-block logs, incomplete queries, malformed supply responses, non-adjacent lineage,
+zero-to-zero events and unfinalized Snapshots fail closed.
+
+This certificate covers one block only. It does not prove a whole announcement window is complete,
+discover candidate blocks, establish who controls an address, or classify a transfer into an EOA,
+Safe, treasury, pension or publicity-named “burn wallet” as irreversible. The endpoint is strictly
+read-only and requires a configured EVM provider with parent-block state availability.
 
 ### EVM Claim Report replay
 
