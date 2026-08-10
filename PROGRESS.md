@@ -16,9 +16,9 @@ completed feature.
 | Production acceptance            | **No**                                                                                                            |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                    |
 | Unit tests                       | **264 passing across 28 files**                                                                                   |
-| Integration tests                | **30 environment-free plus 14 real PostgreSQL passing; latest completed remote baseline has 46 passing**          |
+| Integration tests                | **30 environment-free plus 14 real PostgreSQL passing; latest completed remote baseline has 47 passing**          |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                                                      |
-| Remote CI                        | **Pass on immutable development commit `513c561`; protected main `3372a5a`**                                      |
+| Remote CI                        | **Pass on immutable development commit `768e116`; protected main `3372a5a`**                                      |
 | Coverage                         | **Current local: 83.38% statements / 75.65% branches / 91.60% functions / 84.36% lines**                          |
 | Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed                                |
 | Durable evidence/history         | Raw execution/state, anchor/alert provenance and generic semantic checkpoints wired; semantic projections pending |
@@ -116,6 +116,10 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31350281405) passed on immutable
   origin-resume commit `513c561`: 304 tests, 86.20% statement/78.20% branch/95.65% function/87.17%
   line coverage, 10 browser flows, dependency gates, and five production container targets.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31352251137) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31352251135) passed on immutable
+  semantic-worker commit `768e116`: 311 tests, 85.68% statement/77.99% branch/94.77% function/86.66%
+  line coverage, 10 browser flows, dependency gates, and all six production container targets.
 
 ### Read-only chain foundation
 
@@ -390,7 +394,7 @@ correctness. Exact local smoke observations and limitations are in
 | ------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | Reproducible install/build     | Pass                                                                      | locked npm install in production container; all packages/API/web                                                                     |
 | Unit tests                     | 264 pass                                                                  | 28 files across schemas, adapters, data quality, ingestion, storage, workers and API runtime                                         |
-| Integration tests              | 30 environment-free; 14 real PostgreSQL pass; 46 latest completed CI pass | origin resume/terminal replay and checkpoint health are deterministic; real PostgreSQL guards and latest remote all-store suite pass |
+| Integration tests              | 30 environment-free; 14 real PostgreSQL pass; 47 latest completed CI pass | origin resume/terminal replay and checkpoint health are deterministic; real PostgreSQL guards and latest remote all-store suite pass |
 | Restart regression             | Pass                                                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                              |
 | Coverage gate                  | Pass                                                                      | current local: 83.38% statements, 75.65% branches, 91.60% functions, 84.36% lines on 294 tests; 17 opt-in durable tests skipped      |
 | Chromium E2E                   | 10 pass                                                                   | five flows each on desktop and Pixel 7, including Flap state/event/default/Evidence/Unknown rendering                                |
@@ -403,7 +407,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                                                      | PostgreSQL 001–007/triggers and ClickHouse Raw Fact schema/migration                                                                 |
 | Runtime/browser smoke          | Pass                                                                      | API/web health, proxy, security headers, desktop/mobile render                                                                       |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope                                 | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending        |
-| Remote CI                      | Pass                                                                      | CI/CodeQL pass on immutable `513c561`: 304 tests, 10 Chromium flows and five container targets                                       |
+| Remote CI                      | Pass                                                                      | CI/CodeQL pass on immutable `768e116`: 311 tests, 10 Chromium flows and six container targets                                        |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

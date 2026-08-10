@@ -655,20 +655,20 @@ FFT conclusion is claimed.
 
 ## Automated verification
 
-| Command                  | Result                                                                                                                                                                      |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 264 unit, 30 environment-free integration, build, license and zero-vulnerability audit; 14 PostgreSQL tests also passed separately           |
-| local `test:coverage`    | pass: 294 tests, 17 opt-in durable skips; 83.38% statements, 75.65% branches, 91.60% functions, 84.36% lines                                                                |
-| branch `test:coverage`   | latest completed pass: 304 tests; 86.20% statements, 78.20% branches, 95.65% functions, 87.17% lines                                                                        |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                         |
-| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |
-| `docker compose config`  | pass                                                                                                                                                                        |
-| production Compose smoke | pass: clean current-source semantic-worker image/non-root entrypoint plus prior live finalized ingestion and terminal replay                                                |
-| branch GitHub Actions CI | [latest completed pass on `513c561`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31350281421): 304 tests, 10 Chromium E2E, and five production container targets |
-| branch CodeQL            | [latest completed pass on `513c561`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31350281405): JavaScript and TypeScript analysis                                |
+| Command                  | Result                                                                                                                                                                     |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| local non-browser gates  | pass: format, lint, typecheck, 264 unit, 30 environment-free integration, build, license and zero-vulnerability audit; 14 PostgreSQL tests also passed separately          |
+| local `test:coverage`    | pass: 294 tests, 17 opt-in durable skips; 83.38% statements, 75.65% branches, 91.60% functions, 84.36% lines                                                               |
+| branch `test:coverage`   | latest completed pass: 311 tests; 85.68% statements, 77.99% branches, 94.77% functions, 86.66% lines                                                                       |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                        |
+| `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                     |
+| `docker compose config`  | pass                                                                                                                                                                       |
+| production Compose smoke | pass: clean current-source semantic-worker image/non-root entrypoint plus prior live finalized ingestion and terminal replay                                               |
+| branch GitHub Actions CI | [latest completed pass on `768e116`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31352251137): 311 tests, 10 Chromium E2E, and six production container targets |
+| branch CodeQL            | [latest completed pass on `768e116`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31352251135): JavaScript and TypeScript analysis                               |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
-and MinIO services. All 46 integration tests passed and the workflow removed its named volumes. The
+and MinIO services. All 47 integration tests passed and the workflow removed its named volumes. The
 current local semantic-worker batch additionally passed all 14 PostgreSQL tests on a fresh
 disposable image and built the sixth production target; ClickHouse and MinIO were not rerun locally
 for this PostgreSQL/worker-only batch.
