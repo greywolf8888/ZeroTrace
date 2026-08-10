@@ -12,7 +12,7 @@ import {
   type KnowledgeValue,
 } from '@zerotrace/schemas';
 
-export const CLAIM_AUDIT_MODEL_VERSION = 'claim-audit-v1.0.0';
+export const CLAIM_AUDIT_MODEL_VERSION = 'claim-audit-v1.1.0';
 const BPS_DENOMINATOR = 10_000n;
 
 export type ClaimStatus = 'VERIFIED' | 'PARTIALLY_VERIFIED' | 'CONTRADICTED' | 'INSUFFICIENT_DATA';
@@ -212,6 +212,22 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)];
 }
 
+function snapshotTimeBound(metadata: AnalysisMetadata): number {
+  const snapshot = metadata.snapshot;
+  if (snapshot === null) throw new Error('Claim audit requires a replayable chain Snapshot.');
+  const capturedAt = parseTime(snapshot.capturedAt, 'snapshot.capturedAt');
+  if (!('blockTimestamp' in snapshot) || snapshot.blockTimestamp === undefined) {
+    return capturedAt;
+  }
+  return Math.min(capturedAt, parseTime(snapshot.blockTimestamp, 'snapshot.blockTimestamp'));
+}
+
+function assertAtOrBeforeSnapshot(value: string, field: string, snapshotBound: number): void {
+  if (parseTime(value, field) > snapshotBound) {
+    throw new Error(`${field} must not occur after the Snapshot time bound.`);
+  }
+}
+
 function formatRatio(numerator: bigint, denominator: bigint, decimalPlaces = 4): string {
   if (denominator === 0n) throw new Error('Cannot format a ratio with a zero denominator.');
   const integer = numerator / denominator;
@@ -313,28 +329,43 @@ function validateActionPath(
   maximumHops: number,
 ): boolean {
   if (action.transferIds.length === 0) {
-    return normalizeAddress(action.actor) === normalizeAddress(claim.destinationAddress);
+    return (
+      normalizeAddress(action.actor) === normalizeAddress(claim.destinationAddress) &&
+      action.path.length === 1 &&
+      normalizeAddress(action.path[0] ?? '') === normalizeAddress(claim.destinationAddress)
+    );
   }
   if (
     action.transferIds.length > maximumHops ||
+    new Set(action.transferIds).size !== action.transferIds.length ||
     action.path.length !== action.transferIds.length + 1 ||
     normalizeAddress(action.path[0] ?? '') !== normalizeAddress(claim.destinationAddress) ||
+    normalizeAddress(action.actor) !== normalizeAddress(action.path[0] ?? '') ||
     new Set(action.path.map(normalizeAddress)).size !== action.path.length
   ) {
     return false;
   }
   const actionAmount = parseAtomic(action.amount, 'action.amount');
+  const actionTime = parseTime(action.observedAt, 'action.observedAt');
+  let previousTransferTime = Number.NEGATIVE_INFINITY;
   for (let index = 0; index < action.transferIds.length; index += 1) {
     const transfer = transfersById.get(action.transferIds[index] ?? '');
+    const transferTime =
+      transfer === undefined
+        ? Number.POSITIVE_INFINITY
+        : parseTime(transfer.observedAt, 'transfer.observedAt');
     if (
       transfer === undefined ||
       !withinWindow(transfer.observedAt, claim.window) ||
+      transferTime < previousTransferTime ||
+      transferTime > actionTime ||
       normalizeAddress(transfer.from) !== normalizeAddress(action.path[index] ?? '') ||
       normalizeAddress(transfer.to) !== normalizeAddress(action.path[index + 1] ?? '') ||
       parseAtomic(transfer.amount, 'transfer.amount') < actionAmount
     ) {
       return false;
     }
+    previousTransferTime = transferTime;
   }
   return true;
 }
@@ -488,6 +519,25 @@ export function auditClaims(input: ClaimAuditInput): ClaimAuditReport {
   if (new Set(claims.map((claim) => claim.id)).size !== claims.length) {
     throw new Error('Claim ids must be unique.');
   }
+  if (new Set(claims.map((claim) => claim.assetId)).size !== 1) {
+    throw new Error('A Claim audit may contain exactly one assetId.');
+  }
+  if (new Set(actions.map((action) => action.id)).size !== actions.length) {
+    throw new Error('Action ids must be unique.');
+  }
+  const custodyAddresses = custodyObservations.map((observation) =>
+    normalizeAddress(observation.address),
+  );
+  if (new Set(custodyAddresses).size !== custodyAddresses.length) {
+    throw new Error('Custody addresses must be unique after normalization.');
+  }
+  const snapshotBound = snapshotTimeBound(input.metadata);
+  for (const transfer of transfers) {
+    assertAtOrBeforeSnapshot(transfer.observedAt, 'transfer.observedAt', snapshotBound);
+  }
+  for (const action of actions) {
+    assertAtOrBeforeSnapshot(action.observedAt, 'action.observedAt', snapshotBound);
+  }
   const policy = { ...defaultPolicy, ...input.policy };
   assertPolicy(policy);
   ClaimAuditPolicySchema.parse(policy);
@@ -499,6 +549,7 @@ export function auditClaims(input: ClaimAuditInput): ClaimAuditReport {
     if (parseTime(claim.window.from, 'window.from') > parseTime(claim.window.to, 'window.to')) {
       throw new Error('Claim window must not end before it begins.');
     }
+    assertAtOrBeforeSnapshot(claim.window.to, 'claim.window.to', snapshotBound);
     const source = normalizeAddress(claim.sourceAddress);
     const destination = normalizeAddress(claim.destinationAddress);
     const deposits = transfers.filter(

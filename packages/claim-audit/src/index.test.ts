@@ -16,6 +16,7 @@ const metadata: AnalysisMetadata = {
     blockNumber: '100',
     blockHash: `0x${'a'.repeat(64)}`,
     finality: 'finalized',
+    blockTimestamp: '2026-08-10T00:00:00.000Z',
     capturedAt: '2026-08-10T00:00:00.000Z',
     providerVersions: { fixture: '1' },
     adapterVersions: { fixture: '1' },
@@ -347,5 +348,145 @@ describe('deterministic claim audit', () => {
         policy: { verifiedAmountToleranceBps: '501', partialAmountToleranceBps: '500' },
       }),
     ).toThrow('may not exceed');
+  });
+
+  it('rejects mixed assets and ambiguous duplicate observations', () => {
+    expect(() =>
+      run({
+        claims: [claim({ id: 'one' }), claim({ id: 'two', assetId: 'eip155:56:other' })],
+      }),
+    ).toThrow('exactly one assetId');
+    expect(() =>
+      run({
+        claims: [claim({ id: 'one' })],
+        actions: [
+          {
+            id: 'same',
+            type: 'DIVIDEND',
+            actor: 'one',
+            amount: '1',
+            observedAt: '2026-08-03T00:00:00.000Z',
+            transferIds: [],
+            path: ['one'],
+            evidenceIds: ['ev_action_one'],
+          },
+          {
+            id: 'same',
+            type: 'DIVIDEND',
+            actor: 'one',
+            amount: '1',
+            observedAt: '2026-08-04T00:00:00.000Z',
+            transferIds: [],
+            path: ['one'],
+            evidenceIds: ['ev_action_two'],
+          },
+        ],
+      }),
+    ).toThrow('Action ids must be unique');
+    expect(() =>
+      run({
+        claims: [claim({ id: 'one' })],
+        custody: [
+          {
+            address: 'Vault',
+            kind: 'EOA',
+            canMoveFunds: knownValue(true),
+            evidenceIds: ['ev_vault_one'],
+          },
+          {
+            address: 'vault',
+            kind: 'CONTRACT',
+            canMoveFunds: knownValue(true),
+            evidenceIds: ['ev_vault_two'],
+          },
+        ],
+      }),
+    ).toThrow('Custody addresses must be unique');
+  });
+
+  it('rejects windows and observations that extend beyond the Snapshot', () => {
+    expect(() =>
+      run({
+        claims: [
+          claim({
+            id: 'future-window',
+            window: { from: window.from, to: '2026-08-10T00:00:01.000Z' },
+          }),
+        ],
+      }),
+    ).toThrow('claim.window.to must not occur after the Snapshot');
+    expect(() =>
+      run({
+        claims: [claim({ id: 'one' })],
+        transfers: [transfer('future-transfer', 'tax', 'one', '1000', '2026-08-10T00:00:01.000Z')],
+      }),
+    ).toThrow('transfer.observedAt must not occur after the Snapshot');
+    expect(() =>
+      run({
+        claims: [claim({ id: 'one' })],
+        actions: [
+          {
+            id: 'future-action',
+            type: 'DIVIDEND',
+            actor: 'one',
+            amount: '1',
+            observedAt: '2026-08-10T00:00:01.000Z',
+            transferIds: [],
+            path: ['one'],
+            evidenceIds: ['ev_future_action'],
+          },
+        ],
+      }),
+    ).toThrow('action.observedAt must not occur after the Snapshot');
+  });
+
+  it('accepts terminal paths only when actor, edges, ordering, and action time agree', () => {
+    const transfers = [
+      transfer('hop-1', 'processor', 'relay', '400', '2026-08-03T02:00:00.000Z'),
+      transfer('hop-2', 'relay', 'dead', '400', '2026-08-03T01:00:00.000Z'),
+    ];
+    const action = {
+      id: 'invalid-order',
+      type: 'BURN' as const,
+      actor: 'processor',
+      amount: '400',
+      observedAt: '2026-08-03T03:00:00.000Z',
+      transferIds: ['hop-1', 'hop-2'],
+      path: ['processor', 'relay', 'dead'],
+      evidenceIds: ['ev_invalid_order'],
+    };
+    const result = run({
+      claims: [
+        claim({
+          id: 'processor',
+          expectedAction: 'BURN',
+          expectedShareBps: '4000',
+        }),
+      ],
+      transfers: [transfer('deposit', 'tax', 'processor', '400'), ...transfers],
+      actions: [action],
+    });
+    expect(result.items[0]).toMatchObject({
+      status: 'CONTRADICTED',
+      actualActionAmount: { state: 'known', value: '0' },
+    });
+
+    const wrongActor = run({
+      claims: [claim({ id: 'processor', expectedAction: 'BURN', expectedShareBps: '4000' })],
+      transfers: [transfer('deposit', 'tax', 'processor', '400')],
+      actions: [
+        {
+          ...action,
+          id: 'wrong-actor',
+          actor: 'other',
+          transferIds: [],
+          path: ['processor'],
+          evidenceIds: ['ev_wrong_actor'],
+        },
+      ],
+    });
+    expect(wrongActor.items[0]?.findings.map((finding) => finding.code)).toContain(
+      'ACTION_NOT_OBSERVED',
+    );
   });
 });
