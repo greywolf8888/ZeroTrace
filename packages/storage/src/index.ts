@@ -14,6 +14,7 @@ export * from './ingestion-checkpoints.js';
 export * from './semantic-checkpoints.js';
 export * from './data-quality.js';
 export * from './flap-history.js';
+export * from './flap-lifetime-heads.js';
 
 type DatabaseRow = Record<string, unknown>;
 

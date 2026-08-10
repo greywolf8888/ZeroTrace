@@ -34,6 +34,7 @@ export default defineConfig({
       include: ['packages/*/src/**/*.ts', 'services/*/src/**/*.ts', 'apps/api/src/**/*.ts'],
       exclude: [
         '**/*.test.ts',
+        '**/test-fixtures/**',
         'packages/chain-adapters/src/index.ts',
         'apps/api/src/server.ts',
         'services/ingest-worker/src/cli.ts',
