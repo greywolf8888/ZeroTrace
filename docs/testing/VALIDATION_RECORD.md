@@ -589,13 +589,13 @@ flows passed.
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | local non-browser gates  | pass: format, lint, typecheck, 241 unit, 28 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
 | local `test:coverage`    | pass: 269 tests, 15 durable skips; 83.93% statements, 75.80% branches, 91.78% functions, 85.05% lines                                                                       |
-| branch `test:coverage`   | latest completed pass: 281 tests; 86.59% statements, 78.04% branches, 95.3% functions, 87.71% lines                                                                         |
+| branch `test:coverage`   | latest completed pass: 284 tests; 86.56% statements, 78.33% branches, 95.43% functions, 87.68% lines                                                                        |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                         |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |
 | `docker compose config`  | pass                                                                                                                                                                        |
 | production Compose smoke | pass: clean current-source worker build, live finalized block, and terminal replay                                                                                          |
-| branch GitHub Actions CI | [latest completed pass on `a52a78e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31342767551): 281 tests, 10 Chromium E2E, and five production container targets |
-| branch CodeQL            | [latest completed pass on `a52a78e`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31342767550): JavaScript and TypeScript analysis                                |
+| branch GitHub Actions CI | [latest completed pass on `343ea35`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31344637524): 284 tests, 10 Chromium E2E, and five production container targets |
+| branch CodeQL            | [latest completed pass on `343ea35`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31344637521): JavaScript and TypeScript analysis                                |
 
 The latest complete durable run used GitHub Actions disposable PostgreSQL, ClickHouse, and MinIO
 services. All 43 integration tests passed and the workflow removed its named volumes. The local
