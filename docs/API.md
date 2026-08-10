@@ -173,11 +173,15 @@ EIP-1898 before any result is accepted.
 
 The current standard surface performs exact ERC-1167 runtime-bytecode detection, reads the three
 EIP-1967 implementation/admin/beacon slots, calls ERC-173 `owner()`, and reads owners/threshold for
-strictly registered Safe singleton versions. It emits a fixed 23-domain coverage matrix. Custom
-upgrade authorization, mint/burn roles, taxes, blacklist/whitelist, trading switches, limits,
-routers, treasuries, LP control, Safe modules/guard/fallback handler, recursive controllers, and
-historical validity remain typed Unknown until separately decoded; zero-valued `owner()` therefore
-does not mean that all control is absent.
+strictly registered Safe singleton versions. It resolves the runtime logic target and reads its code
+at the same canonical block. With `SOURCIFY_V2_URL` configured, exact source metadata is accepted
+only when the returned runtime bytecode equals the RPC logic bytecode. V1.1 emits a fixed 25-domain
+coverage matrix and separately lists verified ABI mutation declarations. A declaration does not
+establish its current controller or execution reachability. Effective custom authorization,
+mint/burn roles, taxes, blacklist/whitelist, trading switches, limits, routers, treasuries, LP
+control, Safe modules/guard/fallback handler, controller recursion, and historical validity remain
+typed Unknown until separately decoded; zero-valued `owner()` therefore does not mean all control
+is absent. Immutable v1.0 reports retain their original 23-domain shape on replay.
 
 Successful inspection stores one immutable, content-addressed report whose identity is bound to
 the finalized Snapshot, canonical subject, source set, model version, source Evidence, terminal

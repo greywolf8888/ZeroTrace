@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ProviderError, type TransportObservation } from '@zerotrace/chain-adapters';
 import { EvidenceLedger } from '@zerotrace/evidence';
 import type { AnalysisSnapshot, ChainAnchorRead, Evidence } from '@zerotrace/schemas';
-import { encodeAbiParameters, encodeFunctionData, type Address } from 'viem';
+import { encodeAbiParameters, encodeFunctionData, keccak256, type Address } from 'viem';
 
 import { OFFICIAL_SAFE_IMPLEMENTATIONS } from './claim-evm.js';
 import {
@@ -16,6 +16,7 @@ import {
   inspectEvmControlSurface,
   type EvmControlReadAdapter,
 } from './evm-control-rights.js';
+import type { EvmSourceVerificationAdapter } from './sourcify.js';
 
 const blockHash = `0x${'a'.repeat(64)}`;
 const parentHash = `0x${'b'.repeat(64)}`;
@@ -75,6 +76,7 @@ const selectors = Object.fromEntries(
 
 interface FixtureState {
   code: string;
+  codes?: Record<string, string>;
   slots?: Record<string, string>;
   calls?: Record<string, string | ProviderError>;
 }
@@ -120,7 +122,8 @@ function adapter(sourceId: string, fixture: FixtureState): EvmControlReadAdapter
         snapshot: snapshot(sourceId),
         payload: { fixture: true },
       }),
-    getCodeObservationAtBlockHash: () => sourced(fixture.code),
+    getCodeObservationAtBlockHash: (address) =>
+      sourced(fixture.codes?.[address.toLowerCase()] ?? fixture.code),
     getStorageObservationAtBlockHash: (_address, slot) =>
       sourced(fixture.slots?.[slot] ?? zeroWord),
     callObservationAtBlockHash: (_address, data) => {
@@ -164,6 +167,7 @@ describe('EVM control surface', () => {
     const writer = evidenceWriter();
     const fixture = {
       code,
+      codes: { [implementation]: '0x6000' },
       calls: {
         [selectors.owner]: encodeAbiParameters(
           [{ type: 'address' }],
@@ -204,7 +208,142 @@ describe('EVM control surface', () => {
     expect(result.coverage.find((item) => item.domain === 'TAX_CHANGE')).toMatchObject({
       observed: { state: 'unknown', reason: 'NOT_QUERIED' },
     });
+    expect(result.logicCode).toMatchObject({
+      state: 'known',
+      value: {
+        address: implementation,
+        relation: 'ERC1167_IMPLEMENTATION',
+        runtimeBytecodeHash: keccak256('0x6000'),
+      },
+    });
+    expect(result.verifiedSource).toMatchObject({
+      state: 'unknown',
+      reason: 'PROVIDER_UNCONFIGURED',
+    });
     expect(writer.ledger.drilldown(result.terminalEvidenceId).length).toBeGreaterThanOrEqual(7);
+  });
+
+  it('binds exact verified source to Snapshot logic code without inventing controllers', async () => {
+    const proxyCode = `0x${ERC1167_RUNTIME_PREFIX}${implementation.slice(2)}${ERC1167_RUNTIME_SUFFIX}`;
+    const logicCode = '0x60006000';
+    const writer = evidenceWriter();
+    const sourceVerificationAdapter: EvmSourceVerificationAdapter = {
+      sourceId: 'sourcify-v2@sourcify.dev',
+      verify: () =>
+        Promise.resolve({
+          endpointId: 'sourcify-v2@sourcify.dev',
+          value: {
+            status: 'EXACT_MATCH',
+            sourceId: 'sourcify-v2@sourcify.dev',
+            sourceUri: `https://sourcify.dev/server/v2/contract/56/${implementation}`,
+            address: implementation,
+            matchType: 'exact_match',
+            runtimeBytecode: logicCode,
+            runtimeBytecodeHash: keccak256(logicCode),
+            runtimeBytecodeBytes: 4,
+            contractName: 'FlapTaxTokenV3',
+            fullyQualifiedName: 'src/Tax/FlapTaxTokenV3.sol:FlapTaxTokenV3',
+            language: 'Solidity',
+            compilerVersion: '0.8.24+commit.e11b9ed9',
+            verifiedAt: '2026-06-03T00:24:59.393Z',
+            deployment: {
+              state: 'known',
+              value: {
+                blockNumber: '90',
+                transactionHash: `0x${'9'.repeat(64)}`,
+                deployer: `0x${'8'.repeat(40)}`,
+              },
+            },
+            abiFunctionCount: 4,
+            mutatingFunctionSignatures: [
+              'approve(address,uint256)',
+              'finalizeMigration()',
+              'startMigration()',
+              'transferOwnership(address)',
+            ],
+          },
+        }),
+    };
+    const result = await inspectEvmControlSurface({
+      subject,
+      adapters: [
+        adapter('bsc-rpc@bsc-dataseed.bnbchain.org', {
+          code: proxyCode,
+          codes: { [implementation]: logicCode },
+        }),
+      ],
+      sourceVerificationAdapter,
+      writeEvidence: writer.write,
+    });
+
+    expect(result.verifiedSource).toMatchObject({
+      state: 'known',
+      value: {
+        address: implementation,
+        contractName: 'FlapTaxTokenV3',
+        runtimeBytecodeHash: keccak256(logicCode),
+      },
+    });
+    expect(result.declaredCapabilities?.map((item) => item.rightType)).toEqual([
+      'MIGRATION',
+      'OWNER',
+    ]);
+    expect(result.rights).toEqual([]);
+    expect(result.coverage.find((item) => item.domain === 'MIGRATION')).toMatchObject({
+      observed: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      evidenceIds: [expect.stringMatching(/^ev_/)],
+    });
+    expect(result.metadata.sourceSet).toContain('sourcify-v2@sourcify.dev');
+  });
+
+  it('keeps verified source conflicting when provider bytecode differs from Snapshot logic', async () => {
+    const proxyCode = `0x${ERC1167_RUNTIME_PREFIX}${implementation.slice(2)}${ERC1167_RUNTIME_SUFFIX}`;
+    const snapshotLogic = '0x6000';
+    const verifierLogic = '0x6001';
+    const writer = evidenceWriter();
+    const sourceVerificationAdapter: EvmSourceVerificationAdapter = {
+      sourceId: 'sourcify-v2@sourcify.dev',
+      verify: () =>
+        Promise.resolve({
+          endpointId: 'sourcify-v2@sourcify.dev',
+          value: {
+            status: 'EXACT_MATCH',
+            sourceId: 'sourcify-v2@sourcify.dev',
+            sourceUri: `https://sourcify.dev/server/v2/contract/56/${implementation}`,
+            address: implementation,
+            matchType: 'exact_match',
+            runtimeBytecode: verifierLogic,
+            runtimeBytecodeHash: keccak256(verifierLogic),
+            runtimeBytecodeBytes: 2,
+            contractName: 'ConflictingContract',
+            fullyQualifiedName: 'src/ConflictingContract.sol:ConflictingContract',
+            language: 'Solidity',
+            compilerVersion: '0.8.24',
+            verifiedAt: '2026-06-03T00:24:59.393Z',
+            deployment: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+            abiFunctionCount: 1,
+            mutatingFunctionSignatures: ['mint(address,uint256)'],
+          },
+        }),
+    };
+    const result = await inspectEvmControlSurface({
+      subject,
+      adapters: [
+        adapter('bsc-rpc@bsc-dataseed.bnbchain.org', {
+          code: proxyCode,
+          codes: { [implementation]: snapshotLogic },
+        }),
+      ],
+      sourceVerificationAdapter,
+      writeEvidence: writer.write,
+    });
+
+    expect(result.verifiedSource).toMatchObject({
+      state: 'unknown',
+      reason: 'CONFLICTING_SOURCES',
+    });
+    expect(result.declaredCapabilities).toEqual([]);
+    expect(result.metadata.sourceSet).toContain('sourcify-v2@sourcify.dev');
   });
 
   it('emits point-in-time owner and EIP-1967 admin rights without inventing history', async () => {

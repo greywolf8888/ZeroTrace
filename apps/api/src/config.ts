@@ -49,6 +49,8 @@ const EnvironmentSchema = z.object({
   SOLANA_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(10_000).default(4),
   SOLANA_COMMITMENT: z.enum(['processed', 'confirmed', 'finalized']).default('finalized'),
   SQD_PORTAL_URL: optionalString,
+  SOURCIFY_V2_URL: optionalString,
+  SOURCIFY_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(100).default(2),
   POSTGRES_URL: optionalString,
   CLICKHOUSE_URL: optionalString,
   CLICKHOUSE_USERNAME: optionalString,
@@ -110,6 +112,8 @@ export interface AppConfig {
   solanaRequestsPerSecond: number;
   solanaCommitment: 'processed' | 'confirmed' | 'finalized';
   sqdPortalUrl?: string;
+  sourcifyV2Url?: string;
+  sourcifyRequestsPerSecond: number;
   postgresUrl?: string;
   clickhouseUrl?: string;
   clickhouseUsername?: string;
@@ -237,6 +241,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
   const bitcoinPrimary = firstUrl(bitcoinEsploraUrls).primary;
   const solanaPrimary = firstUrl(solanaRpcUrls).primary;
   const sqdPortalUrl = optionalUrl(parsed.SQD_PORTAL_URL, 'SQD Portal URL');
+  const sourcifyV2Url = optionalUrl(parsed.SOURCIFY_V2_URL, 'Sourcify V2 URL');
   const postgresUrl = optionalPostgresUrl(parsed.POSTGRES_URL);
   const clickhouseUrl = optionalOrigin(parsed.CLICKHOUSE_URL, 'CLICKHOUSE_URL');
   const objectStoreEndpoint = optionalOrigin(parsed.OBJECT_STORE_ENDPOINT, 'OBJECT_STORE_ENDPOINT');
@@ -297,6 +302,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     solanaRpcUrls,
     solanaRequestsPerSecond: parsed.SOLANA_REQUESTS_PER_SECOND,
     solanaCommitment: parsed.SOLANA_COMMITMENT,
+    sourcifyRequestsPerSecond: parsed.SOURCIFY_REQUESTS_PER_SECOND,
     gmgnConfigured: parsed.GMGN_API_KEY !== undefined,
     jupiterConfigured: parsed.JUPITER_API_KEY !== undefined,
     etherscanConfigured: parsed.ETHERSCAN_API_KEY !== undefined,
@@ -308,6 +314,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     ...(bitcoinPrimary === undefined ? {} : { bitcoinEsploraUrl: bitcoinPrimary }),
     ...(solanaPrimary === undefined ? {} : { solanaRpcUrl: solanaPrimary }),
     ...(sqdPortalUrl === undefined ? {} : { sqdPortalUrl }),
+    ...(sourcifyV2Url === undefined ? {} : { sourcifyV2Url }),
     ...(postgresUrl === undefined ? {} : { postgresUrl }),
     ...(clickhouseUrl === undefined ? {} : { clickhouseUrl }),
     ...(parsed.CLICKHOUSE_USERNAME === undefined

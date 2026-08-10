@@ -40,6 +40,7 @@ import {
   type ObjectStoreHealth,
   type RawFactStorageHealth,
 } from '@zerotrace/storage';
+import { SourcifyV2Adapter, type EvmSourceVerificationAdapter } from '@zerotrace/platform-adapters';
 
 import type { AppConfig } from './config.js';
 
@@ -47,6 +48,7 @@ export interface AppRuntime {
   providerRegistry: ProviderRegistry;
   evmAdapters: Map<number, EvmLedgerAdapter>;
   evmSourceAdapters?: Map<number, EvmLedgerAdapter[]>;
+  evmSourceVerification?: EvmSourceVerificationAdapter;
   sqdBscLogReader?: EvmLogReader;
   sqdBscCreationReader?: EvmContractCreationReader;
   bitcoinAdapter?: BitcoinUtxoLedgerAdapter;
@@ -160,6 +162,20 @@ export function createRuntime(config: AppConfig): AppRuntime {
   const bscAnchorReaders: ChainAnchorReader[] = [];
   const bitcoinAnchorReaders: ChainAnchorReader[] = [];
   const solanaAnchorReaders: ChainAnchorReader[] = [];
+  const evmSourceVerification =
+    config.sourcifyV2Url === undefined
+      ? undefined
+      : new SourcifyV2Adapter({
+          publicBaseUrl: config.sourcifyV2Url,
+          transport: new SafeRestTransport({
+            endpointId: `sourcify-v2@${new URL(config.sourcifyV2Url).hostname.toLowerCase()}`,
+            baseUrl: config.sourcifyV2Url,
+            policy: policyFor(config.sourcifyV2Url, config),
+            timeoutMs: Math.max(config.requestTimeoutMs, 15_000),
+            maxResponseBytes: 1_000_000,
+            resilience: resilienceFor(config, config.sourcifyRequestsPerSecond),
+          }),
+        });
 
   const addEvm = (
     urls: readonly string[],
@@ -504,6 +520,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ),
     evmAdapters,
     evmSourceAdapters,
+    ...(evmSourceVerification === undefined ? {} : { evmSourceVerification }),
     ...(sqdBscLogReader === undefined ? {} : { sqdBscLogReader }),
     ...(sqdBscCreationReader === undefined ? {} : { sqdBscCreationReader }),
     evidenceLedger,

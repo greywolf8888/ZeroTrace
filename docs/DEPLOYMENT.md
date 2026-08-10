@@ -268,6 +268,10 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/010_flap_lifetime_reorgs.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/011_evm_claim_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/012_evm_control_surface_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/013_evm_control_source_provenance.sql
 ```
 
 PowerShell equivalent:
@@ -290,6 +294,10 @@ Get-Content -Raw infra/postgres/init/009_flap_lifetime_heads.sql |
 Get-Content -Raw infra/postgres/init/010_flap_lifetime_reorgs.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/011_evm_claim_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/012_evm_control_surface_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/013_evm_control_source_provenance.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

@@ -38,6 +38,7 @@ function baseConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     solanaRpcUrls: [],
     solanaRequestsPerSecond: 0,
     solanaCommitment: 'finalized',
+    sourcifyRequestsPerSecond: 0,
     gmgnConfigured: false,
     jupiterConfigured: false,
     etherscanConfigured: false,
@@ -83,12 +84,14 @@ describe('application runtime wiring', () => {
           'bitcoin.example',
           'solana.example',
           'sqd.example',
+          'sourcify.example',
         ],
         ethereumRpcUrls: ['https://ethereum.example', 'https://ethereum-fallback.example'],
         bscRpcUrls: ['https://bsc.example'],
         bitcoinEsploraUrls: ['https://bitcoin.example/api'],
         solanaRpcUrls: ['https://solana.example'],
         sqdPortalUrl: 'https://sqd.example',
+        sourcifyV2Url: 'https://sourcify.example/server',
       }),
     );
     expect([...runtime.evmAdapters.keys()]).toEqual([1, 56]);
@@ -98,6 +101,7 @@ describe('application runtime wiring', () => {
     expect(runtime.solanaAdapter?.config.commitment).toBe('finalized');
     expect(runtime.sqdBscLogReader).toBeDefined();
     expect(runtime.sqdBscCreationReader).toBeDefined();
+    expect(runtime.evmSourceVerification?.sourceId).toBe('sourcify-v2@sourcify.example');
     expect(runtime.dataQuality.configuredSources()).toEqual({
       'eip155:1': 2,
       'eip155:56': 1,

@@ -1595,6 +1595,17 @@ function ControlRightsWorkspace() {
 
   const record = result?.record;
   const report = record?.report;
+  const logicCode = report?.logicCode ?? {
+    state: 'unknown' as const,
+    reason: 'NOT_QUERIED',
+    detail: 'This legacy report predates recursive logic-code inspection.',
+  };
+  const verifiedSource = report?.verifiedSource ?? {
+    state: 'unknown' as const,
+    reason: 'NOT_QUERIED',
+    detail: 'This legacy report predates exact verified-source inspection.',
+  };
+  const declaredCapabilities = report?.declaredCapabilities ?? [];
   const knownCoverage =
     report?.coverage.filter((item) => item.observed.state === 'known').length ?? 0;
   const coverageCount = report?.coverage.length ?? 0;
@@ -1670,8 +1681,9 @@ function ControlRightsWorkspace() {
         </form>
         <p className="quote-note">
           Current coverage: exact ERC-1167 runtime, EIP-1967 implementation/admin/beacon slots,
-          ERC-173-shaped owner(), and allowlisted Safe owner/threshold state. Custom token roles and
-          historical validity remain Unknown until separately proved.
+          Snapshot-bound recursive logic bytecode, ERC-173-shaped owner(), allowlisted Safe
+          owner/threshold state, and optional Sourcify V2 exact-source provenance. A declared ABI
+          capability never becomes a current right without controller Evidence.
         </p>
         {error === undefined ? null : <p className="inline-error">{error}</p>}
       </section>
@@ -1724,6 +1736,20 @@ function ControlRightsWorkspace() {
                 detail="No activation or revocation history inferred"
                 state={report.metadata.historyCoverage === 1 ? 'known' : 'unknown'}
               />
+              <MetricTile
+                label="Verified logic source"
+                value={
+                  verifiedSource.state === 'known'
+                    ? (verifiedSource.value?.contractName ?? 'Unknown')
+                    : 'Unknown'
+                }
+                detail={
+                  verifiedSource.state === 'known'
+                    ? `Exact bytecode · ${verifiedSource.value?.compilerVersion ?? 'compiler unknown'}`
+                    : 'No exact Snapshot-bound source provenance'
+                }
+                state={verifiedSource.state === 'stale' ? 'unknown' : verifiedSource.state}
+              />
             </div>
             <div className="fact-grid">
               <div className="fact-row">
@@ -1741,6 +1767,18 @@ function ControlRightsWorkspace() {
               <div className="fact-row">
                 <span>owner()</span>
                 <KnowledgeDisplay data={report.ownerAddress} />
+              </div>
+              <div className="fact-row">
+                <span>Logic bytecode</span>
+                {logicCode.state === 'known' ? (
+                  <span>
+                    {titleCase(logicCode.value?.relation ?? 'UNKNOWN')} ·{' '}
+                    {logicCode.value?.runtimeBytecodeBytes.toLocaleString() ?? '?'} bytes ·{' '}
+                    <code>{shortId(logicCode.value?.runtimeBytecodeHash ?? '', 16)}</code>
+                  </span>
+                ) : (
+                  <KnowledgeDisplay data={logicCode} />
+                )}
               </div>
               <div className="fact-row">
                 <span>Source agreement</span>
@@ -1774,6 +1812,67 @@ function ControlRightsWorkspace() {
                 <b>Captured</b> {formatTime(record.capturedAt)}
               </span>
             </div>
+          </section>
+
+          <section className="panel" aria-labelledby="declared-capabilities-heading">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Verified declaration ≠ effective authority</span>
+                <h3 id="declared-capabilities-heading">Declared mutation surface</h3>
+              </div>
+              <span className="snapshot-badge">
+                {declaredCapabilities.length} classified capabilities
+              </span>
+            </div>
+            {verifiedSource.state === 'known' ? (
+              <div className="fact-grid">
+                <div className="fact-row">
+                  <span>Source contract</span>
+                  <a href={verifiedSource.value?.sourceUri} target="_blank" rel="noreferrer">
+                    {verifiedSource.value?.contractName ?? 'Verified source'}
+                  </a>
+                </div>
+                <div className="fact-row">
+                  <span>Runtime match</span>
+                  <StatusPill status="EXACT_BYTECODE_MATCH" />
+                </div>
+                <div className="fact-row">
+                  <span>ABI functions</span>
+                  <span>{verifiedSource.value?.abiFunctionCount ?? '?'}</span>
+                </div>
+                <div className="fact-row">
+                  <span>Verified at</span>
+                  <span>
+                    {verifiedSource.value?.verifiedAt === undefined
+                      ? 'Unknown'
+                      : formatTime(verifiedSource.value.verifiedAt)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <KnowledgeDisplay data={verifiedSource} />
+            )}
+            {declaredCapabilities.length === 0 ? (
+              <div className="empty-state compact-empty">
+                <strong>No mutation capability was classified from exact verified ABI.</strong>
+                <span>This does not prove custom fallback or unverified behavior absent.</span>
+              </div>
+            ) : (
+              <div className="claim-draft-list">
+                {declaredCapabilities.map((capability) => (
+                  <article className="claim-draft-card" key={capability.rightType}>
+                    <div className="claim-draft-heading">
+                      <h4>{titleCase(capability.rightType)}</h4>
+                      <span className="snapshot-badge">DECLARED_ONLY</span>
+                    </div>
+                    <p className="panel-copy">
+                      <code>{capability.functionSignatures.join(', ')}</code>
+                    </p>
+                    <p className="panel-copy">{capability.detail}</p>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="panel" aria-labelledby="control-right-list-heading">

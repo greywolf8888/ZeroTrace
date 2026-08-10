@@ -38,6 +38,17 @@ function report(): EvmControlSurfaceReport {
     beaconAddress: { state: 'unknown', reason: 'NOT_APPLICABLE' },
     ownerAddress: { state: 'unknown', reason: 'UNSUPPORTED' },
     safe: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+    logicCode: {
+      state: 'known',
+      value: {
+        address: subject,
+        relation: 'SUBJECT',
+        runtimeBytecodeHash: `0x${'f'.repeat(64)}`,
+        runtimeBytecodeBytes: 2,
+      },
+    },
+    verifiedSource: { state: 'unknown', reason: 'PROVIDER_UNCONFIGURED' },
+    declaredCapabilities: [],
     sourceAgreement: { state: 'known', value: true },
     sourceIndependence: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
     rights: [],
@@ -59,7 +70,7 @@ function report(): EvmControlSurfaceReport {
       simulationCoverage: 0,
       freshness: snapshot.blockTimestamp,
       sourceSet: ['fixture'],
-      modelVersion: 'evm-control-surface-v1.0.0',
+      modelVersion: 'evm-control-surface-v1.1.0',
       confidence: 0.8,
       evidenceIds: [terminalEvidence],
     },
@@ -69,7 +80,7 @@ function report(): EvmControlSurfaceReport {
         ledger: 'EVM',
         chainId: 'eip155:56',
         kind: 'DERIVED_FEATURE',
-        source: 'zerotrace:evm-control-surface-v1.0.0',
+        source: 'zerotrace:evm-control-surface-v1.1.0',
         locator: `evm-control-surface-report:${subject}@${blockHash}`,
         payloadHash: 'e'.repeat(64),
         observedAt: capturedAt,
@@ -100,6 +111,34 @@ function storedRow(values: readonly unknown[]): Record<string, unknown> {
 }
 
 describe('Postgres EVM control surface repository', () => {
+  it('replays immutable v1.0 reports without fabricating v1.1 source fields', async () => {
+    const legacy = report();
+    delete legacy.logicCode;
+    delete legacy.verifiedSource;
+    delete legacy.declaredCapabilities;
+    legacy.coverage = legacy.coverage.filter(
+      (item) => !['LOGIC_CODE', 'MIGRATION'].includes(item.domain),
+    );
+    legacy.metadata.modelVersion = 'evm-control-surface-v1.0.0';
+    legacy.metadata.dataCoverage = 1 / legacy.coverage.length;
+    const source = legacy.evidence[0];
+    if (source !== undefined) source.source = 'zerotrace:evm-control-surface-v1.0.0';
+    let row: Record<string, unknown> | undefined;
+    const query = vi.fn(async (text: string, values: readonly unknown[] = []) => {
+      if (text.includes('INSERT INTO evm_control_surface_reports')) {
+        row ??= storedRow(values);
+        return { rows: [], rowCount: 1 };
+      }
+      return { rows: row === undefined ? [] : [row], rowCount: row === undefined ? 0 : 1 };
+    });
+    const repository = PostgresEvmControlSurfaceRepository.fromPool({ query, end: vi.fn() });
+
+    const stored = await repository.put(legacy);
+    expect(stored.report.logicCode).toBeUndefined();
+    expect(stored.report.coverage).toHaveLength(23);
+    await expect(repository.get(stored.id)).resolves.toEqual(stored);
+  });
+
   it('writes once, verifies replay, and reads the latest report', async () => {
     let row: Record<string, unknown> | undefined;
     const query = vi.fn(async (text: string, values: readonly unknown[] = []) => {

@@ -1334,9 +1334,11 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? 'DURABLE_STORAGE_REQUIRED'
             : runtime.evmAdapters.size === 0
               ? 'EVM_PROVIDER_REQUIRED'
-              : 'IMPLEMENTED_STANDARD_SURFACE',
+              : runtime.evmSourceVerification === undefined
+                ? 'IMPLEMENTED_STANDARD_SURFACE_SOURCE_PROVIDER_OPTIONAL'
+                : 'IMPLEMENTED_STANDARD_AND_SOURCE_SURFACE',
         detail:
-          'Finalized multi-source EVM inspection covers exact ERC-1167 bytecode, EIP-1967 implementation/admin/beacon slots, ERC-173 owner(), and registered Safe owners/threshold. Reports, Snapshot, source Evidence, terminal Evidence, coverage, and Unknown domains are immutable and provider-free to replay. Custom authorization, validity history, recursive controllers, token roles, and non-EVM control surfaces remain pending.',
+          'Finalized multi-source EVM inspection covers exact ERC-1167 bytecode, EIP-1967 implementation/admin/beacon slots, ERC-173 owner(), registered Safe owners/threshold, and Snapshot-bound runtime logic code. Optional Sourcify V2 metadata is accepted only on exact bytecode equality; declared ABI mutations stay separate from effective rights. Reports and Evidence replay without providers. Effective custom authorization/history, controller recursion and non-EVM surfaces remain pending.',
       },
       {
         id: 'finalized-historical-ingestion',
@@ -3058,6 +3060,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         adapters,
         writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(runtime.evmSourceVerification === undefined
+          ? {}
+          : { sourceVerificationAdapter: runtime.evmSourceVerification }),
         ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
       });
       const record = await repository.put(report);

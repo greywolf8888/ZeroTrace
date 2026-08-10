@@ -762,6 +762,7 @@ export const EvmControlRightTypeSchema = z.enum([
   'SAFE_GUARD',
   'SAFE_FALLBACK_HANDLER',
   'LP_POSITION',
+  'MIGRATION',
 ]);
 export type EvmControlRightType = z.infer<typeof EvmControlRightTypeSchema>;
 
@@ -796,6 +797,7 @@ export type EvmControlRight = z.infer<typeof EvmControlRightSchema>;
 
 export const EvmControlCoverageDomainSchema = z.enum([
   'CONTRACT_CODE',
+  'LOGIC_CODE',
   'ERC1167_IMPLEMENTATION',
   'EIP1967_IMPLEMENTATION',
   'EIP1967_ADMIN',
@@ -818,6 +820,7 @@ export const EvmControlCoverageDomainSchema = z.enum([
   'ROUTER_CHANGE',
   'TREASURY',
   'LP_POSITION',
+  'MIGRATION',
 ]);
 export type EvmControlCoverageDomain = z.infer<typeof EvmControlCoverageDomainSchema>;
 
@@ -848,6 +851,56 @@ export const EvmSafeControlSchema = z.object({
 });
 export type EvmSafeControl = z.infer<typeof EvmSafeControlSchema>;
 
+export const EvmLogicCodeRelationSchema = z.enum([
+  'SUBJECT',
+  'ERC1167_IMPLEMENTATION',
+  'EIP1967_IMPLEMENTATION',
+  'BEACON_IMPLEMENTATION',
+  'SAFE_SINGLETON',
+]);
+export type EvmLogicCodeRelation = z.infer<typeof EvmLogicCodeRelationSchema>;
+
+export const EvmLogicCodeSchema = z.object({
+  address: EvmCanonicalAddressSchema,
+  relation: EvmLogicCodeRelationSchema,
+  runtimeBytecodeHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  runtimeBytecodeBytes: z.number().int().positive().max(1_000_000),
+});
+export type EvmLogicCode = z.infer<typeof EvmLogicCodeSchema>;
+
+export const EvmVerifiedSourceDeploymentSchema = z.object({
+  blockNumber: UnsignedQuantityStringSchema,
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  deployer: EvmCanonicalAddressSchema,
+});
+export type EvmVerifiedSourceDeployment = z.infer<typeof EvmVerifiedSourceDeploymentSchema>;
+
+export const EvmVerifiedSourceSchema = z.object({
+  sourceId: z.string().min(1),
+  sourceUri: z.url(),
+  address: EvmCanonicalAddressSchema,
+  matchType: z.literal('exact_match'),
+  runtimeBytecodeHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  runtimeBytecodeBytes: z.number().int().positive().max(1_000_000),
+  contractName: z.string().min(1).max(256),
+  fullyQualifiedName: z.string().min(1).max(1_024),
+  language: z.string().min(1).max(64),
+  compilerVersion: z.string().min(1).max(256),
+  verifiedAt: IsoDateTimeSchema,
+  deployment: knowledgeValueSchema(EvmVerifiedSourceDeploymentSchema),
+  abiFunctionCount: z.number().int().nonnegative().max(2_048),
+  mutatingFunctionSignatures: z.array(z.string().min(1).max(2_048)).max(2_048),
+});
+export type EvmVerifiedSource = z.infer<typeof EvmVerifiedSourceSchema>;
+
+export const EvmDeclaredCapabilitySchema = z.object({
+  rightType: EvmControlRightTypeSchema,
+  functionSignatures: z.array(z.string().min(1).max(2_048)).min(1).max(64),
+  detail: z.string().min(1),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+});
+export type EvmDeclaredCapability = z.infer<typeof EvmDeclaredCapabilitySchema>;
+
 export const EvmControlSurfaceReportSchema = z
   .object({
     ledger: z.literal('EVM'),
@@ -859,6 +912,9 @@ export const EvmControlSurfaceReportSchema = z
     beaconAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
     ownerAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
     safe: knowledgeValueSchema(EvmSafeControlSchema),
+    logicCode: knowledgeValueSchema(EvmLogicCodeSchema).optional(),
+    verifiedSource: knowledgeValueSchema(EvmVerifiedSourceSchema).optional(),
+    declaredCapabilities: z.array(EvmDeclaredCapabilitySchema).optional(),
     sourceAgreement: knowledgeValueSchema(z.boolean()),
     sourceIndependence: knowledgeValueSchema(z.boolean()),
     rights: z.array(EvmControlRightSchema),
@@ -883,7 +939,13 @@ export const EvmControlSurfaceReportSchema = z
       });
     }
     const domains = value.coverage.map((item) => item.domain);
-    const expectedDomains = [...EvmControlCoverageDomainSchema.options].sort();
+    const expectedDomains = EvmControlCoverageDomainSchema.options
+      .filter(
+        (domain) =>
+          value.metadata.modelVersion !== 'evm-control-surface-v1.0.0' ||
+          !['LOGIC_CODE', 'MIGRATION'].includes(domain),
+      )
+      .sort();
     if (
       domains.length !== expectedDomains.length ||
       [...new Set(domains)].sort().some((domain, index) => domain !== expectedDomains[index])
@@ -899,6 +961,7 @@ export const EvmControlSurfaceReportSchema = z
     const nestedEvidenceIds = [
       ...value.rights.flatMap((right) => right.evidenceIds),
       ...value.coverage.flatMap((item) => item.evidenceIds),
+      ...(value.declaredCapabilities ?? []).flatMap((item) => item.evidenceIds),
     ];
     if (
       metadataEvidenceIds.length !== new Set(metadataEvidenceIds).size ||
@@ -911,6 +974,33 @@ export const EvmControlSurfaceReportSchema = z
         code: 'custom',
         path: ['metadata', 'evidenceIds'],
         message: 'Control surface provenance must be canonical and contain all nested Evidence.',
+      });
+    }
+    if (
+      value.logicCode?.state === 'known' &&
+      value.verifiedSource?.state === 'known' &&
+      (value.logicCode.value.address !== value.verifiedSource.value.address ||
+        value.logicCode.value.runtimeBytecodeHash !==
+          value.verifiedSource.value.runtimeBytecodeHash ||
+        value.logicCode.value.runtimeBytecodeBytes !==
+          value.verifiedSource.value.runtimeBytecodeBytes)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['verifiedSource'],
+        message: 'Verified source must match the exact Snapshot-bound logic bytecode.',
+      });
+    }
+    if (
+      value.metadata.modelVersion === 'evm-control-surface-v1.1.0' &&
+      (value.logicCode === undefined ||
+        value.verifiedSource === undefined ||
+        value.declaredCapabilities === undefined)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'modelVersion'],
+        message: 'Control surface v1.1 requires logic code and verified-source fields.',
       });
     }
   });

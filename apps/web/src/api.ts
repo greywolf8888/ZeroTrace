@@ -949,6 +949,43 @@ export interface EvmControlSurfaceResponse {
         implementationAddress: string;
         implementationVersion: string;
       }>;
+      logicCode?: KnowledgeValue<{
+        address: string;
+        relation:
+          | 'SUBJECT'
+          | 'ERC1167_IMPLEMENTATION'
+          | 'EIP1967_IMPLEMENTATION'
+          | 'BEACON_IMPLEMENTATION'
+          | 'SAFE_SINGLETON';
+        runtimeBytecodeHash: string;
+        runtimeBytecodeBytes: number;
+      }>;
+      verifiedSource?: KnowledgeValue<{
+        sourceId: string;
+        sourceUri: string;
+        address: string;
+        matchType: 'exact_match';
+        runtimeBytecodeHash: string;
+        runtimeBytecodeBytes: number;
+        contractName: string;
+        fullyQualifiedName: string;
+        language: string;
+        compilerVersion: string;
+        verifiedAt: string;
+        deployment: KnowledgeValue<{
+          blockNumber: string;
+          transactionHash: string;
+          deployer: string;
+        }>;
+        abiFunctionCount: number;
+        mutatingFunctionSignatures: string[];
+      }>;
+      declaredCapabilities?: Array<{
+        rightType: string;
+        functionSignatures: string[];
+        detail: string;
+        evidenceIds: string[];
+      }>;
       sourceAgreement: KnowledgeValue<boolean>;
       sourceIndependence: KnowledgeValue<boolean>;
       rights: Array<{

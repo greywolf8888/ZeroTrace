@@ -337,7 +337,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `011`, are in
+local upgrade commands, including migrations `007` through `013`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration
@@ -373,6 +373,8 @@ Important values:
 | `SQD_PROVIDER_ALLOW_HOSTS`            | worker-only exact hostname allowlist; defaults to `portal.sqd.dev`               |
 | `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                        |
 | `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                        |
+| `SOURCIFY_V2_URL`                     | optional exact verified-source API base; blank keeps provenance Unknown          |
+| `SOURCIFY_REQUESTS_PER_SECOND`        | bounded Sourcify request pacing                                                  |
 | `FLAP_HISTORY_*`                      | Compose defaults for the bounded event-history projection worker                 |
 | `BURN_PROMOTION_*`                    | Compose defaults for bounded durable ERC-20 candidate promotion                  |
 | `FLAP_LIFETIME_*`                     | Compose defaults for exact point-in-time lifetime materialization                |

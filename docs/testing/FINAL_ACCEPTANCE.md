@@ -120,7 +120,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
   - [x] Finalized EVM ERC-1167/EIP-1967/ERC-173/registered-Safe standard surface with complete
         coverage, immutable Evidence-bound report replay, API/UI, deterministic tests and scoped
         independent-source FFT acceptance
-  - [ ] Custom EVM authorization and history, recursive controllers, Bitcoin custody semantics,
+  - [x] Same-Snapshot recursive EVM logic bytecode plus exact Sourcify V2 provenance, with verified
+        ABI declarations separated from effective rights and legacy report replay retained
+  - [ ] Effective custom EVM authorization/history and controller recursion, Bitcoin custody semantics,
         Solana authorities/PDAs/multisigs, and cross-ledger temporal validity
 - [ ] Versioned launchpad and market lifecycle adapters
   - [x] Deterministic Flap BSC fixed-block Portal V8Safe/V6/V5 inspection, negative Evidence, API and UI

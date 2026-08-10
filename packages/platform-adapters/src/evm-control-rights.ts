@@ -13,20 +13,25 @@ import {
   type Evidence,
   type EvmControlCoverage,
   type EvmControlCoverageDomain,
+  type EvmDeclaredCapability,
+  type EvmLogicCode,
+  type EvmLogicCodeRelation,
   type EvmControlRight,
   type EvmControlSurfaceReport,
   type EvmSafeControl,
+  type EvmVerifiedSource,
   type KnowledgeValue,
 } from '@zerotrace/schemas';
-import { decodeFunctionResult, encodeFunctionData } from 'viem';
+import { decodeFunctionResult, encodeFunctionData, keccak256 } from 'viem';
 import type { z } from 'zod';
 
 import { OFFICIAL_SAFE_IMPLEMENTATIONS } from './claim-evm.js';
 import { attestBscSourceIndependence } from './flap-market-reconciliation.js';
+import type { EvmSourceVerificationAdapter, SourcifyExactMatch } from './sourcify.js';
 
 type EvmSnapshot = z.infer<typeof EvmSnapshotSchema>;
 
-export const EVM_CONTROL_SURFACE_MODEL_VERSION = 'evm-control-surface-v1.0.0';
+export const EVM_CONTROL_SURFACE_MODEL_VERSION = 'evm-control-surface-v1.1.0';
 
 export const ERC1167_RUNTIME_PREFIX = '363d3d373d3d3d363d73';
 export const ERC1167_RUNTIME_SUFFIX = '5af43d82803e903d91602b57fd5bf3';
@@ -148,6 +153,11 @@ interface SourceControlState {
     | { status: 'UNSUPPORTED' }
     | { status: 'UNREGISTERED'; singleton: string; version: string }
     | ({ status: 'SUPPORTED' } & EvmSafeControl);
+  logicCode:
+    | null
+    | (EvmLogicCode & {
+        code: string;
+      });
 }
 
 interface SourceObservation {
@@ -275,6 +285,7 @@ async function observeSource(
       },
       owner: { status: 'UNSUPPORTED' },
       safe: { status: 'UNSUPPORTED' },
+      logicCode: null,
     };
   } else {
     const [implementationObservation, adminObservation, beaconObservation, singletonObservation] =
@@ -402,10 +413,56 @@ async function observeSource(
       }
     }
 
+    const erc1167Implementation = detectErc1167Implementation(code);
+    let logicTarget: { address: string; relation: EvmLogicCodeRelation } | undefined;
+    if (safe.status === 'SUPPORTED' || safe.status === 'UNREGISTERED') {
+      logicTarget = {
+        address: safe.status === 'SUPPORTED' ? safe.implementationAddress : safe.singleton,
+        relation: 'SAFE_SINGLETON',
+      };
+    } else if (erc1167Implementation !== null) {
+      logicTarget = {
+        address: erc1167Implementation,
+        relation: 'ERC1167_IMPLEMENTATION',
+      };
+    } else if (implementation.address !== undefined && beacon.address === undefined) {
+      logicTarget = {
+        address: implementation.address,
+        relation: 'EIP1967_IMPLEMENTATION',
+      };
+    } else if (implementation.address === undefined && beaconImplementation.address !== undefined) {
+      logicTarget = {
+        address: beaconImplementation.address,
+        relation: 'BEACON_IMPLEMENTATION',
+      };
+    } else if (implementation.address === undefined && beacon.address === undefined) {
+      logicTarget = { address: subject, relation: 'SUBJECT' };
+    }
+    let logicCode: SourceControlState['logicCode'] = null;
+    if (logicTarget !== undefined) {
+      const observation =
+        logicTarget.address === subject
+          ? codeObservation
+          : await adapter.getCodeObservationAtBlockHash(logicTarget.address, snapshot.blockHash);
+      endpointIds.add(observation.endpointId);
+      const targetCode = observation.value.toLowerCase();
+      if (!/^0x(?:[0-9a-f]{2})*$/.test(targetCode)) {
+        throw new ProviderError('INVALID_RESPONSE', 'EVM logic bytecode is malformed.');
+      }
+      if (targetCode !== '0x') {
+        logicCode = {
+          ...logicTarget,
+          code: targetCode,
+          runtimeBytecodeHash: keccak256(targetCode as `0x${string}`),
+          runtimeBytecodeBytes: (targetCode.length - 2) / 2,
+        };
+      }
+    }
+
     state = {
       code,
       codeBytes: (code.length - 2) / 2,
-      erc1167Implementation: detectErc1167Implementation(code),
+      erc1167Implementation,
       eip1967: { implementation, admin, beacon, beaconImplementation },
       owner:
         owner === undefined
@@ -416,6 +473,7 @@ async function observeSource(
               address: owner,
             },
       safe,
+      logicCode,
     };
   }
 
@@ -446,7 +504,7 @@ async function observeSource(
       blockOrSlot: snapshot.blockNumber,
       finality: snapshot.finality,
       summary:
-        'Canonical block-hash EVM code, standard proxy slots, owner interface, and registered Safe surface observation.',
+        'Canonical block-hash EVM subject/logic code, standard proxy slots, owner interface, and registered Safe surface observation.',
     }),
     [],
     snapshot,
@@ -550,6 +608,7 @@ function reportFields(
   | 'beaconAddress'
   | 'ownerAddress'
   | 'safe'
+  | 'logicCode'
   | 'rights'
   | 'coverage'
 > {
@@ -627,6 +686,20 @@ function reportFields(
             'NOT_APPLICABLE',
             'No registered Safe-compatible control surface was observed.',
           );
+  const logicCode =
+    state.logicCode === null
+      ? unknownValue(
+          state.code === '0x' ? 'NOT_APPLICABLE' : 'INSUFFICIENT_DATA',
+          state.code === '0x'
+            ? 'An EOA has no runtime logic bytecode.'
+            : 'A unique non-empty runtime logic target could not be established.',
+        )
+      : knownValue({
+          address: state.logicCode.address,
+          relation: state.logicCode.relation,
+          runtimeBytecodeHash: state.logicCode.runtimeBytecodeHash,
+          runtimeBytecodeBytes: state.logicCode.runtimeBytecodeBytes,
+        });
 
   const rights: EvmControlRight[] = [];
   if (
@@ -706,6 +779,21 @@ function reportFields(
       'CONTRACT_CODE',
       knownValue(state.code !== '0x'),
       'Canonical bytecode presence.',
+      queried,
+    ),
+    coverage(
+      'LOGIC_CODE',
+      state.code === '0x'
+        ? knownValue(false)
+        : state.logicCode === null
+          ? unknownValue(
+              'INSUFFICIENT_DATA',
+              'A unique non-empty runtime logic target was not established.',
+            )
+          : knownValue(true),
+      state.logicCode === null
+        ? 'No unique non-empty runtime logic bytecode was established.'
+        : `${state.logicCode.relation} runtime bytecode was read at the same canonical block hash.`,
       queried,
     ),
     coverage(
@@ -801,6 +889,10 @@ function reportFields(
       'LP_POSITION',
       'LP ownership and withdrawal control require position-specific analysis.',
     ),
+    notQueried(
+      'MIGRATION',
+      'Launchpad migration authorization requires verified semantics and current controller state.',
+    ),
   ];
   coverageItems.sort((left, rightItem) => left.domain.localeCompare(rightItem.domain));
   if (coverageItems.length !== EvmControlCoverageDomainSchema.options.length) {
@@ -814,15 +906,240 @@ function reportFields(
     beaconAddress,
     ownerAddress,
     safe,
+    logicCode,
     rights,
     coverage: coverageItems,
   };
+}
+
+const DECLARED_CAPABILITY_NAMES: Readonly<
+  Partial<Record<EvmControlRight['rightType'], readonly string[]>>
+> = Object.freeze({
+  OWNER: ['renounceOwnership', 'transferOwnership'],
+  PROXY_ADMIN: ['changeAdmin'],
+  UPGRADE: ['upgradeTo', 'upgradeToAndCall'],
+  MINT: ['mint', 'mintTo'],
+  BURN: ['burn', 'burnFrom'],
+  TAX_CHANGE: [
+    'setBuyTaxRate',
+    'setSellTaxRate',
+    'setTaxProcessor',
+    'setTaxRate',
+    'setTaxes',
+    'updateTaxRate',
+  ],
+  BLACKLIST: ['addToBlacklist', 'blacklist', 'removeFromBlacklist', 'setBlacklist'],
+  WHITELIST: ['addToWhitelist', 'removeFromWhitelist', 'setWhitelist'],
+  TRADING_SWITCH: ['disableTrading', 'enableTrading', 'openTrading', 'setTradingEnabled'],
+  MAX_TX: ['setMaxTransactionAmount', 'setMaxTx', 'setMaxTxAmount'],
+  MAX_WALLET: ['setMaxWallet', 'setMaxWalletAmount'],
+  FEE_EXEMPTION: ['excludeFromFees', 'includeInFees', 'setFeeExempt'],
+  ROUTER_CHANGE: ['setRouter', 'updateRouter'],
+  TREASURY: ['setDividendContract', 'setTaxProcessor', 'setTreasury', 'updateTreasury'],
+  SAFE_MODULE: ['disableModule', 'enableModule'],
+  SAFE_GUARD: ['setGuard'],
+  SAFE_FALLBACK_HANDLER: ['setFallbackHandler'],
+  LP_POSITION: ['removeLiquidity', 'withdrawLiquidity'],
+  MIGRATION: ['finalizeMigration', 'startMigration'],
+});
+
+function declaredCapabilities(
+  source: EvmVerifiedSource,
+  evidenceId: string,
+): EvmDeclaredCapability[] {
+  const byName = new Map<string, string[]>();
+  for (const signature of source.mutatingFunctionSignatures) {
+    const name = signature.slice(0, signature.indexOf('('));
+    const signatures = byName.get(name) ?? [];
+    signatures.push(signature);
+    byName.set(name, signatures);
+  }
+  return Object.entries(DECLARED_CAPABILITY_NAMES)
+    .flatMap(([rightType, names]) => {
+      const signatures = [...new Set(names.flatMap((name) => byName.get(name) ?? []))].sort();
+      return signatures.length === 0
+        ? []
+        : [
+            {
+              rightType: rightType as EvmControlRight['rightType'],
+              functionSignatures: signatures,
+              detail:
+                'Exact verified ABI declares this mutation surface; declaration does not establish current authorization, reachability, or successful execution.',
+              evidenceIds: [evidenceId],
+            },
+          ];
+    })
+    .sort((left, rightItem) => left.rightType.localeCompare(rightItem.rightType));
+}
+
+interface VerifiedSourceFields {
+  verifiedSource: KnowledgeValue<EvmVerifiedSource>;
+  declaredCapabilities: EvmDeclaredCapability[];
+  evidence?: Evidence;
+}
+
+function sourceFailure(error: unknown): KnowledgeValue<EvmVerifiedSource> {
+  if (error instanceof ProviderError && error.code === 'RATE_LIMITED') {
+    return unavailableValue('RATE_LIMITED', 'Source-verification provider rate limit exceeded.');
+  }
+  return unavailableValue(
+    'PROVIDER_DOWN',
+    error instanceof ProviderError
+      ? `Source-verification provider failed with ${error.code}.`
+      : 'Source-verification provider failed.',
+  );
+}
+
+async function inspectVerifiedSource(options: {
+  adapter?: EvmSourceVerificationAdapter;
+  chainId: number;
+  state: SourceControlState;
+  snapshot: EvmSnapshot;
+  writeEvidence: EvmControlEvidenceWriter;
+}): Promise<VerifiedSourceFields> {
+  if (options.state.logicCode === null) {
+    return {
+      verifiedSource: unknownValue(
+        options.state.code === '0x' ? 'NOT_APPLICABLE' : 'INSUFFICIENT_DATA',
+        options.state.code === '0x'
+          ? 'An EOA has no logic bytecode to verify.'
+          : 'Source verification requires a unique non-empty logic-code target.',
+      ),
+      declaredCapabilities: [],
+    };
+  }
+  if (options.adapter === undefined) {
+    return {
+      verifiedSource: unknownValue(
+        'PROVIDER_UNCONFIGURED',
+        'No exact source-verification provider is configured.',
+      ),
+      declaredCapabilities: [],
+    };
+  }
+  let observation: Awaited<ReturnType<EvmSourceVerificationAdapter['verify']>>;
+  try {
+    observation = await options.adapter.verify(options.chainId, options.state.logicCode.address);
+  } catch (error) {
+    return { verifiedSource: sourceFailure(error), declaredCapabilities: [] };
+  }
+  const sourceEvidence = await options.writeEvidence(
+    createEvidence({
+      ledger: 'EVM',
+      chainId: options.snapshot.chainId,
+      kind: 'PROVIDER_OBSERVATION',
+      source: observation.endpointId,
+      locator: `source-verification:${options.state.logicCode.address}`,
+      sourceUri: observation.value.sourceUri,
+      payload: observation.value,
+      observedAt: options.snapshot.capturedAt,
+      blockOrSlot: options.snapshot.blockNumber,
+      finality: options.snapshot.finality,
+      summary:
+        observation.value.status === 'EXACT_MATCH'
+          ? 'Exact source-verification metadata and runtime bytecode observation.'
+          : 'Source-verification provider returned no exact runtime match.',
+    }),
+    [],
+    options.snapshot,
+  );
+  if (observation.value.status !== 'EXACT_MATCH') {
+    return {
+      verifiedSource: unknownValue('INSUFFICIENT_DATA', observation.value.detail),
+      declaredCapabilities: [],
+      evidence: sourceEvidence,
+    };
+  }
+  if (
+    observation.value.runtimeBytecode !== options.state.logicCode.code ||
+    observation.value.runtimeBytecodeHash !== options.state.logicCode.runtimeBytecodeHash ||
+    observation.value.runtimeBytecodeBytes !== options.state.logicCode.runtimeBytecodeBytes
+  ) {
+    return {
+      verifiedSource: unknownValue(
+        'CONFLICTING_SOURCES',
+        'Verified-source runtime bytecode does not equal the Snapshot-bound RPC bytecode.',
+      ),
+      declaredCapabilities: [],
+      evidence: sourceEvidence,
+    };
+  }
+  const match = observation.value as SourcifyExactMatch;
+  const verified: EvmVerifiedSource = {
+    sourceId: match.sourceId,
+    sourceUri: match.sourceUri,
+    address: match.address,
+    matchType: match.matchType,
+    runtimeBytecodeHash: match.runtimeBytecodeHash,
+    runtimeBytecodeBytes: match.runtimeBytecodeBytes,
+    contractName: match.contractName,
+    fullyQualifiedName: match.fullyQualifiedName,
+    language: match.language,
+    compilerVersion: match.compilerVersion,
+    verifiedAt: match.verifiedAt,
+    deployment: match.deployment,
+    abiFunctionCount: match.abiFunctionCount,
+    mutatingFunctionSignatures: match.mutatingFunctionSignatures,
+  };
+  return {
+    verifiedSource: knownValue(verified),
+    declaredCapabilities: declaredCapabilities(verified, sourceEvidence.id),
+    evidence: sourceEvidence,
+  };
+}
+
+const CAPABILITY_COVERAGE_DOMAIN: Readonly<
+  Partial<Record<EvmControlRight['rightType'], EvmControlCoverageDomain>>
+> = Object.freeze({
+  UPGRADE: 'UPGRADE_AUTHORIZATION',
+  MINT: 'MINT',
+  BURN: 'BURN',
+  TAX_CHANGE: 'TAX_CHANGE',
+  BLACKLIST: 'BLACKLIST',
+  WHITELIST: 'WHITELIST',
+  TRADING_SWITCH: 'TRADING_SWITCH',
+  MAX_TX: 'MAX_TX',
+  MAX_WALLET: 'MAX_WALLET',
+  FEE_EXEMPTION: 'FEE_EXEMPTION',
+  ROUTER_CHANGE: 'ROUTER_CHANGE',
+  TREASURY: 'TREASURY',
+  SAFE_MODULE: 'SAFE_MODULES',
+  SAFE_GUARD: 'SAFE_GUARD',
+  SAFE_FALLBACK_HANDLER: 'SAFE_FALLBACK_HANDLER',
+  LP_POSITION: 'LP_POSITION',
+  MIGRATION: 'MIGRATION',
+});
+
+function applyDeclaredCapabilities(
+  coverageItems: readonly EvmControlCoverage[],
+  capabilities: readonly EvmDeclaredCapability[],
+): EvmControlCoverage[] {
+  const byDomain = new Map<EvmControlCoverageDomain, EvmDeclaredCapability[]>();
+  for (const capability of capabilities) {
+    const domain = CAPABILITY_COVERAGE_DOMAIN[capability.rightType];
+    if (domain !== undefined) byDomain.set(domain, [...(byDomain.get(domain) ?? []), capability]);
+  }
+  return coverageItems.map((item) => {
+    const matching = byDomain.get(item.domain);
+    if (matching === undefined || item.observed.state === 'known') return item;
+    const signatures = matching.flatMap((entry) => entry.functionSignatures).sort();
+    return coverage(
+      item.domain,
+      unknownValue(
+        'INSUFFICIENT_DATA',
+        'A verified mutation surface exists, but its current controller and execution semantics are unresolved.',
+      ),
+      `Verified ABI declares ${signatures.join(', ')}; current authorization remains Unknown.`,
+      matching.flatMap((entry) => entry.evidenceIds),
+    );
+  });
 }
 
 export async function inspectEvmControlSurface(options: {
   subject: string;
   adapters: readonly EvmControlReadAdapter[];
   writeEvidence: EvmControlEvidenceWriter;
+  sourceVerificationAdapter?: EvmSourceVerificationAdapter;
   blockNumber?: string;
 }): Promise<EvmControlSurfaceReport> {
   const subject = normalizeAddress(options.subject, 'control subject');
@@ -892,7 +1209,21 @@ export async function inspectEvmControlSurface(options: {
     evidence.push(...independence.evidence);
   }
   const sourceEvidenceIds = observations.map((item) => item.evidence.id).sort();
-  const fields = reportFields(state, snapshot, subject, sourceEvidenceIds);
+  const verification = await inspectVerifiedSource({
+    ...(options.sourceVerificationAdapter === undefined
+      ? {}
+      : { adapter: options.sourceVerificationAdapter }),
+    chainId,
+    state,
+    snapshot,
+    writeEvidence: options.writeEvidence,
+  });
+  if (verification.evidence !== undefined) evidence.push(verification.evidence);
+  const baseFields = reportFields(state, snapshot, subject, sourceEvidenceIds);
+  const fields = {
+    ...baseFields,
+    coverage: applyDeclaredCapabilities(baseFields.coverage, verification.declaredCapabilities),
+  };
   const sourceAgreement = knownValue(true);
   const terminalSources = [...new Set(evidence.map((item) => item.id))].sort();
   const terminal = await options.writeEvidence(
@@ -910,6 +1241,9 @@ export async function inspectEvmControlSurface(options: {
         sourceIds: [...sourceIds].sort(),
         sourceAgreement,
         sourceIndependence,
+        logicCode: fields.logicCode,
+        verifiedSource: verification.verifiedSource,
+        declaredCapabilities: verification.declaredCapabilities,
         rights: fields.rights,
         coverage: fields.coverage,
       },
@@ -935,7 +1269,12 @@ export async function inspectEvmControlSurface(options: {
     historyCoverage: 0,
     simulationCoverage: 0,
     freshness: snapshot.blockTimestamp ?? snapshot.capturedAt,
-    sourceSet: [...sourceIds].sort(),
+    sourceSet: [
+      ...new Set([
+        ...sourceIds,
+        ...(verification.evidence === undefined ? [] : [verification.evidence.source]),
+      ]),
+    ].sort(),
     modelVersion: EVM_CONTROL_SURFACE_MODEL_VERSION,
     confidence: independent ? 0.99 : sourceIds.length > 1 ? 0.85 : 0.8,
     evidenceIds,
@@ -945,6 +1284,8 @@ export async function inspectEvmControlSurface(options: {
     chainId: snapshot.chainId,
     subject,
     ...fields,
+    verifiedSource: verification.verifiedSource,
+    declaredCapabilities: verification.declaredCapabilities,
     sourceAgreement,
     sourceIndependence,
     terminalEvidenceId: terminal.id,

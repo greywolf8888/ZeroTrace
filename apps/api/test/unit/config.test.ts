@@ -12,6 +12,8 @@ describe('API configuration', () => {
     expect(config.bitcoinEsploraUrls).toEqual([]);
     expect(config.solanaRpcUrl).toBeUndefined();
     expect(config.solanaRpcUrls).toEqual([]);
+    expect(config.sourcifyV2Url).toBeUndefined();
+    expect(config.sourcifyRequestsPerSecond).toBe(2);
     expect(config.ethereumSnapshotTag).toBe('finalized');
     expect(config.bscSnapshotTag).toBe('finalized');
     expect(config.dataQualityMinSources).toBe(2);
@@ -86,6 +88,7 @@ describe('API configuration', () => {
       BTC_ESPLORA_URL: 'https://bitcoin.example/api',
       SOLANA_RPC_URLS: 'https://solana-one.example,https://solana-two.example',
       SQD_PORTAL_URL: 'https://portal.sqd.dev',
+      SOURCIFY_V2_URL: 'https://sourcify.dev/server',
     });
 
     expect(config.bscRpcUrls).toEqual(['https://bsc-two.example', 'https://bsc-one.example']);
@@ -95,6 +98,7 @@ describe('API configuration', () => {
       'https://solana-two.example',
     ]);
     expect(config.sqdPortalUrl).toBe('https://portal.sqd.dev');
+    expect(config.sourcifyV2Url).toBe('https://sourcify.dev/server');
   });
 
   it('rejects invalid provider URLs without echoing their value', () => {

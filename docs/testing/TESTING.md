@@ -119,6 +119,10 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
 - BSC market reconciliation covers two documented operators, two hostnames owned by one operator,
   entirely unregistered operators, exact reserve conflict, and anchor disagreement before market
   reads; every inconclusive operator decision retains the versioned registry Evidence root;
+- EVM control inspection resolves subject and logic bytecode at one finalized block across all RPC
+  sources; Sourcify metadata becomes Known only on exact byte-for-byte equality, ABI declarations
+  never create rights, mismatches remain conflicting, and immutable v1.0 reports replay without
+  fabricated v1.1 fields;
 - UI displays Unknown and read-only state without placeholder data.
 
 ## Real-chain fixture rules

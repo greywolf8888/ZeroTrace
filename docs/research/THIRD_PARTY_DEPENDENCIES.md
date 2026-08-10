@@ -4,10 +4,11 @@ Inventory date: **2026-08-11**
 
 The current-state Snapshot, request-provenance, anchor reconciliation, 2026-08-11 BSC
 operator-attestation/market-reconciliation, EIP-1898 all-block supply continuity, and EVM
-ERC-1167/ERC-173/ERC-1967/Safe control-surface work use the existing clean HTTP adapters, pinned
+ERC-1167/ERC-173/ERC-1967/Safe control-surface and Sourcify V2 exact-source work use the existing clean HTTP adapters, pinned
 `viem`, `pg` client, and Node.js built-ins; they add no third-party runtime package or copied
 upstream code. Safe v1.3.0 remains an LGPL-3.0-only reference boundary with clean ABI-compatible
-reads; the EIP specifications are CC0 references.
+reads; the EIP specifications are CC0 references. Sourcify is consumed only as a hosted read API;
+no Sourcify server package or source is copied or linked.
 `@zerotrace/data-quality` is an internal workspace package reused by the platform adapter.
 
 Direct versions are pinned in manifests or container configuration. Transitive npm components are
@@ -115,6 +116,7 @@ mature capabilities.
 | [FlapVaultExample](https://github.com/flap-sh/FlapVaultExample)             | `0a6ad1b71cecf0051b1f3a239e719d2f77989e26`            | MIT                 | official Portal inspection interfaces    | clean ABI-compatible read adapter; no upstream code copied              |
 | [PancakeSwap V2 core](https://github.com/pancakeswap/pancake-swap-core)     | `3b214306770e86bc3a64e67c2b5bdb566b4e94a7`            | GPL-3.0             | official factory/pair reference          | reference only; clean ABI/math implementation, no copied or linked code |
 | [Safe Smart Account](https://github.com/safe-fndn/safe-smart-account)       | `v1.3.0` / `186a21a74b327f17fc41217a927dea7064f74604` | LGPL-3.0-only       | multisig proxy and custody semantics     | reference only; clean ABI-compatible reads, no linking or copied code   |
+| [Sourcify](https://github.com/ethereum/sourcify)                            | hosted API V2 observed 2026-08-11                     | MIT                 | exact verified-source metadata           | clean bounded HTTPS adapter only; no server package or source linked    |
 
 Hosted APIs and official documentation are recorded in
 [VERIFIED_SOURCES.md](VERIFIED_SOURCES.md). Their network terms and quotas require a fresh review

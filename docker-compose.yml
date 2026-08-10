@@ -14,7 +14,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-8000}
       HEALTH_CACHE_TTL_MS: ${HEALTH_CACHE_TTL_MS:-15000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-eth-mainnet.g.alchemy.com,bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org,portal.sqd.dev,api.mainnet.solana.com,blockstream.info}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-eth-mainnet.g.alchemy.com,bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org,portal.sqd.dev,sourcify.dev,api.mainnet.solana.com,blockstream.info}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-100}
@@ -46,6 +46,8 @@ services:
       SOLANA_REQUESTS_PER_SECOND: ${SOLANA_REQUESTS_PER_SECOND:-4}
       SOLANA_COMMITMENT: ${SOLANA_COMMITMENT:-finalized}
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SOURCIFY_V2_URL: ${SOURCIFY_V2_URL:-https://sourcify.dev/server}
+      SOURCIFY_REQUESTS_PER_SECOND: ${SOURCIFY_REQUESTS_PER_SECOND:-2}
       POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
       CLICKHOUSE_URL: http://clickhouse:8123
       CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-default}

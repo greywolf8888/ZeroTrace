@@ -69,6 +69,7 @@ const config: AppConfig = {
   solanaRpcUrls: [],
   solanaRequestsPerSecond: 0,
   solanaCommitment: 'finalized',
+  sourcifyRequestsPerSecond: 0,
   gmgnConfigured: false,
   jupiterConfigured: false,
   etherscanConfigured: false,

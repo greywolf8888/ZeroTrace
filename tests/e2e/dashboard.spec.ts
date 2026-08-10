@@ -2329,6 +2329,7 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
   const terminalEvidenceId = 'ev_000000000000000000000099';
   const domains = [
     'CONTRACT_CODE',
+    'LOGIC_CODE',
     'ERC1167_IMPLEMENTATION',
     'EIP1967_IMPLEMENTATION',
     'EIP1967_ADMIN',
@@ -2351,6 +2352,7 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
     'ROUTER_CHANGE',
     'TREASURY',
     'LP_POSITION',
+    'MIGRATION',
   ];
   await page.route('**/api/v1/control-rights/EVM/**/inspect', async (route) => {
     await route.fulfill({
@@ -2365,8 +2367,12 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
           resultHash: 'b'.repeat(64),
           terminalEvidenceId,
           evidenceIds: [terminalEvidenceId],
-          sourceSet: ['bsc-rpc@bnb-mainnet.g.alchemy.com', 'bsc-rpc@bsc-dataseed.bnbchain.org'],
-          modelVersion: 'evm-control-surface-v1.0.0',
+          sourceSet: [
+            'bsc-rpc@bnb-mainnet.g.alchemy.com',
+            'bsc-rpc@bsc-dataseed.bnbchain.org',
+            'sourcify-v2@sourcify.dev',
+          ],
+          modelVersion: 'evm-control-surface-v1.1.0',
           capturedAt: '2026-08-11T05:00:00.000Z',
           createdAt: '2026-08-11T05:00:01.000Z',
           report: {
@@ -2382,6 +2388,52 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
               value: '0x0000000000000000000000000000000000000000',
             },
             safe: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            logicCode: {
+              state: 'known',
+              value: {
+                address: implementation,
+                relation: 'ERC1167_IMPLEMENTATION',
+                runtimeBytecodeHash: `0x${'c'.repeat(64)}`,
+                runtimeBytecodeBytes: 19331,
+              },
+            },
+            verifiedSource: {
+              state: 'known',
+              value: {
+                sourceId: 'sourcify-v2@sourcify.dev',
+                sourceUri: `https://sourcify.dev/server/v2/contract/56/${implementation}`,
+                address: implementation,
+                matchType: 'exact_match',
+                runtimeBytecodeHash: `0x${'c'.repeat(64)}`,
+                runtimeBytecodeBytes: 19331,
+                contractName: 'FlapTaxTokenV3',
+                fullyQualifiedName: 'src/Tax/FlapTaxTokenV3.sol:FlapTaxTokenV3',
+                language: 'Solidity',
+                compilerVersion: '0.8.24+commit.e11b9ed9',
+                verifiedAt: '2026-06-03T00:24:59.393Z',
+                deployment: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+                abiFunctionCount: 43,
+                mutatingFunctionSignatures: [
+                  'finalizeMigration()',
+                  'startMigration()',
+                  'transferOwnership(address)',
+                ],
+              },
+            },
+            declaredCapabilities: [
+              {
+                rightType: 'MIGRATION',
+                functionSignatures: ['finalizeMigration()', 'startMigration()'],
+                detail: 'Declared only; current authorization is unresolved.',
+                evidenceIds: ['ev_000000000000000000000098'],
+              },
+              {
+                rightType: 'OWNER',
+                functionSignatures: ['transferOwnership(address)'],
+                detail: 'Declared only; current authorization is unresolved.',
+                evidenceIds: ['ev_000000000000000000000098'],
+              },
+            ],
             sourceAgreement: { state: 'known', value: true },
             sourceIndependence: { state: 'known', value: true },
             rights: [],
@@ -2389,32 +2441,41 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
               domain,
               observed: [
                 'CONTRACT_CODE',
+                'LOGIC_CODE',
                 'ERC1167_IMPLEMENTATION',
                 'EIP1967_IMPLEMENTATION',
                 'EIP1967_ADMIN',
                 'EIP1967_BEACON',
                 'ERC173_OWNER',
                 'SAFE_OWNERS_THRESHOLD',
-                'UPGRADE_AUTHORIZATION',
               ].includes(domain)
                 ? {
                     state: 'known',
-                    value: ['CONTRACT_CODE', 'ERC1167_IMPLEMENTATION'].includes(domain),
+                    value: ['CONTRACT_CODE', 'LOGIC_CODE', 'ERC1167_IMPLEMENTATION'].includes(
+                      domain,
+                    ),
                   }
-                : { state: 'unknown', reason: 'NOT_QUERIED' },
+                : {
+                    state: 'unknown',
+                    reason: domain === 'MIGRATION' ? 'INSUFFICIENT_DATA' : 'NOT_QUERIED',
+                  },
               detail: `${domain} coverage boundary.`,
               evidenceIds: domain === 'CONTRACT_CODE' ? [terminalEvidenceId] : [],
             })),
             terminalEvidenceId,
             metadata: {
               snapshot: { ledger: 'EVM', chainId: 'eip155:56', blockNumber: '115192882' },
-              dataCoverage: 8 / 23,
+              dataCoverage: 8 / 25,
               sourceCoverage: 1,
               historyCoverage: 0,
               simulationCoverage: 0,
               freshness: '2026-08-11T04:59:57.000Z',
-              sourceSet: ['bsc-rpc@bnb-mainnet.g.alchemy.com', 'bsc-rpc@bsc-dataseed.bnbchain.org'],
-              modelVersion: 'evm-control-surface-v1.0.0',
+              sourceSet: [
+                'bsc-rpc@bnb-mainnet.g.alchemy.com',
+                'bsc-rpc@bsc-dataseed.bnbchain.org',
+                'sourcify-v2@sourcify.dev',
+              ],
+              modelVersion: 'evm-control-surface-v1.1.0',
               confidence: 0.99,
               evidenceIds: [terminalEvidenceId],
             },
@@ -2435,6 +2496,9 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
   await expect(page.getByText(implementation)).toBeVisible();
   await expect(page.getByText('owner() returned the zero address')).toBeVisible();
   await expect(page.getByText('No direct right was positively established')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'FlapTaxTokenV3' })).toBeVisible();
+  await expect(page.getByText('Exact Bytecode Match')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Declared mutation surface' })).toBeVisible();
   const coverage = page.locator('section.panel').filter({
     has: page.getByRole('heading', { name: 'Coverage matrix' }),
   });

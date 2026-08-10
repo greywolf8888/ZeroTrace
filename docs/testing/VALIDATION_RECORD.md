@@ -1285,9 +1285,9 @@ both tables remained present. No legacy row was discarded or assigned fabricated
 
 | Command                  | Result                                                                                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| local non-browser gates  | pass: format, lint, typecheck, 419 unit, 60 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                   |
+| local non-browser gates  | pass: format, lint, typecheck, 425 unit, 60 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                   |
 | local durable stores     | pass: PostgreSQL migrations `001-012`, canonical ClickHouse and versioned object store; all 83 integration tests passed                                                  |
-| local `test:coverage`    | pass: 479 tests, 23 opt-in durable skips; 82.82% statements, 77.08% branches, 91.93% functions, 84.00% lines                                                             |
+| local `test:coverage`    | pass: 485 tests, 23 opt-in durable skips; 82.85% statements, 76.97% branches, 91.99% functions, 83.99% lines                                                             |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                        |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                         |
 | `npm run test:e2e`       | pass: 24 Chromium tests across desktop and Pixel 7, including EVM Control Rights, supply continuity, market/RV, burn, Claim Declaration/Report and Unknown               |
@@ -1404,3 +1404,30 @@ public endpoints. A container-environment assertion found no Alchemy URL credent
 Provider-free latest and exact-ID reads returned the same report ID, result hash, Snapshot hash and
 terminal Evidence, while readiness remained `UP`. The supplied credential was never printed,
 written to repository files or retained in the final container.
+
+### Recursive logic and Sourcify V2 extension
+
+The v1.1 route repeated the independent Alchemy/BNB Chain inspection at finalized block
+`115204533`, hash `0xf8c1476af87b6ccd90077145d72e8578664f50f0e629c115a0765ac756e64f55`.
+Both operators also returned identical 19,331-byte runtime logic at implementation
+`0x024f18294970b5c76c0691b87f138a0317156422`, with Keccak-256 hash
+`0xb530a7e0ff0d6ab435a5ec71f2b04092937735e23a0fb3a0746724ce9b875b4a`.
+
+The bounded Sourcify V2 adapter returned an exact `FlapTaxTokenV3` match compiled with Solidity
+`0.8.24+commit.e11b9ed9`; its full runtime bytecode equaled the Snapshot-bound RPC bytecode before
+the report accepted source provenance. The verified ABI declares owner-transfer and migration
+mutations. They remain `DECLARED_ONLY`: zero current direct rights were emitted, and migration
+coverage is `Unknown(INSUFFICIENT_DATA)` until effective authorization and reachability are proved.
+
+PostgreSQL accepted report `ecs_d57a8094dae726623a47090a`, result hash
+`b863f2a3c7d04e7c72e2e2cc339970b7829f7d9e5e6b31a507443cd2b0aae7e7`, and terminal Evidence
+`ev_15ba74e221b8a914eb59702b`. Migration `013_evm_control_source_provenance` enforces exact
+logic/source identity, source-set inclusion and declared-capability Evidence for v1.1 inserts.
+Unit storage acceptance additionally replays legacy immutable v1.0 reports without manufacturing
+the new fields.
+
+The API/Web containers were then rebuilt with `ALCHEMY_API_KEY` empty and two public BNB Chain RPC
+URLs. A container-local assertion confirmed no key and no Alchemy credential URL remained. Readiness
+stayed `UP` with `readOnly: true`, and the provider-free latest-report route replayed the same v1.1
+report ID, result hash, finalized Snapshot, 19,331-byte logic hash, exact source match, two declared
+capabilities, zero direct rights and the unchanged 8/25 Known coverage result.
