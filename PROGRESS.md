@@ -18,7 +18,7 @@ completed feature.
 | Unit tests                       | **250 passing across 24 files**                                                          |
 | Integration tests                | **29 local passing; latest completed remote baseline has 43 passing**                    |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                             |
-| Remote CI                        | **Pass on immutable development commit `343ea35`; protected main `3372a5a`**             |
+| Remote CI                        | **Pass on immutable development commit `911691c`; protected main `3372a5a`**             |
 | Coverage                         | **Current local: 83.93% statements / 75.86% branches / 91.96% functions / 85.00% lines** |
 | Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed       |
 | Durable evidence/history         | Raw execution/state plus anchor/alert provenance wired; semantic history pending         |
@@ -378,7 +378,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                       | PostgreSQL 001–006/triggers and ClickHouse Raw Fact schema/migration                                                          |
 | Runtime/browser smoke          | Pass                                       | API/web health, proxy, security headers, desktop/mobile render                                                                |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope  | four parent-linked anchors, BSC endpoint agreement/continuity and four finalized pipelines; independent/archive scope pending |
-| Remote CI                      | Pass                                       | CI/CodeQL pass on immutable `343ea35`: 284 tests, 10 Chromium flows and five container targets                                |
+| Remote CI                      | Pass                                       | CI/CodeQL pass on immutable `911691c`: 294 tests, 10 Chromium flows and five container targets                                |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
