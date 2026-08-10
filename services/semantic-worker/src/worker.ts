@@ -73,7 +73,18 @@ function endpointId(url: string, index: number, total: number): string {
   return `bsc-rpc@${host}${total === 1 ? '' : `#${index + 1}`}`;
 }
 
-export function createBscTransport(config: FlapOriginWorkerConfig): JsonRpcTransport {
+export interface BscProviderConfig {
+  bscRpcUrls: string[];
+  providerAllowedHosts: string[];
+  allowPrivateProviderUrls: boolean;
+  requestTimeoutMs: number;
+  bscRequestsPerSecond: number;
+  maxAttempts: number;
+  retryBaseDelayMs: number;
+  retryMaxDelayMs: number;
+}
+
+export function createBscTransport(config: BscProviderConfig): JsonRpcTransport {
   const transports = config.bscRpcUrls.map(
     (url, index) =>
       new SafeJsonRpcTransport({

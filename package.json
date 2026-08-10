@@ -24,6 +24,7 @@
     "ingest": "npm run build:packages && npm run build -w @zerotrace/ingest-worker && npm run start -w @zerotrace/ingest-worker --",
     "flap:origin": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start -w @zerotrace/semantic-worker --",
     "flap:history": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:history -w @zerotrace/semantic-worker --",
+    "flap:lifetime": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:lifetime -w @zerotrace/semantic-worker --",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "health": "node scripts/healthcheck.mjs",

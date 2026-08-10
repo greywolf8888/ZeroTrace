@@ -8,8 +8,10 @@
     "build": "tsc -b",
     "dev": "tsx --tsconfig ../../tsconfig.base.json src/cli.ts",
     "dev:history": "tsx --tsconfig ../../tsconfig.base.json src/history-cli.ts",
+    "dev:lifetime": "tsx --tsconfig ../../tsconfig.base.json src/lifetime-cli.ts",
     "start": "node dist/src/cli.js",
-    "start:history": "node dist/src/history-cli.js"
+    "start:history": "node dist/src/history-cli.js",
+    "start:lifetime": "node dist/src/lifetime-cli.js"
   },
   "dependencies": {
     "@zerotrace/chain-adapters": "*",
