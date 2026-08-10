@@ -49,6 +49,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
   requested-range versus lifetime coverage, bounded negative Evidence, API, and responsive UI;
 - finalized SQD BSC address/topic log discovery as the preferred Flap range source, with parent
   continuity, source-head and filter validation plus field-for-field BSC RPC receipt replay;
+- sparse finalized SQD EVM contract-creation discovery with dataset/source-head bounds and strict
+  trace validation, plus bounded Flap origin proof joined to the exact BSC receipt, `TokenCreated`
+  event, Snapshot, Evidence graph, capability status, and API;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;
@@ -95,9 +98,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 - finalized provider-shaped EVM execution/state, Bitcoin UTXO, and Solana execution/balance records
   are persisted and strict raw ledger queries are exposed; Flap BSC current Portal state and a
-  caller-supplied event transaction plus bounded event ranges are decoded, but deployment-origin
-  continuous history, complete lifecycle reconstruction, other launchpads, and market reconstruction
-  are not implemented;
+  caller-supplied event transaction, bounded event ranges, and bounded creation-origin proofs are
+  decoded, but deployment-origin continuous history, complete lifecycle reconstruction, other
+  launchpads, and market reconstruction are not implemented;
 - common-position endpoint reconciliation and reorg detection are implemented, but continuous
   scheduling, automatic rollback/replay, and independently operated provider acceptance are not;
 - entity resolution is an uncalibrated baseline;

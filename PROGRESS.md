@@ -15,12 +15,12 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                               |
 | Production acceptance            | **No**                                                                                   |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                           |
-| Unit tests                       | **241 passing across 24 files**                                                          |
-| Integration tests                | **28 local passing; all 43 integration tests pass in latest completed CI**               |
+| Unit tests                       | **250 passing across 24 files**                                                          |
+| Integration tests                | **29 local passing; latest completed remote baseline has 43 passing**                    |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                             |
 | Remote CI                        | **Pass on immutable development commit `343ea35`; protected main `3372a5a`**             |
-| Coverage                         | **Current local: 83.93% statements / 75.80% branches / 91.78% functions / 85.05% lines** |
-| Real-chain validation            | Four-chain anchors/raw ingestion and one named Flap SQD/RPC history replay passed        |
+| Coverage                         | **Current local: 83.93% statements / 75.86% branches / 91.96% functions / 85.00% lines** |
+| Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed       |
 | Durable evidence/history         | Raw execution/state plus anchor/alert provenance wired; semantic history pending         |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
@@ -32,22 +32,22 @@ The only allowed status vocabulary in this ledger is:
 `IMPLEMENTED_AND_VERIFIED`, `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`,
 `PARTIALLY_IMPLEMENTED`, `BLOCKED_EXTERNAL`, and `NOT_IMPLEMENTED`.
 
-| Architecture domain                  | Status                                      | Current boundary                                                                                                                   |
-| ------------------------------------ | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed                                                     |
-| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass and endpoint comparison work; forced outage drill pending                                      |
-| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                               |
-| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | height/hash/previous-hash Esplora anchor; public best-chain smoke passed                                                           |
-| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor and minimum-context account smoke passed                                                              |
-| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history plus anchor continuity detection work; scheduling and rollback/replay remain                                           |
-| Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                       |
-| Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; independent real-source reconciliation and entity calibration remain          |
-| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline engine only; calibration and temporal graph are absent                                                       |
-| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode and bounded SQD/RPC history work; continuous lifetime history, FFT and other platforms remain |
-| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels and Flap Portal preview work; DEX routes, fee/impact decomposition, gas and capacity remain     |
-| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                           |
-| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger results, Evidence and anchor Data Health work; terminal investigation is absent                                       |
-| Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                      |
+| Architecture domain                  | Status                                      | Current boundary                                                                                                                                  |
+| ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed                                                                    |
+| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass and endpoint comparison work; forced outage drill pending                                                     |
+| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                                              |
+| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | height/hash/previous-hash Esplora anchor; public best-chain smoke passed                                                                          |
+| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor and minimum-context account smoke passed                                                                             |
+| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history plus anchor continuity detection work; scheduling and rollback/replay remain                                                          |
+| Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                                      |
+| Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; independent real-source reconciliation and entity calibration remain                         |
+| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline engine only; calibration and temporal graph are absent                                                                      |
+| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, bounded history and contract-origin proof work; continuous lifetime history, FFT and other platforms remain |
+| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels and Flap Portal preview work; DEX routes, fee/impact decomposition, gas and capacity remain                    |
+| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                          |
+| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger results, Evidence and anchor Data Health work; terminal investigation is absent                                                      |
+| Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                     |
 
 ## Completed
 
@@ -230,6 +230,13 @@ The only allowed status vocabulary in this ledger is:
   `0xb81252503501f366b5dfb8c89fff85076d2f8888` at block `98759976`: SQD range discovery plus RPC
   receipt replay produced creation/configuration chronology, 100% requested-range coverage and 12
   Evidence nodes. Lifetime coverage and terminal history coverage correctly remained Unknown/zero.
+- sparse finalized SQD `createResultAddress` discovery now joins a contract creation trace to its
+  parent transaction and exact BSC receipt/Snapshot. The named non-FFT token above passed with the
+  official Portal as contract creator, trace path `[0,0,0,1]`, 100% one-block range coverage and a
+  13-node Evidence drilldown. Lifetime/history coverage correctly remained Unknown/zero;
+- the sampled public BSC RPC rejected historical `eth_getCode` at older heights and is not treated as
+  archive-capable. This does not block finalized SQD creation discovery, but archive state remains an
+  explicit acceptance gap.
 
 ### Finalized ingestion foundation
 
@@ -357,10 +364,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                              | Scope                                                                                                                         |
 | ------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                       | locked npm install in production container; all packages/API/web                                                              |
-| Unit tests                     | 241 pass                                   | 24 files across schemas, adapters, data quality, ingestion, storage, worker and API runtime                                   |
-| Integration tests              | 28 local pass; 43 latest completed CI pass | all API and durable PostgreSQL, ClickHouse, and object-storage integration tests pass in CI; local Docker remains unavailable |
+| Unit tests                     | 250 pass                                   | 24 files across schemas, adapters, data quality, ingestion, storage, worker and API runtime                                   |
+| Integration tests              | 29 local pass; 43 latest completed CI pass | all API and durable PostgreSQL, ClickHouse, and object-storage integration tests pass in CI; local Docker remains unavailable |
 | Restart regression             | Pass                                       | same-anchor recapture persists across repository/API restart without Snapshot collision                                       |
-| Coverage gate                  | Pass                                       | current local: 83.93% statements, 75.80% branches, 91.78% functions, 85.05% lines on 269 tests; 15 durable tests skipped      |
+| Coverage gate                  | Pass                                       | current local: 83.93% statements, 75.86% branches, 91.96% functions, 85.00% lines on 279 tests; 15 durable tests skipped      |
 | Chromium E2E                   | 10 pass                                    | five flows each on desktop and Pixel 7, including Flap state/event/default/Evidence/Unknown rendering                         |
 | Formatting / ESLint / types    | Pass                                       | full repository                                                                                                               |
 | Dependency vulnerability audit | Pass                                       | 0 vulnerabilities across the complete npm dependency graph                                                                    |

@@ -17,9 +17,12 @@ import {
   FLAP_HISTORY_MAX_CHUNKS,
   FLAP_HISTORY_MAX_RANGE_BLOCKS,
   FLAP_HISTORY_MODEL_VERSION,
+  FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS,
+  FLAP_TOKEN_ORIGIN_MODEL_VERSION,
   PLATFORM_REGISTRY,
   discoverFlapEventHistory,
   inspectFlapEventTransaction,
+  inspectFlapTokenOrigin,
   inspectFlapToken,
   quoteFlapSell,
 } from '@zerotrace/platform-adapters';
@@ -136,6 +139,29 @@ const FlapEventHistoryQuerySchema = FlapEventTransactionQuerySchema.extend({
         message: `History query exceeds ${FLAP_HISTORY_MAX_CHUNKS} chunks.`,
       });
     }
+  }
+});
+
+const FlapTokenOriginQuerySchema = FlapEventTransactionQuerySchema.extend({
+  fromBlock: z
+    .string()
+    .max(32)
+    .regex(/^(?:0|[1-9]\d*)$/),
+  toBlock: z
+    .string()
+    .max(32)
+    .regex(/^(?:0|[1-9]\d*)$/),
+}).superRefine((query, context) => {
+  const fromBlock = BigInt(query.fromBlock);
+  const toBlock = BigInt(query.toBlock);
+  if (toBlock < fromBlock) {
+    context.addIssue({ code: 'custom', path: ['toBlock'], message: 'toBlock precedes fromBlock.' });
+  } else if (toBlock - fromBlock + 1n > BigInt(FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS)) {
+    context.addIssue({
+      code: 'custom',
+      path: ['toBlock'],
+      message: `Origin range exceeds ${FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS} blocks.`,
+    });
   }
 });
 
@@ -844,6 +870,16 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'Bounded Portal log ranges use the finalized SQD BSC stream when configured, with strict RPC-log fallback, then decode by token and replay exact RPC receipts/block hashes. Requested-range coverage is distinct from token-lifetime coverage, which remains Unknown until deployment-origin indexing is continuous.',
       },
       {
+        id: 'flap-token-origin',
+        status: !runtime.evmAdapters.has(56)
+          ? 'BSC_PROVIDER_REQUIRED'
+          : runtime.sqdBscCreationReader === undefined
+            ? 'SQD_PROVIDER_REQUIRED'
+            : 'IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A bounded finalized SQD create-trace search is rebound to the exact BSC receipt, TokenCreated event, and Snapshot. Empty bounded ranges produce negative Evidence but never imply lifetime absence; continuous deployment-to-target coverage remains pending.',
+      },
+      {
         id: 'flap-bsc-sell-preview',
         status: runtime.evmAdapters.has(56)
           ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
@@ -1448,6 +1484,44 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
         ...(query.chunkSize === undefined ? {} : { chunkSize: query.chunkSize }),
+      });
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/origin',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LaunchInspectionParamsSchema.parse(request.params);
+      const query = FlapTokenOriginQuerySchema.parse(request.query);
+      const adapter = runtime.evmAdapters.get(56);
+      const creationReader = runtime.sqdBscCreationReader;
+      if (adapter === undefined || creationReader === undefined) {
+        const detail =
+          adapter === undefined
+            ? 'A BNB Smart Chain read-only provider is required.'
+            : 'The finalized SQD BSC source is required for contract-creation trace discovery.';
+        return reply.code(503).send({
+          platform: 'flap',
+          token: params.token,
+          searchedRange: { fromBlock: query.fromBlock, toBlock: query.toBlock },
+          searchedRangeCoverage: 0,
+          origin: unavailableValue('PROVIDER_UNCONFIGURED', detail),
+          lifetimeCoverage: unavailableValue('PROVIDER_UNCONFIGURED', detail),
+          observedCreationCount: 0,
+          metadata: emptyMetadata(FLAP_TOKEN_ORIGIN_MODEL_VERSION),
+          evidence: [],
+        });
+      }
+      return inspectFlapTokenOrigin({
+        adapter,
+        creationReader,
+        token: params.token,
+        fromBlock: query.fromBlock,
+        toBlock: query.toBlock,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
       });
     },
   );

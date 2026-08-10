@@ -95,6 +95,7 @@ describe('application runtime wiring', () => {
     expect(runtime.bitcoinAdapter?.config.id).toBe('bitcoin-esplora');
     expect(runtime.solanaAdapter?.config.commitment).toBe('finalized');
     expect(runtime.sqdBscLogReader).toBeDefined();
+    expect(runtime.sqdBscCreationReader).toBeDefined();
     expect(runtime.dataQuality.configuredSources()).toEqual({
       'eip155:1': 2,
       'eip155:56': 1,

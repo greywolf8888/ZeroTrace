@@ -3,6 +3,7 @@ import { unknownValue, type Ledger } from '@zerotrace/schemas';
 export * from './flap.js';
 export * from './flap-events.js';
 export * from './flap-history.js';
+export * from './flap-origin.js';
 
 export type PlatformRole = 'LAUNCH_MECHANISM' | 'EXECUTION_PLATFORM' | 'LABEL_PROVIDER';
 export type AdapterImplementationStatus =
@@ -34,7 +35,7 @@ export const PLATFORM_REGISTRY: readonly PlatformDescriptor[] = Object.freeze([
       'https://docs.flap.sh/flap/developers/basic-and-mechanism/bonding-curve',
     ],
     integrationBoundary:
-      'Versioned Portal V8Safe/V6/V5 inspection and fixed-block previewSell are wired; event history, tax/vault, migration, LP ownership, DEX routes, and complete RV remain pending.',
+      'Versioned Portal V8Safe/V6/V5 inspection, fixed-block previewSell, exact receipt events, bounded history, and bounded SQD contract-origin proof are wired; continuous lifetime history, tax/vault, migration control, LP ownership, DEX routes, and complete RV remain pending.',
   },
   {
     id: 'pump',

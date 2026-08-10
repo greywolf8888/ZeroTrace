@@ -65,6 +65,9 @@ The current foundation includes:
 - bounded Flap Portal event-history scans that prefer finalized SQD address/topic discovery with a
   strict `eth_getLogs` fallback, then field-for-field RPC receipt-replay every discovered log while
   keeping token-lifetime coverage Unknown;
+- bounded Flap contract-origin resolution that joins a finalized SQD create trace to the exact BSC
+  receipt, `TokenCreated` event and replay Snapshot while treating an empty search range as negative
+  Evidence rather than lifetime absence;
 - fixed-block Flap `previewSell` quotes whose provider-returned atomic proceeds and derivation
   Evidence remain separate from unqueried nominal price, fee breakdown and price impact;
 - an Evidence-grounded typed discrepancy engine with exact-state checks, exact-decimal error
@@ -143,15 +146,15 @@ protocol-specific decoders, and distributed workflows remain open work. Read
 
 ## Chain and platform scope
 
-| Domain            | Terminal scope                                                                                | Current repository state                                                                                                                                                             |
-| ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| EVM               | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound block/transaction queries, anchor reconciliation and finalized raw execution/state; archive/semantic validation pending                                               |
-| Bitcoin           | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                |
-| Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending                                                  |
-| Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                                                                           |
-| Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap current state, supplied transaction decoding and bounded SQD/RPC receipt-replayed history work; deployment-origin continuous history, FFT validation and other adapters pending |
-| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels plus Flap Portal sell preview work; DEX routing, decomposition, gas and capacity pending                                                          |
-| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                 |
+| Domain            | Terminal scope                                                                                | Current repository state                                                                                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EVM               | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound block/transaction queries, anchor reconciliation and finalized raw execution/state; archive/semantic validation pending                                                    |
+| Bitcoin           | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                     |
+| Solana            | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending                                                       |
+| Entity Resolution | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline implemented; temporal graph and calibration pending                                                                                                                |
+| Launchpad         | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap current state, supplied transaction decoding, bounded SQD/RPC history and bounded creation-origin proof work; continuous lifetime history, FFT validation and other adapters pending |
+| Realizable Value  | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels plus Flap Portal sell preview work; DEX routing, decomposition, gas and capacity pending                                                               |
+| Evidence          | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                      |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
 execution/label observation source; it is not a launchpad and can never merge entities by itself.
@@ -330,6 +333,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add fixed-block Flap Portal sell previews with provider Evidence and no-fake-zero UI states
 - [x] Add exact-receipt Flap creation/configuration/migration event decoding with default provenance
 - [x] Add bounded Flap Portal discovery through finalized SQD/RPC log sources with exact log/receipt replay
+- [x] Add bounded finalized SQD contract-origin proof with exact Flap receipt/Snapshot replay
 - [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets
 - [ ] Add continuous scheduling, live/unfinalized handling, rollback/replay and independent-provider validation
 - [ ] Add deployment-origin continuous Flap indexing and complete lifecycle reconstruction, then Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders

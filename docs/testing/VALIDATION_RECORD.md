@@ -577,6 +577,34 @@ example defaults remain secure and unchanged. This result accepts one bounded cr
 fixture; it is not the FFT token, a lifetime-history proof, a continuous checkpoint, an independent
 operator reconciliation, or market/RV/entity acceptance.
 
+### SQD contract-origin to exact BSC receipt proof
+
+The sparse SQD creation reader and Flap origin service were then executed through project code
+against the same named non-FFT token. SQD supplied the successful `create` trace and parent
+transaction; the public BSC RPC supplied the exact receipt and block used to decode `TokenCreated`.
+The service accepted the origin only after the official Portal creator, created address, trace
+position, receipt log and Snapshot agreed:
+
+| Field                    | Observation                                                          |
+| ------------------------ | -------------------------------------------------------------------- |
+| Token                    | `0xb81252503501f366b5dfb8c89fff85076d2f8888`                         |
+| Creation transaction     | `0x53614caf06221b2dadee950b588ca0bad466f73e04a40c6392780f9459630459` |
+| Block                    | `98759976`                                                           |
+| Block hash               | `0x7a5bffd6bd99c3dc33ec1a2d20ec48a03928f21cd189e40a791cb0bd71d05253` |
+| Trace path               | `[0,0,0,1]`                                                          |
+| Contract creator         | official Portal `0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0`         |
+| Launch creator           | `0xa2bb0586192ca431c628f83aa82d5b818a6917eb`                         |
+| Requested-range coverage | `1`                                                                  |
+| Evidence/drilldown nodes | `13` / `13`                                                          |
+| Lifetime/history state   | lifetime `unknown`; terminal `historyCoverage: 0`                    |
+
+This proves one bounded contract origin, not continuous coverage. A separate public BSC RPC probe
+returned non-retryable historical `eth_getCode` errors across old block heights, so that endpoint is
+not accepted as archive-capable. The default SSRF policy remains unchanged; the local live probe
+used private-network allowance only for the explicitly allowlisted public HTTPS hostnames because
+the host environment's DNS interception resolves them to private-range addresses. No FFT request
+or conclusion was made in this slice.
+
 The complete local gate for this cross-check passed formatting, lint, typecheck, 241 unit tests, 28
 API integration tests, production builds, license policy and a zero-vulnerability dependency audit.
 Coverage passed 269 tests with 15 Docker-dependent durable tests explicitly skipped at 83.93%
@@ -587,8 +615,8 @@ flows passed.
 
 | Command                  | Result                                                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 241 unit, 28 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
-| local `test:coverage`    | pass: 269 tests, 15 durable skips; 83.93% statements, 75.80% branches, 91.78% functions, 85.05% lines                                                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 250 unit, 29 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
+| local `test:coverage`    | pass: 279 tests, 15 durable skips; 83.93% statements, 75.86% branches, 91.96% functions, 85.00% lines                                                                       |
 | branch `test:coverage`   | latest completed pass: 284 tests; 86.56% statements, 78.33% branches, 95.43% functions, 87.68% lines                                                                        |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                         |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |

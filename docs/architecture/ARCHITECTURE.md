@@ -379,6 +379,14 @@ and token-lifetime completeness are separate fields: even a 100%
 requested-range scan retains Unknown lifetime coverage and zero terminal history coverage.
 Deployment-origin continuous checkpoints and cross-range lifecycle projection remain later stages.
 
+The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
+non-matching blocks are expected, while returned blocks and source-head completion are validated.
+A unique trace is not trusted alone. ZeroTrace joins its parent transaction, validates the created
+address, successful result bytecode and creator, then replays the exact BSC receipt and block. The
+contract origin becomes Known only when the trace position, official Portal creator, `TokenCreated`
+event and Snapshot agree. Empty or ambiguous bounded ranges remain Unknown. This establishes an
+origin primitive but does not yet establish continuous token-lifetime history.
+
 Flap realizable-value preview is a distinct provider-observation layer, not a replacement for the
 deterministic RV engine. It reuses the inspection Snapshot and calls the official view-only
 `previewSell` interface at that exact block. The raw output is Contract State Evidence; a separate

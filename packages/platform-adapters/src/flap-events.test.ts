@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   EvmLedgerAdapter,
+  type EvmContractCreationReader,
   type EvmLogReader,
   type JsonRpcTransport,
   type TransportObservation,
@@ -14,6 +15,7 @@ import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   discoverFlapEventHistory,
   inspectFlapEventTransaction,
+  inspectFlapTokenOrigin,
 } from './index.js';
 
 const token = `0x${'a'.repeat(40)}`;
@@ -102,6 +104,14 @@ class EventJsonRpcTransport implements JsonRpcTransport {
     this.calls.push({ method, params });
     if (method === 'eth_getTransactionReceipt') return this.receiptValue as T;
     if (method === 'eth_getBlockByNumber') {
+      if (params[0] === '0x11') {
+        return {
+          number: '0x11',
+          hash: `0x${'4'.repeat(64)}`,
+          parentHash: blockHash,
+          timestamp: '0x66',
+        } as T;
+      }
       return {
         number: '0x10',
         hash: this.returnedBlockHash,
@@ -185,17 +195,23 @@ function fixture(logs: readonly unknown[], returnedBlockHash = blockHash) {
     transport,
   );
   const ledger = new EvidenceLedger();
+  const writeEvidence = async (
+    item: Parameters<EvidenceLedger['add']>[0],
+    sources: readonly string[] = [],
+    snapshot?: Parameters<EvidenceLedger['add']>[2],
+  ) => ledger.add(item, sources, snapshot).evidence;
   return {
+    adapter,
     ledger,
     transport,
+    writeEvidence,
     inspect: () =>
       inspectFlapEventTransaction({
         adapter,
         token,
         transactionHash,
         deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
-        writeEvidence: async (item, sources = [], snapshot) =>
-          ledger.add(item, sources, snapshot).evidence,
+        writeEvidence,
       }),
   };
 }
@@ -430,6 +446,150 @@ describe('Flap transaction-local event inspection', () => {
     ).rejects.toMatchObject({
       code: 'INVALID_RESPONSE',
     });
+  });
+});
+
+describe('Flap token contract origin', () => {
+  function creationReader(
+    value: Awaited<
+      ReturnType<EvmContractCreationReader['getContractCreationsObservation']>
+    >['value'],
+  ): EvmContractCreationReader {
+    return {
+      getContractCreationsObservation: async () => ({
+        endpointId: 'sqd:binance-mainnet',
+        value,
+      }),
+    };
+  }
+
+  function creation(overrides: Record<string, unknown> = {}) {
+    return {
+      address: token,
+      creator: FLAP_BSC_MAINNET_DEPLOYMENT.portal.toLowerCase(),
+      bytecode: '0x60006000',
+      blockHash,
+      blockNumber: '0x10',
+      transactionHash,
+      transactionIndex: '0x1',
+      traceAddress: [0, 1],
+      raw: {},
+      ...overrides,
+    };
+  }
+
+  it('binds a unique creation trace to the exact Flap receipt and Snapshot', async () => {
+    const context = fixture([eventLog(tokenCreated(), 0)]);
+    const result = await inspectFlapTokenOrigin({
+      adapter: context.adapter,
+      creationReader: creationReader([creation()]),
+      token,
+      fromBlock: '16',
+      toBlock: '17',
+      deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+      writeEvidence: context.writeEvidence,
+    });
+
+    expect(result.origin).toMatchObject({
+      state: 'known',
+      value: {
+        contractCreator: FLAP_BSC_MAINNET_DEPLOYMENT.portal.toLowerCase(),
+        launchCreator: creator,
+        creationTrace: {
+          blockNumber: '16',
+          transactionIndex: '1',
+          traceAddress: [0, 1],
+        },
+        tokenCreatedPosition: { blockNumber: '16', logIndex: '0' },
+      },
+    });
+    expect(result.lifetimeCoverage).toMatchObject({
+      state: 'unknown',
+      reason: 'INSUFFICIENT_DATA',
+    });
+    expect(result.metadata.historyCoverage).toBe(0);
+    expect(result.metadata.snapshot).toMatchObject({
+      blockNumber: '17',
+      blockHash: `0x${'4'.repeat(64)}`,
+    });
+    expect(result.evidence.at(-1)?.kind).toBe('DERIVED_FEATURE');
+    expect(context.ledger.drilldown(result.evidence.at(-1)?.id ?? '')).toHaveLength(7);
+  });
+
+  it('returns bounded negative Evidence without claiming the token has no origin', async () => {
+    const context = fixture([eventLog(tokenCreated(), 0)]);
+    const result = await inspectFlapTokenOrigin({
+      adapter: context.adapter,
+      creationReader: creationReader([]),
+      token,
+      fromBlock: '16',
+      toBlock: '16',
+      deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+      writeEvidence: context.writeEvidence,
+    });
+
+    expect(result.origin).toMatchObject({ state: 'unknown', reason: 'INSUFFICIENT_DATA' });
+    expect(result.observedCreationCount).toBe(0);
+    expect(result.evidence.at(-1)?.kind).toBe('NEGATIVE_EVIDENCE');
+    expect(result.metadata.historyCoverage).toBe(0);
+    expect(
+      context.transport.calls.some((call) => call.method === 'eth_getTransactionReceipt'),
+    ).toBe(false);
+  });
+
+  it('keeps an ambiguous bounded origin Unknown without selecting a trace', async () => {
+    const context = fixture([eventLog(tokenCreated(), 0)]);
+    const result = await inspectFlapTokenOrigin({
+      adapter: context.adapter,
+      creationReader: creationReader([
+        creation({ traceAddress: [0, 1] }),
+        creation({ traceAddress: [0, 2] }),
+      ]),
+      token,
+      fromBlock: '16',
+      toBlock: '16',
+      deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+      writeEvidence: context.writeEvidence,
+    });
+
+    expect(result.origin).toMatchObject({ state: 'unknown', reason: 'CONFLICTING_SOURCES' });
+    expect(result.observedCreationCount).toBe(2);
+    expect(result.evidence.at(-1)?.kind).toBe('DERIVED_FEATURE');
+    expect(
+      context.transport.calls.some((call) => call.method === 'eth_getTransactionReceipt'),
+    ).toBe(false);
+  });
+
+  it('rejects a trace whose contract creator is not the official Portal', async () => {
+    const context = fixture([eventLog(tokenCreated(), 0)]);
+    await expect(
+      inspectFlapTokenOrigin({
+        adapter: context.adapter,
+        creationReader: creationReader([creation({ creator })]),
+        token,
+        fromBlock: '16',
+        toBlock: '16',
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: context.writeEvidence,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+
+  it('rejects an operationally unbounded origin request before provider access', async () => {
+    const context = fixture([eventLog(tokenCreated(), 0)]);
+    const reader = creationReader([]);
+    await expect(
+      inspectFlapTokenOrigin({
+        adapter: context.adapter,
+        creationReader: reader,
+        token,
+        fromBlock: '0',
+        toBlock: '1000000',
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: context.writeEvidence,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    expect(context.transport.calls).toHaveLength(0);
   });
 });
 

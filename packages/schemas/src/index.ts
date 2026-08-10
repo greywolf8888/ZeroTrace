@@ -909,6 +909,41 @@ export const FlapEventHistorySchema = z.object({
 });
 export type FlapEventHistory = z.infer<typeof FlapEventHistorySchema>;
 
+export const EvmTracePositionSchema = z.object({
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  transactionIndex: UnsignedQuantityStringSchema,
+  traceAddress: z.array(z.number().int().nonnegative()).max(64),
+});
+export type EvmTracePosition = z.infer<typeof EvmTracePositionSchema>;
+
+export const FlapTokenOriginValueSchema = z.object({
+  contractCreator: z.string().regex(/^0x[0-9a-f]{40}$/),
+  launchCreator: z.string().regex(/^0x[0-9a-f]{40}$/),
+  bytecodeFingerprint: Hash256Schema,
+  creationTrace: EvmTracePositionSchema,
+  tokenCreatedPosition: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(2),
+});
+export type FlapTokenOriginValue = z.infer<typeof FlapTokenOriginValueSchema>;
+
+export const FlapTokenOriginSchema = z.object({
+  platform: z.literal('flap'),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  searchedRange: z.object({
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+  }),
+  searchedRangeCoverage: CoverageRatioSchema,
+  origin: knowledgeValueSchema(FlapTokenOriginValueSchema),
+  lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+  observedCreationCount: z.number().int().nonnegative(),
+  metadata: AnalysisMetadataSchema,
+  evidence: z.array(EvidenceSchema).min(2),
+});
+export type FlapTokenOrigin = z.infer<typeof FlapTokenOriginSchema>;
+
 export const RealizableValuePointSchema = z.object({
   inputQuantity: DecimalStringSchema,
   nominalValue: knowledgeValueSchema(DecimalStringSchema),

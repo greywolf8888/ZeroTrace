@@ -6,7 +6,15 @@ import {
 } from './security.js';
 import { parseProviderJson, type FetchImplementation } from './transport.js';
 import type { JsonValue } from '@zerotrace/schemas';
-import type { EvmLogQuery, EvmLogReader, EvmLogRecord, EvmLogTopicFilter } from './evm.js';
+import type {
+  EvmContractCreationQuery,
+  EvmContractCreationReader,
+  EvmContractCreationRecord,
+  EvmLogQuery,
+  EvmLogReader,
+  EvmLogRecord,
+  EvmLogTopicFilter,
+} from './evm.js';
 import type { TransportObservation } from './transport.js';
 
 export const SQD_DATASETS = {
@@ -74,6 +82,7 @@ export interface SqdLedgerRecordItem {
 export interface SqdFinalizedRangeRequest {
   fromBlock: number;
   toBlock: number;
+  includeAllBlocks?: boolean;
   fields?: Readonly<Record<string, Readonly<Record<string, boolean>>>>;
   requests?: Readonly<Record<string, readonly Readonly<Record<string, unknown>>[]>>;
 }
@@ -839,6 +848,9 @@ function buildQuery(
   request: SqdFinalizedRangeRequest,
 ): Record<string, unknown> {
   const config = SQD_DATASETS[dataset];
+  if (request.includeAllBlocks !== undefined && typeof request.includeAllBlocks !== 'boolean') {
+    throw new RangeError('SQD includeAllBlocks must be boolean.');
+  }
   const allowedFields = ALLOWED_FIELD_GROUPS[config.queryType];
   const fields: Record<string, Record<string, boolean>> = {};
   for (const [group, selection] of Object.entries(request.fields ?? {})) {
@@ -879,7 +891,7 @@ function buildQuery(
     type: config.queryType,
     fromBlock: request.fromBlock,
     toBlock: request.toBlock,
-    includeAllBlocks: true,
+    includeAllBlocks: request.includeAllBlocks ?? true,
     fields,
     ...itemRequests,
   };
@@ -994,6 +1006,8 @@ export class SqdPortalClient {
       throw new RangeError(`SQD range may not exceed ${this.#options.maxRangeBlocks} blocks.`);
     }
     const baseQuery = buildQuery(this.dataset, request);
+    const requireContiguous =
+      SQD_DATASETS[this.dataset].contiguous && request.includeAllBlocks !== false;
     const progress: StreamProgress = {
       lastBlock: null,
       lastHash: null,
@@ -1021,6 +1035,7 @@ export class SqdPortalClient {
             cursor,
             request.toBlock,
             progress,
+            requireContiguous,
             onBlock,
           );
           progress.finalizedHead = maxNullable(progress.finalizedHead, outcome.finalizedHead);
@@ -1039,7 +1054,7 @@ export class SqdPortalClient {
             };
           }
           if (outcome.emptyRange) {
-            if (SQD_DATASETS[this.dataset].contiguous || outcome.finalizedHead === null) {
+            if (requireContiguous || outcome.finalizedHead === null) {
               throw new ProviderError(
                 'INVALID_RESPONSE',
                 'SQD finalized stream returned unverifiable empty coverage.',
@@ -1118,6 +1133,7 @@ export class SqdPortalClient {
     fromBlock: number,
     toBlock: number,
     progress: StreamProgress,
+    requireContiguous: boolean,
     onBlock: (block: SqdFinalizedBlock) => void | Promise<void>,
   ): Promise<{ noContent: boolean; emptyRange: boolean; finalizedHead: number | null }> {
     const response = await this.#fetch('finalized-stream', {
@@ -1167,15 +1183,13 @@ export class SqdPortalClient {
           'SQD block numbers are not strictly increasing.',
         );
       }
-      if (
-        SQD_DATASETS[this.dataset].contiguous &&
-        block.header.number !== (previous ?? fromBlock - 1) + 1
-      ) {
+      if (requireContiguous && block.header.number !== (previous ?? fromBlock - 1) + 1) {
         throw new ProviderError('INVALID_RESPONSE', 'SQD finalized stream contains a block gap.');
       }
       if (
-        SQD_DATASETS[this.dataset].contiguous &&
+        previous !== null &&
         previousHash !== null &&
+        (requireContiguous || block.header.number === previous + 1) &&
         block.header.parentHash.toLowerCase() !== previousHash.toLowerCase()
       ) {
         throw new ProviderError(
@@ -1289,6 +1303,198 @@ export interface SqdEvmLogReaderOptions {
   source: SqdPortalClient;
   maxRangeBlocks?: number;
   maxResults?: number;
+}
+
+export interface SqdEvmContractCreationReaderOptions {
+  source: SqdPortalClient;
+  maxRangeBlocks?: number;
+  maxResults?: number;
+}
+
+function sqdObject(
+  value: JsonValue | undefined,
+  field: string,
+): Readonly<Record<string, JsonValue>> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `SQD EVM ${field} is invalid.`);
+  }
+  return value as Readonly<Record<string, JsonValue>>;
+}
+
+export class SqdEvmContractCreationReader implements EvmContractCreationReader {
+  readonly endpointId: string;
+  readonly #source: SqdPortalClient;
+  readonly #maxRangeBlocks: number;
+  readonly #maxResults: number;
+  #metadataPromise: Promise<SqdDatasetMetadata> | undefined;
+
+  constructor(options: SqdEvmContractCreationReaderOptions) {
+    if (SQD_DATASETS[options.source.dataset].queryType !== 'evm') {
+      throw new RangeError('SQD EVM contract creation reader requires an EVM dataset.');
+    }
+    this.#source = options.source;
+    this.endpointId = `sqd:${options.source.dataset}`;
+    this.#maxRangeBlocks = requireInteger(
+      options.maxRangeBlocks ?? 1_000_000,
+      'maxRangeBlocks',
+      1,
+      1_000_000,
+    );
+    this.#maxResults = requireInteger(options.maxResults ?? 16, 'maxResults', 1, 10_000);
+  }
+
+  async getContractCreationsObservation(
+    query: EvmContractCreationQuery,
+  ): Promise<TransportObservation<EvmContractCreationRecord[]>> {
+    const fromBlock = sqdLogPosition(query.fromBlock, 'fromBlock');
+    const toBlock = sqdLogPosition(query.toBlock, 'toBlock');
+    if (toBlock < fromBlock) {
+      throw new ProviderError('INVALID_RESPONSE', 'SQD EVM creation range ends before it begins.');
+    }
+    if (toBlock - fromBlock + 1 > this.#maxRangeBlocks) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        `SQD EVM creation range exceeds the configured ${this.#maxRangeBlocks}-block limit.`,
+      );
+    }
+    const address = sqdLogAddress(query.address, 'creation address');
+    const metadata = await this.#metadata();
+    if (metadata.startBlock === null || fromBlock < metadata.startBlock) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'SQD dataset start coverage does not include the requested EVM creation range.',
+      );
+    }
+
+    const creations: EvmContractCreationRecord[] = [];
+    const seen = new Set<string>();
+    const summary = await this.#source.readFinalizedRange(
+      {
+        fromBlock,
+        toBlock,
+        includeAllBlocks: false,
+        fields: {
+          transaction: { hash: true, transactionIndex: true },
+          trace: {
+            transactionIndex: true,
+            traceAddress: true,
+            type: true,
+            createFrom: true,
+            createResultAddress: true,
+            createResultCode: true,
+            error: true,
+          },
+        },
+        requests: {
+          traces: [{ type: ['create'], createResultAddress: [address], transaction: true }],
+        },
+      },
+      (block) => {
+        const blockHash = evmBlockHash(block, 'EVM contract creation');
+        const transactionHashes = new Map<number, string>();
+        for (const transaction of sqdTransactionsFromBlock(this.#source.dataset, block)) {
+          const transactionIndex = sourcePosition(
+            transaction.payload.transactionIndex,
+            'EVM creation transaction index',
+          );
+          if (transactionHashes.has(transactionIndex)) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'SQD EVM creation response contains duplicate transaction indexes.',
+            );
+          }
+          transactionHashes.set(transactionIndex, transaction.identity);
+        }
+
+        for (const trace of sqdEvmTracesFromBlock(this.#source.dataset, block)) {
+          const payload = trace.payload;
+          if (
+            payload.type !== 'create' ||
+            (payload.error !== undefined && payload.error !== null)
+          ) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'SQD returned a trace outside the requested successful creation filter.',
+            );
+          }
+          const transactionIndex = sourcePosition(
+            payload.transactionIndex,
+            'EVM creation trace transaction index',
+          );
+          const transactionHash = transactionHashes.get(transactionIndex);
+          if (transactionHash === undefined) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'SQD EVM creation trace is missing its parent transaction.',
+            );
+          }
+          const action = sqdObject(payload.action, 'creation action');
+          const result = sqdObject(payload.result, 'creation result');
+          const creator = sqdLogAddress(String(action.from ?? ''), 'creation creator');
+          const createdAddress = sqdLogAddress(
+            String(result.address ?? ''),
+            'created contract address',
+          );
+          const bytecode = result.code;
+          if (
+            createdAddress !== address ||
+            typeof bytecode !== 'string' ||
+            !EVM_HEX_DATA.test(bytecode) ||
+            bytecode === '0x'
+          ) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'SQD returned an invalid or mismatched EVM contract creation.',
+            );
+          }
+          const traceAddress = sourcePath(payload.traceAddress, 'EVM creation trace address', true);
+          const identity = `${blockHash}:${transactionHash}:${traceAddress.join('.') || 'root'}`;
+          if (seen.has(identity)) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'SQD returned a duplicate EVM contract creation.',
+            );
+          }
+          seen.add(identity);
+          creations.push({
+            address: createdAddress,
+            creator,
+            bytecode: bytecode.toLowerCase(),
+            blockHash,
+            blockNumber: `0x${block.header.number.toString(16)}`,
+            transactionHash,
+            transactionIndex: `0x${transactionIndex.toString(16)}`,
+            traceAddress,
+            raw: payload,
+          });
+          if (creations.length > this.#maxResults) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              `SQD EVM creation result exceeds the configured ${this.#maxResults}-record limit.`,
+            );
+          }
+        }
+      },
+    );
+    if (summary.completion !== 'REQUESTED_RANGE_COMPLETE' || summary.nextBlock !== toBlock + 1) {
+      throw new ProviderError(
+        'HTTP_ERROR',
+        'SQD finalized coverage did not reach the requested EVM creation range end.',
+        { retryable: true },
+      );
+    }
+    return { endpointId: this.endpointId, value: creations };
+  }
+
+  async #metadata(): Promise<SqdDatasetMetadata> {
+    this.#metadataPromise ??= this.#source.metadata();
+    try {
+      return await this.#metadataPromise;
+    } catch (error) {
+      this.#metadataPromise = undefined;
+      throw error;
+    }
+  }
 }
 
 function sqdLogPosition(value: string, field: string): number {

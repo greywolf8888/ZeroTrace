@@ -1630,6 +1630,86 @@ describe('ZeroTrace API contract', () => {
     expect(drilldown.json().nodes).toHaveLength(6);
   });
 
+  it('resolves a bounded Flap contract origin from SQD and exact BSC receipt Evidence', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new FlapEventTransport(fixtureFlapCreationReceipt()),
+      ),
+    );
+    const sqdCreations = vi.fn(async () => ({
+      endpointId: 'sqd:binance-mainnet',
+      value: [
+        {
+          address: fixtureFlapToken,
+          creator: '0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0',
+          bytecode: '0x60006000',
+          blockHash: `0x${'6'.repeat(64)}`,
+          blockNumber: '0x10',
+          transactionHash: fixtureFlapEventTransactionHash,
+          transactionIndex: '0x1',
+          traceAddress: [0, 1],
+          raw: {},
+        },
+      ],
+    }));
+    runtime.sqdBscCreationReader = { getContractCreationsObservation: sqdCreations };
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/origin?chainId=eip155:56&platform=flap&fromBlock=16&toBlock=16`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      platform: 'flap',
+      token: fixtureFlapToken,
+      searchedRange: { fromBlock: '16', toBlock: '16' },
+      searchedRangeCoverage: 1,
+      origin: {
+        state: 'known',
+        value: {
+          contractCreator: '0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0',
+          launchCreator: `0x${'c'.repeat(40)}`,
+          creationTrace: { blockNumber: '16', transactionIndex: '1', traceAddress: [0, 1] },
+          tokenCreatedPosition: { blockNumber: '16', logIndex: '0' },
+        },
+      },
+      lifetimeCoverage: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      metadata: { historyCoverage: 0, modelVersion: 'flap-token-origin-v1' },
+    });
+    expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'PROVIDER_OBSERVATION',
+      'RECEIPT',
+      'LOG',
+      'PROVIDER_OBSERVATION',
+      'DERIVED_FEATURE',
+      'TRACE',
+      'DERIVED_FEATURE',
+    ]);
+    expect(sqdCreations).toHaveBeenCalledWith({
+      address: fixtureFlapToken,
+      fromBlock: '16',
+      toBlock: '16',
+    });
+    const derivedId = response.json().evidence.at(-1).id;
+    const drilldown = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${derivedId}/drilldown`,
+    });
+    expect(drilldown.statusCode, drilldown.body).toBe(200);
+    expect(drilldown.json().nodes).toHaveLength(7);
+  });
+
   it('returns a fixed-block Flap previewSell quote without inventing fee or impact fields', async () => {
     const runtime = runtimeWithAllLedgers();
     runtime.evmAdapters.set(
@@ -1829,6 +1909,18 @@ describe('ZeroTrace API contract', () => {
       lifetimeCoverage: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
       chronology: [],
       transactions: [],
+      evidence: [],
+    });
+    const unavailableFlapOrigin = await degraded.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/origin?chainId=eip155:56&fromBlock=16&toBlock=17`,
+    });
+    expect(unavailableFlapOrigin.statusCode).toBe(503);
+    expect(unavailableFlapOrigin.json()).toMatchObject({
+      searchedRangeCoverage: 0,
+      origin: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
+      lifetimeCoverage: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
+      observedCreationCount: 0,
       evidence: [],
     });
     const unavailableFlapQuote = await degraded.inject({

@@ -29,6 +29,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/launches/EVM/:token`                         | version-pinned Flap BSC current Portal-state inspection          |
 | GET    | `/api/v1/launches/EVM/:token/events/:transactionHash` | exact-receipt Flap creation/configuration/migration decoding     |
 | GET    | `/api/v1/launches/EVM/:token/history`                 | bounded Flap Portal log discovery with exact receipt replay      |
+| GET    | `/api/v1/launches/EVM/:token/origin`                  | bounded Flap creation-trace and exact receipt origin proof       |
 | POST   | `/api/v1/rv/flap-sell`                                | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/data-quality/discrepancies`                  | typed error-budget and discrepancy audit                         |
 | GET    | `/api/v1/evidence/:id`                                | Evidence node, source edges, and bound Snapshot                  |
@@ -119,6 +120,18 @@ transactions were replayed. It does not mean full token history: `lifetimeCovera
 `historyCoverage` remain Unknown/zero until the Portal deployment origin is evidenced and indexing
 is continuous through the analysis Snapshot. An empty result creates bounded negative Evidence,
 not a claim that the token never emitted a Flap event.
+
+`GET /api/v1/launches/EVM/:token/origin?chainId=eip155:56&platform=flap&fromBlock=...&toBlock=...`
+searches at most 1,000,000 finalized BSC blocks through SQD's `createResultAddress` trace filter.
+The route requires both `SQD_PORTAL_URL` and a BSC RPC provider. A unique successful create trace is
+accepted only when its creator is the versioned official Portal and its address, block, transaction,
+transaction index and Snapshot agree with the exact RPC receipt and decoded `TokenCreated` event.
+The response retains the runtime bytecode fingerprint and trace path as Evidence.
+
+`searchedRangeCoverage=1` proves only the requested finalized range. Zero matches produce bounded
+negative Evidence and an Unknown origin; multiple matches produce a conflicting-sources Unknown.
+Even a unique match leaves `lifetimeCoverage` Unknown and `historyCoverage=0` until checkpointed
+event indexing is continuous from the evidenced creation block through the target Snapshot.
 
 `POST /api/v1/rv/flap-sell` accepts `chainId=eip155:56`, `token`, unsigned-decimal atomic
 `inputQuantity`, optional `platform=flap`, and optional decimal `blockNumber`. The inspector and

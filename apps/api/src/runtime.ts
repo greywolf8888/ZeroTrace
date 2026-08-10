@@ -7,8 +7,10 @@ import {
   SafeJsonRpcTransport,
   SafeRestTransport,
   SolanaLedgerAdapter,
+  SqdEvmContractCreationReader,
   SqdEvmLogReader,
   SqdPortalClient,
+  type EvmContractCreationReader,
   type EvmLogReader,
   type ProviderUrlPolicy,
   type RestTransport,
@@ -40,6 +42,7 @@ export interface AppRuntime {
   providerRegistry: ProviderRegistry;
   evmAdapters: Map<number, EvmLedgerAdapter>;
   sqdBscLogReader?: EvmLogReader;
+  sqdBscCreationReader?: EvmContractCreationReader;
   bitcoinAdapter?: BitcoinUtxoLedgerAdapter;
   solanaAdapter?: SolanaLedgerAdapter;
   evidenceLedger: EvidenceLedger;
@@ -211,23 +214,35 @@ export function createRuntime(config: AppConfig): AppRuntime {
     bscAnchorReaders,
   );
 
-  const sqdBscLogReader =
+  const sqdBscSource =
     config.sqdPortalUrl === undefined || config.bscChainId !== 56
       ? undefined
+      : new SqdPortalClient({
+          portalUrl: config.sqdPortalUrl,
+          dataset: 'binance-mainnet',
+          policy: policyFor(config.sqdPortalUrl, config),
+          timeoutMs: Math.max(config.requestTimeoutMs, 30_000),
+          maxRangeBlocks: 1_000_000,
+          maxAttempts: config.providerResilience.maxAttempts,
+          retryBaseDelayMs: config.providerResilience.retryBaseDelayMs,
+          retryMaxDelayMs: config.providerResilience.retryMaxDelayMs,
+          requestsPerSecond: 2,
+        });
+  const sqdBscLogReader =
+    sqdBscSource === undefined
+      ? undefined
       : new SqdEvmLogReader({
-          source: new SqdPortalClient({
-            portalUrl: config.sqdPortalUrl,
-            dataset: 'binance-mainnet',
-            policy: policyFor(config.sqdPortalUrl, config),
-            timeoutMs: Math.max(config.requestTimeoutMs, 30_000),
-            maxRangeBlocks: 50_000,
-            maxAttempts: config.providerResilience.maxAttempts,
-            retryBaseDelayMs: config.providerResilience.retryBaseDelayMs,
-            retryMaxDelayMs: config.providerResilience.retryMaxDelayMs,
-            requestsPerSecond: 2,
-          }),
+          source: sqdBscSource,
           maxRangeBlocks: 10_000,
           maxResults: 25_000,
+        });
+  const sqdBscCreationReader =
+    sqdBscSource === undefined
+      ? undefined
+      : new SqdEvmContractCreationReader({
+          source: sqdBscSource,
+          maxRangeBlocks: 1_000_000,
+          maxResults: 16,
         });
 
   let bitcoinAdapter: BitcoinUtxoLedgerAdapter | undefined;
@@ -423,6 +438,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ),
     evmAdapters,
     ...(sqdBscLogReader === undefined ? {} : { sqdBscLogReader }),
+    ...(sqdBscCreationReader === undefined ? {} : { sqdBscCreationReader }),
     evidenceLedger,
     dataQuality,
     ingestionStorage: {

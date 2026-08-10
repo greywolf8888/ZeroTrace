@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ProviderError } from './errors.js';
 import {
+  SqdEvmContractCreationReader,
   SqdPortalClient,
   SqdEvmLogReader,
   sqdBitcoinInputsFromBlock,
@@ -216,6 +217,33 @@ describe('SqdPortalClient', () => {
     ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 
+  it('uses official sparse continuation semantics without claiming omitted blocks as returned rows', async () => {
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonlResponse([block(10), block(12)], { finalizedHead: 20 }));
+    const received: number[] = [];
+
+    const result = await client(fetchImplementation).readFinalizedRange(
+      { fromBlock: 10, toBlock: 12, includeAllBlocks: false },
+      (item) => {
+        received.push(item.header.number);
+      },
+    );
+
+    expect(received).toEqual([10, 12]);
+    expect(result).toMatchObject({
+      completion: 'REQUESTED_RANGE_COMPLETE',
+      lastBlock: 12,
+      nextBlock: 13,
+      blocks: 2,
+    });
+    expect(JSON.parse(String(fetchImplementation.mock.calls[0]?.[1]?.body))).toMatchObject({
+      fromBlock: 10,
+      toBlock: 12,
+      includeAllBlocks: false,
+    });
+  });
+
   it('allows skipped Solana slots while preserving strictly increasing ordering', async () => {
     const fetchImplementation = vi
       .fn<typeof fetch>()
@@ -346,6 +374,162 @@ describe('SqdPortalClient', () => {
           policy,
         }),
     ).toThrow(ProviderError);
+  });
+});
+
+describe('SqdEvmContractCreationReader', () => {
+  it('extracts a filtered successful creation and its parent transaction from a sparse range', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    const creator = `0x${'b'.repeat(40)}`;
+    const transactionHash = `0x${'c'.repeat(64)}`;
+    const responseBlock: SqdFinalizedBlock = {
+      ...block(10),
+      transactions: [{ transactionIndex: 7, hash: transactionHash }],
+      traces: [
+        {
+          transactionIndex: 7,
+          traceAddress: [0, 1],
+          type: 'create',
+          error: null,
+          action: { from: creator },
+          result: { address, code: '0x1234' },
+        },
+      ],
+    };
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            dataset: 'binance-mainnet',
+            aliases: [],
+            real_time: true,
+            start_block: 0,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(jsonlResponse([responseBlock], { finalizedHead: 10 }));
+    const reader = new SqdEvmContractCreationReader({
+      source: client(fetchImplementation, { dataset: 'binance-mainnet' }),
+      maxRangeBlocks: 10,
+    });
+
+    await expect(
+      reader.getContractCreationsObservation({ address, fromBlock: '10', toBlock: '10' }),
+    ).resolves.toMatchObject({
+      endpointId: 'sqd:binance-mainnet',
+      value: [
+        {
+          address,
+          creator,
+          bytecode: '0x1234',
+          blockNumber: '0xa',
+          transactionHash,
+          transactionIndex: '0x7',
+          traceAddress: [0, 1],
+        },
+      ],
+    });
+    expect(JSON.parse(String(fetchImplementation.mock.calls[1]?.[1]?.body))).toMatchObject({
+      type: 'evm',
+      fromBlock: 10,
+      toBlock: 10,
+      includeAllBlocks: false,
+      traces: [{ type: ['create'], createResultAddress: [address], transaction: true }],
+      fields: {
+        transaction: { hash: true, transactionIndex: true },
+        trace: { createFrom: true, createResultAddress: true, createResultCode: true },
+      },
+    });
+  });
+
+  it('fails closed on a mismatched creation result or incomplete source coverage', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    const metadata = new Response(
+      JSON.stringify({
+        dataset: 'binance-mainnet',
+        aliases: [],
+        real_time: true,
+        start_block: 0,
+      }),
+      { status: 200 },
+    );
+    const mismatchedFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(metadata)
+      .mockResolvedValueOnce(
+        jsonlResponse([
+          {
+            ...block(10),
+            transactions: [{ transactionIndex: 0, hash: `0x${'c'.repeat(64)}` }],
+            traces: [
+              {
+                transactionIndex: 0,
+                traceAddress: [],
+                type: 'create',
+                error: null,
+                action: { from: `0x${'b'.repeat(40)}` },
+                result: { address: `0x${'d'.repeat(40)}`, code: '0x12' },
+              },
+            ],
+          },
+        ]),
+      );
+    await expect(
+      new SqdEvmContractCreationReader({
+        source: client(mismatchedFetch, { dataset: 'binance-mainnet' }),
+      }).getContractCreationsObservation({ address, fromBlock: '10', toBlock: '10' }),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+
+    const shortfallFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            dataset: 'binance-mainnet',
+            aliases: [],
+            real_time: true,
+            start_block: 0,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 204,
+          headers: { 'x-sqd-finalized-head-number': '9' },
+        }),
+      );
+    await expect(
+      new SqdEvmContractCreationReader({
+        source: client(shortfallFetch, { dataset: 'binance-mainnet' }),
+      }).getContractCreationsObservation({ address, fromBlock: '10', toBlock: '10' }),
+    ).rejects.toMatchObject({ code: 'HTTP_ERROR', retryable: true });
+  });
+
+  it('returns a bounded empty result only when sparse source coverage reaches the range end', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            dataset: 'binance-mainnet',
+            aliases: [],
+            real_time: true,
+            start_block: 0,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(jsonlResponse([], { finalizedHead: 10 }));
+
+    await expect(
+      new SqdEvmContractCreationReader({
+        source: client(fetchImplementation, { dataset: 'binance-mainnet' }),
+      }).getContractCreationsObservation({ address, fromBlock: '10', toBlock: '10' }),
+    ).resolves.toEqual({ endpointId: 'sqd:binance-mainnet', value: [] });
   });
 });
 

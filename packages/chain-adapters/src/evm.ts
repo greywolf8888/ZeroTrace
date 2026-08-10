@@ -76,6 +76,30 @@ export interface EvmLogReader {
   getLogsObservation(query: EvmLogQuery): Promise<TransportObservation<EvmLogRecord[]>>;
 }
 
+export interface EvmContractCreationRecord {
+  address: string;
+  creator: string;
+  bytecode: string;
+  blockHash: string;
+  blockNumber: string;
+  transactionHash: string;
+  transactionIndex: string;
+  traceAddress: readonly number[];
+  raw: Readonly<Record<string, unknown>>;
+}
+
+export interface EvmContractCreationQuery {
+  address: string;
+  fromBlock: string;
+  toBlock: string;
+}
+
+export interface EvmContractCreationReader {
+  getContractCreationsObservation(
+    query: EvmContractCreationQuery,
+  ): Promise<TransportObservation<EvmContractCreationRecord[]>>;
+}
+
 const ALLOWED_EVM_METHODS = new Set([
   'eth_chainId',
   'eth_blockNumber',

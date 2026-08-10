@@ -82,6 +82,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
         separation, negative Evidence, API and desktop/mobile UI
   - [x] Finalized SQD filtered discovery plus exact BSC RPC replay for one named non-FFT
         creation/configuration fixture
+  - [x] Sparse finalized SQD create-trace decoding and bounded origin-to-exact-receipt proof with
+        deterministic positive, negative, ambiguity and mismatch coverage
   - [ ] Deployment-origin continuous Flap history, named migration/FFT fixtures, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
