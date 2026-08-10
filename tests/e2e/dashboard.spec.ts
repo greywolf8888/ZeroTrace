@@ -591,6 +591,100 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
       });
     },
   );
+  await page.route('**/api/v1/launches/EVM/**/history/lifetime/heads/latest*', async (route) => {
+    const capturedAt = '2026-08-10T00:03:00.000Z';
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        head: {
+          id: `flh_${'1'.repeat(24)}`,
+          chainId: 'eip155:56',
+          token: bscTokenAddress,
+          sequence: 3,
+          scanId: '44444444-4444-4444-8444-444444444444',
+          headType: 'EXTENSION',
+          predecessorId: `flh_${'2'.repeat(24)}`,
+          targetBlock: 50000105,
+          targetHash: `0x${'d'.repeat(64)}`,
+          terminalEvidenceId: 'ev_lifetime_head_terminal',
+          createdAt: capturedAt,
+          result: {
+            platform: 'flap',
+            token: bscTokenAddress,
+            dataset: 'binance-mainnet',
+            datasetStartBlock: '0',
+            targetBlock: '50000105',
+            predecessor: {
+              scanId: bscFlapLifetimeScan,
+              targetBlock: '50000103',
+              targetHash: `0x${'a'.repeat(64)}`,
+              terminalEvidenceId: 'ev_lifetime_terminal',
+            },
+            originScanId: '11111111-1111-4111-8111-111111111111',
+            origin: {
+              state: 'known',
+              value: {
+                contractCreator: `0x${'b'.repeat(40)}`,
+                launchCreator: `0x${'c'.repeat(40)}`,
+                creationTrace: { blockNumber: '50000000', transactionHash: `0x${'6'.repeat(64)}` },
+              },
+            },
+            continuity: {
+              status: 'HISTORICAL_MATCH',
+              continuous: { state: 'known', value: true },
+              evidenceIds: ['ev_lifetime_continuity'],
+              terminalEvidenceId: 'ev_lifetime_continuity',
+            },
+            historyProjection: {
+              scanId: '55555555-5555-4555-8555-555555555555',
+              fromBlock: '50000104',
+              toBlock: '50000105',
+              segmentCount: 1,
+              transactionCount: 1,
+              unrecognizedPortalLogCount: 0,
+              requestedRangeCoverage: 1,
+              terminalEvidenceId: 'ev_lifetime_delta',
+            },
+            lifetimeCoverage: { state: 'known', value: true },
+            terminalEvidenceId: 'ev_lifetime_head_terminal',
+            metadata: {
+              snapshot: {
+                ledger: 'EVM',
+                chainId: 'eip155:56',
+                blockNumber: '50000105',
+                blockHash: `0x${'d'.repeat(64)}`,
+                finality: 'finalized',
+              },
+              dataCoverage: 1,
+              sourceCoverage: 1,
+              historyCoverage: 1,
+              simulationCoverage: 0,
+              freshness: capturedAt,
+              sourceSet: ['bsc-rpc-a', 'bsc-rpc-b', 'sqd:binance-mainnet'],
+              modelVersion: 'flap-lifetime-extension-v1',
+              confidence: 0.97,
+              evidenceIds: ['ev_lifetime_head_terminal'],
+            },
+            evidence: [
+              {
+                id: 'ev_lifetime_head_terminal',
+                ledger: 'EVM',
+                chainId: 'eip155:56',
+                kind: 'DERIVED_FEATURE',
+                source: 'zerotrace:flap-lifetime-extension-v1',
+                locator: `flap-lifetime-extension:${bscTokenAddress}:50000103-50000105`,
+                payloadHash: 'e'.repeat(64),
+                observedAt: capturedAt,
+                blockOrSlot: '50000105',
+                finality: 'finalized',
+                summary: 'Accepted Flap lifetime head extends exact finalized coverage.',
+              },
+            ],
+          },
+        },
+      }),
+    });
+  });
   await page.route('**/api/v1/rv/flap-sell', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -716,11 +810,21 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(
     page.getByRole('heading', { name: 'Flap exact lifetime materialization' }),
   ).toBeVisible();
-  await page.getByLabel('Lifetime materialization scan ID').fill(bscFlapLifetimeScan);
-  await page.getByRole('button', { name: 'Replay lifetime proof' }).click();
+  await page.getByRole('button', { name: 'Load latest accepted head' }).click();
   const lifetimePanel = page.locator('.event-history-panel').filter({
     has: page.getByRole('heading', { name: 'Flap exact lifetime materialization' }),
   });
+  await expect(lifetimePanel).toContainText('Accepted sequence 3');
+  await expect(lifetimePanel).toContainText('Head type Extension');
+  await expect(lifetimePanel).toContainText('Historical Match · 50000103 → 50000105');
+  await expect(
+    page.getByRole('heading', { name: 'Latest Flap lifetime head Evidence root' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Accepted Flap lifetime head extends exact finalized coverage.'),
+  ).toBeVisible();
+  await page.getByLabel('Lifetime materialization scan ID').fill(bscFlapLifetimeScan);
+  await page.getByRole('button', { name: 'Replay lifetime proof' }).click();
   await expect(lifetimePanel).toContainText('Materialization coverage 100%');
   await expect(lifetimePanel).toContainText('Lifetime coverage true');
   await expect(lifetimePanel).toContainText('Block 50000000');

@@ -34,6 +34,7 @@ import {
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
   FlapHistoryProjectionError,
+  FlapLifetimeHeadError,
   SemanticCheckpointError,
   StorageError,
   type ObjectStoreHealth,
@@ -561,6 +562,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | StorageHealth
     | Awaited<ReturnType<NonNullable<AppRuntime['semanticCheckpoints']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['flapHistoryProjection']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['flapLifetimeHeads']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -581,11 +583,13 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         checkedAt: new Date().toISOString(),
       };
     } else {
-      const [evidence, semanticCheckpoints, flapHistoryProjection] = await Promise.all([
-        runtime.evidenceRepository.health(),
-        runtime.semanticCheckpoints?.health(),
-        runtime.flapHistoryProjection?.health(),
-      ]);
+      const [evidence, semanticCheckpoints, flapHistoryProjection, flapLifetimeHeads] =
+        await Promise.all([
+          runtime.evidenceRepository.health(),
+          runtime.semanticCheckpoints?.health(),
+          runtime.flapHistoryProjection?.health(),
+          runtime.flapLifetimeHeads?.health(),
+        ]);
       value =
         evidence.status === 'DOWN'
           ? evidence
@@ -593,7 +597,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? semanticCheckpoints
             : flapHistoryProjection?.status === 'DOWN'
               ? flapHistoryProjection
-              : evidence;
+              : flapLifetimeHeads?.status === 'DOWN'
+                ? flapLifetimeHeads
+                : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -781,6 +787,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof FlapHistoryProjectionError) {
       const status = error.code === 'FLAP_HISTORY_PROJECTION_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof FlapLifetimeHeadError) {
+      const status = error.code === 'FLAP_LIFETIME_HEAD_INVALID' ? 400 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1684,6 +1696,62 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         },
         segments,
       };
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/history/lifetime/heads/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LaunchInspectionParamsSchema.parse(request.params);
+      FlapEventTransactionQuerySchema.parse(request.query);
+      const classification = classifyIdentifier(params.token, {
+        ledger: 'EVM',
+        type: 'ADDRESS',
+        chainId: 'eip155:56',
+      });
+      const subject = classification.candidates.find(
+        (candidate) => candidate.ledger === 'EVM' && candidate.type === 'ADDRESS',
+      );
+      if (subject === undefined) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_IDENTIFIER',
+              'A structurally valid EVM token address is required.',
+              false,
+            ),
+          );
+      }
+      const heads = runtime.flapLifetimeHeads;
+      if (heads === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_LIFETIME_HEAD_UNAVAILABLE',
+              'Durable Flap lifetime head storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const head = await heads.latestHead('eip155:56', subject.normalizedId.toLowerCase());
+      if (head === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_LIFETIME_HEAD_NOT_FOUND',
+              'No accepted Flap lifetime head exists for this token.',
+              false,
+            ),
+          );
+      }
+      return { head };
     },
   );
 

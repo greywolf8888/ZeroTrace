@@ -7,6 +7,7 @@ import {
   type FlapConfigurationField,
   type FlapEventHistoryResponse,
   type FlapHistoryProjectionPageResponse,
+  type FlapLifetimeHeadResponse,
   type FlapLifetimeMaterializationResponse,
   type FlapEventTransactionResponse,
   type FlapInspectionResponse,
@@ -542,6 +543,9 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
   const [lifetimeResult, setLifetimeResult] = useState<FlapLifetimeMaterializationResponse>();
   const [lifetimeError, setLifetimeError] = useState<string>();
   const [lifetimeBusy, setLifetimeBusy] = useState(false);
+  const [latestLifetimeHead, setLatestLifetimeHead] = useState<FlapLifetimeHeadResponse>();
+  const [latestLifetimeError, setLatestLifetimeError] = useState<string>();
+  const [latestLifetimeBusy, setLatestLifetimeBusy] = useState(false);
   const validTransactionHash = /^0x[0-9a-fA-F]{64}$/.test(transactionHash);
   const validHistoryRange = isValidBoundedBlockRange(historyFromBlock, historyToBlock);
   const validProjectionScanId =
@@ -618,6 +622,21 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
       );
     } finally {
       setLifetimeBusy(false);
+    }
+  }
+
+  async function loadLatestLifetimeHead() {
+    setLatestLifetimeBusy(true);
+    setLatestLifetimeError(undefined);
+    setLatestLifetimeHead(undefined);
+    try {
+      setLatestLifetimeHead(await api.flapLatestLifetimeHead(token));
+    } catch (cause) {
+      setLatestLifetimeError(
+        cause instanceof Error ? cause.message : 'Latest Flap lifetime head replay failed.',
+      );
+    } finally {
+      setLatestLifetimeBusy(false);
     }
   }
 
@@ -960,6 +979,76 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
           </div>
           <span className="snapshot-badge">Provider-free replay</span>
         </div>
+        <div className="history-actions">
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={latestLifetimeBusy}
+            onClick={() => void loadLatestLifetimeHead()}
+          >
+            {latestLifetimeBusy ? 'Loading accepted head…' : 'Load latest accepted head'}
+          </button>
+        </div>
+        <p className="quote-note">
+          The accepted head is provider-free replay from the append-only scheduler chain. A missing
+          head is Unknown, never zero lifetime coverage.
+        </p>
+        {latestLifetimeError === undefined ? null : (
+          <div className="alert alert-warning">
+            <strong>Latest accepted head unavailable</strong>
+            {latestLifetimeError}
+          </div>
+        )}
+        {latestLifetimeHead === undefined ? null : (
+          <>
+            <div className="snapshot-strip">
+              <span>
+                <b>Accepted sequence</b> {latestLifetimeHead.head.sequence}
+              </span>
+              <span>
+                <b>Head type</b> {titleCase(latestLifetimeHead.head.headType)}
+              </span>
+              <span>
+                <b>Finalized target</b> {latestLifetimeHead.head.targetBlock}
+              </span>
+              <span>
+                <b>Lifetime coverage</b>{' '}
+                <KnowledgeDisplay data={latestLifetimeHead.head.result.lifetimeCoverage} />
+              </span>
+            </div>
+            <div className="fact-grid">
+              <div className="fact-row">
+                <span>Head / scan</span>
+                <code title={`${latestLifetimeHead.head.id} / ${latestLifetimeHead.head.scanId}`}>
+                  {shortId(latestLifetimeHead.head.id, 10)} ·{' '}
+                  {shortId(latestLifetimeHead.head.scanId, 10)}
+                </code>
+              </div>
+              <div className="fact-row">
+                <span>Continuity</span>
+                {latestLifetimeHead.head.result.continuity === undefined ? (
+                  <code>Initial exact materialization</code>
+                ) : (
+                  <code>
+                    {titleCase(latestLifetimeHead.head.result.continuity.status)} ·{' '}
+                    {latestLifetimeHead.head.result.predecessor?.targetBlock} →{' '}
+                    {latestLifetimeHead.head.result.targetBlock}
+                  </code>
+                )}
+              </div>
+              <div className="fact-row">
+                <span>Evidence root</span>
+                <code title={latestLifetimeHead.head.terminalEvidenceId}>
+                  {shortId(latestLifetimeHead.head.terminalEvidenceId, 10)}
+                </code>
+              </div>
+              <div className="fact-row">
+                <span>Freshness</span>
+                <code>{formatTime(latestLifetimeHead.head.result.metadata.freshness)}</code>
+              </div>
+            </div>
+          </>
+        )}
         <form className="quote-form" onSubmit={(event) => void replayLifetime(event)}>
           <label htmlFor="flap-lifetime-scan-id">Lifetime materialization scan ID</label>
           <input
@@ -1081,6 +1170,14 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
           evidence={lifetimeResult.scan.terminalResult.evidence}
           eyebrow="SQD dataset metadata → origin proof → history projection"
           title="Flap lifetime Evidence root"
+        />
+      )}
+      {latestLifetimeHead === undefined ||
+      latestLifetimeHead.head.result.evidence.length === 0 ? null : (
+        <EvidencePanel
+          evidence={latestLifetimeHead.head.result.evidence}
+          eyebrow="Accepted predecessor → continuity proof → delta projection"
+          title="Latest Flap lifetime head Evidence root"
         />
       )}
     </>

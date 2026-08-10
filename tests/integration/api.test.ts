@@ -2038,6 +2038,87 @@ describe('ZeroTrace API contract', () => {
     expect(response.json().error.code).toBe('SEMANTIC_CHECKPOINT_CONFLICT');
   });
 
+  it('replays the latest accepted Flap lifetime head without provider access', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const latestHead = vi.fn(async () => ({
+      id: `flh_${'1'.repeat(24)}`,
+      chainId: 'eip155:56' as const,
+      token: fixtureFlapToken,
+      sequence: 4,
+      scanId: '88888888-8888-4888-8888-888888888888',
+      headType: 'EXTENSION' as const,
+      predecessorId: `flh_${'2'.repeat(24)}`,
+      targetBlock: 105,
+      targetHash: `0x${'7'.repeat(64)}`,
+      resultHash: '3'.repeat(64),
+      result: {
+        platform: 'flap',
+        token: fixtureFlapToken,
+        targetBlock: '105',
+        lifetimeCoverage: { state: 'known', value: true },
+        terminalEvidenceId: `ev_${'4'.repeat(24)}`,
+        metadata: {
+          freshness: '2026-08-10T00:00:00.000Z',
+          modelVersion: 'flap-lifetime-extension-v1',
+        },
+      },
+      snapshotHash: '5'.repeat(64),
+      terminalEvidenceId: `ev_${'4'.repeat(24)}`,
+      createdAt: '2026-08-10T00:00:01.000Z',
+    }));
+    runtime.flapLifetimeHeads = { latestHead } as unknown as NonNullable<
+      AppRuntime['flapLifetimeHeads']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/launches/EVM/${fixtureFlapToken}/history/lifetime/heads/latest` +
+        '?chainId=eip155:56&platform=flap',
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      head: {
+        sequence: 4,
+        headType: 'EXTENSION',
+        targetBlock: 105,
+        result: {
+          lifetimeCoverage: { state: 'known', value: true },
+          metadata: { modelVersion: 'flap-lifetime-extension-v1' },
+        },
+      },
+    });
+    expect(latestHead).toHaveBeenCalledWith('eip155:56', fixtureFlapToken);
+  });
+
+  it('distinguishes unconfigured and absent Flap lifetime heads', async () => {
+    const unconfiguredRuntime = runtimeWithAllLedgers();
+    const unconfiguredApp = await createApp({
+      config,
+      runtime: unconfiguredRuntime,
+      logger: false,
+    });
+    apps.push(unconfiguredApp);
+    const url =
+      `/api/v1/launches/EVM/${fixtureFlapToken}/history/lifetime/heads/latest` +
+      '?chainId=eip155:56';
+    const unconfigured = await unconfiguredApp.inject({ method: 'GET', url });
+    expect(unconfigured.statusCode).toBe(503);
+    expect(unconfigured.json().error.code).toBe('FLAP_LIFETIME_HEAD_UNAVAILABLE');
+
+    const emptyRuntime = runtimeWithAllLedgers();
+    emptyRuntime.flapLifetimeHeads = {
+      latestHead: vi.fn(async () => undefined),
+    } as unknown as NonNullable<AppRuntime['flapLifetimeHeads']>;
+    const emptyApp = await createApp({ config, runtime: emptyRuntime, logger: false });
+    apps.push(emptyApp);
+    const absent = await emptyApp.inject({ method: 'GET', url });
+    expect(absent.statusCode).toBe(404);
+    expect(absent.json().error.code).toBe('FLAP_LIFETIME_HEAD_NOT_FOUND');
+  });
+
   it('resolves a bounded Flap contract origin from SQD and exact BSC receipt Evidence', async () => {
     const runtime = runtimeWithAllLedgers();
     let checkpointRun: FlapOriginCheckpointRun | undefined;

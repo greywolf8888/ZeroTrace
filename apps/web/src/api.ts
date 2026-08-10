@@ -423,6 +423,61 @@ export interface FlapLifetimeMaterializationResponse {
   };
 }
 
+export interface FlapLifetimeHeadResponse {
+  head: {
+    id: string;
+    chainId: 'eip155:56';
+    token: string;
+    sequence: number;
+    scanId: string;
+    headType: 'INITIAL' | 'EXTENSION';
+    predecessorId: string | null;
+    targetBlock: number;
+    targetHash: string;
+    terminalEvidenceId: string;
+    createdAt: string;
+    result: {
+      platform: 'flap';
+      token: string;
+      dataset: 'binance-mainnet';
+      datasetStartBlock: string;
+      targetBlock: string;
+      originScanId: string;
+      origin: KnowledgeValue<{
+        contractCreator: string;
+        launchCreator: string;
+        creationTrace: { blockNumber: string; transactionHash: string };
+      }>;
+      predecessor?: {
+        scanId: string;
+        targetBlock: string;
+        targetHash: string;
+        terminalEvidenceId: string;
+      };
+      continuity?: {
+        status: 'DIRECT_EXTENSION' | 'HISTORICAL_MATCH';
+        continuous: KnowledgeValue<boolean>;
+        evidenceIds: string[];
+        terminalEvidenceId: string;
+      };
+      historyProjection: {
+        scanId: string;
+        fromBlock: string;
+        toBlock: string;
+        segmentCount: number;
+        transactionCount: number;
+        unrecognizedPortalLogCount: number;
+        requestedRangeCoverage: number;
+        terminalEvidenceId: string;
+      } | null;
+      lifetimeCoverage: KnowledgeValue<boolean>;
+      terminalEvidenceId: string;
+      metadata: AnalysisMetadata;
+      evidence: EvidenceRecord[];
+    };
+  };
+}
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -574,6 +629,15 @@ export const api = {
         '/history/lifetime/materializations/' +
         encodeURIComponent(scanId) +
         '?' +
+        parameters.toString(),
+    );
+  },
+  flapLatestLifetimeHead: (token: string) => {
+    const parameters = new URLSearchParams({ chainId: 'eip155:56', platform: 'flap' });
+    return requestJson<FlapLifetimeHeadResponse>(
+      '/api/v1/launches/EVM/' +
+        encodeURIComponent(token) +
+        '/history/lifetime/heads/latest?' +
         parameters.toString(),
     );
   },

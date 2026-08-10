@@ -29,6 +29,7 @@ import {
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
+  PostgresFlapLifetimeHeadRepository,
   PostgresIngestionCheckpointRepository,
   PostgresSemanticScanCheckpointRepository,
   RawArtifactStore,
@@ -51,6 +52,7 @@ export interface AppRuntime {
   evidenceRepository?: EvidenceRepository;
   semanticCheckpoints?: PostgresSemanticScanCheckpointRepository;
   flapHistoryProjection?: PostgresFlapHistoryProjectionRepository;
+  flapLifetimeHeads?: PostgresFlapLifetimeHeadRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -430,6 +432,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const flapLifetimeHeads =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresFlapLifetimeHeadRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -451,6 +462,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       checkpoints?.close(),
       semanticCheckpoints?.close(),
       flapHistoryProjection?.close(),
+      flapLifetimeHeads?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -474,6 +486,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(evidenceRepository === undefined ? {} : { evidenceRepository }),
     ...(semanticCheckpoints === undefined ? {} : { semanticCheckpoints }),
     ...(flapHistoryProjection === undefined ? {} : { flapHistoryProjection }),
+    ...(flapLifetimeHeads === undefined ? {} : { flapLifetimeHeads }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),
