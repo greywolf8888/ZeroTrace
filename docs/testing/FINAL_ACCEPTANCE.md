@@ -84,6 +84,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
         creation/configuration fixture
   - [x] Sparse finalized SQD create-trace decoding and bounded origin-to-exact-receipt proof with
         deterministic positive, negative, ambiguity and mismatch coverage
+  - [x] Multi-response SQD continuation metadata and deterministic multi-chunk origin coverage;
+        wide restart-safe scanning/checkpoints remain pending
   - [ ] Deployment-origin continuous Flap history, named migration/FFT fixtures, lifecycle and market/RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels

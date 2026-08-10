@@ -419,6 +419,14 @@ describe('SqdEvmContractCreationReader', () => {
       reader.getContractCreationsObservation({ address, fromBlock: '10', toBlock: '10' }),
     ).resolves.toMatchObject({
       endpointId: 'sqd:binance-mainnet',
+      coverage: {
+        fromBlock: '10',
+        toBlock: '10',
+        nextBlock: '11',
+        finalizedHead: '10',
+        requestCount: 1,
+        completion: 'REQUESTED_RANGE_COMPLETE',
+      },
       value: [
         {
           address,
@@ -529,7 +537,19 @@ describe('SqdEvmContractCreationReader', () => {
       new SqdEvmContractCreationReader({
         source: client(fetchImplementation, { dataset: 'binance-mainnet' }),
       }).getContractCreationsObservation({ address, fromBlock: '10', toBlock: '10' }),
-    ).resolves.toEqual({ endpointId: 'sqd:binance-mainnet', value: [] });
+    ).resolves.toEqual({
+      endpointId: 'sqd:binance-mainnet',
+      value: [],
+      coverage: {
+        fromBlock: '10',
+        toBlock: '10',
+        nextBlock: '11',
+        finalizedHead: '10',
+        responseBlockCount: 0,
+        requestCount: 1,
+        completion: 'REQUESTED_RANGE_COMPLETE',
+      },
+    });
   });
 });
 

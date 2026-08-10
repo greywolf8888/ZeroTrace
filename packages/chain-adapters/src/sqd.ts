@@ -10,6 +10,7 @@ import type {
   EvmContractCreationQuery,
   EvmContractCreationReader,
   EvmContractCreationRecord,
+  EvmContractCreationObservation,
   EvmLogQuery,
   EvmLogReader,
   EvmLogRecord,
@@ -1345,7 +1346,7 @@ export class SqdEvmContractCreationReader implements EvmContractCreationReader {
 
   async getContractCreationsObservation(
     query: EvmContractCreationQuery,
-  ): Promise<TransportObservation<EvmContractCreationRecord[]>> {
+  ): Promise<EvmContractCreationObservation> {
     const fromBlock = sqdLogPosition(query.fromBlock, 'fromBlock');
     const toBlock = sqdLogPosition(query.toBlock, 'toBlock');
     if (toBlock < fromBlock) {
@@ -1483,7 +1484,19 @@ export class SqdEvmContractCreationReader implements EvmContractCreationReader {
         { retryable: true },
       );
     }
-    return { endpointId: this.endpointId, value: creations };
+    return {
+      endpointId: this.endpointId,
+      value: creations,
+      coverage: {
+        fromBlock: fromBlock.toString(),
+        toBlock: toBlock.toString(),
+        nextBlock: summary.nextBlock.toString(),
+        finalizedHead: summary.finalizedHead?.toString() ?? null,
+        responseBlockCount: summary.blocks,
+        requestCount: summary.requests,
+        completion: 'REQUESTED_RANGE_COMPLETE',
+      },
+    };
   }
 
   async #metadata(): Promise<SqdDatasetMetadata> {

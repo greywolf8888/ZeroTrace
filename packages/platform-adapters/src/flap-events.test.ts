@@ -456,9 +456,18 @@ describe('Flap token contract origin', () => {
     >['value'],
   ): EvmContractCreationReader {
     return {
-      getContractCreationsObservation: async () => ({
+      getContractCreationsObservation: async (query) => ({
         endpointId: 'sqd:binance-mainnet',
         value,
+        coverage: {
+          fromBlock: query.fromBlock,
+          toBlock: query.toBlock,
+          nextBlock: (BigInt(query.toBlock) + 1n).toString(),
+          finalizedHead: query.toBlock,
+          responseBlockCount: value.length,
+          requestCount: 1,
+          completion: 'REQUESTED_RANGE_COMPLETE',
+        },
       }),
     };
   }
@@ -480,12 +489,32 @@ describe('Flap token contract origin', () => {
 
   it('binds a unique creation trace to the exact Flap receipt and Snapshot', async () => {
     const context = fixture([eventLog(tokenCreated(), 0)]);
+    const queries: Array<{ fromBlock: string; toBlock: string }> = [];
+    const reader: EvmContractCreationReader = {
+      getContractCreationsObservation: async (query) => {
+        queries.push({ fromBlock: query.fromBlock, toBlock: query.toBlock });
+        return {
+          endpointId: 'sqd:binance-mainnet',
+          value: query.fromBlock === '16' ? [creation()] : [],
+          coverage: {
+            fromBlock: query.fromBlock,
+            toBlock: query.toBlock,
+            nextBlock: (BigInt(query.toBlock) + 1n).toString(),
+            finalizedHead: query.toBlock,
+            responseBlockCount: 1,
+            requestCount: 1,
+            completion: 'REQUESTED_RANGE_COMPLETE',
+          },
+        };
+      },
+    };
     const result = await inspectFlapTokenOrigin({
       adapter: context.adapter,
-      creationReader: creationReader([creation()]),
+      creationReader: reader,
       token,
       fromBlock: '16',
       toBlock: '17',
+      chunkSize: 1,
       deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
       writeEvidence: context.writeEvidence,
     });
@@ -512,8 +541,18 @@ describe('Flap token contract origin', () => {
       blockNumber: '17',
       blockHash: `0x${'4'.repeat(64)}`,
     });
+    expect(result.searchedRange).toEqual({
+      fromBlock: '16',
+      toBlock: '17',
+      chunkSize: 1,
+      chunkCount: 2,
+    });
+    expect(queries).toEqual([
+      { fromBlock: '16', toBlock: '16' },
+      { fromBlock: '17', toBlock: '17' },
+    ]);
     expect(result.evidence.at(-1)?.kind).toBe('DERIVED_FEATURE');
-    expect(context.ledger.drilldown(result.evidence.at(-1)?.id ?? '')).toHaveLength(7);
+    expect(context.ledger.drilldown(result.evidence.at(-1)?.id ?? '')).toHaveLength(8);
   });
 
   it('returns bounded negative Evidence without claiming the token has no origin', async () => {
@@ -575,6 +614,36 @@ describe('Flap token contract origin', () => {
     ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 
+  it('rejects a creation source that cannot prove the requested chunk coverage', async () => {
+    const context = fixture([eventLog(tokenCreated(), 0)]);
+    const reader: EvmContractCreationReader = {
+      getContractCreationsObservation: async (query) => ({
+        endpointId: 'sqd:binance-mainnet',
+        value: [],
+        coverage: {
+          fromBlock: query.fromBlock,
+          toBlock: query.toBlock,
+          nextBlock: query.toBlock,
+          finalizedHead: query.toBlock,
+          responseBlockCount: 0,
+          requestCount: 1,
+          completion: 'REQUESTED_RANGE_COMPLETE',
+        },
+      }),
+    };
+    await expect(
+      inspectFlapTokenOrigin({
+        adapter: context.adapter,
+        creationReader: reader,
+        token,
+        fromBlock: '16',
+        toBlock: '16',
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: context.writeEvidence,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+
   it('rejects an operationally unbounded origin request before provider access', async () => {
     const context = fixture([eventLog(tokenCreated(), 0)]);
     const reader = creationReader([]);
@@ -584,7 +653,7 @@ describe('Flap token contract origin', () => {
         creationReader: reader,
         token,
         fromBlock: '0',
-        toBlock: '1000000',
+        toBlock: '250000000',
         deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
         writeEvidence: context.writeEvidence,
       }),

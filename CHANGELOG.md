@@ -52,6 +52,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - sparse finalized SQD EVM contract-creation discovery with dataset/source-head bounds and strict
   trace validation, plus bounded Flap origin proof joined to the exact BSC receipt, `TokenCreated`
   event, Snapshot, Evidence graph, capability status, and API;
+- explicit creation-range completion metadata and multi-response/multi-chunk origin scanning, with
+  duplicate, incomplete continuation, chunk-count and synchronous API range limits that fail closed;
 - Evidence-grounded same-Snapshot discrepancy audits with exact-state/conservation checks,
   exact-decimal error budgets, warning bands, coverage gates, derived Evidence, and Unknown values
   excluded from numeric denominators;

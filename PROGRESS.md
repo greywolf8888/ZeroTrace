@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                               |
 | Production acceptance            | **No**                                                                                   |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                           |
-| Unit tests                       | **250 passing across 24 files**                                                          |
+| Unit tests                       | **251 passing across 24 files**                                                          |
 | Integration tests                | **29 local passing; latest completed remote baseline has 43 passing**                    |
 | Real-browser E2E                 | **10 passing: Chromium desktop and Pixel 7**                                             |
 | Remote CI                        | **Pass on immutable development commit `911691c`; protected main `3372a5a`**             |
-| Coverage                         | **Current local: 83.93% statements / 75.86% branches / 91.96% functions / 85.00% lines** |
+| Coverage                         | **Current local: 83.97% statements / 75.90% branches / 91.99% functions / 85.03% lines** |
 | Real-chain validation            | Four-chain anchors/raw ingestion plus named Flap history and origin replays passed       |
 | Durable evidence/history         | Raw execution/state plus anchor/alert provenance wired; semantic history pending         |
 
@@ -234,6 +234,11 @@ The only allowed status vocabulary in this ledger is:
   parent transaction and exact BSC receipt/Snapshot. The named non-FFT token above passed with the
   official Portal as contract creator, trace path `[0,0,0,1]`, 100% one-block range coverage and a
   13-node Evidence drilldown. Lifetime/history coverage correctly remained Unknown/zero;
+- logical origin scans can now cross multiple bounded chunks, and every source observation exposes
+  requested/next positions, finalized head, response-block count and request count. A live scan of
+  BSC blocks `0-999999` required 14 SQD responses and 268 continuation headers, found no creation,
+  and accepted the chunk only at `nextBlock=1000000`; this is bounded negative Evidence, not a
+  global absence claim;
 - the sampled public BSC RPC rejected historical `eth_getCode` at older heights and is not treated as
   archive-capable. This does not block finalized SQD creation discovery, but archive state remains an
   explicit acceptance gap.
@@ -364,10 +369,10 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                              | Scope                                                                                                                         |
 | ------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                       | locked npm install in production container; all packages/API/web                                                              |
-| Unit tests                     | 250 pass                                   | 24 files across schemas, adapters, data quality, ingestion, storage, worker and API runtime                                   |
+| Unit tests                     | 251 pass                                   | 24 files across schemas, adapters, data quality, ingestion, storage, worker and API runtime                                   |
 | Integration tests              | 29 local pass; 43 latest completed CI pass | all API and durable PostgreSQL, ClickHouse, and object-storage integration tests pass in CI; local Docker remains unavailable |
 | Restart regression             | Pass                                       | same-anchor recapture persists across repository/API restart without Snapshot collision                                       |
-| Coverage gate                  | Pass                                       | current local: 83.93% statements, 75.86% branches, 91.96% functions, 85.00% lines on 279 tests; 15 durable tests skipped      |
+| Coverage gate                  | Pass                                       | current local: 83.97% statements, 75.90% branches, 91.99% functions, 85.03% lines on 280 tests; 15 durable tests skipped      |
 | Chromium E2E                   | 10 pass                                    | five flows each on desktop and Pixel 7, including Flap state/event/default/Evidence/Unknown rendering                         |
 | Formatting / ESLint / types    | Pass                                       | full repository                                                                                                               |
 | Dependency vulnerability audit | Pass                                       | 0 vulnerabilities across the complete npm dependency graph                                                                    |

@@ -605,6 +605,15 @@ used private-network allowance only for the explicitly allowlisted public HTTPS 
 the host environment's DNS interception resolves them to private-range addresses. No FFT request
 or conclusion was made in this slice.
 
+The follow-up coverage probe requested BSC blocks `0-999999` for the same token. SQD returned 268
+sparse/header continuation records across 14 HTTP responses before the reader reached
+`nextBlock=1000000`; no creation trace was present. Project code retained the requested bounds,
+finalized head `115030815`, response-block count, request count and completed status. An earlier
+probe with a deliberately low five-request cap failed closed with `HTTP_ERROR`, demonstrating that
+partial pagination is not mistaken for complete negative Evidence. This validates one resumable
+chunk boundary only; a full dataset-start-to-target scan still requires durable cross-chunk
+checkpointing and was not claimed.
+
 The complete local gate for this cross-check passed formatting, lint, typecheck, 241 unit tests, 28
 API integration tests, production builds, license policy and a zero-vulnerability dependency audit.
 Coverage passed 269 tests with 15 Docker-dependent durable tests explicitly skipped at 83.93%
@@ -615,8 +624,8 @@ flows passed.
 
 | Command                  | Result                                                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 250 unit, 29 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
-| local `test:coverage`    | pass: 279 tests, 15 durable skips; 83.93% statements, 75.86% branches, 91.96% functions, 85.00% lines                                                                       |
+| local non-browser gates  | pass: format, lint, typecheck, 251 unit, 29 API integration, build, license, audit; 15 durable integration tests explicitly skipped because Docker was unavailable          |
+| local `test:coverage`    | pass: 280 tests, 15 durable skips; 83.97% statements, 75.90% branches, 91.99% functions, 85.03% lines                                                                       |
 | branch `test:coverage`   | latest completed pass: 294 tests; 86.47% statements, 78.31% branches, 95.53% functions, 87.54% lines                                                                        |
 | `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Flap state/events/bounded history/default provenance/Evidence/Unknown                                         |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                      |

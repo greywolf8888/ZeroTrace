@@ -21,7 +21,11 @@ import { inspectFlapEventTransaction } from './flap-events.js';
 import type { FlapDeployment, FlapEvidenceWriter } from './flap.js';
 
 export const FLAP_TOKEN_ORIGIN_MODEL_VERSION = 'flap-token-origin-v1';
-export const FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS = 1_000_000;
+export const FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE = 1_000_000;
+export const FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE = 1_000_000;
+export const FLAP_TOKEN_ORIGIN_MAX_CHUNKS = 250;
+export const FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS =
+  FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE * FLAP_TOKEN_ORIGIN_MAX_CHUNKS;
 
 function canonicalAddress(value: string, field: string): string {
   try {
@@ -38,6 +42,21 @@ function decimalPosition(value: string, field: string): bigint {
     throw new ProviderError('INVALID_RESPONSE', `Flap ${field} must be unsigned decimal.`);
   }
   return BigInt(value);
+}
+
+function chunkSize(value: number | undefined): number {
+  const selected = value ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE;
+  if (
+    !Number.isSafeInteger(selected) ||
+    selected < 1 ||
+    selected > FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE
+  ) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      `Flap origin chunkSize must be an integer from 1 through ${FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE}.`,
+    );
+  }
+  return selected;
 }
 
 function snapshotPosition(snapshot: EvmSnapshot): string {
@@ -90,6 +109,7 @@ export async function inspectFlapTokenOrigin(options: {
   toBlock: string;
   deployment: FlapDeployment;
   writeEvidence: FlapEvidenceWriter;
+  chunkSize?: number;
 }): Promise<FlapTokenOrigin> {
   const { adapter, creationReader, deployment, writeEvidence } = options;
   const token = canonicalAddress(options.token, 'origin token');
@@ -99,7 +119,8 @@ export async function inspectFlapTokenOrigin(options: {
   if (toBlock < fromBlock) {
     throw new ProviderError('INVALID_RESPONSE', 'Flap origin range ends before it begins.');
   }
-  if (toBlock - fromBlock + 1n > BigInt(FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS)) {
+  const requestedBlocks = toBlock - fromBlock + 1n;
+  if (requestedBlocks > BigInt(FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS)) {
     throw new ProviderError(
       'INVALID_RESPONSE',
       `Flap origin range exceeds ${FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS} blocks.`,
@@ -107,6 +128,16 @@ export async function inspectFlapTokenOrigin(options: {
   }
   if (`eip155:${adapter.config.chainId}` !== deployment.chainId) {
     throw new ProviderError('CHAIN_MISMATCH', 'Flap origin deployment and adapter chains differ.');
+  }
+  const selectedChunkSize = chunkSize(options.chunkSize);
+  const chunkCount = Number(
+    (requestedBlocks + BigInt(selectedChunkSize) - 1n) / BigInt(selectedChunkSize),
+  );
+  if (chunkCount > FLAP_TOKEN_ORIGIN_MAX_CHUNKS) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      `Flap origin query exceeds ${FLAP_TOKEN_ORIGIN_MAX_CHUNKS} chunks.`,
+    );
   }
 
   const upperAnchor = await adapter.readAnchorAt(toBlock.toString());
@@ -117,83 +148,124 @@ export async function inspectFlapTokenOrigin(options: {
   ) {
     throw new ProviderError('CHAIN_MISMATCH', 'Flap origin upper Snapshot is inconsistent.');
   }
-  const observation = await creationReader.getContractCreationsObservation({
-    address: token,
-    fromBlock: fromBlock.toString(),
-    toBlock: toBlock.toString(),
-  });
-  const rangeEvidence = await writeEvidence(
-    createEvidence({
-      ledger: 'EVM',
-      chainId: deployment.chainId,
-      kind: 'PROVIDER_OBSERVATION',
-      source: observation.endpointId,
-      locator: `contract-creation-traces:${token}:${fromBlock}-${toBlock}`,
-      payload: {
-        filter: { address: token, fromBlock: fromBlock.toString(), toBlock: toBlock.toString() },
-        creations: observation.value,
-      },
-      observedAt: upperAnchor.snapshot.capturedAt,
-      blockOrSlot: toBlock.toString(),
-      finality: upperAnchor.snapshot.finality,
-      summary: `Contract-creation traces observed for bounded block range ${fromBlock}-${toBlock}.`,
-    }),
-    [],
-    upperAnchor.snapshot,
-  );
+  const rangeEvidence: Evidence[] = [];
+  const observedCreations: Array<{
+    creation: EvmContractCreationRecord;
+    endpointId: string;
+  }> = [];
+  const sourceSet = new Set<string>([upperAnchor.anchor.source]);
+  const creationIdentities = new Set<string>();
+  for (let start = fromBlock; start <= toBlock; start += BigInt(selectedChunkSize)) {
+    const end =
+      start + BigInt(selectedChunkSize) - 1n > toBlock
+        ? toBlock
+        : start + BigInt(selectedChunkSize) - 1n;
+    const observation = await creationReader.getContractCreationsObservation({
+      address: token,
+      fromBlock: start.toString(),
+      toBlock: end.toString(),
+    });
+    if (
+      observation.coverage.completion !== 'REQUESTED_RANGE_COMPLETE' ||
+      observation.coverage.fromBlock !== start.toString() ||
+      observation.coverage.toBlock !== end.toString() ||
+      observation.coverage.nextBlock !== (end + 1n).toString()
+    ) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Flap origin creation source returned inconsistent range coverage.',
+      );
+    }
+    sourceSet.add(observation.endpointId);
+    for (const creation of observation.value) {
+      const identity = `${creation.blockHash}:${creation.transactionHash}:${creation.traceAddress.join('.') || 'root'}`;
+      if (creationIdentities.has(identity)) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'Flap origin chunks returned a duplicate contract creation.',
+        );
+      }
+      creationIdentities.add(identity);
+      observedCreations.push({ creation, endpointId: observation.endpointId });
+    }
+    rangeEvidence.push(
+      await writeEvidence(
+        createEvidence({
+          ledger: 'EVM',
+          chainId: deployment.chainId,
+          kind: 'PROVIDER_OBSERVATION',
+          source: observation.endpointId,
+          locator: `contract-creation-traces:${token}:${start}-${end}`,
+          payload: {
+            filter: { address: token, fromBlock: start.toString(), toBlock: end.toString() },
+            coverage: observation.coverage,
+            creations: observation.value,
+          },
+          observedAt: upperAnchor.snapshot.capturedAt,
+          blockOrSlot: toBlock.toString(),
+          finality: upperAnchor.snapshot.finality,
+          summary: `Contract-creation traces observed for bounded chunk ${start}-${end}.`,
+        }),
+        [],
+        upperAnchor.snapshot,
+      ),
+    );
+  }
 
-  if (observation.value.length !== 1) {
-    const reason = observation.value.length === 0 ? 'INSUFFICIENT_DATA' : 'CONFLICTING_SOURCES';
+  if (observedCreations.length !== 1) {
+    const reason = observedCreations.length === 0 ? 'INSUFFICIENT_DATA' : 'CONFLICTING_SOURCES';
     const detail =
-      observation.value.length === 0
+      observedCreations.length === 0
         ? 'No creation trace was found in the complete bounded range; the contract origin may be outside it.'
         : 'Multiple creation generations were observed for this address; a unique origin is unsafe.';
+    const sourceEvidenceIds = rangeEvidence.map((item) => item.id);
     const derived = await writeEvidence(
       createEvidence({
         ledger: 'EVM',
         chainId: deployment.chainId,
-        kind: observation.value.length === 0 ? 'NEGATIVE_EVIDENCE' : 'DERIVED_FEATURE',
+        kind: observedCreations.length === 0 ? 'NEGATIVE_EVIDENCE' : 'DERIVED_FEATURE',
         source: `zerotrace:${FLAP_TOKEN_ORIGIN_MODEL_VERSION}`,
         locator: `flap-token-origin:${token}:${fromBlock}-${toBlock}`,
-        payload: { token, observedCreationCount: observation.value.length, originState: 'unknown' },
+        payload: { token, observedCreationCount: observedCreations.length, originState: 'unknown' },
         observedAt: upperAnchor.snapshot.capturedAt,
         blockOrSlot: toBlock.toString(),
         finality: upperAnchor.snapshot.finality,
         summary: detail,
-        sourceEvidenceIds: [rangeEvidence.id],
+        sourceEvidenceIds,
       }),
-      [rangeEvidence.id],
+      sourceEvidenceIds,
       upperAnchor.snapshot,
     );
-    const evidence = [rangeEvidence, derived];
+    const evidence = [...rangeEvidence, derived];
     return FlapTokenOriginSchema.parse({
       platform: 'flap',
       token,
-      searchedRange: { fromBlock: fromBlock.toString(), toBlock: toBlock.toString() },
+      searchedRange: {
+        fromBlock: fromBlock.toString(),
+        toBlock: toBlock.toString(),
+        chunkSize: selectedChunkSize,
+        chunkCount,
+      },
       searchedRangeCoverage: 1,
       origin: unknownValue(reason, detail),
       lifetimeCoverage: unknownValue(
         'INSUFFICIENT_DATA',
         'Lifetime coverage requires a unique creation origin and continuous indexing to the target Snapshot.',
       ),
-      observedCreationCount: observation.value.length,
-      metadata: analysisMetadata(
-        upperAnchor.snapshot,
-        [upperAnchor.anchor.source, observation.endpointId],
-        evidence,
-        0,
-      ),
+      observedCreationCount: observedCreations.length,
+      metadata: analysisMetadata(upperAnchor.snapshot, [...sourceSet], evidence, 0),
       evidence,
     });
   }
 
-  const creationTrace = observation.value[0];
-  if (creationTrace === undefined) {
+  const observedCreation = observedCreations[0];
+  if (observedCreation === undefined) {
     throw new ProviderError(
       'INVALID_RESPONSE',
       'Flap origin observation declared one creation without returning its trace.',
     );
   }
+  const { creation: creationTrace, endpointId: creationEndpointId } = observedCreation;
   const transaction = await inspectFlapEventTransaction({
     adapter,
     token,
@@ -235,7 +307,7 @@ export async function inspectFlapTokenOrigin(options: {
       ledger: 'EVM',
       chainId: deployment.chainId,
       kind: 'TRACE',
-      source: observation.endpointId,
+      source: creationEndpointId,
       locator: `contract-creation-trace:${token}:${position.transactionHash}:${position.traceAddress.join('.') || 'root'}`,
       payload: { ...creationTrace, normalizedPosition: position },
       observedAt: transactionSnapshot.capturedAt,
@@ -247,7 +319,11 @@ export async function inspectFlapTokenOrigin(options: {
     transactionSnapshot,
   );
   const transactionRoot = transactionRootEvidence(transaction.evidence);
-  const sourceEvidenceIds = [rangeEvidence.id, traceEvidence.id, transactionRoot.id];
+  const sourceEvidenceIds = [
+    ...rangeEvidence.map((item) => item.id),
+    traceEvidence.id,
+    transactionRoot.id,
+  ];
   const originValue = {
     contractCreator: creationTrace.creator,
     launchCreator: creationEvent.creator,
@@ -274,11 +350,16 @@ export async function inspectFlapTokenOrigin(options: {
     sourceEvidenceIds,
     upperAnchor.snapshot,
   );
-  const evidence = [rangeEvidence, ...transaction.evidence, traceEvidence, derived];
+  const evidence = [...rangeEvidence, ...transaction.evidence, traceEvidence, derived];
   return FlapTokenOriginSchema.parse({
     platform: 'flap',
     token,
-    searchedRange: { fromBlock: fromBlock.toString(), toBlock: toBlock.toString() },
+    searchedRange: {
+      fromBlock: fromBlock.toString(),
+      toBlock: toBlock.toString(),
+      chunkSize: selectedChunkSize,
+      chunkCount,
+    },
     searchedRangeCoverage: 1,
     origin: knownValue(originValue),
     lifetimeCoverage: unknownValue(
@@ -288,7 +369,7 @@ export async function inspectFlapTokenOrigin(options: {
     observedCreationCount: 1,
     metadata: analysisMetadata(
       upperAnchor.snapshot,
-      [upperAnchor.anchor.source, observation.endpointId, ...transaction.metadata.sourceSet],
+      [...sourceSet, ...transaction.metadata.sourceSet],
       evidence,
       1,
     ),

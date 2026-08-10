@@ -128,6 +128,12 @@ accepted only when its creator is the versioned official Portal and its address,
 transaction index and Snapshot agree with the exact RPC receipt and decoded `TokenCreated` event.
 The response retains the runtime bytecode fingerprint and trace path as Evidence.
 
+An optional `chunkSize` is bounded at 1,000,000 blocks and the synchronous route permits at most
+250 chunks inside its one-million-block request ceiling. Each source response must report the exact
+requested range, next block, finalized head, response-block count, request count and completed
+status. SQD may paginate one logical filtered chunk across multiple HTTP responses; ZeroTrace does
+not claim coverage until continuation reaches the requested end.
+
 `searchedRangeCoverage=1` proves only the requested finalized range. Zero matches produce bounded
 negative Evidence and an Unknown origin; multiple matches produce a conflicting-sources Unknown.
 Even a unique match leaves `lifetimeCoverage` Unknown and `historyCoverage=0` until checkpointed

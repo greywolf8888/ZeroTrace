@@ -17,7 +17,9 @@ import {
   FLAP_HISTORY_MAX_CHUNKS,
   FLAP_HISTORY_MAX_RANGE_BLOCKS,
   FLAP_HISTORY_MODEL_VERSION,
-  FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS,
+  FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
+  FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
+  FLAP_TOKEN_ORIGIN_MAX_CHUNKS,
   FLAP_TOKEN_ORIGIN_MODEL_VERSION,
   PLATFORM_REGISTRY,
   discoverFlapEventHistory,
@@ -151,17 +153,28 @@ const FlapTokenOriginQuerySchema = FlapEventTransactionQuerySchema.extend({
     .string()
     .max(32)
     .regex(/^(?:0|[1-9]\d*)$/),
+  chunkSize: z.coerce.number().int().min(1).max(FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE).optional(),
 }).superRefine((query, context) => {
   const fromBlock = BigInt(query.fromBlock);
   const toBlock = BigInt(query.toBlock);
   if (toBlock < fromBlock) {
     context.addIssue({ code: 'custom', path: ['toBlock'], message: 'toBlock precedes fromBlock.' });
-  } else if (toBlock - fromBlock + 1n > BigInt(FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS)) {
+  } else if (toBlock - fromBlock + 1n > BigInt(FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE)) {
     context.addIssue({
       code: 'custom',
       path: ['toBlock'],
-      message: `Origin range exceeds ${FLAP_TOKEN_ORIGIN_MAX_RANGE_BLOCKS} blocks.`,
+      message: `Synchronous origin range exceeds ${FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE} blocks.`,
     });
+  } else {
+    const selectedChunkSize = BigInt(query.chunkSize ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE);
+    const chunkCount = (toBlock - fromBlock + selectedChunkSize) / selectedChunkSize;
+    if (chunkCount > BigInt(FLAP_TOKEN_ORIGIN_MAX_CHUNKS)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['chunkSize'],
+        message: `Origin query exceeds ${FLAP_TOKEN_ORIGIN_MAX_CHUNKS} chunks.`,
+      });
+    }
   }
 });
 
@@ -877,7 +890,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? 'SQD_PROVIDER_REQUIRED'
             : 'IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION',
         detail:
-          'A bounded finalized SQD create-trace search is rebound to the exact BSC receipt, TokenCreated event, and Snapshot. Empty bounded ranges produce negative Evidence but never imply lifetime absence; continuous deployment-to-target coverage remains pending.',
+          'A synchronous, range-limited finalized SQD create-trace search validates multi-response continuation metadata and rebinds a unique result to the exact BSC receipt, TokenCreated event, and Snapshot. Empty bounded ranges produce negative Evidence but never imply lifetime absence; durable wide-range checkpoints remain pending.',
       },
       {
         id: 'flap-bsc-sell-preview',
@@ -1504,7 +1517,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         return reply.code(503).send({
           platform: 'flap',
           token: params.token,
-          searchedRange: { fromBlock: query.fromBlock, toBlock: query.toBlock },
+          searchedRange: {
+            fromBlock: query.fromBlock,
+            toBlock: query.toBlock,
+            chunkSize: query.chunkSize ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
+            chunkCount: Number(
+              (BigInt(query.toBlock) -
+                BigInt(query.fromBlock) +
+                BigInt(query.chunkSize ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE)) /
+                BigInt(query.chunkSize ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE),
+            ),
+          },
           searchedRangeCoverage: 0,
           origin: unavailableValue('PROVIDER_UNCONFIGURED', detail),
           lifetimeCoverage: unavailableValue('PROVIDER_UNCONFIGURED', detail),
@@ -1522,6 +1545,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
         writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(query.chunkSize === undefined ? {} : { chunkSize: query.chunkSize }),
       });
     },
   );

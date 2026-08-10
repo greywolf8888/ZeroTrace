@@ -94,10 +94,26 @@ export interface EvmContractCreationQuery {
   toBlock: string;
 }
 
+export interface EvmContractCreationCoverage {
+  fromBlock: string;
+  toBlock: string;
+  nextBlock: string;
+  finalizedHead: string | null;
+  responseBlockCount: number;
+  requestCount: number;
+  completion: 'REQUESTED_RANGE_COMPLETE';
+}
+
+export interface EvmContractCreationObservation extends TransportObservation<
+  EvmContractCreationRecord[]
+> {
+  coverage: EvmContractCreationCoverage;
+}
+
 export interface EvmContractCreationReader {
   getContractCreationsObservation(
     query: EvmContractCreationQuery,
-  ): Promise<TransportObservation<EvmContractCreationRecord[]>>;
+  ): Promise<EvmContractCreationObservation>;
 }
 
 const ALLOWED_EVM_METHODS = new Set([

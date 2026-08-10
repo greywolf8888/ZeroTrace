@@ -381,6 +381,10 @@ Deployment-origin continuous checkpoints and cross-range lifecycle projection re
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.
+A logical range may require multiple Portal responses, including header-only continuation records
+when the filter has no matching trace. Coverage therefore binds requested start/end, next block,
+finalized head, response-block count and request count; an HTTP 200 or empty match set alone is not
+accepted as complete.
 A unique trace is not trusted alone. ZeroTrace joins its parent transaction, validates the created
 address, successful result bytecode and creator, then replays the exact BSC receipt and block. The
 contract origin becomes Known only when the trace position, official Portal creator, `TokenCreated`

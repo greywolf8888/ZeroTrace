@@ -1644,7 +1644,7 @@ describe('ZeroTrace API contract', () => {
         new FlapEventTransport(fixtureFlapCreationReceipt()),
       ),
     );
-    const sqdCreations = vi.fn(async () => ({
+    const sqdCreations = vi.fn(async (query: { fromBlock: string; toBlock: string }) => ({
       endpointId: 'sqd:binance-mainnet',
       value: [
         {
@@ -1659,6 +1659,15 @@ describe('ZeroTrace API contract', () => {
           raw: {},
         },
       ],
+      coverage: {
+        fromBlock: query.fromBlock,
+        toBlock: query.toBlock,
+        nextBlock: (BigInt(query.toBlock) + 1n).toString(),
+        finalizedHead: query.toBlock,
+        responseBlockCount: 1,
+        requestCount: 1,
+        completion: 'REQUESTED_RANGE_COMPLETE' as const,
+      },
     }));
     runtime.sqdBscCreationReader = { getContractCreationsObservation: sqdCreations };
     const app = await createApp({ config, runtime, logger: false });
@@ -1833,6 +1842,20 @@ describe('ZeroTrace API contract', () => {
     });
     expect(wrongChain.statusCode).toBe(400);
     expect(wrongChain.json().error.code).toBe('INVALID_CHAIN_ID');
+
+    const oversizedOriginRange = await app.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/origin?chainId=eip155:56&fromBlock=0&toBlock=1000000`,
+    });
+    expect(oversizedOriginRange.statusCode).toBe(400);
+    expect(oversizedOriginRange.json().error.code).toBe('INVALID_REQUEST');
+
+    const excessiveOriginChunks = await app.inject({
+      method: 'GET',
+      url: `/api/v1/launches/EVM/${fixtureFlapToken}/origin?chainId=eip155:56&fromBlock=0&toBlock=1000&chunkSize=1`,
+    });
+    expect(excessiveOriginChunks.statusCode).toBe(400);
+    expect(excessiveOriginChunks.json().error.code).toBe('INVALID_REQUEST');
 
     const malformedProviderResponse = await app.inject({
       method: 'GET',

@@ -934,6 +934,8 @@ export const FlapTokenOriginSchema = z.object({
   searchedRange: z.object({
     fromBlock: UnsignedQuantityStringSchema,
     toBlock: UnsignedQuantityStringSchema,
+    chunkSize: z.number().int().positive(),
+    chunkCount: z.number().int().positive(),
   }),
   searchedRangeCoverage: CoverageRatioSchema,
   origin: knowledgeValueSchema(FlapTokenOriginValueSchema),
