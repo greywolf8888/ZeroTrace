@@ -2822,4 +2822,91 @@ describe('ZeroTrace API contract', () => {
       evidenceIds: [wrongHash.id],
     });
   });
+
+  it('replays latest and exact durable Claim Reports without provider access', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const token = fixtureFlapToken;
+    const address = `0x${'d'.repeat(40)}`;
+    const reportId = `ecr_${'1'.repeat(24)}`;
+    const record = {
+      id: reportId,
+      chainId: 'eip155:56',
+      tokenAddress: token,
+      address,
+      fromBlock: '90',
+      toBlock: '100',
+      snapshotBlock: '100',
+      snapshotHash: `0x${'e'.repeat(64)}`,
+      resultHash: 'f'.repeat(64),
+      report: { terminalEvidenceId: `ev_${'2'.repeat(24)}` },
+      terminalEvidenceId: `ev_${'2'.repeat(24)}`,
+      evidenceIds: [`ev_${'2'.repeat(24)}`],
+      sourceSet: ['sqd:bsc'],
+      modelVersion: 'evm-claim-address-observation-v1.0.0',
+      capturedAt: '2026-08-10T00:00:01.000Z',
+      createdAt: '2026-08-10T00:00:02.000Z',
+    };
+    const latest = vi.fn(async () => record);
+    const get = vi.fn(async () => record);
+    runtime.claimReports = { latest, get } as unknown as NonNullable<AppRuntime['claimReports']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const latestResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/${token}/addresses/${address}/reports/latest` + '?chainId=eip155:56',
+    });
+    expect(latestResponse.statusCode, latestResponse.body).toBe(200);
+    expect(latestResponse.json()).toEqual({ record });
+    expect(latest).toHaveBeenCalledWith('eip155:56', token, address);
+
+    const exactResponse = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/claims/EVM/${token}/addresses/${address}/reports/${reportId}` +
+        '?chainId=eip155:56',
+    });
+    expect(exactResponse.statusCode, exactResponse.body).toBe(200);
+    expect(exactResponse.json()).toEqual({ record });
+    expect(get).toHaveBeenCalledWith(reportId);
+
+    const wrongSubject = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/claims/EVM/${token}/addresses/0x${'c'.repeat(40)}/reports/${reportId}` +
+        '?chainId=eip155:56',
+    });
+    expect(wrongSubject.statusCode).toBe(404);
+    expect(wrongSubject.json().error.code).toBe('CLAIM_REPORT_NOT_FOUND');
+  });
+
+  it('reports durable Claim Report replay as unavailable or not found explicitly', async () => {
+    const unconfigured = await createApp({
+      config,
+      runtime: runtimeWithAllLedgers(),
+      logger: false,
+    });
+    apps.push(unconfigured);
+    const token = fixtureFlapToken;
+    const address = `0x${'d'.repeat(40)}`;
+    const unavailable = await unconfigured.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/${token}/addresses/${address}/reports/latest` + '?chainId=eip155:56',
+    });
+    expect(unavailable.statusCode).toBe(503);
+    expect(unavailable.json().error.code).toBe('CLAIM_REPORT_UNAVAILABLE');
+
+    const runtime = runtimeWithAllLedgers();
+    runtime.claimReports = { latest: vi.fn(async () => undefined) } as unknown as NonNullable<
+      AppRuntime['claimReports']
+    >;
+    const empty = await createApp({ config, runtime, logger: false });
+    apps.push(empty);
+    const missing = await empty.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/${token}/addresses/${address}/reports/latest` + '?chainId=eip155:56',
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json().error.code).toBe('CLAIM_REPORT_NOT_FOUND');
+  });
 });

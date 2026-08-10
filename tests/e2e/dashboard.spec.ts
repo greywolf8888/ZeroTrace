@@ -142,6 +142,8 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
 });
 
 test('shows versioned Flap state and preserves unqueried values as Unknown', async ({ page }) => {
+  const claimAddress = '0x8d50a68b4f9ada119d198d6472eaf0cb6db302d9';
+  const claimTerminalEvidenceId = 'ev_a6a115563867c6dfcbcca54b';
   await page.route('**/api/v1/subjects/EVM/**', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -737,6 +739,113 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
       }),
     });
   });
+  await page.route('**/api/v1/claims/EVM/**/reports/**', async (route) => {
+    const capturedAt = '2026-08-10T12:00:01.404Z';
+    const terminalEvidenceId = claimTerminalEvidenceId;
+    const metadata = {
+      snapshot: {
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        blockNumber: '115117033',
+        blockHash: `0x${'7'.repeat(64)}`,
+        finality: 'finalized',
+        blockTimestamp: '2026-08-10T12:00:02.000Z',
+        capturedAt,
+      },
+      dataCoverage: 1,
+      sourceCoverage: 0.5,
+      historyCoverage: 0,
+      simulationCoverage: 0,
+      freshness: '2026-08-10T12:00:02.000Z',
+      sourceSet: ['bsc-official-1', 'sqd:binance-mainnet'],
+      modelVersion: 'evm-claim-address-observation-v1.0.0',
+      confidence: 0.95,
+      evidenceIds: [terminalEvidenceId],
+    };
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        record: {
+          id: `ecr_${'1'.repeat(24)}`,
+          chainId: 'eip155:56',
+          tokenAddress: bscTokenAddress,
+          address: claimAddress,
+          fromBlock: '113485950',
+          toBlock: '115117033',
+          snapshotBlock: '115117033',
+          snapshotHash: `0x${'7'.repeat(64)}`,
+          resultHash: '8'.repeat(64),
+          terminalEvidenceId,
+          evidenceIds: [terminalEvidenceId],
+          sourceSet: ['bsc-official-1', 'sqd:binance-mainnet'],
+          modelVersion: 'evm-claim-address-observation-v1.0.0',
+          capturedAt,
+          createdAt: capturedAt,
+          report: {
+            window: {
+              from: '2026-08-02T00:00:00.000Z',
+              to: '2026-08-10T12:00:02.000Z',
+            },
+            custody: {
+              kind: 'SAFE_MULTISIG',
+              canMoveFunds: { state: 'known', value: true },
+              threshold: 4,
+              ownerCount: 6,
+              executedTransactions: 11,
+              implementationVersion: '1.3.0',
+              evidenceIds: ['ev_373de48c776eebea7c51996e'],
+            },
+            flow: {
+              inflow: {
+                observedAmount: '176000010000000000000000000',
+                actualAmount: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+                transferCount: 123,
+                uniqueCounterparties: 109,
+                firstObservedAt: { state: 'known', value: '2026-08-03T09:36:09.000Z' },
+                lastObservedAt: { state: 'known', value: '2026-08-10T07:00:48.000Z' },
+                evidenceIds: [],
+              },
+              outflow: {
+                observedAmount: '24507000000000000000000000',
+                actualAmount: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+                transferCount: 10,
+                uniqueCounterparties: 1,
+                firstObservedAt: { state: 'known', value: '2026-08-04T11:20:42.000Z' },
+                lastObservedAt: { state: 'known', value: '2026-08-10T10:17:50.000Z' },
+                evidenceIds: [],
+              },
+              shareUnitAssessment: {
+                unit: '1000000000000000000000000',
+                observedDeposits: 123,
+                exactUnitDeposits: 71,
+                exactMultipleDeposits: 107,
+                nonMultipleDeposits: 16,
+                observedWholeShares: '176',
+                nonMultipleObservedAmount: '10',
+                exactMultipleCoverage: { state: 'known', value: 0.8699186991869918 },
+              },
+              selfTransferCount: 0,
+              selfTransferObservedAmount: '0',
+              topCounterparties: [
+                {
+                  direction: 'OUTFLOW',
+                  address: '0x343e8a70b212816a5582a880b9cd4c3278c4f360',
+                  observedAmount: '24507000000000000000000000',
+                  transferCount: 10,
+                  firstObservedAt: '2026-08-04T11:20:42.000Z',
+                  lastObservedAt: '2026-08-10T10:17:50.000Z',
+                  evidenceIds: [],
+                },
+              ],
+              metadata,
+            },
+            terminalEvidenceId,
+            metadata,
+          },
+        },
+      }),
+    });
+  });
 
   await page.goto('/');
   await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
@@ -754,6 +863,22 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
     page.getByText('Flap launch mechanism normalized from versioned Portal state.'),
   ).toBeVisible();
 
+  await expect(page.getByRole('heading', { name: 'Claim Report' })).toBeVisible();
+  await page.getByLabel('Claim wallet address').fill(claimAddress);
+  await page.getByRole('button', { name: 'Load latest report' }).click();
+  const claimPanel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Claim Report' }),
+  });
+  await expect(claimPanel).toContainText('Safe Multisig');
+  await expect(claimPanel).toContainText('4-of-6 threshold');
+  await expect(claimPanel).toContainText('176000010000000000000000000');
+  await expect(claimPanel).toContainText('Insufficient Data');
+  await expect(claimPanel.getByText('Observed whole shares')).toBeVisible();
+  await expect(claimPanel.getByText('176', { exact: true })).toBeVisible();
+  await expect(claimPanel.getByText('Non-multiple deposits')).toBeVisible();
+  await expect(claimPanel.getByText('16', { exact: true })).toBeVisible();
+  await expect(claimPanel).toContainText(claimTerminalEvidenceId);
+
   await expect(
     page.getByRole('heading', { name: 'Flap creation / migration transaction' }),
   ).toBeVisible();
@@ -764,7 +889,9 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   );
   await expect(page.getByText('Fixture Token', { exact: true })).toBeVisible();
   await expect(page.getByText('Official Default').first()).toBeVisible();
-  await expect(page.getByText('History coverage')).toBeVisible();
+  await expect(
+    page.locator('.event-panel .snapshot-strip').filter({ hasText: 'Classification' }),
+  ).toContainText('History coverage');
   await expect(
     page.getByRole('heading', { name: 'Flap transaction evidence ledger' }),
   ).toBeVisible();

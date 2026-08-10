@@ -33,6 +33,7 @@ import {
 } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
+  ClaimReportStorageError,
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   SemanticCheckpointError,
@@ -104,6 +105,29 @@ const LaunchInspectionQuerySchema = z.object({
     .string()
     .regex(/^(?:0|[1-9]\d*)$/)
     .optional(),
+});
+
+const ClaimReportParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  token: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
+  address: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+const ClaimReportByIdParamsSchema = ClaimReportParamsSchema.extend({
+  reportId: z.string().regex(/^ecr_[0-9a-f]{24}$/),
+});
+
+const ClaimReportQuerySchema = z.object({
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
 });
 
 const FlapEventTransactionParamsSchema = LaunchInspectionParamsSchema.extend({
@@ -563,6 +587,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['semanticCheckpoints']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['flapHistoryProjection']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['flapLifetimeHeads']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['claimReports']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -583,13 +608,19 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         checkedAt: new Date().toISOString(),
       };
     } else {
-      const [evidence, semanticCheckpoints, flapHistoryProjection, flapLifetimeHeads] =
-        await Promise.all([
-          runtime.evidenceRepository.health(),
-          runtime.semanticCheckpoints?.health(),
-          runtime.flapHistoryProjection?.health(),
-          runtime.flapLifetimeHeads?.health(),
-        ]);
+      const [
+        evidence,
+        semanticCheckpoints,
+        flapHistoryProjection,
+        flapLifetimeHeads,
+        claimReports,
+      ] = await Promise.all([
+        runtime.evidenceRepository.health(),
+        runtime.semanticCheckpoints?.health(),
+        runtime.flapHistoryProjection?.health(),
+        runtime.flapLifetimeHeads?.health(),
+        runtime.claimReports?.health(),
+      ]);
       value =
         evidence.status === 'DOWN'
           ? evidence
@@ -599,7 +630,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               ? flapHistoryProjection
               : flapLifetimeHeads?.status === 'DOWN'
                 ? flapLifetimeHeads
-                : evidence;
+                : claimReports?.status === 'DOWN'
+                  ? claimReports
+                  : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -793,6 +826,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof FlapLifetimeHeadError) {
       const status = error.code === 'FLAP_LIFETIME_HEAD_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ClaimReportStorageError) {
+      const status = error.code === 'CLAIM_REPORT_INVALID' ? 400 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -2213,6 +2252,87 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         },
         evidence: [derived],
       };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/addresses/:address/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimReportParamsSchema.parse(request.params);
+      const query = ClaimReportQuerySchema.parse(request.query);
+      const repository = runtime.claimReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_REPORT_UNAVAILABLE',
+              'Durable Claim Report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(
+        query.chainId,
+        params.token.toLowerCase(),
+        params.address.toLowerCase(),
+      );
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_REPORT_NOT_FOUND',
+              'No durable Claim Report exists for this token and address.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/addresses/:address/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimReportByIdParamsSchema.parse(request.params);
+      const query = ClaimReportQuerySchema.parse(request.query);
+      const repository = runtime.claimReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_REPORT_UNAVAILABLE',
+              'Durable Claim Report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.chainId !== query.chainId ||
+        record.tokenAddress !== params.token.toLowerCase() ||
+        record.address !== params.address.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_REPORT_NOT_FOUND',
+              'The requested durable Claim Report was not found for this subject.',
+              false,
+            ),
+          );
+      }
+      return { record };
     },
   );
 

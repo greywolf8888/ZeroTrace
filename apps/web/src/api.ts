@@ -478,6 +478,77 @@ export interface FlapLifetimeHeadResponse {
   };
 }
 
+export interface ClaimReportResponse {
+  record: {
+    id: string;
+    chainId: string;
+    tokenAddress: string;
+    address: string;
+    fromBlock: string;
+    toBlock: string;
+    snapshotBlock: string;
+    snapshotHash: string;
+    resultHash: string;
+    terminalEvidenceId: string;
+    evidenceIds: string[];
+    sourceSet: string[];
+    modelVersion: string;
+    capturedAt: string;
+    createdAt: string;
+    report: {
+      window: { from: string; to: string };
+      custody: {
+        kind: string;
+        canMoveFunds: KnowledgeValue<boolean>;
+        threshold?: number;
+        ownerCount?: number;
+        executedTransactions?: number;
+        implementationAddress?: string;
+        implementationVersion?: string;
+        evidenceIds: string[];
+      };
+      flow: {
+        inflow: ClaimFlowAggregate;
+        outflow: ClaimFlowAggregate;
+        shareUnitAssessment: {
+          unit: string;
+          observedDeposits: number;
+          exactUnitDeposits: number;
+          exactMultipleDeposits: number;
+          nonMultipleDeposits: number;
+          observedWholeShares: string;
+          nonMultipleObservedAmount: string;
+          exactMultipleCoverage: KnowledgeValue<number>;
+        } | null;
+        selfTransferCount: number;
+        selfTransferObservedAmount: string;
+        topCounterparties: Array<{
+          direction: 'INFLOW' | 'OUTFLOW';
+          address: string;
+          observedAmount: string;
+          transferCount: number;
+          firstObservedAt: string;
+          lastObservedAt: string;
+          evidenceIds: string[];
+        }>;
+        metadata: AnalysisMetadata;
+      };
+      terminalEvidenceId: string;
+      metadata: AnalysisMetadata;
+    };
+  };
+}
+
+interface ClaimFlowAggregate {
+  observedAmount: string;
+  actualAmount: KnowledgeValue<string>;
+  transferCount: number;
+  uniqueCounterparties: number;
+  firstObservedAt: KnowledgeValue<string>;
+  lastObservedAt: KnowledgeValue<string>;
+  evidenceIds: string[];
+}
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -638,6 +709,30 @@ export const api = {
       '/api/v1/launches/EVM/' +
         encodeURIComponent(token) +
         '/history/lifetime/heads/latest?' +
+        parameters.toString(),
+    );
+  },
+  latestClaimReport: (token: string, address: string, chainId = 'eip155:56') => {
+    const parameters = new URLSearchParams({ chainId });
+    return requestJson<ClaimReportResponse>(
+      '/api/v1/claims/EVM/' +
+        encodeURIComponent(token) +
+        '/addresses/' +
+        encodeURIComponent(address) +
+        '/reports/latest?' +
+        parameters.toString(),
+    );
+  },
+  claimReport: (token: string, address: string, reportId: string, chainId = 'eip155:56') => {
+    const parameters = new URLSearchParams({ chainId });
+    return requestJson<ClaimReportResponse>(
+      '/api/v1/claims/EVM/' +
+        encodeURIComponent(token) +
+        '/addresses/' +
+        encodeURIComponent(address) +
+        '/reports/' +
+        encodeURIComponent(reportId) +
+        '?' +
         parameters.toString(),
     );
   },

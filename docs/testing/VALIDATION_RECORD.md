@@ -949,25 +949,50 @@ gap-free default used by continuous Flap scans. All focused deterministic tests 
 of this optimized path exceeded the current outer process execution limit before returning a
 terminal result, so it is not recorded as a second accepted run.
 
+## Durable EVM Claim Report replay (2026-08-10)
+
+Migration `011_evm_claim_reports` and a content-addressed repository now persist a completed
+same-Snapshot EVM claim-address observation without exposing a write-capable HTTP route. Repository
+validation requires canonical token/subject/window identity, a finalized timestamped EVM Snapshot
+shared by custody and flow, canonical result hashing, and terminal plus nested Evidence IDs that are
+present in the report metadata. Stored rows are revalidated on every exact or latest read, and SQL
+guards reject mutation and deletion.
+
+The new latest/exact API routes and Claim Report UI read PostgreSQL only. Deterministic repository,
+API and desktop/mobile browser tests passed for replay, identity mismatch, missing/unconfigured
+storage, corrupt rows, observed-versus-Actual Unknown semantics, custody, share metrics, Snapshot and
+Evidence display. The real PostgreSQL integration test also covers migration health, idempotent
+write, restart replay and database mutation rejection. Docker Desktop was unavailable, so a fresh
+isolated PostgreSQL 16.10 instance was initialized with trust authentication on loopback, all
+migrations `001-011` applied successfully, and the complete PostgreSQL-enabled integration run
+passed 59 tests with only three ClickHouse/object-store tests skipped. Nineteen of those tests
+exercised real PostgreSQL, including the new Claim Report path. The temporary server was stopped and
+its data directory removed.
+
+This is durable observation replay, not automatic capture, official pension-wallet attribution,
+dividend/action proof, independent-source reconciliation, market pricing or terminal FFT acceptance.
+
 ## Automated verification
 
 | Command                  | Result                                                                                                                                              |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| local non-browser gates  | pass: format, lint, typecheck, 348 unit, 38 environment-free integration and build; dependency license/audit gates green                            |
-| local `test:coverage`    | pass: 386 tests, 21 opt-in durable skips; 82.30% statements, 76.49% branches, 90.38% functions, 83.39% lines                                        |
+| local non-browser gates  | pass: format, lint, typecheck, 351 unit, 40 environment-free integration and build; dependency license/audit gates green                            |
+| local PostgreSQL         | pass: fresh PostgreSQL 16.10 applied migrations `001-011`; 59 integration tests passed, 3 non-PostgreSQL durable tests skipped                      |
+| local `test:coverage`    | pass: 391 tests, 22 opt-in durable skips; 82.33% statements, 76.49% branches, 90.53% functions, 83.42% lines                                        |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                    |
-| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including projection pagination, exact/latest lifetime replay, Unknown and storage failure      |
+| `test:e2e:windows`       | pass: 10 Chromium tests across desktop and Pixel 7, including Claim Report, projection/lifetime replay, Unknown and storage failure                 |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                              |
 | `docker compose config`  | pass                                                                                                                                                |
 | production Compose smoke | pass: current lifetime-head CLI production-image build/help and rendered four-service semantic profile; prior locked semantic image ran as UID 1000 |
-| branch GitHub Actions CI | [pass on `d6a7c1f`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31384624840): full CI matrix, Chromium and all production targets        |
-| branch CodeQL            | [pass on `d6a7c1f`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31384624768): JavaScript and TypeScript analysis                         |
+| branch GitHub Actions CI | [pass on `301a485`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31388266666): full CI matrix, Chromium and all production targets        |
+| branch CodeQL            | [pass on `301a485`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31388266772): JavaScript and TypeScript analysis                         |
 
 The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
 and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
-current local runner batch additionally passed all 18 PostgreSQL tests on a fresh disposable image.
-ClickHouse and MinIO were not rerun locally for this PostgreSQL/API/UI-only module; the complete
-environment-free, browser, dependency, SBOM and Compose gates were rerun before its push.
+current local PostgreSQL runner passed all 19 PostgreSQL tests after applying migrations `001-011`
+to a fresh PostgreSQL 16.10 instance. ClickHouse and MinIO were not rerun locally for this
+PostgreSQL/API/UI-only module; the complete environment-free, browser, dependency, SBOM and Compose
+gates were rerun before its push.
 
 Archive history beyond block headers, load, forced real-provider failover, reorg, backup/restore, and
 production security controls remain acceptance gates. The branch results are immutable pre-promotion

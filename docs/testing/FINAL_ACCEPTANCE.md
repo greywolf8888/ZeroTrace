@@ -133,8 +133,10 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       provider-observation Evidence for empty or non-empty Transfer query chunks
 - [x] Strict target-indexed `from`/`to` collection, self-transfer deduplication, hard SQD body
       deadlines, bounded terminal Evidence roots and richer exact-unit/share observations
-- [ ] Same-Snapshot action derivation, independent-source reconciliation, durable report replay,
-      API/UI Claim Audit and terminal named FFT conclusion
+- [x] Content-addressed append-only Claim Report repository and provider-free latest/exact API/UI
+      replay with same-Snapshot, canonical-hash and nested-Evidence validation
+- [ ] Automated durable capture scheduling, same-Snapshot action derivation, independent-source
+      reconciliation, complete Claim Audit and terminal named FFT conclusion
 - [ ] Entity probability calibration corpus with Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
 

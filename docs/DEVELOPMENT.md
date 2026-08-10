@@ -212,6 +212,22 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/materializations/<scan-id>?cha
 
 The replay endpoint reads only PostgreSQL. The worker is one-shot.
 
+## EVM Claim Report replay
+
+Migration `011_evm_claim_reports` adds immutable, content-addressed storage for completed
+same-Snapshot EVM claim-address observations. The storage repository validates terminal and nested
+Evidence membership before writing, then revalidates canonical identity on every read. The API and
+UI can replay the latest report for a token/address or an exact `ecr_...` report ID without calling
+an external provider:
+
+```text
+GET /api/v1/claims/EVM/<token>/addresses/<address>/reports/latest?chainId=eip155:56
+GET /api/v1/claims/EVM/<token>/addresses/<address>/reports/<report-id>?chainId=eip155:56
+```
+
+This module does not schedule or initiate a live capture. Report creation is a repository operation
+for a completed Evidence-backed observation; automated capture orchestration remains pending.
+
 ## Continuous Flap lifetime heads
 
 The fourth semantic-worker entrypoint maintains one append-only accepted lifetime chain. It requires
@@ -249,7 +265,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `010`, are in
+local upgrade commands, including migrations `007` through `011`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

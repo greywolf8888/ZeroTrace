@@ -10,7 +10,11 @@ import {
 } from '@zerotrace/chain-adapters';
 import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
 import { createEvidence } from '@zerotrace/evidence';
-import { FlapEventHistorySchema, unknownValue } from '@zerotrace/schemas';
+import {
+  FlapEventHistorySchema,
+  unknownValue,
+  type EvmClaimAddressObservation,
+} from '@zerotrace/schemas';
 import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   FLAP_HISTORY_MODEL_VERSION,
@@ -18,6 +22,7 @@ import {
   type FlapHistorySegmentExecutor,
 } from '@zerotrace/platform-adapters';
 import {
+  PostgresClaimReportRepository,
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
@@ -983,6 +988,214 @@ postgresDescribe('PostgreSQL Data Quality integration', () => {
       await expect(pool.query('DELETE FROM data_quality_alert_evidence')).rejects.toThrow(
         /append-only/,
       );
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL durable Claim Report integration', () => {
+  let evidence: PostgresEvidenceRepository;
+  let reports: PostgresClaimReportRepository;
+  const token = `0x${'1'.repeat(40)}`;
+  const address = `0x${'2'.repeat(40)}`;
+  const counterparty = `0x${'3'.repeat(40)}`;
+  const reportSnapshot = {
+    ledger: 'EVM' as const,
+    chainId: 'eip155:56',
+    blockNumber: '100',
+    blockHash: `0x${'4'.repeat(64)}`,
+    finality: 'finalized' as const,
+    blockTimestamp: '2026-08-10T00:00:00.000Z',
+    capturedAt: '2026-08-10T00:00:01.000Z',
+    providerVersions: { fixture: '1' },
+    adapterVersions: { claim: '1' },
+    configHash: '5'.repeat(64),
+    entityModelVersion: 'entity-v0.1.0',
+    labelSnapshot: 'labels-v1',
+  };
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    reports = new PostgresClaimReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), reports.close()]);
+  });
+
+  it('persists, restart-replays, and SQL-protects a fully evidenced Claim Report', async () => {
+    const observedAt = reportSnapshot.capturedAt;
+    const custody = createEvidence({
+      ledger: 'EVM',
+      chainId: reportSnapshot.chainId,
+      kind: 'CONTRACT_STATE',
+      source: 'rpc:bsc',
+      locator: `safe:${address}@100`,
+      payload: { kind: 'SAFE_MULTISIG', threshold: 2, owners: 3 },
+      observedAt,
+      blockOrSlot: '100',
+      finality: 'finalized',
+      summary: 'Claim Report integration custody source.',
+    });
+    const query = createEvidence({
+      ledger: 'EVM',
+      chainId: reportSnapshot.chainId,
+      kind: 'PROVIDER_OBSERVATION',
+      source: 'sqd:bsc',
+      locator: `erc20-transfer-range:${token}:90-100:to`,
+      payload: { resultCount: 1 },
+      observedAt,
+      blockOrSlot: '100',
+      finality: 'finalized',
+      summary: 'Claim Report integration range source.',
+    });
+    const transfer = createEvidence({
+      ledger: 'EVM',
+      chainId: reportSnapshot.chainId,
+      kind: 'LOG',
+      source: 'sqd:bsc',
+      locator: `erc20-transfer:${token}:fixture:0`,
+      payload: { from: counterparty, to: address, amount: '1000000' },
+      observedAt,
+      blockOrSlot: '100',
+      finality: 'finalized',
+      summary: 'Claim Report integration Transfer source.',
+    });
+    const sourceIds = [custody.id, query.id, transfer.id].sort();
+    const terminal = createEvidence({
+      ledger: 'EVM',
+      chainId: reportSnapshot.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:evm-claim-address-observation-v1.0.0',
+      locator: `evm-claim-address:${token}:${address}:90-100`,
+      payload: { tokenAddress: token, address, fromBlock: '90', toBlock: '100' },
+      observedAt,
+      blockOrSlot: '100',
+      finality: 'finalized',
+      summary: 'Claim Report integration terminal root.',
+      sourceEvidenceIds: sourceIds,
+    });
+    for (const item of [custody, query, transfer]) {
+      await evidence.put(item, [], reportSnapshot);
+    }
+    await evidence.put(terminal, sourceIds, reportSnapshot);
+    const window = { from: '2026-08-02T00:00:00.000Z', to: reportSnapshot.blockTimestamp };
+    const report: EvmClaimAddressObservation = {
+      tokenAddress: token,
+      address,
+      fromBlock: '90',
+      toBlock: '100',
+      window,
+      custody: {
+        address,
+        kind: 'SAFE_MULTISIG' as const,
+        canMoveFunds: { state: 'known' as const, value: true },
+        threshold: 2,
+        ownerCount: 3,
+        executedTransactions: 1,
+        evidenceIds: [custody.id],
+      },
+      custodyMetadata: {
+        snapshot: reportSnapshot,
+        dataCoverage: 1,
+        sourceCoverage: 0.5,
+        historyCoverage: 0,
+        simulationCoverage: 0,
+        freshness: reportSnapshot.blockTimestamp,
+        sourceSet: ['rpc:bsc'],
+        modelVersion: 'safe-compatible-read-v1.1.0',
+        confidence: 0.95,
+        evidenceIds: [custody.id],
+      },
+      flow: {
+        address,
+        window,
+        inflow: {
+          observedAmount: '1000000',
+          actualAmount: unknownValue('INSUFFICIENT_DATA'),
+          transferCount: 1,
+          uniqueCounterparties: 1,
+          firstObservedAt: { state: 'known' as const, value: observedAt },
+          lastObservedAt: { state: 'known' as const, value: observedAt },
+          evidenceIds: [transfer.id],
+        },
+        outflow: {
+          observedAmount: '0',
+          actualAmount: unknownValue('INSUFFICIENT_DATA'),
+          transferCount: 0,
+          uniqueCounterparties: 0,
+          firstObservedAt: unknownValue('INSUFFICIENT_DATA'),
+          lastObservedAt: unknownValue('INSUFFICIENT_DATA'),
+          evidenceIds: [],
+        },
+        shareUnitAssessment: null,
+        selfTransferCount: 0,
+        selfTransferObservedAmount: '0',
+        topCounterparties: [
+          {
+            direction: 'INFLOW' as const,
+            address: counterparty,
+            observedAmount: '1000000',
+            transferCount: 1,
+            firstObservedAt: observedAt,
+            lastObservedAt: observedAt,
+            evidenceIds: [transfer.id],
+          },
+        ],
+        metadata: {
+          snapshot: reportSnapshot,
+          dataCoverage: 1,
+          sourceCoverage: 0.5,
+          historyCoverage: 1,
+          simulationCoverage: 0,
+          freshness: reportSnapshot.blockTimestamp,
+          sourceSet: ['sqd:bsc'],
+          modelVersion: 'claim-flow-summary-v1.0.0',
+          confidence: 0.95,
+          evidenceIds: [query.id, transfer.id].sort(),
+        },
+      },
+      terminalEvidenceId: terminal.id,
+      metadata: {
+        snapshot: reportSnapshot,
+        dataCoverage: 1,
+        sourceCoverage: 0.5,
+        historyCoverage: 0,
+        simulationCoverage: 0,
+        freshness: reportSnapshot.blockTimestamp,
+        sourceSet: ['rpc:bsc', 'sqd:bsc'],
+        modelVersion: 'evm-claim-address-observation-v1.0.0',
+        confidence: 0.95,
+        evidenceIds: [...sourceIds, terminal.id].sort(),
+      },
+    };
+
+    const stored = await reports.put(report);
+    await expect(reports.put(report)).resolves.toEqual(stored);
+    await reports.close();
+    reports = new PostgresClaimReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(reports.get(stored.id)).resolves.toEqual(stored);
+    await expect(reports.latest('eip155:56', token, address)).resolves.toEqual(stored);
+    await expect(reports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE evm_claim_reports SET report = report WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM evm_claim_reports WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();
     }

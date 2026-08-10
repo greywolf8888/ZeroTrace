@@ -108,6 +108,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
   all-block Flap scanning unchanged by default;
 - richer pension-share observations for exact-unit deposits, exact-multiple whole shares and
   non-multiple amounts without promoting observed values to coverage-complete Actual values;
+- content-addressed, append-only PostgreSQL EVM Claim Reports with same-Snapshot/nested-Evidence
+  validation and provider-free latest/exact API plus desktop/mobile UI replay;
 - supplied company icon integrated into the GitHub README, web header, hero, and favicon;
 - PostgreSQL and ClickHouse initialization schemas;
 - bounded, restart-safe SQD finalized block/transaction ingestion plus EVM logs/traces/state diffs,

@@ -25,6 +25,7 @@ import {
 import { EvidenceLedger, hashPayload } from '@zerotrace/evidence';
 import {
   ClickHouseRawFactRepository,
+  PostgresClaimReportRepository,
   DataQualityStorageError,
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
@@ -53,6 +54,7 @@ export interface AppRuntime {
   semanticCheckpoints?: PostgresSemanticScanCheckpointRepository;
   flapHistoryProjection?: PostgresFlapHistoryProjectionRepository;
   flapLifetimeHeads?: PostgresFlapLifetimeHeadRepository;
+  claimReports?: PostgresClaimReportRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -441,6 +443,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const claimReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresClaimReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -463,6 +474,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       semanticCheckpoints?.close(),
       flapHistoryProjection?.close(),
       flapLifetimeHeads?.close(),
+      claimReports?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -487,6 +499,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(semanticCheckpoints === undefined ? {} : { semanticCheckpoints }),
     ...(flapHistoryProjection === undefined ? {} : { flapHistoryProjection }),
     ...(flapLifetimeHeads === undefined ? {} : { flapLifetimeHeads }),
+    ...(claimReports === undefined ? {} : { claimReports }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

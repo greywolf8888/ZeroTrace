@@ -21,23 +21,25 @@ The initial API has no authentication and is suitable only for local/staging use
 
 ## Implemented intelligence endpoints
 
-| Method | Path                                                  | Notes                                                            |
-| ------ | ----------------------------------------------------- | ---------------------------------------------------------------- |
-| GET    | `/api/v1/search?q=...`                                | local identifier classification; optional `ledger` and `chainId` |
-| GET    | `/api/v1/subjects/:ledger/:id`                        | snapshot-pinned current-state read when provider exists          |
-| GET    | `/api/v1/ledger/:ledger/:type/:id`                    | typed block, transaction, or Bitcoin outpoint query              |
-| GET    | `/api/v1/launches/EVM/:token`                         | version-pinned Flap BSC current Portal-state inspection          |
-| GET    | `/api/v1/launches/EVM/:token/events/:transactionHash` | exact-receipt Flap creation/configuration/migration decoding     |
-| GET    | `/api/v1/launches/EVM/:token/history`                 | bounded Flap Portal log discovery with exact receipt replay      |
-| GET    | `/api/v1/launches/EVM/:token/history/projections/:id` | provider-free paginated replay of immutable stored segments      |
-| GET    | `/api/v1/launches/EVM/:token/origin`                  | bounded Flap creation-trace and exact receipt origin proof       |
-| POST   | `/api/v1/rv/flap-sell`                                | fixed-block read-only Flap Portal `previewSell` quote            |
-| POST   | `/api/v1/data-quality/discrepancies`                  | typed error-budget and discrepancy audit                         |
-| GET    | `/api/v1/evidence/:id`                                | Evidence node, source edges, and bound Snapshot                  |
-| GET    | `/api/v1/evidence/:id/drilldown`                      | restart-safe derived/source Evidence traversal                   |
-| POST   | `/api/v1/entities/resolve`                            | deterministic evidence-feature baseline                          |
-| POST   | `/api/v1/rv/constant-product`                         | exact-integer pool exit quote                                    |
-| POST   | `/api/v1/scenarios/exit-race`                         | seeded shared-pool exit ordering                                 |
+| Method | Path                                                          | Notes                                                            |
+| ------ | ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| GET    | `/api/v1/search?q=...`                                        | local identifier classification; optional `ledger` and `chainId` |
+| GET    | `/api/v1/subjects/:ledger/:id`                                | snapshot-pinned current-state read when provider exists          |
+| GET    | `/api/v1/ledger/:ledger/:type/:id`                            | typed block, transaction, or Bitcoin outpoint query              |
+| GET    | `/api/v1/launches/EVM/:token`                                 | version-pinned Flap BSC current Portal-state inspection          |
+| GET    | `/api/v1/launches/EVM/:token/events/:transactionHash`         | exact-receipt Flap creation/configuration/migration decoding     |
+| GET    | `/api/v1/launches/EVM/:token/history`                         | bounded Flap Portal log discovery with exact receipt replay      |
+| GET    | `/api/v1/launches/EVM/:token/history/projections/:id`         | provider-free paginated replay of immutable stored segments      |
+| GET    | `/api/v1/launches/EVM/:token/origin`                          | bounded Flap creation-trace and exact receipt origin proof       |
+| GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest` | latest immutable EVM Claim Report; provider-free replay          |
+| GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`    | exact content-addressed EVM Claim Report replay                  |
+| POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
+| POST   | `/api/v1/data-quality/discrepancies`                          | typed error-budget and discrepancy audit                         |
+| GET    | `/api/v1/evidence/:id`                                        | Evidence node, source edges, and bound Snapshot                  |
+| GET    | `/api/v1/evidence/:id/drilldown`                              | restart-safe derived/source Evidence traversal                   |
+| POST   | `/api/v1/entities/resolve`                                    | deterministic evidence-feature baseline                          |
+| POST   | `/api/v1/rv/constant-product`                                 | exact-integer pool exit quote                                    |
+| POST   | `/api/v1/scenarios/exit-race`                                 | seeded shared-pool exit ordering                                 |
 
 Current-state subject reads establish a ledger-specific anchor before reading the subject:
 
@@ -51,6 +53,20 @@ Current-state subject reads establish a ledger-specific anchor before reading th
 
 Solana's explicit `value: null` is a Known non-existent account. A missing, stale, malformed, or
 provider-failed response remains Unknown/unavailable and is never converted to a zero balance.
+
+### EVM Claim Report replay
+
+`GET /api/v1/claims/EVM/:token/addresses/:address/reports/latest?chainId=eip155:56` returns the
+newest immutable report for one canonical token and subject address. Replace `latest` with a stable
+`ecr_...` report ID to replay that exact content-addressed result. Both routes read PostgreSQL only;
+they perform no RPC or SQD request and cannot initiate capture or any chain write.
+
+Every returned report is revalidated against its canonical hash, finalized timestamped Snapshot,
+terminal and nested Evidence IDs, source set, coverage, freshness, model version and confidence.
+Custody and flow must use the same Snapshot. Observed inflow/outflow remain atomic-unit lower bounds;
+coverage-incomplete Actual values remain typed Unknown. Counterparties and outflows do not prove a
+dividend, burn, controller, owner, withdrawal right or terminal action. Unconfigured storage returns
+`503`; an absent or identity-mismatched report returns `404` rather than a synthetic zero.
 
 ### Typed ledger records
 

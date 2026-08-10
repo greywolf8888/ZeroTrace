@@ -156,8 +156,8 @@ Expected invariants:
 - `/health/live` returns HTTP 200, `status: UP`, and `readOnly: true`;
 - readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
-- missing or unhealthy Flap projection/head migrations `008`/`010` return readiness HTTP 503 when PostgreSQL
-  is configured;
+- missing or unhealthy Flap projection/head or Claim Report migrations `008`/`010`/`011` return
+  readiness HTTP 503 when PostgreSQL is configured;
 - `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
 - `/health` and `/api/v1/data-quality/anchors` distinguish agreement, disagreement, insufficient
   sources, provider unavailability, continuity state, and data-quality storage health;
@@ -238,6 +238,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/009_flap_lifetime_heads.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/010_flap_lifetime_reorgs.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/011_evm_claim_reports.sql
 ```
 
 PowerShell equivalent:
@@ -255,9 +257,12 @@ Get-Content -Raw infra/postgres/init/009_flap_lifetime_heads.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/010_flap_lifetime_reorgs.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/011_evm_claim_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 
-Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`. Never delete a
+Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`; a missing Claim
+Report migration surfaces as `storage.errorCode=CLAIM_REPORT_NOT_INITIALIZED`. Never delete a
 persistent volume as a migration strategy.
 
 ## Shutdown
