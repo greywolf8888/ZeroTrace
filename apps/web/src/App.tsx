@@ -7,6 +7,7 @@ import {
   type FlapConfigurationField,
   type FlapEventHistoryResponse,
   type FlapHistoryProjectionPageResponse,
+  type FlapLifetimeMaterializationResponse,
   type FlapEventTransactionResponse,
   type FlapInspectionResponse,
   type FlapSellQuoteResponse,
@@ -537,11 +538,19 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
   const [projectionResult, setProjectionResult] = useState<FlapHistoryProjectionPageResponse>();
   const [projectionError, setProjectionError] = useState<string>();
   const [projectionBusy, setProjectionBusy] = useState(false);
+  const [lifetimeScanId, setLifetimeScanId] = useState('');
+  const [lifetimeResult, setLifetimeResult] = useState<FlapLifetimeMaterializationResponse>();
+  const [lifetimeError, setLifetimeError] = useState<string>();
+  const [lifetimeBusy, setLifetimeBusy] = useState(false);
   const validTransactionHash = /^0x[0-9a-fA-F]{64}$/.test(transactionHash);
   const validHistoryRange = isValidBoundedBlockRange(historyFromBlock, historyToBlock);
   const validProjectionScanId =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       projectionScanId,
+    );
+  const validLifetimeScanId =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      lifetimeScanId,
     );
 
   async function inspectTransaction(event: FormEvent<HTMLFormElement>) {
@@ -593,6 +602,23 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
   function replayProjection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void loadProjection();
+  }
+
+  async function replayLifetime(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validLifetimeScanId) return;
+    setLifetimeBusy(true);
+    setLifetimeError(undefined);
+    setLifetimeResult(undefined);
+    try {
+      setLifetimeResult(await api.flapLifetimeMaterialization(token, lifetimeScanId));
+    } catch (cause) {
+      setLifetimeError(
+        cause instanceof Error ? cause.message : 'Flap lifetime materialization replay failed.',
+      );
+    } finally {
+      setLifetimeBusy(false);
+    }
   }
 
   const configurationRows: Array<[string, FlapConfigurationField]> =
@@ -926,6 +952,114 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
           </>
         )}
       </section>
+      <section className="panel subject-panel event-history-panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Dataset start → origin → finalized target</span>
+            <h3>Flap exact lifetime materialization</h3>
+          </div>
+          <span className="snapshot-badge">Provider-free replay</span>
+        </div>
+        <form className="quote-form" onSubmit={(event) => void replayLifetime(event)}>
+          <label htmlFor="flap-lifetime-scan-id">Lifetime materialization scan ID</label>
+          <input
+            id="flap-lifetime-scan-id"
+            placeholder="00000000-0000-4000-8000-000000000000"
+            value={lifetimeScanId}
+            onChange={(event) => setLifetimeScanId(event.target.value.trim())}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button
+            className="secondary-button"
+            type="submit"
+            disabled={lifetimeBusy || !validLifetimeScanId}
+          >
+            {lifetimeBusy ? 'Loading lifetime proof…' : 'Replay lifetime proof'}
+          </button>
+        </form>
+        <p className="quote-note">
+          Paste the scan ID emitted by <code>flap:lifetime</code>. Known lifetime coverage requires
+          official SQD dataset-start coverage, one unique deployment origin, and complete supported
+          Portal event history through the same finalized Snapshot. This view performs no chain
+          reads.
+        </p>
+        {lifetimeError === undefined ? null : (
+          <div className="alert alert-warning">
+            <strong>Lifetime replay unavailable</strong>
+            {lifetimeError}
+          </div>
+        )}
+        {lifetimeResult === undefined ? null : (
+          <>
+            <div className="snapshot-strip">
+              <span>
+                <b>Status</b> {titleCase(lifetimeResult.scan.status)}
+              </span>
+              <span>
+                <b>Dataset coverage</b> {lifetimeResult.scan.datasetStartBlock}–
+                {lifetimeResult.scan.targetBlock}
+              </span>
+              <span>
+                <b>Materialization coverage</b>{' '}
+                {Math.round(lifetimeResult.scan.requestedRangeCoverage * 100)}%
+              </span>
+              <span>
+                <b>Lifetime coverage</b>{' '}
+                {lifetimeResult.scan.terminalResult === null ? (
+                  <span className="knowledge-unknown">Not completed</span>
+                ) : (
+                  <KnowledgeDisplay data={lifetimeResult.scan.terminalResult.lifetimeCoverage} />
+                )}
+              </span>
+            </div>
+            {lifetimeResult.scan.terminalResult === null ? (
+              <div className="alert alert-warning">
+                <strong>Composite checkpoint is still running</strong>
+                No terminal lifetime conclusion is available yet; this is not zero coverage.
+              </div>
+            ) : (
+              <div className="fact-grid">
+                <div className="fact-row">
+                  <span>Deployment origin</span>
+                  {lifetimeResult.scan.terminalResult.origin.state === 'known' ? (
+                    <code>
+                      Block{' '}
+                      {lifetimeResult.scan.terminalResult.origin.value?.creationTrace.blockNumber}
+                    </code>
+                  ) : (
+                    <KnowledgeDisplay data={lifetimeResult.scan.terminalResult.origin} />
+                  )}
+                </div>
+                <div className="fact-row">
+                  <span>Origin scan</span>
+                  <code title={lifetimeResult.scan.terminalResult.originScanId}>
+                    {shortId(lifetimeResult.scan.terminalResult.originScanId, 10)}
+                  </code>
+                </div>
+                <div className="fact-row">
+                  <span>History projection</span>
+                  {lifetimeResult.scan.terminalResult.historyProjection === null ? (
+                    <span className="knowledge-unknown">Unknown · no unique origin</span>
+                  ) : (
+                    <code title={lifetimeResult.scan.terminalResult.historyProjection.scanId}>
+                      {lifetimeResult.scan.terminalResult.historyProjection.segmentCount} segments ·{' '}
+                      {lifetimeResult.scan.terminalResult.historyProjection.transactionCount}{' '}
+                      transactions
+                    </code>
+                  )}
+                </div>
+                <div className="fact-row">
+                  <span>Evidence confidence</span>
+                  <code>
+                    {Math.round(lifetimeResult.scan.terminalResult.metadata.confidence * 100)}%
+                  </code>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
       {result === undefined || result.evidence.length === 0 ? null : (
         <EvidencePanel
           evidence={result.evidence}
@@ -938,6 +1072,15 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
           evidence={historyResult.evidence}
           eyebrow="Bounded Portal logs → receipt-replayed chronology"
           title="Flap history evidence ledger"
+        />
+      )}
+      {lifetimeResult?.scan.terminalResult === null ||
+      lifetimeResult?.scan.terminalResult === undefined ||
+      lifetimeResult.scan.terminalResult.evidence.length === 0 ? null : (
+        <EvidencePanel
+          evidence={lifetimeResult.scan.terminalResult.evidence}
+          eyebrow="SQD dataset metadata → origin proof → history projection"
+          title="Flap lifetime Evidence root"
         />
       )}
     </>

@@ -7,6 +7,7 @@ const bscTokenAddress = `0x${'a'.repeat(40)}`;
 const bscFlapCreationTransaction = `0x${'7'.repeat(64)}`;
 const bscFlapHistoryScan = '00000000-0000-4000-8000-000000000001';
 const unavailableFlapHistoryScan = '00000000-0000-4000-8000-000000000002';
+const bscFlapLifetimeScan = '00000000-0000-4000-8000-000000000003';
 
 test('renders capability truth and unknown values without fake market data', async ({ page }) => {
   const browserErrors: string[] = [];
@@ -501,6 +502,95 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
       }),
     });
   });
+  await page.route(
+    '**/api/v1/launches/EVM/**/history/lifetime/materializations/**',
+    async (route) => {
+      const capturedAt = '2026-08-10T00:02:00.000Z';
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          scan: {
+            id: bscFlapLifetimeScan,
+            status: 'REQUESTED_RANGE_COMPLETE',
+            source: 'zerotrace:flap-lifetime-materialization-v1',
+            chainId: 'eip155:56',
+            token: bscTokenAddress,
+            dataset: 'binance-mainnet',
+            datasetStartBlock: '0',
+            targetBlock: '50000103',
+            nextBlock: '50000104',
+            requestedRangeCoverage: 1,
+            evidenceIds: ['ev_lifetime_terminal'],
+            lastErrorCode: null,
+            startedAt: '2026-08-10T00:00:00.000Z',
+            updatedAt: capturedAt,
+            completedAt: capturedAt,
+            terminalResult: {
+              originScanId: '11111111-1111-4111-8111-111111111111',
+              originSearchCoverage: 1,
+              origin: {
+                state: 'known',
+                value: {
+                  contractCreator: `0x${'b'.repeat(40)}`,
+                  launchCreator: `0x${'c'.repeat(40)}`,
+                  creationTrace: {
+                    blockNumber: '50000000',
+                    transactionHash: `0x${'6'.repeat(64)}`,
+                  },
+                },
+              },
+              historyProjection: {
+                scanId: '22222222-2222-4222-8222-222222222222',
+                fromBlock: '50000000',
+                toBlock: '50000103',
+                segmentCount: 1,
+                transactionCount: 2,
+                unrecognizedPortalLogCount: 0,
+                requestedRangeCoverage: 1,
+                terminalEvidenceId: 'ev_history_terminal',
+              },
+              lifetimeCoverage: { state: 'known', value: true },
+              terminalEvidenceId: 'ev_lifetime_terminal',
+              metadata: {
+                snapshot: {
+                  ledger: 'EVM',
+                  chainId: 'eip155:56',
+                  blockNumber: '50000103',
+                  blockHash: `0x${'a'.repeat(64)}`,
+                  finality: 'finalized',
+                },
+                dataCoverage: 1,
+                sourceCoverage: 1,
+                historyCoverage: 1,
+                simulationCoverage: 0,
+                freshness: capturedAt,
+                sourceSet: ['bsc-rpc-fixture', 'sqd:binance-mainnet'],
+                modelVersion: 'flap-lifetime-materialization-v1',
+                confidence: 0.97,
+                evidenceIds: ['ev_history_terminal', 'ev_lifetime_terminal'],
+              },
+              evidence: [
+                {
+                  id: 'ev_lifetime_terminal',
+                  ledger: 'EVM',
+                  chainId: 'eip155:56',
+                  kind: 'DERIVED_FEATURE',
+                  source: 'zerotrace:flap-lifetime-materialization-v1',
+                  locator: `flap-lifetime:${bscTokenAddress}@50000103`,
+                  payloadHash: 'b'.repeat(64),
+                  observedAt: capturedAt,
+                  blockOrSlot: '50000103',
+                  finality: 'finalized',
+                  summary:
+                    'Flap deployment origin and every supported Portal event are materialized through one finalized target Snapshot.',
+                },
+              ],
+            },
+          },
+        }),
+      });
+    },
+  );
   await page.route('**/api/v1/rv/flap-sell', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -622,6 +712,25 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await page.getByRole('button', { name: 'Replay projection' }).click();
   await expect(page.getByText('Projection replay unavailable')).toBeVisible();
   await expect(page.getByText('Durable history projection storage is unavailable.')).toBeVisible();
+
+  await expect(
+    page.getByRole('heading', { name: 'Flap exact lifetime materialization' }),
+  ).toBeVisible();
+  await page.getByLabel('Lifetime materialization scan ID').fill(bscFlapLifetimeScan);
+  await page.getByRole('button', { name: 'Replay lifetime proof' }).click();
+  const lifetimePanel = page.locator('.event-history-panel').filter({
+    has: page.getByRole('heading', { name: 'Flap exact lifetime materialization' }),
+  });
+  await expect(lifetimePanel).toContainText('Materialization coverage 100%');
+  await expect(lifetimePanel).toContainText('Lifetime coverage true');
+  await expect(lifetimePanel).toContainText('Block 50000000');
+  await expect(lifetimePanel).toContainText('1 segments · 2 transactions');
+  await expect(page.getByRole('heading', { name: 'Flap lifetime Evidence root' })).toBeVisible();
+  await expect(
+    page.getByText(
+      'Flap deployment origin and every supported Portal event are materialized through one finalized target Snapshot.',
+    ),
+  ).toBeVisible();
 
   await page.getByLabel('Sell amount (atomic units)').fill('1000000000000000000');
   await page.getByRole('button', { name: 'Preview sell' }).click();

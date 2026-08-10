@@ -1865,6 +1865,179 @@ describe('ZeroTrace API contract', () => {
     expect(listSegments).not.toHaveBeenCalled();
   });
 
+  it('replays an exact completed Flap lifetime materialization without provider access', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const scanId = '66666666-6666-4666-8666-666666666666';
+    const now = '2026-08-10T03:30:00.000Z';
+    const historyEvidenceId = 'ev_000000000000000000000002';
+    const terminalEvidence = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:flap-lifetime-materialization-v1',
+      locator: `flap-lifetime:${fixtureFlapToken}@103`,
+      payload: { token: fixtureFlapToken, lifetimeCoverage: true },
+      observedAt: now,
+      blockOrSlot: '103',
+      finality: 'finalized',
+      summary: 'Fixture exact Flap lifetime materialization.',
+    });
+    const result = {
+      platform: 'flap',
+      token: fixtureFlapToken,
+      dataset: 'binance-mainnet',
+      datasetStartBlock: '0',
+      targetBlock: '103',
+      originScanId: '11111111-1111-4111-8111-111111111111',
+      originSearchCoverage: 1,
+      origin: knownValue({
+        contractCreator: `0x${'b'.repeat(40)}`,
+        launchCreator: `0x${'c'.repeat(40)}`,
+        bytecodeFingerprint: '4'.repeat(64),
+        creationTrace: {
+          transactionHash: `0x${'5'.repeat(64)}`,
+          blockNumber: '100',
+          blockHash: `0x${'6'.repeat(64)}`,
+          transactionIndex: '1',
+          traceAddress: [0],
+        },
+        tokenCreatedPosition: {
+          transactionHash: `0x${'5'.repeat(64)}`,
+          blockNumber: '100',
+          blockHash: `0x${'6'.repeat(64)}`,
+          transactionIndex: '1',
+          logIndex: '0',
+        },
+        evidenceIds: ['ev_000000000000000000000001', 'ev_000000000000000000000004'],
+      }),
+      historyProjection: {
+        scanId: '22222222-2222-4222-8222-222222222222',
+        fromBlock: '100',
+        toBlock: '103',
+        segmentCount: 1,
+        transactionCount: 1,
+        unrecognizedPortalLogCount: 0,
+        requestedRangeCoverage: 1,
+        terminalEvidenceId: historyEvidenceId,
+      },
+      lifetimeCoverage: knownValue(true),
+      terminalEvidenceId: terminalEvidence.id,
+      metadata: {
+        snapshot: {
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          blockNumber: '103',
+          blockHash: `0x${'7'.repeat(64)}`,
+          parentBlockHash: `0x${'8'.repeat(64)}`,
+          finality: 'finalized',
+          capturedAt: now,
+          providerVersions: { 'bsc-rpc': 'json-rpc' },
+          adapterVersions: { evm: '0.1.0' },
+          configHash: '9'.repeat(64),
+          entityModelVersion: 'entity-unapplied',
+          labelSnapshot: 'labels-unapplied',
+        },
+        dataCoverage: 1,
+        sourceCoverage: 1,
+        historyCoverage: 1,
+        simulationCoverage: 0,
+        freshness: now,
+        sourceSet: ['bsc-rpc', 'sqd:binance-mainnet'],
+        modelVersion: 'flap-lifetime-materialization-v1',
+        confidence: 0.97,
+        evidenceIds: [historyEvidenceId, terminalEvidence.id],
+      },
+      evidence: [terminalEvidence],
+    };
+    const get = vi.fn(async () => ({
+      id: scanId,
+      scanType: 'FLAP_LIFETIME_MATERIALIZATION',
+      source: 'zerotrace:flap-lifetime-materialization-v1',
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      subject: fixtureFlapToken,
+      fromBlock: 0,
+      toBlock: 103,
+      chunkSize: 104,
+      identityHash: '1'.repeat(64),
+      identity: {},
+      status: 'REQUESTED_RANGE_COMPLETE' as const,
+      nextBlock: 104,
+      stateHash: '2'.repeat(64),
+      state: { version: 'flap-lifetime-materialization-checkpoint-v1', result },
+      evidenceIds: [terminalEvidence.id],
+      lastErrorCode: null,
+      startedAt: now,
+      updatedAt: now,
+      completedAt: now,
+    }));
+    runtime.semanticCheckpoints = { get } as unknown as NonNullable<
+      AppRuntime['semanticCheckpoints']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/launches/EVM/${fixtureFlapToken}/history/lifetime/materializations/${scanId}` +
+        '?chainId=eip155:56&platform=flap',
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      scan: {
+        id: scanId,
+        status: 'REQUESTED_RANGE_COMPLETE',
+        dataset: 'binance-mainnet',
+        datasetStartBlock: '0',
+        targetBlock: '103',
+        nextBlock: '104',
+        requestedRangeCoverage: 1,
+        terminalResult: {
+          originScanId: '11111111-1111-4111-8111-111111111111',
+          origin: { state: 'known' },
+          historyProjection: {
+            scanId: '22222222-2222-4222-8222-222222222222',
+            requestedRangeCoverage: 1,
+          },
+          lifetimeCoverage: { state: 'known', value: true },
+          terminalEvidenceId: terminalEvidence.id,
+          metadata: { historyCoverage: 1, confidence: 0.97 },
+        },
+      },
+    });
+    expect(get).toHaveBeenCalledWith(scanId);
+  });
+
+  it('fails closed when a completed Flap lifetime checkpoint is corrupt', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const scanId = '77777777-7777-4777-8777-777777777777';
+    runtime.semanticCheckpoints = {
+      get: vi.fn(async () => ({
+        id: scanId,
+        scanType: 'FLAP_LIFETIME_MATERIALIZATION',
+        source: 'zerotrace:flap-lifetime-materialization-v1',
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        subject: fixtureFlapToken,
+        status: 'REQUESTED_RANGE_COMPLETE',
+        state: { result: { lifetimeCoverage: { state: 'known', value: true } } },
+      })),
+    } as unknown as NonNullable<AppRuntime['semanticCheckpoints']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/launches/EVM/${fixtureFlapToken}/history/lifetime/materializations/${scanId}` +
+        '?chainId=eip155:56',
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe('SEMANTIC_CHECKPOINT_CONFLICT');
+  });
+
   it('resolves a bounded Flap contract origin from SQD and exact BSC receipt Evidence', async () => {
     const runtime = runtimeWithAllLedgers();
     let checkpointRun: FlapOriginCheckpointRun | undefined;

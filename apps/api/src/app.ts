@@ -17,6 +17,7 @@ import {
   FLAP_HISTORY_MAX_CHUNKS,
   FLAP_HISTORY_MAX_RANGE_BLOCKS,
   FLAP_HISTORY_MODEL_VERSION,
+  FLAP_LIFETIME_MATERIALIZATION_SOURCE,
   FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
   FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
   FLAP_TOKEN_ORIGIN_MAX_CHUNKS,
@@ -43,6 +44,7 @@ import {
   AnalysisMetadataSchema,
   DiscrepancyCheckInputSchema,
   FlapEventHistoryProjectionSchema,
+  FlapLifetimeMaterializationSchema,
   knownValue,
   unavailableValue,
   unknownValue,
@@ -939,6 +941,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'A one-shot worker with separately configured SQD/BSC read providers projects wider finalized ranges as immutable bounded segments, persists each segment before cursor advancement, and resumes one exact pending segment after interruption. This API replays stored scan-ID pages without providers. Requested-range completion does not imply continuous token-lifetime coverage.',
       },
       {
+        id: 'flap-lifetime-materialization',
+        status:
+          runtime.semanticCheckpoints === undefined || runtime.flapHistoryProjection === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A one-shot worker composes official SQD dataset-start metadata, unique Flap deployment origin, and immutable origin-to-target event history at one exact finalized BSC Snapshot. Lifetime coverage is Known only when every child proof is complete; this API replays the composite checkpoint by scan ID without contacting providers. Repeated-head scheduling remains pending.',
+      },
+      {
         id: 'flap-token-origin',
         status: !runtime.evmAdapters.has(56)
           ? 'BSC_PROVIDER_REQUIRED'
@@ -1672,6 +1683,106 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           nextAfterBlock: hasMore && last !== undefined ? last.fromBlock : null,
         },
         segments,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/history/lifetime/materializations/:scanId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = FlapHistoryProjectionParamsSchema.parse(request.params);
+      FlapEventTransactionQuerySchema.parse(request.query);
+      const classification = classifyIdentifier(params.token, {
+        ledger: 'EVM',
+        type: 'ADDRESS',
+        chainId: 'eip155:56',
+      });
+      const subject = classification.candidates.find(
+        (candidate) => candidate.ledger === 'EVM' && candidate.type === 'ADDRESS',
+      );
+      if (subject === undefined) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_IDENTIFIER',
+              'A structurally valid EVM token address is required.',
+              false,
+            ),
+          );
+      }
+      const checkpoints = runtime.semanticCheckpoints;
+      if (checkpoints === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_LIFETIME_MATERIALIZATION_UNAVAILABLE',
+              'Durable Flap lifetime materialization storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const run = await checkpoints.get(params.scanId);
+      if (
+        run === undefined ||
+        run.scanType !== 'FLAP_LIFETIME_MATERIALIZATION' ||
+        run.source !== FLAP_LIFETIME_MATERIALIZATION_SOURCE ||
+        run.ledger !== 'EVM' ||
+        run.chainId !== 'eip155:56' ||
+        run.subject !== subject.normalizedId.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_LIFETIME_MATERIALIZATION_NOT_FOUND',
+              'The requested Flap lifetime materialization was not found.',
+              false,
+            ),
+          );
+      }
+      let terminalResult = null;
+      if (run.status === 'REQUESTED_RANGE_COMPLETE') {
+        const state =
+          typeof run.state === 'object' && run.state !== null && !Array.isArray(run.state)
+            ? run.state
+            : undefined;
+        const parsed = FlapLifetimeMaterializationSchema.safeParse(state?.result);
+        if (!parsed.success) {
+          throw new SemanticCheckpointError(
+            'SEMANTIC_CHECKPOINT_CONFLICT',
+            'Completed Flap lifetime materialization terminal state is invalid.',
+            { cause: parsed.error },
+          );
+        }
+        terminalResult = parsed.data;
+      }
+      const requestedBlocks = run.toBlock - run.fromBlock + 1;
+      const completedBlocks = Math.max(0, Math.min(requestedBlocks, run.nextBlock - run.fromBlock));
+      return {
+        scan: {
+          id: run.id,
+          status: run.status,
+          source: run.source,
+          chainId: run.chainId,
+          token: run.subject,
+          dataset: 'binance-mainnet',
+          datasetStartBlock: String(run.fromBlock),
+          targetBlock: String(run.toBlock),
+          nextBlock: String(run.nextBlock),
+          requestedRangeCoverage: completedBlocks / requestedBlocks,
+          evidenceIds: [...run.evidenceIds],
+          lastErrorCode: run.lastErrorCode,
+          startedAt: run.startedAt,
+          updatedAt: run.updatedAt,
+          completedAt: run.completedAt,
+          terminalResult,
+        },
       };
     },
   );

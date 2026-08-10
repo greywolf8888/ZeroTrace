@@ -2,7 +2,7 @@ const configuredBase = import.meta.env.VITE_API_URL as string | undefined;
 const API_BASE = (configuredBase ?? '').replace(/\/$/, '');
 
 export interface KnowledgeValue<T> {
-  state: 'known' | 'unknown' | 'unavailable';
+  state: 'known' | 'unknown' | 'unavailable' | 'stale';
   value?: T;
   reason?: string;
   detail?: string;
@@ -380,6 +380,49 @@ export interface FlapHistoryProjectionPageResponse {
   }>;
 }
 
+export interface FlapLifetimeMaterializationResponse {
+  scan: {
+    id: string;
+    status: 'RUNNING' | 'REQUESTED_RANGE_COMPLETE';
+    source: string;
+    chainId: 'eip155:56';
+    token: string;
+    dataset: 'binance-mainnet';
+    datasetStartBlock: string;
+    targetBlock: string;
+    nextBlock: string;
+    requestedRangeCoverage: number;
+    evidenceIds: string[];
+    lastErrorCode: string | null;
+    startedAt: string;
+    updatedAt: string;
+    completedAt: string | null;
+    terminalResult: {
+      originScanId: string;
+      originSearchCoverage: number;
+      origin: KnowledgeValue<{
+        contractCreator: string;
+        launchCreator: string;
+        creationTrace: { blockNumber: string; transactionHash: string };
+      }>;
+      historyProjection: {
+        scanId: string;
+        fromBlock: string;
+        toBlock: string;
+        segmentCount: number;
+        transactionCount: number;
+        unrecognizedPortalLogCount: number;
+        requestedRangeCoverage: number;
+        terminalEvidenceId: string;
+      } | null;
+      lifetimeCoverage: KnowledgeValue<boolean>;
+      terminalEvidenceId: string;
+      metadata: AnalysisMetadata;
+      evidence: EvidenceRecord[];
+    } | null;
+  };
+}
+
 export interface PlatformDescriptor {
   id: string;
   name: string;
@@ -518,6 +561,17 @@ export const api = {
       '/api/v1/launches/EVM/' +
         encodeURIComponent(token) +
         '/history/projections/' +
+        encodeURIComponent(scanId) +
+        '?' +
+        parameters.toString(),
+    );
+  },
+  flapLifetimeMaterialization: (token: string, scanId: string) => {
+    const parameters = new URLSearchParams({ chainId: 'eip155:56', platform: 'flap' });
+    return requestJson<FlapLifetimeMaterializationResponse>(
+      '/api/v1/launches/EVM/' +
+        encodeURIComponent(token) +
+        '/history/lifetime/materializations/' +
         encodeURIComponent(scanId) +
         '?' +
         parameters.toString(),
