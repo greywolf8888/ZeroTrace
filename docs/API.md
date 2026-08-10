@@ -159,6 +159,33 @@ coverage-incomplete Actual values remain typed Unknown. Counterparties and outfl
 dividend, burn, controller, owner, withdrawal right or terminal action. Unconfigured storage returns
 `503`; an absent or identity-mismatched report returns `404` rather than a synthetic zero.
 
+### EVM control-surface inspection and replay
+
+- `POST /api/v1/control-rights/EVM/:subject/inspect`
+- `GET /api/v1/control-rights/EVM/:subject/reports/latest?chainId=eip155:56`
+- `GET /api/v1/control-rights/EVM/:subject/reports/:reportId?chainId=eip155:56`
+- `GET /api/v1/control-rights?ledger=EVM&chainId=eip155:56&subject=:subject`
+
+The inspection request body requires `chainId` and accepts an optional decimal `blockNumber`.
+Inspection requires a configured finalized EVM provider and durable PostgreSQL Evidence/report
+storage. Every configured source independently reads the same canonical block hash through
+EIP-1898 before any result is accepted.
+
+The current standard surface performs exact ERC-1167 runtime-bytecode detection, reads the three
+EIP-1967 implementation/admin/beacon slots, calls ERC-173 `owner()`, and reads owners/threshold for
+strictly registered Safe singleton versions. It emits a fixed 23-domain coverage matrix. Custom
+upgrade authorization, mint/burn roles, taxes, blacklist/whitelist, trading switches, limits,
+routers, treasuries, LP control, Safe modules/guard/fallback handler, recursive controllers, and
+historical validity remain typed Unknown until separately decoded; zero-valued `owner()` therefore
+does not mean that all control is absent.
+
+Successful inspection stores one immutable, content-addressed report whose identity is bound to
+the finalized Snapshot, canonical subject, source set, model version, source Evidence, terminal
+Evidence, and exact derivation edges. Source disagreement fails closed and stores no report. Source
+independence is separately attested from the versioned official operator registry; two hostnames
+owned by one operator never count as independent. Latest, exact-ID, and list reads replay PostgreSQL
+only and do not contact providers.
+
 ### Typed ledger records
 
 `type` accepts `BLOCK` and `TRANSACTION` on EVM, Bitcoin, and Solana, plus `OUTPOINT` on Bitcoin.
@@ -446,8 +473,7 @@ restart; without it, capability and health output explicitly report process-loca
 
 ## Explicitly incomplete endpoints
 
-`/assets`, `/labels`, `/control-rights`, `/markets`, `/claims`, and
-`/timeline` return HTTP 501 with:
+`/assets`, `/labels`, `/markets`, `/claims`, and `/timeline` return HTTP 501 with:
 
 - `CAPABILITY_NOT_IMPLEMENTED`;
 - a typed Unknown knowledge value;

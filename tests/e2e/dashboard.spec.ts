@@ -2320,3 +2320,130 @@ test('keeps scenario execution gated and exposes provider availability', async (
   await expect(ingestionStorageCard).toContainText('0/3');
   await expect(page.getByRole('button', { name: 'Refresh providers' })).toBeEnabled();
 });
+
+test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unknown roles', async ({
+  page,
+}) => {
+  const subject = '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777';
+  const implementation = '0x024f18294970b5c76c0691b87f138a0317156422';
+  const terminalEvidenceId = 'ev_000000000000000000000099';
+  const domains = [
+    'CONTRACT_CODE',
+    'ERC1167_IMPLEMENTATION',
+    'EIP1967_IMPLEMENTATION',
+    'EIP1967_ADMIN',
+    'EIP1967_BEACON',
+    'ERC173_OWNER',
+    'SAFE_OWNERS_THRESHOLD',
+    'SAFE_MODULES',
+    'SAFE_GUARD',
+    'SAFE_FALLBACK_HANDLER',
+    'UPGRADE_AUTHORIZATION',
+    'MINT',
+    'BURN',
+    'TAX_CHANGE',
+    'BLACKLIST',
+    'WHITELIST',
+    'TRADING_SWITCH',
+    'MAX_TX',
+    'MAX_WALLET',
+    'FEE_EXEMPTION',
+    'ROUTER_CHANGE',
+    'TREASURY',
+    'LP_POSITION',
+  ];
+  await page.route('**/api/v1/control-rights/EVM/**/inspect', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        record: {
+          id: 'ecs_000000000000000000000001',
+          chainId: 'eip155:56',
+          subject,
+          snapshotBlock: '115192882',
+          snapshotHash: `0x${'a'.repeat(64)}`,
+          resultHash: 'b'.repeat(64),
+          terminalEvidenceId,
+          evidenceIds: [terminalEvidenceId],
+          sourceSet: ['bsc-rpc@bnb-mainnet.g.alchemy.com', 'bsc-rpc@bsc-dataseed.bnbchain.org'],
+          modelVersion: 'evm-control-surface-v1.0.0',
+          capturedAt: '2026-08-11T05:00:00.000Z',
+          createdAt: '2026-08-11T05:00:01.000Z',
+          report: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            subject,
+            contractKind: { state: 'known', value: 'ERC1167_MINIMAL_PROXY' },
+            implementationAddress: { state: 'known', value: implementation },
+            proxyAdminAddress: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            beaconAddress: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            ownerAddress: {
+              state: 'known',
+              value: '0x0000000000000000000000000000000000000000',
+            },
+            safe: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            sourceAgreement: { state: 'known', value: true },
+            sourceIndependence: { state: 'known', value: true },
+            rights: [],
+            coverage: domains.map((domain) => ({
+              domain,
+              observed: [
+                'CONTRACT_CODE',
+                'ERC1167_IMPLEMENTATION',
+                'EIP1967_IMPLEMENTATION',
+                'EIP1967_ADMIN',
+                'EIP1967_BEACON',
+                'ERC173_OWNER',
+                'SAFE_OWNERS_THRESHOLD',
+                'UPGRADE_AUTHORIZATION',
+              ].includes(domain)
+                ? {
+                    state: 'known',
+                    value: ['CONTRACT_CODE', 'ERC1167_IMPLEMENTATION'].includes(domain),
+                  }
+                : { state: 'unknown', reason: 'NOT_QUERIED' },
+              detail: `${domain} coverage boundary.`,
+              evidenceIds: domain === 'CONTRACT_CODE' ? [terminalEvidenceId] : [],
+            })),
+            terminalEvidenceId,
+            metadata: {
+              snapshot: { ledger: 'EVM', chainId: 'eip155:56', blockNumber: '115192882' },
+              dataCoverage: 8 / 23,
+              sourceCoverage: 1,
+              historyCoverage: 0,
+              simulationCoverage: 0,
+              freshness: '2026-08-11T04:59:57.000Z',
+              sourceSet: ['bsc-rpc@bnb-mainnet.g.alchemy.com', 'bsc-rpc@bsc-dataseed.bnbchain.org'],
+              modelVersion: 'evm-control-surface-v1.0.0',
+              confidence: 0.99,
+              evidenceIds: [terminalEvidenceId],
+            },
+            evidence: [],
+          },
+        },
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Control Rights' }).click();
+  await expect(page.getByRole('heading', { name: 'EVM Control Rights' })).toBeVisible();
+  await page.getByRole('button', { name: 'Inspect and persist' }).click();
+
+  await expect(page.getByText('Erc1167 Minimal Proxy')).toBeVisible();
+  await expect(page.getByText(implementation)).toBeVisible();
+  await expect(page.getByText('owner() returned the zero address')).toBeVisible();
+  await expect(page.getByText('No direct right was positively established')).toBeVisible();
+  const coverage = page.locator('section.panel').filter({
+    has: page.getByRole('heading', { name: 'Coverage matrix' }),
+  });
+  await expect(coverage).toContainText('Tax Change');
+  await expect(coverage).toContainText('Not Queried');
+  await expect(page.getByText(terminalEvidenceId)).toBeVisible();
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});

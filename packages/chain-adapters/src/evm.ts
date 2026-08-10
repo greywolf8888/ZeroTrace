@@ -495,6 +495,36 @@ export class EvmLedgerAdapter {
     return { ...observation, value: requireHexData(observation.value, 'bytecode') };
   }
 
+  async getCodeObservationAtBlockHash(
+    address: string,
+    blockHash: string,
+  ): Promise<TransportObservation<string>> {
+    const observation = await this.readSourced<unknown>('eth_getCode', [
+      requireAddress(address, 'code address'),
+      {
+        blockHash: requireCanonicalBlockHash(blockHash),
+        requireCanonical: true,
+      },
+    ]);
+    return { ...observation, value: requireHexData(observation.value, 'bytecode') };
+  }
+
+  async getStorageObservationAtBlockHash(
+    address: string,
+    slot: string,
+    blockHash: string,
+  ): Promise<TransportObservation<string>> {
+    const observation = await this.readSourced<unknown>('eth_getStorageAt', [
+      requireAddress(address, 'storage address'),
+      requireHash(slot, 'storage slot'),
+      {
+        blockHash: requireCanonicalBlockHash(blockHash),
+        requireCanonical: true,
+      },
+    ]);
+    return { ...observation, value: requireHash(observation.value, 'storage word') };
+  }
+
   async call(to: string, data: string, blockTag: string): Promise<string> {
     return (await this.callObservation(to, data, blockTag)).value;
   }

@@ -256,12 +256,14 @@ describe('capability probes and snapshots', () => {
         },
         eth_getBalance: '0x2a',
         eth_getCode: '0x6000',
+        eth_getStorageAt: `0x${'2'.repeat(64)}`,
         eth_call: `0x${'0'.repeat(63)}1`,
       },
       {
         eth_getBlockByNumber: 'evm-anchor',
         eth_getBalance: 'evm-balance',
         eth_getCode: 'evm-code',
+        eth_getStorageAt: 'evm-storage',
       },
     );
     const adapter = new EvmLedgerAdapter(
@@ -285,6 +287,28 @@ describe('capability probes and snapshots', () => {
     await expect(adapter.getCodeObservation('0xabc', '0x10')).resolves.toEqual({
       value: '0x6000',
       endpointId: 'evm-code',
+    });
+    await expect(
+      adapter.getCodeObservationAtBlockHash(`0x${'1'.repeat(40)}`, `0x${'a'.repeat(64)}`),
+    ).resolves.toEqual({ value: '0x6000', endpointId: 'evm-code' });
+    expect(transport.calls.at(-1)).toEqual({
+      method: 'eth_getCode',
+      params: [`0x${'1'.repeat(40)}`, { blockHash: `0x${'a'.repeat(64)}`, requireCanonical: true }],
+    });
+    await expect(
+      adapter.getStorageObservationAtBlockHash(
+        `0x${'1'.repeat(40)}`,
+        `0x${'3'.repeat(64)}`,
+        `0x${'a'.repeat(64)}`,
+      ),
+    ).resolves.toEqual({ value: `0x${'2'.repeat(64)}`, endpointId: 'evm-storage' });
+    expect(transport.calls.at(-1)).toEqual({
+      method: 'eth_getStorageAt',
+      params: [
+        `0x${'1'.repeat(40)}`,
+        `0x${'3'.repeat(64)}`,
+        { blockHash: `0x${'a'.repeat(64)}`, requireCanonical: true },
+      ],
     });
     await expect(
       adapter.callObservation(`0x${'1'.repeat(40)}`, '0x1234', '0x10'),

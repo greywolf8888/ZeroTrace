@@ -9,6 +9,7 @@ import {
   type EvmClaimBurnConservationResponse,
   type EvmClaimBurnPromotionReplayResponse,
   type EvmSupplyContinuityReplayResponse,
+  type EvmControlSurfaceResponse,
   type EvidenceRecord,
   type FlapConfigurationField,
   type FlapEventHistoryResponse,
@@ -29,12 +30,13 @@ import {
   type SubjectResponse,
 } from './api.js';
 
-type View = 'overview' | 'search' | 'claims' | 'scenario' | 'health';
+type View = 'overview' | 'search' | 'control' | 'claims' | 'scenario' | 'health';
 type Theme = 'dark' | 'light';
 
 const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
   { id: 'overview', label: 'Market Reality', marker: 'MR' },
   { id: 'search', label: 'Intelligence Search', marker: 'IS' },
+  { id: 'control', label: 'Control Rights', marker: 'CR' },
   { id: 'claims', label: 'Claim Audit', marker: 'CA' },
   { id: 'scenario', label: 'Scenario Lab', marker: 'SL' },
   { id: 'health', label: 'Data Health', marker: 'DH' },
@@ -42,7 +44,6 @@ const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
 
 const FUTURE_DOMAINS = [
   'Entity Intelligence',
-  'Controller Graph',
   'Evidence Ledger',
   'Control Timeline',
   'Analyst Workbench',
@@ -1559,6 +1560,312 @@ function ClaimAuditWorkspace() {
       <ClaimBurnPromotionReplayPanel />
       <SupplyContinuityReplayPanel />
       <ClaimBurnConservationPanel />
+    </>
+  );
+}
+
+function ControlRightsWorkspace() {
+  const [subjectAddress, setSubjectAddress] = useState(
+    '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
+  );
+  const [blockNumber, setBlockNumber] = useState('');
+  const [result, setResult] = useState<EvmControlSurfaceResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const validAddress = /^0x[0-9a-fA-F]{40}$/.test(subjectAddress);
+  const validBlock = blockNumber === '' || /^(0|[1-9]\d*)$/.test(blockNumber);
+
+  async function load(mode: 'inspect' | 'replay') {
+    if (!validAddress || !validBlock) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(
+        mode === 'inspect'
+          ? await api.inspectControlSurface(subjectAddress, blockNumber)
+          : await api.latestControlSurface(subjectAddress),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Control surface request failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const record = result?.record;
+  const report = record?.report;
+  const knownCoverage =
+    report?.coverage.filter((item) => item.observed.state === 'known').length ?? 0;
+  const coverageCount = report?.coverage.length ?? 0;
+  const ownerIsZero =
+    report?.ownerAddress.state === 'known' &&
+    report.ownerAddress.value === '0x0000000000000000000000000000000000000000';
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">Canonical Snapshot · Evidence · explicit Unknown</span>
+          <h1>EVM Control Rights</h1>
+          <p>
+            Inspect standard proxy, owner, and registered Safe control paths without treating an
+            unqueried role as absent. Reports are immutable and replay without provider access.
+          </p>
+        </div>
+        <StatusPill status="READ_ONLY" />
+      </div>
+      <section
+        className="panel subject-panel quote-panel"
+        aria-labelledby="control-inspect-heading"
+      >
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">BNB Smart Chain · eip155:56</span>
+            <h3 id="control-inspect-heading">Control surface inspection</h3>
+          </div>
+          <span className="snapshot-badge">No signing or broadcast</span>
+        </div>
+        <form
+          className="quote-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void load('inspect');
+          }}
+        >
+          <label htmlFor="control-subject">Contract address</label>
+          <input
+            id="control-subject"
+            spellCheck={false}
+            value={subjectAddress}
+            onChange={(event) => setSubjectAddress(event.target.value.trim())}
+            placeholder="0x…"
+          />
+          <label htmlFor="control-block">Finalized block (optional)</label>
+          <input
+            id="control-block"
+            inputMode="numeric"
+            spellCheck={false}
+            value={blockNumber}
+            onChange={(event) => setBlockNumber(event.target.value.trim())}
+            placeholder="Leave empty for the common finalized head"
+          />
+          <div className="control-actions">
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={busy || !validAddress || !validBlock}
+            >
+              {busy ? 'Inspecting…' : 'Inspect and persist'}
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={busy || !validAddress}
+              onClick={() => void load('replay')}
+            >
+              Replay latest
+            </button>
+          </div>
+        </form>
+        <p className="quote-note">
+          Current coverage: exact ERC-1167 runtime, EIP-1967 implementation/admin/beacon slots,
+          ERC-173-shaped owner(), and allowlisted Safe owner/threshold state. Custom token roles and
+          historical validity remain Unknown until separately proved.
+        </p>
+        {error === undefined ? null : <p className="inline-error">{error}</p>}
+      </section>
+
+      {record === undefined || report === undefined ? null : (
+        <>
+          <section className="panel" aria-labelledby="control-result-heading">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Immutable report {record.id}</span>
+                <h3 id="control-result-heading">Observed control surface</h3>
+              </div>
+              <StatusPill
+                status={
+                  report.sourceIndependence.state === 'known' &&
+                  report.sourceIndependence.value === true
+                    ? 'VERIFIED_INDEPENDENT'
+                    : 'INCONCLUSIVE_SOURCE_INDEPENDENCE'
+                }
+              />
+            </div>
+            <div className="metric-grid compact-grid">
+              <MetricTile
+                label="Contract shape"
+                value={
+                  report.contractKind.state === 'known'
+                    ? titleCase(String(report.contractKind.value))
+                    : 'Unknown'
+                }
+                detail="Exact runtime and standard-slot classification"
+                state={
+                  report.contractKind.state === 'stale' ? 'unknown' : report.contractKind.state
+                }
+              />
+              <MetricTile
+                label="Direct rights"
+                value={String(report.rights.length)}
+                detail="Only rights with positive point-in-time Evidence"
+                state="known"
+              />
+              <MetricTile
+                label="Domain coverage"
+                value={`${knownCoverage}/${coverageCount}`}
+                detail={`${Math.round(report.metadata.dataCoverage * 100)}% usable point-in-time coverage`}
+                state={knownCoverage === coverageCount ? 'known' : 'unknown'}
+              />
+              <MetricTile
+                label="History coverage"
+                value={`${Math.round(report.metadata.historyCoverage * 100)}%`}
+                detail="No activation or revocation history inferred"
+                state={report.metadata.historyCoverage === 1 ? 'known' : 'unknown'}
+              />
+            </div>
+            <div className="fact-grid">
+              <div className="fact-row">
+                <span>Implementation</span>
+                <KnowledgeDisplay data={report.implementationAddress} />
+              </div>
+              <div className="fact-row">
+                <span>Proxy admin</span>
+                <KnowledgeDisplay data={report.proxyAdminAddress} />
+              </div>
+              <div className="fact-row">
+                <span>Beacon</span>
+                <KnowledgeDisplay data={report.beaconAddress} />
+              </div>
+              <div className="fact-row">
+                <span>owner()</span>
+                <KnowledgeDisplay data={report.ownerAddress} />
+              </div>
+              <div className="fact-row">
+                <span>Source agreement</span>
+                <KnowledgeDisplay data={report.sourceAgreement} />
+              </div>
+              <div className="fact-row">
+                <span>Source independence</span>
+                <KnowledgeDisplay data={report.sourceIndependence} />
+              </div>
+            </div>
+            {ownerIsZero ? (
+              <div className="alert alert-warning">
+                <strong>owner() returned the zero address</strong>
+                <span>
+                  No OWNER right is emitted. This does not prove mint, tax, blacklist, router,
+                  treasury, LP, or other custom controls are absent.
+                </span>
+              </div>
+            ) : null}
+            <div className="snapshot-strip">
+              <span>
+                <b>Snapshot</b> {record.snapshotBlock}
+              </span>
+              <span>
+                <b>Block hash</b> <code>{shortId(record.snapshotHash, 16)}</code>
+              </span>
+              <span>
+                <b>Sources</b> {record.sourceSet.join(', ')}
+              </span>
+              <span>
+                <b>Captured</b> {formatTime(record.capturedAt)}
+              </span>
+            </div>
+          </section>
+
+          <section className="panel" aria-labelledby="control-right-list-heading">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Positive Evidence only</span>
+                <h3 id="control-right-list-heading">Direct control rights</h3>
+              </div>
+              <span className="snapshot-badge">Point in time</span>
+            </div>
+            {report.rights.length === 0 ? (
+              <div className="empty-state compact-empty">
+                <strong>No direct right was positively established by this adapter set.</strong>
+                <span>
+                  Review the coverage table; this is not a proof that all control is absent.
+                </span>
+              </div>
+            ) : (
+              <div className="claim-draft-list">
+                {report.rights.map((controlRight) => (
+                  <article className="claim-draft-card" key={controlRight.id}>
+                    <div className="claim-draft-heading">
+                      <div>
+                        <span className="eyebrow">{controlRight.id}</span>
+                        <h4>{titleCase(controlRight.rightType)}</h4>
+                      </div>
+                      <KnowledgeDisplay data={controlRight.threshold} />
+                    </div>
+                    <div className="fact-grid">
+                      <div className="fact-row">
+                        <span>Controller</span>
+                        <code>{controlRight.controller}</code>
+                      </div>
+                      <div className="fact-row">
+                        <span>Scope</span>
+                        <span>{controlRight.scope}</span>
+                      </div>
+                      <div className="fact-row">
+                        <span>Active from</span>
+                        <KnowledgeDisplay data={controlRight.activeFrom} />
+                      </div>
+                      <div className="fact-row">
+                        <span>Active to</span>
+                        <KnowledgeDisplay data={controlRight.activeTo} />
+                      </div>
+                    </div>
+                    <p className="panel-copy">{controlRight.constraints.join(' ')}</p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="panel" aria-labelledby="control-coverage-heading">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Known false is not Unknown</span>
+                <h3 id="control-coverage-heading">Coverage matrix</h3>
+              </div>
+              <code>{record.terminalEvidenceId}</code>
+            </div>
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Domain</th>
+                    <th>State</th>
+                    <th>Evidence</th>
+                    <th>Interpretation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.coverage.map((item) => (
+                    <tr key={item.domain}>
+                      <td>{titleCase(item.domain)}</td>
+                      <td>
+                        {item.observed.state === 'known' ? (
+                          <StatusPill status={item.observed.value ? 'OBSERVED' : 'NOT_OBSERVED'} />
+                        ) : (
+                          <KnowledgeDisplay data={item.observed} />
+                        )}
+                      </td>
+                      <td>{item.evidenceIds.length}</td>
+                      <td>{item.detail}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
     </>
   );
 }
@@ -3873,6 +4180,7 @@ export function App() {
         />
       );
     }
+    if (view === 'control') return <ControlRightsWorkspace />;
     if (view === 'scenario') return <ScenarioLab />;
     if (view === 'claims') return <ClaimAuditWorkspace />;
     if (view === 'health') {

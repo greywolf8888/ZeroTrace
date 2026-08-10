@@ -35,6 +35,7 @@ import {
   inspectFlapTokenOrigin,
   inspectFlapTokenOriginRestartSafe,
   inspectFlapToken,
+  inspectEvmControlSurface,
   quoteFlapPancakeV2BuyScenarios,
   quoteFlapPancakeV2SellScenarios,
   reconcileFlapPancakeV2Market,
@@ -46,6 +47,7 @@ import {
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
   ClaimReportStorageError,
+  ControlSurfaceReportStorageError,
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   SemanticCheckpointError,
@@ -140,6 +142,43 @@ const ClaimReportByIdParamsSchema = ClaimReportParamsSchema.extend({
 
 const ClaimReportQuerySchema = z.object({
   chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+});
+
+const ControlSurfaceParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  subject: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+const ControlSurfaceByIdParamsSchema = ControlSurfaceParamsSchema.extend({
+  reportId: z.string().regex(/^ecs_[0-9a-f]{24}$/),
+});
+
+const ControlSurfaceQuerySchema = z.object({
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+});
+
+const ControlSurfaceInspectSchema = ControlSurfaceQuerySchema.extend({
+  blockNumber: z
+    .string()
+    .regex(/^(0|[1-9]\d*)$/)
+    .optional(),
+});
+
+const ControlSurfaceListQuerySchema = ControlSurfaceQuerySchema.extend({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  subject: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
 });
 
 const ClaimBurnParamsSchema = z.object({
@@ -776,6 +815,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['flapHistoryProjection']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['flapLifetimeHeads']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['claimReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -802,12 +842,14 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         flapHistoryProjection,
         flapLifetimeHeads,
         claimReports,
+        controlSurfaces,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
         runtime.flapHistoryProjection?.health(),
         runtime.flapLifetimeHeads?.health(),
         runtime.claimReports?.health(),
+        runtime.controlSurfaces?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -820,7 +862,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                 ? flapLifetimeHeads
                 : claimReports?.status === 'DOWN'
                   ? claimReports
-                  : evidence;
+                  : controlSurfaces?.status === 'DOWN'
+                    ? controlSurfaces
+                    : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1025,6 +1069,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof ClaimReportStorageError) {
       const status = error.code === 'CLAIM_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ControlSurfaceReportStorageError) {
+      const status = error.code === 'CONTROL_SURFACE_INVALID' ? 400 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1276,6 +1326,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         status: bscReconciliationStatus,
         detail:
           'Each reconciled BSC endpoint independently reruns the complete Flap/Pancake V2 market, buy and sell certificate at one agreed finalized block. Exact state and typed 0.50% market/RV budgets fail closed; source independence becomes Known only for endpoints matched by the versioned official operator registry.',
+      },
+      {
+        id: 'evm-control-surface',
+        status:
+          runtime.controlSurfaces === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : runtime.evmAdapters.size === 0
+              ? 'EVM_PROVIDER_REQUIRED'
+              : 'IMPLEMENTED_STANDARD_SURFACE',
+        detail:
+          'Finalized multi-source EVM inspection covers exact ERC-1167 bytecode, EIP-1967 implementation/admin/beacon slots, ERC-173 owner(), and registered Safe owners/threshold. Reports, Snapshot, source Evidence, terminal Evidence, coverage, and Unknown domains are immutable and provider-free to replay. Custom authorization, validity history, recursive controllers, token roles, and non-EVM control surfaces remain pending.',
       },
       {
         id: 'finalized-historical-ingestion',
@@ -2953,15 +3014,157 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     },
   );
 
-  const incompleteCapabilities = [
-    'assets',
-    'labels',
-    'control-rights',
-    'launches',
-    'markets',
-    'claims',
-    'timeline',
-  ];
+  app.post(
+    '/api/v1/control-rights/:ledger/:subject/inspect',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ControlSurfaceParamsSchema.parse(request.params);
+      const input = ControlSurfaceInspectSchema.parse(request.body);
+      const repository = runtime.controlSurfaces;
+      if (repository === undefined || runtime.evidenceRepository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              'Durable Evidence and EVM control surface storage are required.',
+              false,
+            ),
+          );
+      }
+      const numericChainId = Number(input.chainId.slice('eip155:'.length));
+      if (!Number.isSafeInteger(numericChainId)) {
+        return reply
+          .code(400)
+          .send(errorResponse(request, 'INVALID_CHAIN_ID', 'Invalid EIP-155 chain ID.', false));
+      }
+      const primary = runtime.evmAdapters.get(numericChainId);
+      if (primary === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured finalized EVM provider is required for control inspection.',
+              true,
+            ),
+          );
+      }
+      const adapters = runtime.evmSourceAdapters?.get(numericChainId) ?? [primary];
+      const report = await inspectEvmControlSurface({
+        subject: params.subject,
+        adapters,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+      const record = await repository.put(report);
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/control-rights/:ledger/:subject/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ControlSurfaceParamsSchema.parse(request.params);
+      const query = ControlSurfaceQuerySchema.parse(request.query);
+      const repository = runtime.controlSurfaces;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              'Durable EVM control surface storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(query.chainId, params.subject.toLowerCase());
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_NOT_FOUND',
+              'No durable EVM control surface report was found for this subject.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/control-rights/:ledger/:subject/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ControlSurfaceByIdParamsSchema.parse(request.params);
+      const query = ControlSurfaceQuerySchema.parse(request.query);
+      const repository = runtime.controlSurfaces;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              'Durable EVM control surface storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.chainId !== query.chainId ||
+        record.subject !== params.subject.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_NOT_FOUND',
+              'The requested durable EVM control surface report was not found.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/control-rights',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const query = ControlSurfaceListQuerySchema.parse(request.query);
+      const repository = runtime.controlSurfaces;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              'Durable EVM control surface storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(query.chainId, query.subject.toLowerCase());
+      return { records: record === undefined ? [] : [record] };
+    },
+  );
+
+  const incompleteCapabilities = ['assets', 'labels', 'launches', 'markets', 'claims', 'timeline'];
   for (const capability of incompleteCapabilities) {
     app.all(`/api/v1/${capability}`, { schema: { tags: ['analysis'] } }, (request, reply) =>
       capabilityNotImplemented(request, reply, capability),

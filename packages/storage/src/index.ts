@@ -16,6 +16,7 @@ export * from './data-quality.js';
 export * from './flap-history.js';
 export * from './flap-lifetime-heads.js';
 export * from './claim-reports.js';
+export * from './control-surface-reports.js';
 
 type DatabaseRow = Record<string, unknown>;
 

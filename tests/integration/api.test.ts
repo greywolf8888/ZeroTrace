@@ -4331,4 +4331,85 @@ describe('ZeroTrace API contract', () => {
     expect(missing.statusCode).toBe(404);
     expect(missing.json().error.code).toBe('CLAIM_REPORT_NOT_FOUND');
   });
+
+  it('replays latest, exact, and generic EVM control surface records without providers', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const subject = `0x${'d'.repeat(40)}`;
+    const reportId = `ecs_${'1'.repeat(24)}`;
+    const record = {
+      id: reportId,
+      chainId: 'eip155:56',
+      subject,
+      snapshotBlock: '100',
+      snapshotHash: `0x${'e'.repeat(64)}`,
+      resultHash: 'f'.repeat(64),
+      report: { terminalEvidenceId: `ev_${'2'.repeat(24)}` },
+      terminalEvidenceId: `ev_${'2'.repeat(24)}`,
+      evidenceIds: [`ev_${'2'.repeat(24)}`],
+      sourceSet: ['bsc-rpc'],
+      modelVersion: 'evm-control-surface-v1.0.0',
+      capturedAt: '2026-08-11T00:00:01.000Z',
+      createdAt: '2026-08-11T00:00:02.000Z',
+    };
+    const latest = vi.fn(async () => record);
+    const get = vi.fn(async () => record);
+    runtime.controlSurfaces = { latest, get } as unknown as NonNullable<
+      AppRuntime['controlSurfaces']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const latestResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-rights/EVM/${subject}/reports/latest?chainId=eip155:56`,
+    });
+    expect(latestResponse.statusCode, latestResponse.body).toBe(200);
+    expect(latestResponse.json()).toEqual({ record });
+
+    const exactResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-rights/EVM/${subject}/reports/${reportId}?chainId=eip155:56`,
+    });
+    expect(exactResponse.statusCode, exactResponse.body).toBe(200);
+    expect(exactResponse.json()).toEqual({ record });
+
+    const genericResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-rights?ledger=EVM&chainId=eip155:56&subject=${subject}`,
+    });
+    expect(genericResponse.statusCode, genericResponse.body).toBe(200);
+    expect(genericResponse.json()).toEqual({ records: [record] });
+    expect(latest).toHaveBeenCalledTimes(2);
+    expect(get).toHaveBeenCalledWith(reportId);
+
+    const wrongSubject = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/control-rights/EVM/0x${'c'.repeat(40)}/reports/${reportId}` + '?chainId=eip155:56',
+    });
+    expect(wrongSubject.statusCode).toBe(404);
+    expect(wrongSubject.json().error.code).toBe('CONTROL_SURFACE_NOT_FOUND');
+  });
+
+  it('keeps control surface inspection and replay explicitly unavailable without durable storage', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const subject = `0x${'d'.repeat(40)}`;
+
+    const inspection = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control-rights/EVM/${subject}/inspect`,
+      payload: { chainId: 'eip155:56' },
+    });
+    expect(inspection.statusCode).toBe(503);
+    expect(inspection.json().error.code).toBe('CONTROL_SURFACE_UNAVAILABLE');
+
+    const replay = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-rights/EVM/${subject}/reports/latest?chainId=eip155:56`,
+    });
+    expect(replay.statusCode).toBe(503);
+    expect(replay.json().error.code).toBe('CONTROL_SURFACE_UNAVAILABLE');
+  });
 });

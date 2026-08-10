@@ -1086,6 +1086,24 @@ tbody tr:hover {
   padding: 18px;
 }
 
+.control-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.compact-empty {
+  min-height: 140px;
+  gap: 8px;
+  margin: 18px;
+}
+
+.compact-empty > span {
+  max-width: 620px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
 .reconciliation-form {
   grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
   align-items: end;

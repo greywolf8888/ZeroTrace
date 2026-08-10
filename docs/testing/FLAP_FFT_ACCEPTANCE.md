@@ -187,6 +187,30 @@ trie node`, so no conclusion is emitted for that unavailable history. The result
 the pension Safe from movable custody into a burn nor proves deployment-to-head supply continuity.
 Independent archive-capable backfill and continuous scheduling remain terminal gates.
 
+## Scoped EVM control-surface acceptance: 2026-08-11
+
+Alchemy and BNB Chain independently read FFT at finalized block `115199429`, hash
+`0x8bd43eaa5ec636bf3f9b0caf6f6f642fc9072a69c636c076ea5d5b085f5654d3`. Exact bytecode,
+EIP-1967 slots and read-only calls agreed. The strict ERC-1167 detector identified the standard
+45-byte runtime and fixed implementation `0x024f18294970b5c76c0691b87f138a0317156422`.
+ERC-173 `owner()` returned `0x0000000000000000000000000000000000000000`; the EIP-1967 admin,
+implementation and beacon slots were zero because this is not an EIP-1967 proxy.
+
+Report `ecs_14af3cdb90ffa23d388ba10a`, result hash
+`54a15e586f0e7701df1c39459e24a657928c0c67539cc917d80d52c1505bf8af`, retains seven
+Evidence nodes and terminal Evidence `ev_b8b0fe2ae38165e2128664c7`. Seven of 23 standard-surface
+coverage domains are Known and 16 are explicitly Unknown. Upgrade authorization remains Unknown
+because a fixed redirect does not prove implementation code/history. No direct right is emitted from a zero
+ERC-173 owner, but this is not a “no controller” conclusion: the implementation's custom upgrade,
+mint/burn, tax, blacklist/whitelist, trading, fee exemption, router, treasury and LP authorization,
+plus historical validity and recursive controllers, have not yet been decoded.
+
+The report was persisted through the API, its PostgreSQL row and migration were verified, and the
+API was recreated with an empty Alchemy key and only keyless BNB public RPC configuration. Latest
+and exact-ID reads returned identical report ID, result hash, Snapshot hash and terminal Evidence;
+the container credential-residue assertion was false. This closes only the point-in-time EVM
+standard-surface slice, not terminal FFT control/entity acceptance.
+
 ## Required output
 
 The terminal acceptance artifact must contain:

@@ -81,6 +81,11 @@ The current foundation includes:
   independent quote/RV budget, and inconclusive results when operator ownership is unverified;
 - an Evidence-grounded typed discrepancy engine with exact-state checks, exact-decimal error
   budgets, warning bands, coverage gates, and explicit Unknown exclusion from numeric denominators;
+- finalized multi-source EVM control-surface inspection for exact ERC-1167 runtime bytecode,
+  EIP-1967 implementation/admin/beacon slots, ERC-173 `owner()`, and registered Safe
+  owners/threshold, with all unqueried authorization domains retained as typed Unknown;
+- immutable PostgreSQL control-surface reports with Snapshot/source/terminal Evidence constraints,
+  provider-free latest/exact replay, and a responsive Control Rights workspace;
 - request-scoped provider provenance across failover pools, with dynamic head/tip/slot anchors
   explicitly bypassing stored TTL responses;
 - common-position chain-anchor reconciliation across configured endpoints, with explicit
@@ -151,12 +156,15 @@ flowchart LR
   F --> EV["Evidence ledger"]
   DQ --> EV
   EV --> ER["Entity resolution"]
+  EV --> CR["Control-right engine"]
   EV --> LM["Launch and market adapters"]
   ER --> RV["Realizable-value engine"]
+  CR --> RV
   LM --> RV
   RV --> SC["Scenario engine"]
   EV --> UI["Analyst UI"]
   ER --> UI
+  CR --> UI
   RV --> UI
   SC --> UI
   DB[("PostgreSQL")]
@@ -187,10 +195,11 @@ distributed workflows remain open work. Read
 
 | Domain             | Terminal scope                                                                                | Current repository state                                                                                                                                                                                                                                                                                                  |
 | ------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound block/transaction queries, anchor reconciliation and finalized raw execution/state; archive/semantic validation pending                                                                                                                                                                                    |
+| EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound queries, anchor reconciliation, finalized raw execution/state, and a strict ERC-1167/EIP-1967/ERC-173/registered-Safe point-in-time control surface; custom authorization, recursive controllers, validity history and archive/semantic validation pending                                                 |
 | Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                                                                                                                                                     |
 | Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending                                                                                                                                                                                       |
 | Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                               |
+| Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard-surface reports and desktop/mobile replay implemented; custom roles, token controls, recursive controller identity, history, Bitcoin custody semantics and Solana authority/PDA surfaces pending                                                                                                   |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                                                                   |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, and verified Pancake V2 buy/exit-size models work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                  |
 | Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, live FFT observations and Claim Report replay work; complete historical backfill, continuous scheduling, official attribution and terminal FFT acceptance pending |
@@ -358,6 +367,20 @@ the bounded quote/RV checks pass, and official endpoint documentation resolves a
 operators. Two BNB Chain public hostnames therefore remain `SAME_OPERATOR`/`INCONCLUSIVE`; configure
 the documented Alchemy BSC URL template plus a BNB Chain endpoint to exercise the verified-
 independence gate. Credentials are expanded locally and never appear in source IDs or Evidence.
+
+Inspect the point-in-time EVM standard control surface and persist its replayable report with:
+
+```bash
+curl -sS -X POST \
+  http://localhost:8080/api/v1/control-rights/EVM/0xdcfb441a1f38802820a4e7b4cc8aab37833c7777/inspect \
+  -H 'content-type: application/json' \
+  -d '{"chainId":"eip155:56"}'
+```
+
+The report covers exact ERC-1167/EIP-1967/ERC-173 and registered-Safe observations. It never treats
+a zero owner or missing standard slot as proof that custom tax, role, treasury, LP, upgrade or
+historical control is absent. Once captured, latest/exact report routes and the Control Rights UI
+replay PostgreSQL without contacting a provider.
 
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
@@ -556,7 +579,8 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Add live/unfinalized policy, archive-grade coverage and forced real-reorg drills across independent operators
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
 - [ ] Build temporal entity graph, real-world calibration datasets, analyst overrides and auditable recomputation
-- [ ] Add control-right extraction for proxies, multisigs, EVM ownership, Solana authorities and PDAs
+- [x] Add finalized ERC-1167/EIP-1967/ERC-173/registered-Safe EVM control-surface reports and UI
+- [ ] Extend control rights to custom EVM roles/history, recursive controllers, Bitcoin custody semantics, Solana authorities and PDAs
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
 - [ ] Backfill complete supply history and add continuous capture scheduling, reviewed-draft promotion and terminal FFT audit
@@ -567,8 +591,10 @@ The named terminal real-chain acceptance target is Flap/BSC token FFT at
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`; its error budget and automatic discrepancy rules are
 defined in [the FFT acceptance specification](docs/testing/FLAP_FFT_ACCEPTANCE.md). Named
 same-Snapshot Pancake V2 buy/exit-size slices now pass their deterministic arithmetic checks; this is
-not a terminal FFT conclusion. A later live Alchemy + BNB Chain run passes the independent-source
-market/RV gate, while fork settlement, multi-route RV, real-world entity calibration and
+not a terminal FFT conclusion. Live Alchemy + BNB Chain runs pass the independent-source market/RV
+gate and identify the FFT token as an ERC-1167 proxy with a fixed implementation and zero-valued
+ERC-173 owner at one finalized Snapshot. Tax, blacklist, treasury, LP and recursive implementation
+authority remain Unknown, while fork settlement, multi-route RV, real-world entity calibration and
 claim-action gates remain open.
 
 Exact percentages, test counts, and external validation gates live in [PROGRESS.md](PROGRESS.md).

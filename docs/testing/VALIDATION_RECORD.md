@@ -1285,32 +1285,30 @@ both tables remained present. No legacy row was discarded or assigned fabricated
 
 | Command                  | Result                                                                                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| local non-browser gates  | pass: format, lint, typecheck, 412 unit, 58 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                   |
-| local durable stores     | pass: PostgreSQL migrations `001-011`, canonical ClickHouse and versioned object store; all 80 integration tests passed                                                  |
-| local `test:coverage`    | pass: 470 tests, 22 opt-in durable skips; 82.76% statements, 77.26% branches, 91.66% functions, 83.94% lines                                                             |
+| local non-browser gates  | pass: format, lint, typecheck, 419 unit, 60 environment-free integration, 1 model-eval and build; dependency license/audit gates green                                   |
+| local durable stores     | pass: PostgreSQL migrations `001-012`, canonical ClickHouse and versioned object store; all 83 integration tests passed                                                  |
+| local `test:coverage`    | pass: 479 tests, 23 opt-in durable skips; 82.82% statements, 77.08% branches, 91.93% functions, 84.00% lines                                                             |
 | `npm run eval:entity`    | pass: 7-case structural corpus; controller/coordination precision 1, Service Hub/CoinJoin false merges 0, one explicit abstention                                        |
 | branch `test:coverage`   | pass on `23b3306`: 385 tests; 83.74% statements, 77.99% branches, 92.22% functions, 84.78% lines                                                                         |
-| `npm run test:e2e`       | pass: 22 Chromium tests across desktop and Pixel 7, including supply continuity, multi-source market/RV, burn, Claim Declaration/Report and Unknown                      |
+| `npm run test:e2e`       | pass: 24 Chromium tests across desktop and Pixel 7, including EVM Control Rights, supply continuity, market/RV, burn, Claim Declaration/Report and Unknown               |
 | `npm run sbom`           | pass: CycloneDX JSON generated locally                                                                                                                                   |
 | `docker compose config`  | pass                                                                                                                                                                     |
-| production Compose smoke | pass: rebuilt API/Web healthy and read-only; same-operator capability truth plus 91-node durable FFT Evidence replay passed                                              |
+| production Compose smoke | pass: API/Web and all worker targets rebuilt; keyless API/Web healthy/read-only and immutable FFT control report replay passed                                           |
 | branch GitHub Actions CI | [pass on `2d115c3`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31433097623): full CI matrix, structural model gate, 22 Chromium flows and production targets |
 | branch CodeQL            | [pass on `2d115c3`](https://github.com/greywolf8888/ZeroTrace/actions/runs/31433098888): JavaScript and TypeScript analysis                                              |
 
-The latest complete all-store durable run used GitHub Actions disposable PostgreSQL, ClickHouse,
-and MinIO services. All 54 integration tests passed and the workflow removed its named volumes. The
-current local PostgreSQL runner passed all 19 PostgreSQL tests after applying migrations `001-011`
-to a fresh PostgreSQL 16.10 instance. ClickHouse and MinIO were not rerun locally for this
-PostgreSQL/API/UI-only module; the complete environment-free, browser, dependency, SBOM and Compose
-gates were rerun before its push.
+The latest complete all-store durable run used the local Compose PostgreSQL 17.10, ClickHouse 26.7
+and MinIO services. All 83 integration tests passed; the PostgreSQL subset passed all 19 tests with
+migrations `001-012`. The complete environment-free, browser, dependency, SBOM, production-image
+and Compose gates were rerun before push.
 
 The current batch also built the production API and Web images and started the default seven-service
 Compose topology. Host port `5432` was already allocated, so the project PostgreSQL mapping used the
 documented environment override `55439`; no external database process was stopped. The retained
 ZeroTrace volume contained only migrations `001-002`. A custom-format `pg_dump` backup was written
 inside that project volume before the missing append-only migrations `003-011` were applied in
-order. `schema_migrations` then reported the complete `001-011` sequence and API storage health
-became `UP`.
+order. Migration `012` was then applied for immutable EVM control-surface reports;
+`schema_migrations` reported the complete `001-012` sequence and API storage health became `UP`.
 
 Because this host resolves public provider domains through a private-range interception proxy, the
 default `ALLOW_PRIVATE_PROVIDER_URLS=false` correctly returned provider-down readiness. A local-only
@@ -1377,3 +1375,32 @@ This closes the scoped independent-source gate for current Flap/Pancake V2 marke
 It does not close historical executable-quote calibration, fork settlement, additional routes,
 official pension-wallet attribution, complete claim flows, entity calibration, archive retention,
 forced-reorg behavior or terminal FFT acceptance.
+
+## FFT EVM control-surface validation (2026-08-11)
+
+The production inspection route read FFT through Alchemy and the official BNB Chain public RPC at
+one common finalized block. Both operators returned byte-for-byte identical contract code,
+EIP-1967 slots, ERC-173 owner call and Safe-probe state at block `115199429`, hash
+`0x8bd43eaa5ec636bf3f9b0caf6f6f642fc9072a69c636c076ea5d5b085f5654d3`.
+
+The exact 45-byte runtime matched ERC-1167 and resolved the fixed implementation to
+`0x024f18294970b5c76c0691b87f138a0317156422`. ERC-173 `owner()` returned the zero address;
+the EIP-1967 implementation/admin/beacon slots were zero. The engine emitted zero direct rights,
+seven Known coverage entries and 16 Unknown entries across the fixed 23-domain matrix. Upgrade
+authorization remains Unknown because a fixed redirect does not prove target-code immutability or
+recursive implementation control. This is not
+a claim that no controller exists: custom implementation authorization, tax, blacklist, trading,
+treasury, LP and historical/recursive controller surfaces remain unqueried.
+
+The API stored report `ecs_14af3cdb90ffa23d388ba10a`, result hash
+`54a15e586f0e7701df1c39459e24a657928c0c67539cc917d80d52c1505bf8af`, with seven
+Evidence nodes and terminal root `ev_b8b0fe2ae38165e2128664c7`. Migration
+`012_evm_control_surface_reports` was present and exactly one row matched the ID/hash. PostgreSQL
+integration also verified idempotent replay, repository restart, canonical hash/provenance checks,
+and database rejection of update/delete.
+
+After capture, the API container was recreated with `ALCHEMY_API_KEY` empty and two keyless BNB
+public endpoints. A container-environment assertion found no Alchemy URL credential residue.
+Provider-free latest and exact-ID reads returned the same report ID, result hash, Snapshot hash and
+terminal Evidence, while readiness remained `UP`. The supplied credential was never printed,
+written to repository files or retained in the final container.

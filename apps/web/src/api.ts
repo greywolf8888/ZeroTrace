@@ -912,6 +912,71 @@ export interface EvmSupplyContinuityReplayResponse {
   };
 }
 
+export interface EvmControlSurfaceResponse {
+  record: {
+    id: string;
+    chainId: string;
+    subject: string;
+    snapshotBlock: string;
+    snapshotHash: string;
+    resultHash: string;
+    terminalEvidenceId: string;
+    evidenceIds: string[];
+    sourceSet: string[];
+    modelVersion: string;
+    capturedAt: string;
+    createdAt: string;
+    report: {
+      ledger: 'EVM';
+      chainId: string;
+      subject: string;
+      contractKind: KnowledgeValue<
+        | 'EOA'
+        | 'DIRECT_CONTRACT'
+        | 'ERC1167_MINIMAL_PROXY'
+        | 'EIP1967_PROXY'
+        | 'EIP1967_BEACON_PROXY'
+        | 'SAFE_PROXY'
+      >;
+      implementationAddress: KnowledgeValue<string>;
+      proxyAdminAddress: KnowledgeValue<string>;
+      beaconAddress: KnowledgeValue<string>;
+      ownerAddress: KnowledgeValue<string>;
+      safe: KnowledgeValue<{
+        owners: string[];
+        threshold: string;
+        nonce: string;
+        implementationAddress: string;
+        implementationVersion: string;
+      }>;
+      sourceAgreement: KnowledgeValue<boolean>;
+      sourceIndependence: KnowledgeValue<boolean>;
+      rights: Array<{
+        id: string;
+        chainId: string;
+        subject: string;
+        controller: string;
+        rightType: string;
+        scope: string;
+        threshold: KnowledgeValue<string>;
+        constraints: string[];
+        evidenceIds: string[];
+        activeFrom: KnowledgeValue<string>;
+        activeTo: KnowledgeValue<string>;
+      }>;
+      coverage: Array<{
+        domain: string;
+        observed: KnowledgeValue<boolean>;
+        detail: string;
+        evidenceIds: string[];
+      }>;
+      terminalEvidenceId: string;
+      metadata: AnalysisMetadata;
+      evidence: EvidenceRecord[];
+    };
+  };
+}
+
 interface ClaimFlowAggregate {
   observedAmount: string;
   actualAmount: KnowledgeValue<string>;
@@ -1194,6 +1259,23 @@ export const api = {
     requestJson<EvmSupplyContinuityReplayResponse>(
       `/api/v1/claims/EVM/${encodeURIComponent(token)}/supply-continuity/${encodeURIComponent(scanId)}`,
     ),
+  inspectControlSurface: (subject: string, blockNumber?: string, chainId = 'eip155:56') =>
+    requestJson<EvmControlSurfaceResponse>(
+      `/api/v1/control-rights/EVM/${encodeURIComponent(subject)}/inspect`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          chainId,
+          ...(blockNumber === undefined || blockNumber === '' ? {} : { blockNumber }),
+        }),
+      },
+    ),
+  latestControlSurface: (subject: string, chainId = 'eip155:56') => {
+    const parameters = new URLSearchParams({ chainId });
+    return requestJson<EvmControlSurfaceResponse>(
+      `/api/v1/control-rights/EVM/${encodeURIComponent(subject)}/reports/latest?${parameters.toString()}`,
+    );
+  },
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',

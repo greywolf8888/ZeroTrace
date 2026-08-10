@@ -11,8 +11,10 @@ import {
 import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
 import { createEvidence } from '@zerotrace/evidence';
 import {
+  EvmControlCoverageDomainSchema,
   FlapEventHistorySchema,
   unknownValue,
+  type EvmControlSurfaceReport,
   type EvmClaimAddressObservation,
 } from '@zerotrace/schemas';
 import {
@@ -24,6 +26,7 @@ import {
 import {
   PostgresClaimReportRepository,
   PostgresDataQualityRepository,
+  PostgresEvmControlSurfaceRepository,
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
   PostgresIngestionCheckpointRepository,
@@ -1195,6 +1198,136 @@ postgresDescribe('PostgreSQL durable Claim Report integration', () => {
       ).rejects.toThrow(/immutable/);
       await expect(
         pool.query('DELETE FROM evm_claim_reports WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL durable EVM control surface integration', () => {
+  let evidence: PostgresEvidenceRepository;
+  let reports: PostgresEvmControlSurfaceRepository;
+  const subject = `0x${'a'.repeat(40)}`;
+  const capturedAt = '2026-08-11T12:00:01.000Z';
+  const snapshot = {
+    ledger: 'EVM' as const,
+    chainId: 'eip155:56',
+    blockNumber: '101',
+    blockHash: `0x${'a'.repeat(64)}`,
+    parentBlockHash: `0x${'b'.repeat(64)}`,
+    finality: 'finalized' as const,
+    blockTimestamp: '2026-08-11T12:00:00.000Z',
+    capturedAt,
+    providerVersions: { 'bsc-rpc@integration': 'json-rpc' },
+    adapterVersions: { evm: 'integration' },
+    configHash: 'c'.repeat(64),
+    entityModelVersion: 'entity-v0.1.0',
+    labelSnapshot: 'labels-v1',
+  };
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    reports = new PostgresEvmControlSurfaceRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), reports.close()]);
+  });
+
+  it('persists, replays, and rejects mutation of a provenance-bound report', async () => {
+    const raw = createEvidence({
+      ledger: 'EVM',
+      chainId: snapshot.chainId,
+      kind: 'CONTRACT_STATE',
+      source: 'bsc-rpc@integration',
+      locator: `eth_getCode:${subject}@${snapshot.blockHash}`,
+      payload: { code: '0x6000' },
+      observedAt: capturedAt,
+      blockOrSlot: snapshot.blockNumber,
+      finality: snapshot.finality,
+      summary: 'Control surface integration contract state.',
+    });
+    const terminal = createEvidence({
+      ledger: 'EVM',
+      chainId: snapshot.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:evm-control-surface-v1.0.0',
+      locator: `evm-control-surface-report:${subject}@${snapshot.blockHash}`,
+      payload: { subject, snapshotHash: snapshot.blockHash },
+      observedAt: capturedAt,
+      blockOrSlot: snapshot.blockNumber,
+      finality: snapshot.finality,
+      summary: 'Control surface integration terminal root.',
+      sourceEvidenceIds: [raw.id],
+    });
+    await evidence.put(raw, [], snapshot);
+    await evidence.put(terminal, [raw.id], snapshot);
+
+    const report: EvmControlSurfaceReport = {
+      ledger: 'EVM',
+      chainId: snapshot.chainId,
+      subject,
+      contractKind: { state: 'known', value: 'DIRECT_CONTRACT' },
+      implementationAddress: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+      proxyAdminAddress: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+      beaconAddress: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+      ownerAddress: { state: 'unknown', reason: 'UNSUPPORTED' },
+      safe: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+      sourceAgreement: { state: 'known', value: true },
+      sourceIndependence: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      rights: [],
+      coverage: EvmControlCoverageDomainSchema.options.map((domain) => ({
+        domain,
+        observed:
+          domain === 'CONTRACT_CODE'
+            ? ({ state: 'known', value: true } as const)
+            : ({ state: 'unknown', reason: 'NOT_QUERIED' } as const),
+        detail: `${domain} integration coverage.`,
+        evidenceIds: domain === 'CONTRACT_CODE' ? [raw.id] : [],
+      })),
+      terminalEvidenceId: terminal.id,
+      metadata: {
+        snapshot,
+        dataCoverage: 1 / EvmControlCoverageDomainSchema.options.length,
+        sourceCoverage: 0.5,
+        historyCoverage: 0,
+        simulationCoverage: 0,
+        freshness: snapshot.blockTimestamp,
+        sourceSet: ['bsc-rpc@integration'],
+        modelVersion: 'evm-control-surface-v1.0.0',
+        confidence: 0.8,
+        evidenceIds: [raw.id, terminal.id].sort(),
+      },
+      evidence: [raw, terminal].sort((left, right) => left.id.localeCompare(right.id)),
+    };
+
+    const stored = await reports.put(report);
+    await expect(reports.put(report)).resolves.toEqual(stored);
+    await reports.close();
+    reports = new PostgresEvmControlSurfaceRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(reports.get(stored.id)).resolves.toEqual(stored);
+    await expect(reports.latest(snapshot.chainId, subject)).resolves.toEqual(stored);
+    await expect(reports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE evm_control_surface_reports SET report = report WHERE id = $1', [
+          stored.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM evm_control_surface_reports WHERE id = $1', [stored.id]),
       ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();

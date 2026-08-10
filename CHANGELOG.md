@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- finalized multi-source EVM control-surface inspection for exact ERC-1167 runtime bytecode,
+  EIP-1967 implementation/admin/beacon slots, ERC-173 owner and registered Safe
+  owners/threshold, with a complete Unknown-preserving coverage matrix, immutable PostgreSQL
+  reports, provider-free API replay, responsive UI and scoped FFT real-chain acceptance;
 - bounded restart-safe BSC ERC-20 all-block `totalSupply` continuity scanning with canonical
   EIP-1898 reads, exact multi-source state reconciliation, complete changed-block mint/burn
   certificates, official operator-independence attestations, durable Evidence/checkpoints,

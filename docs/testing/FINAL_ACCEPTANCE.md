@@ -117,6 +117,11 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Baseline evidence fusion with critical suppression cases
 - [ ] Calibrated entity-resolution model and labeled evaluation corpus
 - [ ] Controller/control-right extraction across terminal scope
+  - [x] Finalized EVM ERC-1167/EIP-1967/ERC-173/registered-Safe standard surface with complete
+        coverage, immutable Evidence-bound report replay, API/UI, deterministic tests and scoped
+        independent-source FFT acceptance
+  - [ ] Custom EVM authorization and history, recursive controllers, Bitcoin custody semantics,
+        Solana authorities/PDAs/multisigs, and cross-ledger temporal validity
 - [ ] Versioned launchpad and market lifecycle adapters
   - [x] Deterministic Flap BSC fixed-block Portal V8Safe/V6/V5 inspection, negative Evidence, API and UI
   - [x] Deterministic caller-supplied Flap creation/configuration/migration transaction decoding,

@@ -7,6 +7,7 @@ export const CoverageRatioSchema = z.number().min(0).max(1);
 export const QuantityStringSchema = z.string().regex(/^-?\d+$/);
 export const UnsignedQuantityStringSchema = z.string().regex(/^(?:0|[1-9]\d*)$/);
 export const DecimalStringSchema = z.string().regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/);
+export const EvmCanonicalAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/);
 export const JsonValueSchema = z.json();
 export type JsonValue = z.infer<typeof JsonValueSchema>;
 
@@ -741,6 +742,29 @@ export const EntityResolutionSchema = z.object({
 });
 export type EntityResolution = z.infer<typeof EntityResolutionSchema>;
 
+export const EvmControlRightTypeSchema = z.enum([
+  'OWNER',
+  'PROXY_ADMIN',
+  'UPGRADE',
+  'MINT',
+  'BURN',
+  'TAX_CHANGE',
+  'BLACKLIST',
+  'WHITELIST',
+  'TRADING_SWITCH',
+  'MAX_TX',
+  'MAX_WALLET',
+  'FEE_EXEMPTION',
+  'ROUTER_CHANGE',
+  'TREASURY',
+  'SAFE_OWNER',
+  'SAFE_MODULE',
+  'SAFE_GUARD',
+  'SAFE_FALLBACK_HANDLER',
+  'LP_POSITION',
+]);
+export type EvmControlRightType = z.infer<typeof EvmControlRightTypeSchema>;
+
 export const ControlRightSchema = z.object({
   id: z.string().min(1),
   subject: z.string().min(1),
@@ -754,6 +778,143 @@ export const ControlRightSchema = z.object({
   activeTo: IsoDateTimeSchema.optional(),
 });
 export type ControlRight = z.infer<typeof ControlRightSchema>;
+
+export const EvmControlRightSchema = z.object({
+  id: z.string().regex(/^cr_[0-9a-f]{24}$/),
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  subject: EvmCanonicalAddressSchema,
+  controller: EvmCanonicalAddressSchema,
+  rightType: EvmControlRightTypeSchema,
+  scope: z.string().min(1),
+  threshold: knowledgeValueSchema(DecimalStringSchema),
+  constraints: z.array(z.string().min(1)),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+  activeFrom: knowledgeValueSchema(IsoDateTimeSchema),
+  activeTo: knowledgeValueSchema(IsoDateTimeSchema),
+});
+export type EvmControlRight = z.infer<typeof EvmControlRightSchema>;
+
+export const EvmControlCoverageDomainSchema = z.enum([
+  'CONTRACT_CODE',
+  'ERC1167_IMPLEMENTATION',
+  'EIP1967_IMPLEMENTATION',
+  'EIP1967_ADMIN',
+  'EIP1967_BEACON',
+  'ERC173_OWNER',
+  'SAFE_OWNERS_THRESHOLD',
+  'SAFE_MODULES',
+  'SAFE_GUARD',
+  'SAFE_FALLBACK_HANDLER',
+  'UPGRADE_AUTHORIZATION',
+  'MINT',
+  'BURN',
+  'TAX_CHANGE',
+  'BLACKLIST',
+  'WHITELIST',
+  'TRADING_SWITCH',
+  'MAX_TX',
+  'MAX_WALLET',
+  'FEE_EXEMPTION',
+  'ROUTER_CHANGE',
+  'TREASURY',
+  'LP_POSITION',
+]);
+export type EvmControlCoverageDomain = z.infer<typeof EvmControlCoverageDomainSchema>;
+
+export const EvmControlCoverageSchema = z.object({
+  domain: EvmControlCoverageDomainSchema,
+  observed: knowledgeValueSchema(z.boolean()),
+  detail: z.string().min(1),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+});
+export type EvmControlCoverage = z.infer<typeof EvmControlCoverageSchema>;
+
+export const EvmContractKindSchema = z.enum([
+  'EOA',
+  'DIRECT_CONTRACT',
+  'ERC1167_MINIMAL_PROXY',
+  'EIP1967_PROXY',
+  'EIP1967_BEACON_PROXY',
+  'SAFE_PROXY',
+]);
+export type EvmContractKind = z.infer<typeof EvmContractKindSchema>;
+
+export const EvmSafeControlSchema = z.object({
+  owners: z.array(EvmCanonicalAddressSchema).min(1).max(100),
+  threshold: UnsignedQuantityStringSchema.refine((value) => BigInt(value) > 0n),
+  nonce: UnsignedQuantityStringSchema,
+  implementationAddress: EvmCanonicalAddressSchema,
+  implementationVersion: z.string().min(1).max(64),
+});
+export type EvmSafeControl = z.infer<typeof EvmSafeControlSchema>;
+
+export const EvmControlSurfaceReportSchema = z
+  .object({
+    ledger: z.literal('EVM'),
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    subject: EvmCanonicalAddressSchema,
+    contractKind: knowledgeValueSchema(EvmContractKindSchema),
+    implementationAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
+    proxyAdminAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
+    beaconAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
+    ownerAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
+    safe: knowledgeValueSchema(EvmSafeControlSchema),
+    sourceAgreement: knowledgeValueSchema(z.boolean()),
+    sourceIndependence: knowledgeValueSchema(z.boolean()),
+    rights: z.array(EvmControlRightSchema),
+    coverage: z.array(EvmControlCoverageSchema),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot?.ledger === 'EVM', {
+      message: 'EVM control surface requires an EVM Snapshot.',
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot?.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.chainId !== value.chainId
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Control surface identity requires one finalized matching EVM Snapshot.',
+      });
+    }
+    const domains = value.coverage.map((item) => item.domain);
+    const expectedDomains = [...EvmControlCoverageDomainSchema.options].sort();
+    if (
+      domains.length !== expectedDomains.length ||
+      [...new Set(domains)].sort().some((domain, index) => domain !== expectedDomains[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['coverage'],
+        message: 'Control surface coverage must include every EVM control domain exactly once.',
+      });
+    }
+    const evidenceIds = value.evidence.map((item) => item.id).sort();
+    const metadataEvidenceIds = value.metadata.evidenceIds;
+    const nestedEvidenceIds = [
+      ...value.rights.flatMap((right) => right.evidenceIds),
+      ...value.coverage.flatMap((item) => item.evidenceIds),
+    ];
+    if (
+      metadataEvidenceIds.length !== new Set(metadataEvidenceIds).size ||
+      metadataEvidenceIds.some((id, index) => id !== evidenceIds[index]) ||
+      evidenceIds.length !== metadataEvidenceIds.length ||
+      !metadataEvidenceIds.includes(value.terminalEvidenceId) ||
+      nestedEvidenceIds.some((id) => !metadataEvidenceIds.includes(id))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'evidenceIds'],
+        message: 'Control surface provenance must be canonical and contain all nested Evidence.',
+      });
+    }
+  });
+export type EvmControlSurfaceReport = z.infer<typeof EvmControlSurfaceReportSchema>;
 
 export const LaunchLifecycleSchema = z.enum([
   'DISCOVERED',
