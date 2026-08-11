@@ -285,6 +285,27 @@ and the API contract fixes `automaticOwnershipMergeAllowed=false`. This bounded 
 complete CoinJoin classifier, address cluster, change history, peeling-chain analysis, external
 attribution, or calibrated Entity Resolution result.
 
+### Global intelligence search
+
+`global-intelligence-search-v0.1.0` is a provider-free read projection over authoritative durable
+records, not a second fact store. PostgreSQL migration `022_durable_intelligence_search` exposes
+identifier-bearing roles from the current immutable Claim, Control, Solana transaction, pension and
+Entity report families together with registered label observations. Search results retain each
+source record identity, Snapshot knowledge, source set, model version, confidence knowledge,
+freshness and complete terminal Evidence.
+
+Subject Registry enrichment is deliberately non-merging. A matching registered subject may expose
+its label observations and Entity-membership candidates, but a label never creates or merges an
+Entity. No registry binding is `Unknown(NOT_QUERIED)`; a registered subject with no matching rows is
+a Known empty set. Entity confidence and membership probability preserve their stored Known,
+Unknown, or Unavailable state.
+
+The query planner runs local checksum/structure classification independently from the PostgreSQL
+projection. Storage absence or failure degrades only the durable partition. A Known empty projection
+means no exact match inside `IMMUTABLE_REPORTS_AND_REGISTERED_LABELS_V1`, never that a subject is
+absent from a chain. Verified symbol/ticker lookup, platform/project names, complete Subject Registry
+coverage and semantic-checkpoint indexing remain explicit terminal gaps.
+
 ### Realizable value
 
 The implemented kernel uses exact integer arithmetic for a constant-product pool and represents a

@@ -48,6 +48,9 @@ The current foundation includes:
 - canonical, Zod-validated schemas for snapshots, subjects, knowledge state, evidence, entities,
   control rights, launch mechanisms, provider health, and realizable value;
 - checksum-aware identifier classification for EVM, Bitcoin, and Solana;
+- durable exact intelligence search across immutable report families and registered labels, with
+  terminal Evidence, Snapshot/freshness/confidence, Subject Registry label/Entity context, explicit
+  storage degradation, and an empty-result contract that never claims on-chain nonexistence;
 - SSRF-hardened, response-bounded, read-only adapters for EVM JSON-RPC, Bitcoin Esplora, and Solana
   JSON-RPC;
 - finality-explicit current-state anchors: configurable EVM `finalized`/`safe`/`latest` block tags,
@@ -274,6 +277,10 @@ cd ZeroTrace
 cp .env.example .env
 docker compose up --build
 ```
+
+If host port `5432` is already occupied, set `POSTGRES_PORT` in `.env` (for example,
+`POSTGRES_PORT=15432`) before starting Compose. The container still uses PostgreSQL port `5432`;
+only the host binding changes.
 
 Open:
 
@@ -658,6 +665,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Materialize bounded pairwise relationship timelines with revisions, explicit position gaps, immutable Evidence and provider-free replay
 - [x] Materialize bounded exact-Snapshot investigation graphs with immutable PostgreSQL reports, optional Apache AGE projection, bounded traversal and Cytoscape Evidence drilldown
 - [x] Compare durable investigation graphs across Snapshots/revisions with explicit continuity, typed request-scope deltas, immutable Evidence and no inferred membership or relationship termination
+- [x] Add durable exact identifier/registered-label search over immutable reports with Evidence drilldown and explicit coverage gaps
 - [x] Add version-pinned Flap BSC Portal-state inspection with Evidence/Unknown UI rendering
 - [x] Add fixed-block Flap Portal sell previews with provider Evidence and no-fake-zero UI states
 - [x] Add exact-receipt Flap creation/configuration/migration event decoding with default provenance
@@ -694,7 +702,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
 - [ ] Complete generic Claim Verification coverage: durable scheduling, historical backfill, reviewed-draft promotion and independently evidenced action paths
-- [ ] Complete global search, cross-Snapshot timeline, comparison, scenario and export workflows in the UI
+- [ ] Extend global search to verified symbol/ticker, platform/project and semantic-checkpoint indexes; complete comparison, general scenario and export workflows
 - [ ] Run archive-grade, multi-provider, real-chain fixtures and production load/failure testing
 
 Flap/BSC token FFT at

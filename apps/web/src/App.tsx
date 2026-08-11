@@ -5998,6 +5998,16 @@ function SearchWorkspace({
   onSearch: (query: string, network: string) => Promise<void>;
   onInspect: (candidate: SubjectCandidate) => Promise<void>;
 }) {
+  const durableProjection =
+    result?.durableResults.state === 'known' ? result.durableResults.value : undefined;
+  const durableEvidence = [
+    ...new Map(
+      (durableProjection?.matches ?? []).map((match) => [
+        match.terminalEvidence.id,
+        match.terminalEvidence,
+      ]),
+    ).values(),
+  ];
   return (
     <>
       <div className="page-heading">
@@ -6005,8 +6015,9 @@ function SearchWorkspace({
           <span className="eyebrow">Global Intelligence Search</span>
           <h1>Trace an on-chain subject</h1>
           <p>
-            Checksum and structure classification happens locally; address, transaction, block, and
-            Bitcoin outpoint inspection uses configured read-only providers.
+            Exact identifiers and registered labels are searched against durable Evidence-bound
+            reports; checksum and structure classification remains local. Provider reads only begin
+            when you choose Inspect.
           </p>
         </div>
       </div>
@@ -6032,8 +6043,8 @@ function SearchWorkspace({
                 {result.candidates.length} candidate{result.candidates.length === 1 ? '' : 's'}
               </h2>
             </div>
-            <span className="freshness">
-              Confidence {Math.round(result.metadata.confidence * 100)}%
+            <span className="freshness search-confidence">
+              Result confidence <KnowledgeDisplay data={result.resultConfidence} />
             </span>
           </div>
           {result.rejectedReason === undefined ? null : (
@@ -6084,6 +6095,146 @@ function SearchWorkspace({
             })}
           </div>
         </section>
+      )}
+      {result === undefined ? null : (
+        <section className="panel durable-search-panel" data-testid="durable-search-results">
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">PostgreSQL exact projection</span>
+              <h3>Durable intelligence</h3>
+            </div>
+            <StatusPill
+              status={result.durableResults.state === 'known' ? 'INDEXED' : 'UNAVAILABLE'}
+            />
+          </div>
+          {result.durableResults.state !== 'known' ? (
+            <div className="alert alert-warning durable-search-alert">
+              <strong>{titleCase(result.durableResults.reason ?? 'unavailable')}</strong>
+              {result.durableResults.detail ??
+                'The durable projection could not be queried; local classification is still valid.'}
+            </div>
+          ) : durableProjection === undefined || durableProjection.matches.length === 0 ? (
+            <div className="durable-search-empty">
+              <strong>No match in the declared durable projection</strong>
+              <p>
+                This is not evidence that the identifier, token, account, or entity does not exist
+                on-chain.
+              </p>
+            </div>
+          ) : (
+            <div className="table-scroll">
+              <table className="durable-search-table">
+                <thead>
+                  <tr>
+                    <th>Subject</th>
+                    <th>Chain / type</th>
+                    <th>Record</th>
+                    <th>Entity</th>
+                    <th>Label</th>
+                    <th>Confidence</th>
+                    <th>Freshness</th>
+                    <th>Evidence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {durableProjection.matches.map((match) => (
+                    <tr key={match.documentId}>
+                      <td>
+                        <code title={match.normalizedIdentifier}>
+                          {shortId(match.normalizedIdentifier, 9)}
+                        </code>
+                        <small>{titleCase(match.matchedBy)}</small>
+                      </td>
+                      <td>
+                        <span className={'chain-tag chain-' + match.ledger.toLowerCase()}>
+                          {match.ledger}
+                        </span>
+                        <small>{match.chainId}</small>
+                        <KnowledgeDisplay data={match.subjectType} />
+                      </td>
+                      <td>
+                        <strong>{titleCase(match.recordType)}</strong>
+                        <small>{titleCase(match.role)}</small>
+                        <code title={match.recordId}>{shortId(match.recordId, 7)}</code>
+                      </td>
+                      <td>
+                        {match.entities.state === 'known' ? (
+                          match.entities.value?.length === 0 ? (
+                            <span>None registered</span>
+                          ) : (
+                            match.entities.value?.map((entity) => (
+                              <span key={entity.entityId}>
+                                {titleCase(entity.classification)} · {shortId(entity.entityId, 6)}
+                              </span>
+                            ))
+                          )
+                        ) : (
+                          <KnowledgeDisplay data={match.entities} />
+                        )}
+                      </td>
+                      <td>
+                        {match.labels.state === 'known' ? (
+                          match.labels.value?.length === 0 ? (
+                            <span>None registered</span>
+                          ) : (
+                            match.labels.value?.map((label) => (
+                              <span
+                                key={label.id}
+                                title={`${label.source} · ${label.licensePolicy}`}
+                              >
+                                {label.label} · {titleCase(label.category)}
+                              </span>
+                            ))
+                          )
+                        ) : (
+                          <KnowledgeDisplay data={match.labels} />
+                        )}
+                      </td>
+                      <td>
+                        <KnowledgeDisplay data={match.analysisConfidence} />
+                      </td>
+                      <td>
+                        {match.freshness.state === 'known'
+                          ? formatTime(match.freshness.value)
+                          : titleCase(match.freshness.reason ?? match.freshness.state)}
+                      </td>
+                      <td>
+                        <code title={match.terminalEvidence.id}>
+                          {shortId(match.terminalEvidence.id, 7)}
+                        </code>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="snapshot-strip">
+            <span>
+              <b>Scope</b>{' '}
+              {durableProjection?.coverageScope ?? titleCase(result.durableResults.reason ?? '')}
+            </span>
+            <span>
+              <b>Matches</b> {durableProjection?.matchCount ?? 'Unavailable'}
+            </span>
+            <span>
+              <b>Truncated</b>{' '}
+              {durableProjection === undefined
+                ? 'Unavailable'
+                : String(durableProjection.truncated)}
+            </span>
+            <span>
+              <b>Known gaps</b> symbol/ticker · platform/project · complete registry · checkpoints
+            </span>
+          </div>
+        </section>
+      )}
+      {durableEvidence.length === 0 ? null : (
+        <EvidencePanel
+          evidence={durableEvidence}
+          eyebrow="Durable match → terminal Evidence"
+          title="Search evidence ledger"
+        />
       )}
       {subject === undefined ? null : (
         <>

@@ -9,6 +9,8 @@ import {
   ClaimRuleSchema,
   FlapLifetimeMaterializationSchema,
   FlapLifetimeRollbackSchema,
+  GlobalIntelligenceSearchProjectionSchema,
+  GlobalIntelligenceSearchRecordTypeSchema,
   LaunchMechanismSnapshotSchema,
   ProviderHealthSchema,
   knownValue,
@@ -498,6 +500,78 @@ describe('Flap lifetime rollback', () => {
           ...rollback.metadata,
           snapshot: { ...rollback.metadata.snapshot, blockHash: `0x${'0'.repeat(64)}` },
         },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('durable intelligence search contracts', () => {
+  const terminalEvidenceId = `ev_${'a'.repeat(24)}`;
+  const match = {
+    documentId: `isr_${'b'.repeat(24)}`,
+    ledger: 'EVM' as const,
+    chainId: 'eip155:56',
+    normalizedIdentifier: `0x${'c'.repeat(40)}`,
+    subjectType: knownValue('CONTRACT'),
+    matchedBy: 'IDENTIFIER' as const,
+    recordType: 'EVM_CONTROL_SURFACE' as const,
+    recordId: `ecs_${'d'.repeat(24)}`,
+    role: 'CONTROL_SUBJECT',
+    snapshot: unknownValue('INSUFFICIENT_DATA'),
+    analysisConfidence: unknownValue('INSUFFICIENT_DATA'),
+    freshness: knownValue('2026-08-12T00:00:00.000Z'),
+    labels: unknownValue('NOT_QUERIED'),
+    entities: unknownValue('NOT_QUERIED'),
+    terminalEvidence: {
+      id: terminalEvidenceId,
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      kind: 'DERIVED_FEATURE' as const,
+      source: 'zerotrace:test',
+      locator: 'durable-search:test',
+      payloadHash: 'e'.repeat(64),
+      observedAt: '2026-08-12T00:00:00.000Z',
+      summary: 'Durable search contract fixture.',
+    },
+    sourceSet: ['postgres:test'],
+    modelVersion: 'evm-control-surface-v0.1.0',
+  };
+  const projection = {
+    query: match.normalizedIdentifier,
+    coverageScope: 'IMMUTABLE_REPORTS_AND_REGISTERED_LABELS_V1' as const,
+    matches: [match],
+    matchCount: 1,
+    truncated: false,
+    indexedRecordTypes: [...GlobalIntelligenceSearchRecordTypeSchema.options].sort(),
+    terminalEvidenceIds: [terminalEvidenceId],
+  };
+
+  it('accepts canonical Evidence-bound matches with explicit missing registry knowledge', () => {
+    expect(GlobalIntelligenceSearchProjectionSchema.safeParse(projection).success).toBe(true);
+  });
+
+  it('rejects hidden Unknown types, ledger-conflicting Evidence, and label matches without labels', () => {
+    expect(
+      GlobalIntelligenceSearchProjectionSchema.safeParse({
+        ...projection,
+        matches: [{ ...match, subjectType: knownValue('UNKNOWN') }],
+      }).success,
+    ).toBe(false);
+    expect(
+      GlobalIntelligenceSearchProjectionSchema.safeParse({
+        ...projection,
+        matches: [
+          {
+            ...match,
+            terminalEvidence: { ...match.terminalEvidence, chainId: 'eip155:1' },
+          },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      GlobalIntelligenceSearchProjectionSchema.safeParse({
+        ...projection,
+        matches: [{ ...match, matchedBy: 'LABEL', labels: knownValue([]) }],
       }).success,
     ).toBe(false);
   });

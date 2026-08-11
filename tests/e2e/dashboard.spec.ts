@@ -723,7 +723,102 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
 
-test('classifies a checksummed EVM address without claiming provider facts', async ({ page }) => {
+test('renders an Evidence-bound durable search match without claiming missing registry facts', async ({
+  page,
+}) => {
+  const terminalEvidenceId = `ev_${'1'.repeat(24)}`;
+  const normalizedAddress = checksummedEvmAddress.toLowerCase();
+  await page.route('**/api/v1/search?*', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        query: checksummedEvmAddress,
+        candidates: [
+          {
+            ledger: 'EVM',
+            chainId: 'eip155:1',
+            type: 'ADDRESS',
+            id: checksummedEvmAddress,
+            normalizedId: normalizedAddress,
+            validation: 'CHECKSUM_VALID',
+            confidence: 1,
+          },
+        ],
+        durableResults: {
+          state: 'known',
+          value: {
+            query: checksummedEvmAddress,
+            coverageScope: 'IMMUTABLE_REPORTS_AND_REGISTERED_LABELS_V1',
+            matches: [
+              {
+                documentId: `isr_${'2'.repeat(24)}`,
+                ledger: 'EVM',
+                chainId: 'eip155:1',
+                normalizedIdentifier: normalizedAddress,
+                subjectType: { state: 'known', value: 'CONTRACT' },
+                matchedBy: 'IDENTIFIER',
+                recordType: 'EVM_CONTROL_SURFACE',
+                recordId: `ecs_${'3'.repeat(24)}`,
+                role: 'CONTROL_SUBJECT',
+                snapshot: {
+                  state: 'known',
+                  value: { position: '16', hash: `0x${'a'.repeat(64)}` },
+                },
+                analysisConfidence: { state: 'known', value: 0.82 },
+                freshness: { state: 'known', value: '2026-08-12T00:00:00.000Z' },
+                labels: { state: 'unknown', reason: 'NOT_QUERIED' },
+                entities: { state: 'unknown', reason: 'NOT_QUERIED' },
+                terminalEvidence: {
+                  id: terminalEvidenceId,
+                  ledger: 'EVM',
+                  chainId: 'eip155:1',
+                  kind: 'DERIVED_FEATURE',
+                  source: 'zerotrace:evm-control-surface-v0.1.0',
+                  locator: 'evm-control-surface:fixture',
+                  payloadHash: 'b'.repeat(64),
+                  observedAt: '2026-08-12T00:00:00.000Z',
+                  blockOrSlot: '16',
+                  finality: 'finalized',
+                  summary: 'Immutable control-surface terminal Evidence.',
+                },
+                sourceSet: ['ethereum-rpc'],
+                modelVersion: 'evm-control-surface-v0.1.0',
+              },
+            ],
+            matchCount: 1,
+            truncated: false,
+            indexedRecordTypes: ['EVM_CONTROL_SURFACE'],
+            terminalEvidenceIds: [terminalEvidenceId],
+          },
+        },
+        resultConfidence: { state: 'known', value: 1 },
+        coverage: {
+          scope: 'IDENTIFIER_CLASSIFICATION_AND_DURABLE_EXACT_PROJECTION_V1',
+          identifierClassification: { state: 'known', value: true },
+          durableProjection: { state: 'known', value: true },
+          gaps: {
+            tokenSymbolTickerLookup: { state: 'unknown', reason: 'NOT_IMPLEMENTED' },
+            platformProjectLexicalLookup: { state: 'unknown', reason: 'NOT_IMPLEMENTED' },
+            completeSubjectRegistry: { state: 'unknown', reason: 'NOT_IMPLEMENTED' },
+            semanticCheckpointIndex: { state: 'unknown', reason: 'NOT_IMPLEMENTED' },
+          },
+        },
+        absenceSemantics: 'NO_DURABLE_MATCH_IS_NOT_ONCHAIN_NONEXISTENCE',
+        metadata: {
+          snapshot: null,
+          dataCoverage: 1,
+          sourceCoverage: 1,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: '2026-08-12T00:00:00.000Z',
+          sourceSet: ['local-checksum-and-structure', 'postgres-durable-intelligence-search-v1'],
+          modelVersion: 'global-intelligence-search-v0.1.0',
+          confidence: 1,
+          evidenceIds: [terminalEvidenceId],
+        },
+      }),
+    });
+  });
   await page.goto('/');
   await page.getByLabel('Address or transaction identifier').fill(checksummedEvmAddress);
   await page.getByLabel('Network').selectOption('ethereum');
@@ -732,9 +827,14 @@ test('classifies a checksummed EVM address without claiming provider facts', asy
   await expect(page.getByRole('heading', { name: 'Trace an on-chain subject' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '1 candidate' })).toBeVisible();
   await expect(page.getByText('Checksum Valid')).toBeVisible();
-  await expect(page.getByText('eip155:1')).toBeVisible();
+  await expect(page.locator('.candidate-card').getByText('eip155:1')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Inspect' })).toBeEnabled();
-  await expect(page.getByRole('heading', { name: 'Evidence ledger' })).toHaveCount(0);
+  const durableResults = page.getByTestId('durable-search-results');
+  await expect(durableResults).toContainText('Evm Control Surface');
+  await expect(durableResults).toContainText('Not Queried');
+  await expect(durableResults).toContainText(terminalEvidenceId.slice(0, 7));
+  await expect(page.getByRole('heading', { name: 'Search evidence ledger' })).toBeVisible();
+  await expect(page.getByText('Immutable control-surface terminal Evidence.')).toBeVisible();
 });
 
 test('opens a typed Solana transaction result with Snapshot and Evidence', async ({ page }) => {

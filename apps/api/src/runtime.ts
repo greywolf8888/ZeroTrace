@@ -41,6 +41,7 @@ import {
   PostgresEntityInvestigationGraphTimelineRepository,
   AgeInvestigationGraphProjectionRepository,
   PostgresIngestionCheckpointRepository,
+  PostgresIntelligenceSearchRepository,
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
   RawArtifactStore,
@@ -77,6 +78,7 @@ export interface AppRuntime {
   entityRelationshipTimelines?: PostgresEntityRelationshipTimelineRepository;
   entityInvestigationGraphs?: PostgresEntityInvestigationGraphRepository;
   entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
+  intelligenceSearch?: PostgresIntelligenceSearchRepository;
   ageInvestigationGraphProjection?: AgeInvestigationGraphProjectionRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
@@ -575,6 +577,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const intelligenceSearch =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresIntelligenceSearchRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const ageInvestigationGraphProjection =
     config.ageUrl === undefined
       ? undefined
@@ -616,6 +627,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       entityRelationshipTimelines?.close(),
       entityInvestigationGraphs?.close(),
       entityInvestigationGraphTimelines?.close(),
+      intelligenceSearch?.close(),
       ageInvestigationGraphProjection?.close(),
       rawFacts?.close(),
     ]);
@@ -655,6 +667,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(entityInvestigationGraphTimelines === undefined
       ? {}
       : { entityInvestigationGraphTimelines }),
+    ...(intelligenceSearch === undefined ? {} : { intelligenceSearch }),
     ...(ageInvestigationGraphProjection === undefined ? {} : { ageInvestigationGraphProjection }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }

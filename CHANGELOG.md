@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- durable `global-intelligence-search-v0.1.0` exact projection across registered labels and current
+  immutable report families, with PostgreSQL migration `022`, terminal Evidence, explicit
+  Snapshot/confidence/freshness/Subject Registry knowledge, partial storage degradation, responsive
+  desktop/mobile UI and no on-chain-nonexistence inference from an empty result;
 - immutable `entity-investigation-graph-timeline-v0.1.0` reports over two to 100 durable graph
   observations, with deterministic revisions/position advances, explicit Snapshot continuity,
   typed request-scope additions/omissions, PostgreSQL source/Evidence/immutability enforcement,

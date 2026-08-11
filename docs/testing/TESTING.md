@@ -210,7 +210,8 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 
 - read-only and capability truth on first load;
 - explicit Unknown metric rendering;
-- valid EVM identifier classification without a provider;
+- valid EVM identifier classification plus Evidence-bound durable exact search, explicit missing
+  registry knowledge and scoped-absence semantics without a provider;
 - scenario gating;
 - data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
 - typed Solana legacy/v0 transaction rendering with Snapshot, per-instruction Evidence, ALT account

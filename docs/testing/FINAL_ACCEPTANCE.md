@@ -272,7 +272,10 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       no-edge decisions and Evidence drilldown on desktop/mobile
 - [x] Responsive immutable graph-timeline materialization/latest/exact replay with continuity,
       request-scope pair changes, Evidence drilldown and no inferred relationship end on desktop/mobile
-- [ ] Complete global search, temporal traversal, comparison, scenario and export workflows
+- [x] Responsive durable exact search with terminal Evidence, explicit missing registry knowledge,
+      storage degradation and no on-chain-nonexistence inference on desktop/mobile
+- [ ] Extend global search indexing; complete temporal traversal, comparison, general scenario and
+      export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance
 
