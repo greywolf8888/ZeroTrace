@@ -1923,3 +1923,9 @@ remained in `Created` until removed. Existing volumes and project data were not 
 API/Web recreation was therefore not claimed; the production artifacts were exercised through the
 host runtime/browser path above, and disposable-container startup remains a remote CI gate for this
 commit.
+
+Exact code commit `c9c6a17` then passed [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31513348630)
+and [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31513348679) on PR #12. Quality
+and contracts, Chromium E2E, every production container target, JavaScript/TypeScript analysis and
+CodeQL all passed. This independently closes the disposable-container gate for the code commit; it
+does not remove the separate long-lived local ClickHouse capacity and Docker Desktop start defects.

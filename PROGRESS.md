@@ -19,7 +19,7 @@ completed feature.
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                    |
 | Integration tests                | **72 environment-free plus 27 real-storage passing; 99 with PostgreSQL, ClickHouse and object store enabled** |
 | Real-browser E2E                 | **36 passing: Chromium desktop and Pixel 7**                                                                  |
-| Remote CI                        | **Feature `f1c8a57` and post-merge main `33f20e5` passed CI/CodeQL; PR #5 merged**                            |
+| Remote CI                        | **Feature `c9c6a17` passed CI/CodeQL on PR #12; last recorded protected main `33f20e5`**                      |
 | Coverage                         | **Current durable: 83.32% statements / 77.25% branches / 93.93% functions / 84.48% lines**                    |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed      |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/Scenario, control, and Solana reports wired               |
@@ -1097,7 +1097,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                                                                    | isolated empty PostgreSQL database applied migrations 001–021; 23 PostgreSQL tests passed and the temporary database was removed; current AGE also passed                         |
 | Runtime/browser smoke          | Pass                                                                                    | real `eit_ea900ad3c0aedf0618298d94` materialize/latest/exact replay and seven-node Evidence drilldown loaded through headed Chromium; PostgreSQL/AGE UP and read-only preserved   |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope                                               | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                    |
-| Remote CI                      | Exact-SHA passes `f1c8a57` / main `33f20e5`                                             | PR #5 feature head and protected-main squash both passed CI and CodeQL                                                                                                            |
+| Remote CI                      | Exact-SHA feature pass `c9c6a17`; last recorded main `33f20e5`                          | PR #12 code head passed CI and CodeQL; its documentation-only acceptance-record follow-up must pass again before the protected-main squash                                        |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
