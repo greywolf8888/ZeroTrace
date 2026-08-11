@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- finalized EVM/BSC pension-wallet behavioral candidate discovery with caller-visible policy,
+  exact-unit and unique-depositor signals, immutable PostgreSQL report replay, responsive Claim
+  Audit UI, and a full-range FFT validation that keeps role, exit restrictions, and dividend
+  execution explicitly Unknown;
 - immutable content-addressed Solana transaction semantic reports with PostgreSQL-enforced
   signature/Snapshot/Evidence lineage, idempotent writes, exact/latest provider-free replay,
   explicit provider-failure fallback provenance, responsive UI and real mainnet restart replay;

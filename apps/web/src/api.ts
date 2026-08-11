@@ -810,6 +810,74 @@ export interface EvmClaimBurnCandidateDiscoveryResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface EvmPensionVaultCandidate {
+  address: string;
+  inflowTransferCount: number;
+  outflowTransferCount: number;
+  exactUnitDepositCount: number;
+  exactMultipleDepositCount: number;
+  nonMultipleDepositCount: number;
+  uniqueExactUnitDepositorCount: number;
+  uniqueOutflowDestinationCount: number;
+  observedInflowAmount: string;
+  observedOutflowAmount: string;
+  observedNetAmount: string;
+  observedWholeShares: string;
+  firstInflowAt: string;
+  lastInflowAt: string;
+  firstOutflowAt: KnowledgeValue<string>;
+  lastOutflowAt: KnowledgeValue<string>;
+  criteria: ['EXACT_SHARE_UNIT_DEPOSITS', 'UNIQUE_DEPOSITOR_THRESHOLD'];
+  transferEvidenceIds: string[];
+  evidenceId: string;
+  roleAttribution: KnowledgeValue<'PENSION_VAULT'>;
+  participantExitPolicy: KnowledgeValue<boolean>;
+  dividendExecution: KnowledgeValue<boolean>;
+}
+
+export interface EvmPensionCandidateReport {
+  tokenAddress: string;
+  fromBlock: string;
+  toBlock: string;
+  policy: {
+    shareUnitAtomic: string;
+    minimumExactUnitDeposits: number;
+    minimumUniqueExactUnitDepositors: number;
+    maximumCandidates: number;
+  };
+  scannedTransferCount: number;
+  candidates: EvmPensionVaultCandidate[];
+  coverageEvidenceIds: string[];
+  terminalEvidenceId: string;
+  metadata: AnalysisMetadata;
+}
+
+export interface StoredPensionCandidateReport {
+  id: string;
+  chainId: 'eip155:56';
+  tokenAddress: string;
+  fromBlock: string;
+  toBlock: string;
+  snapshotHash: string;
+  resultHash: string;
+  report: EvmPensionCandidateReport;
+  terminalEvidenceId: string;
+  evidenceIds: string[];
+  sourceSet: string[];
+  modelVersion: 'evm-pension-candidate-discovery-v1.0.0';
+  capturedAt: string;
+  createdAt: string;
+}
+
+export interface EvmPensionCandidateDiscoveryResponse {
+  report: EvmPensionCandidateReport;
+  durableReport: StoredPensionCandidateReport;
+}
+
+export interface EvmPensionCandidateReplayResponse {
+  record: StoredPensionCandidateReport;
+}
+
 export interface EvmClaimBurnPromotionReplayResponse {
   scan: {
     id: string;
@@ -1385,6 +1453,28 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ chainId, fromBlock, toBlock }),
       },
+    ),
+  discoverPensionCandidates: (
+    token: string,
+    input: {
+      fromBlock: string;
+      toBlock: string;
+      shareUnitAtomic: string;
+      minimumExactUnitDeposits: number;
+      minimumUniqueExactUnitDepositors: number;
+      maximumCandidates: number;
+    },
+  ) =>
+    requestJson<EvmPensionCandidateDiscoveryResponse>(
+      `/api/v1/claims/EVM/${encodeURIComponent(token)}/pension-candidates`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ chainId: 'eip155:56', ...input }),
+      },
+    ),
+  latestPensionCandidateReport: (token: string) =>
+    requestJson<EvmPensionCandidateReplayResponse>(
+      `/api/v1/claims/EVM/${encodeURIComponent(token)}/pension-candidates/reports/latest`,
     ),
   replayClaimBurnPromotion: (token: string, scanId: string) =>
     requestJson<EvmClaimBurnPromotionReplayResponse>(

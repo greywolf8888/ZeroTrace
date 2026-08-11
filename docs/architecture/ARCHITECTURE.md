@@ -335,6 +335,23 @@ terminal and nested Evidence membership, and replay identity before writes and r
 latest/exact API routes and the UI expose observed atomic-unit lower bounds, custody, coverage,
 Snapshot and Evidence without converting them into action meaning.
 
+Token-wide pension-vault candidate discovery is a separate behavior-only projection. A caller must
+provide the exact atomic share unit and minimum deposit/depositor policy; the engine does not infer
+community rules from a token symbol or silently embed protocol thresholds. It scans a complete
+finalized BSC Transfer range, excludes mint/burn/zero/self-transfer records from deposits, and
+requires both repeated exact-unit deposits and unique exact-unit senders. Exact multiples,
+non-multiples, outflows, whole shares, time bounds and transfer Evidence are retained as raw
+behavioral metrics. A qualifying address is never automatically labeled, clustered, or promoted to
+an entity: official pension role, participant exit policy and dividend execution remain typed
+Unknown until independent off-chain attribution plus on-chain action Evidence support them.
+
+Completed discoveries are content-addressed `pcr_...` reports. PostgreSQL migration `016` validates
+the finalized range-end Snapshot, canonical Evidence/source sets, every candidate's derived
+Evidence and exact transfer-parent edge set, and a terminal root derived from the complete coverage
+queries plus candidate nodes. Updates and deletes are forbidden. Live discovery fails closed
+without durable Evidence/report storage; latest/exact replay is provider-free. This projection
+establishes only “address satisfied policy P in range R”, never “the community statement is true”.
+
 The first action derivation path is an exact finalized-block ERC-20 burn certificate. It requires
 adjacent parent/target lineage, reads `totalSupply` at both positions, captures every target-block
 `Transfer`, and reconciles `before + mint - burn = after`. Only conserved non-zero zero-address

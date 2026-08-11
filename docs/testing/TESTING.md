@@ -132,6 +132,11 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   fail closed. Exact/latest replay performs no provider call, and automatic provider-failure replay
   must expose `replayed=true` plus a typed Unavailable live-refresh reason without changing the
   stored Snapshot.
+- EVM pension-candidate tests require complete requested-range transfer coverage, explicit
+  share-unit/depositor policy, canonical arithmetic and ordering, Evidence-linked candidate and
+  terminal derivations, immutable content-addressed replay, migration `016` update/delete guards,
+  and Unknown role/no-exit/dividend attribution. Candidate discovery must fail closed rather than
+  silently truncate an over-limit result set.
 - no-evidence entity input remains Unknown.
 - common services and CoinJoin suppress controller confidence.
 - sell-disabled RV is unavailable rather than zero.
@@ -196,6 +201,8 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - Flap fixed-block state, transaction-local creation/default provenance, bounded range/lifetime
   history coverage, durable projection pagination, exact lifetime materialization replay, sell
   preview, multi-source market/RV discrepancy review, Unknown preservation and Evidence rendering;
+- EVM pension-behavior discovery and latest durable replay, including exact-unit/depositor metrics,
+  Snapshot/Evidence rendering, Unknown attribution boundaries and mobile containment;
 - anchor-reconciliation status, common-position/operator-independence explanation, four configured
   chain targets, and process-local data-quality storage truth;
 - mobile viewport layout;

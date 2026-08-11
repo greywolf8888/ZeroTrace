@@ -2432,9 +2432,12 @@ test('compiles a public pension statement as a human-review draft without invent
     .getByLabel('Announcement text')
     .fill('养老钱包打入100w币为1股，不可退出，每周分红，8月2号开始。');
   await page.getByRole('button', { name: 'Compile review drafts' }).click();
+  const declarationPanel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Claim Declaration Review' }),
+  });
   await expect(page.getByText('Declaration ≠ chain fact')).toBeVisible();
-  await expect(page.getByText('Pension Vault')).toBeVisible();
-  await expect(page.getByText('1,000,000')).toHaveCount(0);
+  await expect(page.getByText('Pension Vault', { exact: true })).toBeVisible();
+  await expect(declarationPanel.getByText('1,000,000')).toHaveCount(0);
   await expect(page.getByText('1000000', { exact: true })).toBeVisible();
   await expect(page.getByText('Incomplete', { exact: true })).toBeVisible();
   await expect(page.getByText('Insufficient Data').first()).toBeVisible();
@@ -2442,6 +2445,141 @@ test('compiles a public pension statement as a human-review draft without invent
   await expect(
     page.getByText(/month\/day fragment was not converted into an audit boundary/i),
   ).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
+test('shows durable pension behavior candidates on mobile without inventing social attribution', async ({
+  page,
+}) => {
+  const fftToken = '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777';
+  const candidate = '0x8d50a68b4f9ada119d198d6472eaf0cb6db302d9';
+  const reportId = `pcr_${'1'.repeat(24)}`;
+  const terminalEvidenceId = `ev_${'2'.repeat(24)}`;
+  const candidateEvidenceId = `ev_${'3'.repeat(24)}`;
+  const report = {
+    tokenAddress: fftToken,
+    fromBlock: '113485950',
+    toBlock: '115154970',
+    policy: {
+      shareUnitAtomic: '1000000000000000000000000',
+      minimumExactUnitDeposits: 5,
+      minimumUniqueExactUnitDepositors: 5,
+      maximumCandidates: 20,
+    },
+    scannedTransferCount: 13621,
+    candidates: [
+      {
+        address: candidate,
+        inflowTransferCount: 123,
+        outflowTransferCount: 10,
+        exactUnitDepositCount: 71,
+        exactMultipleDepositCount: 107,
+        nonMultipleDepositCount: 16,
+        uniqueExactUnitDepositorCount: 109,
+        uniqueOutflowDestinationCount: 1,
+        observedInflowAmount: '176000010000000000000000000',
+        observedOutflowAmount: '24507000000000000000000000',
+        observedNetAmount: '151493010000000000000000000',
+        observedWholeShares: '176',
+        firstInflowAt: '2026-08-03T09:36:09.000Z',
+        lastInflowAt: '2026-08-10T07:00:48.000Z',
+        firstOutflowAt: { state: 'known', value: '2026-08-04T11:20:42.000Z' },
+        lastOutflowAt: { state: 'known', value: '2026-08-10T10:17:50.000Z' },
+        criteria: ['EXACT_SHARE_UNIT_DEPOSITS', 'UNIQUE_DEPOSITOR_THRESHOLD'],
+        transferEvidenceIds: [`ev_${'4'.repeat(24)}`],
+        evidenceId: candidateEvidenceId,
+        roleAttribution: {
+          state: 'unknown',
+          reason: 'INSUFFICIENT_DATA',
+          detail: 'Behavioral Evidence does not establish an official pension-vault role.',
+        },
+        participantExitPolicy: {
+          state: 'unknown',
+          reason: 'INSUFFICIENT_DATA',
+          detail: 'Wallet history does not prove participant exit policy.',
+        },
+        dividendExecution: {
+          state: 'unknown',
+          reason: 'NOT_QUERIED',
+          detail: 'Outflows have not been classified as weekly dividends.',
+        },
+      },
+    ],
+    coverageEvidenceIds: [`ev_${'5'.repeat(24)}`],
+    terminalEvidenceId,
+    metadata: {
+      snapshot: {
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        blockNumber: '115154970',
+        blockHash: `0x${'6'.repeat(64)}`,
+        finality: 'finalized',
+      },
+      dataCoverage: 1,
+      sourceCoverage: 0.5,
+      historyCoverage: 1,
+      simulationCoverage: 0,
+      freshness: '2026-08-10T16:44:39.000Z',
+      sourceSet: ['sqd:binance-mainnet'],
+      modelVersion: 'evm-pension-candidate-discovery-v1.0.0',
+      confidence: 0.75,
+      evidenceIds: [candidateEvidenceId, terminalEvidenceId, `ev_${'5'.repeat(24)}`],
+    },
+  };
+  await page.route('**/api/v1/claims/EVM/*/pension-candidates', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        report,
+        durableReport: {
+          id: reportId,
+          chainId: 'eip155:56',
+          tokenAddress: fftToken,
+          fromBlock: report.fromBlock,
+          toBlock: report.toBlock,
+          snapshotHash: `0x${'6'.repeat(64)}`,
+          resultHash: '7'.repeat(64),
+          report,
+          terminalEvidenceId,
+          evidenceIds: report.metadata.evidenceIds,
+          sourceSet: report.metadata.sourceSet,
+          modelVersion: report.metadata.modelVersion,
+          capturedAt: '2026-08-10T16:44:40.000Z',
+          createdAt: '2026-08-10T16:44:41.000Z',
+        },
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  const panel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Pension Vault Candidates' }),
+  });
+  await expect(panel).toContainText('Behavior is not identity');
+  await expect(panel.getByLabel('BSC token')).toHaveValue(fftToken);
+  await expect(panel.getByLabel('From block')).toHaveValue('113485950');
+  await panel.getByLabel('Finalized to block').fill('115154970');
+  await panel.getByRole('button', { name: 'Discover candidates' }).click();
+
+  await expect(panel.getByTestId('pension-candidate-result')).toContainText(
+    'Complete requested range',
+  );
+  await expect(panel).toContainText('13621');
+  await expect(panel).toContainText('176');
+  await expect(panel).toContainText('71');
+  await expect(panel).toContainText('109');
+  await expect(panel).toContainText('Role Unknown');
+  await expect(panel).toContainText('Insufficient Data');
+  await expect(panel).toContainText('Not Queried');
+  await expect(panel).toContainText(reportId);
+  await expect(panel).toContainText(terminalEvidenceId);
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

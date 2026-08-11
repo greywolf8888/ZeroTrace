@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import {
   EvmLedgerAdapter,
   SolanaLedgerAdapter,
+  type EvmLogQuery,
+  type EvmLogRecord,
   type JsonRpcTransport,
   type TransportObservation,
   type TransportReadOptions,
@@ -24,6 +26,7 @@ import {
 import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   FLAP_HISTORY_MODEL_VERSION,
+  discoverEvmPensionCandidates,
   projectFlapEventHistoryRestartSafe,
   type FlapHistorySegmentExecutor,
 } from '@zerotrace/platform-adapters';
@@ -36,6 +39,7 @@ import {
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
   PostgresIngestionCheckpointRepository,
+  PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
 
@@ -1623,6 +1627,125 @@ postgresDescribe('PostgreSQL durable Solana transaction intelligence integration
       ).rejects.toThrow(/immutable/);
       await expect(
         pool.query('DELETE FROM solana_transaction_reports WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL durable EVM pension candidate integration', () => {
+  let evidence: PostgresEvidenceRepository;
+  let reports: PostgresPensionCandidateReportRepository;
+  const token = `0x${randomUUID().replaceAll('-', '').padEnd(40, '0')}`;
+  const candidate = `0x${'d'.repeat(40)}`;
+  const shareUnit = 1_000_000n;
+  const reportSnapshot = {
+    ledger: 'EVM' as const,
+    chainId: 'eip155:56',
+    blockNumber: '120',
+    blockHash: `0x${'f'.repeat(64)}`,
+    parentBlockHash: `0x${'e'.repeat(64)}`,
+    finality: 'finalized' as const,
+    blockTimestamp: '2026-08-10T00:01:00.000Z',
+    capturedAt: '2026-08-10T00:01:01.000Z',
+    providerVersions: {
+      'bsc-rpc@test.example': 'evm-ledger-v0.1.0',
+      'sqd:binance-mainnet': 'sqd-finalized-v1',
+    },
+    adapterVersions: { evm: 'evm-ledger-v0.1.0' },
+    configHash: '7'.repeat(64),
+    entityModelVersion: 'entity-model-unapplied',
+    labelSnapshot: 'labels-unapplied',
+  };
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    reports = new PostgresPensionCandidateReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), reports.close()]);
+  });
+
+  it('persists a production-composed behavioral report, replays it, and rejects mutation', async () => {
+    const indexed = (address: string) => `0x${'0'.repeat(24)}${address.slice(2)}`;
+    const logs: EvmLogRecord[] = [2, 3, 4].map((digit, index) => ({
+      address: token,
+      blockHash: `0x${String(digit).repeat(64)}`,
+      blockNumber: `0x${(101 + index).toString(16)}`,
+      blockTimestamp: `2026-08-0${index + 2}T00:00:00.000Z`,
+      transactionHash: `0x${String(digit).repeat(64)}`,
+      transactionIndex: '0x0',
+      logIndex: '0x0',
+      data: `0x${shareUnit.toString(16).padStart(64, '0')}`,
+      topics: [
+        '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+        indexed(`0x${String(digit).repeat(40)}`),
+        indexed(candidate),
+      ],
+      removed: false,
+      raw: { integration: true },
+    }));
+    const logReader = {
+      getLogsObservation: async (query: EvmLogQuery) => {
+        expect(query).toMatchObject({ address: token, fromBlock: '100', toBlock: '120' });
+        return { endpointId: 'sqd:binance-mainnet', value: logs };
+      },
+    };
+    const run = await discoverEvmPensionCandidates({
+      tokenAddress: token,
+      fromBlock: '100',
+      toBlock: '120',
+      snapshot: reportSnapshot,
+      policy: {
+        shareUnitAtomic: shareUnit.toString(),
+        minimumExactUnitDeposits: 3,
+        minimumUniqueExactUnitDepositors: 3,
+        maximumCandidates: 20,
+      },
+      logReader,
+      writeEvidence: async (item, sourceEvidenceIds = [], itemSnapshot) =>
+        (await evidence.put(item, sourceEvidenceIds, itemSnapshot)).evidence,
+      now: () => '2026-08-10T00:01:02.000Z',
+    });
+    expect(run.report.candidates).toEqual([
+      expect.objectContaining({
+        address: candidate,
+        exactUnitDepositCount: 3,
+        roleAttribution: expect.objectContaining({
+          state: 'unknown',
+          reason: 'INSUFFICIENT_DATA',
+        }),
+      }),
+    ]);
+
+    const stored = await reports.put(run.report);
+    await expect(reports.put(run.report)).resolves.toEqual(stored);
+    await reports.close();
+    reports = new PostgresPensionCandidateReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(reports.get(stored.id)).resolves.toEqual(stored);
+    await expect(reports.latest(token)).resolves.toEqual(stored);
+    await expect(reports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE evm_pension_candidate_reports SET report = report WHERE id = $1', [
+          stored.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM evm_pension_candidate_reports WHERE id = $1', [stored.id]),
       ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();

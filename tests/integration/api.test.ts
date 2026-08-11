@@ -11,6 +11,8 @@ import {
   ProviderError,
   ProviderRegistry,
   SolanaLedgerAdapter,
+  type EvmLogQuery,
+  type EvmLogRecord,
   type JsonRpcTransport,
   type RestTransport,
   type TransportObservation,
@@ -5042,6 +5044,164 @@ describe('ZeroTrace API contract', () => {
       },
       terminalResult: null,
     });
+  });
+
+  it('discovers and replays durable BSC pension behavior candidates without promoting a role', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new BurnDiscoveryAnchorTransport(),
+      ),
+    );
+    const candidate = `0x${'d'.repeat(40)}`;
+    const shareUnit = 1_000_000n;
+    const indexed = (address: string) => `0x${'0'.repeat(24)}${address.slice(2)}`;
+    const logs: EvmLogRecord[] = [2, 3, 4].map((digit, index) => ({
+      address: fixtureFlapToken,
+      blockHash: `0x${String(digit).repeat(64)}`,
+      blockNumber: `0x${(101 + index).toString(16)}`,
+      blockTimestamp: `2024-02-0${index + 2}T00:00:00.000Z`,
+      transactionHash: `0x${String(digit).repeat(64)}`,
+      transactionIndex: '0x0',
+      logIndex: '0x0',
+      data: `0x${shareUnit.toString(16).padStart(64, '0')}`,
+      topics: [ERC20_TRANSFER_TOPIC, indexed(`0x${String(digit).repeat(40)}`), indexed(candidate)],
+      removed: false,
+      raw: { fixture: true },
+    }));
+    const getLogsObservation = vi.fn(async (query: EvmLogQuery) => {
+      expect(query).toMatchObject({
+        address: fixtureFlapToken,
+        fromBlock: '100',
+        toBlock: '110',
+        topics: [ERC20_TRANSFER_TOPIC],
+      });
+      return { endpointId: 'sqd:binance-mainnet', value: logs };
+    });
+    runtime.sqdBscLogReader = { getLogsObservation };
+    runtime.evidenceRepository = repository();
+    let storedRecord: Record<string, unknown> | undefined;
+    const put = vi.fn(async (report: Record<string, unknown>) => {
+      storedRecord = {
+        id: `pcr_${'3'.repeat(24)}`,
+        chainId: 'eip155:56',
+        tokenAddress: fixtureFlapToken,
+        fromBlock: '100',
+        toBlock: '110',
+        snapshotHash: `0x${'f'.repeat(64)}`,
+        resultHash: '4'.repeat(64),
+        report,
+        terminalEvidenceId: report.terminalEvidenceId,
+        evidenceIds: (report.metadata as { evidenceIds: string[] }).evidenceIds,
+        sourceSet: (report.metadata as { sourceSet: string[] }).sourceSet,
+        modelVersion: 'evm-pension-candidate-discovery-v1.0.0',
+        capturedAt: '2024-02-12T21:00:12.000Z',
+        createdAt: '2026-08-11T05:00:02.000Z',
+      };
+      return storedRecord;
+    });
+    const latest = vi.fn(async () => storedRecord);
+    const get = vi.fn(async () => storedRecord);
+    runtime.pensionCandidateReports = { put, latest, get } as unknown as NonNullable<
+      AppRuntime['pensionCandidateReports']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const live = await app.inject({
+      method: 'POST',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/pension-candidates`,
+      payload: {
+        chainId: 'eip155:56',
+        fromBlock: '100',
+        toBlock: '110',
+        shareUnitAtomic: shareUnit.toString(),
+        minimumExactUnitDeposits: 3,
+        minimumUniqueExactUnitDepositors: 3,
+        maximumCandidates: 20,
+      },
+    });
+    expect(live.statusCode, live.body).toBe(200);
+    expect(live.json()).toMatchObject({
+      report: {
+        tokenAddress: fixtureFlapToken,
+        scannedTransferCount: 3,
+        candidates: [
+          {
+            address: candidate,
+            exactUnitDepositCount: 3,
+            uniqueExactUnitDepositorCount: 3,
+            roleAttribution: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+            participantExitPolicy: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+            dividendExecution: { state: 'unknown', reason: 'NOT_QUERIED' },
+          },
+        ],
+      },
+      durableReport: { id: `pcr_${'3'.repeat(24)}`, resultHash: '4'.repeat(64) },
+    });
+    expect(put).toHaveBeenCalledTimes(1);
+
+    const latestReplay = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/pension-candidates/reports/latest`,
+    });
+    expect(latestReplay.statusCode, latestReplay.body).toBe(200);
+    expect(latestReplay.json()).toEqual({ record: storedRecord });
+
+    const exactReplay = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/claims/EVM/${fixtureFlapToken}/pension-candidates/reports/` +
+        `pcr_${'3'.repeat(24)}`,
+    });
+    expect(exactReplay.statusCode, exactReplay.body).toBe(200);
+    expect(exactReplay.json()).toEqual({ record: storedRecord });
+    expect(latest).toHaveBeenCalledWith(fixtureFlapToken);
+    expect(get).toHaveBeenCalledWith(`pcr_${'3'.repeat(24)}`);
+  });
+
+  it('requires durable storage for live pension candidate discovery', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new BurnDiscoveryAnchorTransport(),
+      ),
+    );
+    runtime.sqdBscLogReader = {
+      getLogsObservation: vi.fn(async () => ({ endpointId: 'sqd:binance-mainnet', value: [] })),
+    };
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/claims/EVM/${fixtureFlapToken}/pension-candidates`,
+      payload: {
+        chainId: 'eip155:56',
+        fromBlock: '100',
+        toBlock: '110',
+        shareUnitAtomic: '1000000',
+        minimumExactUnitDeposits: 3,
+        minimumUniqueExactUnitDepositors: 3,
+        maximumCandidates: 20,
+      },
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe('DURABLE_STORAGE_REQUIRED');
   });
 
   it('replays latest and exact durable Claim Reports without provider access', async () => {

@@ -1657,3 +1657,52 @@ MinIO coverage, production build, licenses, audit, SBOM, both Chromium viewports
 production container targets:
 [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31460030258) and
 [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31460030151).
+
+## FFT pension behavior discovery and durable replay: 2026-08-11
+
+ZeroTrace added `evm-pension-candidate-discovery-v1.0.0`, an explicit-policy behavioral screen over
+the complete finalized BSC ERC-20 Transfer surface. Unit tests cover qualifying exact-unit deposits,
+complete empty results, incomplete range coverage, duplicate/missing Evidence and fail-closed
+candidate ceilings. Production-composition tests verify query/log/candidate/terminal derivation
+edges and invariant Unknown role/no-exit/dividend meaning. Repository tests verify content-addressed
+idempotency, corrupt replay rejection, lookup validation and migration health. API tests cover live
+durable persistence, provider-free latest/exact replay and refusal to run without durable storage.
+
+PostgreSQL migration `016_evm_pension_candidate_reports` was applied non-destructively to the active
+volume. A real PostgreSQL integration composed the report through the production Evidence writer,
+closed and reopened the repository, replayed latest/exact content, passed health, and proved SQL
+update/delete rejection. The responsive Claim Audit panel passed both Chromium desktop and Pixel 7
+with editable policy, candidate metrics, immutable provenance, explicit Unknown fields and no
+horizontal overflow.
+
+The live read-only FFT run used token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, finalized range
+`113485950-115257276`, end hash
+`0x0af09564f5ef906e64e624caf396c6235ffb34b507f886127827ba4669c869b5`, and a recorded policy of
+1,000,000 FFT per share, minimum five exact deposits, minimum five unique exact-unit depositors and
+maximum 20 candidates. It validated 14,020 Transfers and found one matching address:
+`0x8d50a68b4f9ada119d198d6472eaf0cb6db302d9`.
+
+The candidate had 123 inflows, 71 exact-unit deposits from 69 unique exact-unit depositors, 107
+exact-multiple deposits, 16 non-multiple deposits, 164 observed whole shares, and ten outflows to
+one observed destination. Exact covered-range inflow/outflow/net amounts were respectively
+`176000010000000000000000000`, `24507000000000000000000000`, and
+`151493010000000000000000000` atomic FFT. Report `pcr_ff8cd2b24f23d71758cf3e63`, result hash
+`44ac76cc1adb60446d323761fac89acf53ad7feaedd18a368d35679f6d364d79`, candidate Evidence
+`ev_fd1eaba3374aa73bf4eb1230`, and terminal Evidence `ev_dda9728dd1f05d64175d9f4d` were persisted.
+
+The API was then recreated with `ALLOW_PRIVATE_PROVIDER_URLS=false`. Readiness became explicitly
+`DEGRADED` because the host intercepts public provider DNS into a private range, while the container
+remained healthy and storage stayed available. Provider-free latest and exact-ID routes returned
+the identical report ID, hash, candidate and 14,020-transfer count. No secret, signing, approval,
+swap, transaction broadcast or fund movement was used. The synchronous scan took 407 seconds;
+asynchronous checkpointing and Evidence batch persistence remain a documented production
+performance gate.
+
+The complete local gate passed 471 unit tests across 71 files, 71 environment-free integration
+tests, all 97 integration tests with PostgreSQL/ClickHouse/MinIO enabled, one Entity structural
+evaluation, and 34 Chromium desktop/mobile flows. The durable coverage run passed all 568 tests at
+83.37% statements, 77.95% branches, 93.41% functions and 84.55% lines. Formatting, lint, typecheck,
+production build, license allowlist, development/production vulnerability audits, CycloneDX SBOM,
+Compose validation and runtime health also passed. The first full E2E attempt exposed two ambiguous
+legacy text locators after the new panel added similar copy; the locators were scoped to the
+declaration panel and the complete 34-test rerun passed.

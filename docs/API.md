@@ -36,6 +36,9 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest` | latest immutable EVM Claim Report; provider-free replay          |
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`    | exact content-addressed EVM Claim Report replay                  |
 | POST   | `/api/v1/claims/declarations/parse`                           | compile public wording into Evidence-bound human-review drafts   |
+| POST   | `/api/v1/claims/EVM/:token/pension-candidates`                | finalized BSC share-unit/depositor behavior discovery            |
+| GET    | `/api/v1/claims/EVM/:token/pension-candidates/reports/latest` | latest provider-free immutable behavior report replay            |
+| GET    | `/api/v1/claims/EVM/:token/pension-candidates/reports/:id`    | exact content-addressed behavior report replay                   |
 | POST   | `/api/v1/claims/EVM/:token/burn-candidates`                   | finalized BSC zero-address Transfer candidate-range discovery    |
 | POST   | `/api/v1/claims/EVM/:token/burn-conservation`                 | exact-block ERC-20 supply/mint/burn conservation certificate     |
 | GET    | `/api/v1/claims/EVM/:token/burn-promotions/:id`               | provider-free durable candidate-promotion replay                 |
@@ -99,6 +102,33 @@ silent storage-level supply changes are returned as `Unknown(NOT_QUERIED)`. It d
 candidate promotion inside the synchronous request, all-block `totalSupply` scanning, attribution,
 signing, swaps or transaction broadcast. The durable worker and replay route below compose the
 event candidates with exact-block certificates without weakening that boundary.
+
+### Pension-vault behavioral candidate discovery
+
+`POST /api/v1/claims/EVM/:token/pension-candidates` accepts BSC `chainId=eip155:56`, an ordered
+finalized range of at most 5,000,000 blocks, and a required versioned policy:
+`shareUnitAtomic`, `minimumExactUnitDeposits`, `minimumUniqueExactUnitDepositors`, and
+`maximumCandidates`. No protocol or community threshold is silently hard-coded. Optional bounded
+SQD request/transfer limits are operational guards, not classification rules.
+
+The endpoint scans the complete token-wide ERC-20 `Transfer` surface from SQD, persists every query
+and returned log, and derives a candidate only when one address receives enough exact share-unit
+deposits from enough unique senders. Mint, burn, zero-amount, and self-transfer records do not count
+as behavioral deposits. Exact-multiple, non-multiple, outflow, time, counterparty, atomic amount,
+whole-share, and Evidence metrics remain separately visible; exceeding the candidate ceiling fails
+instead of silently truncating the result.
+
+This is behavioral screening, not official attribution. Every candidate must return
+`roleAttribution`, `participantExitPolicy`, and `dividendExecution` as typed Unknown. Neither a
+repeated 1,000,000-token deposit pattern nor subsequent outflow proves “养老钱包”, membership,
+no-exit enforcement, weekly dividends, controller identity, or payout funding source.
+
+Live discovery requires durable PostgreSQL Evidence and report storage. Migration
+`016_evm_pension_candidate_reports` stores `pcr_...` content-addressed reports and validates the
+finalized Snapshot, canonical report/source/Evidence sets, candidate-to-transfer derivation edges,
+terminal Evidence root, model version, and result hash before insert; update and delete are
+forbidden. The latest and exact-ID GET routes read PostgreSQL only, perform no RPC/SQD call, and
+return `404` for a token/report mismatch rather than substituting an empty candidate set.
 
 ### Durable ERC-20 burn promotion replay
 

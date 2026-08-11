@@ -35,6 +35,7 @@ import {
   PostgresFlapHistoryProjectionRepository,
   PostgresFlapLifetimeHeadRepository,
   PostgresIngestionCheckpointRepository,
+  PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
   RawArtifactStore,
   type EvidenceRepository,
@@ -64,6 +65,7 @@ export interface AppRuntime {
   controlSurfaces?: PostgresEvmControlSurfaceRepository;
   solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
   solanaTransactionReports?: PostgresSolanaTransactionReportRepository;
+  pensionCandidateReports?: PostgresPensionCandidateReportRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -507,6 +509,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const pensionCandidateReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresPensionCandidateReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -533,6 +544,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       controlSurfaces?.close(),
       solanaControlSurfaces?.close(),
       solanaTransactionReports?.close(),
+      pensionCandidateReports?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -563,6 +575,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
     ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
     ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),
+    ...(pensionCandidateReports === undefined ? {} : { pensionCandidateReports }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

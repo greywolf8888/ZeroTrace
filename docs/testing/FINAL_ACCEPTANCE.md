@@ -185,6 +185,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       deadlines, bounded terminal Evidence roots and richer exact-unit/share observations
 - [x] Content-addressed append-only Claim Report repository and provider-free latest/exact API/UI
       replay with same-Snapshot, canonical-hash and nested-Evidence validation
+- [x] Versioned token-wide pension behavior discovery with caller-supplied atomic share unit,
+      exact deposit/depositor thresholds, complete finalized SQD Transfer coverage, immutable
+      PostgreSQL report/replay and invariant Unknown role/no-exit/dividend semantics
 - [x] Same-Snapshot migrated-Flap Pancake V2 pool/factory/router verification, reserve spot,
       multi-size buy scenarios and automatic 0.10% Router/model arithmetic checks, including one
       named FFT point-in-time run
@@ -225,6 +228,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       terminal Evidence in API plus desktop/mobile UI
 - [x] Responsive Claim Audit declaration review with no production fixtures, warnings, draft
       readiness, human-review gate and Unknown pension-address rendering
+- [x] Responsive pension behavior discovery/latest replay with editable FFT acceptance profile,
+      candidate flow/share metrics, durable provenance and no identity promotion on desktop/mobile
 - [x] Responsive exact-block burn certificate review on desktop/mobile with status, supply/event
       arithmetic, generated actions and terminal Evidence
 - [x] Responsive burn-candidate range review with event scope, candidate blocks, terminal Evidence
@@ -272,6 +277,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Named FFT migrated Pancake V2 point-in-time market plus buy/exit-size arithmetic fixtures
 - [x] Named live FFT Alchemy + BNB Chain common-finalized-block market/RV reconciliation: 37/37
       checks passed and the 91-node terminal Evidence graph replayed from PostgreSQL after restart
+- [x] Named FFT pension behavior scan from block `113485950` through `115257276`: 14,020 Transfers,
+      one policy-matching address, immutable report `pcr_ff8cd2b24f23d71758cf3e63`, identical
+      provider-free latest/exact replay, and explicit Unknown official role/no-exit/dividend meaning
 - [ ] RV reconciliation against historical executable quotes
 - [ ] Run the registered
       [Flap/BSC FFT terminal acceptance](FLAP_FFT_ACCEPTANCE.md) for

@@ -187,6 +187,43 @@ trie node`, so no conclusion is emitted for that unavailable history. The result
 the pension Safe from movable custody into a burn nor proves deployment-to-head supply continuity.
 Independent archive-capable backfill and continuous scheduling remain terminal gates.
 
+## Scoped pension-behavior acceptance: 2026-08-11
+
+The production token-wide discovery scanned finalized FFT blocks `113485950-115257276`, ending at
+hash `0x0af09564f5ef906e64e624caf396c6235ffb34b507f886127827ba4669c869b5`, timestamp
+`2026-08-11T05:32:07Z`. The recorded policy used a 1,000,000 FFT atomic share unit
+(`1000000000000000000000000`), minimum five exact-unit deposits, minimum five unique exact-unit
+depositors, and a 20-candidate fail-closed ceiling. These inputs are part of the report; they are not
+silent protocol constants.
+
+SQD returned and ZeroTrace validated 14,020 ERC-20 Transfers with complete requested-range data and
+history coverage. Exactly one address satisfied the behavior policy:
+`0x8d50a68b4f9ada119d198d6472eaf0cb6db302d9`. It received 123 non-mint/non-self inflows, including
+71 exact-unit deposits from 69 unique exact-unit depositors, 107 exact-multiple deposits and 16
+non-multiple deposits. The exact multiples represent 164 observed whole shares. Observed inflow was
+`176000010000000000000000000` atomic FFT, outflow was
+`24507000000000000000000000`, and net was `151493010000000000000000000`; ten outflows went to one
+observed destination. These are exact covered-range ledger quantities, so their numerical error
+budget is zero atomic-unit mismatch.
+
+Report `pcr_ff8cd2b24f23d71758cf3e63`, result hash
+`44ac76cc1adb60446d323761fac89acf53ad7feaedd18a368d35679f6d364d79`, candidate Evidence
+`ev_fd1eaba3374aa73bf4eb1230`, and terminal Evidence `ev_dda9728dd1f05d64175d9f4d` were stored in
+PostgreSQL. After the live Provider was disabled and the fail-closed SSRF default restored, latest
+and exact-ID routes returned the identical report and result hash without RPC or SQD access.
+
+No false-positive “error rate” is claimed from one unlabeled token. Behavioral classification
+quality requires a separately sourced labeled corpus; until then ZeroTrace reports exact pattern
+coverage and counts, not an invented accuracy percentage. The public statement is independent
+Analyst Evidence. Official pension-wallet attribution, participant membership and no-exit
+enforcement, weekly-dividend classification, controller identity, funding source and payout cadence
+all remain Unknown. This scoped result therefore identifies an early-launch behavior candidate but
+does not complete the Claim Audit or terminal FFT acceptance.
+
+The synchronous live request took 407 seconds because 14,020 source Evidence nodes were validated
+and written individually. Checkpointed asynchronous execution and batch persistence remain a
+production performance gate; the range was not reduced or sampled to hide this limitation.
+
 ## Scoped EVM control/source acceptance: 2026-08-11
 
 Alchemy and BNB Chain independently read FFT at finalized block `115204533`, hash

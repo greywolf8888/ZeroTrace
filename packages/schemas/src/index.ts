@@ -2640,6 +2640,167 @@ export const EvmClaimTransferObservationSchema = ClaimTransferObservationSchema.
 });
 export type EvmClaimTransferObservation = z.infer<typeof EvmClaimTransferObservationSchema>;
 
+export const EvmPensionCandidatePolicySchema = z.object({
+  shareUnitAtomic: UnsignedQuantityStringSchema.refine((value) => BigInt(value) > 0n, {
+    message: 'Pension candidate share unit must be positive.',
+  }),
+  minimumExactUnitDeposits: z.number().int().min(1).max(100_000),
+  minimumUniqueExactUnitDepositors: z.number().int().min(1).max(100_000),
+  maximumCandidates: z.number().int().min(1).max(1_000),
+});
+export type EvmPensionCandidatePolicy = z.infer<typeof EvmPensionCandidatePolicySchema>;
+
+export const EvmPensionCandidateCriterionSchema = z.enum([
+  'EXACT_SHARE_UNIT_DEPOSITS',
+  'UNIQUE_DEPOSITOR_THRESHOLD',
+]);
+
+export const EvmPensionCandidateMetricsSchema = z
+  .object({
+    address: z.string().regex(/^0x[0-9a-f]{40}$/),
+    inflowTransferCount: z.number().int().positive(),
+    outflowTransferCount: z.number().int().nonnegative(),
+    exactUnitDepositCount: z.number().int().positive(),
+    exactMultipleDepositCount: z.number().int().positive(),
+    nonMultipleDepositCount: z.number().int().nonnegative(),
+    uniqueExactUnitDepositorCount: z.number().int().positive(),
+    uniqueOutflowDestinationCount: z.number().int().nonnegative(),
+    observedInflowAmount: UnsignedQuantityStringSchema,
+    observedOutflowAmount: UnsignedQuantityStringSchema,
+    observedNetAmount: QuantityStringSchema,
+    observedWholeShares: UnsignedQuantityStringSchema,
+    firstInflowAt: IsoDateTimeSchema,
+    lastInflowAt: IsoDateTimeSchema,
+    firstOutflowAt: knowledgeValueSchema(IsoDateTimeSchema),
+    lastOutflowAt: knowledgeValueSchema(IsoDateTimeSchema),
+    criteria: z.array(EvmPensionCandidateCriterionSchema).length(2),
+    transferEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.exactUnitDepositCount > value.exactMultipleDepositCount ||
+      value.exactMultipleDepositCount + value.nonMultipleDepositCount !==
+        value.inflowTransferCount ||
+      value.uniqueExactUnitDepositorCount > value.exactUnitDepositCount ||
+      BigInt(value.observedNetAmount) !==
+        BigInt(value.observedInflowAmount) - BigInt(value.observedOutflowAmount) ||
+      value.transferEvidenceIds.length !== new Set(value.transferEvidenceIds).size ||
+      value.transferEvidenceIds.some(
+        (evidenceId, index) => evidenceId !== [...value.transferEvidenceIds].sort()[index],
+      ) ||
+      value.criteria[0] !== 'EXACT_SHARE_UNIT_DEPOSITS' ||
+      value.criteria[1] !== 'UNIQUE_DEPOSITOR_THRESHOLD'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['address'],
+        message: 'Pension candidate metrics and canonical provenance must agree.',
+      });
+    }
+    const hasOutflow = value.outflowTransferCount > 0;
+    if (
+      value.uniqueOutflowDestinationCount > value.outflowTransferCount ||
+      (hasOutflow &&
+        (value.firstOutflowAt.state !== 'known' || value.lastOutflowAt.state !== 'known')) ||
+      (!hasOutflow &&
+        (value.firstOutflowAt.state !== 'unknown' || value.lastOutflowAt.state !== 'unknown'))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['outflowTransferCount'],
+        message: 'Pension candidate outflow timing must match observed outflows.',
+      });
+    }
+  });
+export type EvmPensionCandidateMetrics = z.infer<typeof EvmPensionCandidateMetricsSchema>;
+
+export const EvmPensionVaultCandidateSchema = EvmPensionCandidateMetricsSchema.extend({
+  evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  roleAttribution: knowledgeValueSchema(z.literal('PENSION_VAULT')),
+  participantExitPolicy: knowledgeValueSchema(z.boolean()),
+  dividendExecution: knowledgeValueSchema(z.boolean()),
+}).superRefine((value, context) => {
+  for (const field of ['roleAttribution', 'participantExitPolicy', 'dividendExecution'] as const) {
+    if (value[field].state === 'known') {
+      context.addIssue({
+        code: 'custom',
+        path: [field],
+        message: 'Behavioral candidate discovery cannot promote social or policy meaning to fact.',
+      });
+    }
+  }
+});
+export type EvmPensionVaultCandidate = z.infer<typeof EvmPensionVaultCandidateSchema>;
+
+export const EvmPensionCandidateDiscoverySchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    policy: EvmPensionCandidatePolicySchema,
+    scannedTransferCount: z.number().int().nonnegative(),
+    candidates: z.array(EvmPensionVaultCandidateSchema),
+    coverageEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('evm-pension-candidate-discovery-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    const addresses = value.candidates.map((candidate) => candidate.address);
+    const coverageEvidenceIds = [...value.coverageEvidenceIds];
+    const expectedEvidenceIds = [
+      ...coverageEvidenceIds,
+      ...value.candidates.map((candidate) => candidate.evidenceId),
+      value.terminalEvidenceId,
+    ].sort();
+    const actualEvidenceIds = [...value.metadata.evidenceIds].sort();
+    if (
+      BigInt(value.toBlock) < BigInt(value.fromBlock) ||
+      snapshot?.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.toBlock ||
+      value.metadata.freshness !== snapshot.blockTimestamp ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      value.metadata.sourceSet.length === 0 ||
+      value.metadata.sourceSet.length !== new Set(value.metadata.sourceSet).size ||
+      value.metadata.sourceSet.some(
+        (source, index) => source !== [...value.metadata.sourceSet].sort()[index],
+      ) ||
+      addresses.length !== new Set(addresses).size ||
+      addresses.some((address, index) => address !== [...addresses].sort()[index]) ||
+      value.candidates.length > value.policy.maximumCandidates ||
+      coverageEvidenceIds.length !== new Set(coverageEvidenceIds).size ||
+      coverageEvidenceIds.some(
+        (evidenceId, index) => evidenceId !== [...coverageEvidenceIds].sort()[index],
+      ) ||
+      expectedEvidenceIds.length !== actualEvidenceIds.length ||
+      expectedEvidenceIds.some((evidenceId, index) => evidenceId !== actualEvidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Pension candidate report range, coverage, order and Evidence must be canonical.',
+      });
+    }
+    for (const candidate of value.candidates) {
+      if (
+        candidate.exactUnitDepositCount < value.policy.minimumExactUnitDeposits ||
+        candidate.uniqueExactUnitDepositorCount < value.policy.minimumUniqueExactUnitDepositors
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['candidates'],
+          message: 'Every emitted pension candidate must satisfy the recorded policy.',
+        });
+      }
+    }
+  });
+export type EvmPensionCandidateDiscovery = z.infer<typeof EvmPensionCandidateDiscoverySchema>;
+
 export const ClaimActionObservationSchema = z.object({
   id: z.string().min(1),
   type: ClaimObservedActionTypeSchema,

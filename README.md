@@ -73,6 +73,9 @@ The current foundation includes:
 - bounded Flap contract-origin resolution that joins a finalized SQD create trace to the exact BSC
   receipt, `TokenCreated` event and replay Snapshot while treating an empty search range as negative
   Evidence rather than lifetime absence;
+- finalized EVM/BSC pension-wallet behavioral candidate discovery over complete requested token
+  transfer ranges, with explicit share-unit/depositor policy, immutable Evidence/report replay, and
+  role, no-exit, membership and dividend claims retained as Unknown until independently proven;
 - fixed-block Flap `previewSell` quotes whose provider-returned atomic proceeds and derivation
   Evidence remain separate from unqueried nominal price, fee breakdown and price impact;
 - migrated-Flap Pancake V2 market inspection that verifies pool, factory, router, pair identity,
@@ -206,7 +209,11 @@ without contacting RPC; automatic provider-failure fallback is explicitly marked
 retains the original Snapshot rather than masquerading as a live read. It also returns bracketed Bitcoin address
 UTXOs, outpoints with observable script-control facts, and Bitcoin transaction-level clustering
 candidates with CoinJoin/Payjoin/service suppression. Provider records remain separate from derived
-Evidence; scripts, keys and common inputs are never treated as entity identity. A
+Evidence; scripts, keys and common inputs are never treated as entity identity. A token-wide EVM
+behavior projection can identify wallets receiving repeated exact caller-supplied share units and
+report their complete observed in/outflow arithmetic. This is discovery evidence, not proof of an
+official pension role, membership contract, no-exit rule, controller, or dividend policy. Results
+are stored as immutable content-addressed reports for provider-free replay. A
 common-position anchor/continuity foundation now detects deterministic source conflicts and parent
 history changes without choosing a majority winner. Flap lifetime heads add deterministic
 multi-source rollback/replay; general multi-chain scheduling and rollback, independent-provider and
@@ -226,7 +233,7 @@ distributed workflows remain open work. Read
 | Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                                                                                                                                                               |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                                                                                                                                                                                                   |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, and verified Pancake V2 buy/exit-size models work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                                                                                                  |
-| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, live FFT observations and Claim Report replay work; complete historical backfill, continuous scheduling, official attribution and terminal FFT acceptance pending                                                                                                                                 |
+| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, immutable Claim Report replay, and finalized pension-behavior candidate discovery validated on FFT; complete historical backfill, continuous scheduling, official attribution, dividend-policy proof and terminal FFT acceptance pending                                                          |
 | Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                                                                                                                                                      |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
@@ -616,6 +623,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add Snapshot/Evidence-gated claim-allocation and terminal-action audit kernels
 - [x] Add Evidence-bound tax/treasury/burn/liquidity/pension/dividend statement compilation and human-review UI
 - [x] Add finalized target-indexed EVM Transfer/custody observation and live same-Snapshot FFT address-flow composition
+- [x] Add finalized token-wide pension-behavior candidate discovery, immutable report replay and scoped FFT validation
 - [x] Add exact-block ERC-20 total-supply/mint-burn conservation, Evidence replay, API and responsive Claim Audit UI
 - [x] Add BSC SQD long-range zero-address burn-candidate discovery with explicit silent-supply Unknown
 - [x] Add restart-safe burn-candidate promotion, exact-block certificates and provider-free API/UI replay

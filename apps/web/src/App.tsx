@@ -8,6 +8,7 @@ import {
   type EvmClaimBurnCandidateDiscoveryResponse,
   type EvmClaimBurnConservationResponse,
   type EvmClaimBurnPromotionReplayResponse,
+  type StoredPensionCandidateReport,
   type EvmSupplyContinuityReplayResponse,
   type EvmControlSurfaceResponse,
   type EvidenceRecord,
@@ -1928,6 +1929,297 @@ function ClaimBurnCandidateDiscoveryPanel() {
   );
 }
 
+function PensionCandidateDiscoveryPanel() {
+  const [token, setToken] = useState('0xdcfb441a1f38802820a4e7b4cc8aab37833c7777');
+  const [fromBlock, setFromBlock] = useState('113485950');
+  const [toBlock, setToBlock] = useState('');
+  const [shareUnitAtomic, setShareUnitAtomic] = useState('1000000000000000000000000');
+  const [minimumDeposits, setMinimumDeposits] = useState('5');
+  const [minimumDepositors, setMinimumDepositors] = useState('5');
+  const [maximumCandidates, setMaximumCandidates] = useState('20');
+  const [record, setRecord] = useState<StoredPensionCandidateReport>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState<'discover' | 'replay'>();
+  const validToken = /^0x[0-9a-fA-F]{40}$/.test(token);
+  const validRange = (() => {
+    if (!/^(0|[1-9]\d*)$/.test(fromBlock) || !/^[1-9]\d*$/.test(toBlock)) return false;
+    const from = BigInt(fromBlock);
+    const to = BigInt(toBlock);
+    return to >= from && to - from + 1n <= 5_000_000n;
+  })();
+  const validShareUnit = /^[1-9]\d*$/.test(shareUnitAtomic) && shareUnitAtomic.length <= 96;
+  const numericPolicy = [minimumDeposits, minimumDepositors, maximumCandidates].map(Number);
+  const validPolicy =
+    numericPolicy.every((value) => Number.isSafeInteger(value) && value >= 1) &&
+    numericPolicy[0]! <= 100_000 &&
+    numericPolicy[1]! <= 100_000 &&
+    numericPolicy[2]! <= 1_000;
+
+  async function discover(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validToken || !validRange || !validShareUnit || !validPolicy) return;
+    setBusy('discover');
+    setError(undefined);
+    setRecord(undefined);
+    try {
+      const result = await api.discoverPensionCandidates(token, {
+        fromBlock,
+        toBlock,
+        shareUnitAtomic,
+        minimumExactUnitDeposits: numericPolicy[0]!,
+        minimumUniqueExactUnitDepositors: numericPolicy[1]!,
+        maximumCandidates: numericPolicy[2]!,
+      });
+      setRecord(result.durableReport);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Pension candidate discovery failed.');
+    } finally {
+      setBusy(undefined);
+    }
+  }
+
+  async function replayLatest() {
+    if (!validToken) return;
+    setBusy('replay');
+    setError(undefined);
+    setRecord(undefined);
+    try {
+      setRecord((await api.latestPensionCandidateReport(token)).record);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Pension candidate replay failed.');
+    } finally {
+      setBusy(undefined);
+    }
+  }
+
+  const report = record?.report;
+  return (
+    <section
+      className="panel subject-panel quote-panel"
+      aria-labelledby="pension-candidate-heading"
+    >
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Behavioral discovery · immutable replay</span>
+          <h3 id="pension-candidate-heading">Pension Vault Candidates</h3>
+        </div>
+        <span className="snapshot-badge">BSC SQD · Evidence only</span>
+      </div>
+      <p className="panel-copy">
+        Find wallets receiving repeated exact share-unit deposits across a complete finalized
+        Transfer range. The FFT acceptance profile is prefilled with the stated 1,000,000-token unit
+        and the 2026-08-02 start block; every value remains editable and versioned in the report.
+      </p>
+      <div className="alert alert-warning">
+        <strong>Behavior is not identity</strong>
+        <span>
+          A matching wallet is only a chain-observed candidate. Official pension ownership, no-exit
+          rules, participant membership and weekly dividend execution remain Unknown until
+          independently evidenced.
+        </span>
+      </div>
+      <form
+        className="quote-form pension-candidate-form"
+        onSubmit={(event) => void discover(event)}
+      >
+        <div className="claim-burn-field pension-token-field">
+          <label htmlFor="pension-token">BSC token</label>
+          <input
+            id="pension-token"
+            spellCheck={false}
+            value={token}
+            onChange={(event) => setToken(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field">
+          <label htmlFor="pension-from">From block</label>
+          <input
+            id="pension-from"
+            inputMode="numeric"
+            value={fromBlock}
+            onChange={(event) => setFromBlock(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field">
+          <label htmlFor="pension-to">Finalized to block</label>
+          <input
+            id="pension-to"
+            inputMode="numeric"
+            placeholder="Current finalized block"
+            value={toBlock}
+            onChange={(event) => setToBlock(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field pension-share-field">
+          <label htmlFor="pension-share-unit">Share unit (atomic)</label>
+          <input
+            id="pension-share-unit"
+            inputMode="numeric"
+            value={shareUnitAtomic}
+            onChange={(event) => setShareUnitAtomic(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field">
+          <label htmlFor="pension-min-deposits">Min exact deposits</label>
+          <input
+            id="pension-min-deposits"
+            inputMode="numeric"
+            value={minimumDeposits}
+            onChange={(event) => setMinimumDeposits(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field">
+          <label htmlFor="pension-min-depositors">Min unique depositors</label>
+          <input
+            id="pension-min-depositors"
+            inputMode="numeric"
+            value={minimumDepositors}
+            onChange={(event) => setMinimumDepositors(event.target.value.trim())}
+          />
+        </div>
+        <div className="claim-burn-field">
+          <label htmlFor="pension-max-candidates">Candidate ceiling</label>
+          <input
+            id="pension-max-candidates"
+            inputMode="numeric"
+            value={maximumCandidates}
+            onChange={(event) => setMaximumCandidates(event.target.value.trim())}
+          />
+        </div>
+        <div className="panel-actions pension-candidate-actions">
+          <button
+            className="secondary-button"
+            type="submit"
+            disabled={
+              busy !== undefined || !validToken || !validRange || !validShareUnit || !validPolicy
+            }
+          >
+            {busy === 'discover' ? 'Scanning…' : 'Discover candidates'}
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={busy !== undefined || !validToken}
+            onClick={() => void replayLatest()}
+          >
+            {busy === 'replay' ? 'Replaying…' : 'Replay latest'}
+          </button>
+        </div>
+      </form>
+      {error === undefined ? null : <p className="inline-error">{error}</p>}
+      {record === undefined || report === undefined ? null : (
+        <div className="burn-conservation-result" data-testid="pension-candidate-result">
+          <div className="snapshot-strip">
+            <span className="status-chip status-up">Complete requested range</span>
+            <span>
+              <b>Transfers</b> {report.scannedTransferCount}
+            </span>
+            <span>
+              <b>Candidates</b> {report.candidates.length}
+            </span>
+            <span>
+              <b>Range</b> {report.fromBlock}–{report.toBlock}
+            </span>
+          </div>
+          <div className="fact-grid burn-fact-grid">
+            <div className="fact-row">
+              <span>Durable report</span>
+              <code>{record.id}</code>
+            </div>
+            <div className="fact-row">
+              <span>Policy model</span>
+              <code>{record.modelVersion}</code>
+            </div>
+            <div className="fact-row">
+              <span>Share unit (atomic)</span>
+              <strong>{report.policy.shareUnitAtomic}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Snapshot block</span>
+              <strong>{record.toBlock}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Captured</span>
+              <strong>{formatTime(record.capturedAt)}</strong>
+            </div>
+            <div className="fact-row">
+              <span>Terminal Evidence</span>
+              <code>{record.terminalEvidenceId}</code>
+            </div>
+          </div>
+          {report.candidates.length === 0 ? (
+            <p className="panel-copy">
+              No wallet satisfied this exact recorded policy inside this complete requested range.
+              This does not prove that no pension mechanism exists under another unit, threshold,
+              token, or time window.
+            </p>
+          ) : (
+            <div className="claim-draft-list">
+              {report.candidates.map((candidate) => (
+                <article className="claim-draft-card" key={candidate.address}>
+                  <div className="claim-draft-heading">
+                    <div>
+                      <span className="eyebrow">Behavioral candidate</span>
+                      <h4>{shortId(candidate.address, 10)}</h4>
+                    </div>
+                    <span className="status-chip status-degraded">Role Unknown</span>
+                  </div>
+                  <div className="fact-grid">
+                    <div className="fact-row">
+                      <span>Exact unit deposits</span>
+                      <strong>{candidate.exactUnitDepositCount}</strong>
+                    </div>
+                    <div className="fact-row">
+                      <span>Unique exact-unit depositors</span>
+                      <strong>{candidate.uniqueExactUnitDepositorCount}</strong>
+                    </div>
+                    <div className="fact-row">
+                      <span>Observed whole shares</span>
+                      <strong>{candidate.observedWholeShares}</strong>
+                    </div>
+                    <div className="fact-row">
+                      <span>Observed net amount (atomic)</span>
+                      <strong>{candidate.observedNetAmount}</strong>
+                    </div>
+                    <div className="fact-row">
+                      <span>Observed inflows / outflows</span>
+                      <strong>
+                        {candidate.inflowTransferCount} / {candidate.outflowTransferCount}
+                      </strong>
+                    </div>
+                    <div className="fact-row">
+                      <span>First / last inflow</span>
+                      <strong>
+                        {formatTime(candidate.firstInflowAt)} → {formatTime(candidate.lastInflowAt)}
+                      </strong>
+                    </div>
+                    <div className="fact-row">
+                      <span>Official role</span>
+                      <KnowledgeDisplay data={candidate.roleAttribution} />
+                    </div>
+                    <div className="fact-row">
+                      <span>No-exit policy</span>
+                      <KnowledgeDisplay data={candidate.participantExitPolicy} />
+                    </div>
+                    <div className="fact-row">
+                      <span>Weekly dividends</span>
+                      <KnowledgeDisplay data={candidate.dividendExecution} />
+                    </div>
+                    <div className="fact-row">
+                      <span>Candidate Evidence</span>
+                      <code>{candidate.evidenceId}</code>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ClaimBurnPromotionReplayPanel() {
   const [token, setToken] = useState('');
   const [scanId, setScanId] = useState('');
@@ -2406,6 +2698,7 @@ function ClaimAuditWorkspace() {
         <StatusPill status="HUMAN_REVIEW_REQUIRED" />
       </div>
       <ClaimDeclarationPanel />
+      <PensionCandidateDiscoveryPanel />
       <ClaimBurnCandidateDiscoveryPanel />
       <ClaimBurnPromotionReplayPanel />
       <SupplyContinuityReplayPanel />

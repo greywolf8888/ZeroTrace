@@ -29,6 +29,7 @@ import {
   FLAP_TOKEN_ORIGIN_MODEL_VERSION,
   PLATFORM_REGISTRY,
   discoverErc20BurnCandidates,
+  discoverEvmPensionCandidates,
   discoverFlapEventHistory,
   inspectFlapEventTransaction,
   observeEvmClaimBurnBlock,
@@ -51,6 +52,7 @@ import {
   ControlSurfaceReportStorageError,
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
+  PensionCandidateReportStorageError,
   SemanticCheckpointError,
   SolanaTransactionReportStorageError,
   StorageError,
@@ -273,6 +275,45 @@ const ClaimBurnDiscoveryRequestSchema = z
         code: 'custom',
         path: ['toBlock'],
         message: 'Burn candidate range may contain at most 5000000 blocks.',
+      });
+    }
+  });
+
+const PensionCandidateReportByIdParamsSchema = ClaimBurnParamsSchema.extend({
+  reportId: z.string().regex(/^pcr_[0-9a-f]{24}$/),
+});
+
+const PensionCandidateDiscoveryRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    fromBlock: z.string().regex(/^(0|[1-9]\d*)$/),
+    toBlock: z.string().regex(/^[1-9]\d*$/),
+    shareUnitAtomic: z
+      .string()
+      .regex(/^[1-9]\d*$/)
+      .max(96),
+    minimumExactUnitDeposits: z.number().int().min(1).max(100_000),
+    minimumUniqueExactUnitDepositors: z.number().int().min(1).max(100_000),
+    maximumCandidates: z.number().int().min(1).max(1_000),
+    maxBlocksPerRequest: z.number().int().min(1).max(1_000_000).optional(),
+    maxRequests: z.number().int().min(1).max(10_000).optional(),
+    maxTransfers: z.number().int().min(1).max(1_000_000).optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    if (toBlock < fromBlock) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Pension candidate range must be ordered.',
+      });
+    } else if (toBlock - fromBlock + 1n > 5_000_000n) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Pension candidate range may contain at most 5000000 blocks.',
       });
     }
   });
@@ -881,6 +922,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['pensionCandidateReports']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -910,6 +952,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         controlSurfaces,
         solanaControlSurfaces,
         solanaTransactionReports,
+        pensionCandidateReports,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -919,6 +962,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.controlSurfaces?.health(),
         runtime.solanaControlSurfaces?.health(),
         runtime.solanaTransactionReports?.health(),
+        runtime.pensionCandidateReports?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -937,7 +981,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                       ? solanaControlSurfaces
                       : solanaTransactionReports?.status === 'DOWN'
                         ? solanaTransactionReports
-                        : evidence;
+                        : pensionCandidateReports?.status === 'DOWN'
+                          ? pensionCandidateReports
+                          : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1158,6 +1204,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof PensionCandidateReportStorageError) {
+      const status = error.code === 'PENSION_CANDIDATE_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     if (error instanceof SemanticCheckpointError) {
       const status =
         error.code === 'SEMANTIC_CHECKPOINT_INVALID'
@@ -1331,6 +1383,19 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             : 'IMPLEMENTED_DURABLE_PENDING_INDEPENDENT_VALIDATION',
         detail:
           'A read-only BSC worker checkpoints complete zero-address event segments only after every candidate has an exact-block totalSupply/Transfer conservation certificate. Scan-ID API/UI replay uses PostgreSQL only, rejects corrupt state, and keeps silent supply-change detection Unknown.',
+      },
+      {
+        id: 'evm-pension-behavior-candidate-discovery',
+        status:
+          runtime.evidenceRepository === undefined || runtime.pensionCandidateReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : !runtime.evmAdapters.has(56)
+              ? 'BSC_PROVIDER_REQUIRED'
+              : runtime.sqdBscLogReader === undefined
+                ? 'SQD_PROVIDER_REQUIRED'
+                : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A caller-supplied, versioned share-unit/depositor policy scans a complete finalized BSC ERC-20 Transfer range, emits only behavioral wallet candidates, and persists an immutable Evidence-linked report for provider-free replay. Official pension role, participant exit policy and dividend execution remain Unknown until independent source and flow Evidence support them.',
       },
       {
         id: 'erc20-supply-continuity',
@@ -2861,6 +2926,165 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       });
       const evidence = await addEvidence(runtime, result.evidence);
       return { ...result, evidence };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/pension-candidates/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const repository = runtime.pensionCandidateReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_UNAVAILABLE',
+              'Durable pension candidate report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(params.token.toLowerCase());
+      if (record === undefined || record.chainId !== 'eip155:56') {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_NOT_FOUND',
+              'No durable BSC pension candidate report exists for this token.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/pension-candidates/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = PensionCandidateReportByIdParamsSchema.parse(request.params);
+      const repository = runtime.pensionCandidateReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_UNAVAILABLE',
+              'Durable pension candidate report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.chainId !== 'eip155:56' ||
+        record.tokenAddress !== params.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_NOT_FOUND',
+              'The durable pension candidate report was not found for this BSC token.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/:ledger/:token/pension-candidates',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const input = PensionCandidateDiscoveryRequestSchema.parse(request.body);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured BSC provider is required for pension candidate discovery.',
+              true,
+            ),
+          );
+      }
+      if (runtime.sqdBscLogReader === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'HISTORY_PROVIDER_UNCONFIGURED',
+              'Pension candidate discovery requires the finalized BSC SQD dataset.',
+              true,
+            ),
+          );
+      }
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.pensionCandidateReports === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_STORAGE_REQUIRED',
+              'Pension candidate discovery requires durable Evidence and report storage.',
+              false,
+            ),
+          );
+      }
+      const anchor = await adapter.readAnchorAt(input.toBlock);
+      if (anchor.snapshot.ledger !== 'EVM' || anchor.snapshot.finality !== 'finalized') {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FINALIZED_PROVIDER_REQUIRED',
+              'Pension candidate discovery requires a finalized range-end Snapshot.',
+              true,
+            ),
+          );
+      }
+      const run = await discoverEvmPensionCandidates({
+        tokenAddress: params.token,
+        fromBlock: input.fromBlock,
+        toBlock: input.toBlock,
+        snapshot: anchor.snapshot,
+        policy: {
+          shareUnitAtomic: input.shareUnitAtomic,
+          minimumExactUnitDeposits: input.minimumExactUnitDeposits,
+          minimumUniqueExactUnitDepositors: input.minimumUniqueExactUnitDepositors,
+          maximumCandidates: input.maximumCandidates,
+        },
+        logReader: runtime.sqdBscLogReader,
+        blockReader: adapter,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.maxBlocksPerRequest === undefined
+          ? {}
+          : { maxBlocksPerRequest: input.maxBlocksPerRequest }),
+        ...(input.maxRequests === undefined ? {} : { maxRequests: input.maxRequests }),
+        ...(input.maxTransfers === undefined ? {} : { maxTransfers: input.maxTransfers }),
+      });
+      const durableReport = await runtime.pensionCandidateReports.put(run.report);
+      return { report: run.report, durableReport };
     },
   );
 

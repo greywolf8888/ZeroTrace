@@ -1349,6 +1349,24 @@ tbody tr:hover {
   align-items: end;
 }
 
+.pension-candidate-form {
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  align-items: end;
+}
+
+.pension-token-field,
+.pension-share-field {
+  grid-column: span 2;
+}
+
+.pension-candidate-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 5px 0 0;
+  border-top: 0;
+}
+
 .claim-burn-field {
   display: grid;
   min-width: 0;
@@ -1899,6 +1917,16 @@ footer a {
 
   .claim-burn-form {
     grid-template-columns: 1fr;
+  }
+
+  .pension-token-field,
+  .pension-share-field {
+    grid-column: auto;
+  }
+
+  .pension-candidate-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .claim-draft-heading,

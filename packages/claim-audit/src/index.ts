@@ -831,3 +831,4 @@ export function auditClaims(input: ClaimAuditInput): ClaimAuditReport {
 export * from './flow.js';
 export * from './declaration.js';
 export * from './burn.js';
+export * from './pension-candidate.js';
