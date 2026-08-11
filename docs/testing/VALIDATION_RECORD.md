@@ -1969,3 +1969,10 @@ unconfigured for that final coverage command after V8 coverage instrumentation a
 reused 1 GiB volume's memory allowance. Their non-instrumented real-storage execution had already
 passed 3/3 in the 101-test serial suite; long-lived ClickHouse compaction, retention and memory
 sizing remain a production operations gate.
+
+Exact feature commit `db86aca` passed
+[GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31521748113) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31521748107) on PR #13. Quality and
+contracts, all 36 Chromium desktop/mobile flows, every production container target,
+JavaScript/TypeScript analysis and CodeQL passed. The documentation-only acceptance-record
+follow-up must independently pass before the protected-main squash merge.
