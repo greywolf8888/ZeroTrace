@@ -43,12 +43,14 @@ import {
   type ComparisonObservation,
   type EntityRelationshipReport,
   type EntityRelationshipTimelineReport,
+  type EntityInvestigationGraphReport,
 } from '@zerotrace/schemas';
 import {
   StorageError,
   type EvidenceRepository,
   type StoredEntityRelationshipReport,
   type StoredEntityRelationshipTimeline,
+  type StoredEntityInvestigationGraph,
 } from '@zerotrace/storage';
 import { encodeAbiParameters, toEventSelector } from 'viem';
 
@@ -1026,6 +1028,7 @@ function addFixtureEvidence(runtime: AppRuntime, blockOrSlot = '16') {
 function attachEntityReportDurability(runtime: AppRuntime) {
   const records = new Map<string, StoredEntityRelationshipReport>();
   const timelines = new Map<string, StoredEntityRelationshipTimeline>();
+  const graphs = new Map<string, StoredEntityInvestigationGraph>();
   const durableEvidence = new Map<string, EvidenceNode>();
   const evidenceRepository: EvidenceRepository = {
     put: async (evidence, sourceEvidenceIds = [], snapshot) => {
@@ -1158,6 +1161,56 @@ function attachEntityReportDurability(runtime: AppRuntime) {
     }),
     close: async () => undefined,
   } as NonNullable<AppRuntime['entityRelationshipTimelines']>;
+  runtime.entityInvestigationGraphs = {
+    put: async (report: EntityInvestigationGraphReport) => {
+      const graph = report.graph;
+      const snapshot = graph.metadata.snapshot;
+      const asOfPosition =
+        snapshot.ledger === 'EVM'
+          ? snapshot.blockNumber
+          : snapshot.ledger === 'BITCOIN'
+            ? snapshot.height
+            : snapshot.slot;
+      const asOfHash = snapshot.ledger === 'SOLANA' ? snapshot.blockhash : snapshot.blockHash;
+      const resultHash = hashPayload(report);
+      const record: StoredEntityInvestigationGraph = {
+        id: `eig_${hashPayload({ schema: 'zerotrace-entity-investigation-graph-report-v1', resultHash }).slice(0, 24)}`,
+        ledger: graph.request.ledger,
+        chainId: graph.request.chainId,
+        asOfPosition,
+        asOfHash,
+        timelineSetHash: graph.request.timelineSetHash,
+        resultHash,
+        report,
+        terminalEvidenceId: report.terminalEvidenceId,
+        timelineIds: graph.request.timelineIds,
+        subjectIds: graph.nodes.map((node) => node.subjectId).sort(),
+        edgeIds: graph.edges.map((edge) => edge.id).sort(),
+        evidenceIds: report.evidence.map((item) => item.id).sort(),
+        sourceSet: graph.metadata.sourceSet,
+        modelVersion: 'entity-investigation-graph-v0.1.0',
+        capturedAt: snapshot.capturedAt,
+        createdAt: '2026-08-09T00:00:04.000Z',
+      };
+      graphs.set(record.id, record);
+      return record;
+    },
+    get: async (id: string) => graphs.get(id),
+    latest: async ({ ledger, chainId, subjectId }) =>
+      [...graphs.values()].find(
+        (record) =>
+          record.ledger === ledger &&
+          record.chainId === chainId &&
+          (subjectId === undefined || record.subjectIds.includes(subjectId)),
+      ),
+    health: async () => ({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+      checkedAt: '2026-08-09T00:00:01.000Z',
+    }),
+    close: async () => undefined,
+  } as NonNullable<AppRuntime['entityInvestigationGraphs']>;
   return records;
 }
 
@@ -4322,7 +4375,7 @@ describe('ZeroTrace API contract', () => {
         features: [
           {
             kind: 'SHARED_ONCHAIN_AUTHORITY',
-            strength: 0.5,
+            strength: 0.98,
             reliability: 1,
             evidenceId: source.id,
           },
@@ -4385,6 +4438,73 @@ describe('ZeroTrace API contract', () => {
     });
     expect(exactTimeline.statusCode).toBe(200);
     expect(exactTimeline.json()).toEqual(latestTimeline.json());
+
+    const materializedGraph = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/investigation-graphs/materialize',
+      payload: {
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        timelineIds: [timelineId],
+      },
+    });
+    expect(materializedGraph.statusCode, materializedGraph.body).toBe(200);
+    expect(materializedGraph.json()).toMatchObject({
+      replayed: false,
+      ageProjection: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
+      record: {
+        id: expect.stringMatching(/^eig_[0-9a-f]{24}$/),
+        report: {
+          sourceOfTruth: 'DURABLE_ENTITY_RELATIONSHIP_TIMELINES',
+          automaticOwnershipMergeAllowed: false,
+          graph: {
+            summary: {
+              nodeCount: 2,
+              observationCount: 1,
+              sameControllerEdgeCount: 1,
+              rawTransferEdgesCopied: false,
+            },
+            edges: [
+              {
+                relation: 'SAME_CONTROLLER',
+                automaticOwnershipPropagationAllowed: false,
+              },
+            ],
+            investigationComponents: [
+              {
+                automaticEntityMembershipAllowed: false,
+                membershipConclusion: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+              },
+            ],
+          },
+        },
+      },
+    });
+    const graphId = materializedGraph.json().record.id as string;
+    const graphTerminalEvidenceId = materializedGraph.json().record.terminalEvidenceId as string;
+    const latestGraph = await app.inject({
+      method: 'GET',
+      url: '/api/v1/entities/investigation-graphs/latest?ledger=EVM&chainId=eip155%3A1&subjectId=controller&maxDepth=1&maxNodes=10',
+    });
+    expect(latestGraph.statusCode, latestGraph.body).toBe(200);
+    expect(latestGraph.json()).toMatchObject({
+      replayed: true,
+      record: { id: graphId },
+      subgraph: { seedSubjectId: 'controller', maxDepth: 1, truncated: false },
+    });
+    expect(latestGraph.json().subgraph.nodes).toHaveLength(2);
+    const exactGraph = await app.inject({
+      method: 'GET',
+      url: `/api/v1/entities/investigation-graphs/${graphId}?ledger=EVM&chainId=eip155%3A1&seedSubjectId=module`,
+    });
+    expect(exactGraph.statusCode, exactGraph.body).toBe(200);
+    expect(exactGraph.json()).toMatchObject({ replayed: true, record: { id: graphId } });
+    const graphEvidence = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${graphTerminalEvidenceId}/drilldown`,
+    });
+    expect(graphEvidence.statusCode, graphEvidence.body).toBe(200);
+    expect(graphEvidence.json().nodes.length).toBeGreaterThanOrEqual(4);
 
     const scenario = await app.inject({
       method: 'POST',

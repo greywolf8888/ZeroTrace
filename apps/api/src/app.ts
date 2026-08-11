@@ -16,8 +16,11 @@ import {
   canonicalizeEntityRelationshipInput,
   ENTITY_RELATIONSHIP_MODEL_VERSION,
   ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION,
+  ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION,
+  buildEntityInvestigationGraph,
   buildEntityRelationshipTimeline,
   resolveEntityRelationship,
+  traverseEntityInvestigationGraph,
 } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
@@ -59,6 +62,8 @@ import {
   ControlSurfaceReportStorageError,
   EntityRelationshipReportStorageError,
   EntityRelationshipTimelineStorageError,
+  EntityInvestigationGraphStorageError,
+  AgeInvestigationGraphProjectionError,
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   FlapPensionEntryReportStorageError,
@@ -70,6 +75,7 @@ import {
   type RawFactStorageHealth,
   type StorageHealth,
   type StoredSolanaTransactionReport,
+  type AgeInvestigationGraphProjectionResult,
 } from '@zerotrace/storage';
 import {
   AnalysisMetadataSchema,
@@ -77,6 +83,7 @@ import {
   EntityRelationshipInputSchema,
   EntityRelationshipReportSchema,
   EntityRelationshipTimelineReportSchema,
+  EntityInvestigationGraphReportSchema,
   FlapEventHistoryProjectionSchema,
   FlapLifetimeMaterializationSchema,
   SolanaTransactionIntelligenceReportSchema,
@@ -86,6 +93,7 @@ import {
   type AnalysisMetadata,
   type AnalysisSnapshot,
   type Evidence,
+  type KnowledgeValue,
   type Ledger,
 } from '@zerotrace/schemas';
 
@@ -617,6 +625,41 @@ const EntityRelationshipTimelineParamsSchema = z
   .object({ timelineId: z.string().regex(/^ert_[0-9a-f]{24}$/) })
   .strict();
 
+const EntityInvestigationGraphMaterializeSchema = z
+  .object({
+    ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']),
+    chainId: z.string().trim().min(1).max(128),
+    timelineIds: z
+      .array(z.string().regex(/^ert_[0-9a-f]{24}$/))
+      .min(1)
+      .max(250),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (new Set(value.timelineIds).size !== value.timelineIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['timelineIds'],
+        message: 'Investigation graph timeline IDs must be unique.',
+      });
+    }
+  });
+
+const EntityInvestigationGraphQuerySchema = z
+  .object({
+    ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']),
+    chainId: z.string().trim().min(1).max(128),
+    subjectId: z.string().trim().min(1).max(512).optional(),
+    seedSubjectId: z.string().trim().min(1).max(512).optional(),
+    maxDepth: z.coerce.number().int().min(0).max(3).default(2),
+    maxNodes: z.coerce.number().int().min(1).max(200).default(100),
+  })
+  .strict();
+
+const EntityInvestigationGraphParamsSchema = z
+  .object({ graphId: z.string().regex(/^eig_[0-9a-f]{24}$/) })
+  .strict();
+
 const FlapPancakeV2ReconciliationRequestSchema = z
   .object({
     chainId: z.literal('eip155:56'),
@@ -1009,6 +1052,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionEntryReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipTimelines']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphs']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -1042,6 +1086,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         pensionEntryReports,
         entityRelationshipReports,
         entityRelationshipTimelines,
+        entityInvestigationGraphs,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -1055,6 +1100,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.pensionEntryReports?.health(),
         runtime.entityRelationshipReports?.health(),
         runtime.entityRelationshipTimelines?.health(),
+        runtime.entityInvestigationGraphs?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -1081,7 +1127,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                               ? entityRelationshipReports
                               : entityRelationshipTimelines?.status === 'DOWN'
                                 ? entityRelationshipTimelines
-                                : evidence;
+                                : entityInvestigationGraphs?.status === 'DOWN'
+                                  ? entityInvestigationGraphs
+                                  : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1245,6 +1293,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     return value;
   };
 
+  const graphProjectionHealth = async () =>
+    runtime.ageInvestigationGraphProjection === undefined
+      ? ({
+          status: 'UNCONFIGURED' as const,
+          backend: 'APACHE_AGE' as const,
+          durable: true as const,
+          checkedAt: new Date().toISOString(),
+          graphName: 'zerotrace_investigation' as const,
+        } as const)
+      : runtime.ageInvestigationGraphProjection.health();
+
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof CorsOriginError) {
       return reply
@@ -1326,6 +1385,18 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof EntityInvestigationGraphStorageError) {
+      const status = error.code === 'ENTITY_INVESTIGATION_GRAPH_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof AgeInvestigationGraphProjectionError) {
+      const status = error.code === 'AGE_PROJECTION_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     if (error instanceof SemanticCheckpointError) {
       const status =
         error.code === 'SEMANTIC_CHECKPOINT_INVALID'
@@ -1356,7 +1427,11 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   }));
 
   app.get('/health/ready', { schema: { tags: ['system'] } }, async (_request, reply) => {
-    const [providers, storage] = await Promise.all([providerHealth(), storageHealth()]);
+    const [providers, storage, graphProjection] = await Promise.all([
+      providerHealth(),
+      storageHealth(),
+      graphProjectionHealth(),
+    ]);
     const serviceReady = storage.status !== 'DOWN';
     const status =
       providers.some((provider) => provider.status === 'UP') && serviceReady ? 'UP' : 'DEGRADED';
@@ -1366,16 +1441,18 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       readOnly: true,
       providers,
       storage,
+      graphProjection,
       checkedAt: new Date().toISOString(),
     });
   });
 
   app.get('/health', { schema: { tags: ['system'] } }, async () => {
-    const [providers, storage, ingestionStorage, dataQuality] = await Promise.all([
+    const [providers, storage, ingestionStorage, dataQuality, graphProjection] = await Promise.all([
       providerHealth(),
       storageHealth(),
       ingestionStorageHealth(),
       dataQualityHealth(),
+      graphProjectionHealth(),
     ]);
     return {
       status:
@@ -1391,6 +1468,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       storage,
       ingestionStorage,
       dataQuality,
+      graphProjection,
       checkedAt: new Date().toISOString(),
     };
   });
@@ -1652,11 +1730,14 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         status:
           runtime.evidenceRepository === undefined ||
           runtime.entityRelationshipReports === undefined ||
-          runtime.entityRelationshipTimelines === undefined
+          runtime.entityRelationshipTimelines === undefined ||
+          runtime.entityInvestigationGraphs === undefined
             ? 'DURABLE_STORAGE_REQUIRED'
-            : 'IMPLEMENTED_DURABLE_TEMPORAL_BASELINE',
+            : runtime.ageInvestigationGraphProjection === undefined
+              ? 'IMPLEMENTED_DURABLE_INVESTIGATION_GRAPH'
+              : 'IMPLEMENTED_DURABLE_GRAPH_WITH_AGE_PROJECTION',
         detail:
-          'Evidence-weighted pair scoring emits immutable Snapshot-bound hypotheses plus a durable cross-Snapshot timeline with explicit same-position revisions, position gaps, probability deltas and provider-free replay. Canonical ordering, grounded service-hub suppression, explicit Unknown and a hard no-automatic-merge boundary are enforced. Full graph extraction, analyst overrides and real-world calibration remain pending.',
+          'Evidence-weighted pair scoring emits immutable Snapshot-bound hypotheses and cross-Snapshot timelines. Exact-Snapshot timeline sets now build bounded investigation graphs with separate same-controller and coordination edges, retained negative/Unknown observations, service-node suppression, provider-free replay, and Evidence drilldown. Apache AGE is an optional rebuildable acceleration index; PostgreSQL reports remain authoritative. Analyst overrides, protocol-scale relationship extraction and real-world calibration remain pending.',
       },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },
       { id: 'shared-liquidity-exit-race', status: 'IMPLEMENTED_DETERMINISTIC' },
@@ -3456,6 +3537,336 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           );
       }
       return { replayed: true, record };
+    },
+  );
+
+  app.post(
+    '/api/v1/entities/investigation-graphs/materialize',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityInvestigationGraphMaterializeSchema.parse(request.body);
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.entityRelationshipReports === undefined ||
+        runtime.entityRelationshipTimelines === undefined ||
+        runtime.entityInvestigationGraphs === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_UNAVAILABLE',
+              'Durable Evidence, relationship reports, timelines, and graph report storage are required.',
+              false,
+            ),
+          );
+      }
+      const timelineIds = [...input.timelineIds].sort();
+      const records = await Promise.all(
+        timelineIds.map((timelineId) => runtime.entityRelationshipTimelines?.get(timelineId)),
+      );
+      const missingTimelineIds = timelineIds.filter((_, index) => records[index] === undefined);
+      if (missingTimelineIds.length > 0) {
+        return reply.code(404).send({
+          ...errorResponse(
+            request,
+            'ENTITY_RELATIONSHIP_TIMELINE_NOT_FOUND',
+            'At least one requested durable relationship timeline was not found.',
+            false,
+          ),
+          timelineIds: missingTimelineIds,
+        });
+      }
+      const storedTimelines = records.map((record) => record!);
+      if (
+        storedTimelines.some(
+          (record) => record.ledger !== input.ledger || record.chainId !== input.chainId,
+        )
+      ) {
+        return reply
+          .code(422)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_IDENTITY_MISMATCH',
+              'Every requested timeline must use the requested ledger and chain.',
+              false,
+            ),
+          );
+      }
+      const snapshotHashes = new Set(
+        storedTimelines.map((record) => hashPayload(record.report.timeline.metadata.snapshot)),
+      );
+      if (snapshotHashes.size !== 1) {
+        return reply
+          .code(422)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_SNAPSHOT_MISMATCH',
+              'Every requested timeline must terminate at the same exact Snapshot.',
+              false,
+            ),
+          );
+      }
+      const relationshipPairs = storedTimelines.map(
+        (record) => `${record.subjectA}\u0000${record.subjectB}`,
+      );
+      if (new Set(relationshipPairs).size !== relationshipPairs.length) {
+        return reply
+          .code(422)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_DUPLICATE_PAIR',
+              'An investigation graph may include only one timeline for each canonical subject pair.',
+              false,
+            ),
+          );
+      }
+      const latestRelationshipReports = await Promise.all(
+        storedTimelines.map((record) => {
+          const latestReportId = record.report.timeline.observations.at(-1)?.reportId;
+          return latestReportId === undefined
+            ? undefined
+            : runtime.entityRelationshipReports?.get(latestReportId);
+        }),
+      );
+      if (latestRelationshipReports.some((record) => record === undefined)) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_RELATIONSHIP_REPORT_INCOMPLETE',
+              'A timeline terminal relationship report is unavailable.',
+              true,
+            ),
+          );
+      }
+      const terminalEvidenceIds = storedTimelines.map((record) => record.terminalEvidenceId).sort();
+      const terminalNodes = await Promise.all(
+        terminalEvidenceIds.map((evidenceId) => runtime.evidenceRepository?.get(evidenceId)),
+      );
+      if (terminalNodes.some((node) => node === undefined)) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_EVIDENCE_INCOMPLETE',
+              'A relationship timeline terminal Evidence node is unavailable.',
+              true,
+            ),
+          );
+      }
+      const graph = buildEntityInvestigationGraph({
+        sources: storedTimelines.map((record, index) => {
+          const relationship = latestRelationshipReports[index]!;
+          return {
+            timelineId: record.id,
+            resultHash: record.resultHash,
+            terminalEvidenceId: record.terminalEvidenceId,
+            timeline: record.report.timeline,
+            ...(relationship.report.input.subjectAIsService === undefined
+              ? {}
+              : { subjectAIsService: relationship.report.input.subjectAIsService }),
+            ...(relationship.report.input.subjectBIsService === undefined
+              ? {}
+              : { subjectBIsService: relationship.report.input.subjectBIsService }),
+          };
+        }),
+      });
+      const snapshot = graph.metadata.snapshot;
+      const graphPosition =
+        snapshot.ledger === 'EVM'
+          ? snapshot.blockNumber
+          : snapshot.ledger === 'BITCOIN'
+            ? snapshot.height
+            : snapshot.slot;
+      const derived = await addDerivedAnalysisEvidence(
+        runtime,
+        snapshot,
+        terminalEvidenceIds,
+        `zerotrace:${ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION}`,
+        `entity-investigation-graph:${graph.request.ledger}:${graph.request.chainId}:${graphPosition}:${graph.request.timelineSetHash}`,
+        { graph },
+        'Exact-Snapshot investigation graph projection with distinct controller, coordination, service-suppression, negative, and Unknown semantics.',
+      );
+      const evidence = [...terminalNodes.map((node) => node?.evidence as Evidence), derived].sort(
+        (left, right) => left.id.localeCompare(right.id),
+      );
+      const report = EntityInvestigationGraphReportSchema.parse({
+        schemaVersion: 'entity-investigation-graph-report-v1',
+        sourceOfTruth: 'DURABLE_ENTITY_RELATIONSHIP_TIMELINES',
+        automaticOwnershipMergeAllowed: false,
+        graph,
+        terminalEvidenceId: derived.id,
+        evidence,
+      });
+      const stored = await runtime.entityInvestigationGraphs.put(report);
+      let ageProjection: KnowledgeValue<AgeInvestigationGraphProjectionResult>;
+      if (runtime.ageInvestigationGraphProjection === undefined) {
+        ageProjection = unavailableValue(
+          'PROVIDER_UNCONFIGURED',
+          'AGE_URL is absent; the authoritative PostgreSQL graph report remains available.',
+        );
+      } else {
+        try {
+          ageProjection = knownValue(await runtime.ageInvestigationGraphProjection.project(stored));
+        } catch (error) {
+          const reason =
+            error instanceof AgeInvestigationGraphProjectionError
+              ? error.code === 'AGE_PROJECTION_NOT_INITIALIZED'
+                ? 'EXECUTION_BLOCKED'
+                : error.code === 'AGE_PROJECTION_CONFLICT'
+                  ? 'CONFLICTING_SOURCES'
+                  : 'PROVIDER_DOWN'
+              : 'PROVIDER_DOWN';
+          ageProjection = unavailableValue(
+            reason,
+            'The optional Apache AGE index was not updated; the authoritative PostgreSQL graph report remains available.',
+          );
+        }
+      }
+      return { replayed: false, record: stored, ageProjection };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/investigation-graphs/latest',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityInvestigationGraphQuerySchema.parse(request.query);
+      const repository = runtime.entityInvestigationGraphs;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_UNAVAILABLE',
+              'Durable Entity investigation graph storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest({
+        ledger: input.ledger,
+        chainId: input.chainId,
+        ...(input.subjectId === undefined ? {} : { subjectId: input.subjectId }),
+      });
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_NOT_FOUND',
+              'No durable Entity investigation graph exists for this identity.',
+              false,
+            ),
+          );
+      }
+      const seedSubjectId = input.seedSubjectId ?? input.subjectId;
+      if (
+        seedSubjectId !== undefined &&
+        !record.report.graph.nodes.some((node) => node.subjectId === seedSubjectId)
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_SEED_NOT_FOUND',
+              'The traversal seed is not present in this investigation graph.',
+              false,
+            ),
+          );
+      }
+      return {
+        replayed: true,
+        record,
+        ...(seedSubjectId === undefined
+          ? {}
+          : {
+              subgraph: traverseEntityInvestigationGraph(record.report.graph, {
+                seedSubjectId,
+                maxDepth: input.maxDepth,
+                maxNodes: input.maxNodes,
+              }),
+            }),
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/investigation-graphs/:graphId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityInvestigationGraphQuerySchema.parse(request.query);
+      const params = EntityInvestigationGraphParamsSchema.parse(request.params);
+      const repository = runtime.entityInvestigationGraphs;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_UNAVAILABLE',
+              'Durable Entity investigation graph storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.graphId);
+      if (
+        record === undefined ||
+        record.ledger !== input.ledger ||
+        record.chainId !== input.chainId ||
+        (input.subjectId !== undefined && !record.subjectIds.includes(input.subjectId))
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_NOT_FOUND',
+              'The durable Entity investigation graph was not found for this identity.',
+              false,
+            ),
+          );
+      }
+      const seedSubjectId = input.seedSubjectId ?? input.subjectId;
+      if (
+        seedSubjectId !== undefined &&
+        !record.report.graph.nodes.some((node) => node.subjectId === seedSubjectId)
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_SEED_NOT_FOUND',
+              'The traversal seed is not present in this investigation graph.',
+              false,
+            ),
+          );
+      }
+      return {
+        replayed: true,
+        record,
+        ...(seedSubjectId === undefined
+          ? {}
+          : {
+              subgraph: traverseEntityInvestigationGraph(record.report.graph, {
+                seedSubjectId,
+                maxDepth: input.maxDepth,
+                maxNodes: input.maxNodes,
+              }),
+            }),
+      };
     },
   );
 

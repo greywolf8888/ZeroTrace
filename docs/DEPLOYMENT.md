@@ -22,8 +22,10 @@ docker compose build api web ingest-worker flap-origin-worker flap-history-worke
 The API image runs as the unprivileged Node user and is pruned of test, build, and development-log
 packages after compilation. npm retains the optional TypeScript peer selected by the pinned
 `viem`/`abitype` graph; it is not invoked by the runtime. The web image serves immutable assets with
-Nginx security headers and proxies read API paths. The two database targets bake bootstrap SQL into
-their entrypoint directories for path-independent startup.
+Nginx security headers and proxies read API paths. The CSP retains same-origin scripts/styles and
+allows only the exact SHA-256 of the pinned Cytoscape 3.34.0 runtime style block; arbitrary inline
+styles remain disallowed. The two database targets bake bootstrap SQL into their entrypoint
+directories for path-independent startup.
 
 ## Start profiles
 
@@ -39,16 +41,23 @@ Add durable workflows:
 docker compose --profile full up -d
 ```
 
-Add the optional graph projection store:
+Add the optional investigation graph projection store. Configure the API's internal sidecar URL in
+`.env` first (replace the password if `POSTGRES_PASSWORD` differs):
+
+```text
+AGE_URL=postgresql://zerotrace:zerotrace@graph-db:5432/zerotrace_graph
+```
 
 ```bash
-docker compose --profile graph up -d
+docker compose --profile graph up -d --build api graph-db
 ```
 
 Profiles expose architecture seams. The `ingest` worker is implemented for bounded finalized blocks,
 transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana
-instructions/logs/balances/token balances/rewards; the `full` workflow and `graph` profiles do not
-imply their application projections or orchestration are implemented.
+instructions/logs/balances/token balances/rewards. The `graph` profile implements only the bounded
+exact-Snapshot Entity investigation projection; it does not imply continuous cross-Snapshot graph
+maintenance. The `full` Temporal profile remains an infrastructure seam rather than completed
+workflow orchestration.
 
 Run one bounded finalized range through the implemented worker profile:
 
@@ -175,6 +184,9 @@ Expected invariants:
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
 - missing or unhealthy Flap projection/head or Claim Report migrations `008`/`010`/`011` return
   readiness HTTP 503 when PostgreSQL is configured;
+- missing investigation-graph migration `020` returns readiness HTTP 503 when PostgreSQL is
+  configured; optional AGE status is reported independently under `graphProjection` and does not
+  replace PostgreSQL authority;
 - `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
 - `/health` and `/api/v1/data-quality/anchors` distinguish agreement, disagreement, insufficient
   sources, provider unavailability, continuity state, and data-quality storage health;
@@ -284,6 +296,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/018_entity_relationship_reports.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/019_entity_relationship_timelines.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/020_entity_investigation_graphs.sql
 ```
 
 PowerShell equivalent:
@@ -322,6 +336,8 @@ Get-Content -Raw infra/postgres/init/017_flap_pension_entry_reports.sql |
 Get-Content -Raw infra/postgres/init/018_entity_relationship_reports.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/019_entity_relationship_timelines.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/020_entity_investigation_graphs.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

@@ -35,6 +35,7 @@ import {
   type SubjectCandidate,
   type SubjectResponse,
 } from './api.js';
+import { InvestigationGraphWorkspace } from './InvestigationGraph.js';
 
 type View = 'overview' | 'search' | 'entities' | 'control' | 'claims' | 'scenario' | 'health';
 type Theme = 'dark' | 'light';
@@ -3174,6 +3175,13 @@ function EntityIntelligenceWorkspace() {
           />
         </>
       )}
+      <InvestigationGraphWorkspace
+        key={`${ledger}:${chainId}:${timelineRecord?.id ?? 'no-timeline'}`}
+        ledger={ledger}
+        chainId={chainId}
+        {...(timelineRecord === undefined ? {} : { suggestedTimelineId: timelineRecord.id })}
+        {...(subjectA.trim().length === 0 ? {} : { suggestedSeedSubjectId: subjectA.trim() })}
+      />
     </>
   );
 }
@@ -6407,6 +6415,36 @@ function DataHealth({
                 {titleCase(component.backend)}: {titleCase(component.errorCode)}
               </div>
             ),
+          )}
+        </article>
+        <article className="panel provider-card storage-card">
+          <div className="provider-card-top">
+            <div>
+              <span className="chain-tag storage-tag">GRAPH</span>
+              <h3>Investigation projection</h3>
+            </div>
+            <StatusPill status={health?.graphProjection?.status ?? 'UNCONFIGURED'} />
+          </div>
+          <dl>
+            <div>
+              <dt>Backend</dt>
+              <dd>{titleCase(health?.graphProjection?.backend ?? 'APACHE_AGE')}</dd>
+            </div>
+            <div>
+              <dt>Authority</dt>
+              <dd>PostgreSQL report</dd>
+            </div>
+            <div>
+              <dt>Graph</dt>
+              <dd>{health?.graphProjection?.graphName ?? 'Not configured'}</dd>
+            </div>
+            <div>
+              <dt>Checked</dt>
+              <dd>{formatTime(health?.graphProjection?.checkedAt)}</dd>
+            </div>
+          </dl>
+          {health?.graphProjection?.errorCode === undefined ? null : (
+            <div className="provider-error">{titleCase(health.graphProjection.errorCode)}</div>
           )}
         </article>
         {(health?.providers ?? []).map((provider) => (

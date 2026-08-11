@@ -64,6 +64,14 @@ export interface HealthResponse {
     artifacts: IngestionStorageComponentHealth & { bucket?: string };
   };
   dataQuality: DataQualityHealth;
+  graphProjection?: {
+    status: 'UP' | 'DOWN' | 'UNCONFIGURED';
+    backend: 'APACHE_AGE';
+    durable: true;
+    checkedAt: string;
+    graphName: 'zerotrace_investigation';
+    errorCode?: string;
+  };
   checkedAt: string;
 }
 
@@ -326,6 +334,149 @@ export interface StoredEntityRelationshipTimeline {
 export interface EntityRelationshipTimelineReplayResponse {
   replayed: boolean;
   record: StoredEntityRelationshipTimeline;
+}
+
+export interface EntityInvestigationGraphNode {
+  id: string;
+  subjectId: string;
+  subjectType: KnowledgeValue<string>;
+  serviceInfrastructure: KnowledgeValue<boolean>;
+  terminalEvidenceIds: string[];
+}
+
+export interface EntityInvestigationGraphObservation {
+  timelineId: string;
+  timelineResultHash: string;
+  subjectA: string;
+  subjectB: string;
+  fromPosition: string;
+  toPosition: string;
+  classification: string;
+  sameControllerProbability: KnowledgeValue<number>;
+  coordinationProbability: KnowledgeValue<number>;
+  independenceProbability: KnowledgeValue<number>;
+  serviceSuppressionApplied: boolean;
+  projectionState:
+    | 'PROJECTED'
+    | 'SERVICE_SUPPRESSED'
+    | 'INDEPENDENCE_RETAINED'
+    | 'INFRASTRUCTURE_RETAINED'
+    | 'UNKNOWN_RETAINED';
+  projectedEdgeId: KnowledgeValue<string | null>;
+  terminalEvidenceId: string;
+}
+
+export interface EntityInvestigationGraphEdge {
+  id: string;
+  relation: 'SAME_CONTROLLER' | 'COORDINATED_WITH';
+  sourceNodeId: string;
+  targetNodeId: string;
+  subjectA: string;
+  subjectB: string;
+  classification: string;
+  sameControllerProbability: KnowledgeValue<number>;
+  coordinationProbability: KnowledgeValue<number>;
+  independenceProbability: KnowledgeValue<number>;
+  validFromPosition: string;
+  validToPosition: string;
+  observationCount: number;
+  classificationChangeCount: number;
+  temporalContinuity: KnowledgeValue<boolean>;
+  timelineId: string;
+  terminalEvidenceId: string;
+  automaticOwnershipPropagationAllowed: false;
+}
+
+export interface EntityInvestigationGraphCore {
+  request: {
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+    chainId: string;
+    timelineIds: string[];
+    timelineSetHash: string;
+  };
+  nodes: EntityInvestigationGraphNode[];
+  observations: EntityInvestigationGraphObservation[];
+  edges: EntityInvestigationGraphEdge[];
+  investigationComponents: Array<{
+    id: string;
+    nodeIds: string[];
+    edgeIds: string[];
+    automaticEntityMembershipAllowed: false;
+    membershipConclusion: KnowledgeValue<'COMMON_CONTROL' | 'COORDINATION_GROUP'>;
+  }>;
+  summary: {
+    nodeCount: number;
+    observationCount: number;
+    projectedEdgeCount: number;
+    sameControllerEdgeCount: number;
+    coordinationEdgeCount: number;
+    suppressedObservationCount: number;
+    componentCount: number;
+    completeRequestedTimelineSet: true;
+    rawTransferEdgesCopied: false;
+  };
+  metadata: AnalysisMetadata;
+}
+
+export interface StoredEntityInvestigationGraph {
+  id: string;
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  asOfPosition: string;
+  asOfHash: string;
+  timelineSetHash: string;
+  resultHash: string;
+  terminalEvidenceId: string;
+  timelineIds: string[];
+  subjectIds: string[];
+  edgeIds: string[];
+  evidenceIds: string[];
+  sourceSet: string[];
+  modelVersion: 'entity-investigation-graph-v0.1.0';
+  capturedAt: string;
+  createdAt: string;
+  report: {
+    schemaVersion: 'entity-investigation-graph-report-v1';
+    sourceOfTruth: 'DURABLE_ENTITY_RELATIONSHIP_TIMELINES';
+    automaticOwnershipMergeAllowed: false;
+    graph: EntityInvestigationGraphCore;
+    terminalEvidenceId: string;
+    evidence: EvidenceRecord[];
+  };
+}
+
+export interface EntityInvestigationSubgraph {
+  seedSubjectId: string;
+  maxDepth: number;
+  maxNodes: number;
+  truncated: boolean;
+  distances: Record<string, number>;
+  nodes: EntityInvestigationGraphNode[];
+  edges: EntityInvestigationGraphEdge[];
+  observations: EntityInvestigationGraphObservation[];
+}
+
+export interface EntityInvestigationGraphResponse {
+  replayed: boolean;
+  record: StoredEntityInvestigationGraph;
+  ageProjection?: KnowledgeValue<{
+    status: 'PROJECTED' | 'REPLAYED';
+    backend: 'APACHE_AGE';
+    graphName: string;
+    graphReportId: string;
+    nodeCount: number;
+    edgeCount: number;
+    projectedAt: string;
+  }>;
+  subgraph?: EntityInvestigationSubgraph;
+}
+
+export interface EvidenceDrilldownResponse {
+  nodes: Array<{
+    evidence: EvidenceRecord;
+    sourceEvidenceIds: string[];
+    snapshot?: Record<string, unknown>;
+  }>;
 }
 
 export interface SubjectResponse {
@@ -1830,6 +1981,58 @@ export const api = {
       `/api/v1/entities/relationships/timelines/${encodeURIComponent(timelineId)}?${parameters.toString()}`,
     );
   },
+  materializeEntityInvestigationGraph: (payload: {
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+    chainId: string;
+    timelineIds: string[];
+  }) =>
+    requestJson<EntityInvestigationGraphResponse>(
+      '/api/v1/entities/investigation-graphs/materialize',
+      { method: 'POST', body: JSON.stringify(payload) },
+    ),
+  latestEntityInvestigationGraph: (
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA',
+    chainId: string,
+    input: {
+      subjectId?: string;
+      seedSubjectId?: string;
+      maxDepth?: number;
+      maxNodes?: number;
+    } = {},
+  ) => {
+    const parameters = new URLSearchParams({ ledger, chainId });
+    if (input.subjectId !== undefined) parameters.set('subjectId', input.subjectId);
+    if (input.seedSubjectId !== undefined) parameters.set('seedSubjectId', input.seedSubjectId);
+    if (input.maxDepth !== undefined) parameters.set('maxDepth', String(input.maxDepth));
+    if (input.maxNodes !== undefined) parameters.set('maxNodes', String(input.maxNodes));
+    return requestJson<EntityInvestigationGraphResponse>(
+      `/api/v1/entities/investigation-graphs/latest?${parameters.toString()}`,
+    );
+  },
+  entityInvestigationGraph: (
+    graphId: string,
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA',
+    chainId: string,
+    input: {
+      subjectId?: string;
+      seedSubjectId?: string;
+      maxDepth?: number;
+      maxNodes?: number;
+    } = {},
+  ) => {
+    const parameters = new URLSearchParams({ ledger, chainId });
+    if (input.subjectId !== undefined) parameters.set('subjectId', input.subjectId);
+    if (input.seedSubjectId !== undefined) parameters.set('seedSubjectId', input.seedSubjectId);
+    if (input.maxDepth !== undefined) parameters.set('maxDepth', String(input.maxDepth));
+    if (input.maxNodes !== undefined) parameters.set('maxNodes', String(input.maxNodes));
+    return requestJson<EntityInvestigationGraphResponse>(
+      `/api/v1/entities/investigation-graphs/${encodeURIComponent(graphId)}?${parameters.toString()}`,
+    );
+  },
+  evidenceDrilldown: (evidenceId: string) =>
+    requestJson<EvidenceDrilldownResponse>(
+      `/api/v1/evidence/${encodeURIComponent(evidenceId)}/drilldown`,
+    ),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',

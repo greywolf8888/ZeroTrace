@@ -125,7 +125,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Deterministic Flap accepted-lineage rollback/replay with append-only invalidation and no
       majority branch selection
 - [ ] Forced real reorg and independently operated provider acceptance
-- [ ] Full temporal graph projection, traversal and rebuild beyond the pairwise timeline foundation
+- [x] Bounded exact-Snapshot investigation graph materialization, immutable PostgreSQL replay,
+      optional AGE projection/replay validation and depth/node-bounded traversal
+- [ ] Cross-Snapshot temporal graph maintenance, protocol-scale extraction and rebuild validation
 
 ## Intelligence
 
@@ -262,7 +264,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       Evidence, partial-result suppression and silent-supply Unknown on desktop/mobile
 - [x] Responsive all-block supply-continuity replay with exact range/sample/change counts,
       independent-operator attestations, terminal Evidence and no range overclaim on desktop/mobile
-- [ ] Complete search, full entity graph/traversal, comparison, scenario and export workflows
+- [x] Responsive bounded Controller Graph with distinct controller/coordination edges, retained
+      no-edge decisions and Evidence drilldown on desktop/mobile
+- [ ] Complete global search, cross-Snapshot graph timeline, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance
 

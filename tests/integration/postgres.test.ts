@@ -14,6 +14,8 @@ import {
 import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
 import {
   ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION,
+  ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION,
+  buildEntityInvestigationGraph,
   buildEntityRelationshipTimeline,
   canonicalizeEntityRelationshipInput,
   resolveEntityRelationship,
@@ -22,6 +24,7 @@ import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import {
   EntityRelationshipReportSchema,
   EntityRelationshipTimelineReportSchema,
+  EntityInvestigationGraphReportSchema,
   EvmControlCoverageDomainSchema,
   SolanaControlCoverageDomainSchema,
   SolanaTransactionIntelligenceReportSchema,
@@ -45,6 +48,8 @@ import {
   PostgresDataQualityRepository,
   PostgresEntityRelationshipReportRepository,
   PostgresEntityRelationshipTimelineRepository,
+  PostgresEntityInvestigationGraphRepository,
+  AgeInvestigationGraphProjectionRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaTransactionReportRepository,
@@ -63,6 +68,7 @@ const solanaReportSignature =
   '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
 
 const connectionString = process.env.TEST_POSTGRES_URL;
+const ageConnectionString = process.env.TEST_AGE_URL;
 const postgresDescribe = connectionString === undefined ? describe.skip : describe;
 const checkpointTestRunId = randomUUID();
 
@@ -1945,6 +1951,7 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
   let evidence: PostgresEvidenceRepository;
   let reports: PostgresEntityRelationshipReportRepository;
   let timelines: PostgresEntityRelationshipTimelineRepository;
+  let graphs: PostgresEntityInvestigationGraphRepository;
 
   beforeAll(() => {
     evidence = PostgresEvidenceRepository.fromConnectionString({
@@ -1959,10 +1966,14 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       connectionString: connectionString as string,
       maxConnections: 2,
     });
+    graphs = new PostgresEntityInvestigationGraphRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
   });
 
   afterAll(async () => {
-    await Promise.all([evidence.close(), reports.close(), timelines.close()]);
+    await Promise.all([evidence.close(), reports.close(), timelines.close(), graphs.close()]);
   });
 
   it('persists one canonical no-auto-merge hypothesis, replays it, and rejects mutation', async () => {
@@ -2076,7 +2087,7 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
 
     const revisedInput = canonicalizeEntityRelationshipInput({
       ...input,
-      features: input.features.map((feature) => ({ ...feature, strength: 0.5 })),
+      features: input.features.map((feature) => ({ ...feature, strength: 0.98 })),
     });
     const revisedResult = resolveEntityRelationship(revisedInput);
     const revisedTerminal = createEvidence({
@@ -2183,6 +2194,123 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       expect.objectContaining({ kind: 'REVISION', unobservedPositionCount: '0' }),
     ]);
 
+    const graph = buildEntityInvestigationGraph({
+      sources: [
+        {
+          timelineId: storedTimeline.id,
+          resultHash: storedTimeline.resultHash,
+          terminalEvidenceId: storedTimeline.terminalEvidenceId,
+          timeline: storedTimeline.report.timeline,
+        },
+      ],
+    });
+    const graphTerminal = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'DERIVED_FEATURE',
+      source: `zerotrace:${ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION}`,
+      locator: `entity-investigation-graph:EVM:eip155:1:910000:${graph.request.timelineSetHash}`,
+      payload: { graph },
+      blockOrSlot: '910000',
+      finality: 'finalized',
+      summary: 'Exact-Snapshot integration investigation graph projection.',
+      sourceEvidenceIds: graph.metadata.evidenceIds,
+    });
+    await evidence.put(graphTerminal, graph.metadata.evidenceIds, snapshot);
+    const graphReport = EntityInvestigationGraphReportSchema.parse({
+      schemaVersion: 'entity-investigation-graph-report-v1',
+      sourceOfTruth: 'DURABLE_ENTITY_RELATIONSHIP_TIMELINES',
+      automaticOwnershipMergeAllowed: false,
+      graph,
+      terminalEvidenceId: graphTerminal.id,
+      evidence: [timelineTerminal, graphTerminal].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      ),
+    });
+    const storedGraph = await graphs.put(graphReport);
+    await expect(graphs.put(graphReport)).resolves.toEqual(storedGraph);
+    await graphs.close();
+    graphs = new PostgresEntityInvestigationGraphRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(graphs.get(storedGraph.id)).resolves.toEqual(storedGraph);
+    await expect(
+      graphs.latest({ ledger: 'EVM', chainId: 'eip155:1', subjectId: input.subjectA }),
+    ).resolves.toEqual(storedGraph);
+    await expect(graphs.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+    expect(storedGraph).toMatchObject({
+      id: expect.stringMatching(/^eig_[0-9a-f]{24}$/),
+      timelineIds: [storedTimeline.id],
+      edgeIds: [expect.stringMatching(/^ege_[0-9a-f]{24}$/)],
+      report: {
+        automaticOwnershipMergeAllowed: false,
+        graph: {
+          summary: { rawTransferEdgesCopied: false, sameControllerEdgeCount: 1 },
+        },
+      },
+    });
+
+    if (ageConnectionString !== undefined) {
+      const ageProjection = new AgeInvestigationGraphProjectionRepository({
+        connectionString: ageConnectionString,
+        maxConnections: 1,
+      });
+      try {
+        await expect(ageProjection.health()).resolves.toMatchObject({
+          status: 'UP',
+          backend: 'APACHE_AGE',
+          graphName: 'zerotrace_investigation',
+        });
+        const projected = await ageProjection.project(storedGraph);
+        expect(projected).toMatchObject({
+          status: 'PROJECTED',
+          graphReportId: storedGraph.id,
+          nodeCount: 2,
+          edgeCount: 1,
+        });
+        await expect(ageProjection.project(storedGraph)).resolves.toMatchObject({
+          status: 'REPLAYED',
+          graphReportId: storedGraph.id,
+          nodeCount: 2,
+          edgeCount: 1,
+        });
+        const agePool = new Pool({ connectionString: ageConnectionString });
+        const ageClient = await agePool.connect();
+        try {
+          await ageClient.query("LOAD 'age'");
+          await ageClient.query('SET search_path = ag_catalog, "$user", public');
+          const projectedNodes = await ageClient.query(
+            `SELECT * FROM cypher('zerotrace_investigation', $$
+              MATCH (node:Subject)
+              WHERE node.graphReportId = '${storedGraph.id}'
+              RETURN count(node)
+            $$) AS (count agtype)`,
+          );
+          const projectedEdges = await ageClient.query(
+            `SELECT * FROM cypher('zerotrace_investigation', $$
+              MATCH (:Subject)-[edge]->(:Subject)
+              WHERE edge.graphReportId = '${storedGraph.id}'
+              RETURN count(edge)
+            $$) AS (count agtype)`,
+          );
+          expect(Number(projectedNodes.rows[0]?.count)).toBe(2);
+          expect(Number(projectedEdges.rows[0]?.count)).toBe(1);
+          await expect(
+            ageClient.query(
+              'UPDATE public.zerotrace_graph_projection_registry SET result_hash = result_hash WHERE graph_report_id = $1',
+              [storedGraph.id],
+            ),
+          ).rejects.toThrow(/immutable/);
+        } finally {
+          ageClient.release();
+          await agePool.end();
+        }
+      } finally {
+        await ageProjection.close();
+      }
+    }
+
     const pool = new Pool({ connectionString: connectionString as string });
     try {
       await expect(
@@ -2202,6 +2330,33 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       await expect(
         pool.query('DELETE FROM entity_relationship_timeline_reports WHERE id = $1', [
           storedTimeline.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      const tamperedGraphId = `eig_${randomUUID().replaceAll('-', '').slice(0, 24)}`;
+      const tamperedResultHash = hashPayload({ tamperedGraphId });
+      await expect(
+        pool.query(
+          `INSERT INTO entity_investigation_graph_reports (
+             id, ledger, chain_id, as_of_position, as_of_hash, timeline_set_hash, result_hash,
+             report, terminal_evidence_id, timeline_ids, subject_ids, edge_ids, evidence_ids,
+             source_set, model_version, captured_at, created_at
+           )
+           SELECT $1, ledger, chain_id, as_of_position, as_of_hash, timeline_set_hash, $2,
+             jsonb_set(report, '{graph,edges,0,classification}', '"UNKNOWN"'::jsonb),
+             terminal_evidence_id, timeline_ids, subject_ids, edge_ids, evidence_ids, source_set,
+             model_version, captured_at, created_at
+           FROM entity_investigation_graph_reports WHERE id = $3`,
+          [tamperedGraphId, tamperedResultHash, storedGraph.id],
+        ),
+      ).rejects.toThrow(/edge violates propagation boundaries/);
+      await expect(
+        pool.query('UPDATE entity_investigation_graph_reports SET report = report WHERE id = $1', [
+          storedGraph.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM entity_investigation_graph_reports WHERE id = $1', [
+          storedGraph.id,
         ]),
       ).rejects.toThrow(/immutable/);
     } finally {

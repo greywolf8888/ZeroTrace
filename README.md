@@ -117,6 +117,10 @@ The current foundation includes:
 - durable pairwise Entity relationship timelines over persisted reports, with same-position
   revisions, explicit unobserved-position gaps, Knowledge-state-preserving probability deltas,
   immutable terminal Evidence, and provider-free latest/exact replay;
+- bounded exact-Snapshot investigation graphs materialized only from those durable timelines, with
+  controller and coordination relations kept separate, service/independence/Unknown observations
+  retained without false edges, immutable PostgreSQL authority, optional Apache AGE acceleration,
+  bounded traversal, and an interactive Cytoscape Evidence drilldown UI;
 - Snapshot-bound Bitcoin transaction-entity screening that exposes common-input and bounded change
   candidates, exact fee arithmetic, address reuse, equal-output CoinJoin-like and fanout patterns,
   while BIP78/Payjoin and unqueried service attribution block every automatic ownership merge;
@@ -232,8 +236,8 @@ Unknown until pinned-fork execution. A
 common-position anchor/continuity foundation now detects deterministic source conflicts and parent
 history changes without choosing a majority winner. Flap lifetime heads add deterministic
 multi-source rollback/replay; general multi-chain scheduling and rollback, independent-provider and
-forced-reorg validation, semantic normalization, graph projection, protocol-specific decoders, and
-distributed workflows remain open work. Read
+forced-reorg validation, semantic normalization, cross-Snapshot temporal graph maintenance,
+protocol-specific decoders, and distributed workflows remain open work. Read
 [Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
 [Master Prompt](docs/architecture/ZEROTRACE_MASTER_PROMPT.md).
 
@@ -244,7 +248,7 @@ distributed workflows remain open work. Read
 | EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound queries, finalized raw execution/state, strict ERC-1167/EIP-1967/ERC-173/registered-Safe reads, recursive logic-code hashing, and Sourcify V2 exact-source binding; effective custom-role controllers, validity history and archive/semantic validation pending                                                                                                                                                                            |
 | Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/address/transaction/outpoint reads, standard-script control and conservative common-input/change candidates with CoinJoin/Payjoin/fanout suppression; Core policy, complete graph/history, calibrated classification and asset protocols pending                                                                                                                                                                                     |
 | Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound legacy/v0 semantics with ALT/CPI, official System/SPL/Token-2022 instruction identification, owner-aware core transfer/mint/burn flows, zero-tolerance atomic token reconciliation, immutable transaction-report replay, and finalized token/loader authority reports; continuous projection, Token-2022 extension execution, platform/AMM decoders, PDA/Squads/history/build provenance, other loaders and archive reconciliation pending |
-| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline, immutable pairwise hypotheses, bounded durable relationship timelines, provider-free API/UI replay and executable structural Precision/False-Merge gates implemented; full graph projection, analyst overrides and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                                 |
+| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline, immutable pairwise hypotheses/timelines, bounded exact-Snapshot investigation graphs, PostgreSQL/optional AGE projection, provider-free API/UI replay and executable structural Precision/False-Merge gates implemented; cross-Snapshot temporal maintenance, analyst overrides and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                |
 | Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                                                                                                                                                               |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg and other platform adapters pending                                                                                                                                                                                                                                        |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, verified Pancake V2 buy/exit models, and immutable candidate-bound pension-entry Scenario Reports with provider-free replay work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                   |
@@ -470,8 +474,10 @@ Evidence. Public JSON-RPC does not provide arbitrary historical account state, s
 rejects a caller-supplied historical slot instead of pretending the current account state existed
 there. Exact and latest persisted report routes remain provider-free.
 
-Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
-`--profile graph`.
+Temporal is opt-in with `docker compose --profile full up --build`. Apache AGE is an optional
+derived traversal index: set `AGE_URL` as documented in
+[Local Development](docs/DEVELOPMENT.md#optional-apache-age-investigation-projection), then start
+the `graph` profile. Immutable PostgreSQL graph reports remain authoritative if AGE is absent.
 
 Public BNB Smart Chain, Bitcoin, and Solana endpoints are development fallbacks and can be
 rate-limited. Ethereum remains unconfigured until a local Alchemy key or another read-only RPC is
@@ -646,6 +652,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add Bitcoin transaction common-input/change candidates with CoinJoin/Payjoin/service suppression and no automatic entity merge
 - [x] Persist immutable Entity relationship hypothesis reports with complete Evidence lineage, provider-free replay and no automatic merge
 - [x] Materialize bounded pairwise relationship timelines with revisions, explicit position gaps, immutable Evidence and provider-free replay
+- [x] Materialize bounded exact-Snapshot investigation graphs with immutable PostgreSQL reports, optional Apache AGE projection, bounded traversal and Cytoscape Evidence drilldown
 - [x] Add version-pinned Flap BSC Portal-state inspection with Evidence/Unknown UI rendering
 - [x] Add fixed-block Flap Portal sell previews with provider Evidence and no-fake-zero UI states
 - [x] Add exact-receipt Flap creation/configuration/migration event decoding with default provenance
@@ -674,7 +681,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add complete common-finalized-block Flap/Pancake V2 multi-source reconciliation with official operator attestations and typed 0%/0.50% budgets
 - [ ] Add live/unfinalized policy, archive-grade coverage and forced real-reorg drills across independent operators
 - [ ] Add Pump/PumpSwap, Raydium, Meteora, Moonshot, Four.meme and FomoWell decoders
-- [ ] Build the full temporal entity graph, real-world calibration datasets and authenticated analyst overrides
+- [ ] Extend investigation graphs to cross-Snapshot temporal maintenance, real-world calibration datasets and authenticated analyst overrides
 - [x] Add finalized ERC-1167/EIP-1967/ERC-173/registered-Safe EVM control-surface reports and UI
 - [x] Bind recursive EVM logic bytecode to exact Sourcify V2 metadata and separate declared mutation surfaces from effective rights
 - [x] Add finalized one-slot SPL Token/Token-2022/multisig/upgradeable-loader authority reports and UI
@@ -682,7 +689,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
 - [ ] Complete generic Claim Verification coverage: durable scheduling, historical backfill, reviewed-draft promotion and independently evidenced action paths
-- [ ] Complete search, timeline, evidence graph, comparison, scenario and export workflows in the UI
+- [ ] Complete global search, cross-Snapshot timeline, comparison, scenario and export workflows in the UI
 - [ ] Run archive-grade, multi-provider, real-chain fixtures and production load/failure testing
 
 Flap/BSC token FFT at

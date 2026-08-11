@@ -233,7 +233,30 @@ A `LABELED_REAL_WORLD` corpus requires every prediction to retain a ledger Snaps
 Brier `<= 0.15`, and ECE `<= 0.05`; missing denominators produce `INSUFFICIENT_DATA`. The checked-in
 `STRUCTURAL_GOLDEN` corpus is test-only and can prove regression and suppression behavior, but its
 calibration values are `DIAGNOSTIC_ONLY` and cannot establish a calibrated production entity model.
-Temporal graph extraction and a real labeled corpus remain open.
+Durable pairwise timelines and a bounded exact-Snapshot investigation projection are implemented.
+Cross-Snapshot graph maintenance and a real labeled corpus remain open.
+
+#### Investigation graph projection
+
+The `entity-investigation-graph-v0.1.0` materializer accepts only immutable relationship timelines
+whose terminal observations share one exact ledger Snapshot. It creates investigation relations,
+not a copy of all transfers: positive controller classifications become `SAME_CONTROLLER`, while
+`COORDINATED_BUT_INDEPENDENT` becomes the separate `COORDINATED_WITH` relation. Likely-independent,
+service-suppressed, infrastructure and Unknown states stay as observations without edges. Service
+infrastructure can never acquire a propagated ownership edge.
+
+The content-addressed PostgreSQL report is authoritative and includes every requested timeline,
+node, projection decision, edge, navigation component, source, coverage field, model version and
+terminal Evidence lineage. Components are only a bounded navigation aid and explicitly cannot
+become Entity membership. Latest/exact replay and traversal do not contact chain providers;
+traversal is capped at depth three and 200 nodes.
+
+Apache AGE is an optional derived accelerator. Projection runs transactionally into a dedicated
+graph with only `Subject`, `SAME_CONTROLLER` and `COORDINATED_WITH` records plus report/Evidence
+identity. Its immutable registry and replay count checks detect drift. AGE unavailability is
+reported independently and never changes, replaces or deletes the PostgreSQL report. The analyst
+UI uses Cytoscape.js to render only the bounded returned subgraph and opens each edge's Evidence
+derivation ledger. There is no automatic ownership propagation, Entity merge or chain-write path.
 
 For Bitcoin, a transaction-level model may emit common-input and script-type change candidates only
 as derived features. Equal-output CoinJoin-like structure, fanout/batching, incomplete prevout
@@ -580,14 +603,14 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                             |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Entity hypotheses/timelines, Flap history, EVM Claim/pension-entry Scenario Reports, and Solana control/transaction reports wired; other repositories pending |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                                                                                                                  |
-| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                                                       |
-| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                                                                                                                                          |
-| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                                                      |
-| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                                                                                                                             |
+| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Entity hypotheses/timelines/investigation graphs, Flap history, EVM Claim/pension-entry Scenario Reports, and Solana control/transaction reports wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                                                                                                                                       |
+| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                                                                            |
+| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE derivative projection wired for bounded exact-Snapshot Entity investigation graphs; PostgreSQL remains authoritative                                                                                                                       |
+| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                                                                           |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                                                                                                                                                  |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, ingestion-run,
 and semantic-scan-run tables include append-only or monotonic guards. Semantic checkpoints bind an
@@ -618,6 +641,13 @@ payload against the Evidence ledger, the complete report-terminal parent set, ca
 range arrays, the fixed timeline model version, and the hard no-automatic-merge literal. The
 repository re-parses and re-hashes every replay; update, deletion, truncation beyond the API bound,
 or a missing parent fails closed.
+
+Entity investigation graph reports are immutable, content-addressed compositions of those durable
+timelines. PostgreSQL verifies a single exact Snapshot, every timeline identity/result/current
+probability, exact Evidence payloads and terminal parents, canonical node/edge/component arrays,
+classification-compatible edge types, service-node suppression and the no-transfer-copy/no-
+automatic-propagation literals. The optional AGE projection stores only the bounded investigation
+subgraph and verifies immutable replay counts against the authoritative report.
 
 Flap history projection segments are append-only bounded results keyed to one semantic scan UUID.
 An insert must begin at that running scan's exact cursor and cover precisely one configured chunk.

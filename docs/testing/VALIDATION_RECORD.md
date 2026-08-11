@@ -1821,3 +1821,50 @@ typecheck, production build, licenses, audit, SBOM, all 34 Chromium flows and al
 container targets:
 [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31473349649) and
 [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31473349605).
+
+## Evidence-backed Entity investigation graph and optional AGE projection: 2026-08-11
+
+ZeroTrace added `entity-investigation-graph-v0.1.0` as a generic Entity Resolution read model. It
+materializes one exact-Snapshot graph from one to 250 immutable relationship timelines, emits only
+typed `SAME_CONTROLLER` or distinct `COORDINATED_WITH` edges, retains negative, service,
+infrastructure and Unknown observations without inventing edges, and never copies raw transfers or
+creates Entity membership. Known service hubs and conflicting service evidence both suppress
+ownership propagation. Traversal is limited to depth three and 200 nodes.
+
+PostgreSQL migration `020_entity_investigation_graphs` stores content-addressed reports and rejects
+timeline, Snapshot, Evidence, endpoint, probability, projection and terminal-parent mismatches as
+well as update/delete attempts. A fresh isolated PostgreSQL 17.10 project applied migrations `001`
+through `020`; all 23 real-store tests passed. A separate clean Apache AGE `1.7.0` project created
+the extension, graph and immutable projection registry, then passed the same 23 PostgreSQL/AGE
+tests. PostgreSQL remains authoritative; AGE is a bounded derivative navigation index whose
+availability is reported independently. Both disposable validation volumes were removed.
+
+The rebuilt Compose API materialized persisted graph `eig_c32d2fd69c1bdde5d8adf26a`: two nodes,
+one `SAME_CONTROLLER` edge, `rawTransferEdgesCopied=false`, AGE status `PROJECTED`, exact replay
+match, two-node bounded traversal, and a four-node terminal Evidence drilldown. An unmocked headed
+Chromium session loaded this exact report in the Cytoscape UI and opened its Evidence Ledger from
+the accessible edge control. The final browser console contained zero errors and zero warnings.
+The strict CSP retains `style-src 'self'` plus the pinned SHA-256 hash required by Cytoscape
+`3.34.0`; no broad inline-style allowance was added.
+
+The complete local gate passed 505 unit tests across 77 files, 72 environment-free integration
+tests, all 99 real-storage integration tests, one structural Entity evaluation and all 36 Chromium
+desktop/mobile flows. The durable coverage run passed all 604 tests at 83.28% statements, 77.48%
+branches, 93.76% functions and 84.44% lines. Formatting, lint, typecheck, production build, license
+allowlist, development/production vulnerability audits, CycloneDX SBOM and Compose validation
+passed. The Cytoscape dependency is pinned at `3.34.0`, MIT licensed, dynamically imported, and
+therefore isolated in a lazy web chunk.
+
+The first all-storage run against the existing long-lived ClickHouse volume passed 96 of 99 tests
+but three unrelated ingestion cases failed with ClickHouse error `241 MEMORY_LIMIT_EXCEEDED`
+(`1.02 GiB` projected versus `802.76 MiB` permitted). The identical suite then passed 99/99 using
+a fresh disposable ClickHouse/MinIO environment; the existing project volume was preserved. This
+is an operational capacity/retention warning, not accepted as a product pass for the long-lived
+volume, and remains a required production load gate.
+
+A web-only Docker build later left Docker Desktop's API unresponsive after its caller timed out.
+Docker Desktop was restarted without deleting volumes; ZeroTrace and unrelated existing containers
+recovered, AGE was restarted explicitly, and the isolated web rebuild/recreate then passed. Final
+Compose health reported PostgreSQL storage and AGE projection `UP`, API live HTTP 200, web HTTP 200,
+`readOnly=true`, and explicit provider-dependent readiness rather than converting provider failure
+to a successful or zero-valued state.

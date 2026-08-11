@@ -49,6 +49,7 @@ services:
       SOURCIFY_V2_URL: ${SOURCIFY_V2_URL:-https://sourcify.dev/server}
       SOURCIFY_REQUESTS_PER_SECOND: ${SOURCIFY_REQUESTS_PER_SECOND:-2}
       POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+      AGE_URL: ${AGE_URL:-}
       CLICKHOUSE_URL: http://clickhouse:8123
       CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-default}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
@@ -466,6 +467,13 @@ services:
       - '${AGE_PORT:-5455}:5432'
     volumes:
       - age-data:/var/lib/postgresql
+      - ./infra/age/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U zerotrace -d zerotrace_graph']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
     networks: [zerotrace]
 
 networks:

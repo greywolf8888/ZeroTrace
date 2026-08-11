@@ -164,6 +164,9 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   const revisedTerminalEvidenceId = `ev_${'3'.repeat(24)}`;
   const timelineTerminalEvidenceId = `ev_${'4'.repeat(24)}`;
   const timelineId = `ert_${'5'.repeat(24)}`;
+  const graphId = `eig_${'6'.repeat(24)}`;
+  const graphEdgeId = `ege_${'7'.repeat(24)}`;
+  const graphTerminalEvidenceId = `ev_${'8'.repeat(24)}`;
   const timelineEvidence = [
     evidence.find((item) => item.id === terminalEvidenceId),
     {
@@ -281,6 +284,120 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
       evidence: timelineEvidence,
     },
   };
+  const graphNodes = [
+    {
+      id: `egn_${'1'.repeat(24)}`,
+      subjectId: subjectA,
+      subjectType: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      serviceInfrastructure: { state: 'known', value: false },
+      terminalEvidenceIds: [timelineTerminalEvidenceId],
+    },
+    {
+      id: `egn_${'2'.repeat(24)}`,
+      subjectId: subjectB,
+      subjectType: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      serviceInfrastructure: { state: 'known', value: false },
+      terminalEvidenceIds: [timelineTerminalEvidenceId],
+    },
+  ];
+  const graphEdge = {
+    id: graphEdgeId,
+    relation: 'SAME_CONTROLLER',
+    sourceNodeId: graphNodes[0].id,
+    targetNodeId: graphNodes[1].id,
+    subjectA,
+    subjectB,
+    classification: 'PROBABLE_SAME_CONTROLLER',
+    sameControllerProbability: { state: 'known', value: 0.91 },
+    coordinationProbability: { state: 'known', value: 0.72 },
+    independenceProbability: { state: 'known', value: 0.12 },
+    validFromPosition: '115279243',
+    validToPosition: '115279243',
+    observationCount: 2,
+    classificationChangeCount: 1,
+    temporalContinuity: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+    timelineId,
+    terminalEvidenceId: timelineTerminalEvidenceId,
+    automaticOwnershipPropagationAllowed: false,
+  };
+  const graphObservation = {
+    timelineId,
+    timelineResultHash: timelineRecord.resultHash,
+    subjectA,
+    subjectB,
+    fromPosition: '115279243',
+    toPosition: '115279243',
+    classification: 'PROBABLE_SAME_CONTROLLER',
+    sameControllerProbability: { state: 'known', value: 0.91 },
+    coordinationProbability: { state: 'known', value: 0.72 },
+    independenceProbability: { state: 'known', value: 0.12 },
+    serviceSuppressionApplied: false,
+    projectionState: 'PROJECTED',
+    projectedEdgeId: { state: 'known', value: graphEdgeId },
+    terminalEvidenceId: timelineTerminalEvidenceId,
+  };
+  const graphCore = {
+    request: {
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      timelineIds: [timelineId],
+      timelineSetHash: '6'.repeat(64),
+    },
+    nodes: graphNodes,
+    observations: [graphObservation],
+    edges: [graphEdge],
+    investigationComponents: [
+      {
+        id: `igc_${'9'.repeat(24)}`,
+        nodeIds: graphNodes.map((node) => node.id),
+        edgeIds: [graphEdgeId],
+        automaticEntityMembershipAllowed: false,
+        membershipConclusion: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      },
+    ],
+    summary: {
+      nodeCount: 2,
+      observationCount: 1,
+      projectedEdgeCount: 1,
+      sameControllerEdgeCount: 1,
+      coordinationEdgeCount: 0,
+      suppressedObservationCount: 0,
+      componentCount: 1,
+      completeRequestedTimelineSet: true,
+      rawTransferEdgesCopied: false,
+    },
+    metadata: {
+      ...metadata,
+      modelVersion: 'entity-investigation-graph-v0.1.0',
+      evidenceIds: [timelineTerminalEvidenceId],
+    },
+  };
+  const graphRecord = {
+    id: graphId,
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    asOfPosition: '115279243',
+    asOfHash: snapshot.blockHash,
+    timelineSetHash: '6'.repeat(64),
+    resultHash: '7'.repeat(64),
+    terminalEvidenceId: graphTerminalEvidenceId,
+    timelineIds: [timelineId],
+    subjectIds: [subjectA, subjectB],
+    edgeIds: [graphEdgeId],
+    evidenceIds: [timelineTerminalEvidenceId, graphTerminalEvidenceId].sort(),
+    sourceSet: ['sqd:binance-mainnet'],
+    modelVersion: 'entity-investigation-graph-v0.1.0',
+    capturedAt: snapshot.capturedAt,
+    createdAt: '2026-08-11T08:17:15.000Z',
+    report: {
+      schemaVersion: 'entity-investigation-graph-report-v1',
+      sourceOfTruth: 'DURABLE_ENTITY_RELATIONSHIP_TIMELINES',
+      automaticOwnershipMergeAllowed: false,
+      graph: graphCore,
+      terminalEvidenceId: graphTerminalEvidenceId,
+      evidence: timelineEvidence,
+    },
+  };
   await page.route('**/api/v1/entities/relationships/reports/latest?*', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -291,6 +408,37 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({ replayed: true, record: timelineRecord }),
+    });
+  });
+  await page.route('**/api/v1/entities/investigation-graphs/latest?*', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        replayed: true,
+        record: graphRecord,
+        subgraph: {
+          seedSubjectId: subjectA,
+          maxDepth: 2,
+          maxNodes: 100,
+          truncated: false,
+          distances: { [subjectA]: 0, [subjectB]: 1 },
+          nodes: graphNodes,
+          edges: [graphEdge],
+          observations: [graphObservation],
+        },
+      }),
+    });
+  });
+  await page.route(`**/api/v1/evidence/${timelineTerminalEvidenceId}/drilldown`, async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        nodes: timelineEvidence.map((item) => ({
+          evidence: item,
+          sourceEvidenceIds: [],
+          snapshot,
+        })),
+      }),
     });
   });
 
@@ -321,6 +469,19 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   await expect(page.getByRole('heading', { name: 'Relationship evolution' })).toBeVisible();
   await expect(page.getByText(/^115279243 → 115279243 · Revision$/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Timeline Evidence' })).toBeVisible();
+
+  const graphWorkspace = page.getByTestId('investigation-graph-workspace');
+  await graphWorkspace.getByRole('button', { name: 'Load latest' }).click();
+  const graphResult = page.getByTestId('investigation-graph-result');
+  await expect(graphResult).toContainText('Evidence-backed investigation projection');
+  await expect(graphResult).toContainText('Raw transfer copy');
+  await expect(
+    page.getByTestId('controller-graph-canvas').locator('canvas').first(),
+  ).toBeAttached();
+  await page.getByRole('button', { name: /Same Controller/ }).click();
+  const graphEvidence = page.getByTestId('controller-graph-evidence-ledger');
+  await expect(graphEvidence.getByRole('heading', { name: 'Evidence Ledger' })).toBeVisible();
+  await expect(graphEvidence).toContainText('Durable relationship timeline Evidence.');
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -3554,6 +3715,12 @@ test('keeps scenario execution gated and exposes provider availability', async (
   });
   await expect(ingestionStorageCard).toContainText('Unconfigured');
   await expect(ingestionStorageCard).toContainText('0/3');
+  const graphProjectionCard = page.locator('.storage-card').filter({
+    has: page.getByRole('heading', { name: 'Investigation projection' }),
+  });
+  await expect(graphProjectionCard).toContainText('Apache Age');
+  await expect(graphProjectionCard).toContainText('PostgreSQL report');
+  await expect(graphProjectionCard).toContainText('Unconfigured');
   await expect(page.getByRole('button', { name: 'Refresh providers' })).toBeEnabled();
 });
 
