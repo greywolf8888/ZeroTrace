@@ -42,11 +42,13 @@ import {
   type ChainAnchorRead,
   type ComparisonObservation,
   type EntityRelationshipReport,
+  type EntityRelationshipTimelineReport,
 } from '@zerotrace/schemas';
 import {
   StorageError,
   type EvidenceRepository,
   type StoredEntityRelationshipReport,
+  type StoredEntityRelationshipTimeline,
 } from '@zerotrace/storage';
 import { encodeAbiParameters, toEventSelector } from 'viem';
 
@@ -1023,6 +1025,7 @@ function addFixtureEvidence(runtime: AppRuntime, blockOrSlot = '16') {
 
 function attachEntityReportDurability(runtime: AppRuntime) {
   const records = new Map<string, StoredEntityRelationshipReport>();
+  const timelines = new Map<string, StoredEntityRelationshipTimeline>();
   const durableEvidence = new Map<string, EvidenceNode>();
   const evidenceRepository: EvidenceRepository = {
     put: async (evidence, sourceEvidenceIds = [], snapshot) => {
@@ -1085,6 +1088,26 @@ function attachEntityReportDurability(runtime: AppRuntime) {
           record.subjectA === subjectA &&
           record.subjectB === subjectB,
       ),
+    history: async ({ ledger, chainId, subjectA, subjectB, fromPosition, toPosition, limit }) =>
+      [...records.values()]
+        .filter(
+          (record) =>
+            record.ledger === ledger &&
+            record.chainId === chainId &&
+            record.subjectA === subjectA &&
+            record.subjectB === subjectB &&
+            (fromPosition === undefined ||
+              BigInt(record.snapshotPosition) >= BigInt(fromPosition)) &&
+            (toPosition === undefined || BigInt(record.snapshotPosition) <= BigInt(toPosition)),
+        )
+        .sort((left, right) =>
+          BigInt(left.snapshotPosition) === BigInt(right.snapshotPosition)
+            ? left.id.localeCompare(right.id)
+            : BigInt(left.snapshotPosition) < BigInt(right.snapshotPosition)
+              ? -1
+              : 1,
+        )
+        .slice(0, limit),
     health: async () => ({
       status: 'UP',
       backend: 'POSTGRES',
@@ -1093,6 +1116,48 @@ function attachEntityReportDurability(runtime: AppRuntime) {
     }),
     close: async () => undefined,
   } as NonNullable<AppRuntime['entityRelationshipReports']>;
+  runtime.entityRelationshipTimelines = {
+    put: async (report: EntityRelationshipTimelineReport) => {
+      const timeline = report.timeline;
+      const resultHash = hashPayload(report);
+      const record: StoredEntityRelationshipTimeline = {
+        id: `ert_${hashPayload({ schema: 'zerotrace-entity-relationship-timeline-report-v1', resultHash }).slice(0, 24)}`,
+        ledger: timeline.request.ledger,
+        chainId: timeline.request.chainId,
+        subjectA: timeline.request.subjectA,
+        subjectB: timeline.request.subjectB,
+        fromPosition: timeline.request.fromPosition,
+        toPosition: timeline.request.toPosition,
+        resultHash,
+        report,
+        terminalEvidenceId: report.terminalEvidenceId,
+        reportIds: timeline.observations.map((item) => item.reportId).sort(),
+        evidenceIds: report.evidence.map((item) => item.id).sort(),
+        sourceSet: timeline.metadata.sourceSet,
+        modelVersion: 'entity-timeline-v0.1.0',
+        capturedAt: timeline.metadata.snapshot.capturedAt,
+        createdAt: '2026-08-09T00:00:03.000Z',
+      };
+      timelines.set(record.id, record);
+      return record;
+    },
+    get: async (id: string) => timelines.get(id),
+    latest: async ({ ledger, chainId, subjectA, subjectB }) =>
+      [...timelines.values()].find(
+        (record) =>
+          record.ledger === ledger &&
+          record.chainId === chainId &&
+          record.subjectA === subjectA &&
+          record.subjectB === subjectB,
+      ),
+    health: async () => ({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+      checkedAt: '2026-08-09T00:00:01.000Z',
+    }),
+    close: async () => undefined,
+  } as NonNullable<AppRuntime['entityRelationshipTimelines']>;
   return records;
 }
 
@@ -4247,6 +4312,79 @@ describe('ZeroTrace API contract', () => {
     });
     expect(exact.statusCode).toBe(200);
     expect(exact.json()).toEqual(latest.json());
+
+    const revisedEntity = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/resolve',
+      payload: {
+        subjectA: 'controller',
+        subjectB: 'module',
+        features: [
+          {
+            kind: 'SHARED_ONCHAIN_AUTHORITY',
+            strength: 0.5,
+            reliability: 1,
+            evidenceId: source.id,
+          },
+        ],
+        metadata: fixtureMetadata(source.id),
+      },
+    });
+    expect(revisedEntity.statusCode, revisedEntity.body).toBe(200);
+    expect(revisedEntity.json().durableReport.id).not.toBe(reportId);
+
+    const materializedTimeline = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/relationships/timelines/materialize',
+      payload: {
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        subjectA: 'module',
+        subjectB: 'controller',
+      },
+    });
+    expect(materializedTimeline.statusCode, materializedTimeline.body).toBe(200);
+    expect(materializedTimeline.json()).toMatchObject({
+      replayed: false,
+      record: {
+        id: expect.stringMatching(/^ert_[0-9a-f]{24}$/),
+        report: {
+          automaticOwnershipMergeAllowed: false,
+          timeline: {
+            request: { subjectA: 'controller', subjectB: 'module' },
+            observations: [{}, {}],
+            transitions: [
+              {
+                kind: 'REVISION',
+                fromPosition: '16',
+                toPosition: '16',
+                unobservedPositionCount: '0',
+              },
+            ],
+            summary: {
+              completePersistedReportSet: true,
+              chainObservationContinuity: {
+                state: 'unknown',
+                reason: 'INSUFFICIENT_DATA',
+              },
+            },
+          },
+        },
+      },
+    });
+    const timelineId = materializedTimeline.json().record.id as string;
+    const latestTimeline = await app.inject({
+      method: 'GET',
+      url: '/api/v1/entities/relationships/timelines/latest?ledger=EVM&chainId=eip155%3A1&subjectA=module&subjectB=controller',
+    });
+    expect(latestTimeline.statusCode).toBe(200);
+    expect(latestTimeline.json()).toMatchObject({ replayed: true, record: { id: timelineId } });
+    const exactTimeline = await app.inject({
+      method: 'GET',
+      url: `/api/v1/entities/relationships/timelines/${timelineId}?ledger=EVM&chainId=eip155%3A1&subjectA=controller&subjectB=module`,
+    });
+    expect(exactTimeline.statusCode).toBe(200);
+    expect(exactTimeline.json()).toEqual(latestTimeline.json());
 
     const scenario = await app.inject({
       method: 'POST',

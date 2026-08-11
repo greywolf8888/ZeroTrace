@@ -282,6 +282,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/017_flap_pension_entry_reports.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/018_entity_relationship_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/019_entity_relationship_timelines.sql
 ```
 
 PowerShell equivalent:
@@ -318,6 +320,8 @@ Get-Content -Raw infra/postgres/init/016_evm_pension_candidate_reports.sql |
 Get-Content -Raw infra/postgres/init/017_flap_pension_entry_reports.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/018_entity_relationship_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/019_entity_relationship_timelines.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

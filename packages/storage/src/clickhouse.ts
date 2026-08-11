@@ -271,7 +271,13 @@ function createClickHouseClient(options: ClickHouseRawFactRepositoryOptions): Cl
     request_timeout: requestTimeoutMs,
     max_open_connections: maxConnections,
     compression: { request: true, response: true },
-    clickhouse_settings: { date_time_input_format: 'best_effort' },
+    clickhouse_settings: {
+      date_time_input_format: 'best_effort',
+      // FINAL can otherwise fan out to every host CPU and exceed the memory budget of the
+      // default local/CI container even for a small content-addressed fact range.
+      max_threads: 2,
+      max_final_threads: 2,
+    },
   });
 }
 

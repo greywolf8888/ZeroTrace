@@ -410,6 +410,63 @@ export class PostgresEntityRelationshipReportRepository {
     }
   }
 
+  async history(input: {
+    ledger: Ledger;
+    chainId: string;
+    subjectA: string;
+    subjectB: string;
+    fromPosition?: string;
+    toPosition?: string;
+    limit?: number;
+  }): Promise<StoredEntityRelationshipReport[]> {
+    const expected = identity(input);
+    const fromPosition = input.fromPosition?.trim();
+    const toPosition = input.toPosition?.trim();
+    const limit = input.limit ?? 1_001;
+    if (
+      (fromPosition !== undefined && !/^(?:0|[1-9]\d*)$/.test(fromPosition)) ||
+      (toPosition !== undefined && !/^(?:0|[1-9]\d*)$/.test(toPosition)) ||
+      (fromPosition !== undefined &&
+        toPosition !== undefined &&
+        BigInt(fromPosition) > BigInt(toPosition)) ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 1_001
+    ) {
+      throw invalid('Entity relationship report history range is invalid.');
+    }
+    try {
+      const result = await this.#pool.query(
+        `${SELECT_REPORT}
+         WHERE ledger = $1::ledger_kind
+           AND chain_id = $2
+           AND subject_a = $3
+           AND subject_b = $4
+           AND ($5::numeric IS NULL OR snapshot_position >= $5::numeric)
+           AND ($6::numeric IS NULL OR snapshot_position <= $6::numeric)
+         ORDER BY snapshot_position ASC, captured_at ASC, created_at ASC, id ASC
+         LIMIT $7`,
+        [
+          expected.ledger,
+          expected.chainId,
+          expected.subjectA,
+          expected.subjectB,
+          fromPosition ?? null,
+          toPosition ?? null,
+          limit,
+        ],
+      );
+      return result.rows.map(rowToReport);
+    } catch (error) {
+      if (error instanceof EntityRelationshipReportStorageError) throw error;
+      throw new EntityRelationshipReportStorageError(
+        'ENTITY_RELATIONSHIP_REPORT_UNAVAILABLE',
+        'Entity relationship report history read failed.',
+        { retryable: true, cause: error },
+      );
+    }
+  }
+
   async health(): Promise<{
     status: 'UP' | 'DOWN';
     backend: 'POSTGRES';

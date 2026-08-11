@@ -160,10 +160,137 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
     capturedAt: snapshot.capturedAt,
     createdAt: '2026-08-11T08:17:13.000Z',
   };
+  const revisedReportId = `erh_${'2'.repeat(24)}`;
+  const revisedTerminalEvidenceId = `ev_${'3'.repeat(24)}`;
+  const timelineTerminalEvidenceId = `ev_${'4'.repeat(24)}`;
+  const timelineId = `ert_${'5'.repeat(24)}`;
+  const timelineEvidence = [
+    evidence.find((item) => item.id === terminalEvidenceId),
+    {
+      ...evidence.find((item) => item.id === terminalEvidenceId),
+      id: revisedTerminalEvidenceId,
+      payloadHash: '2'.repeat(64),
+      summary: 'Same-Snapshot recomputation terminal Evidence.',
+    },
+    {
+      ...evidence.find((item) => item.id === terminalEvidenceId),
+      id: timelineTerminalEvidenceId,
+      source: 'zerotrace:entity-timeline-v0.1.0',
+      locator: `entity-relationship-timeline:${subjectA}:${subjectB}:115279243:115279243`,
+      payloadHash: '3'.repeat(64),
+      summary: 'Durable relationship timeline Evidence.',
+    },
+  ].sort((left, right) => (left?.id ?? '').localeCompare(right?.id ?? ''));
+  const timelineRecord = {
+    id: timelineId,
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    subjectA,
+    subjectB,
+    fromPosition: '115279243',
+    toPosition: '115279243',
+    resultHash: '4'.repeat(64),
+    terminalEvidenceId: timelineTerminalEvidenceId,
+    reportIds: [reportId, revisedReportId].sort(),
+    evidenceIds: [terminalEvidenceId, revisedTerminalEvidenceId, timelineTerminalEvidenceId].sort(),
+    sourceSet: ['sqd:binance-mainnet'],
+    modelVersion: 'entity-timeline-v0.1.0',
+    capturedAt: snapshot.capturedAt,
+    createdAt: '2026-08-11T08:17:14.000Z',
+    report: {
+      schemaVersion: 'entity-relationship-timeline-report-v1',
+      automaticOwnershipMergeAllowed: false,
+      timeline: {
+        request: {
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          subjectA,
+          subjectB,
+          fromPosition: '115279243',
+          toPosition: '115279243',
+        },
+        observations: [
+          {
+            reportId,
+            resultHash: '1'.repeat(64),
+            snapshot,
+            classification: 'COORDINATED_BUT_INDEPENDENT',
+            sameControllerProbability: { state: 'known', value: 0.31 },
+            coordinationProbability: { state: 'known', value: 0.96 },
+            independenceProbability: { state: 'known', value: 0.62 },
+            serviceSuppressionApplied: false,
+            terminalEvidenceId,
+            capturedAt: snapshot.capturedAt,
+          },
+          {
+            reportId: revisedReportId,
+            resultHash: '2'.repeat(64),
+            snapshot,
+            classification: 'PROBABLE_SAME_CONTROLLER',
+            sameControllerProbability: { state: 'known', value: 0.91 },
+            coordinationProbability: { state: 'known', value: 0.72 },
+            independenceProbability: { state: 'known', value: 0.12 },
+            serviceSuppressionApplied: false,
+            terminalEvidenceId: revisedTerminalEvidenceId,
+            capturedAt: snapshot.capturedAt,
+          },
+        ],
+        transitions: [
+          {
+            fromReportId: reportId,
+            toReportId: revisedReportId,
+            fromPosition: '115279243',
+            toPosition: '115279243',
+            kind: 'REVISION',
+            unobservedPositionCount: '0',
+            classificationBefore: 'COORDINATED_BUT_INDEPENDENT',
+            classificationAfter: 'PROBABLE_SAME_CONTROLLER',
+            classificationChanged: true,
+            serviceSuppressionBefore: false,
+            serviceSuppressionAfter: false,
+            serviceSuppressionChanged: false,
+            sameControllerDelta: { state: 'known', value: 0.6 },
+            coordinationDelta: { state: 'known', value: -0.24 },
+            independenceDelta: { state: 'known', value: -0.5 },
+            evidenceIds: [terminalEvidenceId, revisedTerminalEvidenceId].sort(),
+          },
+        ],
+        summary: {
+          observationCount: 2,
+          transitionCount: 1,
+          classificationChangeCount: 1,
+          serviceSuppressionChangeCount: 0,
+          currentClassification: 'PROBABLE_SAME_CONTROLLER',
+          currentSameControllerProbability: { state: 'known', value: 0.91 },
+          currentCoordinationProbability: { state: 'known', value: 0.72 },
+          currentIndependenceProbability: { state: 'known', value: 0.12 },
+          completePersistedReportSet: true,
+          chainObservationContinuity: {
+            state: 'unknown',
+            reason: 'INSUFFICIENT_DATA',
+            detail: 'Persisted reports do not prove every chain position was observed.',
+          },
+        },
+        metadata: {
+          ...metadata,
+          modelVersion: 'entity-timeline-v0.1.0',
+          evidenceIds: [terminalEvidenceId, revisedTerminalEvidenceId].sort(),
+        },
+      },
+      terminalEvidenceId: timelineTerminalEvidenceId,
+      evidence: timelineEvidence,
+    },
+  };
   await page.route('**/api/v1/entities/relationships/reports/latest?*', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({ replayed: true, record }),
+    });
+  });
+  await page.route('**/api/v1/entities/relationships/timelines/latest?*', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ replayed: true, record: timelineRecord }),
     });
   });
 
@@ -171,7 +298,10 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   await page.getByRole('button', { name: 'Entity Intelligence' }).click();
   await page.getByLabel('Subject A').fill(subjectB);
   await page.getByLabel('Subject B').fill(subjectA);
-  await page.getByRole('button', { name: 'Load latest' }).click();
+  await page
+    .getByTestId('entity-report-replay')
+    .getByRole('button', { name: 'Load latest' })
+    .click();
 
   const resultPanel = page.getByTestId('entity-report-result');
   await expect(resultPanel).toContainText('Coordinated But Independent');
@@ -180,6 +310,17 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   await expect(resultPanel).toContainText(reportId);
   await expect(page.getByRole('heading', { name: 'Entity relationship Evidence' })).toBeVisible();
   await expect(page.getByText('No labels-to-merge path')).toBeVisible();
+
+  await page
+    .getByTestId('entity-timeline-controls')
+    .getByRole('button', { name: 'Load latest' })
+    .click();
+  const timelinePanel = page.getByTestId('entity-timeline-result');
+  await expect(timelinePanel).toContainText('Probable Same Controller');
+  await expect(timelinePanel).toContainText('Automatic merge blocked');
+  await expect(page.getByRole('heading', { name: 'Relationship evolution' })).toBeVisible();
+  await expect(page.getByText(/^115279243 → 115279243 · Revision$/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Timeline Evidence' })).toBeVisible();
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

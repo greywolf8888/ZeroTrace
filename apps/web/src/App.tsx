@@ -12,6 +12,7 @@ import {
   type EvmSupplyContinuityReplayResponse,
   type EvmControlSurfaceResponse,
   type EntityRelationshipReportReplayResponse,
+  type EntityRelationshipTimelineReplayResponse,
   type EvidenceRecord,
   type FlapConfigurationField,
   type FlapEventHistoryResponse,
@@ -2713,6 +2714,11 @@ function EntityIntelligenceWorkspace() {
   const [subjectB, setSubjectB] = useState('');
   const [reportId, setReportId] = useState('');
   const [response, setResponse] = useState<EntityRelationshipReportReplayResponse>();
+  const [timelineId, setTimelineId] = useState('');
+  const [fromPosition, setFromPosition] = useState('');
+  const [toPosition, setToPosition] = useState('');
+  const [timelineResponse, setTimelineResponse] =
+    useState<EntityRelationshipTimelineReplayResponse>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const validPair =
@@ -2721,6 +2727,13 @@ function EntityIntelligenceWorkspace() {
     subjectB.trim().length > 0 &&
     subjectA.trim() !== subjectB.trim();
   const validReportId = /^erh_[0-9a-f]{24}$/.test(reportId);
+  const validTimelineId = /^ert_[0-9a-f]{24}$/.test(timelineId);
+  const validTimelineRange =
+    (fromPosition.length === 0 || /^(?:0|[1-9]\d*)$/.test(fromPosition)) &&
+    (toPosition.length === 0 || /^(?:0|[1-9]\d*)$/.test(toPosition)) &&
+    (fromPosition.length === 0 ||
+      toPosition.length === 0 ||
+      BigInt(fromPosition) <= BigInt(toPosition));
 
   function changeLedger(next: 'EVM' | 'BITCOIN' | 'SOLANA') {
     setLedger(next);
@@ -2728,7 +2741,41 @@ function EntityIntelligenceWorkspace() {
       next === 'EVM' ? 'eip155:56' : next === 'BITCOIN' ? 'bitcoin-mainnet' : 'solana-mainnet',
     );
     setResponse(undefined);
+    setTimelineResponse(undefined);
     setError(undefined);
+  }
+
+  async function loadTimeline(mode: 'materialize' | 'latest' | 'exact') {
+    if (!validPair || !validTimelineRange || (mode === 'exact' && !validTimelineId)) return;
+    setBusy(true);
+    setError(undefined);
+    setTimelineResponse(undefined);
+    try {
+      if (mode === 'materialize') {
+        setTimelineResponse(
+          await api.materializeEntityRelationshipTimeline({
+            ledger,
+            chainId,
+            subjectA,
+            subjectB,
+            ...(fromPosition.length === 0 ? {} : { fromPosition }),
+            ...(toPosition.length === 0 ? {} : { toPosition }),
+          }),
+        );
+      } else if (mode === 'latest') {
+        setTimelineResponse(
+          await api.latestEntityRelationshipTimeline(ledger, chainId, subjectA, subjectB),
+        );
+      } else {
+        setTimelineResponse(
+          await api.entityRelationshipTimeline(timelineId, ledger, chainId, subjectA, subjectB),
+        );
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Entity relationship timeline failed.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function load(mode: 'latest' | 'exact') {
@@ -2754,6 +2801,8 @@ function EntityIntelligenceWorkspace() {
   const record = response?.record;
   const report = record?.report;
   const result = report?.result;
+  const timelineRecord = timelineResponse?.record;
+  const timeline = timelineRecord?.report.timeline;
 
   return (
     <>
@@ -2843,6 +2892,75 @@ function EntityIntelligenceWorkspace() {
           </div>
         </form>
         {error === undefined ? null : <div className="provider-error">{error}</div>}
+      </section>
+      <section
+        className="panel subject-panel quote-panel"
+        aria-labelledby="entity-timeline-heading"
+        data-testid="entity-timeline-controls"
+      >
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Persisted reports → temporal Evidence projection</span>
+            <h3 id="entity-timeline-heading">Relationship timeline</h3>
+          </div>
+          <span className="snapshot-badge">2–1,000 reports</span>
+        </div>
+        <p className="panel-copy">
+          Materialization uses only immutable reports already in storage. Missing chain positions
+          remain unobserved; a same-position recomputation is shown as a revision.
+        </p>
+        <div className="quote-form">
+          <label htmlFor="entity-timeline-from">From position (optional)</label>
+          <input
+            id="entity-timeline-from"
+            inputMode="numeric"
+            value={fromPosition}
+            onChange={(event) => setFromPosition(event.target.value.trim())}
+            placeholder="Inclusive"
+          />
+          <label htmlFor="entity-timeline-to">To position (optional)</label>
+          <input
+            id="entity-timeline-to"
+            inputMode="numeric"
+            value={toPosition}
+            onChange={(event) => setToPosition(event.target.value.trim())}
+            placeholder="Inclusive"
+          />
+          <label htmlFor="entity-timeline-id">Exact timeline ID (optional)</label>
+          <input
+            id="entity-timeline-id"
+            spellCheck={false}
+            value={timelineId}
+            onChange={(event) => setTimelineId(event.target.value.trim())}
+            placeholder="ert_…"
+          />
+          <div className="control-actions">
+            <button
+              className="primary-button"
+              type="button"
+              disabled={!validPair || !validTimelineRange || busy}
+              onClick={() => void loadTimeline('materialize')}
+            >
+              {busy ? 'Working…' : 'Materialize timeline'}
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={!validPair || busy}
+              onClick={() => void loadTimeline('latest')}
+            >
+              Load latest
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={!validPair || !validTimelineId || busy}
+              onClick={() => void loadTimeline('exact')}
+            >
+              Replay exact
+            </button>
+          </div>
+        </div>
       </section>
       {record === undefined || report === undefined || result === undefined ? null : (
         <>
@@ -2943,6 +3061,116 @@ function EntityIntelligenceWorkspace() {
             evidence={report.evidence}
             eyebrow="Source observations → terminal hypothesis"
             title="Entity relationship Evidence"
+          />
+        </>
+      )}
+      {timelineRecord === undefined || timeline === undefined ? null : (
+        <>
+          <section className="panel" data-testid="entity-timeline-result">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">{timelineRecord.id}</span>
+                <h3>{titleCase(timeline.summary.currentClassification)}</h3>
+              </div>
+              <StatusPill
+                status={timelineResponse?.replayed === true ? 'REPLAYED' : 'MATERIALIZED'}
+              />
+            </div>
+            <div className="metric-grid">
+              <article className="metric-tile metric-known">
+                <div className="metric-label">Observations</div>
+                <div className="metric-value">{timeline.summary.observationCount}</div>
+                <div className="metric-detail">Complete persisted report set in range</div>
+              </article>
+              <article className="metric-tile metric-known">
+                <div className="metric-label">Classification changes</div>
+                <div className="metric-value">{timeline.summary.classificationChangeCount}</div>
+                <div className="metric-detail">Including same-position revisions</div>
+              </article>
+              <article className="metric-tile metric-known">
+                <div className="metric-label">Current same controller</div>
+                <div className="metric-value">
+                  <KnowledgeDisplay data={timeline.summary.currentSameControllerProbability} />
+                </div>
+                <div className="metric-detail">Latest persisted hypothesis</div>
+              </article>
+              <article className="metric-tile metric-unknown">
+                <div className="metric-label">Chain continuity</div>
+                <div className="metric-value">
+                  <KnowledgeDisplay data={timeline.summary.chainObservationContinuity} />
+                </div>
+                <div className="metric-detail">Never inferred from report density</div>
+              </article>
+            </div>
+            <div className="snapshot-strip">
+              <span>
+                <b>Range</b> {timelineRecord.fromPosition} → {timelineRecord.toPosition}
+              </span>
+              <span>
+                <b>Revisions</b>{' '}
+                {timeline.transitions.filter((item) => item.kind === 'REVISION').length}
+              </span>
+              <span>
+                <b>Result hash</b>{' '}
+                <code title={timelineRecord.resultHash}>
+                  {shortId(timelineRecord.resultHash, 8)}
+                </code>
+              </span>
+              <span>
+                <b>Automatic merge</b> blocked
+              </span>
+            </div>
+          </section>
+          <section className="panel" aria-labelledby="entity-timeline-transitions-heading">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Ordered revisions and position advances</span>
+                <h3 id="entity-timeline-transitions-heading">Relationship evolution</h3>
+              </div>
+              <span className="snapshot-badge">{timeline.transitions.length} transitions</span>
+            </div>
+            <div className="contract-list">
+              {timeline.transitions.map((transition) => (
+                <div key={`${transition.fromReportId}:${transition.toReportId}`}>
+                  <strong>
+                    {transition.fromPosition} → {transition.toPosition} ·{' '}
+                    {titleCase(transition.kind)}
+                  </strong>
+                  <span>
+                    {titleCase(transition.classificationBefore)} →{' '}
+                    {titleCase(transition.classificationAfter)} · controller Δ{' '}
+                    <KnowledgeDisplay data={transition.sameControllerDelta} /> · coordination Δ{' '}
+                    <KnowledgeDisplay data={transition.coordinationDelta} /> · unobserved positions{' '}
+                    {transition.unobservedPositionCount}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="panel" aria-labelledby="entity-timeline-observations-heading">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Immutable hypothesis checkpoints</span>
+                <h3 id="entity-timeline-observations-heading">Timeline observations</h3>
+              </div>
+              <span className="snapshot-badge">{timeline.observations.length} reports</span>
+            </div>
+            <div className="contract-list">
+              {timeline.observations.map((observation) => (
+                <div key={observation.reportId}>
+                  <strong>{titleCase(observation.classification)}</strong>
+                  <span>
+                    {shortId(observation.reportId, 8)} · {formatTime(observation.capturedAt)} ·{' '}
+                    terminal {shortId(observation.terminalEvidenceId, 8)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+          <EvidencePanel
+            evidence={timelineRecord.report.evidence}
+            eyebrow="Relationship report terminals → timeline terminal"
+            title="Timeline Evidence"
           />
         </>
       )}
