@@ -1535,7 +1535,8 @@ Lookup Tables and resolved all 11 static, 20 loaded-writable and 23 loaded-reado
 
 The normalized result retained six outer instructions and 26 recorded CPI instructions. The raw
 transaction, each normalized instruction and the terminal semantic result formed 34 linked Evidence
-nodes. The response reported full data coverage, confidence `0.95`, source set
+nodes. After accounting for the 15/16 exact pre/post token-identity pairs, the response reported
+data coverage `0.9895833333333334`, confidence `0.940104`, source set
 `solana-rpc@api.mainnet.solana.com`, and model versions
 `solana-transaction-query-v1.0.0` / `solana-transaction-semantics-v1.0.0`.
 
@@ -1551,8 +1552,8 @@ fail-closed, the allowed hostname remained exact, and all calls were read-only.
 
 The completed local gate passed 453 unit tests across 67 files, 68 environment-free integration
 tests, all 92 integration tests with PostgreSQL/ClickHouse/MinIO enabled, one Entity structural
-evaluation and 32 Chromium desktop/mobile flows. The 545-test durable coverage run reached 83.40%
-statements, 77.99% branches, 93.59% functions and 84.60% lines. Formatting, lint, typecheck,
+evaluation and 32 Chromium desktop/mobile flows. The 545-test durable coverage run reached 83.41%
+statements, 77.99% branches, 93.60% functions and 84.60% lines. Formatting, lint, typecheck,
 production build, license allowlist, development/production dependency audits, CycloneDX SBOM,
 Compose validation and all six production Docker targets passed. Rebuilt API/Web containers became
 healthy and returned `readOnly=true`; readiness remained `DEGRADED` under the fail-closed default

@@ -124,7 +124,8 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   loaded-address cardinality and compiled account indexes. Semantic tests cover fee-payer and access
   flags, ALT ordering, outer/CPI paths, failed execution, exact lamport/SPL deltas, and Unknown for
   unrecorded metadata or a one-sided token balance. Overall data coverage cannot exceed either
-  account-resolution coverage or the six-dimension response-recording coverage.
+  account-resolution coverage or the six-dimension response-recording coverage; the token dimension
+  is the exact pre/post identity-pair ratio.
 - no-evidence entity input remains Unknown.
 - common services and CoinJoin suppress controller confidence.
 - sell-disabled RV is unavailable rather than zero.

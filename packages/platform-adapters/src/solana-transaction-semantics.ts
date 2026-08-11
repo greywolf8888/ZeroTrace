@@ -127,6 +127,20 @@ function balanceIdentity(balance: SolanaTokenBalanceRecord): string {
   return `${balance.accountIndex}:${balance.mint}`;
 }
 
+function tokenBalanceRecordingCoverage(transaction: SolanaTransactionRecord): number {
+  if (transaction.preTokenBalances === undefined || transaction.postTokenBalances === undefined) {
+    return 0;
+  }
+  const preIdentities = new Set(transaction.preTokenBalances.map(balanceIdentity));
+  const postIdentities = new Set(transaction.postTokenBalances.map(balanceIdentity));
+  const identities = new Set([...preIdentities, ...postIdentities]);
+  if (identities.size === 0) return 1;
+  const paired = [...identities].filter(
+    (identity) => preIdentities.has(identity) && postIdentities.has(identity),
+  ).length;
+  return paired / identities.size;
+}
+
 function tokenBalanceChanges(
   transaction: SolanaTransactionRecord,
   resolvedAddresses: readonly string[],
@@ -220,14 +234,15 @@ export function analyzeSolanaTransactionSemantics(
   const accountResolutionComplete =
     transaction.addressTableLookups.length === 0 || transaction.loadedAddresses !== undefined;
   const recordingDimensions = [
-    transaction.success !== undefined,
-    transaction.preBalances !== undefined && transaction.postBalances !== undefined,
-    transaction.innerInstructions !== undefined,
-    transaction.preTokenBalances !== undefined && transaction.postTokenBalances !== undefined,
-    transaction.logMessages !== undefined,
-    transaction.computeUnitsConsumed !== undefined,
+    transaction.success === undefined ? 0 : 1,
+    transaction.preBalances !== undefined && transaction.postBalances !== undefined ? 1 : 0,
+    transaction.innerInstructions === undefined ? 0 : 1,
+    tokenBalanceRecordingCoverage(transaction),
+    transaction.logMessages === undefined ? 0 : 1,
+    transaction.computeUnitsConsumed === undefined ? 0 : 1,
   ];
-  const recordingCoverage = recordingDimensions.filter(Boolean).length / recordingDimensions.length;
+  const recordingCoverage =
+    recordingDimensions.reduce((total, value) => total + value, 0) / recordingDimensions.length;
   const outerInstructions = transaction.instructions.map((instruction, outerIndex) =>
     resolveInstruction({ instruction, outerIndex, resolvedAddresses }),
   );

@@ -184,5 +184,6 @@ describe('Solana transaction semantics', () => {
       postAmount: { state: 'known', value: '70' },
       deltaAmount: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
     });
+    expect(result.recordingCoverage).toBeCloseTo(5 / 6);
   });
 });

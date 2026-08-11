@@ -238,9 +238,11 @@ coverage incomplete. Missing inner-instruction or token-balance recording leaves
 deltas Unknown; an account/mint present on only one side never implies a zero balance. The raw
 transaction, each normalized instruction and the terminal semantic result are separate, linked
 Evidence nodes. `recordingCoverage` measures six explicit response dimensions: execution metadata,
-lamport tables, CPI, token balances, logs and compute units. Overall response coverage uses the
-weaker of account resolution and recording coverage. This generic layer does not claim decoded
-protocol events, controllers, launchpad lifecycle or realizable value.
+lamport tables, CPI, token balances, logs and compute units. The token dimension uses the fraction of
+account/mint identities recorded on both sides, not merely the presence of both arrays. Overall
+response coverage uses the weaker of account resolution and recording coverage, and confidence is
+conservatively scaled by that coverage. This generic layer does not claim decoded protocol events,
+controllers, launchpad lifecycle or realizable value.
 
 Bitcoin transaction facts expose `locktime`, every validated input sequence and direct opt-in RBF
 signaling. `transactionEntityAnalysis` additionally reconciles input/output/fee arithmetic, records

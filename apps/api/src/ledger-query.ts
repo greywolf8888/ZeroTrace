@@ -1137,10 +1137,7 @@ export async function querySolanaTransaction(
       {
         dataCoverage: semanticDataCoverage,
         historyCoverage: 1,
-        confidence:
-          semantics.accountResolutionComplete.state === 'known' && semanticDataCoverage === 1
-            ? 0.95
-            : 0.5,
+        confidence: Math.round(semanticDataCoverage * 0.95 * 1_000_000) / 1_000_000,
       },
     ),
     evidence,

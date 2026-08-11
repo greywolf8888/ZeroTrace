@@ -20,7 +20,7 @@ completed feature.
 | Integration tests                | **68 environment-free plus 24 real-storage passing; 92 with PostgreSQL, ClickHouse and object store enabled** |
 | Real-browser E2E                 | **32 passing: Chromium desktop and Pixel 7**                                                                  |
 | Remote CI                        | **Latest recorded exact-SHA pass: `bb9f098`; Draft PR #5 remains the pre-merge gate**                         |
-| Coverage                         | **Current local: 83.40% statements / 77.99% branches / 93.59% functions / 84.60% lines**                      |
+| Coverage                         | **Current local: 83.41% statements / 77.99% branches / 93.60% functions / 84.60% lines**                      |
 | Real-chain validation            | Four-chain raw/anchors, FFT EVM control, Solana v0 semantics/three controls, and scoped Bitcoin reads passed  |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim and EVM/Solana Control Surface Reports wired                     |
 
@@ -847,7 +847,7 @@ correctness. Exact local smoke observations and limitations are in
 | Integration tests              | 68 environment-free plus 24 real-storage pass | 92 total with PostgreSQL, ClickHouse and object store; immutable EVM/Solana/Bitcoin controls and market/RV guards pass        |
 | Model evaluation tests         | 1 pass                                        | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                |
 | Restart regression             | Pass                                          | same-anchor recapture persists across repository/API restart without Snapshot collision                                       |
-| Coverage gate                  | Pass                                          | current local: 83.40% statements, 77.99% branches, 93.59% functions, 84.60% lines on all 545 tests including 24 durable tests |
+| Coverage gate                  | Pass                                          | current local: 83.41% statements, 77.99% branches, 93.60% functions, 84.60% lines on all 545 tests including 24 durable tests |
 | Chromium E2E                   | 32 pass                                       | desktop and Pixel 7 include Solana v0 semantics, chain controls, supply, market/RV, burn, Claim reports and Unknown           |
 | Formatting / ESLint / types    | Pass                                          | full repository                                                                                                               |
 | Dependency vulnerability audit | Pass                                          | 0 vulnerabilities across the complete npm dependency graph                                                                    |
