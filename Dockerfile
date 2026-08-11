@@ -1,4 +1,4 @@
-FROM node:24.11.1-alpine AS build
+FROM node:24.19.0-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json tsconfig.json tsconfig.base.json tsconfig.packages.json ./
@@ -25,7 +25,7 @@ COPY packages ./packages
 RUN npm run build
 RUN npm prune --omit=dev --no-audit --no-fund
 
-FROM node:24.11.1-alpine AS api
+FROM node:24.19.0-alpine AS api
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
@@ -39,7 +39,7 @@ HEALTHCHECK --interval=15s --timeout=4s --start-period=10s --retries=4 \
   CMD node -e "fetch('http://127.0.0.1:8080/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 CMD ["node", "apps/api/dist/src/server.js"]
 
-FROM node:24.11.1-alpine AS ingest-worker
+FROM node:24.19.0-alpine AS ingest-worker
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
@@ -50,7 +50,7 @@ COPY --from=build /app/packages ./packages
 USER node
 ENTRYPOINT ["node", "services/ingest-worker/dist/src/cli.js"]
 
-FROM node:24.11.1-alpine AS semantic-worker
+FROM node:24.19.0-alpine AS semantic-worker
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json /app/package-lock.json ./
@@ -61,7 +61,7 @@ COPY --from=build /app/packages ./packages
 USER node
 ENTRYPOINT ["node", "services/semantic-worker/dist/src/cli.js"]
 
-FROM nginx:1.29-alpine AS web
+FROM nginx:1.31-alpine AS web
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 80
