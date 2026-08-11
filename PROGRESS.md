@@ -19,7 +19,7 @@ completed feature.
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                    |
 | Integration tests                | **71 environment-free plus 26 real-storage passing; 97 with PostgreSQL, ClickHouse and object store enabled** |
 | Real-browser E2E                 | **34 passing: Chromium desktop and Pixel 7**                                                                  |
-| Remote CI                        | **Latest recorded exact-SHA pass: `f7e40cd`; Draft PR #5 remains the pre-merge gate**                         |
+| Remote CI                        | **Latest recorded exact-SHA pass: `032523d`; Draft PR #5 remains the pre-merge gate**                         |
 | Coverage                         | **Current local: 83.29% statements / 77.81% branches / 93.49% functions / 84.48% lines**                      |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed      |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim/pension/Scenario, control, and Solana reports wired              |
@@ -1013,7 +1013,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                          | fresh bootstrap passed through migration 017; current persistent Compose volume upgraded non-destructively       |
 | Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web healthy; Scenario replay UI served, storage available and broadcast remains forbidden  |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed   |
-| Remote CI                      | Exact-SHA pass `f7e40cd`                      | CI/CodeQL green for the preceding pension-entry acceptance docs; current Scenario Report batch awaits push       |
+| Remote CI                      | Exact-SHA pass `032523d`                      | CI/CodeQL green for the immutable pension-entry Scenario Report batch; Draft PR #5 remains open                  |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

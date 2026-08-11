@@ -1814,3 +1814,10 @@ allowlist, development/production vulnerability audits, CycloneDX SBOM and Compo
 passed. All six production Docker targets built. Recreated API/Web/PostgreSQL retained the existing
 volumes and reported API live `UP`, storage `UP`, `readOnly=true`, web HTTP 200, and explicit
 `DEGRADED` readiness under the host's fail-closed private-range provider DNS environment.
+
+Exact-SHA GitHub Actions and CodeQL passed for immutable Scenario Report commit `032523d` on Draft
+PR #5. CI independently repeated disposable-store coverage (577 tests), formatting, lint,
+typecheck, production build, licenses, audit, SBOM, all 34 Chromium flows and all six production
+container targets:
+[CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31473349649) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31473349605).
