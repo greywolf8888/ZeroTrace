@@ -404,6 +404,19 @@ continuity Knowledge, typed pair changes and request-scope subject additions/omi
 pairs are `Unknown(NOT_QUERIED)`, never a relationship end or membership mutation. Materialization
 and replay read only PostgreSQL/Evidence storage and never contact a chain provider or AGE.
 
+Migration `022_durable_intelligence_search` adds the versioned
+`durable_intelligence_search_documents_v1` read projection and exact-match indexes. It indexes
+registered label observations plus identifier-bearing roles from immutable Claim, Control, Solana
+transaction, pension, Entity relationship, relationship-timeline, investigation-graph and
+graph-timeline reports. PostgreSQL remains authoritative; the view does not copy or mutate report
+payloads.
+
+The search repository joins each document to its terminal Evidence and, when a matching Subject
+Registry row exists, to registered labels and Entity memberships. Missing registry bindings remain
+Unknown. Exact search is provider-free and an empty result is scoped absence, not proof of on-chain
+nonexistence. Verified symbol/ticker, platform/project and semantic-checkpoint indexes remain
+pending.
+
 ## Continuous Flap lifetime heads
 
 The fourth semantic-worker entrypoint maintains one append-only accepted lifetime chain. It requires

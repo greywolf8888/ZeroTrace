@@ -174,10 +174,78 @@ export interface AnalysisMetadata {
   evidenceIds: string[];
 }
 
+export interface GlobalIntelligenceSearchLabel {
+  id: string;
+  label: string;
+  category: string;
+  source: string;
+  sourceClass: string;
+  actorCandidate: KnowledgeValue<string>;
+  sourceConfidence: number;
+  evidenceId: string;
+  observedAt: string;
+  deterministic: boolean;
+  licensePolicy: string;
+}
+
+export interface GlobalIntelligenceSearchEntityCandidate {
+  entityId: string;
+  classification: string;
+  confidence: KnowledgeValue<number>;
+  membershipClass: string;
+  membershipProbability: KnowledgeValue<number>;
+  evidenceIds: string[];
+  modelVersion: string;
+}
+
+export interface GlobalIntelligenceSearchMatch {
+  documentId: string;
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  normalizedIdentifier: string;
+  subjectType: KnowledgeValue<string>;
+  matchedBy: 'IDENTIFIER' | 'LABEL' | 'LABEL_CATEGORY';
+  recordType: string;
+  recordId: string;
+  role: string;
+  snapshot: KnowledgeValue<{ position: string; hash: string }>;
+  analysisConfidence: KnowledgeValue<number>;
+  freshness: KnowledgeValue<string>;
+  labels: KnowledgeValue<GlobalIntelligenceSearchLabel[]>;
+  entities: KnowledgeValue<GlobalIntelligenceSearchEntityCandidate[]>;
+  terminalEvidence: EvidenceRecord;
+  sourceSet: string[];
+  modelVersion: string;
+}
+
+export interface GlobalIntelligenceSearchProjection {
+  query: string;
+  coverageScope: 'IMMUTABLE_REPORTS_AND_REGISTERED_LABELS_V1';
+  matches: GlobalIntelligenceSearchMatch[];
+  matchCount: number;
+  truncated: boolean;
+  indexedRecordTypes: string[];
+  terminalEvidenceIds: string[];
+}
+
 export interface SearchResponse {
   query: string;
   candidates: SubjectCandidate[];
   rejectedReason?: string;
+  durableResults: KnowledgeValue<GlobalIntelligenceSearchProjection>;
+  resultConfidence: KnowledgeValue<number>;
+  coverage: {
+    scope: 'IDENTIFIER_CLASSIFICATION_AND_DURABLE_EXACT_PROJECTION_V1';
+    identifierClassification: KnowledgeValue<boolean>;
+    durableProjection: KnowledgeValue<boolean>;
+    gaps: {
+      tokenSymbolTickerLookup: KnowledgeValue<boolean>;
+      platformProjectLexicalLookup: KnowledgeValue<boolean>;
+      completeSubjectRegistry: KnowledgeValue<boolean>;
+      semanticCheckpointIndex: KnowledgeValue<boolean>;
+    };
+  };
+  absenceSemantics: 'NO_DURABLE_MATCH_IS_NOT_ONCHAIN_NONEXISTENCE';
   metadata: AnalysisMetadata;
 }
 

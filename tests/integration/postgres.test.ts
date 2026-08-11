@@ -61,6 +61,7 @@ import {
   PostgresFlapHistoryProjectionRepository,
   PostgresFlapPensionEntryReportRepository,
   PostgresIngestionCheckpointRepository,
+  PostgresIntelligenceSearchRepository,
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
@@ -287,6 +288,111 @@ const raw = createEvidence({
   blockOrSlot: snapshot.blockNumber,
   finality: 'finalized',
   summary: 'PostgreSQL integration source Evidence.',
+});
+
+postgresDescribe('PostgreSQL durable intelligence search projection', () => {
+  let evidence: PostgresEvidenceRepository;
+  let search: PostgresIntelligenceSearchRepository;
+  let pool: Pool;
+  const fixtureId = randomUUID();
+  const subjectId = randomUUID();
+  const labelId = randomUUID();
+  const identifier = `0x${fixtureId.replaceAll('-', '').padEnd(40, '0').slice(0, 40)}`;
+  const label = `ZeroTrace Search Fixture ${fixtureId}`;
+  const category = `search-fixture-${fixtureId}`;
+  const terminalEvidence = createEvidence({
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    kind: 'ANALYST_OBSERVATION',
+    source: 'zerotrace:postgres-integration',
+    locator: `label:${labelId}`,
+    payload: { subjectId, identifier, label, category },
+    observedAt: '2026-08-12T00:00:00.000Z',
+    blockOrSlot: '115000000',
+    finality: 'finalized',
+    summary: 'Durable search label observation integration fixture.',
+  });
+
+  beforeAll(async () => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    search = new PostgresIntelligenceSearchRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    pool = new Pool({ connectionString: connectionString as string, max: 1 });
+    await evidence.put(terminalEvidence);
+    await pool.query(
+      `INSERT INTO subjects (id, ledger, chain_id, subject_type, normalized_identifier)
+       VALUES ($1, 'EVM', 'eip155:56', 'ADDRESS', $2)`,
+      [subjectId, identifier],
+    );
+    await pool.query(
+      `INSERT INTO label_observations (
+         id, subject_id, source, source_class, label, category, actor_candidate,
+         source_confidence, evidence_id, observed_at, deterministic, license_policy,
+         raw_payload_hash
+       ) VALUES ($1, $2, $3, 'CURATED', $4, $5, NULL, 0.9, $6, $7, false, $8, $9)`,
+      [
+        labelId,
+        subjectId,
+        terminalEvidence.source,
+        label,
+        category,
+        terminalEvidence.id,
+        terminalEvidence.observedAt,
+        'Apache-2.0 test fixture',
+        terminalEvidence.payloadHash,
+      ],
+    );
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), search.close(), pool.end()]);
+  });
+
+  it('finds registered labels and exact identifiers without provider access', async () => {
+    await expect(search.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+
+    const byLabel = await search.search({ query: label, ledger: 'EVM', chainId: 'eip155:56' });
+    expect(byLabel).toMatchObject({
+      matchCount: 1,
+      terminalEvidenceIds: [terminalEvidence.id],
+      matches: [
+        {
+          matchedBy: 'LABEL',
+          recordType: 'LABEL_OBSERVATION',
+          normalizedIdentifier: identifier,
+          subjectType: { state: 'known', value: 'ADDRESS' },
+          snapshot: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+          labels: {
+            state: 'known',
+            value: [
+              {
+                id: labelId,
+                label,
+                category,
+                actorCandidate: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+                evidenceId: terminalEvidence.id,
+              },
+            ],
+          },
+          entities: { state: 'known', value: [] },
+          terminalEvidence: { id: terminalEvidence.id },
+        },
+      ],
+    });
+
+    const byIdentifier = await search.search({
+      query: identifier.toUpperCase(),
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+    });
+    expect(byIdentifier.matches).toHaveLength(1);
+    expect(byIdentifier.matches[0]).toMatchObject({ matchedBy: 'IDENTIFIER', recordId: labelId });
+  });
 });
 
 const derived = createEvidence({

@@ -39,6 +39,7 @@ import {
 import {
   knownValue,
   unknownValue,
+  GlobalIntelligenceSearchRecordTypeSchema,
   type ChainAnchorRead,
   type ComparisonObservation,
   type EntityRelationshipReport,
@@ -48,6 +49,7 @@ import {
 } from '@zerotrace/schemas';
 import {
   StorageError,
+  IntelligenceSearchStorageError,
   type EvidenceRepository,
   type StoredEntityRelationshipReport,
   type StoredEntityRelationshipTimeline,
@@ -1304,7 +1306,117 @@ describe('ZeroTrace API contract', () => {
       url: '/api/v1/search?q=0x52908400098527886e0f7030069857d2e4169ee7',
     });
     expect(response.statusCode).toBe(200);
-    expect(response.json().candidates[0]).toMatchObject({ ledger: 'EVM', type: 'ADDRESS' });
+    expect(response.json()).toMatchObject({
+      candidates: [{ ledger: 'EVM', type: 'ADDRESS' }],
+      durableResults: { state: 'unavailable', reason: 'STORAGE_UNCONFIGURED' },
+      resultConfidence: { state: 'known' },
+      coverage: {
+        identifierClassification: { state: 'known', value: true },
+        durableProjection: { state: 'unavailable', reason: 'STORAGE_UNCONFIGURED' },
+        gaps: {
+          tokenSymbolTickerLookup: { state: 'unknown', reason: 'NOT_IMPLEMENTED' },
+        },
+      },
+      absenceSemantics: 'NO_DURABLE_MATCH_IS_NOT_ONCHAIN_NONEXISTENCE',
+      metadata: { dataCoverage: 0.5, sourceCoverage: 0.5, evidenceIds: [] },
+    });
+  });
+
+  it('returns Evidence-bound durable matches and degrades only that partition on storage failure', async () => {
+    const runtime = runtimeWithEvm();
+    const terminalEvidence = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:test',
+      locator: 'durable-search:test',
+      payload: { record: 'fixture' },
+      observedAt: '2026-08-12T00:00:00.000Z',
+      blockOrSlot: '16',
+      finality: 'finalized',
+      summary: 'Durable search API fixture.',
+    });
+    const search = vi
+      .fn()
+      .mockResolvedValueOnce({
+        query: '0x52908400098527886e0f7030069857d2e4169ee7',
+        coverageScope: 'IMMUTABLE_REPORTS_AND_REGISTERED_LABELS_V1',
+        matches: [
+          {
+            documentId: `isr_${'1'.repeat(24)}`,
+            ledger: 'EVM',
+            chainId: 'eip155:1',
+            normalizedIdentifier: '0x52908400098527886e0f7030069857d2e4169ee7',
+            subjectType: knownValue('CONTRACT'),
+            matchedBy: 'IDENTIFIER',
+            recordType: 'EVM_CONTROL_SURFACE',
+            recordId: `ecs_${'2'.repeat(24)}`,
+            role: 'CONTROL_SUBJECT',
+            snapshot: knownValue({ position: '16', hash: `0x${'a'.repeat(64)}` }),
+            analysisConfidence: knownValue(0.8),
+            freshness: knownValue('2026-08-12T00:00:00.000Z'),
+            labels: knownValue([]),
+            entities: unknownValue('NOT_QUERIED'),
+            terminalEvidence,
+            sourceSet: ['ethereum-rpc'],
+            modelVersion: 'evm-control-surface-v0.1.0',
+          },
+        ],
+        matchCount: 1,
+        truncated: false,
+        indexedRecordTypes: [...GlobalIntelligenceSearchRecordTypeSchema.options].sort(),
+        terminalEvidenceIds: [terminalEvidence.id],
+      })
+      .mockRejectedValueOnce(
+        new IntelligenceSearchStorageError(
+          'INTELLIGENCE_SEARCH_UNAVAILABLE',
+          'Fixture storage is unavailable.',
+          { retryable: true },
+        ),
+      );
+    runtime.intelligenceSearch = {
+      search,
+      health: vi.fn(),
+      close: vi.fn(),
+    } as unknown as NonNullable<AppRuntime['intelligenceSearch']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const available = await app.inject({
+      method: 'GET',
+      url: '/api/v1/search?q=0x52908400098527886e0f7030069857d2e4169ee7&ledger=EVM&chainId=eip155%3A1&limit=10',
+    });
+    expect(available.statusCode, available.body).toBe(200);
+    expect(available.json()).toMatchObject({
+      durableResults: {
+        state: 'known',
+        value: {
+          matchCount: 1,
+          terminalEvidenceIds: [terminalEvidence.id],
+          matches: [
+            {
+              recordType: 'EVM_CONTROL_SURFACE',
+              terminalEvidence: { id: terminalEvidence.id },
+            },
+          ],
+        },
+      },
+      resultConfidence: { state: 'known', value: 1 },
+      coverage: { durableProjection: { state: 'known', value: true } },
+      metadata: { dataCoverage: 1, sourceCoverage: 1, evidenceIds: [terminalEvidence.id] },
+    });
+
+    const degraded = await app.inject({
+      method: 'GET',
+      url: '/api/v1/search?q=0x52908400098527886e0f7030069857d2e4169ee7',
+    });
+    expect(degraded.statusCode, degraded.body).toBe(200);
+    expect(degraded.json()).toMatchObject({
+      candidates: [{ ledger: 'EVM', type: 'ADDRESS' }],
+      durableResults: { state: 'unavailable', reason: 'STORAGE_DOWN' },
+      coverage: { durableProjection: { state: 'unavailable', reason: 'STORAGE_DOWN' } },
+      metadata: { dataCoverage: 0.5 },
+    });
   });
 
   it('binds a subject fact to a snapshot and evidence record', async () => {

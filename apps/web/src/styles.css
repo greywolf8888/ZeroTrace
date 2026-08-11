@@ -1029,6 +1029,57 @@ tbody tr:hover {
   margin-top: 14px;
 }
 
+.durable-search-panel {
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.search-confidence {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.durable-search-alert {
+  margin: 16px 18px;
+}
+
+.durable-search-empty {
+  padding: 24px 18px;
+}
+
+.durable-search-empty p {
+  max-width: 680px;
+  margin: 7px 0 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.durable-search-table {
+  min-width: 1180px;
+}
+
+.durable-search-table td {
+  max-width: 220px;
+  vertical-align: top;
+}
+
+.durable-search-table td > small,
+.durable-search-table td > span,
+.durable-search-table td > code,
+.durable-search-table td > strong {
+  display: block;
+  margin-top: 5px;
+}
+
+.durable-search-table td > :first-child {
+  margin-top: 0;
+}
+
+.durable-search-table small {
+  color: var(--text-muted);
+}
+
 .fact-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

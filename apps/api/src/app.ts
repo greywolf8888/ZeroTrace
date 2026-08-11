@@ -70,6 +70,7 @@ import {
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   FlapPensionEntryReportStorageError,
+  IntelligenceSearchStorageError,
   PensionCandidateReportStorageError,
   SemanticCheckpointError,
   SolanaTransactionReportStorageError,
@@ -118,6 +119,7 @@ const SearchQuerySchema = z.object({
   q: z.string().trim().min(1).max(512),
   ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']).optional(),
   chainId: z.string().min(1).max(128).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 const LedgerRecordParamsSchema = z.object({
@@ -1090,6 +1092,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipTimelines']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphs']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphTimelines']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['intelligenceSearch']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -1125,6 +1128,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         entityRelationshipTimelines,
         entityInvestigationGraphs,
         entityInvestigationGraphTimelines,
+        intelligenceSearch,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -1140,37 +1144,26 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.entityRelationshipTimelines?.health(),
         runtime.entityInvestigationGraphs?.health(),
         runtime.entityInvestigationGraphTimelines?.health(),
+        runtime.intelligenceSearch?.health(),
       ]);
       value =
-        evidence.status === 'DOWN'
-          ? evidence
-          : semanticCheckpoints?.status === 'DOWN'
-            ? semanticCheckpoints
-            : flapHistoryProjection?.status === 'DOWN'
-              ? flapHistoryProjection
-              : flapLifetimeHeads?.status === 'DOWN'
-                ? flapLifetimeHeads
-                : claimReports?.status === 'DOWN'
-                  ? claimReports
-                  : controlSurfaces?.status === 'DOWN'
-                    ? controlSurfaces
-                    : solanaControlSurfaces?.status === 'DOWN'
-                      ? solanaControlSurfaces
-                      : solanaTransactionReports?.status === 'DOWN'
-                        ? solanaTransactionReports
-                        : pensionCandidateReports?.status === 'DOWN'
-                          ? pensionCandidateReports
-                          : pensionEntryReports?.status === 'DOWN'
-                            ? pensionEntryReports
-                            : entityRelationshipReports?.status === 'DOWN'
-                              ? entityRelationshipReports
-                              : entityRelationshipTimelines?.status === 'DOWN'
-                                ? entityRelationshipTimelines
-                                : entityInvestigationGraphs?.status === 'DOWN'
-                                  ? entityInvestigationGraphs
-                                  : entityInvestigationGraphTimelines?.status === 'DOWN'
-                                    ? entityInvestigationGraphTimelines
-                                    : evidence;
+        [
+          evidence,
+          semanticCheckpoints,
+          flapHistoryProjection,
+          flapLifetimeHeads,
+          claimReports,
+          controlSurfaces,
+          solanaControlSurfaces,
+          solanaTransactionReports,
+          pensionCandidateReports,
+          pensionEntryReports,
+          entityRelationshipReports,
+          entityRelationshipTimelines,
+          entityInvestigationGraphs,
+          entityInvestigationGraphTimelines,
+          intelligenceSearch,
+        ].find((component) => component?.status === 'DOWN') ?? evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1561,6 +1554,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             : 'PostgreSQL append-only Evidence and Snapshot persistence is configured.',
       },
       {
+        id: 'global-intelligence-search',
+        status:
+          runtime.intelligenceSearch === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_EXACT_PROJECTION',
+        detail:
+          'Exact identifier, registered label, and label-category lookup projects immutable Evidence-bound reports plus registered Entity memberships from PostgreSQL. Symbol/ticker, platform/project lexical lookup, complete Subject Registry coverage, and semantic checkpoint indexing remain explicit gaps. An empty projection never means that a subject does not exist on-chain.',
+      },
+      {
         id: 'evm-current-state',
         status: runtime.evmAdapters.size > 0 ? 'IMPLEMENTED' : 'PROVIDER_REQUIRED',
       },
@@ -1837,14 +1839,93 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       ...(query.ledger === undefined ? {} : { ledger: query.ledger }),
       ...(query.chainId === undefined ? {} : { chainId: query.chainId }),
     });
+    let durableResults;
+    if (runtime.intelligenceSearch === undefined) {
+      durableResults = unavailableValue(
+        'STORAGE_UNCONFIGURED',
+        'POSTGRES_URL is absent; only deterministic local identifier classification was executed.',
+      );
+    } else {
+      try {
+        durableResults = knownValue(
+          await runtime.intelligenceSearch.search({
+            query: query.q,
+            ...(query.ledger === undefined ? {} : { ledger: query.ledger }),
+            ...(query.chainId === undefined ? {} : { chainId: query.chainId }),
+            ...(query.limit === undefined ? {} : { limit: query.limit }),
+          }),
+        );
+      } catch (error) {
+        if (!(error instanceof IntelligenceSearchStorageError)) throw error;
+        durableResults = unavailableValue(
+          'STORAGE_DOWN',
+          `${error.code}: ${error.message} Local identifier classification remains available.`,
+        );
+      }
+    }
+    const durableMatches = durableResults.state === 'known' ? durableResults.value.matches : [];
+    const matchConfidences = durableMatches.flatMap((match) =>
+      match.analysisConfidence.state === 'known' ? [match.analysisConfidence.value] : [],
+    );
+    const resultConfidences = [
+      ...result.candidates.map((candidate) => candidate.confidence),
+      ...matchConfidences,
+    ];
+    const resultConfidence =
+      resultConfidences.length === 0
+        ? unknownValue(
+            'INSUFFICIENT_DATA',
+            'No classified identifier or confidence-bearing durable match was found in the declared scope.',
+          )
+        : knownValue(Math.max(...resultConfidences));
+    const terminalEvidenceIds =
+      durableResults.state === 'known' ? durableResults.value.terminalEvidenceIds : [];
+    const sourceSet = [
+      'local-checksum-and-structure',
+      ...(durableResults.state === 'known' ? ['postgres-durable-intelligence-search-v1'] : []),
+    ].sort();
+    const executionCoverage = durableResults.state === 'known' ? 1 : 0.5;
     return {
       ...result,
+      durableResults,
+      resultConfidence,
+      coverage: {
+        scope: 'IDENTIFIER_CLASSIFICATION_AND_DURABLE_EXACT_PROJECTION_V1',
+        identifierClassification: knownValue(true),
+        durableProjection:
+          durableResults.state === 'known'
+            ? knownValue(true)
+            : unavailableValue(durableResults.reason, durableResults.detail),
+        gaps: {
+          tokenSymbolTickerLookup: unknownValue(
+            'NOT_IMPLEMENTED',
+            'A verified token-symbol registry is not indexed yet.',
+          ),
+          platformProjectLexicalLookup: unknownValue(
+            'NOT_IMPLEMENTED',
+            'Platform and project names are not yet resolved by this exact-match projection.',
+          ),
+          completeSubjectRegistry: unknownValue(
+            'NOT_IMPLEMENTED',
+            'Not every report subject has a durable Subject Registry binding yet.',
+          ),
+          semanticCheckpointIndex: unknownValue(
+            'NOT_IMPLEMENTED',
+            'Semantic checkpoint payloads are not included in this projection version.',
+          ),
+        },
+      },
+      absenceSemantics: 'NO_DURABLE_MATCH_IS_NOT_ONCHAIN_NONEXISTENCE' as const,
       metadata: {
-        ...emptyMetadata('identifier-parser-v0.1.0', result.candidates[0]?.confidence ?? 0),
-        dataCoverage: result.candidates.length === 0 ? 0 : 1,
-        sourceCoverage: result.candidates.length === 0 ? 0 : 1,
+        ...emptyMetadata(
+          'global-intelligence-search-v0.1.0',
+          resultConfidence.state === 'known' ? resultConfidence.value : executionCoverage,
+        ),
+        dataCoverage: executionCoverage,
+        sourceCoverage: executionCoverage,
         freshness: new Date().toISOString(),
-        sourceSet: ['local-checksum-and-structure'],
+        sourceSet,
+        evidenceIds: terminalEvidenceIds,
       },
     };
   });

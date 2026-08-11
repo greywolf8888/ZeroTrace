@@ -1929,3 +1929,50 @@ and [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31513348679)
 and contracts, Chromium E2E, every production container target, JavaScript/TypeScript analysis and
 CodeQL all passed. This independently closes the disposable-container gate for the code commit; it
 does not remove the separate long-lived local ClickHouse capacity and Docker Desktop start defects.
+
+## Durable Global Intelligence Search projection: 2026-08-12
+
+ZeroTrace added `global-intelligence-search-v0.1.0` as a generic provider-free read projection over
+registered labels and the identifier-bearing immutable report families currently implemented. The
+projection does not specialize FFT: the FFT contract is the first acceptance subject already
+present in the durable report store. PostgreSQL migration `022_durable_intelligence_search` adds
+exact identifier, registered-label and category indexes plus the versioned
+`durable_intelligence_search_documents_v1` view. Every match retains its source report, exact
+Snapshot, canonical source set, confidence, freshness, model version and terminal Evidence ID.
+
+An isolated empty PostgreSQL database applied migrations `001` through `022` in filename order, and
+the search integration passed before the temporary database was removed. Reapplying migration `022`
+to the preserved development database was idempotent. The complete serial real-storage suite then
+passed 101/101 tests against PostgreSQL, Apache AGE, ClickHouse and MinIO after restarting the
+capacity-constrained ClickHouse service. The environment-free integration suite passed 73 tests.
+
+Rebuilt API, web and PostgreSQL images were recreated without deleting persistent volumes. Because
+another local service owned host port `5432`, Compose used the documented `POSTGRES_PORT=15432`
+override while internal PostgreSQL remained on `5432`. PostgreSQL durable-storage health was `UP`,
+the API remained read-only, and the top-level readiness was honestly `DEGRADED` because Ethereum
+was unconfigured and the preserved ClickHouse volume retained its separate capacity condition.
+
+A real HTTP request for BSC subject `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`
+returned one local classification and six durable matches across control-surface, pension-candidate
+and pension-entry reports. The response contained six distinct terminal Evidence IDs, Known result
+confidence, `NO_DURABLE_MATCH_IS_NOT_ONCHAIN_NONEXISTENCE`, and explicit pending symbol/ticker,
+platform/project, full registry and checkpoint indexes. A headed Chromium session rendered the same
+six rows and Evidence ledger. With no durable Subject Registry binding, Entity and label knowledge
+displayed `Not Queried`; it was not converted to an empty entity, false label, or numeric zero.
+
+The repository gate passed formatting, ESLint, typecheck, production build, the production license
+allowlist, zero-vulnerability dependency audit, CycloneDX SBOM and Compose validation. Unit tests
+passed 518/518 across 80 files, one Entity structural evaluation passed, and all 36 desktop/Pixel 7
+Chromium flows passed. Durable coverage passed 616 tests at 83.26% statements, 77.36% branches,
+93.83% functions and 84.41% lines. The three ClickHouse ingestion cases were deliberately
+unconfigured for that final coverage command after V8 coverage instrumentation again exceeded the
+reused 1 GiB volume's memory allowance. Their non-instrumented real-storage execution had already
+passed 3/3 in the 101-test serial suite; long-lived ClickHouse compaction, retention and memory
+sizing remain a production operations gate.
+
+Exact feature commit `db86aca` passed
+[GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31521748113) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31521748107) on PR #13. Quality and
+contracts, all 36 Chromium desktop/mobile flows, every production container target,
+JavaScript/TypeScript analysis and CodeQL passed. The documentation-only acceptance-record
+follow-up must independently pass before the protected-main squash merge.

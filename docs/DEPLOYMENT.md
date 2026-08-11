@@ -35,6 +35,10 @@ Core local topology:
 docker compose up -d
 ```
 
+The host-side PostgreSQL binding defaults to `5432`. Override `POSTGRES_PORT` in `.env` when that
+port is already in use; internal service discovery and `POSTGRES_URL` continue to use
+`postgres:5432`.
+
 Add durable workflows:
 
 ```bash
@@ -300,6 +304,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/020_entity_investigation_graphs.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/021_entity_investigation_graph_timelines.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/022_durable_intelligence_search.sql
 ```
 
 PowerShell equivalent:
@@ -342,6 +348,8 @@ Get-Content -Raw infra/postgres/init/019_entity_relationship_timelines.sql |
 Get-Content -Raw infra/postgres/init/020_entity_investigation_graphs.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/021_entity_investigation_graph_timelines.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/022_durable_intelligence_search.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

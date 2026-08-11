@@ -39,6 +39,8 @@ export const KnowledgeReasonSchema = z.enum([
   'NOT_IMPLEMENTED',
   'PROVIDER_UNCONFIGURED',
   'PROVIDER_DOWN',
+  'STORAGE_UNCONFIGURED',
+  'STORAGE_DOWN',
   'RATE_LIMITED',
   'STALE',
   'CONFLICTING_SOURCES',
@@ -717,6 +719,175 @@ export const LabelObservationSchema = z.object({
   rawPayloadHash: Hash256Schema,
 });
 export type LabelObservation = z.infer<typeof LabelObservationSchema>;
+
+export const GlobalIntelligenceSearchRecordTypeSchema = z.enum([
+  'LABEL_OBSERVATION',
+  'EVM_CLAIM_REPORT',
+  'EVM_CONTROL_SURFACE',
+  'SOLANA_CONTROL_SURFACE',
+  'SOLANA_TRANSACTION',
+  'EVM_PENSION_CANDIDATE',
+  'FLAP_PENSION_ENTRY',
+  'ENTITY_RELATIONSHIP',
+  'ENTITY_RELATIONSHIP_TIMELINE',
+  'ENTITY_INVESTIGATION_GRAPH',
+  'ENTITY_INVESTIGATION_GRAPH_TIMELINE',
+]);
+export type GlobalIntelligenceSearchRecordType = z.infer<
+  typeof GlobalIntelligenceSearchRecordTypeSchema
+>;
+
+export const GlobalIntelligenceSearchLabelSchema = z
+  .object({
+    id: z
+      .string()
+      .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+    label: z.string().trim().min(1).max(512),
+    category: z.string().trim().min(1).max(256),
+    source: z.string().trim().min(1).max(512),
+    sourceClass: z.enum(['DETERMINISTIC', 'CURATED', 'COMMERCIAL', 'COMMUNITY', 'INFERENCE']),
+    actorCandidate: knowledgeValueSchema(z.string().trim().min(1).max(512)),
+    sourceConfidence: ConfidenceSchema,
+    evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    observedAt: IsoDateTimeSchema,
+    deterministic: z.boolean(),
+    licensePolicy: z.string().trim().min(1).max(512),
+  })
+  .strict();
+export type GlobalIntelligenceSearchLabel = z.infer<typeof GlobalIntelligenceSearchLabelSchema>;
+
+export const GlobalIntelligenceSearchEntityCandidateSchema = z
+  .object({
+    entityId: z
+      .string()
+      .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+    classification: z.string().trim().min(1).max(256),
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    membershipClass: z.string().trim().min(1).max(256),
+    membershipProbability: knowledgeValueSchema(ConfidenceSchema),
+    evidenceIds: z
+      .array(z.string().regex(/^ev_[0-9a-f]{24}$/))
+      .min(1)
+      .max(1_000),
+    modelVersion: z.string().trim().min(1).max(256),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.evidenceIds.length !== new Set(value.evidenceIds).size ||
+      value.evidenceIds.some(
+        (evidenceId, index) => evidenceId !== [...value.evidenceIds].sort()[index],
+      )
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceIds'],
+        message: 'Search Entity candidates require canonical unique Evidence IDs.',
+      });
+    }
+  });
+export type GlobalIntelligenceSearchEntityCandidate = z.infer<
+  typeof GlobalIntelligenceSearchEntityCandidateSchema
+>;
+
+export const GlobalIntelligenceSearchSnapshotSchema = z
+  .object({
+    position: UnsignedQuantityStringSchema,
+    hash: z.string().trim().min(1).max(256),
+  })
+  .strict();
+export type GlobalIntelligenceSearchSnapshot = z.infer<
+  typeof GlobalIntelligenceSearchSnapshotSchema
+>;
+
+export const GlobalIntelligenceSearchMatchSchema = z
+  .object({
+    documentId: z.string().regex(/^isr_[0-9a-f]{24}$/),
+    ledger: LedgerSchema,
+    chainId: z.string().trim().min(1).max(128),
+    normalizedIdentifier: z.string().trim().min(1).max(512),
+    subjectType: knowledgeValueSchema(SubjectTypeSchema),
+    matchedBy: z.enum(['IDENTIFIER', 'LABEL', 'LABEL_CATEGORY']),
+    recordType: GlobalIntelligenceSearchRecordTypeSchema,
+    recordId: z.string().trim().min(1).max(512),
+    role: z.string().trim().min(1).max(128),
+    snapshot: knowledgeValueSchema(GlobalIntelligenceSearchSnapshotSchema),
+    analysisConfidence: knowledgeValueSchema(ConfidenceSchema),
+    freshness: knowledgeValueSchema(IsoDateTimeSchema),
+    labels: knowledgeValueSchema(z.array(GlobalIntelligenceSearchLabelSchema).max(1_000)),
+    entities: knowledgeValueSchema(
+      z.array(GlobalIntelligenceSearchEntityCandidateSchema).max(1_000),
+    ),
+    terminalEvidence: EvidenceSchema,
+    sourceSet: z.array(z.string().trim().min(1).max(512)).min(1).max(1_000),
+    modelVersion: z.string().trim().min(1).max(256),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const invalidSubjectType =
+      value.subjectType.state === 'known' && value.subjectType.value === 'UNKNOWN';
+    const invalidSourceSet =
+      value.sourceSet.length !== new Set(value.sourceSet).size ||
+      value.sourceSet.some((source, index) => source !== [...value.sourceSet].sort()[index]);
+    const labelMatchWithoutLabel =
+      value.matchedBy !== 'IDENTIFIER' &&
+      (value.labels.state !== 'known' || value.labels.value.length === 0);
+    if (
+      invalidSubjectType ||
+      invalidSourceSet ||
+      labelMatchWithoutLabel ||
+      value.terminalEvidence.ledger !== value.ledger ||
+      value.terminalEvidence.chainId !== value.chainId
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['recordType'],
+        message:
+          'Search matches require canonical provenance, explicit unknown subject types, and ledger-consistent terminal Evidence.',
+      });
+    }
+  });
+export type GlobalIntelligenceSearchMatch = z.infer<typeof GlobalIntelligenceSearchMatchSchema>;
+
+export const GlobalIntelligenceSearchProjectionSchema = z
+  .object({
+    query: z.string().trim().min(1).max(512),
+    coverageScope: z.literal('IMMUTABLE_REPORTS_AND_REGISTERED_LABELS_V1'),
+    matches: z.array(GlobalIntelligenceSearchMatchSchema).max(100),
+    matchCount: z.number().int().nonnegative().max(100),
+    truncated: z.boolean(),
+    indexedRecordTypes: z.array(GlobalIntelligenceSearchRecordTypeSchema),
+    terminalEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).max(100),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const expectedRecordTypes = [...GlobalIntelligenceSearchRecordTypeSchema.options].sort();
+    const expectedEvidenceIds = [
+      ...new Set(value.matches.map((match) => match.terminalEvidence.id)),
+    ].sort();
+    if (
+      value.matchCount !== value.matches.length ||
+      value.matches.length !== new Set(value.matches.map((match) => match.documentId)).size ||
+      value.indexedRecordTypes.length !== expectedRecordTypes.length ||
+      value.indexedRecordTypes.some(
+        (recordType, index) => recordType !== expectedRecordTypes[index],
+      ) ||
+      value.terminalEvidenceIds.length !== expectedEvidenceIds.length ||
+      value.terminalEvidenceIds.some(
+        (evidenceId, index) => evidenceId !== expectedEvidenceIds[index],
+      )
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['matches'],
+        message:
+          'Search projections require unique matches, exact counts, complete index scope, and canonical terminal Evidence IDs.',
+      });
+    }
+  });
+export type GlobalIntelligenceSearchProjection = z.infer<
+  typeof GlobalIntelligenceSearchProjectionSchema
+>;
 
 export const EntityResolutionClassSchema = z.enum([
   'CONFIRMED_SAME_CONTROLLER',
