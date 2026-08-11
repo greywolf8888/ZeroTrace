@@ -46,6 +46,7 @@ flowchart TB
 
   subgraph Intelligence["Intelligence plane"]
     RESOLVE["Identifier and subject resolver"]
+    LABEL_INTEL["Temporal Label Intelligence"]
     ENTITY["Temporal entity resolution"]
     RIGHTS["Control-right analyzer"]
     LAUNCH["Launch-mechanism adapters"]
@@ -95,6 +96,8 @@ flowchart TB
   NORMALIZE --> EVIDENCE
   QUALITY --> EVIDENCE
   EVIDENCE --> ENTITY
+  EVIDENCE --> LABEL_INTEL
+  LABEL_INTEL --> ENTITY
   EVIDENCE --> RIGHTS
   EVIDENCE --> LAUNCH
   ENTITY --> RV
@@ -103,6 +106,7 @@ flowchart TB
   MARKET --> RV
   RV --> SCENARIO
   ENTITY --> API
+  LABEL_INTEL --> API
   RIGHTS --> API
   MARKET --> API
   RV --> API
@@ -178,6 +182,28 @@ runtime cache; the PostgreSQL repository transactionally persists complete Snaps
 and edges and supports drilldown after restart. Implemented ingestion observations bind a
 content-addressed, read-after-write-verified raw artifact; query-time provider observations do not yet
 persist their raw response bodies.
+
+### Label observation and Label Snapshot
+
+A label is a source observation about one exact ledger-scoped Subject, not a fact that two Subjects
+share an owner. Each observation retains its source class, source confidence, actor candidate,
+validity Knowledge, observed time, license policy, raw-payload hash and Evidence IDs. Deterministic,
+curated, commercial, community and inferred observations coexist; source priority only determines
+review order and never silently discards a conflict.
+
+`label-intelligence-v0.1.0` materializes every registered observation for one Subject and one
+analyst-supplied `asOf` policy into a content-addressed `lss_...` Label Snapshot. Future, active,
+stale and expired observations remain distinct. Conflicting label values, actor candidates and
+determinism claims are persisted with `PRESERVED` disposition. Service/CEX/bridge/mixer/custody
+observations conservatively suppress downstream ownership propagation; absence of such an
+observation does not prove that the Subject is not a Service Hub.
+
+Migration `023_label_intelligence_reports` stores immutable `lir_...` reports and database guards
+bind the Subject, exact observation payloads, source Evidence, terminal derivation, model and the
+following hard rules: labels cannot merge Entities, risk labels cannot establish common control,
+and matching text across chains cannot merge Subjects. The requested observation-set coverage is
+Known only for the exact registered set. Global-source and history coverage remain Unknown until
+source adapters and temporal capture schedules prove them.
 
 ### Anchor reconciliation and continuity
 

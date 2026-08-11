@@ -819,6 +819,162 @@ test('renders an Evidence-bound durable search match without claiming missing re
       }),
     });
   });
+  const labelSourceEvidenceId = `ev_${'2'.repeat(24)}`;
+  const labelTerminalEvidenceId = `ev_${'3'.repeat(24)}`;
+  const firstObservationId = '10000000-0000-4000-8000-000000000001';
+  const secondObservationId = '10000000-0000-4000-8000-000000000002';
+  const labelEvidence = [
+    {
+      id: labelSourceEvidenceId,
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'CONTRACT_STATE',
+      source: 'official-registry',
+      locator: `label:${normalizedAddress}`,
+      payloadHash: 'c'.repeat(64),
+      observedAt: '2026-08-11T00:00:00.000Z',
+      summary: 'Registered label source payload and ledger-scoped Subject binding.',
+    },
+    {
+      id: labelTerminalEvidenceId,
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:label-intelligence-v0.1.0',
+      locator: 'label-intelligence:EVM:eip155:1:subject:lss_snapshot',
+      payloadHash: 'd'.repeat(64),
+      observedAt: '2026-08-12T00:00:00.000Z',
+      finality: 'label-observation-set',
+      summary: 'Immutable Label observation-set review with preserved conflicts.',
+    },
+  ];
+  const labelReport = {
+    id: `lir_${'4'.repeat(24)}`,
+    ledger: 'EVM',
+    chainId: 'eip155:1',
+    subjectId: '10000000-0000-4000-8000-000000000003',
+    subjectType: 'CONTRACT',
+    normalizedIdentifier: normalizedAddress,
+    labelSnapshotId: `lss_${'5'.repeat(24)}`,
+    observationSetHash: 'e'.repeat(64),
+    resultHash: 'f'.repeat(64),
+    terminalEvidenceId: labelTerminalEvidenceId,
+    evidenceIds: [labelSourceEvidenceId, labelTerminalEvidenceId].sort(),
+    sourceSet: ['official-registry', 'community-registry'],
+    modelVersion: 'label-intelligence-v0.1.0',
+    asOf: '2026-08-12T00:00:00.000Z',
+    createdAt: '2026-08-12T00:00:01.000Z',
+    report: {
+      schemaVersion: 'label-intelligence-report-v1',
+      result: {
+        rankedObservationIds: [firstObservationId, secondObservationId],
+        observations: [
+          {
+            observation: {
+              id: firstObservationId,
+              source: 'official-registry',
+              sourceClass: 'DETERMINISTIC',
+              label: 'Example Exchange',
+              category: 'CEX',
+              actorCandidate: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+              sourceConfidence: 0.98,
+              evidenceIds: [labelSourceEvidenceId],
+              observedAt: '2026-08-11T00:00:00.000Z',
+              validFrom: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+              validTo: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+              deterministic: true,
+              licensePolicy: 'MIT-compatible metadata',
+            },
+            temporalStatus: 'ACTIVE',
+            sourcePriority: 5,
+            serviceHubCandidate: true,
+            riskLabel: false,
+            inferenceLabel: false,
+          },
+          {
+            observation: {
+              id: secondObservationId,
+              source: 'community-registry',
+              sourceClass: 'COMMUNITY',
+              label: 'Different Exchange Name',
+              category: 'CEX',
+              actorCandidate: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+              sourceConfidence: 0.61,
+              evidenceIds: [labelSourceEvidenceId],
+              observedAt: '2026-06-01T00:00:00.000Z',
+              validFrom: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+              validTo: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+              deterministic: false,
+              licensePolicy: 'CC0 observation metadata',
+            },
+            temporalStatus: 'STALE',
+            sourcePriority: 2,
+            serviceHubCandidate: true,
+            riskLabel: false,
+            inferenceLabel: false,
+          },
+        ],
+        conflicts: [
+          {
+            id: `lcf_${'6'.repeat(24)}`,
+            dimension: 'LABEL_VALUE',
+            key: 'CEX',
+            values: ['Different Exchange Name', 'Example Exchange'],
+            observationIds: [firstObservationId, secondObservationId],
+            highestPriorityObservationIds: [firstObservationId],
+            disposition: 'PRESERVED',
+          },
+        ],
+        serviceHubSuppression: {
+          applied: true,
+          evidenceIds: [labelSourceEvidenceId],
+          reason: { state: 'known', value: 'SERVICE_HUB_OBSERVATION' },
+        },
+        summary: {
+          observationCount: 2,
+          activeCount: 1,
+          staleCount: 1,
+          expiredCount: 0,
+          futureCount: 0,
+          deterministicCount: 1,
+          inferenceCount: 0,
+          conflictCount: 1,
+          sourceClassCount: 2,
+        },
+        metadata: {
+          modelVersion: 'label-intelligence-v0.1.0',
+          freshness: { state: 'known', value: '2026-08-11T00:00:00.000Z' },
+          conclusionConfidence: { state: 'unknown', reason: 'CONFLICTING_SOURCES' },
+          requestedObservationSetCoverage: { state: 'known', value: 1 },
+          globalSourceCoverage: { state: 'unknown', reason: 'NOT_QUERIED' },
+          historyCoverage: { state: 'unknown', reason: 'NOT_QUERIED' },
+          sourceSet: ['community-registry', 'official-registry'],
+          evidenceIds: [labelSourceEvidenceId, labelTerminalEvidenceId].sort(),
+        },
+        automaticEntityMergeAllowed: false,
+        riskLabelOwnershipInferenceAllowed: false,
+        crossChainSameLabelMergeAllowed: false,
+      },
+      terminalEvidenceId: labelTerminalEvidenceId,
+      evidence: labelEvidence,
+    },
+  };
+  await page.route('**/api/v1/labels/reports', async (route) => {
+    const body = route.request().postDataJSON();
+    expect(body).toMatchObject({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      subjectType: 'CONTRACT',
+      normalizedIdentifier: normalizedAddress,
+      staleAfterSeconds: 2_592_000,
+    });
+    expect(body).not.toHaveProperty('key');
+    expect(body).not.toHaveProperty('matchedBy');
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ replayed: false, record: labelReport }),
+    });
+  });
   await page.goto('/');
   await page.getByLabel('Address or transaction identifier').fill(checksummedEvmAddress);
   await page.getByLabel('Network').selectOption('ethereum');
@@ -835,6 +991,33 @@ test('renders an Evidence-bound durable search match without claiming missing re
   await expect(durableResults).toContainText(terminalEvidenceId.slice(0, 7));
   await expect(page.getByRole('heading', { name: 'Search evidence ledger' })).toBeVisible();
   await expect(page.getByText('Immutable control-surface terminal Evidence.')).toBeVisible();
+
+  const labelPanel = page.getByTestId('label-intelligence');
+  await expect(labelPanel.getByRole('heading', { name: 'Label Intelligence' })).toBeVisible();
+  await labelPanel.getByRole('button', { name: 'Capture label audit' }).click();
+  await expect(labelPanel).toContainText('Entity merge blocked');
+  await expect(labelPanel).toContainText('Risk ≠ control');
+  await expect(labelPanel).toContainText('Cross-chain merge blocked');
+  await expect(labelPanel).toContainText('Applied · ownership propagation suppressed');
+  await expect(labelPanel.getByRole('heading', { name: 'Preserved conflicts' })).toBeVisible();
+  await expect(labelPanel).toContainText('Different Exchange Name ↔ Example Exchange');
+  await expect(labelPanel).toContainText('Conflicting Sources');
+  await expect(
+    page.getByRole('heading', { name: 'Label Intelligence evidence ledger' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Immutable Label observation-set review with preserved conflicts.'),
+  ).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    panelRight: document
+      .querySelector('[data-testid="label-intelligence"]')
+      ?.getBoundingClientRect().right,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+  expect(layout.panelRight ?? 0).toBeLessThanOrEqual(layout.clientWidth + 1);
 });
 
 test('opens a typed Solana transaction result with Snapshot and Evidence', async ({ page }) => {

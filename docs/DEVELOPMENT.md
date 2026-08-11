@@ -417,6 +417,34 @@ Unknown. Exact search is provider-free and an empty result is scoped absence, no
 nonexistence. Verified symbol/ticker, platform/project and semantic-checkpoint indexes remain
 pending.
 
+## Label Intelligence reports
+
+Migration `023_label_intelligence_reports` adds append-only `lir_...` reports plus the
+`label_intelligence_search_documents_v1` projection. Materialization is intentionally separate from
+label capture: the API reads every already-registered observation for one exact Subject, applies an
+explicit `asOf` and stale-window policy, creates a content-addressed Label Snapshot and persists one
+terminal Evidence derivation.
+
+```text
+POST /api/v1/labels/reports
+GET /api/v1/labels/reports/latest?ledger=EVM&chainId=eip155:56&subjectType=CONTRACT&normalizedIdentifier=<address>
+GET /api/v1/labels/reports/<lir-id>
+```
+
+The POST body contains `ledger`, `chainId`, `subjectType`, `normalizedIdentifier`, `asOf`, and
+`staleAfterSeconds`. It never accepts a new label, Entity membership, or analyst override. The engine
+retains future/active/stale/expired observations, source licenses, conflicting labels and actor
+candidates, and makes source priority a review order rather than a truth selector. A Service Hub
+observation suppresses ownership propagation; no observation leaves that conclusion Unknown.
+Global-source and history coverage also remain Unknown until durable source adapters and capture
+schedules exist.
+
+The Intelligence Search UI exposes explicit `Replay latest` and `Capture label audit` actions. A
+capture is a read-only analysis write to the durable report store, not a chain or label-source write.
+Database guards reject report mutation, missing/mismatched source Evidence, altered observation
+payloads, or any attempt to enable label-driven Entity merge, risk-to-control inference, or
+cross-chain same-label merge.
+
 ## Continuous Flap lifetime heads
 
 The fourth semantic-worker entrypoint maintains one append-only accepted lifetime chain. It requires
@@ -454,7 +482,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `020`, are in
+local upgrade commands, including migrations `007` through `023`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

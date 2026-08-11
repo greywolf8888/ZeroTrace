@@ -116,13 +116,22 @@ describe('PostgreSQL durable intelligence search repository', () => {
         rows: [
           {
             view_name: 'durable_intelligence_search_documents_v1',
-            migration_applied: true,
+            label_view_name: 'label_intelligence_search_documents_v1',
+            search_migration_applied: true,
+            label_migration_applied: true,
           },
         ],
         rowCount: 1,
       })
       .mockResolvedValueOnce({
-        rows: [{ view_name: null, migration_applied: false }],
+        rows: [
+          {
+            view_name: null,
+            label_view_name: null,
+            search_migration_applied: false,
+            label_migration_applied: false,
+          },
+        ],
         rowCount: 1,
       });
     const repository = PostgresIntelligenceSearchRepository.fromPool({

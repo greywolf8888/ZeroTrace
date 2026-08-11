@@ -249,6 +249,110 @@ export interface SearchResponse {
   metadata: AnalysisMetadata;
 }
 
+export interface LabelIntelligenceIdentity {
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  subjectType: string;
+  normalizedIdentifier: string;
+}
+
+export interface LabelIntelligenceObservation {
+  id: string;
+  source: string;
+  sourceClass: 'DETERMINISTIC' | 'CURATED' | 'COMMERCIAL' | 'COMMUNITY' | 'INFERENCE';
+  label: string;
+  category: string;
+  actorCandidate: KnowledgeValue<string>;
+  sourceConfidence: number;
+  evidenceIds: string[];
+  observedAt: string;
+  validFrom: KnowledgeValue<string>;
+  validTo: KnowledgeValue<string>;
+  deterministic: boolean;
+  licensePolicy: string;
+}
+
+export interface LabelIntelligenceProjection {
+  observation: LabelIntelligenceObservation;
+  temporalStatus: 'FUTURE' | 'ACTIVE' | 'STALE' | 'EXPIRED';
+  sourcePriority: number;
+  serviceHubCandidate: boolean;
+  riskLabel: boolean;
+  inferenceLabel: boolean;
+}
+
+export interface LabelIntelligenceConflict {
+  id: string;
+  dimension: 'LABEL_VALUE' | 'ACTOR_CANDIDATE' | 'DETERMINISM';
+  key: string;
+  values: string[];
+  observationIds: string[];
+  highestPriorityObservationIds: string[];
+  disposition: 'PRESERVED';
+}
+
+export interface StoredLabelIntelligenceReport {
+  id: string;
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  subjectId: string;
+  subjectType: string;
+  normalizedIdentifier: string;
+  labelSnapshotId: string;
+  observationSetHash: string;
+  resultHash: string;
+  terminalEvidenceId: string;
+  evidenceIds: string[];
+  sourceSet: string[];
+  modelVersion: 'label-intelligence-v0.1.0';
+  asOf: string;
+  createdAt: string;
+  report: {
+    schemaVersion: 'label-intelligence-report-v1';
+    result: {
+      observations: LabelIntelligenceProjection[];
+      rankedObservationIds: string[];
+      conflicts: LabelIntelligenceConflict[];
+      serviceHubSuppression: {
+        applied: boolean;
+        evidenceIds: string[];
+        reason: KnowledgeValue<'SERVICE_HUB_OBSERVATION'>;
+      };
+      summary: {
+        observationCount: number;
+        activeCount: number;
+        staleCount: number;
+        expiredCount: number;
+        futureCount: number;
+        deterministicCount: number;
+        inferenceCount: number;
+        conflictCount: number;
+        sourceClassCount: number;
+      };
+      metadata: {
+        modelVersion: 'label-intelligence-v0.1.0';
+        freshness: KnowledgeValue<string>;
+        conclusionConfidence: KnowledgeValue<number>;
+        requestedObservationSetCoverage: KnowledgeValue<1>;
+        globalSourceCoverage: KnowledgeValue<number>;
+        historyCoverage: KnowledgeValue<number>;
+        sourceSet: string[];
+        evidenceIds: string[];
+      };
+      automaticEntityMergeAllowed: false;
+      riskLabelOwnershipInferenceAllowed: false;
+      crossChainSameLabelMergeAllowed: false;
+    };
+    terminalEvidenceId: string;
+    evidence: EvidenceRecord[];
+  };
+}
+
+export interface LabelIntelligenceReportResponse {
+  replayed: boolean;
+  record: StoredLabelIntelligenceReport;
+}
+
 export interface EvidenceRecord {
   id: string;
   ledger: string;
@@ -1799,6 +1903,33 @@ export const api = {
     if (chainId !== undefined) parameters.set('chainId', chainId);
     return requestJson<SearchResponse>('/api/v1/search?' + parameters.toString());
   },
+  labelIntelligenceLatest: (identity: LabelIntelligenceIdentity) => {
+    const parameters = new URLSearchParams({
+      ledger: identity.ledger,
+      chainId: identity.chainId,
+      subjectType: identity.subjectType,
+      normalizedIdentifier: identity.normalizedIdentifier,
+    });
+    return requestJson<LabelIntelligenceReportResponse>(
+      '/api/v1/labels/reports/latest?' + parameters.toString(),
+    );
+  },
+  labelIntelligenceMaterialize: (
+    identity: LabelIntelligenceIdentity,
+    asOf: string,
+    staleAfterSeconds: number,
+  ) =>
+    requestJson<LabelIntelligenceReportResponse>('/api/v1/labels/reports', {
+      method: 'POST',
+      body: JSON.stringify({
+        ledger: identity.ledger,
+        chainId: identity.chainId,
+        subjectType: identity.subjectType,
+        normalizedIdentifier: identity.normalizedIdentifier,
+        asOf,
+        staleAfterSeconds,
+      }),
+    }),
   subject: (candidate: SubjectCandidate) => {
     const parameters = new URLSearchParams({ chainId: candidate.chainId });
     return requestJson<SubjectResponse>(

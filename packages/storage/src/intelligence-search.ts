@@ -69,7 +69,11 @@ const SEARCH_DOCUMENTS = `
         WHEN lower(document.label_text) = lower($1) THEN 'LABEL'
         ELSE 'LABEL_CATEGORY'
       END AS matched_by
-    FROM durable_intelligence_search_documents_v1 document
+    FROM (
+      SELECT * FROM durable_intelligence_search_documents_v1
+      UNION ALL
+      SELECT * FROM label_intelligence_search_documents_v1
+    ) document
     WHERE ($2::ledger_kind IS NULL OR document.ledger = $2::ledger_kind)
       AND ($3::text IS NULL OR document.chain_id = $3)
       AND (
@@ -518,12 +522,16 @@ export class PostgresIntelligenceSearchRepository {
       const result = await this.#pool.query(
         `SELECT
           to_regclass('public.durable_intelligence_search_documents_v1')::text AS view_name,
-          EXISTS (SELECT 1 FROM schema_migrations WHERE version = $1) AS migration_applied`,
-        ['022_durable_intelligence_search'],
+          to_regclass('public.label_intelligence_search_documents_v1')::text AS label_view_name,
+          EXISTS (SELECT 1 FROM schema_migrations WHERE version = $1) AS search_migration_applied,
+          EXISTS (SELECT 1 FROM schema_migrations WHERE version = $2) AS label_migration_applied`,
+        ['022_durable_intelligence_search', '023_label_intelligence_reports'],
       );
       if (
         result.rows[0]?.view_name !== 'durable_intelligence_search_documents_v1' ||
-        result.rows[0]?.migration_applied !== true
+        result.rows[0]?.label_view_name !== 'label_intelligence_search_documents_v1' ||
+        result.rows[0]?.search_migration_applied !== true ||
+        result.rows[0]?.label_migration_applied !== true
       ) {
         return {
           status: 'DOWN',

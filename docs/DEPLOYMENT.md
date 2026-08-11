@@ -306,6 +306,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/021_entity_investigation_graph_timelines.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/022_durable_intelligence_search.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/023_label_intelligence_reports.sql
 ```
 
 PowerShell equivalent:
@@ -351,11 +353,14 @@ Get-Content -Raw infra/postgres/init/021_entity_investigation_graph_timelines.sq
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/022_durable_intelligence_search.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/023_label_intelligence_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 
-Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`; missing report
-migrations surface explicit repository-specific `*_NOT_INITIALIZED` errors. Never delete a
-persistent volume as a migration strategy.
+Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`, and that
+`label-intelligence` reports `IMPLEMENTED_DURABLE_OBSERVATION_SNAPSHOT` in `/api/v1/capabilities`;
+missing report migrations surface explicit repository-specific `*_NOT_INITIALIZED` errors. Never
+delete a persistent volume as a migration strategy.
 
 Early development ClickHouse volumes may contain a pre-Evidence `raw_chain_facts` table using
 `MergeTree` and lacking `fact_id`, `schema_version`, `evidence_id`, and `raw_artifact_ref`. Do not

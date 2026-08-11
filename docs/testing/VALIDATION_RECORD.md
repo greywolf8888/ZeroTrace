@@ -1976,3 +1976,60 @@ Exact feature commit `db86aca` passed
 contracts, all 36 Chromium desktop/mobile flows, every production container target,
 JavaScript/TypeScript analysis and CodeQL passed. The documentation-only acceptance-record
 follow-up must independently pass before the protected-main squash merge.
+
+## Durable Label Intelligence observation-set reports: 2026-08-12
+
+ZeroTrace added the generic `label-intelligence-v0.1.0` engine over registered observations for one
+exact ledger, chain and Subject. The engine content-addresses the observation set, applies an
+explicit `asOf` and freshness policy, retains future/active/stale/expired states, and preserves
+label-value, actor-candidate and determinism conflicts without selecting a silent winner. Source
+priority is review ordering only. A current Service Hub observation suppresses ownership
+propagation; absence remains `Unknown(NOT_QUERIED)`. Label-to-Entity merge, risk-to-control
+inference and cross-chain same-label merge are all fixed false.
+
+Migration `023_label_intelligence_reports` adds immutable `lir_...` reports and a search projection.
+Its insert guard revalidates the exact Subject, registered observation payloads, source Evidence,
+canonical provenance, terminal derivation and all three non-merge rules; update and delete are
+rejected. An isolated database applied migrations `001` through `023` in filename order, passed all
+25 PostgreSQL integration tests and was then removed. Reapplying migration `023` to the preserved
+development PostgreSQL database was non-destructive. The focused engine/storage suite passed 9/9.
+
+The complete repository `verify` gate passed formatting, ESLint, typecheck, 527 unit tests across 82
+files, 75 environment-free integrations, one Entity structural evaluation, every production build,
+the production dependency-license allowlist and a zero-vulnerability audit. Durable PostgreSQL and
+AGE coverage passed 628 tests with 83.26% statements, 77.36% branches, 93.87% functions and 84.42%
+lines. All 36 Chromium desktop and Pixel 7 flows passed, including Label Intelligence request-body,
+conflict, safety, Evidence and horizontal-overflow assertions.
+The API, web and PostgreSQL production targets also built successfully; the PostgreSQL image
+contains migration `023`.
+
+The non-instrumented real-storage run passed 101 tests. The three ClickHouse ingestion tests again
+failed with error `241 MEMORY_LIMIT_EXCEEDED` on the preserved long-lived volume (about `1.05 GiB`
+projected versus about `814 MiB` permitted). A non-destructive restart did not clear the condition.
+Recreating only that container preserved the named volume, but the existing Docker Desktop defect
+left the new container in `Created` and its start command blocked; no volume was deleted. The passing
+coverage run therefore configured PostgreSQL and AGE and explicitly skipped those three ClickHouse
+cases. This is a local operations gate, not a Label Intelligence pass.
+
+A production API build was started on host port `18082` against the preserved PostgreSQL database.
+A seven-fractional-digit `asOf` request initially exposed a terminal Evidence string-identity bug:
+Evidence normalized the timestamp to milliseconds while the request retained the original text.
+The API now canonicalizes `asOf` before analysis, and a regression test covers that input. The live
+retry created `lir_6bd746e8081ad66fea12ff62`, normalized
+`2026-08-11T19:24:00.1234567Z` to `2026-08-11T19:24:00.123Z`, replayed the exact result hash, retained
+one registered observation and two Evidence nodes, and kept all three merge/control rules false.
+Latest replay correctly returned an existing report with a later logical `asOf`; it did not confuse
+write time with analysis time.
+
+A headed Playwright browser then used the production web build and real API proxy, searched the
+same technical PostgreSQL fixture, displayed three durable search rows, replayed the logically latest
+Label Snapshot, and showed observation freshness, source priority/license, Unknown global/history
+coverage, Service Hub non-observation semantics, all safety boundaries and both Evidence nodes. At a
+390×844 viewport the document client/scroll widths were both 375 CSS pixels, the Label panel stayed
+inside the viewport, and the browser console had zero errors or warnings.
+
+This acceptance used an explicitly named PostgreSQL integration fixture; it is not a real-world
+label attribution and does not validate FFT labels. No external label code/data was copied. Durable
+GraphSense/official/commercial/community adapters, capture scheduling, license/term enforcement,
+complete Subject Registry/history coverage and an independently evidenced FFT label conflict case
+remain pending.

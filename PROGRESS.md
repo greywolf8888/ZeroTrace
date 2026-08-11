@@ -11,16 +11,16 @@ completed feature.
 
 | Measure                          | Current state                                                                                            |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Terminal architecture completion | **20% estimated**                                                                                        |
+| Terminal architecture completion | **21% estimated**                                                                                        |
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                               |
 | Production acceptance            | **No**                                                                                                   |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                           |
-| Unit tests                       | **518 passing across 80 files**                                                                          |
+| Unit tests                       | **527 passing across 82 files**                                                                          |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                               |
-| Integration tests                | **73 environment-free; 101/101 real-storage passing with PostgreSQL, AGE, ClickHouse and object store**  |
+| Integration tests                | **75 environment-free; 101 real-storage pass, 3 long-lived ClickHouse capacity failures**                |
 | Real-browser E2E                 | **36 passing: Chromium desktop and Pixel 7**                                                             |
 | Remote CI                        | **Feature `db86aca` passed CI/CodeQL on PR #13; protected main `3bce3fa`**                               |
-| Coverage                         | **Current durable: 83.26% statements / 77.36% branches / 93.83% functions / 84.41% lines**               |
+| Coverage                         | **Current durable: 83.26% statements / 77.36% branches / 93.87% functions / 84.42% lines**               |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/Scenario, control, and Solana reports wired          |
 
@@ -44,6 +44,7 @@ The only allowed status vocabulary in this ledger is:
 | Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus immutable exact-Snapshot Entity investigation graphs and cross-Snapshot graph timelines work; general terminal graph coverage is incomplete                                                                                                                                                    |
 | Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; scoped Alchemy/BNB market reconciliation passed, while other domains and entity calibration remain                                                                                                                                                                                    |
 | Global Intelligence Search           | `PARTIALLY_IMPLEMENTED`                     | local classification plus durable exact identifier/registered-label projection over current immutable reports works with terminal Evidence and scoped absence; symbol/ticker, platform/project, checkpoint and complete registry indexes remain                                                                                            |
+| Label Intelligence                   | `PARTIALLY_IMPLEMENTED`                     | immutable ledger-scoped observation-set reports, temporal states, preserved conflicts, source review priority, Service Hub suppression, terminal Evidence and UI work; external source adapters, capture schedules, complete registry/history coverage and real-world conflict validation remain                                           |
 | Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | canonical pair inference, immutable Snapshot/Evidence-bound hypotheses/timelines, bounded investigation graphs, durable cross-Snapshot graph timelines, PostgreSQL/optional AGE projection, provider-free replay, exact structural gates and Bitcoin suppression features work; analyst overrides and real-world calibration remain absent |
 | Control Rights                       | `PARTIALLY_IMPLEMENTED`                     | EVM standards/source, Solana SPL/loader and observable Bitcoin script conditions work; effective entities, custom roles, history, recursion and Core policy remain                                                                                                                                                                         |
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; forced-reorg validation and other platforms remain                                                                                                                                                   |
@@ -818,6 +819,30 @@ The only allowed status vocabulary in this ledger is:
 - responsive desktop/mobile UI exposes source record, Entity/label knowledge, confidence,
   freshness and terminal Evidence. Verified symbol/ticker, platform/project, semantic-checkpoint
   and complete Subject Registry indexes remain pending.
+
+### Durable Label Intelligence observation-set reports
+
+- `label-intelligence-v0.1.0` materializes every registered observation for one exact
+  ledger/chain/Subject at an explicit `asOf` time and freshness window. Deterministic, curated,
+  commercial, community and inference sources are review-prioritized without silently selecting a
+  truth winner;
+- future, active, stale and expired observations remain distinct. Label-value, actor-candidate and
+  determinism conflicts receive stable IDs and `PRESERVED` disposition. Source confidence is never
+  reused as Entity/controller certainty;
+- Service Hub categories conservatively suppress downstream ownership propagation only when a
+  non-future/non-expired observation and its Evidence exist. Absence remains Unknown and does not
+  prove a non-service Subject;
+- migration `023_label_intelligence_reports` stores immutable content-addressed `lir_...` reports,
+  rejects update/delete, and verifies the exact Subject, observation payloads, source Evidence,
+  terminal derivation, canonical provenance and hard no-label/risk/cross-chain Entity merge rules;
+- materialize/latest/exact APIs and the existing Intelligence Search workspace expose temporal
+  counts, conflicts, source class/priority/license, coverage Knowledge, Service Hub suppression and
+  complete Evidence. Focused schema/engine/storage/API tests, a clean `001-023` migration replay,
+  25 PostgreSQL integration tests and desktop/Pixel 7 browser tests pass;
+- no external label repository data or code was copied. GraphSense TagPacks, Dune Spellbook,
+  DefiLlama Adapters and Blockscout were license/boundary-reviewed only. Durable adapters, capture
+  scheduling, complete Subject Registry population, full history/global-source coverage and a real
+  cross-source conflict corpus remain unimplemented, so this domain is not production-complete.
 
 ### Flap migrated DEX market and buy scenarios
 

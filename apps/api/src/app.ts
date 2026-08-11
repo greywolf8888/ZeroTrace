@@ -27,6 +27,10 @@ import {
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
 import {
+  buildLabelIntelligenceCore,
+  LABEL_INTELLIGENCE_MODEL_VERSION,
+} from '@zerotrace/label-engine';
+import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   FLAP_EVENT_MODEL_VERSION,
   FLAP_HISTORY_DEFAULT_CHUNK_SIZE,
@@ -71,6 +75,7 @@ import {
   FlapLifetimeHeadError,
   FlapPensionEntryReportStorageError,
   IntelligenceSearchStorageError,
+  LabelIntelligenceStorageError,
   PensionCandidateReportStorageError,
   SemanticCheckpointError,
   SolanaTransactionReportStorageError,
@@ -91,6 +96,8 @@ import {
   EntityInvestigationGraphTimelineReportSchema,
   FlapEventHistoryProjectionSchema,
   FlapLifetimeMaterializationSchema,
+  LabelIntelligenceReportSchema,
+  LabelIntelligenceRequestSchema,
   SolanaTransactionIntelligenceReportSchema,
   knownValue,
   unavailableValue,
@@ -120,6 +127,33 @@ const SearchQuerySchema = z.object({
   ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']).optional(),
   chainId: z.string().min(1).max(128).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+const LabelIntelligenceIdentityQuerySchema = z
+  .object({
+    ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']),
+    chainId: z.string().trim().min(1).max(128),
+    subjectType: z.enum([
+      'ADDRESS',
+      'ACCOUNT',
+      'WALLET',
+      'CONTRACT',
+      'PROGRAM',
+      'TRANSACTION',
+      'BLOCK',
+      'OUTPOINT',
+      'TOKEN',
+      'POOL',
+      'CLUSTER',
+      'ENTITY',
+      'UNKNOWN',
+    ]),
+    normalizedIdentifier: z.string().trim().min(1).max(512),
+  })
+  .strict();
+
+const LabelIntelligenceReportParamsSchema = z.object({
+  reportId: z.string().regex(/^lir_[0-9a-f]{24}$/),
 });
 
 const LedgerRecordParamsSchema = z.object({
@@ -1093,6 +1127,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphs']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphTimelines']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['intelligenceSearch']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['labelIntelligenceReports']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -1129,6 +1164,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         entityInvestigationGraphs,
         entityInvestigationGraphTimelines,
         intelligenceSearch,
+        labelIntelligenceReports,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -1145,6 +1181,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.entityInvestigationGraphs?.health(),
         runtime.entityInvestigationGraphTimelines?.health(),
         runtime.intelligenceSearch?.health(),
+        runtime.labelIntelligenceReports?.health(),
       ]);
       value =
         [
@@ -1163,6 +1200,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           entityInvestigationGraphs,
           entityInvestigationGraphTimelines,
           intelligenceSearch,
+          labelIntelligenceReports,
         ].find((component) => component?.status === 'DOWN') ?? evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
@@ -1431,6 +1469,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof LabelIntelligenceStorageError) {
+      const status = error.code === 'LABEL_INTELLIGENCE_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     if (error instanceof AgeInvestigationGraphProjectionError) {
       const status = error.code === 'AGE_PROJECTION_INVALID' ? 400 : 503;
       return reply
@@ -1561,6 +1605,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             : 'IMPLEMENTED_DURABLE_EXACT_PROJECTION',
         detail:
           'Exact identifier, registered label, and label-category lookup projects immutable Evidence-bound reports plus registered Entity memberships from PostgreSQL. Symbol/ticker, platform/project lexical lookup, complete Subject Registry coverage, and semantic checkpoint indexing remain explicit gaps. An empty projection never means that a subject does not exist on-chain.',
+      },
+      {
+        id: 'label-intelligence',
+        status:
+          runtime.labelIntelligenceReports === undefined || runtime.evidenceRepository === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_OBSERVATION_SNAPSHOT',
+        detail:
+          'Materializes all registered observations for one ledger-scoped Subject into an immutable Label Snapshot with source-priority review order, freshness states, preserved conflicts, conservative Service Hub suppression and terminal Evidence. Labels never merge Entities, risk labels never imply common control, and same text never merges subjects across chains. External label-source adapters and complete registry coverage remain pending.',
       },
       {
         id: 'evm-current-state',
@@ -1929,6 +1982,203 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       },
     };
   });
+
+  app.post('/api/v1/labels/reports', { schema: { tags: ['analysis'] } }, async (request, reply) => {
+    const input = LabelIntelligenceRequestSchema.parse(request.body);
+    if (
+      runtime.evidenceRepository === undefined ||
+      runtime.labelIntelligenceReports === undefined
+    ) {
+      return reply
+        .code(503)
+        .send(
+          errorResponse(
+            request,
+            'DURABLE_STORAGE_REQUIRED',
+            'Label Intelligence requires durable Subject, Label observation, Evidence and report storage.',
+            false,
+          ),
+        );
+    }
+    const observationSet = await runtime.labelIntelligenceReports.loadObservationSet(input);
+    if (observationSet === undefined) {
+      return reply
+        .code(404)
+        .send(
+          errorResponse(
+            request,
+            'LABEL_SUBJECT_NOT_FOUND',
+            'No exact ledger-scoped Subject Registry binding exists for this identifier.',
+            false,
+          ),
+        );
+    }
+    if (observationSet.observations.length === 0) {
+      return reply
+        .code(422)
+        .send(
+          errorResponse(
+            request,
+            'LABEL_OBSERVATIONS_REQUIRED',
+            'The Subject Registry row exists, but it has no durable Label observations to materialize.',
+            false,
+          ),
+        );
+    }
+    const canonicalRequest = LabelIntelligenceRequestSchema.parse({
+      ...input,
+      normalizedIdentifier: observationSet.subject.normalizedIdentifier,
+      asOf: new Date(input.asOf).toISOString(),
+    });
+    const result = buildLabelIntelligenceCore({
+      subject: observationSet.subject,
+      observations: observationSet.observations,
+      request: canonicalRequest,
+    });
+    const sourceEvidenceIds = result.metadata.evidenceIds;
+    const sourceNodes = await Promise.all(
+      sourceEvidenceIds.map((evidenceId) => runtime.evidenceRepository?.get(evidenceId)),
+    );
+    if (sourceNodes.some((node) => node === undefined)) {
+      return reply
+        .code(503)
+        .send(
+          errorResponse(
+            request,
+            'DURABLE_EVIDENCE_INCOMPLETE',
+            'A registered Label observation references unavailable durable Evidence.',
+            true,
+          ),
+        );
+    }
+    const sourceEvidence = sourceNodes.map((node) => node?.evidence as Evidence);
+    const incompatibleEvidenceIds = sourceEvidence
+      .filter(
+        (evidence) =>
+          evidence.ledger !== result.subject.ledger || evidence.chainId !== result.subject.chainId,
+      )
+      .map((evidence) => evidence.id);
+    if (incompatibleEvidenceIds.length > 0) {
+      return rejectUngroundedAnalysis(
+        request,
+        reply,
+        'Label observation Evidence is not scoped to the requested ledger and chain.',
+        incompatibleEvidenceIds,
+        'SNAPSHOT_INCOMPATIBLE',
+      );
+    }
+    const locator = [
+      'label-intelligence',
+      result.subject.ledger,
+      result.subject.chainId,
+      result.subject.id,
+      result.snapshot.id,
+    ].join(':');
+    const terminal = await addEvidence(
+      runtime,
+      createEvidence({
+        ledger: result.subject.ledger,
+        chainId: result.subject.chainId,
+        kind: 'DERIVED_FEATURE',
+        source: `zerotrace:${LABEL_INTELLIGENCE_MODEL_VERSION}`,
+        locator,
+        payload: { request: canonicalRequest, result },
+        observedAt: canonicalRequest.asOf,
+        finality: 'label-observation-set',
+        summary:
+          'Immutable Label observation-set review with preserved conflicts and non-merging safety rules.',
+        sourceEvidenceIds,
+      }),
+      sourceEvidenceIds,
+    );
+    const resultWithTerminal = {
+      ...result,
+      metadata: {
+        ...result.metadata,
+        evidenceIds: uniqueEvidenceIds([...result.metadata.evidenceIds, terminal.id]).sort(),
+      },
+    };
+    const report = LabelIntelligenceReportSchema.parse({
+      schemaVersion: 'label-intelligence-report-v1',
+      result: resultWithTerminal,
+      terminalEvidenceId: terminal.id,
+      evidence: [...sourceEvidence, terminal].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      ),
+    });
+    const record = await runtime.labelIntelligenceReports.put(report);
+    return { replayed: false, record };
+  });
+
+  app.get(
+    '/api/v1/labels/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const input = LabelIntelligenceIdentityQuerySchema.parse(request.query);
+      const repository = runtime.labelIntelligenceReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'LABEL_INTELLIGENCE_UNAVAILABLE',
+              'Durable Label Intelligence report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(input);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'LABEL_INTELLIGENCE_REPORT_NOT_FOUND',
+              'No durable Label Intelligence report exists for this ledger-scoped Subject.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/labels/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LabelIntelligenceReportParamsSchema.parse(request.params);
+      const repository = runtime.labelIntelligenceReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'LABEL_INTELLIGENCE_UNAVAILABLE',
+              'Durable Label Intelligence report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'LABEL_INTELLIGENCE_REPORT_NOT_FOUND',
+              'The durable Label Intelligence report does not exist.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
 
   app.get(
     '/api/v1/subjects/:ledger/:id',

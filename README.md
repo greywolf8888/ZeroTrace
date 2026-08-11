@@ -51,6 +51,10 @@ The current foundation includes:
 - durable exact intelligence search across immutable report families and registered labels, with
   terminal Evidence, Snapshot/freshness/confidence, Subject Registry label/Entity context, explicit
   storage degradation, and an empty-result contract that never claims on-chain nonexistence;
+- immutable ledger-scoped Label Intelligence reports that rank deterministic/curated/commercial/
+  community/inference sources for review, retain active/stale/expired/future states and conflicting
+  values, apply Evidence-grounded Service Hub suppression, and hard-block label-driven Entity,
+  risk-to-control, or cross-chain same-text merges;
 - SSRF-hardened, response-bounded, read-only adapters for EVM JSON-RPC, Bitcoin Esplora, and Solana
   JSON-RPC;
 - finality-explicit current-state anchors: configurable EVM `finalized`/`safe`/`latest` block tags,
@@ -197,6 +201,8 @@ flowchart LR
   F --> EV["Evidence ledger"]
   DQ --> EV
   EV --> ER["Entity resolution"]
+  EV --> LI["Label Intelligence"]
+  LI --> ER
   EV --> CR["Control-right engine"]
   EV --> LM["Launch and market adapters"]
   ER --> RV["Realizable-value engine"]
@@ -205,6 +211,7 @@ flowchart LR
   RV --> SC["Scenario engine"]
   EV --> UI["Analyst UI"]
   ER --> UI
+  LI --> UI
   CR --> UI
   RV --> UI
   SC --> UI
