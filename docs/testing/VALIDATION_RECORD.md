@@ -1763,3 +1763,54 @@ exact-SHA GitHub Actions and CodeQL then passed for immutable feature commit `f4
 license/audit/SBOM gates, all 34 Chromium flows and all six production container targets:
 [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31467827833) and
 [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31467827806).
+
+## Immutable pension-entry Scenario Reports and provider-free replay: 2026-08-11
+
+ZeroTrace added PostgreSQL migration `017_flap_pension_entry_reports` and a dedicated repository for
+complete `flap-pension-entry-economics-v0.1.0` results. A report ID is content-addressed as
+`per_...`; repository writes and reads parse the complete result Schema and verify its canonical
+hash. The insert guard binds token, wallet, `pcr_...` behavior report, finalized market Snapshot,
+complete canonical Evidence/source sets, terminal locator, and exactly three terminal parents.
+Updates and deletes are database-forbidden. The live POST fails closed without this store, while
+latest and exact report reads use PostgreSQL only.
+
+The real PostgreSQL integration composed a Scenario Report through the production Flap/Pancake V2
+adapter and Evidence writer, stored it idempotently, closed and reopened the repository, and replayed
+exact/latest content byte-for-byte. Health returned `UP`; direct SQL update/delete attempts were
+rejected. API integration persisted the composed result, removed the BSC adapter, then replayed both
+routes with `replayed: true`; a mismatched token returned `404`. Browser acceptance exercised
+calculate/persist and latest provider-free replay in both Chromium desktop and Pixel 7 while
+retaining custody-not-burn and execution Unknown wording.
+
+The active PostgreSQL volume was upgraded non-destructively to migration `017`. A separate clean
+PostgreSQL 17.10 project applied every migration from `001` through `017` in order and exposed the
+new table before its disposable volume was removed. The storage integration uses deterministic
+provider-shaped state; it is not counted as a real-chain economic result.
+
+A separate live read-only FFT request captured current finalized block `115279243`, hash
+`0x8e671a829214e25bb4f31bc39f98abda144ae4590087538b715afd5fd4564045`, and reserve spot
+`0.000329654442107268` BSC USDT/FFT. Scenario Report `per_b59d2afa9a22d8dcf01c15ec`, result hash
+`9e377d30848b23385d6093893f01a69f0166b06c8f63236e885df7f901cdcf6f`, terminal Evidence
+`ev_bc40c9b439921127039d33bf`, and whole-share outputs `0/1/2/12/21` were persisted. The API was
+then restored to `ALLOW_PRIVATE_PROVIDER_URLS=false` and recreated; exact/latest replay matched the
+report/result/Snapshot hashes without providers. A separate historical-block request against the
+public BNB nodes returned `missing trie node`, produced no report, and was not replaced by current
+state. Live buy-plus-transfer execution, irreversibility and dividends remain unvalidated and
+Unknown.
+
+The first all-storage rerun against a long-lived local ClickHouse volume failed three unrelated
+ingestion tests with ClickHouse error `241 MEMORY_LIMIT_EXCEEDED`; the Scenario Report/PostgreSQL
+tests passed. Repeating the identical command against a fresh isolated ClickHouse image/volume
+passed all 97 integration tests and all 577 coverage tests. This incident is retained as operational
+Evidence: long-lived ClickHouse part/merge memory, retention and capacity management require a load
+gate before production. The disposable test volume was removed after validation; the existing
+project data volume was preserved.
+
+The complete local gate passed 480 unit tests across 72 files, 71 environment-free integration
+tests, 97/97 real-storage integration tests, one Entity structural evaluation and all 34 Chromium
+desktop/mobile flows. The durable coverage run passed 577/577 tests at 83.29% statements, 77.81%
+branches, 93.49% functions and 84.48% lines. Formatting, lint, typecheck, production build, license
+allowlist, development/production vulnerability audits, CycloneDX SBOM and Compose validation
+passed. All six production Docker targets built. Recreated API/Web/PostgreSQL retained the existing
+volumes and reported API live `UP`, storage `UP`, `readOnly=true`, web HTTP 200, and explicit
+`DEGRADED` readiness under the host's fail-closed private-range provider DNS environment.

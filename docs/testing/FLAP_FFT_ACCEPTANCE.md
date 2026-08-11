@@ -274,6 +274,36 @@ does not by itself prove irreversibility, participant no-exit enforcement, an of
 or weekly dividends. `totalSupplyReduction`, `custodyIrreversible`, execution receipt/shares and
 post-transfer spot therefore remain Unknown.
 
+### Immutable current-Snapshot Scenario Report replay
+
+A follow-up live read-only run at `2026-08-11T08:17:11.381Z` captured finalized BSC block
+`115279243`, hash
+`0x8e671a829214e25bb4f31bc39f98abda144ae4590087538b715afd5fd4564045`. The verified reserve spot
+was `0.000329654442107268` BSC USDT per FFT and the configured buy tax remained `300` bps. This is a
+same-Snapshot reserve price, not an executed wallet settlement price. Data/source/history/simulation
+coverage were `0.85 / 0.5 / 1 / 0.5`, confidence was `0.75`, and 28 Evidence nodes were retained.
+
+| Quote input | Modeled net FFT               | Whole shares | Average quote cost/share | Modeled post-deposit spot |
+| ----------: | ----------------------------- | -----------: | ------------------------ | ------------------------- |
+|         100 | `292443.027345228229894707`   |            0 | `341.946945727484421124` | `0.000332071624454691`    |
+|         500 | `1441221.439171339025579256`  |            1 | `346.927950424804708327` | `0.000341828649910804`    |
+|        1000 | `2831624.208832304419777215`  |            2 | `353.154206296455067331` | `0.000354223597880385`    |
+|        5000 | `12408048.504128903982153138` |           12 | `402.964253269657939362` | `0.000461329827614690`    |
+|       10000 | `21494891.82987470728281558`  |           21 | `465.226811986161529401` | `0.000615079229726697`    |
+
+Scenario Report `per_b59d2afa9a22d8dcf01c15ec`, result hash
+`9e377d30848b23385d6093893f01a69f0166b06c8f63236e885df7f901cdcf6f`, and terminal Evidence
+`ev_bc40c9b439921127039d33bf` were committed to PostgreSQL. The API was then restored to
+`ALLOW_PRIVATE_PROVIDER_URLS=false` and recreated. Latest and exact-ID routes both returned
+`replayed: true`; IDs, result hashes, Snapshot hashes and complete report contents matched without a
+provider call.
+
+The public BNB endpoints rejected a separate attempt to recapture historical block `115265311`
+with `missing trie node`; ZeroTrace returned an RPC error and stored no report. It did not substitute
+current state for that historical request. Archive-provider qualification therefore remains an
+external gate even though the prior immutable fixed-block acceptance result remains valid for its
+recorded Snapshot.
+
 ## Scoped EVM control/source acceptance: 2026-08-11
 
 Alchemy and BNB Chain independently read FFT at finalized block `115204533`, hash

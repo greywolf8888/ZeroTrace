@@ -21,6 +21,7 @@ import {
   type FlapInspectionResponse,
   type FlapPancakeV2BuyScenarioResponse,
   type FlapPancakeV2PensionEntryResponse,
+  type StoredFlapPensionEntryReport,
   type FlapPancakeV2ReconciliationResponse,
   type FlapPancakeV2SellScenarioResponse,
   type FlapSellQuoteResponse,
@@ -4825,6 +4826,12 @@ function FlapPensionEntryScenarioPanel({
   const [reportId, setReportId] = useState('');
   const [wallet, setWallet] = useState('');
   const [result, setResult] = useState<FlapPancakeV2PensionEntryResponse>();
+  const [scenarioReport, setScenarioReport] = useState<{
+    id: string;
+    resultHash: string;
+    createdAt: string;
+    replayed: boolean;
+  }>();
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const parsedInputs = amounts
@@ -4847,18 +4854,45 @@ function FlapPensionEntryScenarioPanel({
     setBusy(true);
     setError(undefined);
     setResult(undefined);
+    setScenarioReport(undefined);
     try {
-      setResult(
-        await api.flapPancakeV2PensionEntryScenarios(
-          token,
-          parsedInputs,
-          blockNumber,
-          reportId,
-          wallet,
-        ),
+      const response = await api.flapPancakeV2PensionEntryScenarios(
+        token,
+        parsedInputs,
+        blockNumber,
+        reportId,
+        wallet,
       );
+      setResult(response);
+      if (response.durableReport !== undefined) {
+        setScenarioReport({ ...response.durableReport, replayed: false });
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Pension entry analysis failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loadLatestScenarioReport() {
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    setScenarioReport(undefined);
+    try {
+      const response = await api.flapPancakeV2PensionEntryLatestReport(token);
+      const record: StoredFlapPensionEntryReport = response.record;
+      setResult(record.report);
+      setScenarioReport({
+        id: record.id,
+        resultHash: record.resultHash,
+        createdAt: record.createdAt,
+        replayed: true,
+      });
+      setReportId(record.pensionReportId);
+      setWallet(record.pensionWallet);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Scenario Report replay failed.');
     } finally {
       setBusy(false);
     }
@@ -4914,6 +4948,14 @@ function FlapPensionEntryScenarioPanel({
           >
             {busy ? 'Joining Evidence…' : 'Calculate pension entry'}
           </button>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={busy}
+            onClick={() => void loadLatestScenarioReport()}
+          >
+            Load latest Scenario Report
+          </button>
         </form>
         <p className="quote-note">
           This is a read-only configured-tax model. Actual wallet receipt and the later transfer
@@ -4961,6 +5003,22 @@ function FlapPensionEntryScenarioPanel({
               <div className="fact-row">
                 <span>Automatic quote check</span>
                 <StatusPill status={result.validation.status} />
+              </div>
+              <div className="fact-row">
+                <span>Scenario Report</span>
+                <strong>
+                  {scenarioReport === undefined ? 'Not available' : shortId(scenarioReport.id)}
+                </strong>
+              </div>
+              <div className="fact-row">
+                <span>Report access</span>
+                <strong>
+                  {scenarioReport === undefined
+                    ? 'Not available'
+                    : scenarioReport.replayed
+                      ? 'Provider-free replay'
+                      : 'Persisted live result'}
+                </strong>
               </div>
             </div>
             <div className="table-scroll scenario-table">
@@ -5028,6 +5086,16 @@ function FlapPensionEntryScenarioPanel({
               <span>
                 <b>Terminal Evidence</b> {shortId(result.terminalEvidenceId)}
               </span>
+              {scenarioReport === undefined ? null : (
+                <span>
+                  <b>Result hash</b> {shortId(scenarioReport.resultHash)}
+                </span>
+              )}
+              {scenarioReport === undefined ? null : (
+                <span>
+                  <b>Stored</b> {formatTime(scenarioReport.createdAt)}
+                </span>
+              )}
             </div>
           </div>
         )}

@@ -34,6 +34,7 @@ import {
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
   PostgresFlapLifetimeHeadRepository,
+  PostgresFlapPensionEntryReportRepository,
   PostgresIngestionCheckpointRepository,
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
@@ -66,6 +67,7 @@ export interface AppRuntime {
   solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
   solanaTransactionReports?: PostgresSolanaTransactionReportRepository;
   pensionCandidateReports?: PostgresPensionCandidateReportRepository;
+  pensionEntryReports?: PostgresFlapPensionEntryReportRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -518,6 +520,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const pensionEntryReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresFlapPensionEntryReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -545,6 +556,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       solanaControlSurfaces?.close(),
       solanaTransactionReports?.close(),
       pensionCandidateReports?.close(),
+      pensionEntryReports?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -576,6 +588,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
     ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),
     ...(pensionCandidateReports === undefined ? {} : { pensionCandidateReports }),
+    ...(pensionEntryReports === undefined ? {} : { pensionEntryReports }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

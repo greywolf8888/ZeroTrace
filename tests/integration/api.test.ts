@@ -5145,6 +5145,40 @@ describe('ZeroTrace API contract', () => {
     runtime.pensionCandidateReports = { put, latest, get } as unknown as NonNullable<
       AppRuntime['pensionCandidateReports']
     >;
+    let storedEntryRecord: Record<string, unknown> | undefined;
+    const putEntry = vi.fn(async (report: Record<string, unknown>) => {
+      const metadata = report.metadata as {
+        snapshot: { blockNumber: string; blockHash: string; capturedAt: string };
+        evidenceIds: string[];
+        sourceSet: string[];
+      };
+      const behavior = report.behavior as { reportId: string; wallet: string };
+      storedEntryRecord = {
+        id: `per_${'5'.repeat(24)}`,
+        chainId: 'eip155:56',
+        tokenAddress: fixtureFlapToken,
+        pensionReportId: behavior.reportId,
+        pensionWallet: behavior.wallet,
+        blockNumber: metadata.snapshot.blockNumber,
+        snapshotHash: metadata.snapshot.blockHash,
+        resultHash: '6'.repeat(64),
+        report,
+        terminalEvidenceId: report.terminalEvidenceId,
+        evidenceIds: metadata.evidenceIds,
+        sourceSet: metadata.sourceSet,
+        modelVersion: 'flap-pension-entry-economics-v0.1.0',
+        capturedAt: metadata.snapshot.capturedAt,
+        createdAt: '2026-08-11T07:30:00.000Z',
+      };
+      return storedEntryRecord;
+    });
+    const latestEntry = vi.fn(async () => storedEntryRecord);
+    const getEntry = vi.fn(async () => storedEntryRecord);
+    runtime.pensionEntryReports = {
+      put: putEntry,
+      latest: latestEntry,
+      get: getEntry,
+    } as unknown as NonNullable<AppRuntime['pensionEntryReports']>;
     const app = await createApp({ config, runtime, logger: false });
     apps.push(app);
 
@@ -5283,9 +5317,40 @@ describe('ZeroTrace API contract', () => {
         snapshot: { blockNumber: '110', blockHash: `0x${'f'.repeat(64)}` },
         modelVersion: 'flap-pension-entry-economics-v0.1.0',
       },
+      durableReport: { id: `per_${'5'.repeat(24)}`, resultHash: '6'.repeat(64) },
     });
     const entryTerminal = durableEvidence.get(entry.json().terminalEvidenceId);
     expect(entryTerminal?.sourceEvidenceIds).toHaveLength(3);
+    expect(putEntry).toHaveBeenCalledTimes(1);
+
+    runtime.evmAdapters.delete(56);
+    const latestEntryReplay = await app.inject({
+      method: 'GET',
+      url:
+        '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest?' +
+        `chainId=eip155%3A56&platform=flap&token=${fixtureFlapToken}`,
+    });
+    expect(latestEntryReplay.statusCode, latestEntryReplay.body).toBe(200);
+    expect(latestEntryReplay.json()).toEqual({ replayed: true, record: storedEntryRecord });
+
+    const mismatchedLatestEntryReplay = await app.inject({
+      method: 'GET',
+      url:
+        '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest?' +
+        `chainId=eip155%3A56&platform=flap&token=0x${'b'.repeat(40)}`,
+    });
+    expect(mismatchedLatestEntryReplay.statusCode).toBe(404);
+
+    const exactEntryReplay = await app.inject({
+      method: 'GET',
+      url:
+        '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/' +
+        `per_${'5'.repeat(24)}?chainId=eip155%3A56&platform=flap&token=${fixtureFlapToken}`,
+    });
+    expect(exactEntryReplay.statusCode, exactEntryReplay.body).toBe(200);
+    expect(exactEntryReplay.json()).toEqual({ replayed: true, record: storedEntryRecord });
+    expect(latestEntry).toHaveBeenCalledWith(fixtureFlapToken);
+    expect(getEntry).toHaveBeenCalledWith(`per_${'5'.repeat(24)}`);
   });
 
   it('requires durable storage for live pension candidate discovery', async () => {

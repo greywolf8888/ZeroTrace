@@ -276,6 +276,10 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/014_solana_control_surface_reports.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/015_solana_transaction_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/016_evm_pension_candidate_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/017_flap_pension_entry_reports.sql
 ```
 
 PowerShell equivalent:
@@ -307,6 +311,10 @@ Get-Content -Raw infra/postgres/init/014_solana_control_surface_reports.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/015_solana_transaction_reports.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/016_evm_pension_candidate_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/017_flap_pension_entry_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 
 Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`; missing report
@@ -322,6 +330,13 @@ creating the canonical `ReplacingMergeTree`. If it contains rows, export and ret
 legacy schema for explicit provenance review instead of silently coercing them into current Raw
 Facts. Automated production migration for this legacy development schema remains an operations
 gate.
+
+Long-lived ClickHouse volumes also need explicit part/merge, retention and memory capacity policy.
+Error `241 MEMORY_LIMIT_EXCEEDED` is an availability failure, not permission to drop the volume or
+coerce missing reads to zero. Preserve the volume, inspect part counts/merge pressure and server
+memory settings from a restored copy, and prove compaction/retention changes under load before
+production. CI and acceptance use disposable initialized volumes so schema correctness remains
+separate from lifecycle capacity.
 
 ## Shutdown
 

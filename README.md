@@ -78,7 +78,8 @@ The current foundation includes:
   role, no-exit, membership and dividend claims retained as Unknown until independently proven;
 - durable pension-entry economics that joins one reported candidate to a same-or-later finalized
   Pancake V2 market Snapshot, then derives whole shares, remainder, committed cost, average cost per
-  share and post-buy spot across one to eight input sizes without calling custody a burn;
+  share and post-buy spot across one to eight input sizes without calling custody a burn; completed
+  results become immutable `per_...` Scenario Reports with exact/latest provider-free replay;
 - fixed-block Flap `previewSell` quotes whose provider-returned atomic proceeds and derivation
   Evidence remain separate from unqueried nominal price, fee breakdown and price impact;
 - migrated-Flap Pancake V2 market inspection that verifies pool, factory, router, pair identity,
@@ -238,7 +239,7 @@ distributed workflows remain open work. Read
 | Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                                                                                                                                                               |
 | Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                                                                                                                                                               |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                                                                                                                                                                                                   |
-| Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, verified Pancake V2 buy/exit models, and durable candidate-bound pension-entry share economics work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                                                |
+| Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, verified Pancake V2 buy/exit models, and immutable candidate-bound pension-entry Scenario Reports with provider-free replay work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                   |
 | Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, immutable Claim Report replay, finalized pension-behavior discovery and same-Snapshot entry economics validated on FFT; complete backfill, scheduling, official attribution, dividend-policy proof and terminal acceptance pending                                                                |
 | Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                                                                                                                                                      |
 
@@ -386,10 +387,20 @@ curl -sS -X POST http://localhost:8080/api/v1/rv/flap-pancake-v2-pension-entry-s
   -d '{"chainId":"eip155:56","token":"0xdcfb441a1f38802820a4e7b4cc8aab37833c7777","quoteInputs":["100","1000","10000"]}'
 ```
 
-Omitting `pensionReportId` selects the latest report; omitting `pensionWallet` is allowed only when
-that report has exactly one candidate. The response reports modeled share capacity and cost while
-keeping execution receipt, transfer-time tax/swapback, custody irreversibility and supply reduction
-Unknown. The destination is a non-zero custody address, not an ERC-20 burn address.
+Omitting `pensionReportId` selects the latest behavior report; omitting `pensionWallet` is allowed
+only when that report has exactly one candidate. A successful request is durably persisted as a
+content-addressed `per_...` Scenario Report. The response reports modeled share capacity and cost
+while keeping execution receipt, transfer-time tax/swapback, custody irreversibility and supply
+reduction Unknown. The destination is a non-zero custody address, not an ERC-20 burn address.
+
+Replay the latest immutable result without an RPC or SQD call:
+
+```bash
+curl -sS 'http://localhost:8080/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest?chainId=eip155%3A56&platform=flap&token=0xdcfb441a1f38802820a4e7b4cc8aab37833c7777'
+```
+
+Replace `latest` with the returned `per_...` ID for exact report replay. Both reads revalidate the
+stored result hash, report schema, Snapshot, complete Evidence set and identity before returning it.
 
 Use the companion sell endpoint to compare one-share and multi-share-sized exits without treating
 `balance × spot` as realizable value:
@@ -644,7 +655,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add Evidence-bound tax/treasury/burn/liquidity/pension/dividend statement compilation and human-review UI
 - [x] Add finalized target-indexed EVM Transfer/custody observation and live same-Snapshot FFT address-flow composition
 - [x] Add finalized token-wide pension-behavior candidate discovery, immutable report replay and scoped FFT validation
-- [x] Bind durable pension candidates to same-Snapshot multi-size entry/share economics with Evidence and read-only UI
+- [x] Bind durable pension candidates to same-Snapshot multi-size entry/share economics, immutable Scenario Reports, provider-free replay and read-only UI
 - [x] Add exact-block ERC-20 total-supply/mint-burn conservation, Evidence replay, API and responsive Claim Audit UI
 - [x] Add BSC SQD long-range zero-address burn-candidate discovery with explicit silent-supply Unknown
 - [x] Add restart-safe burn-candidate promotion, exact-block certificates and provider-free API/UI replay

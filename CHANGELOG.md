@@ -10,7 +10,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 - durable pension-candidate-to-market composition for migrated Flap/Pancake V2 tokens, with
   exact-integer multi-size share economics, same-Snapshot ordering, three-parent Evidence lineage,
-  responsive read-only UI, explicit custody-not-burn treatment, and Unknown execution settlement;
+  append-only content-addressed PostgreSQL Scenario Reports, exact/latest provider-free API/UI
+  replay, explicit custody-not-burn treatment, and Unknown execution settlement;
 - finalized EVM/BSC pension-wallet behavioral candidate discovery with caller-visible policy,
   exact-unit and unique-depositor signals, immutable PostgreSQL report replay, responsive Claim
   Audit UI, and a full-range FFT validation that keeps role, exit restrictions, and dividend

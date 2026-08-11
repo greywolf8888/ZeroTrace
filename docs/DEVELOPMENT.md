@@ -337,7 +337,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `015`, are in
+local upgrade commands, including migrations `007` through `017`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

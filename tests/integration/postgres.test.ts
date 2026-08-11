@@ -26,8 +26,10 @@ import {
 import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
   FLAP_HISTORY_MODEL_VERSION,
+  PANCAKE_V2_BSC_DEPLOYMENT,
   discoverEvmPensionCandidates,
   projectFlapEventHistoryRestartSafe,
+  quoteFlapPensionEntryScenarios,
   type FlapHistorySegmentExecutor,
 } from '@zerotrace/platform-adapters';
 import {
@@ -38,10 +40,12 @@ import {
   PostgresSolanaTransactionReportRepository,
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
+  PostgresFlapPensionEntryReportRepository,
   PostgresIngestionCheckpointRepository,
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
+import { encodeAbiParameters } from 'viem';
 
 import { querySolanaTransaction } from '../../apps/api/src/ledger-query.js';
 
@@ -65,6 +69,122 @@ class IntegrationNoNetworkTransport implements JsonRpcTransport {
     _options: TransportReadOptions = {},
   ): Promise<TransportObservation<T>> {
     throw new Error('PostgreSQL projection integration reached the sourced network.');
+  }
+}
+
+const flapStateV5Components = [
+  { name: 'status', type: 'uint8' },
+  { name: 'reserve', type: 'uint256' },
+  { name: 'circulatingSupply', type: 'uint256' },
+  { name: 'price', type: 'uint256' },
+  { name: 'tokenVersion', type: 'uint8' },
+  { name: 'r', type: 'uint256' },
+  { name: 'h', type: 'uint256' },
+  { name: 'k', type: 'uint256' },
+  { name: 'dexSupplyThresh', type: 'uint256' },
+  { name: 'quoteTokenAddress', type: 'address' },
+  { name: 'nativeToQuoteSwapEnabled', type: 'bool' },
+  { name: 'extensionID', type: 'bytes32' },
+] as const;
+
+function pensionMarketCalls(options: {
+  token: string;
+  pool: string;
+  quote: string;
+  quoteInputs: readonly bigint[];
+}): unknown[] {
+  const quoteReserve = 1_000n * 10n ** 18n;
+  const tokenReserve = 1_000_000_000n * 10n ** 18n;
+  const amountOut = (input: bigint) => {
+    const withFee = input * 9_975n;
+    return (withFee * tokenReserve) / (quoteReserve * 10_000n + withFee);
+  };
+  return [
+    encodeAbiParameters(
+      [
+        {
+          type: 'tuple',
+          components: [
+            ...flapStateV5Components,
+            { name: 'buyTaxRate', type: 'uint256' },
+            { name: 'sellTaxRate', type: 'uint256' },
+            { name: 'pool', type: 'address' },
+            { name: 'progress', type: 'uint256' },
+            { name: 'lpFeeProfile', type: 'uint8' },
+            { name: 'dexId', type: 'uint8' },
+          ],
+        },
+      ],
+      [
+        {
+          status: 4,
+          reserve: 0n,
+          circulatingSupply: 0n,
+          price: 0n,
+          tokenVersion: 6,
+          r: 0n,
+          h: 0n,
+          k: 0n,
+          dexSupplyThresh: 0n,
+          quoteTokenAddress: options.quote as `0x${string}`,
+          nativeToQuoteSwapEnabled: false,
+          extensionID: `0x${'0'.repeat(64)}`,
+          buyTaxRate: 300n,
+          sellTaxRate: 300n,
+          pool: options.pool as `0x${string}`,
+          progress: 1_000_000_000_000_000_000n,
+          lpFeeProfile: 1,
+          dexId: 0,
+        },
+      ],
+    ),
+    encodeAbiParameters(
+      [{ type: 'address' }],
+      [PANCAKE_V2_BSC_DEPLOYMENT.factory as `0x${string}`],
+    ),
+    encodeAbiParameters([{ type: 'address' }], [options.quote as `0x${string}`]),
+    encodeAbiParameters([{ type: 'address' }], [options.token as `0x${string}`]),
+    encodeAbiParameters(
+      [{ type: 'uint112' }, { type: 'uint112' }, { type: 'uint32' }],
+      [quoteReserve, tokenReserve, 123],
+    ),
+    encodeAbiParameters([{ type: 'address' }], [options.pool as `0x${string}`]),
+    encodeAbiParameters(
+      [{ type: 'address' }],
+      [PANCAKE_V2_BSC_DEPLOYMENT.factory as `0x${string}`],
+    ),
+    encodeAbiParameters([{ type: 'uint8' }], [18]),
+    encodeAbiParameters([{ type: 'uint8' }], [18]),
+    ...options.quoteInputs.map((input) =>
+      encodeAbiParameters([{ type: 'uint256[]' }], [[input, amountOut(input)]]),
+    ),
+  ];
+}
+
+class PensionMarketTransport implements JsonRpcTransport {
+  readonly endpointId = 'bsc-rpc@test.example';
+  readonly #calls: unknown[];
+
+  constructor(calls: unknown[]) {
+    this.#calls = [...calls];
+  }
+
+  async request<T>(method: string): Promise<T> {
+    if (method === 'eth_getBlockByNumber') {
+      return {
+        number: '0x79',
+        hash: `0x${'a'.repeat(64)}`,
+        parentHash: `0x${'f'.repeat(64)}`,
+        timestamp: '0x65c95abc',
+      } as T;
+    }
+    if (method === 'eth_getCode') return '0x6000' as T;
+    if (method === 'eth_call') return this.#calls.shift() as T;
+    throw new Error(`Unexpected pension market fixture method ${method}.`);
+  }
+
+  async requestSourced<T>(method: string): Promise<TransportObservation<T>> {
+    return { value: await this.request<T>(method), endpointId: this.endpointId };
   }
 }
 
@@ -1637,6 +1757,7 @@ postgresDescribe('PostgreSQL durable Solana transaction intelligence integration
 postgresDescribe('PostgreSQL durable EVM pension candidate integration', () => {
   let evidence: PostgresEvidenceRepository;
   let reports: PostgresPensionCandidateReportRepository;
+  let entryReports: PostgresFlapPensionEntryReportRepository;
   const token = `0x${randomUUID().replaceAll('-', '').padEnd(40, '0')}`;
   const candidate = `0x${'d'.repeat(40)}`;
   const shareUnit = 1_000_000n;
@@ -1668,10 +1789,14 @@ postgresDescribe('PostgreSQL durable EVM pension candidate integration', () => {
       connectionString: connectionString as string,
       maxConnections: 2,
     });
+    entryReports = new PostgresFlapPensionEntryReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
   });
 
   afterAll(async () => {
-    await Promise.all([evidence.close(), reports.close()]);
+    await Promise.all([evidence.close(), reports.close(), entryReports.close()]);
   });
 
   it('persists a production-composed behavioral report, replays it, and rejects mutation', async () => {
@@ -1737,6 +1862,51 @@ postgresDescribe('PostgreSQL durable EVM pension candidate integration', () => {
     await expect(reports.latest(token)).resolves.toEqual(stored);
     await expect(reports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
 
+    const quoteInputs = [100n * 10n ** 18n, 1_000n * 10n ** 18n];
+    const poolAddress = `0x${'b'.repeat(40)}`;
+    const quoteAddress = `0x${'c'.repeat(40)}`;
+    const adapter = new EvmLedgerAdapter(
+      {
+        id: 'bsc-rpc',
+        chainId: 56,
+        chainName: 'BNB Smart Chain',
+        snapshotBlockTag: 'finalized',
+      },
+      new PensionMarketTransport(
+        pensionMarketCalls({ token, pool: poolAddress, quote: quoteAddress, quoteInputs }),
+      ),
+    );
+    const entryResult = await quoteFlapPensionEntryScenarios({
+      adapter,
+      token,
+      quoteInputs: ['100', '1000'],
+      pensionWallet: candidate,
+      behaviorReportId: stored.id,
+      behaviorResultHash: stored.resultHash,
+      behaviorReport: run.report,
+      behaviorEvidence: run.evidence,
+      writeEvidence: async (item, sourceEvidenceIds = [], itemSnapshot) =>
+        (await evidence.put(item, sourceEvidenceIds, itemSnapshot)).evidence,
+      blockNumber: '121',
+    });
+    const storedEntry = await entryReports.put(entryResult);
+    await expect(entryReports.put(entryResult)).resolves.toEqual(storedEntry);
+    await entryReports.close();
+    entryReports = new PostgresFlapPensionEntryReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(entryReports.get(storedEntry.id)).resolves.toEqual(storedEntry);
+    await expect(entryReports.latest(token)).resolves.toEqual(storedEntry);
+    await expect(entryReports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+    expect(storedEntry).toMatchObject({
+      id: expect.stringMatching(/^per_[0-9a-f]{24}$/),
+      pensionReportId: stored.id,
+      pensionWallet: candidate,
+      blockNumber: '121',
+      report: { destinationTreatment: 'NON_ZERO_CUSTODY_ADDRESS' },
+    });
+
     const pool = new Pool({ connectionString: connectionString as string });
     try {
       await expect(
@@ -1746,6 +1916,14 @@ postgresDescribe('PostgreSQL durable EVM pension candidate integration', () => {
       ).rejects.toThrow(/immutable/);
       await expect(
         pool.query('DELETE FROM evm_pension_candidate_reports WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('UPDATE flap_pension_entry_reports SET report = report WHERE id = $1', [
+          storedEntry.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM flap_pension_entry_reports WHERE id = $1', [storedEntry.id]),
       ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();

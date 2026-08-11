@@ -365,6 +365,34 @@ export interface FlapPancakeV2PensionEntryResponse {
   terminalEvidenceId: string;
   metadata: AnalysisMetadata;
   evidence: EvidenceRecord[];
+  durableReport?: {
+    id: string;
+    resultHash: string;
+    createdAt: string;
+  };
+}
+
+export interface StoredFlapPensionEntryReport {
+  id: string;
+  chainId: 'eip155:56';
+  tokenAddress: string;
+  pensionReportId: string;
+  pensionWallet: string;
+  blockNumber: string;
+  snapshotHash: string;
+  resultHash: string;
+  report: Omit<FlapPancakeV2PensionEntryResponse, 'durableReport'>;
+  terminalEvidenceId: string;
+  evidenceIds: string[];
+  sourceSet: string[];
+  modelVersion: string;
+  capturedAt: string;
+  createdAt: string;
+}
+
+export interface FlapPensionEntryReportReplayResponse {
+  replayed: true;
+  record: StoredFlapPensionEntryReport;
 }
 
 export interface FlapPancakeV2SellScenarioResponse {
@@ -1371,6 +1399,29 @@ export const api = {
         }),
       },
     ),
+  flapPancakeV2PensionEntryLatestReport: (token: string) => {
+    const parameters = new URLSearchParams({
+      chainId: 'eip155:56',
+      platform: 'flap',
+      token,
+    });
+    return requestJson<FlapPensionEntryReportReplayResponse>(
+      '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest?' + parameters.toString(),
+    );
+  },
+  flapPancakeV2PensionEntryReport: (token: string, reportId: string) => {
+    const parameters = new URLSearchParams({
+      chainId: 'eip155:56',
+      platform: 'flap',
+      token,
+    });
+    return requestJson<FlapPensionEntryReportReplayResponse>(
+      '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/' +
+        encodeURIComponent(reportId) +
+        '?' +
+        parameters.toString(),
+    );
+  },
   flapPancakeV2SellScenarios: (
     token: string,
     tokenInputs: readonly string[],

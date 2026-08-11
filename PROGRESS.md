@@ -15,14 +15,14 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                    |
 | Production acceptance            | **No**                                                                                                        |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                |
-| Unit tests                       | **478 passing across 71 files**                                                                               |
+| Unit tests                       | **480 passing across 72 files**                                                                               |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                    |
 | Integration tests                | **71 environment-free plus 26 real-storage passing; 97 with PostgreSQL, ClickHouse and object store enabled** |
 | Real-browser E2E                 | **34 passing: Chromium desktop and Pixel 7**                                                                  |
-| Remote CI                        | **Latest recorded exact-SHA pass: `d450dd0`; Draft PR #5 remains the pre-merge gate**                         |
-| Coverage                         | **Current local: 83.36% statements / 77.84% branches / 93.51% functions / 84.53% lines**                      |
+| Remote CI                        | **Latest recorded exact-SHA pass: `f7e40cd`; Draft PR #5 remains the pre-merge gate**                         |
+| Coverage                         | **Current local: 83.29% statements / 77.81% branches / 93.49% functions / 84.48% lines**                      |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed      |
-| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim, pension, control, and Solana transaction reports wired          |
+| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim/pension/Scenario, control, and Solana reports wired              |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
@@ -46,8 +46,8 @@ The only allowed status vocabulary in this ledger is:
 | Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline, exact structural gates and Bitcoin transaction candidate/suppression features work; real-world calibration and temporal graph are absent                                                                             |
 | Control Rights                       | `PARTIALLY_IMPLEMENTED`                     | EVM standards/source, Solana SPL/loader and observable Bitcoin script conditions work; effective entities, custom roles, history, recursion and Core policy remain                                                                          |
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; full FFT lifecycle and other platforms remain                                                         |
-| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios, candidate-bound pension entry economics and two-operator reconciliation work; fork execution, routes, gas and capacity remain                                       |
-| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                                                                                                                    |
+| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios, immutable candidate-bound pension-entry reports and two-operator reconciliation work; fork execution, routes, gas and capacity remain                               |
+| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race plus immutable pension-entry Scenario Reports and provider-free replay; general portfolio/market scenarios remain                                                                                       |
 | Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, behavioral pension candidates, event promotion and bounded all-block supply continuity work; complete backfill, attribution, continuous scheduling and terminal FFT remain |
 | Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger/Evidence, EVM/Solana controls, Bitcoin UTXO/script boundaries, pension/claim/burn, candidate-bound entry and market/RV panels work; terminal investigation remains incomplete                                                  |
 | Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                                                                               |
@@ -765,9 +765,15 @@ The only allowed status vocabulary in this ledger is:
 - the terminal Evidence root has the verified buy-scenario terminal, candidate Evidence and durable
   behavior-report terminal as mandatory parents. The API can select latest/single candidate or an
   explicit report/wallet, and fails closed for missing storage, Evidence or ambiguous candidates;
+- migration `017_flap_pension_entry_reports` and its repository persist only complete compositions
+  as append-only, content-addressed `per_...` Scenario Reports. PostgreSQL validates identity,
+  canonical result/provenance, the durable candidate/report references, terminal locator and exact
+  three-parent lineage; repository replay re-parses and re-hashes the complete result, and SQL
+  update/delete are forbidden;
 - the responsive DEX-trading UI exposes quote size, modeled net FFT, share equivalent, whole shares,
   committed/remainder tokens, average quote cost per share, post-deposit spot, report/wallet,
-  Snapshot and Evidence. It explicitly labels the destination as non-zero custody, not supply burn;
+  Snapshot and Evidence. It exposes the persisted report ID/hash and latest provider-free replay,
+  and explicitly labels the destination as non-zero custody, not supply burn;
 - a live read-only FFT run joined report `pcr_ff8cd2b24f23d71758cf3e63` and candidate
   `0x8d50a68b4f9ada119d198d6472eaf0cb6db302d9` to finalized BSC block `115265311`, hash
   `0x9bd0a695d141d8b82dd0b4d8e0a70ac67b51d1f5b8a85fb4d0c4da2b9924b8ef`. The verified quote asset
@@ -788,7 +794,13 @@ The only allowed status vocabulary in this ledger is:
 - these are same-Snapshot configured-tax models, not executed purchases. Execution receipt/shares,
   transfer-time tax and swapback, post-transfer pool reserves, total-supply reduction, custody
   irreversibility, official role, exit policy and dividend execution remain Unknown pending a
-  Snapshot-pinned fork and independent Claim Evidence.
+  Snapshot-pinned fork and independent Claim Evidence;
+- live Scenario Report `per_b59d2afa9a22d8dcf01c15ec` persisted current finalized block
+  `115279243`, hash `0x8e671a829214e25bb4f31bc39f98abda144ae4590087538b715afd5fd4564045`,
+  reserve spot `0.000329654442107268` BSC USDT/FFT and whole-share results `0/1/2/12/21` for
+  `100/500/1000/5000/10000`. After restoring fail-closed Provider URL policy and recreating the API,
+  latest/exact PostgreSQL replay matched report/result/Snapshot hashes. A historical public-RPC
+  retry returned `missing trie node` and stored nothing, preserving the archive-provider gap.
 
 ### Flap migrated DEX exit and realizable-value scenarios
 
@@ -907,6 +919,9 @@ The only allowed status vocabulary in this ledger is:
 - transaction-level chain normalization, NATS events, and Temporal workflows;
 - graph projection and temporal queries;
 - cache invalidation and distributed quota coordination.
+- long-lived ClickHouse part compaction, retention, memory sizing and capacity automation; a clean
+  isolated volume passes all storage gates, while the reused local volume has produced error `241`
+  under its current memory limit.
 
 ### EVM terminal scope
 
@@ -983,11 +998,11 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                                 | Scope                                                                                                            |
 | ------------------------------ | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Reproducible install/build     | Pass                                          | locked npm install in production container; all packages/API/web                                                 |
-| Unit tests                     | 478 pass                                      | 71 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime     |
+| Unit tests                     | 480 pass                                      | 72 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime     |
 | Integration tests              | 71 environment-free plus 26 real-storage pass | 97 total with PostgreSQL, ClickHouse and object store; immutable pension/Solana replay and all prior guards pass |
 | Model evaluation tests         | 1 pass                                        | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                   |
 | Restart regression             | Pass                                          | same-anchor recapture persists across repository/API restart without Snapshot collision                          |
-| Coverage gate                  | Pass                                          | durable run: 83.36% statements, 77.84% branches, 93.51% functions, 84.53% lines; all 575 tests passed            |
+| Coverage gate                  | Pass                                          | durable run: 83.29% statements, 77.81% branches, 93.49% functions, 84.48% lines; all 577 tests passed            |
 | Chromium E2E                   | 34 pass                                       | desktop and Pixel 7 include pension behavior/entry, Solana semantics, controls, supply, market/RV and Unknown    |
 | Formatting / ESLint / types    | Pass                                          | full repository                                                                                                  |
 | Dependency vulnerability audit | Pass                                          | 0 vulnerabilities across the complete npm dependency graph                                                       |
@@ -995,10 +1010,10 @@ correctness. Exact local smoke observations and limitations are in
 | CycloneDX SBOM                 | Pass                                          | npm dependency graph                                                                                             |
 | Compose model                  | Pass                                          | rendered default topology                                                                                        |
 | Docker image build/start       | Pass                                          | all six production targets built; rebuilt API/Web and storage services are healthy and read-only                 |
-| Database bootstrap             | Pass                                          | fresh bootstrap passed; current persistent Compose volume upgraded non-destructively through migration 016       |
-| Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web healthy; pension-entry UI served, storage available and broadcast remains forbidden    |
+| Database bootstrap             | Pass                                          | fresh bootstrap passed through migration 017; current persistent Compose volume upgraded non-destructively       |
+| Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web healthy; Scenario replay UI served, storage available and broadcast remains forbidden  |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed   |
-| Remote CI                      | Exact-SHA pass `f439eef`                      | CI/CodeQL green for the FFT candidate-bound pension-entry batch; Draft PR #5 remains open                        |
+| Remote CI                      | Exact-SHA pass `f7e40cd`                      | CI/CodeQL green for the preceding pension-entry acceptance docs; current Scenario Report batch awaits push       |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

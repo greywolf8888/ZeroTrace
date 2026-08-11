@@ -142,6 +142,10 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   agreement at equal height, zero-tolerance share/commitment arithmetic, and the inherited 10 bps
   Router/model gate. A known zero receipt must leave average share cost
   `Unknown(NOT_APPLICABLE)`. Execution receipt, transfer effects and supply reduction stay Unknown.
+- pension-entry Scenario Report tests require migration `017`, content-addressed/idempotent writes,
+  schema/hash revalidation after repository close/reopen, canonical source/Evidence sets, exact
+  candidate/report/terminal lineage, SQL update/delete rejection, and latest/exact replay without a
+  market provider. The live POST must fail closed if the report cannot be persisted.
 - no-evidence entity input remains Unknown.
 - common services and CoinJoin suppress controller confidence.
 - sell-disabled RV is unavailable rather than zero.
@@ -209,7 +213,8 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - EVM pension-behavior discovery and latest durable replay, including exact-unit/depositor metrics,
   Snapshot/Evidence rendering, Unknown attribution boundaries and mobile containment;
 - candidate-bound pension-entry scenarios across three quote sizes, including share arithmetic,
-  custody-not-burn wording, execution Unknown, durable report provenance and mobile containment;
+  custody-not-burn wording, execution Unknown, immutable Scenario Report identity, latest
+  provider-free replay and mobile containment;
 - anchor-reconciliation status, common-position/operator-independence explanation, four configured
   chain targets, and process-local data-quality storage truth;
 - mobile viewport layout;

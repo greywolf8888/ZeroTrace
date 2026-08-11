@@ -235,6 +235,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       candidate flow/share metrics, durable provenance and no identity promotion on desktop/mobile
 - [x] Responsive candidate-bound pension-entry economics with multi-size share/cost output,
       immutable report/Snapshot/Evidence provenance, custody-not-burn and execution Unknown
+- [x] Append-only content-addressed pension-entry Scenario Reports with fail-closed persistence,
+      exact/latest provider-free API replay and desktop/mobile replay state
 - [x] Responsive exact-block burn certificate review on desktop/mobile with status, supply/event
       arithmetic, generated actions and terminal Evidence
 - [x] Responsive burn-candidate range review with event scope, candidate blocks, terminal Evidence

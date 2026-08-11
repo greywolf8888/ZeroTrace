@@ -53,6 +53,7 @@ import {
   ControlSurfaceReportStorageError,
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
+  FlapPensionEntryReportStorageError,
   PensionCandidateReportStorageError,
   SemanticCheckpointError,
   SolanaTransactionReportStorageError,
@@ -541,6 +542,21 @@ const FlapPancakeV2PensionEntryRequestSchema = z
   })
   .strict();
 
+const FlapPensionEntryReportQuerySchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+  })
+  .strict();
+
+const FlapPensionEntryReportParamsSchema = z
+  .object({ reportId: z.string().regex(/^per_[0-9a-f]{24}$/) })
+  .strict();
+
 const FlapPancakeV2ReconciliationRequestSchema = z
   .object({
     chainId: z.literal('eip155:56'),
@@ -958,6 +974,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionCandidateReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['pensionEntryReports']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -988,6 +1005,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         solanaControlSurfaces,
         solanaTransactionReports,
         pensionCandidateReports,
+        pensionEntryReports,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -998,6 +1016,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.solanaControlSurfaces?.health(),
         runtime.solanaTransactionReports?.health(),
         runtime.pensionCandidateReports?.health(),
+        runtime.pensionEntryReports?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -1018,7 +1037,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                         ? solanaTransactionReports
                         : pensionCandidateReports?.status === 'DOWN'
                           ? pensionCandidateReports
-                          : evidence;
+                          : pensionEntryReports?.status === 'DOWN'
+                            ? pensionEntryReports
+                            : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1245,6 +1266,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof FlapPensionEntryReportStorageError) {
+      const status = error.code === 'FLAP_PENSION_ENTRY_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     if (error instanceof SemanticCheckpointError) {
       const status =
         error.code === 'SEMANTIC_CHECKPOINT_INVALID'
@@ -1435,13 +1462,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       {
         id: 'flap-pension-entry-economics',
         status:
-          runtime.evidenceRepository === undefined || runtime.pensionCandidateReports === undefined
+          runtime.evidenceRepository === undefined ||
+          runtime.pensionCandidateReports === undefined ||
+          runtime.pensionEntryReports === undefined
             ? 'DURABLE_STORAGE_REQUIRED'
             : !runtime.evmAdapters.has(56)
               ? 'BSC_PROVIDER_REQUIRED'
               : 'IMPLEMENTED_PENDING_PINNED_FORK_EXECUTION',
         detail:
-          'A durable pension-behavior candidate is joined to same-Snapshot Pancake V2 buy scenarios to calculate modeled whole-share capacity, remainder and average acquisition cost across input sizes. The non-zero destination remains custody rather than supply burn; actual receipt, transfer tax/swapback, irreversibility and dividend execution remain Unknown.',
+          'A durable pension-behavior candidate is joined to same-Snapshot Pancake V2 buy scenarios to calculate modeled whole-share capacity, remainder and average acquisition cost across input sizes, then stored as an immutable content-addressed Scenario Report for provider-free replay. The non-zero destination remains custody rather than supply burn; actual receipt, transfer tax/swapback, irreversibility and dividend execution remain Unknown.',
       },
       {
         id: 'erc20-supply-continuity',
@@ -2631,7 +2660,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       }
       if (
         runtime.evidenceRepository === undefined ||
-        runtime.pensionCandidateReports === undefined
+        runtime.pensionCandidateReports === undefined ||
+        runtime.pensionEntryReports === undefined
       ) {
         return reply
           .code(503)
@@ -2639,7 +2669,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             errorResponse(
               request,
               'DURABLE_STORAGE_REQUIRED',
-              'Pension-entry economics require durable Evidence and pension-candidate report storage.',
+              'Pension-entry economics require durable Evidence, pension-candidate and Scenario Report storage.',
               false,
             ),
           );
@@ -2700,7 +2730,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ),
           );
       }
-      return quoteFlapPensionEntryScenarios({
+      const result = await quoteFlapPensionEntryScenarios({
         adapter,
         token,
         quoteInputs: input.quoteInputs,
@@ -2713,6 +2743,94 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
         ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
       });
+      const stored = await runtime.pensionEntryReports.put(result);
+      return {
+        ...result,
+        durableReport: {
+          id: stored.id,
+          resultHash: stored.resultHash,
+          createdAt: stored.createdAt,
+        },
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPensionEntryReportQuerySchema.parse(request.query);
+      const repository = runtime.pensionEntryReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_PENSION_ENTRY_REPORT_UNAVAILABLE',
+              'Durable Flap pension entry Scenario Report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(input.token.toLowerCase());
+      if (
+        record === undefined ||
+        record.chainId !== input.chainId ||
+        record.tokenAddress !== input.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_PENSION_ENTRY_REPORT_NOT_FOUND',
+              'No durable Flap pension entry Scenario Report exists for this token.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/:reportId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPensionEntryReportQuerySchema.parse(request.query);
+      const params = FlapPensionEntryReportParamsSchema.parse(request.params);
+      const repository = runtime.pensionEntryReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_PENSION_ENTRY_REPORT_UNAVAILABLE',
+              'Durable Flap pension entry Scenario Report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.chainId !== input.chainId ||
+        record.tokenAddress !== input.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_PENSION_ENTRY_REPORT_NOT_FOUND',
+              'The durable Flap pension entry Scenario Report was not found for this BSC token.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
     },
   );
 
