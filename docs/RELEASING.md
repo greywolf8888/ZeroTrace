@@ -15,10 +15,11 @@ change interfaces but must still document migrations and known limitations.
 - Create a GitHub Release only for a planned product milestone (for example `v0.2.0` or `v1.0.0`)
   that passes the complete release gate. A patch Release is reserved for an urgent correction to an
   already published milestone.
-- Review routine dependency major versions manually as milestone work. Dependabot groups weekly
-  minor/patch updates and security updates by ecosystem and does not open routine automatic
-  major-version PRs. Security remediation remains eligible even when the minimum safe fix crosses a
-  version boundary.
+- Review dependency updates manually as verified delivery work. Dependabot keeps npm, Docker and
+  GitHub Actions ecosystem metadata registered, while automated update PR creation is disabled to
+  preserve the single-main policy. Dependabot alerts plus CI vulnerability/license audits remain
+  inputs; accepted fixes travel through the one short-lived protected delivery branch. Security
+  remediation remains eligible even when the minimum safe fix crosses a version boundary.
 
 Tags are created only from protected `main`; the project does not cut a release from a development
 branch.

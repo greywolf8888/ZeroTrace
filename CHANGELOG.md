@@ -209,6 +209,12 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - database initialization images that work from Windows Unicode workspace paths;
 - repository governance, dependency policy, CI, test, deployment, and release documentation.
 
+### Changed
+
+- Dependabot ecosystem metadata remains registered, but automatic update PR branches are disabled
+  under the single-main policy; dependency alerts and CI audit findings are reviewed and delivered
+  through the one short-lived protected batch branch.
+
 ### Fixed
 
 - readiness now remains HTTP-ready for provider-free report replay when optional upstream providers

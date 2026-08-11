@@ -1,4 +1,7 @@
 version: 2
+# ZeroTrace keeps only main between delivery batches. Ecosystem metadata stays registered here,
+# while automated update PR branches are disabled. Dependabot alerts and CI audits are reviewed,
+# then dependency changes are applied through the single protected delivery branch.
 updates:
   - package-ecosystem: npm
     directory: /
@@ -7,7 +10,7 @@ updates:
       day: monday
       time: '03:00'
       timezone: Asia/Singapore
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     groups:
       npm-weekly:
         applies-to: version-updates
@@ -34,7 +37,7 @@ updates:
       day: monday
       time: '03:30'
       timezone: Asia/Singapore
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     groups:
       docker-weekly:
         applies-to: version-updates
@@ -61,7 +64,7 @@ updates:
       day: monday
       time: '04:00'
       timezone: Asia/Singapore
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 0
     groups:
       actions-weekly:
         applies-to: version-updates
