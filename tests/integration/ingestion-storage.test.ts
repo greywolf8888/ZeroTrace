@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 
 import type { SqdFinalizedBlock, SqdFinalizedRangeRequest } from '@zerotrace/chain-adapters';
+import { defineCaptureSchedule, runCaptureCycle } from '@zerotrace/capture-scheduler';
 import { createEvidence } from '@zerotrace/evidence';
 import {
   createSqdProfileRequest,
@@ -13,8 +14,12 @@ import {
   createRawChainFact,
   RawArtifactStore,
   PostgresEvidenceRepository,
+  PostgresActionSemanticsReportRepository,
+  PostgresCaptureScheduleRepository,
   PostgresIngestionCheckpointRepository,
 } from '@zerotrace/storage';
+
+import { createActionSemanticsTransactionCaptureHandler } from '../../services/semantic-worker/src/action-capture-handler.js';
 
 const postgresUrl = process.env.TEST_POSTGRES_URL;
 const clickHouseUrl = process.env.TEST_CLICKHOUSE_URL;
@@ -33,6 +38,7 @@ const testChainId = `integration-${testRunId}`;
 const testDataset = 'ethereum-mainnet';
 const testProvider = `sqd:integration-${testRunId}`;
 const pipelineBlockNumber = Number.parseInt(testRunId.replaceAll('-', '').slice(0, 8), 16) + 1;
+const pipelineTransactionId = `0x${'a'.repeat(64)}`;
 
 const observedAt = '2026-08-09T13:00:00.000Z';
 const payload = {
@@ -49,6 +55,8 @@ storageDescribe('historical ingestion storage integration', () => {
   let artifacts: RawArtifactStore;
   let evidence: PostgresEvidenceRepository;
   let checkpoints: PostgresIngestionCheckpointRepository;
+  let schedules: PostgresCaptureScheduleRepository;
+  let reports: PostgresActionSemanticsReportRepository;
 
   beforeAll(async () => {
     facts = new ClickHouseRawFactRepository({ url: clickHouseUrl as string });
@@ -66,11 +74,25 @@ storageDescribe('historical ingestion storage integration', () => {
       connectionString: postgresUrl as string,
       maxConnections: 2,
     });
+    schedules = new PostgresCaptureScheduleRepository({
+      connectionString: postgresUrl as string,
+      maxConnections: 2,
+    });
+    reports = new PostgresActionSemanticsReportRepository({
+      connectionString: postgresUrl as string,
+      maxConnections: 2,
+    });
     await artifacts.initialize();
   });
 
   afterAll(async () => {
-    await Promise.all([facts.close(), evidence.close(), checkpoints.close()]);
+    await Promise.all([
+      facts.close(),
+      evidence.close(),
+      checkpoints.close(),
+      schedules.close(),
+      reports.close(),
+    ]);
   });
 
   it('observes initialized, versioned, durable backends', async () => {
@@ -153,12 +175,28 @@ storageDescribe('historical ingestion storage integration', () => {
         timestamp: 1_438_269_988,
       },
       transactions: [
-        { hash: `0x${'a'.repeat(64)}`, from: `0x${'1'.repeat(40)}`, value: '1' },
-        { hash: `0x${'b'.repeat(64)}`, from: `0x${'2'.repeat(40)}`, value: '2' },
+        {
+          transactionIndex: 0,
+          hash: pipelineTransactionId,
+          from: `0x${'1'.repeat(40)}`,
+          to: `0x${'4'.repeat(40)}`,
+          input: '0x',
+          value: '1',
+          status: 1,
+        },
+        {
+          transactionIndex: 1,
+          hash: `0x${'b'.repeat(64)}`,
+          from: `0x${'2'.repeat(40)}`,
+          to: `0x${'5'.repeat(40)}`,
+          input: '0x',
+          value: '2',
+          status: 1,
+        },
       ],
       logs: [
         {
-          transactionHash: `0x${'a'.repeat(64)}`,
+          transactionHash: pipelineTransactionId,
           transactionIndex: 0,
           logIndex: 0,
           address: `0x${'3'.repeat(40)}`,
@@ -286,5 +324,68 @@ storageDescribe('historical ingestion storage integration', () => {
       alreadyTerminal: true,
       run: { id: completed.run.id },
     });
+
+    const scheduledAt = '2026-08-09T13:31:00.000Z';
+    const schedule = defineCaptureSchedule({
+      captureKind: 'TRANSACTION',
+      target: {
+        ledger: 'EVM',
+        chainId: '1',
+        subjectType: 'TRANSACTION',
+        normalizedIdentifier: pipelineTransactionId,
+      },
+      parameters: {
+        schemaVersion: 'action-semantics-transaction-capture-v1',
+        dataset: 'ethereum-mainnet',
+        profile: 'ledger-records',
+        blockOrSlot: String(pipelineBlockNumber),
+        adapterVersion: 'raw-ledger-action-adapter-v0.1.0',
+      },
+      trigger: { type: 'ONCE', at: scheduledAt },
+      retryPolicy: {
+        maxAttempts: 3,
+        initialDelaySeconds: 1,
+        maximumDelaySeconds: 10,
+        backoffMultiplierBps: 20_000,
+      },
+      createdAt: scheduledAt,
+    });
+    await schedules.putSchedule(schedule);
+    const captures = await runCaptureCycle({
+      repository: schedules,
+      handlers: new Map([
+        [
+          'TRANSACTION' as const,
+          createActionSemanticsTransactionCaptureHandler({
+            facts,
+            ingestion: checkpoints,
+            evidence,
+            reports,
+          }),
+        ],
+      ]),
+      owner: `integration-${testRunId}`,
+      now: '2026-08-09T13:32:00.000Z',
+    });
+    expect(captures).toHaveLength(1);
+    expect(captures[0]).toMatchObject({
+      status: 'SUCCEEDED',
+      result: {
+        state: 'known',
+        value: {
+          modelVersion: 'action-semantics-v0.2.0',
+          coverage: 1,
+          sourceSet: ['sqd:ethereum-mainnet'],
+        },
+      },
+    });
+    const result = captures[0]?.result;
+    expect(result?.state).toBe('known');
+    if (result?.state === 'known') {
+      await expect(reports.get(result.value.resultRef)).resolves.toMatchObject({
+        transactionIds: [pipelineTransactionId],
+        modelVersion: 'action-semantics-v0.2.0',
+      });
+    }
   });
 });

@@ -93,12 +93,14 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
     const [firstWorker, secondWorker] = await Promise.all([
       schedules.claimDue({
         owner: 'integration-worker-a',
+        captureKinds: ['CLAIM_ACTIONS'],
         now: '2026-08-12T00:00:00.000Z',
         leaseSeconds: 30,
         limit: 1,
       }),
       competingWorker.claimDue({
         owner: 'integration-worker-b',
+        captureKinds: ['CLAIM_ACTIONS'],
         now: '2026-08-12T00:00:00.000Z',
         leaseSeconds: 30,
         limit: 1,
@@ -125,12 +127,14 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
     await expect(
       schedules.claimDue({
         owner: 'integration-worker-a',
+        captureKinds: ['CLAIM_ACTIONS'],
         now: '2026-08-12T00:00:14.999Z',
         limit: 1,
       }),
     ).resolves.toEqual([]);
     const [second] = await schedules.claimDue({
       owner: 'integration-worker-a',
+      captureKinds: ['CLAIM_ACTIONS'],
       now: '2026-08-12T00:00:15.000Z',
       leaseSeconds: 30,
       limit: 1,
@@ -266,6 +270,7 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
     );
     const [first] = await schedules.claimDue({
       owner: 'expiring-worker',
+      captureKinds: ['LABEL_INTELLIGENCE'],
       now: '2026-08-12T01:00:00.000Z',
       leaseSeconds: 30,
       limit: 1,
@@ -274,6 +279,7 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
     await expect(
       schedules.claimDue({
         owner: 'recovery-worker',
+        captureKinds: ['LABEL_INTELLIGENCE'],
         now: '2026-08-12T01:00:31.000Z',
         limit: 1,
       }),
@@ -285,6 +291,7 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
     });
     const [retry] = await schedules.claimDue({
       owner: 'recovery-worker',
+      captureKinds: ['LABEL_INTELLIGENCE'],
       now: '2026-08-12T01:00:36.000Z',
       leaseSeconds: 30,
       limit: 1,
@@ -325,6 +332,7 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
     );
     const [run] = await schedules.claimDue({
       owner: 'late-worker',
+      captureKinds: ['CONTROL_SURFACE'],
       now: '2026-08-12T02:00:00.000Z',
       leaseSeconds: 30,
       limit: 1,

@@ -42,6 +42,15 @@ export interface IngestionCheckpointOptions {
   statementTimeoutMs?: number;
 }
 
+export interface CompletedIngestionCoverageLookup {
+  source: string;
+  dataset: string;
+  ledger: Ledger;
+  chainId: string;
+  position: number;
+  queryHash: string;
+}
+
 export type IngestionCheckpointErrorCode =
   | 'CHECKPOINT_UNAVAILABLE'
   | 'CHECKPOINT_NOT_INITIALIZED'
@@ -350,6 +359,52 @@ export class PostgresIngestionCheckpointRepository {
         retryable: true,
         cause: error,
       });
+    }
+  }
+
+  async findCompletedCoverage(
+    input: CompletedIngestionCoverageLookup,
+  ): Promise<IngestionRun | undefined> {
+    const source = input.source.trim();
+    const dataset = input.dataset.trim();
+    const ledger = LedgerSchema.parse(input.ledger);
+    const chainId = input.chainId.trim();
+    const position = requireRangeInteger(input.position, 'position');
+    if (
+      source === '' ||
+      dataset === '' ||
+      chainId === '' ||
+      !/^[0-9a-f]{64}$/.test(input.queryHash)
+    ) {
+      throw new IngestionCheckpointError(
+        'CHECKPOINT_INVALID',
+        'Completed coverage lookup identity is invalid.',
+      );
+    }
+    try {
+      const result = await this.#pool.query(
+        `${SELECT_RUN}
+         WHERE source = $1
+           AND dataset = $2
+           AND ledger = $3::ledger_kind
+           AND chain_id = $4
+           AND from_block <= $5::numeric
+           AND to_block >= $5::numeric
+           AND next_block > $5::numeric
+           AND query_hash = $6
+           AND status IN ('REQUESTED_RANGE_COMPLETE', 'SOURCE_HEAD_REACHED')
+         ORDER BY completed_at DESC, started_at DESC, id DESC
+         LIMIT 1`,
+        [source, dataset, ledger, chainId, position, input.queryHash],
+      );
+      return result.rows[0] === undefined ? undefined : runFromRow(result.rows[0]);
+    } catch (error) {
+      if (error instanceof IngestionCheckpointError) throw error;
+      throw new IngestionCheckpointError(
+        'CHECKPOINT_UNAVAILABLE',
+        'Completed ingestion coverage read failed.',
+        { retryable: true, cause: error },
+      );
     }
   }
 

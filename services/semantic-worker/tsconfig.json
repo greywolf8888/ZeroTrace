@@ -11,6 +11,8 @@
     { "path": "../../packages/evidence" },
     { "path": "../../packages/data-quality" },
     { "path": "../../packages/storage" },
+    { "path": "../../packages/action-semantics" },
+    { "path": "../../packages/capture-scheduler" },
     { "path": "../../packages/chain-adapters" },
     { "path": "../../packages/platform-adapters" }
   ]

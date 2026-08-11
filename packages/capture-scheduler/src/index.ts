@@ -36,6 +36,7 @@ export interface DefineCaptureScheduleInput {
 export interface CaptureLeaseRepository {
   claimDue(input: {
     owner: string;
+    captureKinds: readonly CaptureKind[];
     now?: string;
     leaseSeconds?: number;
     limit?: number;
@@ -82,8 +83,11 @@ export interface RunCaptureCycleInput {
 
 export async function runCaptureCycle(input: RunCaptureCycleInput): Promise<CaptureRun[]> {
   if (input.signal?.aborted === true) return [];
+  const captureKinds = [...input.handlers.keys()].sort();
+  if (captureKinds.length === 0) return [];
   const runs = await input.repository.claimDue({
     owner: input.owner,
+    captureKinds,
     ...(input.now === undefined ? {} : { now: input.now }),
     ...(input.leaseSeconds === undefined ? {} : { leaseSeconds: input.leaseSeconds }),
     ...(input.limit === undefined ? {} : { limit: input.limit }),

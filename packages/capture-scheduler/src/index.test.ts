@@ -92,10 +92,13 @@ describe('capture scheduling contracts', () => {
     };
     await runCaptureCycle({
       repository,
-      handlers: new Map(),
+      handlers: new Map([['TRANSACTION', vi.fn()]]),
       owner: 'worker-a',
       now: '2026-08-12T00:00:01.000Z',
     });
+    expect(repository.claimDue).toHaveBeenCalledWith(
+      expect.objectContaining({ captureKinds: ['TRANSACTION'] }),
+    );
     expect(fail).toHaveBeenCalledWith(
       expect.objectContaining({
         code: 'CAPTURE_HANDLER_UNREGISTERED',

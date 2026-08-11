@@ -4,6 +4,7 @@ import { createEvidence } from '@zerotrace/evidence';
 import { knownValue, unknownValue, type ActionAssetDelta } from '@zerotrace/schemas';
 
 import {
+  ACTION_SEMANTICS_LEGACY_MODEL_VERSION,
   ACTION_SEMANTICS_MODEL_VERSION,
   actionSemanticsReportId,
   buildActionSemanticsReport,
@@ -275,5 +276,45 @@ describe('action semantics', () => {
       })),
     };
     expect(() => calculateActionSemanticsResultHash(forged)).toThrow(/canonical candidate/);
+  });
+
+  it('replays v0.1 reports under their original proof rules while v0.2 admits value transfer', () => {
+    const evidence = source('versioned-transfer');
+    const candidate = createActionCandidate({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      transactionId: `0x${'77'.repeat(32)}`,
+      blockOrSlot: snapshot.blockNumber,
+      observedAt: evidence.observedAt,
+      proposedKind: 'TRANSFER',
+      application: 'APPLIED',
+      actor: knownValue('0x1111111111111111111111111111111111111111'),
+      counterparties: ['0x2222222222222222222222222222222222222222'],
+      assetDeltas: [
+        delta('BNB', '0x1111111111111111111111111111111111111111', 'DEBIT', '1', evidence.id),
+        delta('BNB', '0x2222222222222222222222222222222222222222', 'CREDIT', '1', evidence.id),
+      ],
+      proofKinds: ['VALUE_TRANSFER'],
+      evidenceIds: [evidence.id],
+    });
+    const build = (modelVersion?: typeof ACTION_SEMANTICS_LEGACY_MODEL_VERSION) =>
+      buildActionSemanticsReport({
+        snapshot,
+        candidates: [candidate],
+        evidence: [evidence],
+        dataCoverage: 1,
+        sourceCoverage: 0.5,
+        historyCoverage: 0,
+        ...(modelVersion === undefined ? {} : { modelVersion }),
+      });
+
+    const legacy = build(ACTION_SEMANTICS_LEGACY_MODEL_VERSION);
+    const current = build();
+    expect(legacy.actions[0]?.primitive).toMatchObject({ state: 'unknown' });
+    expect(current.actions[0]?.primitive).toEqual({ state: 'known', value: 'TRANSFER' });
+    expect(calculateActionSemanticsResultHash(legacy)).toBe(legacy.resultHash);
+    expect(expectedActionSemanticsTerminalEvidence(legacy).source).toBe(
+      `zerotrace:${ACTION_SEMANTICS_LEGACY_MODEL_VERSION}`,
+    );
   });
 });

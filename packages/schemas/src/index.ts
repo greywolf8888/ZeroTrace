@@ -5690,6 +5690,19 @@ export const CaptureTargetSchema = z
   .strict();
 export type CaptureTarget = z.infer<typeof CaptureTargetSchema>;
 
+export const ActionSemanticsTransactionCaptureParametersSchema = z
+  .object({
+    schemaVersion: z.literal('action-semantics-transaction-capture-v1'),
+    dataset: z.enum(['ethereum-mainnet', 'binance-mainnet', 'bitcoin-mainnet', 'solana-mainnet']),
+    profile: z.literal('ledger-records'),
+    blockOrSlot: UnsignedQuantityStringSchema,
+    adapterVersion: z.literal('raw-ledger-action-adapter-v0.1.0'),
+  })
+  .strict();
+export type ActionSemanticsTransactionCaptureParameters = z.infer<
+  typeof ActionSemanticsTransactionCaptureParametersSchema
+>;
+
 export const CaptureTriggerSchema = z.discriminatedUnion('type', [
   z
     .object({
@@ -5963,6 +5976,8 @@ export const ActionProofKindSchema = z.enum([
   'LP_BURN_RESERVE_CHANGE',
   'LP_CUSTODY',
   'DISTRIBUTION_FLOWS',
+  'VALUE_TRANSFER',
+  'UTXO_CONSERVATION',
 ]);
 export type ActionProofKind = z.infer<typeof ActionProofKindSchema>;
 
@@ -6188,7 +6203,9 @@ export const ActionSemanticsReportSchema = z
       value.metadata.snapshot === null ||
       JSON.stringify(value.metadata.snapshot) !== JSON.stringify(value.snapshot) ||
       value.metadata.freshness !== value.snapshot.capturedAt ||
-      value.metadata.modelVersion !== 'action-semantics-v0.1.0' ||
+      !['action-semantics-v0.1.0', 'action-semantics-v0.2.0'].includes(
+        value.metadata.modelVersion,
+      ) ||
       value.metadata.confidence !== 1 ||
       value.classificationCoverage !== knownActions / value.actions.length ||
       !evidenceIds.includes(value.terminalEvidenceId) ||

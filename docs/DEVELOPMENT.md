@@ -491,10 +491,27 @@ GET /api/v1/actions/semantics/reports/latest?ledger=EVM&chainId=eip155:56&transa
 GET /api/v1/actions/semantics/reports/asr_...
 ```
 
-There is deliberately no public POST. Trusted ledger adapters or scheduler handlers call the
-repository only after producing proof-gated candidates and durable Evidence; callers cannot assert
-`proofKinds` through the HTTP surface. Production EVM/Bitcoin/Solana adapters,
-scheduler-handler composition and historical backfill remain open.
+There is deliberately no public POST. `raw-ledger-action-adapter-v0.1.0` correlates one exact
+finalized transaction with its same-artifact child facts: EVM logs/traces/state diffs, Bitcoin
+inputs/outputs, or Solana instructions/logs/native and token balances. `action-semantics-v0.2.0`
+adds proof shapes for native value transfer and exact UTXO conservation while retaining replay of
+stored `v0.1.0` reports through migration `026_action_semantics_v2`.
+
+Only a completed SQD `ledger-records` ingestion query with `transactionIndex` and the full
+ledger-specific materialization set is eligible. Schedule and execute a transaction locally with:
+
+```powershell
+npm run actions:schedule -- --dataset binance-mainnet --transaction 0x... --block-or-slot 123
+npm run actions:capture -- --once
+```
+
+The scheduler CLI writes an immutable `READ_ONLY_CAPTURE` plan. The worker preflights PostgreSQL
+Evidence, ingestion checkpoints, schedules and reports plus ClickHouse Raw Facts, acquires an
+exclusive lease, then writes terminal Evidence before the report and successful run result.
+Pending ingestion is retryable; corrupt provenance, cross-transaction facts or an incomplete
+profile fail closed. Run it continuously with `npm run actions:capture` or as
+`action-capture-worker` in the Compose `semantic` profile. Historical schedule discovery,
+additional capture kinds and Temporal/NATS adapters remain open.
 
 ## Continuous Flap lifetime heads
 
@@ -533,7 +550,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `025`, are in
+local upgrade commands, including migrations `007` through `026`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

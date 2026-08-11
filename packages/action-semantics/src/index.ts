@@ -20,7 +20,14 @@ import {
   type Ledger,
 } from '@zerotrace/schemas';
 
-export const ACTION_SEMANTICS_MODEL_VERSION = 'action-semantics-v0.1.0';
+export const ACTION_SEMANTICS_LEGACY_MODEL_VERSION = 'action-semantics-v0.1.0';
+export const ACTION_SEMANTICS_MODEL_VERSION = 'action-semantics-v0.2.0';
+export const ACTION_SEMANTICS_SUPPORTED_MODEL_VERSIONS = [
+  ACTION_SEMANTICS_LEGACY_MODEL_VERSION,
+  ACTION_SEMANTICS_MODEL_VERSION,
+] as const;
+export type ActionSemanticsModelVersion =
+  (typeof ACTION_SEMANTICS_SUPPORTED_MODEL_VERSIONS)[number];
 
 const ACTION_SEMANTICS_REPORT_ID_SCHEMA = 'zerotrace-action-semantics-report-v1';
 
@@ -47,6 +54,7 @@ export interface BuildActionSemanticsInput {
   sourceCoverage: number;
   historyCoverage: number;
   simulationCoverage?: number;
+  modelVersion?: ActionSemanticsModelVersion;
 }
 
 function canonical(values: readonly string[]): string[] {
@@ -138,7 +146,10 @@ function hasProof(proofs: ReadonlySet<ActionProofKind>, ...required: ActionProof
   return required.every((proof) => proofs.has(proof));
 }
 
-function appliedShape(candidate: ActionSemanticCandidate): boolean {
+function appliedShape(
+  candidate: ActionSemanticCandidate,
+  modelVersion: ActionSemanticsModelVersion,
+): boolean {
   const proofs = new Set(candidate.proofKinds);
   const debits = candidate.assetDeltas.filter((delta) => delta.direction === 'DEBIT');
   const credits = candidate.assetDeltas.filter((delta) => delta.direction === 'CREDIT');
@@ -146,7 +157,14 @@ function appliedShape(candidate: ActionSemanticCandidate): boolean {
   const creditAssets = new Set(credits.map((delta) => delta.assetId));
   switch (candidate.proposedKind) {
     case 'TRANSFER':
-      return hasProof(proofs, 'TRANSFER_LOG') && balancedByAsset(candidate.assetDeltas);
+      return (
+        (hasProof(proofs, 'TRANSFER_LOG') ||
+          (modelVersion === ACTION_SEMANTICS_MODEL_VERSION &&
+            (hasProof(proofs, 'VALUE_TRANSFER') ||
+              hasProof(proofs, 'UTXO_CONSERVATION') ||
+              hasProof(proofs, 'BALANCE_DELTAS')))) &&
+        balancedByAsset(candidate.assetDeltas)
+      );
     case 'SWAP':
       return (
         hasProof(proofs, 'SWAP_EVENT', 'BALANCE_DELTAS') &&
@@ -178,7 +196,10 @@ function appliedShape(candidate: ActionSemanticCandidate): boolean {
       );
     }
     case 'CONTRACT_CALL':
-      return hasProof(proofs, 'CALL_TRACE') || hasProof(proofs, 'EXECUTION_RECEIPT');
+      return modelVersion === ACTION_SEMANTICS_LEGACY_MODEL_VERSION
+        ? hasProof(proofs, 'CALL_TRACE') || hasProof(proofs, 'EXECUTION_RECEIPT')
+        : hasProof(proofs, 'CALL_TRACE') ||
+            hasProof(proofs, 'TRANSACTION_INPUT', 'EXECUTION_RECEIPT');
   }
 }
 
@@ -189,7 +210,10 @@ function attemptedShape(candidate: ActionSemanticCandidate): boolean {
   );
 }
 
-function classify(candidate: ActionSemanticCandidate): {
+function classify(
+  candidate: ActionSemanticCandidate,
+  modelVersion: ActionSemanticsModelVersion,
+): {
   primitive: KnowledgeValue<ActionPrimitiveKind>;
   confidence: KnowledgeValue<number>;
   findings: ActionSemanticObservation['findings'];
@@ -226,7 +250,7 @@ function classify(candidate: ActionSemanticCandidate): {
       findings,
     };
   }
-  if (!appliedShape(candidate)) {
+  if (!appliedShape(candidate, modelVersion)) {
     findings.push(
       candidate.assetDeltas.length === 0 ? 'DELTA_SHAPE_INVALID' : 'PROOF_INCOMPLETE',
       'INTENT_NOT_INFERRED',
@@ -248,8 +272,11 @@ function classify(candidate: ActionSemanticCandidate): {
   };
 }
 
-function observation(candidate: ActionSemanticCandidate): ActionSemanticObservation {
-  const classification = classify(candidate);
+function observation(
+  candidate: ActionSemanticCandidate,
+  modelVersion: ActionSemanticsModelVersion,
+): ActionSemanticObservation {
+  const classification = classify(candidate, modelVersion);
   const content = {
     candidateId: candidate.id,
     ledger: candidate.ledger,
@@ -304,6 +331,12 @@ function reportCore(report: ActionSemanticsReport) {
 
 function canonicalReport(input: ActionSemanticsReport): ActionSemanticsReport {
   const report = ActionSemanticsReportSchema.parse(input);
+  const modelVersion = ACTION_SEMANTICS_SUPPORTED_MODEL_VERSIONS.find(
+    (item) => item === report.metadata.modelVersion,
+  );
+  if (modelVersion === undefined) {
+    throw new Error('Action Semantics report uses an unsupported model version.');
+  }
   for (const action of report.actions) {
     const actor: KnowledgeValue<string> =
       action.actor.state === 'known'
@@ -325,7 +358,7 @@ function canonicalReport(input: ActionSemanticsReport): ActionSemanticsReport {
       proofKinds: action.proofKinds,
       evidenceIds: action.evidenceIds,
     });
-    const expected = observation(candidate);
+    const expected = observation(candidate, modelVersion);
     if (candidate.id !== action.candidateId || hashPayload(expected) !== hashPayload(action)) {
       throw new Error(
         'Action Semantics observation does not match the canonical candidate classification.',
@@ -348,7 +381,7 @@ export function expectedActionSemanticsTerminalEvidence(input: ActionSemanticsRe
     ledger: report.snapshot.ledger,
     chainId: report.snapshot.chainId,
     kind: 'DERIVED_FEATURE',
-    source: `zerotrace:${ACTION_SEMANTICS_MODEL_VERSION}`,
+    source: `zerotrace:${report.metadata.modelVersion}`,
     locator: `action-semantics:${report.snapshot.ledger}:${report.snapshot.chainId}:${position}:${report.resultHash}`,
     payload: {
       resultHash: report.resultHash,
@@ -380,6 +413,7 @@ export function buildActionSemanticsReport(
   input: BuildActionSemanticsInput,
 ): ActionSemanticsReport {
   const snapshot = AnalysisSnapshotSchema.parse(input.snapshot);
+  const modelVersion = input.modelVersion ?? ACTION_SEMANTICS_MODEL_VERSION;
   if (input.candidates.length === 0) throw new Error('Action Semantics requires a candidate.');
   const candidates = input.candidates.map((item) => ActionSemanticCandidateSchema.parse(item));
   const evidence = input.evidence.map((item) => EvidenceSchema.parse(item));
@@ -410,7 +444,7 @@ export function buildActionSemanticsReport(
     );
   }
   const actions = candidates
-    .map(observation)
+    .map((candidate) => observation(candidate, modelVersion))
     .sort((left, right) => left.id.localeCompare(right.id));
   const knownActions = actions.filter((action) => action.primitive.state === 'known').length;
   const sourceSet = canonical(
@@ -437,14 +471,14 @@ export function buildActionSemanticsReport(
       simulation: ratio(input.simulationCoverage ?? 0, 'simulationCoverage'),
     },
     sourceSet,
-    modelVersion: ACTION_SEMANTICS_MODEL_VERSION,
+    modelVersion,
   };
   const resultHash = hashPayload(core);
   const terminal = createEvidence({
     ledger: snapshot.ledger,
     chainId: snapshot.chainId,
     kind: 'DERIVED_FEATURE',
-    source: `zerotrace:${ACTION_SEMANTICS_MODEL_VERSION}`,
+    source: `zerotrace:${modelVersion}`,
     locator: `action-semantics:${snapshot.ledger}:${snapshot.chainId}:${position}:${resultHash}`,
     payload: {
       resultHash,
@@ -481,7 +515,7 @@ export function buildActionSemanticsReport(
       simulationCoverage: core.coverage.simulation,
       freshness: snapshot.capturedAt,
       sourceSet,
-      modelVersion: ACTION_SEMANTICS_MODEL_VERSION,
+      modelVersion,
       confidence: 1,
       evidenceIds: allEvidence.map((item) => item.id),
     },
@@ -490,3 +524,4 @@ export function buildActionSemanticsReport(
 }
 
 export type { ActionSemanticCandidate, ActionSemanticObservation, ActionSemanticsReport };
+export * from './raw-ledger.js';

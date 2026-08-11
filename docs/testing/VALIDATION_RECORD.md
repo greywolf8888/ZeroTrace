@@ -2180,3 +2180,57 @@ PR #16 was squash-merged to protected `main` as `e7f1383`. The exact merge commi
 passed [CI run 31543286842](https://github.com/greywolf8888/ZeroTrace/actions/runs/31543286842)
 and [CodeQL run 31543286847](https://github.com/greywolf8888/ZeroTrace/actions/runs/31543286847).
 The temporary implementation branch was deleted after merge; no release or tag was created.
+
+## Durable multi-chain Action capture handler: 2026-08-12
+
+Action Semantics advanced to `action-semantics-v0.2.0` while retaining strict replay support for
+immutable `v0.1.0` reports. The new generic raw-ledger compiler accepts exactly one provider,
+content-addressed artifact, transaction and Snapshot. It derives only facts justified by the stored
+ledger records: EVM native and ERC-20 transfers plus contract calls, complete Bitcoin UTXO
+conservation and fees, and Solana program calls, validator fees, native deltas and SPL deltas.
+Intent such as buyback, pension, dividend, permanent lock or community allocation remains Unknown.
+
+Migration `026_action_semantics_v2` upgraded the database model constraint and terminal-source
+guard without rewriting old reports. A new production handler proves that the exact transaction's
+`ledger-records` ingestion profile completed, loads the matching ClickHouse facts by provider,
+position and artifact, validates the object-store payload plus Evidence/Snapshot closure, compiles
+and persists the report, and only then completes the PostgreSQL schedule lease. Missing completed
+coverage is retryable; malformed or cross-artifact input is terminally rejected. The worker and
+scheduling CLI accept no private key, signature, approval, swap or broadcast operation.
+
+The complete local `npm run verify` gate passed formatting, ESLint, typecheck, 566 unit tests across
+91 files, 77 environment-free integration tests, one structural Entity evaluation, all builds and
+the production license allowlist. `npm run audit:prod`, CycloneDX SBOM generation, Compose rendering
+and all 36 Chromium desktop/Pixel 7 flows also passed. Docker Desktop's Linux engine was unavailable,
+so 33 durable cases were explicitly skipped locally; that 642-test coverage attempt reached 78.85%
+statements, 72.56% branches, 89.29% functions and 79.92% lines and correctly failed the global
+threshold. It is not recorded as a local coverage pass.
+
+PR #18 supplied the clean disposable-store authority for immutable code commit `9d608f5`.
+[CI run 31547375160](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547375160) applied
+migrations `001-026`, passed 676/676 tests against PostgreSQL, AGE, ClickHouse and MinIO, exercised
+the real ingestion-to-exact-fact-to-lease-to-Evidence/report success path, built the repository,
+checked licenses, found zero dependency vulnerabilities, generated the SBOM, passed all 36 browser
+flows, and built all six production container targets. Remote coverage was 82.39% statements,
+76.61% branches, 93.24% functions and 83.49% lines. [CodeQL run
+31547375237](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547375237) independently passed
+JavaScript/TypeScript analysis.
+
+A later documentation-head rerun, [CI run
+31547857040](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547857040), correctly failed
+instead of being retried away. Parallel real-database suites showed that an unfiltered worker could
+lease a due run belonging to a different registered handler kind. The production fix makes the
+registered capture-kind allowlist mandatory and applies it consistently to expired-lease recovery,
+retry leasing and new schedule occurrences. `runCaptureCycle` now derives this allowlist from its
+actual handler registry, so the transaction worker cannot consume Claim, Label, Entity or other
+workers' runs. A fail-closed unit case also retains protection if a repository violates the filter.
+The post-fix local gate passed format, lint, typecheck, all 566 unit tests, 77 environment-free
+integrations, the Entity evaluation, all builds, license and vulnerability checks, SBOM, Compose
+rendering, and all 36 Chromium desktop/mobile flows. Disposable-store concurrency revalidation is
+required before merge; the failed run is not acceptance evidence.
+
+This closes generic finalized-transaction handler binding, not terminal historical intelligence.
+Continuous discovery/backfill, Temporal/NATS distribution, additional capture kinds,
+independent-source action reconciliation and real-chain cross-ledger calibration remain open. FFT
+was not queried by this batch and remains a later whole-product acceptance fixture, not a special
+production path.
