@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- bounded `entity-investigation-graph-v0.1.0` materialization from exact-Snapshot durable Entity
+  timelines, with strict controller/coordination separation, retained negative/service/Unknown
+  observations, immutable PostgreSQL report and Evidence guards, optional transactional Apache AGE
+  projection, bounded traversal, API replay and responsive Cytoscape Evidence drilldown;
 - bounded, immutable `entity-timeline-v0.1.0` pairwise relationship timelines with deterministic
   same-position revisions and position advances, explicit observation gaps, Knowledge-state-safe
   probability deltas, PostgreSQL report/Evidence lineage guards, provider-free API replay, and

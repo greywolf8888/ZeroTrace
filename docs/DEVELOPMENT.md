@@ -67,6 +67,45 @@ Database initialization is automatic on a new Compose volume:
 The SQL is copied into small project image stages instead of bind-mounted. This keeps initialization
 reliable from Windows workspaces whose paths contain Unicode characters.
 
+### Optional Apache AGE investigation projection
+
+PostgreSQL stores the authoritative immutable investigation-graph report. Apache AGE is an optional
+derived traversal index; the API and provider-free report replay continue to work when it is not
+configured.
+
+Start the initialized AGE sidecar:
+
+```bash
+docker compose --profile graph up -d graph-db
+```
+
+For an API running in Compose, place the following URL in `.env` (replace the password if you changed
+`POSTGRES_PASSWORD`) and recreate the API:
+
+```text
+AGE_URL=postgresql://zerotrace:zerotrace@graph-db:5432/zerotrace_graph
+```
+
+```bash
+docker compose --profile graph up -d --build api graph-db
+```
+
+For `npm run dev` on the host, use
+`AGE_URL=postgresql://zerotrace:zerotrace@localhost:5455/zerotrace_graph`. Migration
+`infra/age/init/001_investigation_graph.sql` loads AGE, creates `zerotrace_investigation`, and adds
+an immutable projection registry on a new volume. `/health` reports this store separately as
+`graphProjection`; AGE failure never becomes a zero-edge conclusion and does not replace the
+PostgreSQL source of truth.
+
+To include the real sidecar in storage integration tests, set the disposable test URL only:
+
+```text
+TEST_AGE_URL=postgresql://zerotrace:zerotrace@localhost:5455/zerotrace_graph
+```
+
+The projection contains only bounded `Subject`, `SAME_CONTROLLER`, and `COORDINATED_WITH`
+investigation records. It never copies the raw transfer graph or propagates Entity membership.
+
 The default full Compose path configures durable PostgreSQL Evidence/Snapshot persistence, semantic
 checkpoints, and immutable Flap history projections. The Flap origin API uses those checkpoints for
 chunk resume and terminal result replay; without PostgreSQL it remains a bounded, process-local
@@ -335,6 +374,21 @@ ordered as revisions. `completePersistedReportSet` never claims continuous chain
 all three probability deltas stay Unknown or Unavailable unless both endpoints are Known. The UI
 can materialize or replay the projection, but cannot merge entities or write analyst overrides.
 
+Migration `020_entity_investigation_graphs` adds immutable `eig_...` reports over one to 250
+distinct timelines ending at one exact Snapshot. The materializer is provider-free:
+
+```text
+POST /api/v1/entities/investigation-graphs/materialize
+GET /api/v1/entities/investigation-graphs/latest?ledger=EVM&chainId=eip155:56&subjectId=<optional-subject>&seedSubjectId=<optional-seed>&maxDepth=2&maxNodes=100
+GET /api/v1/entities/investigation-graphs/<eig-id>?ledger=EVM&chainId=eip155:56&seedSubjectId=<optional-seed>&maxDepth=2&maxNodes=100
+```
+
+The POST body contains `ledger`, `chainId`, and canonical `timelineIds`. Materialization fails on
+mixed Snapshots, duplicate pairs, missing Evidence, or a truncated request. Latest/exact reads use
+PostgreSQL only; optional seed traversal is bounded to depth `0..3` and `1..200` nodes. The UI
+renders controller and coordination edges separately and keeps service, independence and Unknown
+decisions in the audit list without inventing an edge.
+
 ## Continuous Flap lifetime heads
 
 The fourth semantic-worker entrypoint maintains one append-only accepted lifetime chain. It requires
@@ -372,7 +426,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `019`, are in
+local upgrade commands, including migrations `007` through `020`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

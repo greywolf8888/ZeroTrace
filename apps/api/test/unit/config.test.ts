@@ -17,6 +17,7 @@ describe('API configuration', () => {
     expect(config.ethereumSnapshotTag).toBe('finalized');
     expect(config.bscSnapshotTag).toBe('finalized');
     expect(config.dataQualityMinSources).toBe(2);
+    expect(config.ageUrl).toBeUndefined();
     expect(config.corsOrigins).toEqual([
       'http://localhost:5173',
       'http://127.0.0.1:5173',
@@ -130,6 +131,18 @@ describe('API configuration', () => {
     } catch (error) {
       expect(String(error)).not.toContain('sensitive-database-value');
     }
+  });
+
+  it('validates the optional Apache AGE PostgreSQL URL independently', () => {
+    expect(
+      loadConfig({
+        NODE_ENV: 'test',
+        AGE_URL: 'postgresql://zerotrace:test@graph-db:5432/zerotrace_graph',
+      }).ageUrl,
+    ).toBe('postgresql://zerotrace:test@graph-db:5432/zerotrace_graph');
+    expect(() => loadConfig({ NODE_ENV: 'test', AGE_URL: 'https://graph.example' })).toThrow(
+      'AGE_URL must be a valid PostgreSQL connection URL.',
+    );
   });
 
   it('loads durable ingestion origins while redacting storage secrets', () => {

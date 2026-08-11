@@ -52,6 +52,7 @@ const EnvironmentSchema = z.object({
   SOURCIFY_V2_URL: optionalString,
   SOURCIFY_REQUESTS_PER_SECOND: z.coerce.number().min(0).max(100).default(2),
   POSTGRES_URL: optionalString,
+  AGE_URL: optionalString,
   CLICKHOUSE_URL: optionalString,
   CLICKHOUSE_USERNAME: optionalString,
   CLICKHOUSE_PASSWORD: optionalString,
@@ -115,6 +116,7 @@ export interface AppConfig {
   sourcifyV2Url?: string;
   sourcifyRequestsPerSecond: number;
   postgresUrl?: string;
+  ageUrl?: string;
   clickhouseUrl?: string;
   clickhouseUsername?: string;
   clickhousePassword?: ConfigSecret;
@@ -197,14 +199,14 @@ function secret(value: string): ConfigSecret {
   });
 }
 
-function optionalPostgresUrl(rawUrl: string | undefined): string | undefined {
+function optionalPostgresUrl(rawUrl: string | undefined, field: string): string | undefined {
   if (rawUrl === undefined) return undefined;
   try {
     const url = new URL(rawUrl);
     if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error('invalid protocol');
     return rawUrl;
   } catch {
-    throw new Error('POSTGRES_URL must be a valid PostgreSQL connection URL.');
+    throw new Error(`${field} must be a valid PostgreSQL connection URL.`);
   }
 }
 
@@ -242,7 +244,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
   const solanaPrimary = firstUrl(solanaRpcUrls).primary;
   const sqdPortalUrl = optionalUrl(parsed.SQD_PORTAL_URL, 'SQD Portal URL');
   const sourcifyV2Url = optionalUrl(parsed.SOURCIFY_V2_URL, 'Sourcify V2 URL');
-  const postgresUrl = optionalPostgresUrl(parsed.POSTGRES_URL);
+  const postgresUrl = optionalPostgresUrl(parsed.POSTGRES_URL, 'POSTGRES_URL');
+  const ageUrl = optionalPostgresUrl(parsed.AGE_URL, 'AGE_URL');
   const clickhouseUrl = optionalOrigin(parsed.CLICKHOUSE_URL, 'CLICKHOUSE_URL');
   const objectStoreEndpoint = optionalOrigin(parsed.OBJECT_STORE_ENDPOINT, 'OBJECT_STORE_ENDPOINT');
   if (
@@ -316,6 +319,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     ...(sqdPortalUrl === undefined ? {} : { sqdPortalUrl }),
     ...(sourcifyV2Url === undefined ? {} : { sourcifyV2Url }),
     ...(postgresUrl === undefined ? {} : { postgresUrl }),
+    ...(ageUrl === undefined ? {} : { ageUrl }),
     ...(clickhouseUrl === undefined ? {} : { clickhouseUrl }),
     ...(parsed.CLICKHOUSE_USERNAME === undefined
       ? {}

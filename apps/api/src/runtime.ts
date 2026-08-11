@@ -37,6 +37,8 @@ import {
   PostgresFlapPensionEntryReportRepository,
   PostgresEntityRelationshipReportRepository,
   PostgresEntityRelationshipTimelineRepository,
+  PostgresEntityInvestigationGraphRepository,
+  AgeInvestigationGraphProjectionRepository,
   PostgresIngestionCheckpointRepository,
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
@@ -72,6 +74,8 @@ export interface AppRuntime {
   pensionEntryReports?: PostgresFlapPensionEntryReportRepository;
   entityRelationshipReports?: PostgresEntityRelationshipReportRepository;
   entityRelationshipTimelines?: PostgresEntityRelationshipTimelineRepository;
+  entityInvestigationGraphs?: PostgresEntityInvestigationGraphRepository;
+  ageInvestigationGraphProjection?: AgeInvestigationGraphProjectionRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -551,6 +555,24 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const entityInvestigationGraphs =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresEntityInvestigationGraphRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const ageInvestigationGraphProjection =
+    config.ageUrl === undefined
+      ? undefined
+      : new AgeInvestigationGraphProjectionRepository({
+          connectionString: config.ageUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 2,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -581,6 +603,8 @@ export function createRuntime(config: AppConfig): AppRuntime {
       pensionEntryReports?.close(),
       entityRelationshipReports?.close(),
       entityRelationshipTimelines?.close(),
+      entityInvestigationGraphs?.close(),
+      ageInvestigationGraphProjection?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -615,6 +639,8 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(pensionEntryReports === undefined ? {} : { pensionEntryReports }),
     ...(entityRelationshipReports === undefined ? {} : { entityRelationshipReports }),
     ...(entityRelationshipTimelines === undefined ? {} : { entityRelationshipTimelines }),
+    ...(entityInvestigationGraphs === undefined ? {} : { entityInvestigationGraphs }),
+    ...(ageInvestigationGraphProjection === undefined ? {} : { ageInvestigationGraphProjection }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

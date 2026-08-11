@@ -140,8 +140,21 @@ describe('application runtime wiring', () => {
     expect(runtime.evidenceRepository).toBeDefined();
     expect(runtime.semanticCheckpoints).toBeDefined();
     expect(runtime.flapHistoryProjection).toBeDefined();
+    expect(runtime.entityInvestigationGraphs).toBeDefined();
+    expect(runtime.ageInvestigationGraphProjection).toBeUndefined();
     expect(runtime.dataQualityStorage).toBeDefined();
     expect(runtime.dataQuality.durable).toBe(true);
+    await runtime.close?.();
+  });
+
+  it('wires the optional Apache AGE projection without startup I/O', async () => {
+    const runtime = createRuntime(
+      baseConfig({
+        ageUrl: 'postgresql://zerotrace:secret@graph.example/zerotrace_graph',
+      }),
+    );
+    expect(runtime.ageInvestigationGraphProjection).toBeDefined();
+    expect(runtime.entityInvestigationGraphs).toBeUndefined();
     await runtime.close?.();
   });
 
