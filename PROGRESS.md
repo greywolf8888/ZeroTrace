@@ -40,7 +40,7 @@ The only allowed status vocabulary in this ledger is:
 | EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                                                                                                                                                                                                                                       |
 | Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | stable-tip address/UTXO reconciliation plus transaction/outpoint/script reads passed on public Esplora; Core/archive policy pending                                                                                                                                                                                                        |
 | Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor, minimum-context account and live v0 ALT/CPI/balance semantic reads passed                                                                                                                                                                                                                                    |
-| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity, semantic checkpoints and generic durable schedule/run/lease truth work; Temporal/NATS handlers and general rollback/replay remain                                                                                                                                                                          |
+| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity, semantic checkpoints and generic EVM/BTC/Solana transaction capture work; continuous discovery, Temporal/NATS distribution and general rollback/replay remain                                                                                                                                              |
 | Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus immutable exact-Snapshot Entity investigation graphs and cross-Snapshot graph timelines work; general terminal graph coverage is incomplete                                                                                                                                                    |
 | Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; scoped Alchemy/BNB market reconciliation passed, while other domains and entity calibration remain                                                                                                                                                                                    |
 | Global Intelligence Search           | `PARTIALLY_IMPLEMENTED`                     | local classification plus durable exact identifier/registered-label projection over current immutable reports works with terminal Evidence and scoped absence; symbol/ticker, platform/project, checkpoint and complete registry indexes remain                                                                                            |
@@ -50,7 +50,7 @@ The only allowed status vocabulary in this ledger is:
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; forced-reorg validation and other platforms remain                                                                                                                                                   |
 | Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios, immutable candidate-bound pension-entry reports and two-operator reconciliation work; fork execution, routes, gas and capacity remain                                                                                                                              |
 | Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race plus immutable pension-entry Scenario Reports and provider-free replay; general portfolio/market scenarios remain                                                                                                                                                                                      |
-| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, behavioral pension candidates, event promotion, bounded supply continuity, durable proof-gated generic Action Semantics replay and scheduling work; production action adapters, handler binding, generic backfill and attribution remain                                  |
+| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, behavioral pension candidates, supply continuity, proof-gated Action Semantics plus durable raw-transaction capture work; protocol intent/attribution, continuous backfill and independent claim-flow reconciliation remain                                               |
 | Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger/Evidence, durable exact search, EVM/Solana controls, Bitcoin UTXO/script boundaries, pension/claim/burn, candidate-bound entry, market/RV and Entity investigation panels work; broader terminal workflows remain incomplete                                                                                                  |
 | Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                                                                                                                                                                              |
 
@@ -869,7 +869,7 @@ The only allowed status vocabulary in this ledger is:
 
 ### Generic proof-gated Action Semantics
 
-- `action-semantics-v0.1.0` models transfer, swap, mint, burn, liquidity addition/removal, LP
+- `action-semantics-v0.2.0` models transfer, swap, mint, burn, liquidity addition/removal, LP
   custody, distribution and contract-call primitives independently of EVM, Bitcoin, Solana,
   launchpads or named tokens;
 - candidates must match one exact Snapshot and complete Evidence set. Each primitive has a
@@ -888,8 +888,23 @@ The only allowed status vocabulary in this ledger is:
   represented EVM/Bitcoin/Solana transaction IDs, and rejects update/delete;
 - latest transaction and exact content-addressed API replay is provider-free. The HTTP surface has
   no Action Semantics write route, so untrusted clients cannot self-assert proof kinds;
-- production ledger adapters, scheduler-handler composition, historical backfill and real-chain
-  cross-ledger calibration remain pending.
+- `raw-ledger-action-adapter-v0.1.0` now compiles one exact finalized EVM transaction plus
+  logs/traces/state diffs, Bitcoin transaction plus complete UTXO input/output records, or Solana
+  transaction plus instruction/log/balance/token-balance records. Child facts must share the same
+  provider, raw artifact, Snapshot and transaction identity;
+- completed ingestion coverage is queried by exact source/dataset/ledger/chain/position/query hash.
+  A full `ledger-records` profile and explicit transaction index are mandatory; missing coverage is
+  retryable, while structurally incomplete coverage fails terminally rather than producing zero;
+- migration `026_action_semantics_v2` upgrades the insert guard and model constraint without
+  invalidating immutable `v0.1.0` reports. The report repository replays both supported versions
+  and only emits the current version for new raw-ledger compilation;
+- an internal scheduling CLI plus one-shot/continuous worker binds the production `TRANSACTION`
+  handler to PostgreSQL leases and bounded retry, preflights five durable authorities, and is
+  available as `action-capture-worker` in the `semantic` Compose profile. Neither CLI accepts a
+  private key or any chain-write action;
+- continuous schedule discovery/backfill, the remaining capture kinds, Temporal/NATS distribution,
+  protocol-purpose attribution and real-chain cross-ledger calibration remain pending. FFT remains
+  only a later acceptance fixture and is absent from this adapter and worker.
 
 ### Flap migrated DEX market and buy scenarios
 

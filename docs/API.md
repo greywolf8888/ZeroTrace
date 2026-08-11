@@ -740,10 +740,11 @@ repository, `POSTGRES`/`DOWN` with a safe error code when configured storage is 
 failure makes `/health/ready` return HTTP 503.
 
 When PostgreSQL is configured, aggregate storage readiness also checks migrations
-`024_capture_schedules` and `025_action_semantics_reports`. The first verifies only the durable
-schedule/run/attempt authority; the second verifies immutable generic Action Semantics replay.
-There is no public scheduling, worker-lease or Action Semantics write endpoint, and health never
-claims that Temporal/NATS handlers or production action adapters are running.
+`024_capture_schedules` and `026_action_semantics_v2`. The first verifies the durable
+schedule/run/attempt authority; the latter includes immutable generic Action Semantics replay for
+both supported model versions. There is no public scheduling, worker-lease or Action Semantics write
+endpoint. The production worker is an internal CLI/Compose process, not an HTTP write route, and
+health does not claim that Temporal/NATS or the remaining capture kinds are running.
 
 ## Generic Action Semantics replay
 

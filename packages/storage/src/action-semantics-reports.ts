@@ -1,11 +1,12 @@
 import { Pool } from 'pg';
 
 import {
-  ACTION_SEMANTICS_MODEL_VERSION,
+  ACTION_SEMANTICS_SUPPORTED_MODEL_VERSIONS,
   actionSemanticsReportId,
   calculateActionSemanticsResultHash,
   canonicalActionTransactionId,
   expectedActionSemanticsTerminalEvidence,
+  type ActionSemanticsModelVersion,
 } from '@zerotrace/action-semantics';
 import { canonicalJson } from '@zerotrace/evidence';
 import {
@@ -73,7 +74,7 @@ export interface StoredActionSemanticsReport {
   terminalEvidenceId: string;
   evidenceIds: readonly string[];
   sourceSet: readonly string[];
-  modelVersion: typeof ACTION_SEMANTICS_MODEL_VERSION;
+  modelVersion: ActionSemanticsModelVersion;
   classificationCoverage: number;
   capturedAt: string;
   createdAt: string;
@@ -211,10 +212,10 @@ function materialize(input: ActionSemanticsReport): Materialized {
   if (report.resultHash !== resultHash) {
     throw invalid('Action Semantics result hash does not match its canonical report core.');
   }
-  if (
-    report.metadata.modelVersion !== ACTION_SEMANTICS_MODEL_VERSION ||
-    report.metadata.confidence !== 1
-  ) {
+  const modelVersion = ACTION_SEMANTICS_SUPPORTED_MODEL_VERSIONS.find(
+    (item) => item === report.metadata.modelVersion,
+  );
+  if (modelVersion === undefined || report.metadata.confidence !== 1) {
     throw invalid('Action Semantics model identity or deterministic confidence is invalid.');
   }
   const expectedTerminal = expectedActionSemanticsTerminalEvidence(report);
@@ -240,7 +241,7 @@ function materialize(input: ActionSemanticsReport): Materialized {
     terminalEvidenceId: report.terminalEvidenceId,
     evidenceIds: [...report.metadata.evidenceIds],
     sourceSet: [...report.metadata.sourceSet],
-    modelVersion: ACTION_SEMANTICS_MODEL_VERSION,
+    modelVersion,
     classificationCoverage: report.classificationCoverage,
     capturedAt: new Date(report.snapshot.capturedAt).toISOString(),
   };
@@ -284,7 +285,7 @@ function rowToReport(row: Record<string, unknown>): StoredActionSemanticsReport 
     terminalEvidenceId: requiredString(row, 'terminal_evidence_id'),
     evidenceIds: canonicalStringArray(row.evidence_ids, 'Evidence IDs'),
     sourceSet: canonicalStringArray(row.source_set, 'source set'),
-    modelVersion: requiredString(row, 'model_version') as typeof ACTION_SEMANTICS_MODEL_VERSION,
+    modelVersion: requiredString(row, 'model_version') as ActionSemanticsModelVersion,
     classificationCoverage: ratio(row.classification_coverage, 'classification coverage'),
     capturedAt: timestamp(row.captured_at, 'capturedAt'),
     createdAt: timestamp(row.created_at, 'createdAt'),
@@ -428,7 +429,7 @@ export class PostgresActionSemanticsReportRepository {
         `SELECT
           to_regclass('public.action_semantics_reports')::text AS table_name,
           EXISTS (SELECT 1 FROM schema_migrations WHERE version = $1) AS migration_applied`,
-        ['025_action_semantics_reports'],
+        ['026_action_semantics_v2'],
       );
       if (
         result.rows[0]?.table_name !== 'action_semantics_reports' ||

@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { canonicalJson } from '@zerotrace/evidence';
+
 import {
   ClickHouseRawFactRepository,
   createRawChainFact,
@@ -77,6 +79,26 @@ function createFakeClient() {
   };
 }
 
+function rawRow(fact: ReturnType<typeof createRawChainFact>): Record<string, unknown> {
+  return {
+    fact_id: fact.id,
+    schema_version: fact.schemaVersion,
+    ledger: fact.ledger,
+    chain_id: fact.chainId,
+    block_or_slot: fact.blockOrSlot,
+    block_hash: fact.blockHash,
+    fact_type: fact.factType,
+    subject: fact.subject,
+    provider: fact.provider,
+    finality: fact.finality,
+    payload: canonicalJson(fact.payload),
+    payload_hash: fact.payloadHash,
+    evidence_id: fact.evidenceId,
+    raw_artifact_ref: fact.rawArtifactRef,
+    observed_at_ms: Date.parse(fact.observedAt),
+  };
+}
+
 describe('ClickHouseRawFactRepository', () => {
   it('builds deterministic facts whose identity covers Evidence and artifact provenance', () => {
     const first = createRawChainFact(input);
@@ -128,6 +150,72 @@ describe('ClickHouseRawFactRepository', () => {
     });
     await fixture.repository.close();
     expect(fixture.client.close).toHaveBeenCalledOnce();
+  });
+
+  it('loads one exact artifact-scoped transaction fact bundle', async () => {
+    const transactionId = `0x${'d'.repeat(64)}`;
+    const transaction = createRawChainFact({
+      ...input,
+      factType: 'TRANSACTION',
+      subject: transactionId,
+      payload: { hash: transactionId, transactionIndex: 3, status: 1 },
+    });
+    const log = createRawChainFact({
+      ...input,
+      factType: 'LOG',
+      subject: `${transactionId}:0`,
+      evidenceId: `ev_${'e'.repeat(24)}`,
+      payload: {
+        transactionHash: transactionId,
+        transactionIndex: 3,
+        logIndex: 0,
+        address: `0x${'1'.repeat(40)}`,
+        topics: [],
+        data: '0x',
+      },
+    });
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ json: async () => [rawRow(transaction)] })
+      .mockResolvedValueOnce({ json: async () => [rawRow(log)] });
+    const repository = ClickHouseRawFactRepository.fromClient({
+      query,
+      insert: vi.fn(),
+      close: vi.fn(),
+    } as unknown as Parameters<typeof ClickHouseRawFactRepository.fromClient>[0]);
+
+    await expect(
+      repository.listTransactionFacts({
+        ledger: 'EVM',
+        chainId: '1',
+        blockOrSlot: '42',
+        transactionId: transactionId.toUpperCase().replace('0X', '0x'),
+        provider: input.provider,
+      }),
+    ).resolves.toEqual([transaction, log]);
+    expect(query.mock.calls[1]?.[0]?.query_params).toMatchObject({
+      transactionId,
+      transactionIndex: '3',
+      rawArtifactRef: transaction.rawArtifactRef,
+    });
+  });
+
+  it('returns a retryable typed miss when the transaction has not been ingested', async () => {
+    const repository = ClickHouseRawFactRepository.fromClient({
+      query: vi.fn(async () => ({ json: async () => [] })),
+      insert: vi.fn(),
+      close: vi.fn(),
+    } as unknown as Parameters<typeof ClickHouseRawFactRepository.fromClient>[0]);
+
+    await expect(
+      repository.listTransactionFacts({
+        ledger: 'BITCOIN',
+        chainId: 'bitcoin-mainnet',
+        blockOrSlot: '42',
+        transactionId: 'd'.repeat(64),
+        provider: 'sqd:bitcoin-mainnet',
+      }),
+    ).rejects.toMatchObject({ code: 'RAW_FACT_NOT_FOUND', retryable: true });
   });
 
   it('rejects embedded ClickHouse credentials', () => {

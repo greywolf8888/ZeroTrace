@@ -8,6 +8,15 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- production `raw-ledger-action-adapter-v0.1.0` compilation of exact finalized EVM transaction
+  logs/traces/state diffs, Bitcoin inputs/outputs and Solana instruction/balance records into
+  chain-neutral Action Semantics, with strict one-artifact Evidence/Snapshot correlation;
+- durable generic transaction capture handler, scheduling CLI, continuous/one-shot worker and
+  Compose service with completed-ingestion-profile proof, exclusive leases, bounded retry and no
+  chain-write surface;
+- `action-semantics-v0.2.0` native-value/UTXO proof semantics and PostgreSQL migration `026`, while
+  preserving deterministic replay of stored `v0.1.0` reports;
+
 - immutable, content-addressed generic Action Semantics reports with migration `025`, canonical
   EVM/Bitcoin/Solana transaction identities, result/terminal revalidation, exact durable
   Snapshot/Evidence closure, non-derived source-set enforcement, provider-free latest/exact API,

@@ -4,6 +4,7 @@ export const SQD_INGESTION_PROFILES = ['block-headers', 'transactions', 'ledger-
 export type SqdIngestionProfile = (typeof SQD_INGESTION_PROFILES)[number];
 
 const EVM_TRANSACTION_FIELDS = {
+  transactionIndex: true,
   hash: true,
   from: true,
   to: true,
@@ -159,6 +160,7 @@ const SOLANA_REWARD_FIELDS = {
 } as const;
 
 const SOLANA_TRANSACTION_FIELDS = {
+  transactionIndex: true,
   signatures: true,
   feePayer: true,
   err: true,

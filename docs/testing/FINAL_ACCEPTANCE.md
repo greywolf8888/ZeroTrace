@@ -240,6 +240,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Immutable content-addressed Action Semantics persistence with migration `025`, canonical
       EVM/Bitcoin/Solana transaction lookup, exact Snapshot/Evidence closure and provider-free
       latest/exact replay; no public proof-assertion write path
+- [x] Production generic finalized-transaction Action adapter for EVM logs/traces/state diffs,
+      Bitcoin input/output conservation and Solana instruction/balance facts, bound to migration
+      `026`, completed-ingestion proof, durable schedules, worker leases and Compose
 - [x] Finalized BSC SQD long-range zero-address Transfer candidate discovery with bounded sparse
       queries, terminal Evidence, responsive API/UI and silent-supply state retained as Unknown
 - [x] Restart-safe bounded burn-candidate promotion with exact-block certificates before cursor
@@ -250,9 +253,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Add the generic read-only durable schedule/run/lease state machine with deterministic
       occurrence identity, bounded retries, expired-lease recovery, immutable attempts and
       Evidence/Snapshot-gated completion
-- [ ] Bind Temporal Schedules/Workflows, NATS JetStream events and production multi-chain handlers;
-      complete trusted action adapters, historical supply backfill, reviewed-draft promotion and
-      independent claim-flow reconciliation
+- [ ] Bind remaining capture kinds to Temporal Schedules/Workflows and NATS JetStream; complete
+      continuous historical backfill, reviewed-draft promotion and independent claim-flow
+      reconciliation
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures

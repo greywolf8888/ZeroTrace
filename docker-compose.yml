@@ -120,6 +120,31 @@ services:
         condition: service_healthy
     networks: [zerotrace]
 
+  action-capture-worker:
+    profiles: [semantic]
+    build:
+      context: .
+      target: semantic-worker
+    restart: unless-stopped
+    environment:
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      CAPTURE_WORKER_OWNER: ${CAPTURE_WORKER_OWNER:-compose-action-capture}
+      CAPTURE_WORKER_POLL_INTERVAL_MS: ${CAPTURE_WORKER_POLL_INTERVAL_MS:-5000}
+      CAPTURE_WORKER_LEASE_SECONDS: ${CAPTURE_WORKER_LEASE_SECONDS:-300}
+      CAPTURE_WORKER_BATCH_SIZE: ${CAPTURE_WORKER_BATCH_SIZE:-10}
+      CAPTURE_WORKER_REQUEST_TIMEOUT_MS: ${CAPTURE_WORKER_REQUEST_TIMEOUT_MS:-30000}
+      CAPTURE_WORKER_ONCE: ${CAPTURE_WORKER_ONCE:-false}
+    entrypoint: ['node', 'services/semantic-worker/dist/src/action-capture-cli.js']
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    networks: [zerotrace]
+
   flap-origin-worker:
     profiles: [semantic]
     build:

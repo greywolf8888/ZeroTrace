@@ -177,7 +177,15 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   integration additionally requires canonical per-ledger transaction identity, content/result hash
   revalidation, byte-identical durable Snapshots for every Evidence node, exact recursive terminal
   closure, exact non-derived sources, close/reopen latest/exact replay, and SQL update/delete
-  rejection. A report submitted before its Evidence graph exists must fail closed.
+  rejection. Migration `026` must preserve `v0.1.0` report replay while accepting only the current
+  `v0.2.0` terminal-source identity for new current-model reports. A report submitted before its
+  Evidence graph exists must fail closed.
+- raw-ledger Action tests require exact one-provider artifact/Evidence/Snapshot identity and reject
+  cross-transaction children. EVM transaction value and ERC-20 logs, Bitcoin complete UTXO
+  conservation, and Solana instruction/token-balance effects are exercised independently. The
+  real-storage ingestion test runs the finalized pipeline, retrieves the exact ClickHouse bundle,
+  proves its PostgreSQL checkpoint profile, leases a schedule, persists terminal Evidence/report,
+  and completes the run; without all disposable backends it is explicitly skipped.
 - no-evidence entity input remains Unknown and is not persisted as an observed conclusion.
 - common services and CoinJoin suppress controller confidence; naked service flags and risk labels
   cannot merge subjects.

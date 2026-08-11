@@ -45,7 +45,7 @@ function report() {
     proposedKind: 'CONTRACT_CALL',
     application: 'APPLIED',
     actor: knownValue('0x1111111111111111111111111111111111111111'),
-    proofKinds: ['EXECUTION_RECEIPT'],
+    proofKinds: ['EXECUTION_RECEIPT', 'TRANSACTION_INPUT'],
     evidenceIds: [evidence.id],
   });
   return buildActionSemanticsReport({
@@ -158,7 +158,7 @@ describe('PostgresActionSemanticsReportRepository', () => {
     expect(canonicalJson(canonical.metadata.sourceSet)).toBe(canonicalJson(['bsc-rpc@test']));
   });
 
-  it('reports migration 025 health explicitly', async () => {
+  it('reports migration 026 health explicitly', async () => {
     const initialized = PostgresActionSemanticsReportRepository.fromPool({
       query: vi.fn(async () => ({
         rows: [{ table_name: 'action_semantics_reports', migration_applied: true }],

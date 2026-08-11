@@ -132,11 +132,30 @@ describe('SQD ingestion profiles', () => {
   it.each([
     {
       dataset: 'ethereum-mainnet' as const,
-      expected: ['authorizationList', 'from', 'gasUsed', 'hash', 'input', 'status', 'to', 'value'],
+      expected: [
+        'authorizationList',
+        'from',
+        'gasUsed',
+        'hash',
+        'input',
+        'status',
+        'to',
+        'transactionIndex',
+        'value',
+      ],
     },
     {
       dataset: 'bitcoin-mainnet' as const,
-      expected: ['hash', 'locktime', 'size', 'txid', 'version', 'vsize', 'weight'],
+      expected: [
+        'hash',
+        'locktime',
+        'size',
+        'transactionIndex',
+        'txid',
+        'version',
+        'vsize',
+        'weight',
+      ],
     },
     {
       dataset: 'solana-mainnet' as const,
@@ -148,6 +167,7 @@ describe('SQD ingestion profiles', () => {
         'feePayer',
         'recentBlockhash',
         'signatures',
+        'transactionIndex',
         'version',
       ],
     },

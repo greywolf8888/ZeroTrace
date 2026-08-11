@@ -1,5 +1,6 @@
 import { createClient, type ClickHouseClient } from '@clickhouse/client';
 
+import { canonicalActionTransactionId } from '@zerotrace/action-semantics';
 import { canonicalJson, hashPayload } from '@zerotrace/evidence';
 import { LedgerSchema, RawChainFactSchema, type RawChainFact } from '@zerotrace/schemas';
 
@@ -57,6 +58,15 @@ export interface ClickHouseRawFactRepositoryOptions {
   password?: string;
   requestTimeoutMs?: number;
   maxConnections?: number;
+}
+
+export interface RawTransactionFactLookup {
+  ledger: RawChainFact['ledger'];
+  chainId: string;
+  blockOrSlot: string;
+  transactionId: string;
+  provider: string;
+  limit?: number;
 }
 
 type ClickHouseClientLike = Pick<ClickHouseClient, 'insert' | 'query' | 'close'>;
@@ -170,6 +180,54 @@ function parseUnsigned(value: string | number, field: string): string {
     throw new RawFactStorageError('RAW_FACT_CONFLICT', `Stored ${field} is invalid.`);
   }
   return text;
+}
+
+function uint64(value: string, field: string): string {
+  if (!/^(?:0|[1-9][0-9]*)$/.test(value) || BigInt(value) > 18_446_744_073_709_551_615n) {
+    throw new RawFactStorageError('RAW_FACT_INVALID', `${field} must be a UInt64 decimal string.`);
+  }
+  return value;
+}
+
+function nonEmpty(value: string, field: string, maximum: number): string {
+  const normalized = value.trim();
+  if (normalized.length === 0 || normalized.length > maximum) {
+    throw new RawFactStorageError(
+      'RAW_FACT_INVALID',
+      `${field} must contain between 1 and ${maximum} characters.`,
+    );
+  }
+  return normalized;
+}
+
+function transactionIndex(fact: RawChainFact): number {
+  const payload = fact.payload;
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw new RawFactStorageError('RAW_FACT_CONFLICT', 'Transaction payload must be an object.');
+  }
+  const value = payload.transactionIndex;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new RawFactStorageError(
+      'RAW_FACT_CONFLICT',
+      'Transaction payload is missing its canonical transaction index.',
+    );
+  }
+  return value;
+}
+
+function relatedTransactionIndex(fact: RawChainFact): number {
+  const payload = fact.payload;
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw new RawFactStorageError('RAW_FACT_CONFLICT', 'Related fact payload must be an object.');
+  }
+  const value = payload.transactionIndex;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new RawFactStorageError(
+      'RAW_FACT_CONFLICT',
+      'Related fact payload is missing its canonical transaction index.',
+    );
+  }
+  return value;
 }
 
 function rowToFact(row: RawFactRow): RawChainFact {
@@ -389,6 +447,112 @@ export class ClickHouseRawFactRepository {
     } catch (error) {
       if (error instanceof RawFactStorageError) throw error;
       throw new RawFactStorageError('CLICKHOUSE_UNAVAILABLE', 'Raw Fact range read failed.', {
+        retryable: true,
+        cause: error,
+      });
+    }
+  }
+
+  async listTransactionFacts(options: RawTransactionFactLookup): Promise<RawChainFact[]> {
+    const ledger = LedgerSchema.parse(options.ledger);
+    const chainId = nonEmpty(options.chainId, 'chainId', 128);
+    const blockOrSlot = uint64(options.blockOrSlot, 'blockOrSlot');
+    const transactionId = canonicalActionTransactionId(ledger, options.transactionId);
+    const provider = nonEmpty(options.provider, 'provider', 512);
+    const limit = requireInteger(options.limit ?? 10_000, 'limit', 1, 10_000);
+    try {
+      const transactionResult = await this.#client.query({
+        query: `${SELECT_FACT}
+          WHERE ledger = {ledger:String}
+            AND chain_id = {chainId:String}
+            AND block_or_slot = {blockOrSlot:UInt64}
+            AND fact_type = 'TRANSACTION'
+            AND subject = {transactionId:String}
+            AND provider = {provider:String}
+          ORDER BY observed_at DESC, fact_id DESC
+          LIMIT 1`,
+        format: 'JSONEachRow',
+        query_params: { ledger, chainId, blockOrSlot, transactionId, provider },
+      });
+      const transactionRows = await transactionResult.json<RawFactRow>();
+      const transactionRow = transactionRows[0];
+      if (transactionRow === undefined) {
+        throw new RawFactStorageError(
+          'RAW_FACT_NOT_FOUND',
+          'Finalized transaction fact is unavailable.',
+          { retryable: true },
+        );
+      }
+      const transaction = rowToFact(transactionRow);
+      const index = transactionIndex(transaction);
+      const relatedPredicate =
+        ledger === 'EVM'
+          ? `(
+              (fact_type = 'LOG' AND JSONExtractString(payload, 'transactionHash') = {transactionId:String})
+              OR (fact_type IN ('TRACE', 'STATE_DIFF')
+                AND JSONExtractUInt(payload, 'transactionIndex') = {transactionIndex:UInt64})
+            )`
+          : ledger === 'BITCOIN'
+            ? `(fact_type IN ('UTXO_INPUT', 'UTXO_OUTPUT')
+                AND JSONExtractUInt(payload, 'transactionIndex') = {transactionIndex:UInt64})`
+            : `(fact_type IN ('INSTRUCTION', 'LOG', 'BALANCE', 'TOKEN_BALANCE')
+                AND JSONExtractUInt(payload, 'transactionIndex') = {transactionIndex:UInt64})`;
+      const relatedResult = await this.#client.query({
+        query: `${SELECT_FACT}
+          WHERE ledger = {ledger:String}
+            AND chain_id = {chainId:String}
+            AND block_or_slot = {blockOrSlot:UInt64}
+            AND provider = {provider:String}
+            AND raw_artifact_ref = {rawArtifactRef:String}
+            AND ${relatedPredicate}
+          ORDER BY fact_type, subject, fact_id
+          LIMIT {rowLimit:UInt32}`,
+        format: 'JSONEachRow',
+        query_params: {
+          ledger,
+          chainId,
+          blockOrSlot,
+          transactionId,
+          transactionIndex: String(index),
+          provider,
+          rawArtifactRef: transaction.rawArtifactRef,
+          rowLimit: limit + 1,
+        },
+      });
+      const related = (await relatedResult.json<RawFactRow>()).map(rowToFact);
+      if (related.length > limit) {
+        throw new RawFactStorageError(
+          'RAW_FACT_CONFLICT',
+          'Transaction fact bundle exceeds the configured safety limit.',
+        );
+      }
+      for (const fact of related) {
+        if (fact.factType === 'LOG' && ledger === 'EVM') {
+          const payload = fact.payload;
+          const hash =
+            typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+              ? payload.transactionHash
+              : undefined;
+          if (
+            typeof hash !== 'string' ||
+            canonicalActionTransactionId('EVM', hash) !== transactionId
+          ) {
+            throw new RawFactStorageError(
+              'RAW_FACT_CONFLICT',
+              'Stored EVM log belongs to another transaction.',
+            );
+          }
+        } else if (relatedTransactionIndex(fact) !== index) {
+          throw new RawFactStorageError(
+            'RAW_FACT_CONFLICT',
+            'Stored related fact belongs to another transaction.',
+          );
+        }
+      }
+      return [transaction, ...related];
+    } catch (error) {
+      if (error instanceof RawFactStorageError) throw error;
+      throw new RawFactStorageError('CLICKHOUSE_UNAVAILABLE', 'Raw transaction fact read failed.', {
         retryable: true,
         cause: error,
       });

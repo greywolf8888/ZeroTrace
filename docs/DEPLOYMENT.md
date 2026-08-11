@@ -15,7 +15,7 @@ Alerts, and scoped Alchemy/BNB Chain market-RV reconciliation are implemented.
 
 ```bash
 docker compose config --quiet
-docker compose build api web ingest-worker flap-origin-worker flap-history-worker \
+docker compose build api web ingest-worker action-capture-worker flap-origin-worker flap-history-worker \
   flap-lifetime-worker flap-lifetime-head-worker postgres clickhouse
 ```
 
@@ -60,9 +60,10 @@ Profiles expose architecture seams. The `ingest` worker is implemented for bound
 transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana
 instructions/logs/balances/token balances/rewards. The `graph` profile implements only the bounded
 exact-Snapshot Entity investigation projection; it does not imply continuous cross-Snapshot graph
-maintenance. The generic PostgreSQL schedule/run/lease state machine is implemented and
-health-checked when PostgreSQL is configured. The `full` Temporal profile remains the pending
-distributed workflow adapter; starting the profile does not by itself execute registered schedules.
+maintenance. The generic PostgreSQL schedule/run/lease state machine and EVM/Bitcoin/Solana
+finalized-transaction capture handler are implemented. The `semantic` profile can run the polling
+worker. The `full` Temporal profile remains the pending distributed workflow adapter; starting it
+does not replace or execute the PostgreSQL capture worker.
 
 Run one bounded finalized range through the implemented worker profile:
 
@@ -77,7 +78,22 @@ ledger-specific raw transaction identities; `ledger-records` also adds the appli
 log/trace/state-diff, Bitcoin input/output, or Solana instruction/log/balance/token-balance/reward
 tables. These records retain provider shape and do not claim semantic transfer or protocol decoding.
 The worker is restart-safe for the same dataset/range/query identity and does not contain any
-chain-write operation. Scheduling and continuous-head following are not yet supplied.
+chain-write operation.
+
+After a `ledger-records` range completes, create one exact transaction schedule from the host and
+start the internal worker:
+
+```bash
+npm run actions:schedule -- \
+  --dataset binance-mainnet --transaction 0x... --block-or-slot 123
+docker compose --profile semantic up -d action-capture-worker
+```
+
+For an operations probe use `npm run actions:capture -- --once`. The worker preflights migrations
+`024` and `026`, Evidence and ingestion checkpoints, and ClickHouse Raw Facts. It completes only
+when the exact query hash proves a full ledger-specific profile through the requested position.
+Missing ingestion is retryable; malformed facts or incomplete coverage become a typed terminal
+failure. No private key, signing, swap or broadcasting option exists.
 
 Run a wide, restart-safe Flap creation-origin scan through the separate semantic profile:
 
@@ -313,6 +329,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/024_capture_schedules.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/025_action_semantics_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/026_action_semantics_v2.sql
 ```
 
 PowerShell equivalent:
@@ -363,6 +381,8 @@ Get-Content -Raw infra/postgres/init/023_label_intelligence_reports.sql |
 Get-Content -Raw infra/postgres/init/024_capture_schedules.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/025_action_semantics_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/026_action_semantics_v2.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

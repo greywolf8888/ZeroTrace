@@ -500,7 +500,7 @@ is therefore never sufficient burn proof for an arbitrary custom token. The cert
 history coverage applies to that one block, not an announcement window.
 
 The reusable Action Semantics layer sits below claim interpretation and above ledger-specific
-adapters. `action-semantics-v0.1.0` accepts candidates for transfer, swap, mint, burn, liquidity
+adapters. `action-semantics-v0.2.0` accepts candidates for transfer, swap, mint, burn, liquidity
 addition/removal, LP custody, distribution and contract call only when they share the exact
 Snapshot ledger position and complete Evidence set. Each primitive has an explicit proof and
 asset-delta shape; failed execution is retained as `NOT_APPLIED`, unavailable execution metadata is
@@ -509,15 +509,24 @@ node closes each report. The engine never converts a Swap into “buyback”, di
 “dividend”, LP custody into “permanent lock”, or a transfer into “burn”; those purposes remain
 `Unknown(NOT_QUERIED)` until independently evidenced claim comparison.
 
-Migration `025_action_semantics_reports` is the durable authority for these generic reports. It
+Migration `025_action_semantics_reports` is the durable authority for these generic reports and
+`026_action_semantics_v2` safely admits both `v0.1.0` replay and `v0.2.0` writes. The authority
 content-addresses the deterministic result, canonicalizes EVM and Bitcoin hashes separately from
 Solana signatures, indexes every represented transaction, and accepts a report only when every
 Evidence node is durably bound to the byte-identical Snapshot. The stored Evidence set must equal
 the terminal derivation's recursive closure, the terminal's direct parents must equal the Action
 Evidence union, and `sourceSet` must equal the non-derived durable sources. Records are immutable;
 provider-free latest/exact reads are public, while report writes remain an internal trusted-adapter
-boundary. Production ledger adapters, continuous handler binding and historical backfill remain
-pending.
+boundary.
+
+The first production generic adapter consumes exact finalized SQD `ledger-records` facts already
+bound to one content-addressed artifact and Snapshot. It correlates EVM children by transaction hash
+or index, Bitcoin UTXO records by transaction index, and Solana instruction/balance records by
+transaction index. A durable `TRANSACTION` capture handler additionally proves the ingestion query
+completed past the requested position with all required tables materialized before creating the
+terminal Evidence and report. The worker uses exclusive PostgreSQL leases and bounded retries; it
+has no chain-write capability. Continuous discovery/backfill, remaining capture kinds and
+Temporal/NATS distribution remain pending.
 
 Candidate discovery is a separate event-only layer. The BSC implementation uses finalized sparse
 SQD `binance-mainnet` queries for both indexed zero-address directions, groups non-zero `to=0x0`

@@ -160,6 +160,10 @@ The current foundation includes:
   proved transfers, swaps, mint/burn, liquidity, LP custody, distribution and contract-call
   primitives, replays them by canonical EVM/Bitcoin/Solana transaction ID or content address, and
   keeps failed execution, incomplete proof and promotional purpose explicitly separate and Unknown;
+- a production raw-ledger Action adapter and durable capture worker that correlate one exact
+  finalized EVM transaction with its logs/traces/state diffs, one Bitcoin transaction with its
+  complete inputs/outputs, or one Solana transaction with its instructions/balance records; only a
+  completed `ledger-records` ingestion range can produce an Evidence-bound report;
 - finalized EVM burn certificates that compare parent/target ERC-20 `totalSupply` with every mint
   and zero-address Transfer in the target block, create Claim Audit actions only when exact
   conservation holds, and expose contradictions or no-action blocks without fabricating a burn;
@@ -253,9 +257,10 @@ multi-size acquisition/share economics; actual receipt, transfer effects and set
 Unknown until pinned-fork execution. A
 common-position anchor/continuity foundation now detects deterministic source conflicts and parent
 history changes without choosing a majority winner. Flap lifetime heads add deterministic
-multi-source rollback/replay. A generic read-only durable schedule/run/lease state machine now
-provides deterministic occurrences, bounded retry and Evidence/Snapshot-gated completion;
-Temporal/NATS adapters and concrete general multi-chain handlers, independent-provider and
+multi-source rollback/replay. A generic read-only durable schedule/run/lease state machine plus a
+production transaction handler now provide deterministic occurrences, bounded retry, exact
+raw-fact correlation and Evidence/Snapshot-gated completion across EVM, Bitcoin and Solana;
+Temporal/NATS adapters, continuous backfill handlers, independent-provider and
 forced-reorg validation, semantic normalization, continuous graph extraction/rebuild and temporal
 traversal, protocol-specific decoders, and distributed workflows remain open work. Read
 [Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
@@ -263,17 +268,17 @@ traversal, protocol-specific decoders, and distributed workflows remain open wor
 
 ## Chain and platform scope
 
-| Domain             | Terminal scope                                                                                | Current repository state                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound queries, finalized raw execution/state, strict ERC-1167/EIP-1967/ERC-173/registered-Safe reads, recursive logic-code hashing, and Sourcify V2 exact-source binding; effective custom-role controllers, validity history and archive/semantic validation pending                                                                                                                                                                                |
-| Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/address/transaction/outpoint reads, standard-script control and conservative common-input/change candidates with CoinJoin/Payjoin/fanout suppression; Core policy, complete graph/history, calibrated classification and asset protocols pending                                                                                                                                                                                         |
-| Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound legacy/v0 semantics with ALT/CPI, official System/SPL/Token-2022 instruction identification, owner-aware core transfer/mint/burn flows, zero-tolerance atomic token reconciliation, immutable transaction-report replay, and finalized token/loader authority reports; continuous projection, Token-2022 extension execution, platform/AMM decoders, PDA/Squads/history/build provenance, other loaders and archive reconciliation pending     |
-| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline, immutable pairwise hypotheses/timelines, bounded exact-Snapshot investigation graphs and cross-Snapshot graph-report timelines, PostgreSQL/optional AGE projection, provider-free API/UI replay and executable structural Precision/False-Merge gates implemented; continuous extraction/rebuild, analyst overrides and Snapshot/Evidence-backed real-world calibration corpus pending                                                |
-| Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                                                                                                                                                                   |
-| Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg and other platform adapters pending                                                                                                                                                                                                                                            |
-| Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, verified Pancake V2 buy/exit models, and immutable candidate-bound pension-entry Scenario Reports with provider-free replay work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                       |
-| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, proof-gated generic Action Semantics with immutable provider-free report replay, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, immutable Claim Report replay, finalized pension-behavior discovery, same-Snapshot entry economics and generic durable scheduling work; production action adapters, handler binding, backfill and attribution remain |
-| Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                                                                                                                                                          |
+| Domain             | Terminal scope                                                                                | Current repository state                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound queries, finalized raw execution/state, strict ERC-1167/EIP-1967/ERC-173/registered-Safe reads, recursive logic-code hashing, and Sourcify V2 exact-source binding; effective custom-role controllers, validity history and archive/semantic validation pending                                                                                                                                                                            |
+| Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/address/transaction/outpoint reads, standard-script control and conservative common-input/change candidates with CoinJoin/Payjoin/fanout suppression; Core policy, complete graph/history, calibrated classification and asset protocols pending                                                                                                                                                                                     |
+| Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound legacy/v0 semantics with ALT/CPI, official System/SPL/Token-2022 instruction identification, owner-aware core transfer/mint/burn flows, zero-tolerance atomic token reconciliation, immutable transaction-report replay, and finalized token/loader authority reports; continuous projection, Token-2022 extension execution, platform/AMM decoders, PDA/Squads/history/build provenance, other loaders and archive reconciliation pending |
+| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline, immutable pairwise hypotheses/timelines, bounded exact-Snapshot investigation graphs and cross-Snapshot graph-report timelines, PostgreSQL/optional AGE projection, provider-free API/UI replay and executable structural Precision/False-Merge gates implemented; continuous extraction/rebuild, analyst overrides and Snapshot/Evidence-backed real-world calibration corpus pending                                            |
+| Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                                                                                                                                                               |
+| Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg and other platform adapters pending                                                                                                                                                                                                                                        |
+| Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, verified Pancake V2 buy/exit models, and immutable candidate-bound pension-entry Scenario Reports with provider-free replay work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                   |
+| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, proof-gated generic Action Semantics, raw EVM/BTC/Solana transaction compilation, durable capture execution and immutable provider-free replay work; protocol/intent attribution, continuous backfill and independent claim-flow reconciliation remain                                                                                                                                       |
+| Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                                                                                                                                                      |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
 execution/label observation source; it is not a launchpad and can never merge entities by itself.
@@ -318,6 +323,24 @@ Solana instructions/logs/native balances/token balances/rewards as applicable. E
 `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`; only materialized tables receive numeric counts.
 The worker accepts bounded finalized ranges only, claims no protocol decoding, and has no signing or
 broadcast interface.
+
+After ingesting a `ledger-records` range, schedule one exact transaction and run the durable generic
+Action Semantics worker. Replace the dataset, transaction and position with values from the ingested
+range:
+
+```bash
+npm run actions:schedule -- \
+  --dataset ethereum-mainnet \
+  --transaction 0x0000000000000000000000000000000000000000000000000000000000000000 \
+  --block-or-slot 1
+npm run actions:capture -- --once
+```
+
+For a continuous Compose worker, start `action-capture-worker` under the `semantic` profile.
+Capture completion requires the exact artifact, Raw Facts, Evidence,
+Snapshot and completed ingestion query hash. Missing coverage is retried; malformed or incomplete
+coverage is terminal and never becomes a zero-valued action. The worker is chain-neutral and does
+not contain FFT, Flap or any token address.
 
 To prove ERC-20 supply continuity over one explicit BSC range, configure two independently operated
 archive-capable RPC endpoints and run the isolated one-shot profile:
@@ -531,6 +554,9 @@ After starting PostgreSQL, ClickHouse, and MinIO, a host-side finalized range ca
 npm run ingest -- --dataset bitcoin-mainnet --from 0 --to 100
 ```
 
+The same initialized PostgreSQL and ClickHouse stores support generic transaction scheduling and
+capture with `npm run actions:schedule -- ...` followed by `npm run actions:capture -- --once`.
+
 After starting PostgreSQL and setting `POSTGRES_URL`, the same durable Flap origin worker can run on
 the host:
 
@@ -700,6 +726,9 @@ This roadmap describes implementation progress rather than product marketing pha
       execution state and no inferred promotional purpose
 - [x] Persist generic Action Semantics as immutable, content-addressed PostgreSQL reports with
       canonical EVM/Bitcoin/Solana transaction lookup and provider-free latest/exact replay
+- [x] Compile finalized EVM logs/traces/state diffs, Bitcoin UTXOs and Solana
+      instructions/balances into generic Action Semantics and bind the adapter to durable
+      transaction schedules, bounded worker leases and Compose
 - [x] Add Evidence-bound tax/treasury/burn/liquidity/pension/dividend statement compilation and human-review UI
 - [x] Add finalized target-indexed EVM Transfer/custody observation and live same-Snapshot FFT address-flow composition
 - [x] Add finalized token-wide pension-behavior candidate discovery, immutable report replay and scoped FFT validation
@@ -719,9 +748,8 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Extend control rights to effective custom EVM roles/history and controller recursion, Bitcoin custody, and Solana PDA/Squads/history/build provenance
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
-- [ ] Bind durable schedules to Temporal/NATS production handlers and trusted action adapters, then
-      complete Claim Verification historical backfill, reviewed-draft promotion and independently
-      evidenced cross-source reconciliation
+- [ ] Bind remaining capture kinds to Temporal/NATS, add continuous historical transaction
+      backfill, reviewed-draft promotion and independently evidenced claim-flow reconciliation
 - [ ] Extend global search to verified symbol/ticker, platform/project and semantic-checkpoint indexes; complete comparison, general scenario and export workflows
 - [ ] Run archive-grade, multi-provider, real-chain fixtures and production load/failure testing
 

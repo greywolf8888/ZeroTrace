@@ -1605,6 +1605,40 @@ postgresDescribe('PostgreSQL durable Claim Report integration', () => {
 
     const stored = await reports.put(report);
     await expect(reports.put(report)).resolves.toEqual(stored);
+    expect(stored.modelVersion).toBe('action-semantics-v0.2.0');
+
+    const legacyTransactionId = `0x${hashPayload({ checkpointTestRunId, kind: 'legacy-action' })}`;
+    const legacyCandidate = createActionCandidate({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      transactionId: legacyTransactionId,
+      blockOrSlot: snapshot.blockNumber,
+      observedAt: source.observedAt,
+      proposedKind: 'CONTRACT_CALL',
+      application: 'APPLIED',
+      actor: unknownValue('INSUFFICIENT_DATA'),
+      proofKinds: ['EXECUTION_RECEIPT'],
+      evidenceIds: [source.id],
+    });
+    const legacyReport = buildActionSemanticsReport({
+      snapshot,
+      candidates: [legacyCandidate],
+      evidence: [source],
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 0,
+      modelVersion: 'action-semantics-v0.1.0',
+    });
+    const legacyTerminal = legacyReport.evidence.find(
+      (item) => item.id === legacyReport.terminalEvidenceId,
+    );
+    expect(legacyTerminal).toBeDefined();
+    await evidence.put(legacyTerminal!, [source.id], snapshot);
+    await expect(reports.put(legacyReport)).resolves.toMatchObject({
+      modelVersion: 'action-semantics-v0.1.0',
+      transactionIds: [legacyTransactionId],
+    });
+
     await reports.close();
     reports = new PostgresClaimReportRepository({
       connectionString: connectionString as string,
