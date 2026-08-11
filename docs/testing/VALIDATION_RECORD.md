@@ -2175,3 +2175,8 @@ Chromium desktop/mobile flows, and all six production container targets. Final r
 JavaScript/TypeScript analysis. The local ClickHouse and Docker observations above remain recorded
 as host-environment limitations; the clean remote results show that neither is a product-code
 failure.
+
+PR #16 was squash-merged to protected `main` as `e7f1383`. The exact merge commit independently
+passed [CI run 31543286842](https://github.com/greywolf8888/ZeroTrace/actions/runs/31543286842)
+and [CodeQL run 31543286847](https://github.com/greywolf8888/ZeroTrace/actions/runs/31543286847).
+The temporary implementation branch was deleted after merge; no release or tag was created.
