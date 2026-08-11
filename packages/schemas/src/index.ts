@@ -742,6 +742,96 @@ export const EntityResolutionSchema = z.object({
 });
 export type EntityResolution = z.infer<typeof EntityResolutionSchema>;
 
+export const BitcoinScriptClassSchema = z.enum([
+  'P2PKH',
+  'P2SH',
+  'P2WPKH',
+  'P2WSH',
+  'P2TR',
+  'BARE_MULTISIG',
+  'OP_RETURN',
+  'OTHER_SCRIPT',
+]);
+export type BitcoinScriptClass = z.infer<typeof BitcoinScriptClassSchema>;
+
+export const BitcoinSpendConditionVisibilitySchema = z.enum([
+  'FULLY_VISIBLE',
+  'HASH_COMMITTED_HIDDEN',
+  'REVEALED_AND_COMMITMENT_VERIFIED',
+  'TAPROOT_OUTPUT_KEY_ONLY',
+  'TAPROOT_SPEND_OBSERVED',
+  'UNSUPPORTED_SCRIPT',
+]);
+export type BitcoinSpendConditionVisibility = z.infer<typeof BitcoinSpendConditionVisibilitySchema>;
+
+export const BitcoinSignatureRequirementSchema = z.enum([
+  'SINGLE_KEY',
+  'MULTISIG',
+  'KEY_OR_SCRIPT',
+  'ARBITRARY_SCRIPT',
+  'PROVABLY_UNSPENDABLE',
+]);
+export type BitcoinSignatureRequirement = z.infer<typeof BitcoinSignatureRequirementSchema>;
+
+export const BitcoinTaprootSpendPathSchema = z.enum(['KEY_PATH', 'SCRIPT_PATH', 'UNDETERMINED']);
+export type BitcoinTaprootSpendPath = z.infer<typeof BitcoinTaprootSpendPathSchema>;
+
+export const BitcoinTimelockSchema = z.object({
+  kind: z.enum(['ABSOLUTE_HEIGHT', 'ABSOLUTE_TIME', 'RELATIVE_BLOCKS', 'RELATIVE_TIME']),
+  value: UnsignedQuantityStringSchema,
+  encodedValue: UnsignedQuantityStringSchema,
+  detail: z.string().min(1),
+});
+export type BitcoinTimelock = z.infer<typeof BitcoinTimelockSchema>;
+
+export const BitcoinMultisigObservationSchema = z.object({
+  threshold: z.number().int().min(1).max(20),
+  signerCount: z.number().int().min(1).max(20),
+  publicKeyFingerprints: z.array(Hash256Schema).min(1).max(20),
+});
+export type BitcoinMultisigObservation = z.infer<typeof BitcoinMultisigObservationSchema>;
+
+export const BitcoinScriptControlAnalysisSchema = z.object({
+  scriptClass: BitcoinScriptClassSchema,
+  scriptPubKey: z.string().regex(/^(?:[0-9a-f]{2})*$/),
+  addressMatch: knowledgeValueSchema(z.boolean()),
+  spendConditionVisibility: BitcoinSpendConditionVisibilitySchema,
+  signatureRequirement: knowledgeValueSchema(BitcoinSignatureRequirementSchema),
+  multisig: knowledgeValueSchema(BitcoinMultisigObservationSchema),
+  absoluteTimelocks: z.array(BitcoinTimelockSchema),
+  relativeTimelocks: z.array(BitcoinTimelockSchema),
+  hashPredicatePresent: knowledgeValueSchema(z.boolean()),
+  taprootSpendPath: knowledgeValueSchema(BitcoinTaprootSpendPathSchema),
+  revealedScript: knowledgeValueSchema(z.string().regex(/^(?:[0-9a-f]{2})*$/)),
+  controllerIdentity: knowledgeValueSchema(z.string().min(1)),
+  scriptConditionsComplete: knowledgeValueSchema(z.boolean()),
+  modelVersion: z.literal('bitcoin-script-control-v1.0.0'),
+});
+export type BitcoinScriptControlAnalysis = z.infer<typeof BitcoinScriptControlAnalysisSchema>;
+
+export const BitcoinAddressUtxoSchema = z.object({
+  outpoint: z.string().regex(/^[0-9a-f]{64}:(?:0|[1-9]\d*)$/),
+  txid: BitcoinHashSchema,
+  vout: UnsignedQuantityStringSchema,
+  valueSats: UnsignedQuantityStringSchema,
+  confirmed: z.boolean(),
+  blockHeight: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  blockHash: knowledgeValueSchema(BitcoinHashSchema),
+});
+export type BitcoinAddressUtxo = z.infer<typeof BitcoinAddressUtxoSchema>;
+
+export const BitcoinAddressUtxoSetSchema = z.object({
+  address: z.string().min(1),
+  utxos: z.array(BitcoinAddressUtxoSchema).max(100_000),
+  confirmedUtxoCount: z.number().int().nonnegative(),
+  mempoolUtxoCount: z.number().int().nonnegative(),
+  totalValueSats: UnsignedQuantityStringSchema,
+  statsNetValueSats: QuantityStringSchema,
+  balanceAgreement: knowledgeValueSchema(z.boolean()),
+  modelVersion: z.literal('bitcoin-address-utxo-v1.0.0'),
+});
+export type BitcoinAddressUtxoSet = z.infer<typeof BitcoinAddressUtxoSetSchema>;
+
 export const EvmControlRightTypeSchema = z.enum([
   'OWNER',
   'PROXY_ADMIN',

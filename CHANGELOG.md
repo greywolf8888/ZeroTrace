@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- stable-tip Bitcoin address UTXO reconciliation and observable P2PKH/P2SH/SegWit/Taproot
+  spend-condition analysis, including verified revealed-script commitments, legacy multisig,
+  CLTV/CSV, transaction sequence signaling, Evidence-linked API results and responsive UI; effective
+  RBF/CPFP policy, hidden branches and controller identity remain typed Unknown;
 - finalized atomic Solana control-surface inspection for classic SPL Token mint/account/multisig,
   Token-2022 extensions and the upgradeable Program/ProgramData loader, with official generated
   decoders, a 38-domain Unknown-preserving coverage matrix, nested Evidence, immutable PostgreSQL

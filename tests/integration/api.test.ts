@@ -361,6 +361,19 @@ class FakeRestTransport implements RestTransport {
   }
 }
 
+class ChangingBitcoinTipRestTransport extends FakeRestTransport {
+  #tipReads = 0;
+
+  override async getTextSourced(path: string): Promise<TransportObservation<string>> {
+    if (path !== '/blocks/tip/height') return super.getTextSourced(path);
+    this.#tipReads += 1;
+    return {
+      value: this.#tipReads === 1 ? '840000' : '840001',
+      endpointId: 'bitcoin-changing-tip',
+    };
+  }
+}
+
 function runtimeWithEvm(): AppRuntime {
   const evm = new EvmLedgerAdapter(
     { id: 'ethereum-rpc', chainId: 1, chainName: 'Ethereum' },
@@ -636,6 +649,19 @@ function configureReconciliationRuntime(
 }
 
 function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccount): AppRuntime {
+  const bitcoinAddress = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+  const bitcoinOutput = {
+    scriptpubkey: '0014751e76e8199196d454941c45d1b3a323f1433bd6',
+    scriptpubkey_type: 'v0_p2wpkh',
+    scriptpubkey_address: bitcoinAddress,
+    value: 100,
+  };
+  const bitcoinTaprootOutput = {
+    scriptpubkey: '5120c4469d1aab486965aec49d16d73210fb8228368958c69a9479f5341fc665ee75',
+    scriptpubkey_type: 'v1_p2tr',
+    scriptpubkey_address: 'bc1pc3rf6x4tfp5kttkyn5tdwvsslwpzsd5ftrrf49re756pl3n9ae6shr8qka',
+    value: 13_628,
+  };
   const evm = new EvmLedgerAdapter(
     { id: 'ethereum-rpc', chainId: 1, chainName: 'Ethereum' },
     new FakeTransport({
@@ -687,8 +713,8 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
           height: 840000,
           previousblockhash: 'a'.repeat(64),
         },
-        '/address/bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4': {
-          address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+        [`/address/${bitcoinAddress}`]: {
+          address: bitcoinAddress,
           chain_stats: {
             funded_txo_count: 2,
             funded_txo_sum: 500,
@@ -704,6 +730,19 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
             tx_count: 2,
           },
         },
+        [`/address/${bitcoinAddress}/utxo`]: [
+          {
+            txid: 'e'.repeat(64),
+            vout: 1,
+            value: 290,
+            status: {
+              confirmed: true,
+              block_height: 839999,
+              block_hash: 'c'.repeat(64),
+              block_time: 1_699_999_000,
+            },
+          },
+        ],
         [`/tx/${fixtureBitcoinTransactionId}`]: {
           txid: fixtureBitcoinTransactionId,
           version: 2,
@@ -711,15 +750,16 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
           size: 120,
           weight: 480,
           fee: 200,
-          vin: [{}],
-          vout: [
+          vin: [
             {
-              scriptpubkey: '0014' + '1'.repeat(40),
-              scriptpubkey_type: 'v0_p2wpkh',
-              scriptpubkey_address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
-              value: 100,
+              is_coinbase: true,
+              sequence: 4_294_967_295,
+              scriptsig: '03',
+              scriptsig_asm: 'OP_PUSHBYTES_1 03',
+              witness: [],
             },
           ],
+          vout: [bitcoinOutput, bitcoinTaprootOutput],
           status: {
             confirmed: true,
             block_height: 840000,
@@ -733,12 +773,42 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
           vin: 0,
           status: { confirmed: false },
         },
+        [`/tx/${fixtureBitcoinTransactionId}/outspend/1`]: { spent: false },
+        [`/tx/${'d'.repeat(64)}`]: {
+          txid: 'd'.repeat(64),
+          version: 2,
+          locktime: 0,
+          size: 110,
+          weight: 440,
+          fee: 100,
+          vin: [
+            {
+              txid: fixtureBitcoinTransactionId,
+              vout: 0,
+              prevout: bitcoinOutput,
+              is_coinbase: false,
+              sequence: 4_294_967_293,
+              scriptsig: '',
+              scriptsig_asm: '',
+              witness: ['30', `02${'4'.repeat(64)}`],
+            },
+          ],
+          vout: [
+            {
+              scriptpubkey: '6a',
+              scriptpubkey_type: 'op_return',
+              value: 0,
+            },
+          ],
+          status: { confirmed: false },
+        },
       },
       {
         '/blocks/tip/height': 'bitcoin-anchor-a',
         '/block-height/840000': 'bitcoin-anchor-b',
         [`/block/${'b'.repeat(64)}`]: 'bitcoin-anchor-b',
-        '/address/bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4': 'bitcoin-state',
+        [`/address/${bitcoinAddress}`]: 'bitcoin-state',
+        [`/address/${bitcoinAddress}/utxo`]: 'bitcoin-utxo',
       },
     ),
   );
@@ -1451,6 +1521,10 @@ describe('ZeroTrace API contract', () => {
       confirmedBalanceSats: { state: 'known', value: '300' },
       mempoolDeltaSats: { state: 'known', value: '-10' },
       transactionCount: { state: 'known', value: '3' },
+      totalUtxoValueSats: { state: 'known', value: '290' },
+      confirmedUtxoCount: { state: 'known', value: '1' },
+      balanceAgreement: { state: 'known', value: true },
+      effectiveRbfPolicy: { state: 'unknown', reason: 'UNSUPPORTED' },
     });
     expect(bitcoin.json().metadata.snapshot).toMatchObject({
       height: '840000',
@@ -1465,8 +1539,14 @@ describe('ZeroTrace API contract', () => {
       'bitcoin-anchor-a',
       'bitcoin-anchor-b',
       'bitcoin-state',
+      'bitcoin-utxo',
     ]);
     expect(bitcoin.json().evidence[0].source).toBe('bitcoin-state');
+    expect(bitcoin.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'ACCOUNT_STATE',
+      'UTXO',
+      'DERIVED_FEATURE',
+    ]);
 
     const bitcoinEvidenceId = bitcoin.json().evidence[0].id;
     const evidence = await app.inject({
@@ -1510,6 +1590,121 @@ describe('ZeroTrace API contract', () => {
     expect(solana.json().evidence[0].source).toBe('solana-state');
   });
 
+  it('fails closed when the Bitcoin tip changes across an address UTXO observation', async () => {
+    const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+    const runtime = runtimeWithAllLedgers();
+    runtime.bitcoinAdapter = new BitcoinUtxoLedgerAdapter(
+      { id: 'bitcoin-changing-tip' },
+      new ChangingBitcoinTipRestTransport({
+        '/block-height/840000': 'b'.repeat(64),
+        [`/block/${'b'.repeat(64)}`]: {
+          id: 'b'.repeat(64),
+          height: 840000,
+          previousblockhash: 'a'.repeat(64),
+        },
+        '/block-height/840001': 'd'.repeat(64),
+        [`/block/${'d'.repeat(64)}`]: {
+          id: 'd'.repeat(64),
+          height: 840001,
+          previousblockhash: 'b'.repeat(64),
+        },
+        [`/address/${address}`]: {
+          address,
+          chain_stats: {
+            funded_txo_count: 0,
+            funded_txo_sum: 0,
+            spent_txo_count: 0,
+            spent_txo_sum: 0,
+            tx_count: 0,
+          },
+          mempool_stats: {
+            funded_txo_count: 0,
+            funded_txo_sum: 0,
+            spent_txo_count: 0,
+            spent_txo_sum: 0,
+            tx_count: 0,
+          },
+        },
+        [`/address/${address}/utxo`]: [],
+      }),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/subjects/BITCOIN/${address}`,
+    });
+    expect(response.statusCode).toBe(502);
+    expect(response.json().error).toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringMatching(/tip changed/),
+    });
+  });
+
+  it('keeps conflicting Bitcoin address statistics and UTXO value Unknown', async () => {
+    const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+    const runtime = runtimeWithAllLedgers();
+    runtime.bitcoinAdapter = new BitcoinUtxoLedgerAdapter(
+      { id: 'bitcoin-conflict' },
+      new FakeRestTransport({
+        '/blocks/tip/height': '840000',
+        '/block-height/840000': 'b'.repeat(64),
+        [`/block/${'b'.repeat(64)}`]: {
+          id: 'b'.repeat(64),
+          height: 840000,
+          previousblockhash: 'a'.repeat(64),
+        },
+        [`/address/${address}`]: {
+          address,
+          chain_stats: {
+            funded_txo_count: 1,
+            funded_txo_sum: 1,
+            spent_txo_count: 0,
+            spent_txo_sum: 0,
+            tx_count: 1,
+          },
+          mempool_stats: {
+            funded_txo_count: 0,
+            funded_txo_sum: 0,
+            spent_txo_count: 0,
+            spent_txo_sum: 0,
+            tx_count: 0,
+          },
+        },
+        [`/address/${address}/utxo`]: [
+          {
+            txid: 'e'.repeat(64),
+            vout: 0,
+            value: 2,
+            status: { confirmed: false },
+          },
+        ],
+      }),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/subjects/BITCOIN/${address}`,
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      facts: {
+        confirmedBalanceSats: { state: 'known', value: '1' },
+        totalUtxoValueSats: { state: 'known', value: '2' },
+        balanceAgreement: { state: 'unknown', reason: 'CONFLICTING_SOURCES' },
+      },
+      metadata: { confidence: 0.5 },
+      evidence: [
+        { kind: 'ACCOUNT_STATE' },
+        { kind: 'UTXO' },
+        { kind: 'DERIVED_FEATURE', summary: expect.stringMatching(/conflict/) },
+      ],
+    });
+  });
+
   it('queries confirmed EVM, Bitcoin, and Solana transactions with replayable Evidence', async () => {
     const runtime = runtimeWithAllLedgers();
     const app = await createApp({ config, runtime, logger: false });
@@ -1545,7 +1740,7 @@ describe('ZeroTrace API contract', () => {
       status: { state: 'known', value: 'CONFIRMED' },
       blockHeight: { state: 'known', value: '840000' },
       feeSats: { state: 'known', value: '200' },
-      outputCount: { state: 'known', value: '1' },
+      outputCount: { state: 'known', value: '2' },
     });
     expect(bitcoin.json().metadata.snapshot).toMatchObject({
       ledger: 'BITCOIN',
@@ -1669,7 +1864,22 @@ describe('ZeroTrace API contract', () => {
           size: 120,
           weight: 480,
           fee: 200,
-          vin: [{}],
+          vin: [
+            {
+              txid: 'f'.repeat(64),
+              vout: 1,
+              prevout: {
+                scriptpubkey: `0014${'2'.repeat(40)}`,
+                scriptpubkey_type: 'v0_p2wpkh',
+                value: 300,
+              },
+              is_coinbase: false,
+              sequence: 4_294_967_293,
+              scriptsig: '',
+              scriptsig_asm: '',
+              witness: ['30', `02${'3'.repeat(64)}`],
+            },
+          ],
           vout: [
             {
               scriptpubkey: '0014' + '1'.repeat(40),
@@ -1717,6 +1927,9 @@ describe('ZeroTrace API contract', () => {
     expect(bitcoin.json().facts).toMatchObject({
       status: { state: 'known', value: 'MEMPOOL' },
       blockHeight: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      optInRbfSignal: { state: 'known', value: true },
+      effectiveMempoolReplaceability: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      cpfpPackageState: { state: 'unknown', reason: 'UNSUPPORTED' },
     });
     expect(bitcoin.json().metadata.snapshot.mempoolSnapshot).toMatch(/^sha256:[0-9a-f]{64}$/);
 
@@ -1754,6 +1967,17 @@ describe('ZeroTrace API contract', () => {
       spendingTxid: { state: 'known', value: 'd'.repeat(64) },
       spendingVin: { state: 'known', value: '0' },
       spendingStatus: { state: 'known', value: 'MEMPOOL' },
+      scriptControl: {
+        state: 'known',
+        value: {
+          scriptClass: 'P2WPKH',
+          addressMatch: { state: 'known', value: true },
+          hashPredicatePresent: { state: 'known', value: true },
+          controllerIdentity: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+        },
+      },
+      effectiveSpendingTransactionRbf: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      spendingTransactionCpfpPackage: { state: 'unknown', reason: 'UNSUPPORTED' },
     });
     expect(response.json().metadata.snapshot).toMatchObject({
       ledger: 'BITCOIN',
@@ -1762,10 +1986,46 @@ describe('ZeroTrace API contract', () => {
     });
     expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
       'TRANSACTION',
+      'TRANSACTION',
       'UTXO',
+      'DERIVED_FEATURE',
     ]);
     expect(runtime.evidenceLedger.get(response.json().evidence[0].id)).toBeDefined();
     expect(runtime.evidenceLedger.get(response.json().evidence[1].id)).toBeDefined();
+  });
+
+  it('keeps an unspent Taproot script tree and controller identity Unknown', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/BITCOIN/OUTPOINT/${fixtureBitcoinTransactionId}:1`,
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().facts).toMatchObject({
+      valueSats: { state: 'known', value: '13628' },
+      spent: { state: 'known', value: false },
+      spendingTxid: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      scriptControl: {
+        state: 'known',
+        value: {
+          scriptClass: 'P2TR',
+          addressMatch: { state: 'known', value: true },
+          spendConditionVisibility: 'TAPROOT_OUTPUT_KEY_ONLY',
+          taprootSpendPath: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+          controllerIdentity: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+          scriptConditionsComplete: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+        },
+      },
+      effectiveSpendingTransactionRbf: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+    });
+    expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'TRANSACTION',
+      'UTXO',
+      'DERIVED_FEATURE',
+    ]);
   });
 
   it('queries EVM, Bitcoin, and Solana blocks through position or hash identifiers', async () => {

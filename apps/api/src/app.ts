@@ -74,6 +74,7 @@ import {
 import type { AppConfig } from './config.js';
 import {
   queryBitcoinBlock,
+  queryBitcoinAddress,
   queryBitcoinOutpoint,
   queryBitcoinTransaction,
   queryEvmBlock,
@@ -1571,59 +1572,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             metadata: emptyMetadata('btc-subject-v0.1.0'),
           });
         }
-        const snapshot = await adapter.createSnapshot();
-        const statsObservation = await adapter.getAddressObservation(subject.normalizedId);
-        const stats = statsObservation.value;
-        const sourceSet = uniqueSourceIds([
-          ...snapshotSourceIds(snapshot),
-          statsObservation.endpointId,
-        ]);
-        const payload = {
-          stats,
-          snapshotHeight: snapshot.height,
-          snapshotHash: snapshot.blockHash,
-          observationSource: statsObservation.endpointId,
-        };
-        const evidence = await addEvidence(
-          runtime,
-          createEvidence({
-            ledger: 'BITCOIN',
-            chainId: snapshot.chainId,
-            kind: 'ACCOUNT_STATE',
-            source: statsObservation.endpointId,
-            locator: `address:${subject.normalizedId}@${snapshot.height}`,
-            payload,
-            blockOrSlot: snapshot.height,
-            finality: snapshot.finality,
-            summary: 'Bitcoin address chain and mempool statistics near the snapshot tip.',
-          }),
-          [],
-          snapshot,
+        return queryBitcoinAddress(adapter, subject, (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
         );
-        const confirmedBalance = stats.chain_stats.funded_txo_sum - stats.chain_stats.spent_txo_sum;
-        const mempoolDelta = stats.mempool_stats.funded_txo_sum - stats.mempool_stats.spent_txo_sum;
-        return {
-          subject,
-          facts: {
-            confirmedBalanceSats: knownValue(String(confirmedBalance)),
-            mempoolDeltaSats: knownValue(String(mempoolDelta)),
-            transactionCount: knownValue(String(stats.chain_stats.tx_count)),
-          },
-          metadata: {
-            snapshot,
-            dataCoverage: 1,
-            sourceCoverage: 0.5,
-            historyCoverage: 0.5,
-            simulationCoverage: 0,
-            freshness: snapshot.capturedAt,
-            sourceSet,
-            modelVersion: 'btc-subject-v0.1.0',
-            confidence: 0.9,
-            evidenceIds: [evidence.id],
-          },
-          evidence: [evidence],
-          consistency: 'BEST_EFFORT_ESPLORA_TIP',
-        };
       }
 
       const adapter = runtime.solanaAdapter;

@@ -1431,3 +1431,47 @@ URLs. A container-local assertion confirmed no key and no Alchemy credential URL
 stayed `UP` with `readOnly: true`, and the provider-free latest-report route replayed the same v1.1
 report ID, result hash, finalized Snapshot, 19,331-byte logic hash, exact source match, two declared
 capabilities, zero direct rights and the unchanged 8/25 Known coverage result.
+
+## Bitcoin UTXO and script-control validation (2026-08-11)
+
+The production API path queried the configured public Blockstream Esplora endpoint across two
+best-chain Snapshots. The address observation used height `961941`, block
+`0000000000000000000157b3f16edc2d7239f37ee76f399895ace9f1b7cac2c7`, previous block
+`000000000000000000021020a8673bd2888ef709e57ce0627a95e59d85fb8c40`. The two outpoint
+observations used height `961942`, block
+`000000000000000000019fdf691bd3d5fca881d4279fd5ef747b5df5ecd6cbe1`, previous block
+`0000000000000000000157b3f16edc2d7239f37ee76f399895ace9f1b7cac2c7`.
+The local environment maps external hosts through reserved `198.18.0.0/15`; one process-local
+validation invocation therefore enabled the documented private-network development override. The
+repository default remained `ALLOW_PRIVATE_PROVIDER_URLS=false`, and every request stayed HTTPS
+and read-only.
+
+Address `bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4` reported 166 confirmed transactions,
+zero current balance and an empty UTXO set. The independent address-stat and UTXO representations
+reconciled exactly; these zeros are provider observations at the captured Snapshot, not defaults.
+Evidence roots were `ev_f07dd6eb49f75dfa8f488258`,
+`ev_2e522c9e7dc071df81567b15`, and `ev_49f3675b7a25eabb359f4e3a`.
+
+An initial sequential validation crossed the live transition from height `961941` to `961942`.
+The in-flight outpoint request was rejected with HTTP 502 instead of combining observations from
+different tips, and the subsequent request observed the transport circuit as HTTP 503. Fresh,
+individually rate-limited processes then completed both outpoint queries at one stable tip. This is
+the intended fail-closed behavior; a tip transition is not silently treated as a stable Snapshot.
+
+The same API queried funding transaction
+`8cecb5275e9e2a806bb3d9669226ad25acdcc40acd1aab3b10104f7bdb17e782`.
+Output `:1` was a 1,000-sat P2WPKH output spent by input 0 of confirmed transaction
+`75143e36784fbebace4b207a4dcbd4ca752cd314bc32b47ca732c32c428f038f`.
+The script matched the returned address, the spending input matched the funding prevout, and the
+derived Evidence was `ev_236b5f398530c818d1616d5a`. The single-key spend condition is Known;
+the real-world controller remains `Unknown(INSUFFICIENT_DATA)`.
+
+Output `:0` was an unspent 13,628-sat P2TR output. The output-key/address commitment matched, while
+the internal key, optional script tree, spend path, multisig threshold and controller correctly
+remained Unknown. Its three Evidence IDs were `ev_90eb2bce31112f57c8ba4994`,
+`ev_f75114e39e24a57e9e527f18`, and `ev_d1db5e4013660b21afb61ef4`.
+
+This closes scoped Esplora address/UTXO and standard-script validation. It does not close
+self-hosted Core/archive reconciliation, active full-RBF policy, inherited replaceability, CPFP
+package state, hidden Taproot tree reconstruction, clustering, custody attribution, or controller
+identity.

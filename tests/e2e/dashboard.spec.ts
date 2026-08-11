@@ -8,6 +8,8 @@ const bscFlapCreationTransaction = `0x${'7'.repeat(64)}`;
 const bscFlapHistoryScan = '00000000-0000-4000-8000-000000000001';
 const unavailableFlapHistoryScan = '00000000-0000-4000-8000-000000000002';
 const bscFlapLifetimeScan = '00000000-0000-4000-8000-000000000003';
+const bitcoinAddress = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+const bitcoinTransactionId = 'c'.repeat(64);
 
 test('renders capability truth and unknown values without fake market data', async ({ page }) => {
   const browserErrors: string[] = [];
@@ -139,6 +141,203 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
   await expect(
     page.getByText('Solana transaction bound to its committed slot Snapshot.'),
   ).toBeVisible();
+});
+
+test('renders reconciled Bitcoin UTXOs and keeps node policy Unknown', async ({ page }) => {
+  await page.route('**/api/v1/subjects/BITCOIN/**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        subject: {
+          ledger: 'BITCOIN',
+          chainId: 'bitcoin-mainnet',
+          type: 'ADDRESS',
+          id: bitcoinAddress,
+          normalizedId: bitcoinAddress,
+          validation: 'STRUCTURALLY_VALID',
+          confidence: 1,
+        },
+        facts: {
+          confirmedBalanceSats: { state: 'known', value: '300' },
+          mempoolDeltaSats: { state: 'known', value: '-10' },
+          transactionCount: { state: 'known', value: '3' },
+          totalUtxoValueSats: { state: 'known', value: '290' },
+          balanceAgreement: { state: 'known', value: true },
+          effectiveRbfPolicy: {
+            state: 'unknown',
+            reason: 'UNSUPPORTED',
+            detail: 'Esplora does not expose active Bitcoin Core replacement policy.',
+          },
+          cpfpPackageState: {
+            state: 'unknown',
+            reason: 'UNSUPPORTED',
+            detail: 'Esplora does not expose ancestor/descendant package state.',
+          },
+          utxoSet: {
+            state: 'known',
+            value: {
+              address: bitcoinAddress,
+              confirmedUtxoCount: 1,
+              mempoolUtxoCount: 0,
+              totalValueSats: '290',
+              statsNetValueSats: '290',
+              balanceAgreement: { state: 'known', value: true },
+              modelVersion: 'bitcoin-address-utxo-v1.0.0',
+              utxos: [
+                {
+                  outpoint: `${'e'.repeat(64)}:1`,
+                  txid: 'e'.repeat(64),
+                  vout: '1',
+                  valueSats: '290',
+                  confirmed: true,
+                  blockHeight: { state: 'known', value: '839999' },
+                  blockHash: { state: 'known', value: 'd'.repeat(64) },
+                },
+              ],
+            },
+          },
+        },
+        metadata: {
+          snapshot: {
+            ledger: 'BITCOIN',
+            chainId: 'bitcoin-mainnet',
+            height: '840000',
+            blockHash: 'b'.repeat(64),
+            finality: 'best-chain',
+            mempoolSnapshot: `sha256:${'a'.repeat(64)}`,
+          },
+          dataCoverage: 1,
+          sourceCoverage: 0.5,
+          historyCoverage: 0,
+          simulationCoverage: 0,
+          freshness: '2026-08-11T00:00:00.000Z',
+          sourceSet: ['bitcoin-esplora'],
+          modelVersion: 'bitcoin-address-utxo-v1.0.0',
+          confidence: 0.95,
+          evidenceIds: [],
+        },
+        evidence: [],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Address or transaction identifier').fill(bitcoinAddress);
+  await page.getByLabel('Network').selectOption('bitcoin');
+  await page.getByRole('button', { name: 'Trace' }).click();
+  await page.getByRole('button', { name: 'Inspect' }).click();
+
+  const panel = page.getByTestId('bitcoin-address-intelligence');
+  await expect(panel.getByRole('heading', { name: 'Bitcoin UTXO reconciliation' })).toBeVisible();
+  await expect(panel.getByText('290 sats', { exact: true }).first()).toBeVisible();
+  await expect(panel.getByText('1 confirmed · 0 mempool', { exact: true })).toBeVisible();
+  await expect(panel.getByText('Policy boundary', { exact: true })).toBeVisible();
+  await expect(
+    panel.getByText(/RBF effectiveness and CPFP package state remain Unknown/),
+  ).toBeVisible();
+  await expect(panel.getByText('839999', { exact: true })).toBeVisible();
+});
+
+test('renders Bitcoin script conditions without converting keys into controller identity', async ({
+  page,
+}) => {
+  await page.route('**/api/v1/ledger/BITCOIN/OUTPOINT/**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        subject: {
+          ledger: 'BITCOIN',
+          chainId: 'bitcoin-mainnet',
+          type: 'OUTPOINT',
+          id: `${bitcoinTransactionId}:0`,
+          normalizedId: `${bitcoinTransactionId}:0`,
+          validation: 'STRUCTURALLY_VALID',
+          confidence: 1,
+        },
+        facts: {
+          valueSats: { state: 'known', value: '100000' },
+          spent: { state: 'known', value: true },
+          controllerIdentity: {
+            state: 'unknown',
+            reason: 'INSUFFICIENT_DATA',
+            detail: 'Script keys do not prove a real-world entity.',
+          },
+          effectiveSpendingTransactionRbf: {
+            state: 'unknown',
+            reason: 'INSUFFICIENT_DATA',
+            detail: 'Active node policy is unavailable.',
+          },
+          spendingTransactionCpfpPackage: {
+            state: 'unknown',
+            reason: 'UNSUPPORTED',
+            detail: 'Ancestor and descendant state is unavailable.',
+          },
+          scriptControl: {
+            state: 'known',
+            value: {
+              scriptClass: 'P2WSH',
+              spendConditionVisibility: 'REVEALED_AND_COMMITMENT_VERIFIED',
+              signatureRequirement: { state: 'known', value: 'MULTISIG' },
+              multisig: {
+                state: 'known',
+                value: { threshold: 2, signerCount: 3, publicKeyFingerprints: [] },
+              },
+              absoluteTimelocks: [
+                {
+                  kind: 'ABSOLUTE_HEIGHT',
+                  value: '840000',
+                  encodedValue: '840000',
+                  detail: 'CHECKLOCKTIMEVERIFY block-height threshold.',
+                },
+              ],
+              relativeTimelocks: [],
+              hashPredicatePresent: { state: 'known', value: false },
+              taprootSpendPath: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+              controllerIdentity: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+              scriptConditionsComplete: { state: 'known', value: true },
+            },
+          },
+        },
+        metadata: {
+          snapshot: {
+            ledger: 'BITCOIN',
+            chainId: 'bitcoin-mainnet',
+            height: '840000',
+            blockHash: 'b'.repeat(64),
+            finality: 'best-chain',
+            mempoolSnapshot: `sha256:${'a'.repeat(64)}`,
+          },
+          dataCoverage: 1,
+          sourceCoverage: 0.5,
+          historyCoverage: 1,
+          simulationCoverage: 0,
+          freshness: '2026-08-11T00:00:00.000Z',
+          sourceSet: ['bitcoin-esplora'],
+          modelVersion: 'bitcoin-outpoint-query-v1.0.0',
+          confidence: 0.95,
+          evidenceIds: [],
+        },
+        evidence: [],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Address or transaction identifier').fill(`${bitcoinTransactionId}:0`);
+  await page.getByLabel('Network').selectOption('bitcoin');
+  await page.getByRole('button', { name: 'Trace' }).click();
+  await page.getByRole('button', { name: 'Inspect' }).click();
+
+  const panel = page.getByTestId('bitcoin-outpoint-intelligence');
+  await expect(panel.getByRole('heading', { name: 'Bitcoin script control' })).toBeVisible();
+  await expect(panel.getByText('P2WSH', { exact: true })).toBeVisible();
+  await expect(panel.getByText('2-of-3', { exact: true })).toBeVisible();
+  await expect(panel.getByText(/Absolute Height · 840000/)).toBeVisible();
+  await expect(panel.getByText('Insufficient Data', { exact: true }).first()).toBeVisible();
+  await expect(
+    panel.getByText(/public key, hash, or script is not an entity identity/i),
+  ).toBeVisible();
+  await expect(panel.getByText('Unsupported', { exact: true })).toBeVisible();
 });
 
 test('shows versioned Flap state and preserves unqueried values as Unknown', async ({ page }) => {

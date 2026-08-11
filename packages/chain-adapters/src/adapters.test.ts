@@ -689,7 +689,15 @@ describe('capability probes and snapshots', () => {
       size: 120,
       weight: 480,
       fee: 200,
-      vin: [{}],
+      vin: [
+        {
+          is_coinbase: true,
+          scriptsig: '00',
+          scriptsig_asm: 'OP_0',
+          sequence: 0xffffffff,
+          witness: [],
+        },
+      ],
       vout: [
         {
           scriptpubkey: '0014' + '1'.repeat(40),
@@ -701,16 +709,39 @@ describe('capability probes and snapshots', () => {
       status: { confirmed: false },
     };
     const outspend = { spent: false };
+    const utxos = [
+      {
+        txid,
+        vout: 0,
+        value: 100,
+        status: {
+          confirmed: true,
+          block_height: 840000,
+          block_hash: 'b'.repeat(64),
+          block_time: 1_700_000_000,
+        },
+      },
+    ];
     const transport = new FakeRestTransport({
       '/address/bc1qtest': address,
+      '/address/bc1qtest/utxo': utxos,
       [`/tx/${txid}`]: transaction,
       [`/tx/${txid}/outspend/0`]: outspend,
     });
     const adapter = new BitcoinUtxoLedgerAdapter({ id: 'esplora' }, transport);
     await expect(adapter.getAddress('bc1qtest')).resolves.toEqual(address);
+    await expect(adapter.getAddressUtxos('bc1qtest')).resolves.toMatchObject([
+      {
+        txid,
+        vout: '0',
+        valueSats: '100',
+        status: { confirmed: true, blockHeight: '840000' },
+      },
+    ]);
     await expect(adapter.getTransaction(txid)).resolves.toMatchObject({
       txid,
       feeSats: '200',
+      inputs: [{ coinbase: true, sequence: '4294967295', scriptSig: '00', witness: [] }],
       outputs: [{ valueSats: '100', scriptType: 'v0_p2wpkh' }],
       status: { confirmed: false },
     });
@@ -745,6 +776,46 @@ describe('capability probes and snapshots', () => {
       code: 'INVALID_RESPONSE',
     });
     await expect(adapter.getOutspend(txid, 0)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+  });
+
+  it('rejects malformed Bitcoin inputs and duplicate address UTXOs', async () => {
+    const txid = 'a'.repeat(64);
+    const adapter = new BitcoinUtxoLedgerAdapter(
+      { id: 'esplora' },
+      new FakeRestTransport({
+        [`/tx/${txid}`]: {
+          txid,
+          version: 2,
+          locktime: 0,
+          size: 100,
+          weight: 400,
+          fee: 100,
+          vin: [
+            {
+              is_coinbase: false,
+              txid: 'b'.repeat(64),
+              vout: 0,
+              prevout: null,
+              scriptsig: '',
+              scriptsig_asm: '',
+              sequence: 0xfffffffd,
+              witness: [],
+            },
+          ],
+          vout: [],
+          status: { confirmed: false },
+        },
+        '/address/bc1qtest/utxo': [
+          { txid, vout: 0, value: 1, status: { confirmed: false } },
+          { txid, vout: 0, value: 1, status: { confirmed: false } },
+        ],
+      }),
+    );
+
+    await expect(adapter.getTransaction(txid)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+    await expect(adapter.getAddressUtxos('bc1qtest')).rejects.toMatchObject({
       code: 'INVALID_RESPONSE',
     });
   });

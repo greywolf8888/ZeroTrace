@@ -55,6 +55,11 @@ The current foundation includes:
   reads;
 - typed block, transaction, and Bitcoin outpoint queries that bind confirmed records to exact
   Snapshots, bind pending/mempool observations to captured heads, and retain replayable Evidence;
+- bracketed Bitcoin address statistics plus UTXO-set reconciliation, with a content-digested mempool
+  observation and conflicts preserved as `Unknown(CONFLICTING_SOURCES)`;
+- observable Bitcoin spend-condition analysis for P2PKH/P2SH/SegWit/Taproot, verified P2SH/P2WSH
+  reveals, legacy multisig and CLTV/CSV, while controller identity and effective RBF/CPFP policy stay
+  Unknown when Esplora cannot prove them;
 - version-pinned Flap BSC Portal inspection (forward-compatible `getTokenV8Safe` with explicit
   V6/V5 fallbacks)
   that checks Portal/token bytecode at one fixed block and preserves unsupported or unqueried fields
@@ -104,6 +109,8 @@ The current foundation includes:
 - exact-integer constant-product exit quoting and seeded, reproducible shared-liquidity exit races;
 - a Fastify API with OpenAPI, health, readiness, capability truth, and Prometheus metrics;
 - a responsive React intelligence workspace that renders missing knowledge as Unknown rather than 0;
+- dedicated desktop/mobile Bitcoin UTXO and script-control panels that separate visible conditions,
+  hidden commitments, controller identity, and node-policy boundaries;
 - append-only PostgreSQL Evidence/Snapshot persistence with restart-safe derivation drilldown;
 - append-only PostgreSQL chain-anchor observations and Data Quality Alerts whose Evidence links are
   enforced transactionally;
@@ -185,9 +192,9 @@ flowchart LR
 
 The finalized raw-ledger path is wired end to end for blocks, transactions, EVM logs/traces/state
 diffs, Bitcoin inputs/outputs, and Solana instructions/logs/native balances/token balances/rewards.
-The query API also returns strictly validated EVM/Bitcoin/Solana blocks and transactions plus Bitcoin
-outpoints with Snapshot and Evidence metadata. These remain provider-shaped observations, not
-semantic transfers or protocol events. A
+The query API also returns strictly validated EVM/Bitcoin/Solana blocks and transactions, bracketed
+Bitcoin address UTXOs, and outpoints with observable script-control facts. Provider records remain
+separate from derived Evidence; script keys/hashes are never treated as entity identity. A
 common-position anchor/continuity foundation now detects deterministic source conflicts and parent
 history changes without choosing a majority winner. Flap lifetime heads add deterministic
 multi-source rollback/replay; general multi-chain scheduling and rollback, independent-provider and

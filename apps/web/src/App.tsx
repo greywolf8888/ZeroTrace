@@ -126,6 +126,219 @@ function KnowledgeDisplay({ data }: { data: KnowledgeValue<unknown> }) {
   );
 }
 
+interface BitcoinUtxoView {
+  outpoint: string;
+  valueSats: string;
+  confirmed: boolean;
+  blockHeight: KnowledgeValue<string>;
+}
+
+interface BitcoinUtxoSetView {
+  utxos: BitcoinUtxoView[];
+  confirmedUtxoCount: number;
+  mempoolUtxoCount: number;
+  totalValueSats: string;
+  statsNetValueSats: string;
+  balanceAgreement: KnowledgeValue<boolean>;
+}
+
+interface BitcoinScriptControlView {
+  scriptClass: string;
+  spendConditionVisibility: string;
+  signatureRequirement: KnowledgeValue<string>;
+  multisig: KnowledgeValue<{
+    threshold: number;
+    signerCount: number;
+    publicKeyFingerprints: string[];
+  }>;
+  absoluteTimelocks: Array<{ kind: string; value: string; detail: string }>;
+  relativeTimelocks: Array<{ kind: string; value: string; detail: string }>;
+  hashPredicatePresent: KnowledgeValue<boolean>;
+  taprootSpendPath: KnowledgeValue<string>;
+  controllerIdentity: KnowledgeValue<string>;
+  scriptConditionsComplete: KnowledgeValue<boolean>;
+}
+
+function knownObject<T>(value: KnowledgeValue<unknown> | undefined): T | undefined {
+  return value?.state === 'known' && typeof value.value === 'object' && value.value !== null
+    ? (value.value as T)
+    : undefined;
+}
+
+function knownText(value: KnowledgeValue<unknown> | undefined): string {
+  if (value?.state !== 'known') return 'Unknown';
+  return String(value.value ?? 'null');
+}
+
+function BitcoinIntelligencePanel({ response }: { response: SubjectResponse }) {
+  if (response.subject.ledger !== 'BITCOIN') return null;
+  const utxoSet = knownObject<BitcoinUtxoSetView>(response.facts.utxoSet);
+  const scriptControl = knownObject<BitcoinScriptControlView>(response.facts.scriptControl);
+  if (response.subject.type === 'ADDRESS' && utxoSet !== undefined) {
+    return (
+      <section className="panel bitcoin-intelligence" data-testid="bitcoin-address-intelligence">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Stable-tip address observation</span>
+            <h3>Bitcoin UTXO reconciliation</h3>
+          </div>
+          <StatusPill
+            status={utxoSet.balanceAgreement.state === 'known' ? 'AGREEMENT' : 'CONFLICT'}
+          />
+        </div>
+        <div className="bitcoin-summary-grid">
+          <div>
+            <span>Confirmed balance</span>
+            <strong>{knownText(response.facts.confirmedBalanceSats)} sats</strong>
+          </div>
+          <div>
+            <span>Mempool delta</span>
+            <strong>{knownText(response.facts.mempoolDeltaSats)} sats</strong>
+          </div>
+          <div>
+            <span>Observed UTXO value</span>
+            <strong>{utxoSet.totalValueSats} sats</strong>
+          </div>
+          <div>
+            <span>UTXOs</span>
+            <strong>
+              {utxoSet.confirmedUtxoCount} confirmed · {utxoSet.mempoolUtxoCount} mempool
+            </strong>
+          </div>
+        </div>
+        <div className="bitcoin-policy-boundary">
+          <strong>Policy boundary</strong>
+          <p>
+            RBF effectiveness and CPFP package state remain Unknown without Bitcoin Core mempool
+            policy and ancestor/descendant data. Sequence signaling alone is not final policy.
+          </p>
+        </div>
+        <div className="table-scroll bitcoin-utxo-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Outpoint</th>
+                <th>Value</th>
+                <th>State</th>
+                <th>Block</th>
+              </tr>
+            </thead>
+            <tbody>
+              {utxoSet.utxos.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="empty-cell">
+                    No unspent outputs were observed at this Snapshot.
+                  </td>
+                </tr>
+              ) : (
+                utxoSet.utxos.map((utxo) => (
+                  <tr key={utxo.outpoint}>
+                    <td>
+                      <code title={utxo.outpoint}>{shortId(utxo.outpoint, 13)}</code>
+                    </td>
+                    <td>{utxo.valueSats} sats</td>
+                    <td>{utxo.confirmed ? 'Confirmed' : 'Mempool'}</td>
+                    <td>
+                      <KnowledgeDisplay data={utxo.blockHeight} />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  }
+  if (response.subject.type !== 'OUTPOINT' || scriptControl === undefined) return null;
+  const multisig =
+    scriptControl.multisig.state === 'known' ? scriptControl.multisig.value : undefined;
+  const timelocks = [...scriptControl.absoluteTimelocks, ...scriptControl.relativeTimelocks];
+  return (
+    <section className="panel bitcoin-intelligence" data-testid="bitcoin-outpoint-intelligence">
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Observable spend conditions</span>
+          <h3>Bitcoin script control</h3>
+        </div>
+        <StatusPill status={scriptControl.spendConditionVisibility} />
+      </div>
+      <div className="bitcoin-summary-grid">
+        <div>
+          <span>Script class</span>
+          <strong>{scriptControl.scriptClass}</strong>
+        </div>
+        <div>
+          <span>Signature requirement</span>
+          <KnowledgeDisplay data={scriptControl.signatureRequirement} />
+        </div>
+        <div>
+          <span>Multisig</span>
+          <strong>
+            {multisig === undefined
+              ? titleCase(scriptControl.multisig.reason ?? 'unknown')
+              : `${multisig.threshold}-of-${multisig.signerCount}`}
+          </strong>
+        </div>
+        <div>
+          <span>Taproot spend path</span>
+          <KnowledgeDisplay data={scriptControl.taprootSpendPath} />
+        </div>
+      </div>
+      <div className="bitcoin-control-grid">
+        <div>
+          <span>Controller identity</span>
+          <KnowledgeDisplay data={scriptControl.controllerIdentity} />
+          <p>A public key, hash, or script is not an entity identity.</p>
+        </div>
+        <div>
+          <span>Full script conditions</span>
+          <KnowledgeDisplay data={scriptControl.scriptConditionsComplete} />
+          <p>Hidden P2SH/P2WSH/Taproot branches stay Unknown until revealed and verified.</p>
+        </div>
+        <div>
+          <span>Effective RBF</span>
+          <KnowledgeDisplay
+            data={
+              response.facts.effectiveSpendingTransactionRbf ?? {
+                state: 'unknown',
+                reason: 'NOT_QUERIED',
+              }
+            }
+          />
+          <p>Requires active node policy and inherited ancestor state.</p>
+        </div>
+        <div>
+          <span>CPFP package</span>
+          <KnowledgeDisplay
+            data={
+              response.facts.spendingTransactionCpfpPackage ?? {
+                state: 'unknown',
+                reason: 'NOT_QUERIED',
+              }
+            }
+          />
+          <p>Requires Core ancestor/descendant package fields.</p>
+        </div>
+      </div>
+      <div className="bitcoin-timelocks">
+        <strong>Observed timelocks</strong>
+        {timelocks.length === 0 ? (
+          <span>None decoded in the visible script.</span>
+        ) : (
+          <ul>
+            {timelocks.map((lock, index) => (
+              <li key={`${lock.kind}-${lock.value}-${index}`}>
+                {titleCase(lock.kind)} · {lock.value} — {lock.detail}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function TokenAmountKnowledge({ data }: { data: KnowledgeValue<{ decimal: string }> }) {
   if (data.state === 'known' && data.value !== undefined) {
     return <span className="knowledge-known">{data.value.decimal}</span>;
@@ -4168,6 +4381,7 @@ function SearchWorkspace({
       )}
       {subject === undefined ? null : (
         <>
+          <BitcoinIntelligencePanel response={subject} />
           <section className="panel subject-panel">
             <div className="panel-header">
               <div>
@@ -4179,12 +4393,14 @@ function SearchWorkspace({
               </span>
             </div>
             <div className="fact-grid">
-              {Object.entries(subject.facts).map(([label, value]) => (
-                <div className="fact-row" key={label}>
-                  <span>{titleCase(label)}</span>
-                  <KnowledgeDisplay data={value} />
-                </div>
-              ))}
+              {Object.entries(subject.facts)
+                .filter(([label]) => !['utxoSet', 'scriptControl'].includes(label))
+                .map(([label, value]) => (
+                  <div className="fact-row" key={label}>
+                    <span>{titleCase(label)}</span>
+                    <KnowledgeDisplay data={value} />
+                  </div>
+                ))}
             </div>
             <div className="snapshot-strip">
               <span>

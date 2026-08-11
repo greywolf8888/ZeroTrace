@@ -53,6 +53,24 @@ interpreted as unchanged supply.
   exposes `previousblockhash` and reports `confirmations: -1` when a block is not on the main chain.
   This is the authoritative target for future Core/Esplora reorg reconciliation; the current adapter
   implements Esplora parent-history continuity but does not yet call Core.
+- [Esplora's address/transaction API](https://github.com/Blockstream/esplora/blob/master/API.md)
+  exposes `/address/:address/utxo`, strict input sequences, previous outputs, scriptSig/witness
+  material and output-spend links. ZeroTrace brackets address statistics plus the UTXO set between
+  two identical tip anchors, reconciles both value views, verifies a spending input against its
+  funding outpoint, and hashes the mutable observation into the Bitcoin Snapshot.
+- [BIP 141](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki),
+  [BIP 65](https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki),
+  [BIP 112](https://github.com/bitcoin/bips/blob/master/bip-0112.mediawiki),
+  [BIP 341](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki), and
+  [BIP 342](https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki) define witness-script,
+  CLTV/CSV and Taproot spend-path semantics. The current decoder verifies P2SH/P2WSH commitments,
+  observes legacy multisig and CLTV/CSV, and distinguishes Taproot key/script-path witnesses. It
+  deliberately does not claim a hidden script tree, a Taproot tree commitment it has not
+  reconstructed, or a real-world controller identity.
+- [Bitcoin Core `getmempoolentry`](https://bitcoincore.org/en/doc/25.0.0/rpc/blockchain/getmempoolentry/)
+  exposes replacement policy, ancestor/descendant, `depends`, and `spentby` state unavailable from
+  Esplora. ZeroTrace therefore reports input sequence opt-in signaling separately and retains
+  effective RBF/CPFP package conclusions as Unknown until a Core-backed observation exists.
 - Solana's official [`getSlot`](https://solana.com/docs/rpc/http/getslot),
   [`getBlock`](https://solana.com/docs/rpc/http/getblock), and
   [`getAccountInfo`](https://solana.com/docs/rpc/http/getaccountinfo) contracts distinguish a

@@ -61,6 +61,13 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   cross-linked parent data is rejected before reconciliation.
 - typed transaction reads reject malformed identity, placement, quantity, receipt, status, log,
   signature, output, and outspend fields before any result is constructed;
+- Bitcoin address reads bracket statistics and UTXOs with one stable height/hash, reject duplicate
+  or malformed outpoints, and preserve an aggregate/UTXO disagreement as Unknown rather than zero;
+- Bitcoin outpoint tests verify the reported spending input and previous output, strict
+  script/address/provider-type agreement, P2SH/P2WSH reveal commitments, legacy multisig,
+  CLTV/CSV, unspent Taproot hidden state, and controller identity Unknown;
+- Bitcoin transaction tests separate opt-in sequence signaling from effective RBF and CPFP package
+  policy, which remain Unknown without a Core mempool graph;
 - confirmed ledger records must match their position-pinned block/slot Snapshot; pending EVM and
   Bitcoin mempool observations are bound to a captured head, and null EVM/Solana results retain raw
   provider Evidence plus an evidenced, ambiguous negative observation;
@@ -126,7 +133,8 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
 - Solana control inspection requires a stable, same-slot subject/control-account set; official SPL
   Token and Token-2022 decoders plus the upgradeable-loader layout preserve disabled authorities,
   extension state, multisig thresholds, incomplete domains and nested Evidence without fake zeros;
-- UI displays Unknown and read-only state without placeholder data.
+- UI displays Unknown and read-only state without placeholder data, including desktop/mobile Bitcoin
+  UTXO reconciliation and script-control policy boundaries.
 
 ## Real-chain fixture rules
 

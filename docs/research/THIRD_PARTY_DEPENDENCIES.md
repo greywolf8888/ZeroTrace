@@ -11,6 +11,9 @@ indexer, wallet, signing, or transaction package is linked. Safe v1.3.0 remains 
 reference boundary with clean ABI-compatible reads; the EIP specifications are CC0 references.
 Sourcify is consumed only as a hosted read API; no Sourcify server package or source is copied or
 linked.
+Bitcoin script and address commitment analysis uses narrow parse/hash/address subpath imports from
+`bitcoinjs-lib`; ZeroTrace does not import its transaction, PSBT, key-generation, signing, or wallet
+surfaces.
 `@zerotrace/data-quality` is an internal workspace package reused by the platform adapter.
 
 Direct versions are pinned in manifests or container configuration. Transitive npm components are
@@ -30,6 +33,7 @@ captured by `npm run sbom` in CycloneDX JSON and checked by `npm run license:che
 | `react` / `react-dom`        |  19.2.8 | analyst UI                                    | MIT          | [facebook/react](https://github.com/facebook/react)                                               |
 | `viem`                       | 2.55.11 | EVM checksum/address normalization only       | MIT          | [wevm/viem](https://github.com/wevm/viem)                                                         |
 | `bitcoin-address-validation` |   3.0.0 | Bitcoin network/type/checksum validation      | MIT          | [ruigomeseu/bitcoin-address-validation](https://github.com/ruigomeseu/bitcoin-address-validation) |
+| `bitcoinjs-lib`              |   7.0.1 | Bitcoin script/address/hash parsing only      | MIT          | [bitcoinjs/bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib)                             |
 | `bs58`                       |   6.0.0 | lossless Solana public-key/signature decoding | MIT          | [cryptocoinjs/bs58](https://github.com/cryptocoinjs/bs58)                                         |
 | `@solana-program/token`      |  0.15.0 | official classic SPL Token account decoders   | Apache-2.0   | [solana-program/token](https://github.com/solana-program/token)                                   |
 | `@solana-program/token-2022` |  0.14.1 | official Token-2022 base/TLV decoders         | Apache-2.0   | [solana-program/token-2022](https://github.com/solana-program/token-2022)                         |

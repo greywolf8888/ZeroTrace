@@ -36,6 +36,20 @@ export interface BitcoinTransactionOutput {
   raw: Readonly<Record<string, unknown>>;
 }
 
+export interface BitcoinTransactionInput {
+  coinbase: boolean;
+  previousTxid?: string;
+  previousVout?: string;
+  sequence: string;
+  scriptSig: string;
+  scriptSigAsm: string;
+  innerRedeemScriptAsm?: string;
+  innerWitnessScriptAsm?: string;
+  witness: readonly string[];
+  previousOutput?: BitcoinTransactionOutput;
+  raw: Readonly<Record<string, unknown>>;
+}
+
 export interface BitcoinTransactionRecord {
   txid: string;
   version: number;
@@ -44,6 +58,7 @@ export interface BitcoinTransactionRecord {
   weight: string;
   feeSats: string;
   inputCount: number;
+  inputs: readonly BitcoinTransactionInput[];
   outputs: readonly BitcoinTransactionOutput[];
   status: BitcoinTransactionStatus;
   raw: Readonly<Record<string, unknown>>;
@@ -54,6 +69,14 @@ export interface BitcoinOutspendRecord {
   spendingTxid?: string;
   spendingVin?: string;
   status?: BitcoinTransactionStatus;
+  raw: Readonly<Record<string, unknown>>;
+}
+
+export interface BitcoinAddressUtxo {
+  txid: string;
+  vout: string;
+  valueSats: string;
+  status: BitcoinTransactionStatus;
   raw: Readonly<Record<string, unknown>>;
 }
 
@@ -132,6 +155,21 @@ function requireSafeInteger(value: unknown, field: string): number {
   return value;
 }
 
+function requireUint32(value: unknown, field: string): string {
+  const parsed = requireSafeUnsignedInteger(value, field);
+  if (BigInt(parsed) > 0xffff_ffffn) {
+    throw new ProviderError('INVALID_RESPONSE', `Esplora returned an out-of-range ${field}.`);
+  }
+  return parsed;
+}
+
+function requireHex(value: unknown, field: string): string {
+  if (typeof value !== 'string' || value.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `Esplora returned an invalid ${field}.`);
+  }
+  return value.toLowerCase();
+}
+
 function requireRecord(value: unknown, field: string): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new ProviderError('INVALID_RESPONSE', `Esplora returned an invalid ${field}.`);
@@ -166,9 +204,6 @@ function parseTransactionStatus(value: unknown): BitcoinTransactionStatus {
 
 function parseTransactionOutput(value: unknown): BitcoinTransactionOutput {
   const output = requireRecord(value, 'transaction output');
-  if (typeof output.scriptpubkey !== 'string' || !/^[0-9a-fA-F]*$/.test(output.scriptpubkey)) {
-    throw new ProviderError('INVALID_RESPONSE', 'Esplora returned an invalid output script.');
-  }
   if (typeof output.scriptpubkey_type !== 'string' || output.scriptpubkey_type.length === 0) {
     throw new ProviderError('INVALID_RESPONSE', 'Esplora returned an invalid output script type.');
   }
@@ -180,10 +215,67 @@ function parseTransactionOutput(value: unknown): BitcoinTransactionOutput {
   }
   return {
     valueSats: requireSafeUnsignedInteger(output.value, 'output value'),
-    scriptPubKey: output.scriptpubkey.toLowerCase(),
+    scriptPubKey: requireHex(output.scriptpubkey, 'output script'),
     scriptType: output.scriptpubkey_type,
     ...(output.scriptpubkey_address === undefined ? {} : { address: output.scriptpubkey_address }),
     raw: output,
+  };
+}
+
+function parseTransactionInput(value: unknown): BitcoinTransactionInput {
+  const input = requireRecord(value, 'transaction input');
+  if (typeof input.is_coinbase !== 'boolean') {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Esplora transaction input is missing coinbase state.',
+    );
+  }
+  if (typeof input.scriptsig_asm !== 'string') {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Esplora transaction input has invalid scriptSig ASM.',
+    );
+  }
+  if (!Array.isArray(input.witness)) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Esplora transaction input has invalid witness data.',
+    );
+  }
+  for (const field of ['inner_redeemscript_asm', 'inner_witnessscript_asm'] as const) {
+    if (input[field] !== undefined && typeof input[field] !== 'string') {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        `Esplora transaction input has invalid ${field}.`,
+      );
+    }
+  }
+  const witness = input.witness.map((item, index) =>
+    requireHex(item, `input witness item ${index}`),
+  );
+  const shared = {
+    coinbase: input.is_coinbase,
+    sequence: requireUint32(input.sequence, 'input sequence'),
+    scriptSig: requireHex(input.scriptsig, 'input scriptSig'),
+    scriptSigAsm: input.scriptsig_asm,
+    ...(typeof input.inner_redeemscript_asm === 'string'
+      ? { innerRedeemScriptAsm: input.inner_redeemscript_asm }
+      : {}),
+    ...(typeof input.inner_witnessscript_asm === 'string'
+      ? { innerWitnessScriptAsm: input.inner_witnessscript_asm }
+      : {}),
+    witness,
+    raw: input,
+  };
+  if (input.is_coinbase) return shared;
+  if (input.prevout === null || input.prevout === undefined) {
+    throw new ProviderError('INVALID_RESPONSE', 'Non-coinbase Bitcoin input is missing prevout.');
+  }
+  return {
+    ...shared,
+    previousTxid: requireTxid(input.txid, 'input previous transaction id'),
+    previousVout: requireUint32(input.vout, 'input previous output index'),
+    previousOutput: parseTransactionOutput(input.prevout),
   };
 }
 
@@ -202,6 +294,7 @@ function parseTransaction(value: unknown, expectedTxid: string): BitcoinTransact
       'Esplora transaction inputs or outputs are invalid.',
     );
   }
+  const inputs = transaction.vin.map(parseTransactionInput);
   return {
     txid,
     version: requireSafeInteger(transaction.version, 'transaction version'),
@@ -209,11 +302,39 @@ function parseTransaction(value: unknown, expectedTxid: string): BitcoinTransact
     size: requireSafeUnsignedInteger(transaction.size, 'transaction size'),
     weight: requireSafeUnsignedInteger(transaction.weight, 'transaction weight'),
     feeSats: requireSafeUnsignedInteger(transaction.fee, 'transaction fee'),
-    inputCount: transaction.vin.length,
+    inputCount: inputs.length,
+    inputs,
     outputs: transaction.vout.map(parseTransactionOutput),
     status: parseTransactionStatus(transaction.status),
     raw: transaction,
   };
+}
+
+function parseAddressUtxos(value: unknown): BitcoinAddressUtxo[] {
+  if (!Array.isArray(value) || value.length > 100_000) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Esplora returned an invalid or excessive UTXO set.',
+    );
+  }
+  const seen = new Set<string>();
+  return value.map((item, index) => {
+    const utxo = requireRecord(item, `address UTXO ${index}`);
+    const txid = requireTxid(utxo.txid, `address UTXO ${index} transaction id`);
+    const vout = requireUint32(utxo.vout, `address UTXO ${index} output index`);
+    const outpoint = `${txid}:${vout}`;
+    if (seen.has(outpoint)) {
+      throw new ProviderError('INVALID_RESPONSE', 'Esplora returned a duplicate address UTXO.');
+    }
+    seen.add(outpoint);
+    return {
+      txid,
+      vout,
+      valueSats: requireSafeUnsignedInteger(utxo.value, `address UTXO ${index} value`),
+      status: parseTransactionStatus(utxo.status),
+      raw: utxo,
+    };
+  });
 }
 
 function parseOutspend(value: unknown): BitcoinOutspendRecord {
@@ -286,6 +407,21 @@ export class BitcoinUtxoLedgerAdapter {
       `/address/${encodeURIComponent(address)}`,
     );
     return { ...observation, value: parseAddressStats(observation.value, address) };
+  }
+
+  async getAddressUtxos(address: string): Promise<readonly BitcoinAddressUtxo[]> {
+    return (await this.getAddressUtxosObservation(address)).value;
+  }
+
+  async getAddressUtxosObservation(
+    address: string,
+  ): Promise<TransportObservation<readonly BitcoinAddressUtxo[]>> {
+    const observation = await getRestJsonSourced<unknown>(
+      this.#transport,
+      `/address/${encodeURIComponent(address)}/utxo`,
+      { cacheMode: 'bypass' },
+    );
+    return { ...observation, value: parseAddressUtxos(observation.value) };
   }
 
   async getTransaction(txid: string): Promise<BitcoinTransactionRecord> {

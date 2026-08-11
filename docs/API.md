@@ -24,8 +24,8 @@ The initial API has no authentication and is suitable only for local/staging use
 | Method | Path                                                          | Notes                                                            |
 | ------ | ------------------------------------------------------------- | ---------------------------------------------------------------- |
 | GET    | `/api/v1/search?q=...`                                        | local identifier classification; optional `ledger` and `chainId` |
-| GET    | `/api/v1/subjects/:ledger/:id`                                | snapshot-pinned current-state read when provider exists          |
-| GET    | `/api/v1/ledger/:ledger/:type/:id`                            | typed block, transaction, or Bitcoin outpoint query              |
+| GET    | `/api/v1/subjects/:ledger/:id`                                | snapshot-pinned current state; Bitcoin includes bracketed UTXOs  |
+| GET    | `/api/v1/ledger/:ledger/:type/:id`                            | typed block/transaction or Bitcoin script-aware outpoint query   |
 | GET    | `/api/v1/launches/EVM/:token`                                 | version-pinned Flap BSC current Portal-state inspection          |
 | GET    | `/api/v1/launches/EVM/:token/events/:transactionHash`         | exact-receipt Flap creation/configuration/migration decoding     |
 | GET    | `/api/v1/launches/EVM/:token/history`                         | bounded Flap Portal log discovery with exact receipt replay      |
@@ -53,9 +53,11 @@ Current-state subject reads establish a ledger-specific anchor before reading th
 
 - EVM calls `eth_getBlockByNumber` with the configured `finalized`, `safe`, or `latest` tag, then
   reads balance and code at that exact numeric block. The selected finality is part of the Snapshot.
-- Bitcoin reads the tip height and resolves its hash with `/block-height/:height`, preventing a
-  mixed height/hash pair. Esplora address aggregates remain best-effort near that tip and carry the
-  `BEST_EFFORT_ESPLORA_TIP` marker; they are not archive-pinned UTXO proofs.
+- Bitcoin brackets address aggregates plus `/address/:address/utxo` between two identical
+  height/hash anchors. The response reconciles aggregate net value against the complete observed
+  UTXO set and carries `BRACKETED_BEST_CHAIN_TIP_WITH_MEMPOOL_DIGEST`; a changing tip fails the
+  request and a value conflict remains `Unknown(CONFLICTING_SOURCES)`. This is still a current
+  Esplora observation, not archive/Core reconciliation.
 - Solana reads the configured commitment slot, obtains that slot's blockhash with `getBlock`, and
   requires `getAccountInfo.context.slot` to be at least the Snapshot slot.
 
@@ -228,6 +230,18 @@ The response contains `subject`, typed `facts`, `metadata`, and `evidence`. `met
 the Snapshot, coverage, freshness, source set, model version, confidence, and Evidence IDs. These
 records validate provider shape and placement but do not claim semantic transfer, protocol-event,
 controller, launchpad, or RV decoding.
+
+Bitcoin transaction facts expose `locktime`, every validated input sequence and direct opt-in RBF
+signaling. They do not promote that signal to effective replaceability: active node policy,
+inherited ancestor state and CPFP package structure remain Unknown because Esplora does not expose
+Bitcoin Core `getmempoolentry` fields.
+
+Bitcoin outpoint queries fetch and cross-check the funding output, outspend and spending input. The
+derived `scriptControl` classifies standard P2PKH/P2SH/P2WPKH/P2WSH/P2TR, bare multisig, OP_RETURN
+and custom scripts; it verifies revealed P2SH/P2WSH commitments and observes legacy multisig plus
+CLTV/CSV. Unrevealed P2SH/P2WSH and optional Taproot branches remain Unknown. A script key, key hash,
+output key or multisig member is never returned as a controlling entity. Raw transactions, the UTXO
+observation and the derived control result retain separate Evidence nodes and exact source edges.
 
 ### Flap BSC launch inspection
 

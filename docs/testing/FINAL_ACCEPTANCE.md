@@ -244,9 +244,11 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Named EVM execution/state and Solana balance-table capture with integrity-checked artifact replay
 - [x] Scoped finalized Solana control-surface validation for classic SPL mint, Token-2022 mint and
       Token-2022 upgradeable Program/ProgramData, followed by provider-free PostgreSQL replay
+- [x] Scoped public Esplora Bitcoin address/UTXO and P2WPKH/P2TR outpoint validation through the
+      production API path with Snapshot and Evidence; Core policy/archive reconciliation remains open
 - [ ] Ethereum archive/current-state fixture suite
 - [ ] BNB Smart Chain archive/current-state fixture suite
-- [ ] Bitcoin Core plus Esplora fixture suite
+- [ ] Bitcoin Core plus Esplora archive/policy reconciliation fixture suite
 - [ ] Solana archive plus dedicated RPC fixture suite
 - [ ] Named launch/migration fixtures for every declared platform/version
 - [x] Named FFT migrated Pancake V2 point-in-time market plus buy/exit-size arithmetic fixtures
