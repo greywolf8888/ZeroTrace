@@ -2216,6 +2216,19 @@ flows, and built all six production container targets. Remote coverage was 82.39
 31547375237](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547375237) independently passed
 JavaScript/TypeScript analysis.
 
+A later documentation-head rerun, [CI run
+31547857040](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547857040), correctly failed
+instead of being retried away. Parallel real-database suites showed that an unfiltered worker could
+lease a due run belonging to a different registered handler kind. The production fix makes the
+registered capture-kind allowlist mandatory and applies it consistently to expired-lease recovery,
+retry leasing and new schedule occurrences. `runCaptureCycle` now derives this allowlist from its
+actual handler registry, so the transaction worker cannot consume Claim, Label, Entity or other
+workers' runs. A fail-closed unit case also retains protection if a repository violates the filter.
+The post-fix local gate passed format, lint, typecheck, all 566 unit tests, 77 environment-free
+integrations, the Entity evaluation, all builds, license and vulnerability checks, SBOM, Compose
+rendering, and all 36 Chromium desktop/mobile flows. Disposable-store concurrency revalidation is
+required before merge; the failed run is not acceptance evidence.
+
 This closes generic finalized-transaction handler binding, not terminal historical intelligence.
 Continuous discovery/backfill, Temporal/NATS distribution, additional capture kinds,
 independent-source action reconciliation and real-chain cross-ledger calibration remain open. FFT

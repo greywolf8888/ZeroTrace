@@ -10,12 +10,14 @@ import {
   CaptureRunFailureSchema,
   CaptureRunSchema,
   CaptureRunSuccessSchema,
+  CaptureKindSchema,
   CaptureScheduleDefinitionSchema,
   CaptureScheduleRecordSchema,
   knownValue,
   unknownValue,
   type CaptureRun,
   type CaptureRunSuccess,
+  type CaptureKind,
   type CaptureScheduleRecord,
 } from '@zerotrace/schemas';
 
@@ -72,6 +74,7 @@ export class CaptureScheduleStorageError extends Error {
 
 export interface ClaimDueCaptureRunsInput {
   owner: string;
+  captureKinds: readonly CaptureKind[];
   now?: string;
   leaseSeconds?: number;
   limit?: number;
@@ -442,23 +445,29 @@ export class PostgresCaptureScheduleRepository {
 
   async claimDue(input: ClaimDueCaptureRunsInput): Promise<CaptureRun[]> {
     const owner = validateOwner(input.owner);
+    const captureKinds = [
+      ...new Set(CaptureKindSchema.array().min(1).parse(input.captureKinds)),
+    ].sort();
     const now = canonicalTime(input.now ?? new Date().toISOString(), 'now');
     const leaseSeconds = boundedInteger(input.leaseSeconds ?? 300, 'leaseSeconds', 30, 3_600);
     const limit = boundedInteger(input.limit ?? 10, 'limit', 1, 100);
     try {
       const runIds = await transaction(this.#pool, async (client) => {
-        await this.#recoverExpired(client, now, limit);
+        await this.#recoverExpired(client, now, limit, captureKinds);
         const claimed: string[] = [];
         const retries = await client.query(
           `
-            SELECT id, attempt
-            FROM capture_runs
-            WHERE status = 'RETRY_WAIT' AND available_at <= $1::timestamptz
-            ORDER BY available_at, scheduled_for, id
-            FOR UPDATE SKIP LOCKED
-            LIMIT $2
+            SELECT run.id, run.attempt
+            FROM capture_runs run
+            JOIN capture_schedules schedule ON schedule.id = run.schedule_id
+            WHERE run.status = 'RETRY_WAIT'
+              AND run.available_at <= $1::timestamptz
+              AND schedule.capture_kind = ANY($2::text[])
+            ORDER BY run.available_at, run.scheduled_for, run.id
+            FOR UPDATE OF run SKIP LOCKED
+            LIMIT $3
           `,
-          [now, limit],
+          [now, captureKinds, limit],
         );
         for (const row of retries.rows) {
           const id = requiredString(row, 'id');
@@ -491,6 +500,7 @@ export class PostgresCaptureScheduleRepository {
               FROM capture_schedules schedule
               WHERE status = 'ACTIVE'
                 AND next_run_at <= $1::timestamptz
+                AND capture_kind = ANY($2::text[])
                 AND NOT EXISTS (
                   SELECT 1 FROM capture_runs run
                   WHERE run.schedule_id = schedule.id
@@ -498,9 +508,9 @@ export class PostgresCaptureScheduleRepository {
                 )
               ORDER BY next_run_at, id
               FOR UPDATE SKIP LOCKED
-              LIMIT $2
+              LIMIT $3
             `,
-            [now, remaining],
+            [now, captureKinds, remaining],
           );
           for (const row of due.rows) {
             const definition = CaptureScheduleDefinitionSchema.parse(row.definition);
@@ -846,19 +856,26 @@ export class PostgresCaptureScheduleRepository {
     }
   }
 
-  async #recoverExpired(client: SchedulerClient, now: string, limit: number): Promise<void> {
+  async #recoverExpired(
+    client: SchedulerClient,
+    now: string,
+    limit: number,
+    captureKinds: readonly CaptureKind[],
+  ): Promise<void> {
     const expired = await client.query(
       `
         SELECT run.id, run.schedule_id, run.attempt, run.max_attempts, run.lease_owner,
                run.lease_token, run.lease_started_at, schedule.retry_policy
         FROM capture_runs run
         JOIN capture_schedules schedule ON schedule.id = run.schedule_id
-        WHERE run.status = 'LEASED' AND run.lease_expires_at <= $1::timestamptz
+        WHERE run.status = 'LEASED'
+          AND run.lease_expires_at <= $1::timestamptz
+          AND schedule.capture_kind = ANY($2::text[])
         ORDER BY run.lease_expires_at, run.id
         FOR UPDATE OF run, schedule SKIP LOCKED
-        LIMIT $2
+        LIMIT $3
       `,
-      [now, limit],
+      [now, captureKinds, limit],
     );
     for (const row of expired.rows) {
       const attempt = integer(row.attempt, 'attempt');

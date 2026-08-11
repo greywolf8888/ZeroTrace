@@ -902,6 +902,9 @@ The only allowed status vocabulary in this ledger is:
   handler to PostgreSQL leases and bounded retry, preflights five durable authorities, and is
   available as `action-capture-worker` in the `semantic` Compose profile. Neither CLI accepts a
   private key or any chain-write action;
+- workers pass their registered capture-kind allowlist through expired-lease recovery, retry and
+  new-occurrence selection. A transaction worker therefore cannot lease or mutate a Claim, Label,
+  Entity or other worker's run even when all kinds share the same durable queue;
 - continuous schedule discovery/backfill, the remaining capture kinds, Temporal/NATS distribution,
   protocol-purpose attribution and real-chain cross-ledger calibration remain pending. FFT remains
   only a later acceptance fixture and is absent from this adapter and worker.
