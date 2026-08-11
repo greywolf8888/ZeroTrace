@@ -103,14 +103,18 @@ The current foundation includes:
   regression alerts, and operator independence retained as Unknown until verified;
 - content-addressed evidence nodes and deterministic evidence drilldown;
 - baseline evidence fusion with explicit service-hub, CoinJoin, and independence suppression;
+- Snapshot-bound Bitcoin transaction-entity screening that exposes common-input and bounded change
+  candidates, exact fee arithmetic, address reuse, equal-output CoinJoin-like and fanout patterns,
+  while BIP78/Payjoin and unqueried service attribution block every automatic ownership merge;
 - an exact fixed-point Entity Resolution evaluation system with high-confidence controller and
   coordination precision gates, Service Hub/CoinJoin false-merge gates, Brier/ECE diagnostics, a
   test-only structural golden corpus, and fail-closed real-world corpus requirements;
 - exact-integer constant-product exit quoting and seeded, reproducible shared-liquidity exit races;
 - a Fastify API with OpenAPI, health, readiness, capability truth, and Prometheus metrics;
 - a responsive React intelligence workspace that renders missing knowledge as Unknown rather than 0;
-- dedicated desktop/mobile Bitcoin UTXO and script-control panels that separate visible conditions,
-  hidden commitments, controller identity, and node-policy boundaries;
+- dedicated desktop/mobile Bitcoin UTXO, transaction-entity and script-control panels that separate
+  structural candidates, suppression reasons, visible conditions, hidden commitments, controller
+  identity, and node-policy boundaries;
 - append-only PostgreSQL Evidence/Snapshot persistence with restart-safe derivation drilldown;
 - append-only PostgreSQL chain-anchor observations and Data Quality Alerts whose Evidence links are
   enforced transactionally;
@@ -193,8 +197,9 @@ flowchart LR
 The finalized raw-ledger path is wired end to end for blocks, transactions, EVM logs/traces/state
 diffs, Bitcoin inputs/outputs, and Solana instructions/logs/native balances/token balances/rewards.
 The query API also returns strictly validated EVM/Bitcoin/Solana blocks and transactions, bracketed
-Bitcoin address UTXOs, and outpoints with observable script-control facts. Provider records remain
-separate from derived Evidence; script keys/hashes are never treated as entity identity. A
+Bitcoin address UTXOs, outpoints with observable script-control facts, and Bitcoin transaction-level
+clustering candidates with CoinJoin/Payjoin/service suppression. Provider records remain separate
+from derived Evidence; scripts, keys and common inputs are never treated as entity identity. A
 common-position anchor/continuity foundation now detects deterministic source conflicts and parent
 history changes without choosing a majority winner. Flap lifetime heads add deterministic
 multi-source rollback/replay; general multi-chain scheduling and rollback, independent-provider and
@@ -208,7 +213,7 @@ distributed workflows remain open work. Read
 | Domain             | Terminal scope                                                                                | Current repository state                                                                                                                                                                                                                                                                                                  |
 | ------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound queries, finalized raw execution/state, strict ERC-1167/EIP-1967/ERC-173/registered-Safe reads, recursive logic-code hashing, and Sourcify V2 exact-source binding; effective custom-role controllers, validity history and archive/semantic validation pending                                            |
-| Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                                                                                                                                                     |
+| Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/address/transaction/outpoint reads, standard-script control and conservative common-input/change candidates with CoinJoin/Payjoin/fanout suppression; Core policy, complete graph/history, calibrated classification and asset protocols pending                                                     |
 | Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound queries/raw execution plus finalized atomic SPL Token/Token-2022/multisig/upgradeable-loader authority reports; PDA/Squads recursion, authority history, IDL/build provenance, other loaders and archive semantics pending                                                                                 |
 | Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                               |
 | Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                               |
@@ -582,6 +587,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Make current-state EVM/BTC/Solana snapshot anchors finality-explicit and ledger-canonical
 - [x] Add common-position endpoint anchor reconciliation and parent-history continuity detection
 - [x] Add Snapshot- and Evidence-backed block/transaction/outpoint query contracts and UI rendering
+- [x] Add Bitcoin transaction common-input/change candidates with CoinJoin/Payjoin/service suppression and no automatic entity merge
 - [x] Add version-pinned Flap BSC Portal-state inspection with Evidence/Unknown UI rendering
 - [x] Add fixed-block Flap Portal sell previews with provider Evidence and no-fake-zero UI states
 - [x] Add exact-receipt Flap creation/configuration/migration event decoding with default provenance

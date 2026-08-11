@@ -9,20 +9,20 @@ completed feature.
 
 ## Executive status
 
-| Measure                          | Current state                                                                                                 |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Terminal architecture completion | **20% estimated**                                                                                             |
-| Runnable foundation              | **Yes; clean Docker build/start verified**                                                                    |
-| Production acceptance            | **No**                                                                                                        |
-| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                |
-| Unit tests                       | **441 passing across 65 files**                                                                               |
-| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                    |
-| Integration tests                | **66 environment-free plus 24 real-storage passing; 90 with PostgreSQL, ClickHouse and object store enabled** |
-| Real-browser E2E                 | **30 passing: Chromium desktop and Pixel 7**                                                                  |
-| Remote CI                        | **Latest recorded exact-SHA pass: `1fe7b4c`; every new batch is gated on Draft PR #5 before merge**           |
-| Coverage                         | **Current local: 83.25% statements / 77.91% branches / 93.48% functions / 84.45% lines**                      |
-| Real-chain validation            | Four-chain raw/anchors, FFT EVM control, three Solana controls, and scoped Bitcoin UTXO/script reads passed   |
-| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim and EVM/Solana Control Surface Reports wired                     |
+| Measure                          | Current state                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Terminal architecture completion | **20% estimated**                                                                                                  |
+| Runnable foundation              | **Yes; clean Docker build/start verified**                                                                         |
+| Production acceptance            | **No**                                                                                                             |
+| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                     |
+| Unit tests                       | **448 passing across 66 files**                                                                                    |
+| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                         |
+| Integration tests                | **67 environment-free plus 24 real-storage passing; 91 with PostgreSQL, ClickHouse and object store enabled**      |
+| Real-browser E2E                 | **32 passing: Chromium desktop and Pixel 7**                                                                       |
+| Remote CI                        | **Latest recorded exact-SHA pass: `b777ddd`; every new batch is gated on Draft PR #5 before merge**                |
+| Coverage                         | **Current local: 83.37% statements / 78.08% branches / 93.51% functions / 84.56% lines**                           |
+| Real-chain validation            | Four-chain raw/anchors, FFT EVM control, three Solana controls, and scoped Bitcoin UTXO/script/entity reads passed |
+| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim and EVM/Solana Control Surface Reports wired                          |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
@@ -43,7 +43,7 @@ The only allowed status vocabulary in this ledger is:
 | Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity and generic semantic checkpoints work; general scheduling and rollback/replay remain                                                                             |
 | Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                                                                                    |
 | Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; scoped Alchemy/BNB market reconciliation passed, while other domains and entity calibration remain                                         |
-| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline plus exact structural Precision/False-Merge gates work; real-world calibration and temporal graph are absent                                                              |
+| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline, exact structural gates and Bitcoin transaction candidate/suppression features work; real-world calibration and temporal graph are absent                                 |
 | Control Rights                       | `PARTIALLY_IMPLEMENTED`                     | EVM standards/source, Solana SPL/loader and observable Bitcoin script conditions work; effective entities, custom roles, history, recursion and Core policy remain                              |
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; full FFT lifecycle and other platforms remain             |
 | Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios and two-operator market reconciliation work; fork execution, additional routes, gas and capacity remain                  |
@@ -327,6 +327,29 @@ The only allowed status vocabulary in this ledger is:
   set. Outpoint `8cecb5275e9e2a806bb3d9669226ad25acdcc40acd1aab3b10104f7bdb17e782:1`
   linked a 1,000-sat P2WPKH output to its confirmed spending input while retaining controller
   identity Unknown; output `:0` retained the unspent P2TR tree and controller as Unknown.
+
+### Bitcoin transaction entity-safety foundation
+
+- `bitcoin-transaction-entity-v1.0.0` reconciles total prevout value, output value, reported fee,
+  virtual size and fee rate while retaining complete input-address coverage and exact address reuse;
+- common-input address sets and bounded same-script/unique-value change outputs are candidate
+  features only. `automaticOwnershipMergeAllowed` is invariantly false and both ownership and the
+  selected change output remain Unknown without independent history, attribution and calibration;
+- equal-output CoinJoin-like transactions, fanout/batching patterns and incomplete prevout-address
+  context suppress change candidates before scoring. Multi-input transactions retain unresolved
+  BIP78 Payjoin contamination and service/custody attribution as explicit suppression reasons;
+- raw transaction, immutable BIP78 revision and derived candidate set are separate Evidence nodes
+  with exact derivation edges. Legacy P2PKH inputs may correctly omit `witness`; native SegWit and
+  Taproot inputs still fail closed when witness data is absent;
+- API and desktop/Pixel 7 views expose the structural pattern, suppression ledger, fee arithmetic,
+  candidate list and precision boundary without rendering a candidate as an entity or change fact;
+- public Esplora validation passed historical transaction
+  `074b02b446a3d55b26c33582f7a1b44691cd94ae87f50f430288b3213fea596a` at height
+  `576833`: 103 inputs, 194 outputs and an 84-output equal-value group produced
+  `EQUAL_OUTPUT_COINJOIN_LIKE`, zero change candidates and no merge. Recent two-input transaction
+  `002c6f73779400839839b971662ef3fcec4d31c6d00d8634d8491eac6ccae715` at height
+  `961943` produced one bounded change candidate but retained ownership/change conclusions as
+  `Unknown(PRECISION_UNSAFE)`.
 
 ### Flap BSC inspection foundation
 
@@ -755,7 +778,9 @@ The only allowed status vocabulary in this ledger is:
 - Bitcoin Core/ZMQ ingestion and independent Esplora reconciliation;
 - Core-backed effective RBF/full-RBF and CPFP ancestor/descendant policy, plus Taproot tree
   commitment reconstruction and modern Tapscript threshold analysis;
-- complete UTXO flow graph, peeling/change heuristics, CoinJoin classification and calibration;
+- complete UTXO flow graph, address-history/peeling/change inference, protocol-complete CoinJoin and
+  Payjoin classification, service suppression feeds and real-world calibration beyond the bounded
+  transaction-level screen;
 - inscription/rune semantics and exchange/service observation feeds;
 - FomoWell ICP/ICRC/ckBTC canister adapter and verified deployment discovery.
 
@@ -787,7 +812,7 @@ The only allowed status vocabulary in this ledger is:
 | Validation             | Requirement                                                                                                               | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Public stable-tip address/UTXO plus spent P2WPKH and unspent P2TR production-path reads passed at height 961937; Core/archive/policy reconciliation pending                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Public address/UTXO, spent P2WPKH, unspent P2TR and two transaction-entity production paths passed; equal-output CoinJoin-like structure suppressed merging/change candidates, while Core/archive/policy and calibrated graph reconciliation remain pending                                                                                                                                                                                                                                                                                                 |
 | Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Test-only structural golden passes exact Precision/False-Merge gates; Snapshot/Evidence-backed real-world labels and calibration remain pending                                                                                                                                                                                                                                                                                                                                                                                                             |
 | EVM control rights     | Independent standard/source reads plus effective custom-role/history/controller reconstruction                            | Alchemy and BNB Chain agreed on FFT proxy and implementation logic at one finalized Snapshot; Sourcify V2 exact-matched `FlapTaxTokenV3`, and the UI separates declared owner/migration functions from current rights. Effective custom token controllers, role/event history, authorization reachability and non-EVM surfaces remain pending                                                                                                                                                                                                               |

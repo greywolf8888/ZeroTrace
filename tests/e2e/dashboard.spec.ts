@@ -225,7 +225,12 @@ test('renders reconciled Bitcoin UTXOs and keeps node policy Unknown', async ({ 
   await page.getByLabel('Address or transaction identifier').fill(bitcoinAddress);
   await page.getByLabel('Network').selectOption('bitcoin');
   await page.getByRole('button', { name: 'Trace' }).click();
-  await page.getByRole('button', { name: 'Inspect' }).click();
+  await page
+    .locator('.candidate-card')
+    .filter({ hasText: 'BITCOIN' })
+    .filter({ has: page.getByText('ADDRESS', { exact: true }) })
+    .getByRole('button', { name: 'Inspect' })
+    .click();
 
   const panel = page.getByTestId('bitcoin-address-intelligence');
   await expect(panel.getByRole('heading', { name: 'Bitcoin UTXO reconciliation' })).toBeVisible();
@@ -236,6 +241,128 @@ test('renders reconciled Bitcoin UTXOs and keeps node policy Unknown', async ({ 
     panel.getByText(/RBF effectiveness and CPFP package state remain Unknown/),
   ).toBeVisible();
   await expect(panel.getByText('839999', { exact: true })).toBeVisible();
+});
+
+test('screens Bitcoin transaction clustering without merging CoinJoin inputs', async ({ page }) => {
+  await page.route('**/api/v1/ledger/BITCOIN/TRANSACTION/**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        subject: {
+          ledger: 'BITCOIN',
+          chainId: 'bitcoin-mainnet',
+          type: 'TRANSACTION',
+          id: bitcoinTransactionId,
+          normalizedId: bitcoinTransactionId,
+          validation: 'STRUCTURALLY_VALID',
+          confidence: 1,
+        },
+        facts: {
+          status: { state: 'known', value: 'CONFIRMED' },
+          feeSats: { state: 'known', value: '3000' },
+          structuralPattern: { state: 'known', value: 'EQUAL_OUTPUT_COINJOIN_LIKE' },
+          automaticOwnershipMergeAllowed: { state: 'known', value: false },
+          transactionEntityAnalysis: {
+            state: 'known',
+            value: {
+              txid: bitcoinTransactionId,
+              coinbase: false,
+              inputCount: 3,
+              outputCount: 3,
+              inputAddressCoverage: 1,
+              inputAddresses: ['bc1qparticipant1', 'bc1qparticipant2', 'bc1qparticipant3'],
+              outputAddresses: ['bc1qoutput1', 'bc1qoutput2', 'bc1qoutput3'],
+              inputValueSats: { state: 'known', value: '30000' },
+              outputValueSats: '27000',
+              feeSats: '3000',
+              feeReconciles: { state: 'known', value: true },
+              virtualSizeBytes: '300',
+              feeRateSatPerVbyte: { state: 'known', value: '10' },
+              equalOutputGroups: [{ valueSats: '9000', outputCount: 3, vouts: [0, 1, 2] }],
+              structuralPattern: 'EQUAL_OUTPUT_COINJOIN_LIKE',
+              payjoinContaminationRisk: {
+                state: 'unknown',
+                reason: 'INSUFFICIENT_DATA',
+                detail: 'Final transaction does not expose Payjoin negotiation.',
+              },
+              serviceClusterRisk: { state: 'unknown', reason: 'NOT_QUERIED' },
+              addressReuseOutputVouts: [],
+              commonInputHeuristic: { state: 'known', value: true },
+              commonInputOwnershipCandidate: {
+                state: 'known',
+                value: ['bc1qparticipant1', 'bc1qparticipant2', 'bc1qparticipant3'],
+              },
+              automaticOwnershipMergeAllowed: false,
+              suppressionReasons: [
+                'COINJOIN_EQUAL_OUTPUT_PATTERN',
+                'PAYJOIN_NOT_EXCLUDABLE',
+                'SERVICE_ATTRIBUTION_UNQUERIED',
+              ],
+              changeCandidates: [],
+              selectedChangeOutput: { state: 'unknown', reason: 'PRECISION_UNSAFE' },
+              ownershipConclusion: { state: 'unknown', reason: 'PRECISION_UNSAFE' },
+              externalAttribution: { state: 'unknown', reason: 'NOT_QUERIED' },
+              modelVersion: 'bitcoin-transaction-entity-v1.0.0',
+            },
+          },
+        },
+        metadata: {
+          snapshot: {
+            ledger: 'BITCOIN',
+            chainId: 'bitcoin-mainnet',
+            height: '840000',
+            blockHash: 'b'.repeat(64),
+            finality: 'best-chain',
+          },
+          dataCoverage: 1,
+          sourceCoverage: 0.5,
+          historyCoverage: 1,
+          simulationCoverage: 0,
+          freshness: '2026-08-11T00:00:00.000Z',
+          sourceSet: ['bitcoin-esplora'],
+          modelVersion: 'bitcoin-transaction-query-v1.0.0',
+          confidence: 0.95,
+          evidenceIds: [],
+        },
+        evidence: [],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByLabel('Address or transaction identifier').fill(bitcoinTransactionId);
+  await page.getByLabel('Network').selectOption('bitcoin');
+  await page.getByRole('button', { name: 'Trace' }).click();
+  await page
+    .locator('.candidate-card')
+    .filter({ hasText: 'BITCOIN' })
+    .filter({ has: page.getByText('TRANSACTION', { exact: true }) })
+    .getByRole('button', { name: 'Inspect' })
+    .click();
+
+  const panel = page.getByTestId('bitcoin-transaction-entity');
+  await expect(
+    panel.getByRole('heading', { name: 'Bitcoin transaction entity screening' }),
+  ).toBeVisible();
+  await expect(panel.getByText('Equal Output Coinjoin Like', { exact: true })).toBeVisible();
+  await expect(panel.getByText('Blocked', { exact: true })).toBeVisible();
+  await expect(
+    panel
+      .locator('.bitcoin-entity-boundaries > div')
+      .filter({ hasText: 'Ownership conclusion' })
+      .getByText('Precision Unsafe', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    panel
+      .locator('.bitcoin-entity-boundaries > div')
+      .filter({ hasText: 'Selected change output' })
+      .getByText('Precision Unsafe', { exact: true }),
+  ).toBeVisible();
+  await expect(panel.getByText('Coinjoin Equal Output Pattern', { exact: true })).toBeVisible();
+  await expect(panel.getByText(/never directly merge entities/)).toBeVisible();
+  await expect(
+    panel.getByText('No bounded change candidate survived the structural filter.'),
+  ).toBeVisible();
 });
 
 test('renders Bitcoin script conditions without converting keys into controller identity', async ({

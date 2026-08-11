@@ -68,6 +68,11 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   CLTV/CSV, unspent Taproot hidden state, and controller identity Unknown;
 - Bitcoin transaction tests separate opt-in sequence signaling from effective RBF and CPFP package
   policy, which remain Unknown without a Core mempool graph;
+- Bitcoin transaction-entity tests reconcile prevout/output/fee arithmetic, accept omitted witness
+  only for legacy inputs, reject missing native SegWit witness, and cover ordinary common-input,
+  equal-output CoinJoin-like, fanout/batching, incomplete-context and coinbase cases. CoinJoin,
+  fanout or incomplete context must suppress change candidates, and every case fixes automatic
+  ownership merging to false;
 - confirmed ledger records must match their position-pinned block/slot Snapshot; pending EVM and
   Bitcoin mempool observations are bound to a captured head, and null EVM/Solana results retain raw
   provider Evidence plus an evidenced, ambiguous negative observation;
@@ -134,7 +139,7 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   Token and Token-2022 decoders plus the upgradeable-loader layout preserve disabled authorities,
   extension state, multisig thresholds, incomplete domains and nested Evidence without fake zeros;
 - UI displays Unknown and read-only state without placeholder data, including desktop/mobile Bitcoin
-  UTXO reconciliation and script-control policy boundaries.
+  UTXO reconciliation, transaction clustering suppression and script-control policy boundaries.
 
 ## Real-chain fixture rules
 

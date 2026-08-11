@@ -1741,6 +1741,15 @@ describe('ZeroTrace API contract', () => {
       blockHeight: { state: 'known', value: '840000' },
       feeSats: { state: 'known', value: '200' },
       outputCount: { state: 'known', value: '2' },
+      transactionEntityAnalysis: {
+        state: 'known',
+        value: {
+          coinbase: true,
+          structuralPattern: 'NOT_APPLICABLE',
+          automaticOwnershipMergeAllowed: false,
+          ownershipConclusion: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+        },
+      },
     });
     expect(bitcoin.json().metadata.snapshot).toMatchObject({
       ledger: 'BITCOIN',
@@ -1749,6 +1758,11 @@ describe('ZeroTrace API contract', () => {
     });
     expect(bitcoin.json().evidence).toEqual([
       expect.objectContaining({ kind: 'TRANSACTION', blockOrSlot: '840000' }),
+      expect.objectContaining({ kind: 'OFFICIAL_DOCUMENT', source: 'bitcoin-bips' }),
+      expect.objectContaining({
+        kind: 'DERIVED_FEATURE',
+        source: 'zerotrace:bitcoin-transaction-entity-v1.0.0',
+      }),
     ]);
 
     const solana = await app.inject({
@@ -1770,6 +1784,99 @@ describe('ZeroTrace API contract', () => {
     expect(solana.json().evidence).toEqual([
       expect.objectContaining({ kind: 'TRANSACTION', blockOrSlot: '300000000' }),
     ]);
+  });
+
+  it('suppresses automatic Bitcoin ownership merges for CoinJoin-like transaction structure', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const txid = '9'.repeat(64);
+    const vin = Array.from({ length: 3 }, (_, index) => ({
+      txid: String(index + 1).padStart(64, '0'),
+      vout: 0,
+      prevout: {
+        scriptpubkey: `0014${String(index + 1).repeat(40)}`,
+        scriptpubkey_type: 'v0_p2wpkh',
+        scriptpubkey_address: `bc1qparticipant${index + 1}`,
+        value: 10_000,
+      },
+      is_coinbase: false,
+      sequence: 4_294_967_295,
+      scriptsig: '',
+      scriptsig_asm: '',
+      witness: ['30', `02${String(index + 4).repeat(64)}`],
+    }));
+    const vout = Array.from({ length: 3 }, (_, index) => ({
+      scriptpubkey: `0014${String(index + 7).repeat(40)}`,
+      scriptpubkey_type: 'v0_p2wpkh',
+      scriptpubkey_address: `bc1qoutput${index + 1}`,
+      value: 9_000,
+    }));
+    runtime.bitcoinAdapter = new BitcoinUtxoLedgerAdapter(
+      { id: 'bitcoin-coinjoin-screening' },
+      new FakeRestTransport({
+        '/block-height/840000': 'b'.repeat(64),
+        [`/block/${'b'.repeat(64)}`]: {
+          id: 'b'.repeat(64),
+          height: 840000,
+          previousblockhash: 'a'.repeat(64),
+        },
+        [`/tx/${txid}`]: {
+          txid,
+          version: 2,
+          locktime: 0,
+          size: 300,
+          weight: 1_200,
+          fee: 3_000,
+          vin,
+          vout,
+          status: {
+            confirmed: true,
+            block_height: 840000,
+            block_hash: 'b'.repeat(64),
+            block_time: 1_700_000_000,
+          },
+        },
+      }),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/BITCOIN/TRANSACTION/${txid}`,
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().facts).toMatchObject({
+      feeReconciles: { state: 'known', value: true },
+      structuralPattern: { state: 'known', value: 'EQUAL_OUTPUT_COINJOIN_LIKE' },
+      commonInputHeuristic: { state: 'known', value: true },
+      automaticOwnershipMergeAllowed: { state: 'known', value: false },
+      ownershipConclusion: { state: 'unknown', reason: 'PRECISION_UNSAFE' },
+      transactionEntityAnalysis: {
+        state: 'known',
+        value: {
+          inputAddressCoverage: 1,
+          equalOutputGroups: [{ valueSats: '9000', outputCount: 3, vouts: [0, 1, 2] }],
+          structuralPattern: 'EQUAL_OUTPUT_COINJOIN_LIKE',
+          automaticOwnershipMergeAllowed: false,
+          suppressionReasons: expect.arrayContaining([
+            'COINJOIN_EQUAL_OUTPUT_PATTERN',
+            'PAYJOIN_NOT_EXCLUDABLE',
+            'SERVICE_ATTRIBUTION_UNQUERIED',
+          ]),
+          changeCandidates: [],
+          ownershipConclusion: { state: 'unknown', reason: 'PRECISION_UNSAFE' },
+        },
+      },
+    });
+    expect(response.json().evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'TRANSACTION',
+      'OFFICIAL_DOCUMENT',
+      'DERIVED_FEATURE',
+    ]);
+    expect(runtime.evidenceLedger.get(response.json().evidence[2].id)?.sourceEvidenceIds).toEqual(
+      [response.json().evidence[0].id, response.json().evidence[1].id].sort(),
+    );
   });
 
   it('keeps a confirmed EVM transaction known when its receipt remains unavailable', async () => {

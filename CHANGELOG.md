@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- Bitcoin transaction-level entity screening with exact fee reconciliation, common-input/address
+  reuse/equal-output/fanout features, bounded script-type change candidates, pinned BIP78 Evidence,
+  CoinJoin/Payjoin/service suppression, a hard no-automatic-merge policy, responsive UI and public
+  Esplora validation; complete clustering and attribution remain out of scope for this slice;
 - stable-tip Bitcoin address UTXO reconciliation and observable P2PKH/P2SH/SegWit/Taproot
   spend-condition analysis, including verified revealed-script commitments, legacy multisig,
   CLTV/CSV, transaction sequence signaling, Evidence-linked API results and responsive UI; effective

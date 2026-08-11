@@ -1244,7 +1244,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? 'IMPLEMENTED'
             : 'PROVIDERS_PARTIALLY_CONFIGURED',
         detail:
-          'Read-only EVM transaction/block, Bitcoin transaction/block/outpoint, and Solana transaction/slot queries use strict provider-response validation and bind observations to Evidence plus replayable Snapshots. Null, pending, mempool, and provider failures remain distinct.',
+          'Read-only EVM transaction/block, Bitcoin address/transaction/block/outpoint, and Solana transaction/slot queries use strict provider-response validation and bind observations to Evidence plus replayable Snapshots. Bitcoin transactions add conservative common-input/change candidates with CoinJoin/Payjoin/service suppression and no automatic entity merge. Null, pending, mempool, and provider failures remain distinct.',
       },
       {
         id: 'flap-bsc-inspection',
@@ -1398,7 +1398,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         detail:
           'Restart-safe SQD finalized blocks, transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards are implemented with durable provenance. Anchor continuity/reorg detection is wired separately; semantic transfers, protocol decoding, continuous scheduling, and historical replay policy remain pending.',
       },
-      { id: 'entity-evidence-fusion', status: 'IMPLEMENTED_BASELINE' },
+      {
+        id: 'entity-evidence-fusion',
+        status: 'IMPLEMENTED_BASELINE',
+        detail:
+          'Evidence-weighted pair scoring and structural precision gates are joined by Bitcoin transaction-level candidate extraction. Common input and change signals never auto-merge; CoinJoin-like, fanout, incomplete input context, unresolved Payjoin and unqueried service attribution are explicit suppressors. Temporal graph extraction and real-world calibration remain pending.',
+      },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },
       { id: 'shared-liquidity-exit-race', status: 'IMPLEMENTED_DETERMINISTIC' },
     ],

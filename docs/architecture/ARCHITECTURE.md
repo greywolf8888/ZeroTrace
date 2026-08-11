@@ -121,6 +121,10 @@ and a separate finalized raw-ledger worker backed by versioned artifacts, ClickH
 PostgreSQL checkpoints. Strict query-time EVM/Bitcoin/Solana block and transaction records plus
 Bitcoin outpoints are Snapshot- and Evidence-bound; finalized blocks, transactions, EVM logs,
 Bitcoin inputs/outputs, and Solana instructions are also wired through ingestion. A separate
+Bitcoin transaction-entity layer now derives fee/address coverage, common-input and bounded change
+candidates plus equal-output/fanout suppression from the validated transaction record. BIP78 is a
+versioned Evidence parent, and every automatic ownership merge remains disabled because Payjoin,
+service/custody and complete-history contamination are not excluded. A separate
 semantic worker persists restart-safe Flap origin checkpoints and immutable bounded-history
 segments; the API and UI replay those stored segments by scan ID without provider access. Baseline
 entity inference, two deterministic RV algorithms, API, and UI are wired. Query-time endpoint anchors are
@@ -216,6 +220,14 @@ Brier `<= 0.15`, and ECE `<= 0.05`; missing denominators produce `INSUFFICIENT_D
 `STRUCTURAL_GOLDEN` corpus is test-only and can prove regression and suppression behavior, but its
 calibration values are `DIAGNOSTIC_ONLY` and cannot establish a calibrated production entity model.
 Temporal graph extraction and a real labeled corpus remain open.
+
+For Bitcoin, a transaction-level model may emit common-input and script-type change candidates only
+as derived features. Equal-output CoinJoin-like structure, fanout/batching, incomplete prevout
+address coverage, unresolved Payjoin provenance, and unqueried service attribution are explicit
+suppression reasons. CoinJoin/fanout/incomplete patterns suppress change candidates before scoring,
+and the API contract fixes `automaticOwnershipMergeAllowed=false`. This bounded screen is not a
+complete CoinJoin classifier, address cluster, change history, peeling-chain analysis, external
+attribution, or calibrated Entity Resolution result.
 
 ### Realizable value
 

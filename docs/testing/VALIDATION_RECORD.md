@@ -1475,3 +1475,51 @@ This closes scoped Esplora address/UTXO and standard-script validation. It does 
 self-hosted Core/archive reconciliation, active full-RBF policy, inherited replaceability, CPFP
 package state, hidden Taproot tree reconstruction, clustering, custody attribution, or controller
 identity.
+
+## Bitcoin transaction entity-safety validation (2026-08-11)
+
+The production query path then evaluated two public Blockstream Esplora transactions with the same
+process-local HTTPS development override described above. The repository default remained
+`ALLOW_PRIVATE_PROVIDER_URLS=false`. Each result linked the raw transaction, pinned BIP78 revision
+`c38071c8c45a1fc50cecaac0d82d99e3bbd56911` and derived
+`bitcoin-transaction-entity-v1.0.0` payload as three separate Evidence nodes.
+
+Historical transaction
+`074b02b446a3d55b26c33582f7a1b44691cd94ae87f50f430288b3213fea596a` was bound to height
+`576833`, block `000000000000000000188cc008f9fa40fe9b2815504dfec4c05c3a9be6a1334b`
+and previous block `0000000000000000002099f12fa3e30b1b00399fa83ca04f9aa0029f096d4ea8`.
+Its 103 inputs covered 102 distinct addresses; all 194 output addresses were present. Exact arithmetic
+reconciled `3860720304` input sats to `3860691308` output sats plus `28996` fee sats over 13,003
+virtual bytes (`2.22994693` sat/vB). The transaction contained equal-output groups of 84, 20, 12,
+4 and 2 outputs at successively larger denominations, plus a separate two-output group. The model
+returned `EQUAL_OUTPUT_COINJOIN_LIKE`, suppressed all change candidates, fixed automatic ownership
+merge to false, and retained ownership and selected change as `Unknown(PRECISION_UNSAFE)`. Evidence
+IDs were `ev_54725e335f15f673131de166`, `ev_0d61835ca366b112fb6dee5b`, and
+`ev_656bb8baf5a074b91b48863f`.
+
+A recent ordinary-shape two-input/two-output transaction,
+`002c6f73779400839839b971662ef3fcec4d31c6d00d8634d8491eac6ccae715`, exposed a real Esplora
+compatibility case: both P2PKH inputs legitimately omitted the `witness` field. ZeroTrace now maps
+that omission to an empty witness only for legacy inputs and continues to reject absent witness data
+for native SegWit/Taproot prevouts. The corrected path bound the transaction to height `961943`,
+block `00000000000000000001010fa4088d847725c09a30b4aa36a575b16b3d382bd6`, previous block
+`000000000000000000019fdf691bd3d5fca881d4279fd5ef747b5df5ecd6cbe1`. It reconciled 138,431
+input sats to 129,898 output sats plus an 8,533-sat fee over 371 vB (`23` sat/vB). The bounded
+screen reported `NO_STRONG_PATTERN_OBSERVED` and one same-script unique-value change candidate, but
+Payjoin and service attribution remained unresolved, automatic merge stayed false, and ownership
+plus selected change remained `Unknown(PRECISION_UNSAFE)`. Evidence IDs were
+`ev_cd96a240a1315fe51983fab5`, `ev_01d4666bfed1e7879480de6c`, and
+`ev_0bc94a650e820b8fe5f1fc45`.
+
+These observations validate transaction-level feature extraction and suppression, not ground-truth
+CoinJoin protocol attribution or common control. Complete address history, service labels, Payjoin
+provenance, peeling chains, protocol-specific classifiers, independent graph sources and a labeled
+calibration corpus remain required before any production entity merge.
+
+The completed local gate passed 448 unit tests across 66 files, 67 environment-free integration
+tests, 24 opt-in PostgreSQL/ClickHouse/MinIO integration tests, one Entity structural evaluation and
+32 Chromium desktop/mobile E2E tests. The 539-test durable coverage run reached 83.37% statements,
+78.08% branches, 93.51% functions and 84.56% lines. Formatting, lint, typecheck, production build,
+license allowlist, development and production dependency audits, CycloneDX SBOM generation,
+Compose validation, and all six production Docker targets passed. Exact-SHA remote CI remains a
+separate pre-merge gate for this batch.

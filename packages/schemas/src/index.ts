@@ -832,6 +832,77 @@ export const BitcoinAddressUtxoSetSchema = z.object({
 });
 export type BitcoinAddressUtxoSet = z.infer<typeof BitcoinAddressUtxoSetSchema>;
 
+export const BitcoinTransactionPatternSchema = z.enum([
+  'NOT_APPLICABLE',
+  'EQUAL_OUTPUT_COINJOIN_LIKE',
+  'FANOUT_OR_BATCHING_RISK',
+  'NO_STRONG_PATTERN_OBSERVED',
+  'INCOMPLETE_INPUT_CONTEXT',
+]);
+export type BitcoinTransactionPattern = z.infer<typeof BitcoinTransactionPatternSchema>;
+
+export const BitcoinClusteringSuppressionReasonSchema = z.enum([
+  'COINJOIN_EQUAL_OUTPUT_PATTERN',
+  'PAYJOIN_NOT_EXCLUDABLE',
+  'FANOUT_OR_BATCHING_PATTERN',
+  'SERVICE_ATTRIBUTION_UNQUERIED',
+  'INCOMPLETE_PREVOUT_ADDRESS_COVERAGE',
+]);
+export type BitcoinClusteringSuppressionReason = z.infer<
+  typeof BitcoinClusteringSuppressionReasonSchema
+>;
+
+export const BitcoinEqualOutputGroupSchema = z.object({
+  valueSats: UnsignedQuantityStringSchema,
+  outputCount: z.number().int().min(2),
+  vouts: z.array(z.number().int().nonnegative()).min(2),
+});
+export type BitcoinEqualOutputGroup = z.infer<typeof BitcoinEqualOutputGroupSchema>;
+
+export const BitcoinChangeCandidateSchema = z.object({
+  vout: z.number().int().nonnegative(),
+  valueSats: UnsignedQuantityStringSchema,
+  scriptType: z.string().min(1),
+  address: knowledgeValueSchema(z.string().min(1)),
+  signals: z
+    .array(z.enum(['INPUT_SCRIPT_TYPE_MATCH', 'UNIQUE_OUTPUT_VALUE', 'INPUT_ADDRESS_NOT_REUSED']))
+    .min(1),
+});
+export type BitcoinChangeCandidate = z.infer<typeof BitcoinChangeCandidateSchema>;
+
+export const BitcoinTransactionEntityAnalysisSchema = z.object({
+  txid: BitcoinHashSchema,
+  coinbase: z.boolean(),
+  inputCount: z.number().int().nonnegative(),
+  outputCount: z.number().int().nonnegative(),
+  inputAddressCoverage: CoverageRatioSchema,
+  inputAddresses: z.array(z.string().min(1)),
+  outputAddresses: z.array(z.string().min(1)),
+  inputValueSats: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  outputValueSats: UnsignedQuantityStringSchema,
+  feeSats: UnsignedQuantityStringSchema,
+  feeReconciles: knowledgeValueSchema(z.boolean()),
+  virtualSizeBytes: UnsignedQuantityStringSchema,
+  feeRateSatPerVbyte: knowledgeValueSchema(DecimalStringSchema),
+  equalOutputGroups: z.array(BitcoinEqualOutputGroupSchema),
+  structuralPattern: BitcoinTransactionPatternSchema,
+  payjoinContaminationRisk: knowledgeValueSchema(z.boolean()),
+  serviceClusterRisk: knowledgeValueSchema(z.boolean()),
+  addressReuseOutputVouts: z.array(z.number().int().nonnegative()),
+  commonInputHeuristic: knowledgeValueSchema(z.boolean()),
+  commonInputOwnershipCandidate: knowledgeValueSchema(z.array(z.string().min(1)).min(2)),
+  automaticOwnershipMergeAllowed: z.literal(false),
+  suppressionReasons: z.array(BitcoinClusteringSuppressionReasonSchema),
+  changeCandidates: z.array(BitcoinChangeCandidateSchema),
+  selectedChangeOutput: knowledgeValueSchema(z.number().int().nonnegative()),
+  ownershipConclusion: knowledgeValueSchema(z.string().min(1)),
+  externalAttribution: knowledgeValueSchema(z.string().min(1)),
+  modelVersion: z.literal('bitcoin-transaction-entity-v1.0.0'),
+});
+export type BitcoinTransactionEntityAnalysis = z.infer<
+  typeof BitcoinTransactionEntityAnalysisSchema
+>;
+
 export const EvmControlRightTypeSchema = z.enum([
   'OWNER',
   'PROXY_ADMIN',

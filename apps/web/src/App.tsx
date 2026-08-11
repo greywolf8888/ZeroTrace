@@ -159,6 +159,40 @@ interface BitcoinScriptControlView {
   scriptConditionsComplete: KnowledgeValue<boolean>;
 }
 
+interface BitcoinTransactionEntityView {
+  coinbase: boolean;
+  inputCount: number;
+  outputCount: number;
+  inputAddressCoverage: number;
+  inputAddresses: string[];
+  outputAddresses: string[];
+  inputValueSats: KnowledgeValue<string>;
+  outputValueSats: string;
+  feeSats: string;
+  feeReconciles: KnowledgeValue<boolean>;
+  virtualSizeBytes: string;
+  feeRateSatPerVbyte: KnowledgeValue<string>;
+  equalOutputGroups: Array<{ valueSats: string; outputCount: number; vouts: number[] }>;
+  structuralPattern: string;
+  payjoinContaminationRisk: KnowledgeValue<boolean>;
+  serviceClusterRisk: KnowledgeValue<boolean>;
+  addressReuseOutputVouts: number[];
+  commonInputHeuristic: KnowledgeValue<boolean>;
+  commonInputOwnershipCandidate: KnowledgeValue<string[]>;
+  automaticOwnershipMergeAllowed: false;
+  suppressionReasons: string[];
+  changeCandidates: Array<{
+    vout: number;
+    valueSats: string;
+    scriptType: string;
+    address: KnowledgeValue<string>;
+    signals: string[];
+  }>;
+  selectedChangeOutput: KnowledgeValue<number>;
+  ownershipConclusion: KnowledgeValue<string>;
+  externalAttribution: KnowledgeValue<string>;
+}
+
 function knownObject<T>(value: KnowledgeValue<unknown> | undefined): T | undefined {
   return value?.state === 'known' && typeof value.value === 'object' && value.value !== null
     ? (value.value as T)
@@ -174,6 +208,9 @@ function BitcoinIntelligencePanel({ response }: { response: SubjectResponse }) {
   if (response.subject.ledger !== 'BITCOIN') return null;
   const utxoSet = knownObject<BitcoinUtxoSetView>(response.facts.utxoSet);
   const scriptControl = knownObject<BitcoinScriptControlView>(response.facts.scriptControl);
+  const transactionEntity = knownObject<BitcoinTransactionEntityView>(
+    response.facts.transactionEntityAnalysis,
+  );
   if (response.subject.type === 'ADDRESS' && utxoSet !== undefined) {
     return (
       <section className="panel bitcoin-intelligence" data-testid="bitcoin-address-intelligence">
@@ -246,6 +283,119 @@ function BitcoinIntelligencePanel({ response }: { response: SubjectResponse }) {
               )}
             </tbody>
           </table>
+        </div>
+      </section>
+    );
+  }
+  if (response.subject.type === 'TRANSACTION' && transactionEntity !== undefined) {
+    return (
+      <section className="panel bitcoin-intelligence" data-testid="bitcoin-transaction-entity">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Candidate Evidence · no automatic merge</span>
+            <h3>Bitcoin transaction entity screening</h3>
+          </div>
+          <StatusPill status={transactionEntity.structuralPattern} />
+        </div>
+        <div className="bitcoin-summary-grid">
+          <div>
+            <span>Input address coverage</span>
+            <strong>{Math.round(transactionEntity.inputAddressCoverage * 100)}%</strong>
+          </div>
+          <div>
+            <span>Common-input signal</span>
+            <KnowledgeDisplay data={transactionEntity.commonInputHeuristic} />
+          </div>
+          <div>
+            <span>Equal-output groups</span>
+            <strong>{transactionEntity.equalOutputGroups.length}</strong>
+          </div>
+          <div>
+            <span>Automatic ownership merge</span>
+            <strong className="knowledge-unknown">
+              {transactionEntity.automaticOwnershipMergeAllowed ? 'Allowed' : 'Blocked'}
+            </strong>
+          </div>
+        </div>
+        <div className="bitcoin-control-grid bitcoin-entity-boundaries">
+          <div>
+            <span>Ownership conclusion</span>
+            <KnowledgeDisplay data={transactionEntity.ownershipConclusion} />
+            <p>Common inputs remain candidate Evidence and never directly merge entities.</p>
+          </div>
+          <div>
+            <span>Payjoin contamination</span>
+            <KnowledgeDisplay data={transactionEntity.payjoinContaminationRisk} />
+            <p>A final transaction does not expose BIP78 Payjoin negotiation provenance.</p>
+          </div>
+          <div>
+            <span>Service / custody risk</span>
+            <KnowledgeDisplay data={transactionEntity.serviceClusterRisk} />
+            <p>Requires a separate versioned attribution source and Snapshot.</p>
+          </div>
+          <div>
+            <span>Selected change output</span>
+            <KnowledgeDisplay data={transactionEntity.selectedChangeOutput} />
+            <p>Script-type matches are candidates, not safe change attribution.</p>
+          </div>
+        </div>
+        <div className="bitcoin-policy-boundary bitcoin-suppression-ledger">
+          <strong>Suppression ledger</strong>
+          {transactionEntity.suppressionReasons.length === 0 ? (
+            <p>
+              No structural suppression reason was observed; external attribution is still Unknown.
+            </p>
+          ) : (
+            <ul>
+              {transactionEntity.suppressionReasons.map((reason) => (
+                <li key={reason}>{titleCase(reason)}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="table-scroll bitcoin-change-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Change candidate</th>
+                <th>Value</th>
+                <th>Script</th>
+                <th>Signals</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactionEntity.changeCandidates.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="empty-cell">
+                    No bounded change candidate survived the structural filter.
+                  </td>
+                </tr>
+              ) : (
+                transactionEntity.changeCandidates.map((candidate) => (
+                  <tr key={candidate.vout}>
+                    <td>vout {candidate.vout}</td>
+                    <td>{candidate.valueSats} sats</td>
+                    <td>{candidate.scriptType}</td>
+                    <td>{candidate.signals.map(titleCase).join(' · ')}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="snapshot-strip">
+          <span>
+            <b>Fee</b> {transactionEntity.feeSats} sats
+          </span>
+          <span>
+            <b>Virtual size</b> {transactionEntity.virtualSizeBytes} vB
+          </span>
+          <span>
+            <b>Fee rate</b> <KnowledgeDisplay data={transactionEntity.feeRateSatPerVbyte} />
+          </span>
+          <span>
+            <b>Fee arithmetic</b> <KnowledgeDisplay data={transactionEntity.feeReconciles} />
+          </span>
         </div>
       </section>
     );
@@ -4394,7 +4544,10 @@ function SearchWorkspace({
             </div>
             <div className="fact-grid">
               {Object.entries(subject.facts)
-                .filter(([label]) => !['utxoSet', 'scriptControl'].includes(label))
+                .filter(
+                  ([label]) =>
+                    !['utxoSet', 'scriptControl', 'transactionEntityAnalysis'].includes(label),
+                )
                 .map(([label, value]) => (
                   <div className="fact-row" key={label}>
                     <span>{titleCase(label)}</span>

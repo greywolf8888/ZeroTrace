@@ -232,7 +232,19 @@ records validate provider shape and placement but do not claim semantic transfer
 controller, launchpad, or RV decoding.
 
 Bitcoin transaction facts expose `locktime`, every validated input sequence and direct opt-in RBF
-signaling. They do not promote that signal to effective replaceability: active node policy,
+signaling. `transactionEntityAnalysis` additionally reconciles input/output/fee arithmetic, records
+input-address coverage, exact address reuse and equal-output groups, screens bounded common-input
+and script-type change candidates, and reports CoinJoin-like or fanout/batching structure. The raw
+transaction, pinned BIP78 source revision and derived model result are separate Evidence nodes.
+
+`commonInputHeuristic` is structural candidate Evidence only. `automaticOwnershipMergeAllowed` is
+always `Known(false)` in this route: final transactions do not carry BIP78 Payjoin negotiation
+provenance, service/custody attribution is a separate versioned source, and equal-output CoinJoin-like
+or fanout/incomplete patterns suppress change candidates before scoring. `ownershipConclusion` and
+`selectedChangeOutput` therefore remain Unknown unless a future independently evidenced analysis
+meets the precision gates; the current endpoint never creates an Entity merge.
+
+Direct sequence signaling is not promoted to effective replaceability: active node policy,
 inherited ancestor state and CPFP package structure remain Unknown because Esplora does not expose
 Bitcoin Core `getmempoolentry` fields.
 

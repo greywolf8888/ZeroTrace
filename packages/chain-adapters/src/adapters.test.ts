@@ -780,6 +780,76 @@ describe('capability probes and snapshots', () => {
     });
   });
 
+  it('accepts omitted witness for legacy inputs but rejects missing native SegWit witness', async () => {
+    const txid = 'a'.repeat(64);
+    const legacyTransaction = {
+      txid,
+      version: 2,
+      locktime: 0,
+      size: 190,
+      weight: 760,
+      fee: 100,
+      vin: [
+        {
+          is_coinbase: false,
+          txid: 'b'.repeat(64),
+          vout: 0,
+          prevout: {
+            scriptpubkey: `76a914${'1'.repeat(40)}88ac`,
+            scriptpubkey_type: 'p2pkh',
+            scriptpubkey_address: '1LegacyInput',
+            value: 1_000,
+          },
+          scriptsig: `47${'1'.repeat(142)}`,
+          scriptsig_asm: 'OP_PUSHBYTES_71',
+          sequence: 0xffffffff,
+        },
+      ],
+      vout: [
+        {
+          scriptpubkey: `76a914${'2'.repeat(40)}88ac`,
+          scriptpubkey_type: 'p2pkh',
+          scriptpubkey_address: '1LegacyOutput',
+          value: 900,
+        },
+      ],
+      status: { confirmed: false },
+    };
+    const valid = new BitcoinUtxoLedgerAdapter(
+      { id: 'esplora' },
+      new FakeRestTransport({ [`/tx/${txid}`]: legacyTransaction }),
+    );
+    await expect(valid.getTransaction(txid)).resolves.toMatchObject({
+      inputs: [{ witness: [], previousOutput: { scriptType: 'p2pkh' } }],
+    });
+
+    const invalid = new BitcoinUtxoLedgerAdapter(
+      { id: 'esplora' },
+      new FakeRestTransport({
+        [`/tx/${txid}`]: {
+          ...legacyTransaction,
+          vin: [
+            {
+              ...legacyTransaction.vin[0],
+              prevout: {
+                scriptpubkey: `0014${'1'.repeat(40)}`,
+                scriptpubkey_type: 'v0_p2wpkh',
+                scriptpubkey_address: 'bc1qmissingwitness',
+                value: 1_000,
+              },
+              scriptsig: '',
+              scriptsig_asm: '',
+            },
+          ],
+        },
+      }),
+    );
+    await expect(invalid.getTransaction(txid)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringMatching(/missing witness/),
+    });
+  });
+
   it('rejects malformed Bitcoin inputs and duplicate address UTXOs', async () => {
     const txid = 'a'.repeat(64);
     const adapter = new BitcoinUtxoLedgerAdapter(

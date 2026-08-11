@@ -17,6 +17,7 @@ export * from './claim-evm-supply-continuity.js';
 export * from './claim-evm-observation.js';
 export * from './evm-control-rights.js';
 export * from './bitcoin-control-rights.js';
+export * from './bitcoin-transaction-entity.js';
 export * from './solana-control-rights.js';
 export * from './sourcify.js';
 

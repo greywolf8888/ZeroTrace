@@ -1123,8 +1123,33 @@ tbody tr:hover {
   border-top: 1px solid var(--border);
 }
 
-.bitcoin-utxo-table td {
+.bitcoin-utxo-table td,
+.bitcoin-change-table td {
   white-space: nowrap;
+}
+
+.bitcoin-change-table {
+  border-top: 1px solid var(--border);
+}
+
+.bitcoin-suppression-ledger ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bitcoin-suppression-ledger li {
+  padding: 5px 8px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning) 24%, var(--border));
+  border-radius: 999px;
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .bitcoin-timelocks > span {

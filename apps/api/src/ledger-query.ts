@@ -6,7 +6,10 @@ import {
   type SolanaLedgerAdapter,
 } from '@zerotrace/chain-adapters';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
-import { analyzeBitcoinScriptControl } from '@zerotrace/platform-adapters';
+import {
+  analyzeBitcoinScriptControl,
+  analyzeBitcoinTransactionEntity,
+} from '@zerotrace/platform-adapters';
 import {
   BitcoinAddressUtxoSetSchema,
   BitcoinSnapshotSchema,
@@ -645,7 +648,7 @@ export async function queryBitcoinTransaction(
     finality = 'mempool-observation';
     consistency = 'MEMPOOL_OBSERVATION_AT_BEST_CHAIN_TIP';
   }
-  const evidence = await writeEvidence(
+  const transactionEvidence = await writeEvidence(
     createEvidence({
       ledger: 'BITCOIN',
       chainId: snapshot.chainId,
@@ -662,17 +665,79 @@ export async function queryBitcoinTransaction(
     [],
     snapshot,
   );
+  const sourceEvidence = await writeEvidence(
+    createEvidence({
+      ledger: 'BITCOIN',
+      chainId: snapshot.chainId,
+      kind: 'OFFICIAL_DOCUMENT',
+      source: 'bitcoin-bips',
+      locator: 'bip-0078@c38071c8c45a1fc50cecaac0d82d99e3bbd56911',
+      sourceUri:
+        'https://github.com/bitcoin/bips/blob/c38071c8c45a1fc50cecaac0d82d99e3bbd56911/bip-0078.mediawiki',
+      payload: {
+        revision: 'c38071c8c45a1fc50cecaac0d82d99e3bbd56911',
+        specification: 'BIP78',
+        status: 'Deployed',
+        impactedHeuristics: ['common-input', 'change-scriptpubkey', 'change-round-amount'],
+        interpretation:
+          'Final transaction structure cannot prove whether Payjoin negotiation occurred.',
+      },
+      blockOrSlot: position(snapshot),
+      finality: 'versioned-document',
+      summary:
+        'BIP78 documents that Payjoin can invalidate common-input and change-identification heuristics.',
+    }),
+    [],
+    snapshot,
+  );
+  const entityAnalysis = analyzeBitcoinTransactionEntity(transaction);
+  const entityEvidence = await writeEvidence(
+    createEvidence({
+      ledger: 'BITCOIN',
+      chainId: snapshot.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:bitcoin-transaction-entity-v1.0.0',
+      locator: `transaction-entity:${transaction.txid}@${position(snapshot)}`,
+      payload: entityAnalysis,
+      blockOrSlot: position(snapshot),
+      finality,
+      summary:
+        entityAnalysis.structuralPattern === 'EQUAL_OUTPUT_COINJOIN_LIKE'
+          ? 'Equal-output CoinJoin-like structure suppresses automatic common-input ownership merging.'
+          : 'Bitcoin clustering candidates were derived without converting transaction heuristics into an entity merge.',
+      sourceEvidenceIds: [transactionEvidence.id, sourceEvidence.id],
+    }),
+    [transactionEvidence.id, sourceEvidence.id],
+    snapshot,
+  );
+  const evidence = [transactionEvidence, sourceEvidence, entityEvidence];
   return {
     subject,
-    facts: bitcoinTransactionFacts(transaction),
+    facts: {
+      ...bitcoinTransactionFacts(transaction),
+      transactionEntityAnalysis: knownValue(entityAnalysis),
+      feeReconciles: entityAnalysis.feeReconciles,
+      structuralPattern: knownValue(entityAnalysis.structuralPattern),
+      commonInputHeuristic: entityAnalysis.commonInputHeuristic,
+      automaticOwnershipMergeAllowed: knownValue(false),
+      selectedChangeOutput: entityAnalysis.selectedChangeOutput,
+      ownershipConclusion: entityAnalysis.ownershipConclusion,
+    },
     metadata: metadata(
       snapshot,
       [observation.endpointId],
-      'bitcoin-transaction-query-v0.1.0',
-      [evidence.id],
-      { historyCoverage: transaction.status.confirmed ? 1 : 0, confidence: 0.95 },
+      'bitcoin-transaction-query-v1.0.0',
+      evidence.map((item) => item.id),
+      {
+        historyCoverage: transaction.status.confirmed ? 1 : 0,
+        confidence:
+          entityAnalysis.feeReconciles.state === 'known' &&
+          entityAnalysis.feeReconciles.value === false
+            ? 0.5
+            : 0.95,
+      },
     ),
-    evidence: [evidence],
+    evidence,
     ...(consistency === undefined ? {} : { consistency }),
   };
 }

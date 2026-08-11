@@ -236,7 +236,7 @@ function parseTransactionInput(value: unknown): BitcoinTransactionInput {
       'Esplora transaction input has invalid scriptSig ASM.',
     );
   }
-  if (!Array.isArray(input.witness)) {
+  if (input.witness !== undefined && !Array.isArray(input.witness)) {
     throw new ProviderError(
       'INVALID_RESPONSE',
       'Esplora transaction input has invalid witness data.',
@@ -250,7 +250,7 @@ function parseTransactionInput(value: unknown): BitcoinTransactionInput {
       );
     }
   }
-  const witness = input.witness.map((item, index) =>
+  const witness = (input.witness ?? []).map((item, index) =>
     requireHex(item, `input witness item ${index}`),
   );
   const shared = {
@@ -271,11 +271,18 @@ function parseTransactionInput(value: unknown): BitcoinTransactionInput {
   if (input.prevout === null || input.prevout === undefined) {
     throw new ProviderError('INVALID_RESPONSE', 'Non-coinbase Bitcoin input is missing prevout.');
   }
+  const previousOutput = parseTransactionOutput(input.prevout);
+  if (/^v(?:0|1)_/.test(previousOutput.scriptType) && witness.length === 0) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Native SegWit or Taproot input is missing witness data.',
+    );
+  }
   return {
     ...shared,
     previousTxid: requireTxid(input.txid, 'input previous transaction id'),
     previousVout: requireUint32(input.vout, 'input previous output index'),
-    previousOutput: parseTransactionOutput(input.prevout),
+    previousOutput,
   };
 }
 

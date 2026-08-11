@@ -187,6 +187,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       checks, 0.50% independent quote/RV budgets, API/UI and provider-free Evidence replay
 - [x] Exact Entity Precision/False-Merge evaluator plus a test-only structural golden corpus covering
       high-confidence same-controller, coordination, independence, Service Hub, CoinJoin and abstention
+- [x] Snapshot/Evidence-bound Bitcoin transaction common-input/change candidates with exact fee
+      reconciliation, BIP78 Payjoin warning, CoinJoin/fanout/incomplete-context suppression, no
+      automatic ownership merge, responsive UI and two public Esplora production-path observations
 - [x] Exact finalized-block ERC-20 burn action derivation with adjacent `totalSupply`, complete
       mint/burn Transfer conservation, contradiction/no-action states, Evidence replay, API/UI and
       one named FFT Alchemy no-action certificate
