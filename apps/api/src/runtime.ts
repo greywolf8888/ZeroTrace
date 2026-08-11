@@ -25,6 +25,7 @@ import {
 import { EvidenceLedger, hashPayload } from '@zerotrace/evidence';
 import {
   ClickHouseRawFactRepository,
+  PostgresCaptureScheduleRepository,
   PostgresClaimReportRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
@@ -81,6 +82,7 @@ export interface AppRuntime {
   entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
   intelligenceSearch?: PostgresIntelligenceSearchRepository;
   labelIntelligenceReports?: PostgresLabelIntelligenceReportRepository;
+  captureSchedules?: PostgresCaptureScheduleRepository;
   ageInvestigationGraphProjection?: AgeInvestigationGraphProjectionRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
@@ -597,6 +599,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const captureSchedules =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresCaptureScheduleRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const ageInvestigationGraphProjection =
     config.ageUrl === undefined
       ? undefined
@@ -640,6 +651,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       entityInvestigationGraphTimelines?.close(),
       intelligenceSearch?.close(),
       labelIntelligenceReports?.close(),
+      captureSchedules?.close(),
       ageInvestigationGraphProjection?.close(),
       rawFacts?.close(),
     ]);
@@ -681,6 +693,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       : { entityInvestigationGraphTimelines }),
     ...(intelligenceSearch === undefined ? {} : { intelligenceSearch }),
     ...(labelIntelligenceReports === undefined ? {} : { labelIntelligenceReports }),
+    ...(captureSchedules === undefined ? {} : { captureSchedules }),
     ...(ageInvestigationGraphProjection === undefined ? {} : { ageInvestigationGraphProjection }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }

@@ -1128,6 +1128,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphTimelines']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['intelligenceSearch']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['labelIntelligenceReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['captureSchedules']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -1165,6 +1166,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         entityInvestigationGraphTimelines,
         intelligenceSearch,
         labelIntelligenceReports,
+        captureSchedules,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -1182,6 +1184,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.entityInvestigationGraphTimelines?.health(),
         runtime.intelligenceSearch?.health(),
         runtime.labelIntelligenceReports?.health(),
+        runtime.captureSchedules?.health(),
       ]);
       value =
         [
@@ -1201,6 +1204,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           entityInvestigationGraphTimelines,
           intelligenceSearch,
           labelIntelligenceReports,
+          captureSchedules,
         ].find((component) => component?.status === 'DOWN') ?? evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
@@ -1826,6 +1830,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               : 'STORAGE_REQUIRED',
         detail:
           'Restart-safe SQD finalized blocks, transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards are implemented with durable provenance. Anchor continuity/reorg detection is wired separately; semantic transfers, protocol decoding, continuous scheduling, and historical replay policy remain pending.',
+      },
+      {
+        id: 'durable-capture-scheduling',
+        status:
+          runtime.captureSchedules === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_STATE_HANDLER_BINDING_PENDING',
+        detail:
+          'Generic EVM/Bitcoin/Solana read-only schedules use deterministic occurrence IDs, exclusive expiring leases, bounded retries and immutable attempts. Successful runs require a durable terminal Evidence node bound to the exact Snapshot plus coverage, freshness, source set, model version and confidence. Temporal/NATS adapters and production capture handlers remain pending.',
       },
       {
         id: 'entity-evidence-fusion',

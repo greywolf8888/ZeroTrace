@@ -60,8 +60,9 @@ Profiles expose architecture seams. The `ingest` worker is implemented for bound
 transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana
 instructions/logs/balances/token balances/rewards. The `graph` profile implements only the bounded
 exact-Snapshot Entity investigation projection; it does not imply continuous cross-Snapshot graph
-maintenance. The `full` Temporal profile remains an infrastructure seam rather than completed
-workflow orchestration.
+maintenance. The generic PostgreSQL schedule/run/lease state machine is implemented and
+health-checked when PostgreSQL is configured. The `full` Temporal profile remains the pending
+distributed workflow adapter; starting the profile does not by itself execute registered schedules.
 
 Run one bounded finalized range through the implemented worker profile:
 
@@ -308,6 +309,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/022_durable_intelligence_search.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/023_label_intelligence_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/024_capture_schedules.sql
 ```
 
 PowerShell equivalent:
@@ -354,6 +357,8 @@ Get-Content -Raw infra/postgres/init/021_entity_investigation_graph_timelines.sq
 Get-Content -Raw infra/postgres/init/022_durable_intelligence_search.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/023_label_intelligence_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/024_capture_schedules.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

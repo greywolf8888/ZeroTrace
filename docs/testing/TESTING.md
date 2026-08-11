@@ -163,6 +163,17 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   Idempotent/latest/exact replay must survive repository reopen; altered observation payloads,
   terminal provenance, update/delete, label-driven Entity merge, risk-to-control inference and
   cross-chain same-label merge must fail closed.
+- capture scheduler tests require migration `024` and a disposable PostgreSQL database. They race
+  two worker repositories for one due occurrence, verify deterministic run identity, bounded retry
+  availability, lease expiry recovery, stale-token rejection, one-shot terminal state and immutable
+  attempt history. A successful run must reference a terminal Evidence node whose durable Snapshot
+  is byte-for-byte equal to the submitted result. Unrelated-Snapshot Evidence, incomplete terminal
+  reachability, invented source sets and missing Evidence must fail closed as non-retryable
+  conflicts.
+- Action Semantics tests require exact Snapshot/Evidence identity and per-primitive proof shapes.
+  They assert that a proved Swap does not become a buyback claim, custody does not become burn
+  without supply-conservation proof, a failed liquidity attempt remains `NOT_APPLIED`, incomplete
+  execution remains Unknown, and report identity is stable under input reordering.
 - no-evidence entity input remains Unknown and is not persisted as an observed conclusion.
 - common services and CoinJoin suppress controller confidence; naked service flags and risk labels
   cannot merge subjects.

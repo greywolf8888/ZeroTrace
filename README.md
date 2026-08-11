@@ -156,6 +156,9 @@ The current foundation includes:
 - a deterministic public-statement compiler that turns tax, treasury, burn, liquidity, pension and
   dividend language into human-review drafts backed by Analyst Evidence; missing wallets, dates and
   action proof remain Unknown and declarations never become chain facts;
+- a chain-neutral Action Semantics engine that classifies proved transfers, swaps, mint/burn,
+  liquidity, LP custody, distribution and contract-call primitives while keeping failed execution,
+  incomplete proof and promotional purpose explicitly separate and Unknown where appropriate;
 - finalized EVM burn certificates that compare parent/target ERC-20 `totalSupply` with every mint
   and zero-address Transfer in the target block, create Claim Audit actions only when exact
   conservation holds, and expose contradictions or no-action blocks without fabricating a burn;
@@ -249,7 +252,9 @@ multi-size acquisition/share economics; actual receipt, transfer effects and set
 Unknown until pinned-fork execution. A
 common-position anchor/continuity foundation now detects deterministic source conflicts and parent
 history changes without choosing a majority winner. Flap lifetime heads add deterministic
-multi-source rollback/replay; general multi-chain scheduling and rollback, independent-provider and
+multi-source rollback/replay. A generic read-only durable schedule/run/lease state machine now
+provides deterministic occurrences, bounded retry and Evidence/Snapshot-gated completion;
+Temporal/NATS adapters and concrete general multi-chain handlers, independent-provider and
 forced-reorg validation, semantic normalization, continuous graph extraction/rebuild and temporal
 traversal, protocol-specific decoders, and distributed workflows remain open work. Read
 [Architecture](docs/architecture/ARCHITECTURE.md) and the authoritative
@@ -266,7 +271,7 @@ traversal, protocol-specific decoders, and distributed workflows remain open wor
 | Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                                                                                                                                                               |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg and other platform adapters pending                                                                                                                                                                                                                                        |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, verified Pancake V2 buy/exit models, and immutable candidate-bound pension-entry Scenario Reports with provider-free replay work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                   |
-| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, immutable Claim Report replay, finalized pension-behavior discovery and same-Snapshot entry economics validated through a registered FFT reference case; generic backfill, scheduling, attribution and action-proof coverage remain                                                               |
+| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, proof-gated generic Action Semantics, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, immutable Claim Report replay, finalized pension-behavior discovery, same-Snapshot entry economics and generic durable scheduling work; production adapters/persistence, handler binding, backfill and attribution remain                                   |
 | Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                                                                                                                                                      |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
@@ -679,6 +684,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add bounded Flap Portal discovery through finalized SQD/RPC log sources with exact log/receipt replay
 - [x] Add bounded finalized SQD contract-origin proof with exact Flap receipt/Snapshot replay
 - [x] Add durable generic semantic-scan state and contiguous coverage checkpoints
+- [x] Add generic read-only durable schedules, exclusive run leases, bounded retries and immutable attempt audit
 - [x] Add immutable, Evidence-backed Flap history segment projection storage
 - [x] Add restart-safe cross-range Flap event-history projection over immutable segments
 - [x] Bind Flap event-history projection to a read-only worker, paginated API, health, Compose and UI
@@ -689,6 +695,8 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Add append-only multi-source Flap finalized-reorg rollback with safe branch replay
 - [x] Add same-Snapshot typed discrepancy audits with Evidence validation and per-class error budgets
 - [x] Add Snapshot/Evidence-gated claim-allocation and terminal-action audit kernels
+- [x] Add proof-gated generic Action Semantics primitives with explicit applied/failed/Unknown
+      execution state and no inferred promotional purpose
 - [x] Add Evidence-bound tax/treasury/burn/liquidity/pension/dividend statement compilation and human-review UI
 - [x] Add finalized target-indexed EVM Transfer/custody observation and live same-Snapshot FFT address-flow composition
 - [x] Add finalized token-wide pension-behavior candidate discovery, immutable report replay and scoped FFT validation
@@ -708,7 +716,9 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Extend control rights to effective custom EVM roles/history and controller recursion, Bitcoin custody, and Solana PDA/Squads/history/build provenance
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
-- [ ] Complete generic Claim Verification coverage: durable scheduling, historical backfill, reviewed-draft promotion and independently evidenced action paths
+- [ ] Bind durable schedules to Temporal/NATS production handlers, persist production Action
+      Semantics reports, and complete Claim Verification historical backfill, reviewed-draft
+      promotion and independently evidenced action adapters
 - [ ] Extend global search to verified symbol/ticker, platform/project and semantic-checkpoint indexes; complete comparison, general scenario and export workflows
 - [ ] Run archive-grade, multi-provider, real-chain fixtures and production load/failure testing
 

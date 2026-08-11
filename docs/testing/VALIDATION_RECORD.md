@@ -2030,6 +2030,79 @@ inside the viewport, and the browser console had zero errors or warnings.
 
 This acceptance used an explicitly named PostgreSQL integration fixture; it is not a real-world
 label attribution and does not validate FFT labels. No external label code/data was copied. Durable
-GraphSense/official/commercial/community adapters, capture scheduling, license/term enforcement,
-complete Subject Registry/history coverage and an independently evidenced FFT label conflict case
-remain pending.
+GraphSense/official/commercial/community adapters, production capture handlers, license/term
+enforcement, complete Subject Registry/history coverage and an independently evidenced FFT label
+conflict case remain pending. The generic scheduler foundation is validated below.
+
+## Generic durable capture scheduling foundation: 2026-08-12
+
+ZeroTrace added `capture-scheduler-v0.1.0` and migration `024_capture_schedules` without any FFT,
+Flap or token-specific defaults. The typed contract admits EVM, Bitcoin and Solana targets across
+all current capture domains, fixes the operation to `READ_ONLY_CAPTURE`, content-addresses schedule
+identity, canonicalizes sub-millisecond timestamps, preserves interval anchors under
+`SKIP_MISSED`, and bounds retry attempts and exponential delay.
+
+An isolated PostgreSQL database applied migrations `001` through `024` in filename order. Three
+real-database cases then passed: two independent repository instances raced for one due occurrence
+and exactly one received the lease; a retryable failure became available only after its calculated
+backoff and the second attempt committed a terminal Evidence/Snapshot-bound success; and an expired
+one-shot lease was written as `LEASE_EXPIRED`, retried, exhausted and completed with an explicit
+Unknown result. A stale token could not complete a terminal or expired run. The temporary database
+was removed after the suite.
+
+The success path used two durable Evidence nodes and a finalized EVM Snapshot. PostgreSQL verified
+the terminal node's stored Snapshot payload, target ledger/chain, exact recursive Evidence closure,
+exact non-derived source set, coverage, freshness, model version and confidence before accepting the
+run. Separate completion attempts containing unrelated-Snapshot Evidence or an invented source were
+rejected as non-retryable conflicts without consuming the lease. Run/schedule terminal mutation and
+scheduler-history deletion remain database-forbidden. Six deterministic unit tests cover identity,
+anchor math, bounded backoff, mandatory provenance, unregistered-handler failure and abort behavior.
+Runtime wiring and schema/type/lint checks pass.
+
+This validates the reusable persistence and handler-dispatch boundary only. Temporal
+Schedules/Workflows, NATS JetStream publication, a long-running worker deployment, concrete
+multi-chain handlers, pause/resume operations and real distributed outage drills remain pending.
+No FFT chain request was made and no existing token conclusion changed.
+
+## Generic proof-gated Action Semantics: 2026-08-12
+
+ZeroTrace added `action-semantics-v0.1.0` as a chain-, platform- and token-neutral primitive layer.
+The schema and engine model transfer, swap, mint, burn, liquidity addition/removal, LP custody,
+distribution and contract-call candidates at one exact Snapshot. Applied primitives require their
+versioned proof and asset-delta shape; failed calls require both decoded input and receipt Evidence
+and remain `NOT_APPLIED`; unavailable execution and incomplete proof remain Unknown.
+
+Five deterministic unit cases passed. They confirm a proved Swap while leaving its claimed purpose
+`Unknown(NOT_QUERIED)`, reject a proposed burn represented only by transfer-to-custody Evidence,
+retain a proved failed liquidity attempt with zero applied deltas, reject cross-Snapshot candidate
+Evidence, and produce the same result hash, action order and terminal Evidence under reversed input
+order. The report carries complete source Evidence, a derived terminal node, exact Snapshot,
+coverage, freshness, source set, fixed model version and explicit per-action confidence Knowledge.
+
+This is deterministic semantic normalization, not a production chain adapter or a claim verdict.
+No FFT address, Flap constant, pension rule, promotional taxonomy or production mock exists in the
+package. Durable report persistence, real EVM/Bitcoin/Solana candidate adapters, continuous handler
+binding and cross-ledger real-chain calibration remain pending.
+
+The complete repository gate then passed formatting, ESLint, typecheck, 538 unit tests across 84
+files, 75 environment-free integrations, one Entity structural evaluation, all application/worker
+builds, the production dependency-license allowlist and a zero-vulnerability audit. The first E2E
+start correctly failed because the pre-existing local `node_modules` had not linked the newly added
+capture-scheduler workspace; reinstalling from the lockfile created the workspace junction and all
+36 Chromium desktop/mobile flows passed. The Dockerfile dependency layer now explicitly copies
+both new workspace manifests before `npm ci`, and API, web, ingest-worker, semantic-worker,
+PostgreSQL and ClickHouse production targets all built successfully from that corrected boundary.
+
+PostgreSQL/AGE durable coverage passed 642 tests with three ClickHouse cases explicitly skipped:
+83.17% statements, 77.04% branches, 93.83% functions and 84.32% lines. An environment-free
+coverage attempt had failed the global threshold because all durable repository tests, including
+the new scheduler integration, were correctly skipped; it was not recorded as a pass. Applying
+migration `024` to the preserved PostgreSQL database was non-destructive. A production API build
+then connected to it directly and returned durable storage `UP`, `readOnly=true`, and
+`durable-capture-scheduling=IMPLEMENTED_DURABLE_STATE_HANDLER_BINDING_PENDING`.
+
+Docker Desktop locally left newly recreated API/web containers in `Created` and also retained the
+existing ClickHouse container in that state; even a direct `docker start` blocked. No application
+error log was produced and no data volume was deleted. Direct production-build API validation and
+real PostgreSQL tests passed, but a current full Compose start is therefore not claimed. Remote CI
+container build/E2E and exact-SHA CodeQL acceptance remain pending for this batch.

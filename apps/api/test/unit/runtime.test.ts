@@ -141,6 +141,7 @@ describe('application runtime wiring', () => {
     expect(runtime.semanticCheckpoints).toBeDefined();
     expect(runtime.flapHistoryProjection).toBeDefined();
     expect(runtime.entityInvestigationGraphs).toBeDefined();
+    expect(runtime.captureSchedules).toBeDefined();
     expect(runtime.ageInvestigationGraphProjection).toBeUndefined();
     expect(runtime.dataQualityStorage).toBeDefined();
     expect(runtime.dataQuality.durable).toBe(true);

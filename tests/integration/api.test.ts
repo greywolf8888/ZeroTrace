@@ -1850,6 +1850,12 @@ describe('ZeroTrace API contract', () => {
     );
     expect(capabilities.json().core).toContainEqual(
       expect.objectContaining({
+        id: 'durable-capture-scheduling',
+        status: 'DURABLE_STORAGE_REQUIRED',
+      }),
+    );
+    expect(capabilities.json().core).toContainEqual(
+      expect.objectContaining({
         id: 'erc20-burn-candidate-promotion',
         status: 'DURABLE_STORAGE_REQUIRED',
       }),

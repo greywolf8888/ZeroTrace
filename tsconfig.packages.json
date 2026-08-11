@@ -9,6 +9,8 @@
     { "path": "./packages/ingestion" },
     { "path": "./packages/chain-adapters" },
     { "path": "./packages/platform-adapters" },
+    { "path": "./packages/action-semantics" },
+    { "path": "./packages/capture-scheduler" },
     { "path": "./packages/label-engine" },
     { "path": "./packages/entity-engine" },
     { "path": "./packages/claim-audit" },

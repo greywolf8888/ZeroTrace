@@ -299,9 +299,9 @@ relationship end, an entity exit, a graph split/merge, or any membership mutatio
 copies no raw transfers and every observation is bound to the exact immutable graph terminal
 Evidence. PostgreSQL migration `021_entity_investigation_graph_timelines` validates the source
 graphs, transitions, Evidence parents, result identity and no-mutation invariants and forbids update
-or delete. Materialize/latest/exact API paths and the responsive UI are provider-free. Continuous
-capture scheduling, protocol-scale rebuilds, authenticated analyst overrides and calibrated
-ownership decisions remain separate work.
+or delete. Materialize/latest/exact API paths and the responsive UI are provider-free. A generic
+durable scheduler foundation exists, but continuous graph capture handlers, protocol-scale rebuilds,
+authenticated analyst overrides and calibrated ownership decisions remain separate work.
 
 For Bitcoin, a transaction-level model may emit common-input and script-type change candidates only
 as derived features. Equal-output CoinJoin-like structure, fanout/batching, incomplete prevout
@@ -499,6 +499,17 @@ block without a burn is `NOT_APPLICABLE`. Both produce no actions. A zero-addres
 is therefore never sufficient burn proof for an arbitrary custom token. The certificate's complete
 history coverage applies to that one block, not an announcement window.
 
+The reusable Action Semantics layer sits below claim interpretation and above ledger-specific
+adapters. `action-semantics-v0.1.0` accepts candidates for transfer, swap, mint, burn, liquidity
+addition/removal, LP custody, distribution and contract call only when they share the exact
+Snapshot ledger position and complete Evidence set. Each primitive has an explicit proof and
+asset-delta shape; failed execution is retained as `NOT_APPLIED`, unavailable execution metadata is
+`UNKNOWN`, and an unproved proposed primitive remains Unknown. A deterministic terminal Evidence
+node closes each report. The engine never converts a Swap into “buyback”, distribution into
+“dividend”, LP custody into “permanent lock”, or a transfer into “burn”; those purposes remain
+`Unknown(NOT_QUERIED)` until independently evidenced claim comparison. Production ledger adapters,
+durable report storage and continuous handler binding remain pending.
+
 Candidate discovery is a separate event-only layer. The BSC implementation uses finalized sparse
 SQD `binance-mainnet` queries for both indexed zero-address directions, groups non-zero `to=0x0`
 events by block, retains same-block mint context, and persists every query/log plus a terminal
@@ -511,9 +522,9 @@ segments. It captures a finalized range-end Snapshot, completes zero-address dis
 every candidate against its exact finalized block, persists the Evidence graph, and only then
 advances the semantic cursor. A completed checkpoint can be replayed through PostgreSQL-only API/UI
 paths; a partial or structurally inconsistent checkpoint has no terminal result and fails closed.
-This is scoped event/candidate proof, so silent-supply coverage remains Unknown. Generic continuous
-capture scheduling, complete historical supply coverage, official wallet attribution and closure of
-registered reference-case reports remain pending.
+This is scoped event/candidate proof, so silent-supply coverage remains Unknown. Binding the generic
+durable scheduler to this production handler, complete historical supply coverage, official wallet
+attribution and closure of registered reference-case reports remain pending.
 
 Silent/custom supply discovery has a separate bounded all-block path. The
 `erc20-supply-continuity-v1.0.0` worker samples `totalSupply()` at `from - 1` and every finalized
@@ -676,7 +687,7 @@ security boundaries and have regression tests.
 | Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                                                                            |
 | Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE derivative projection wired for bounded exact-Snapshot Entity investigation graphs; PostgreSQL remains authoritative                                                                                                                       |
 | Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                                                                           |
-| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                                                                                                                                                  |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Generic PostgreSQL-backed schedule/run/lease truth and a handler-neutral cycle coordinator are wired; Temporal schedule/workflow and NATS JetStream adapters remain pending                                                                                    |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, ingestion-run,
 and semantic-scan-run tables include append-only or monotonic guards. Semantic checkpoints bind an
@@ -687,6 +698,19 @@ Deferred database constraints reject inferred Evidence without a source edge and
 without Evidence. Repositories verify canonical IDs, Snapshot identity, idempotent conflicts, and
 transactional writes. ClickHouse Raw Facts bind Evidence and artifact references and use explicit
 logical deduplication; metric tables enforce a knowledge-state/value consistency constraint.
+
+Migration `024_capture_schedules` adds a chain- and domain-neutral durable scheduling authority.
+Schedule definitions are content-addressed, immutable and restricted to `READ_ONLY_CAPTURE`.
+Occurrences use deterministic IDs, single-active-run semantics, bounded leases, `FOR UPDATE SKIP
+LOCKED` worker claims, capped retry policies and append-only attempt records. Expired leases become
+explicit failed attempts before retry or terminal exhaustion. A successful run is accepted only
+when every Evidence node uses the exact submitted durable Snapshot, the submitted set equals the
+terminal node's recursive Evidence closure, and the source set equals the non-derived Evidence
+sources; coverage, freshness, model version and confidence are also mandatory. A worker therefore
+cannot publish success with an unrelated Snapshot, orphan Evidence, missing provenance or an
+invented source. This state machine is the persistence/Activity boundary for Temporal and NATS
+adapters, not a replacement for the Master Prompt's Temporal workflow layer. No production capture
+handler or distributed event adapter is implied merely by registering a schedule.
 
 Solana transaction reports are append-only, content-addressed projections. PostgreSQL validates
 report/signature/Snapshot identity, canonical Evidence/source arrays, terminal Evidence lineage and
@@ -791,7 +815,8 @@ credential-free scan ID emitted by the worker and renders requested-range progre
 Unknown lifetime coverage. Neither surface starts a provider scan. Requested-range coverage can be
 complete while lifetime coverage remains Unknown and terminal `historyCoverage` remains zero.
 Continuous deployment-origin-to-finalized-head scheduling is implemented by the accepted-head layer
-described below; general multi-chain scheduling remains a later stage.
+described below. The generic durable scheduling state machine is also implemented, while its
+multi-chain production handlers and Temporal/NATS adapters remain a later stage.
 
 The lifetime materializer composes those two child scans into one immutable, point-in-time semantic
 identity. It first binds official SQD dataset-start metadata and one exact finalized BSC target,

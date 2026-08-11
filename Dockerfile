@@ -9,6 +9,8 @@ COPY services/semantic-worker/package.json services/semantic-worker/package.json
 COPY packages/schemas/package.json packages/schemas/package.json
 COPY packages/identifiers/package.json packages/identifiers/package.json
 COPY packages/evidence/package.json packages/evidence/package.json
+COPY packages/action-semantics/package.json packages/action-semantics/package.json
+COPY packages/capture-scheduler/package.json packages/capture-scheduler/package.json
 COPY packages/storage/package.json packages/storage/package.json
 COPY packages/ingestion/package.json packages/ingestion/package.json
 COPY packages/chain-adapters/package.json packages/chain-adapters/package.json
