@@ -23,6 +23,7 @@ import {
   resolveEntityRelationship,
 } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
+import { buildLabelIntelligenceCore } from '@zerotrace/label-engine';
 import {
   EntityRelationshipReportSchema,
   EntityRelationshipTimelineReportSchema,
@@ -32,6 +33,7 @@ import {
   SolanaControlCoverageDomainSchema,
   SolanaTransactionIntelligenceReportSchema,
   FlapEventHistorySchema,
+  LabelIntelligenceReportSchema,
   unknownValue,
   type EvmControlSurfaceReport,
   type SolanaControlSurfaceReport,
@@ -62,6 +64,7 @@ import {
   PostgresFlapPensionEntryReportRepository,
   PostgresIngestionCheckpointRepository,
   PostgresIntelligenceSearchRepository,
+  PostgresLabelIntelligenceReportRepository,
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
@@ -293,6 +296,7 @@ const raw = createEvidence({
 postgresDescribe('PostgreSQL durable intelligence search projection', () => {
   let evidence: PostgresEvidenceRepository;
   let search: PostgresIntelligenceSearchRepository;
+  let labelIntelligence: PostgresLabelIntelligenceReportRepository;
   let pool: Pool;
   const fixtureId = randomUUID();
   const subjectId = randomUUID();
@@ -319,6 +323,10 @@ postgresDescribe('PostgreSQL durable intelligence search projection', () => {
       maxConnections: 2,
     });
     search = new PostgresIntelligenceSearchRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    labelIntelligence = new PostgresLabelIntelligenceReportRepository({
       connectionString: connectionString as string,
       maxConnections: 2,
     });
@@ -350,7 +358,7 @@ postgresDescribe('PostgreSQL durable intelligence search projection', () => {
   });
 
   afterAll(async () => {
-    await Promise.all([evidence.close(), search.close(), pool.end()]);
+    await Promise.all([evidence.close(), search.close(), labelIntelligence.close(), pool.end()]);
   });
 
   it('finds registered labels and exact identifiers without provider access', async () => {
@@ -392,6 +400,105 @@ postgresDescribe('PostgreSQL durable intelligence search projection', () => {
     });
     expect(byIdentifier.matches).toHaveLength(1);
     expect(byIdentifier.matches[0]).toMatchObject({ matchedBy: 'IDENTIFIER', recordId: labelId });
+  });
+
+  it('persists, replays and indexes an immutable Label observation-set report', async () => {
+    await expect(labelIntelligence.health()).resolves.toMatchObject({
+      status: 'UP',
+      durable: true,
+    });
+    const observationSet = await labelIntelligence.loadObservationSet({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      subjectType: 'ADDRESS',
+      normalizedIdentifier: identifier.toUpperCase(),
+    });
+    expect(observationSet).toBeDefined();
+    const request = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      subjectType: 'ADDRESS' as const,
+      normalizedIdentifier: identifier,
+      asOf: '2026-08-12T01:00:00.000Z',
+      staleAfterSeconds: 86_400,
+    };
+    const result = buildLabelIntelligenceCore({
+      subject: observationSet!.subject,
+      observations: observationSet!.observations,
+      request,
+    });
+    const terminal = createEvidence({
+      ledger: result.subject.ledger,
+      chainId: result.subject.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:label-intelligence-v0.1.0',
+      locator: [
+        'label-intelligence',
+        result.subject.ledger,
+        result.subject.chainId,
+        result.subject.id,
+        result.snapshot.id,
+      ].join(':'),
+      payload: { request, result },
+      observedAt: request.asOf,
+      finality: 'label-observation-set',
+      summary: 'PostgreSQL Label Intelligence integration report.',
+      sourceEvidenceIds: result.metadata.evidenceIds,
+    });
+    await evidence.put(terminal, result.metadata.evidenceIds);
+    const report = LabelIntelligenceReportSchema.parse({
+      schemaVersion: 'label-intelligence-report-v1',
+      result: {
+        ...result,
+        metadata: {
+          ...result.metadata,
+          evidenceIds: [...result.metadata.evidenceIds, terminal.id].sort(),
+        },
+      },
+      terminalEvidenceId: terminal.id,
+      evidence: [terminalEvidence, terminal].sort((left, right) => left.id.localeCompare(right.id)),
+    });
+
+    const stored = await labelIntelligence.put(report);
+    expect(stored).toMatchObject({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      subjectId,
+      labelSnapshotId: result.snapshot.id,
+      terminalEvidenceId: terminal.id,
+      modelVersion: 'label-intelligence-v0.1.0',
+    });
+    await expect(labelIntelligence.get(stored.id)).resolves.toEqual(stored);
+    await expect(
+      labelIntelligence.latest({
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        subjectType: 'ADDRESS',
+        normalizedIdentifier: identifier,
+      }),
+    ).resolves.toEqual(stored);
+    await expect(
+      pool.query(
+        `UPDATE label_intelligence_reports SET source_set = ARRAY['tampered'] WHERE id = $1`,
+        [stored.id],
+      ),
+    ).rejects.toThrow(/immutable/);
+
+    const projection = await search.search({
+      query: identifier,
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+    });
+    expect(projection.matches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          recordType: 'LABEL_INTELLIGENCE',
+          recordId: stored.id,
+          terminalEvidence: expect.objectContaining({ id: terminal.id }),
+          snapshot: expect.objectContaining({ state: 'unknown' }),
+        }),
+      ]),
+    );
   });
 });
 

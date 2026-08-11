@@ -8,6 +8,11 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- immutable `label-intelligence-v0.1.0` observation-set reports with ledger-scoped Subject identity,
+  deterministic/curated/commercial/community/inference review priority, future/active/stale/expired
+  states, preserved label/actor/determinism conflicts, conservative Service Hub suppression,
+  PostgreSQL migration `023`, materialize/latest/exact API, durable search projection, responsive
+  desktop/mobile UI, terminal Evidence and hard no-label/risk/cross-chain Entity merge rules;
 - durable `global-intelligence-search-v0.1.0` exact projection across registered labels and current
   immutable report families, with PostgreSQL migration `022`, terminal Evidence, explicit
   Snapshot/confidence/freshness/Subject Registry knowledge, partial storage degradation, responsive

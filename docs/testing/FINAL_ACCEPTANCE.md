@@ -139,6 +139,13 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Canonical pairwise Entity hypothesis persistence rejects duplicate features, ungrounded service
       flags and label-driven merge hints; fixed-version results replay without providers and expose
       controller, coordination and independence separately
+- [x] Ledger-scoped Label Intelligence core with source-priority review ordering, explicit temporal
+      states, preserved value/actor/determinism conflicts, Evidence-grounded Service Hub suppression
+      and hard no-label/risk/cross-chain Entity merge rules
+- [x] Immutable PostgreSQL Label Snapshots/reports with exact Subject/observation/Evidence binding,
+      update/delete guards, materialize/latest/exact API and search projection
+- [ ] Durable GraphSense/official/commercial/community label-source adapters, license/term enforcement,
+      capture schedules, complete Subject Registry coverage and real cross-source conflict corpus
 - [ ] Calibrated entity-resolution model and labeled evaluation corpus
 - [ ] Controller/control-right extraction across terminal scope
   - [x] Finalized EVM ERC-1167/EIP-1967/ERC-173/registered-Safe standard surface with complete
@@ -256,6 +263,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       exact/latest provider-free API replay and desktop/mobile replay state
 - [x] Responsive Entity Intelligence latest/exact replay with Snapshot/result identity, canonical
       features, complete Evidence, Service Hub suppression and no automatic ownership merge on
+      desktop/mobile
+- [x] Responsive Label Intelligence capture/latest replay with temporal counts, preserved conflicts,
+      coverage Knowledge, Service Hub suppression, source/license provenance and Evidence on
       desktop/mobile
 - [x] Responsive Entity timeline materialization/latest/exact replay with explicit revisions,
       unobserved-position gaps, probability-delta knowledge states and no automatic merge on

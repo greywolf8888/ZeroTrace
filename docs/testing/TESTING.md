@@ -157,6 +157,12 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   identity, continuity and request-scope change while forbidding inferred relationship termination
   and Entity-membership mutation. All three report families require idempotent close/reopen replay,
   SQL update/delete rejection and provider-free latest/exact APIs.
+- Label Intelligence tests require migration `023`, exact ledger-scoped Subject identity, canonical
+  observation/Snapshot ordering, source Evidence and licenses, distinct future/active/stale/expired
+  states, preserved value/actor/determinism conflicts, and Evidence-exact Service Hub suppression.
+  Idempotent/latest/exact replay must survive repository reopen; altered observation payloads,
+  terminal provenance, update/delete, label-driven Entity merge, risk-to-control inference and
+  cross-chain same-label merge must fail closed.
 - no-evidence entity input remains Unknown and is not persisted as an observed conclusion.
 - common services and CoinJoin suppress controller confidence; naked service flags and risk labels
   cannot merge subjects.
@@ -212,6 +218,9 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - explicit Unknown metric rendering;
 - valid EVM identifier classification plus Evidence-bound durable exact search, explicit missing
   registry knowledge and scoped-absence semantics without a provider;
+- explicit Label Intelligence capture/replay with temporal counts, preserved conflicts, Unknown
+  global/history coverage, Service Hub suppression, source/license/Evidence provenance and all
+  no-merge safety boundaries at desktop and Pixel 7 widths;
 - scenario gating;
 - data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
 - typed Solana legacy/v0 transaction rendering with Snapshot, per-instruction Evidence, ALT account

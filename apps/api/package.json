@@ -19,6 +19,7 @@
     "@zerotrace/entity-engine": "*",
     "@zerotrace/evidence": "*",
     "@zerotrace/identifiers": "*",
+    "@zerotrace/label-engine": "*",
     "@zerotrace/platform-adapters": "*",
     "@zerotrace/rv": "*",
     "@zerotrace/schemas": "*",

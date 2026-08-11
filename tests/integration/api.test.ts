@@ -46,6 +46,8 @@ import {
   type EntityRelationshipTimelineReport,
   type EntityInvestigationGraphReport,
   type EntityInvestigationGraphTimelineReport,
+  type LabelIntelligenceReport,
+  type LabelObservation,
 } from '@zerotrace/schemas';
 import {
   StorageError,
@@ -55,6 +57,7 @@ import {
   type StoredEntityRelationshipTimeline,
   type StoredEntityInvestigationGraph,
   type StoredEntityInvestigationGraphTimeline,
+  type StoredLabelIntelligenceReport,
 } from '@zerotrace/storage';
 import { encodeAbiParameters, toEventSelector } from 'viem';
 
@@ -1417,6 +1420,219 @@ describe('ZeroTrace API contract', () => {
       coverage: { durableProjection: { state: 'unavailable', reason: 'STORAGE_DOWN' } },
       metadata: { dataCoverage: 0.5 },
     });
+  });
+
+  it('materializes and replays a non-merging Label observation Snapshot with conflicts preserved', async () => {
+    const runtime = runtimeWithEvm();
+    const subject = {
+      id: '10000000-0000-4000-8000-000000000001',
+      ledger: 'EVM' as const,
+      chainId: 'eip155:1',
+      subjectType: 'ADDRESS' as const,
+      normalizedIdentifier: '0x52908400098527886e0f7030069857d2e4169ee7',
+    };
+    const sourceEvidence = [
+      createEvidence({
+        ledger: subject.ledger,
+        chainId: subject.chainId,
+        kind: 'OFFICIAL_DOCUMENT',
+        source: 'official-registry',
+        locator: 'registry:official:subject-1',
+        payload: { label: 'Official Actor' },
+        observedAt: '2026-08-11T12:00:00.000Z',
+        summary: 'Official registry Label observation.',
+      }),
+      createEvidence({
+        ledger: subject.ledger,
+        chainId: subject.chainId,
+        kind: 'PROVIDER_OBSERVATION',
+        source: 'curated-registry',
+        locator: 'registry:curated:subject-1',
+        payload: { label: 'Different Actor' },
+        observedAt: '2026-08-11T11:00:00.000Z',
+        summary: 'Curated registry Label observation.',
+      }),
+    ];
+    const observations: LabelObservation[] = [
+      {
+        id: '10000000-0000-4000-8000-000000000002',
+        subjectId: subject.id,
+        ledger: subject.ledger,
+        chainId: subject.chainId,
+        subjectType: subject.subjectType,
+        normalizedIdentifier: subject.normalizedIdentifier,
+        source: sourceEvidence[0]!.source,
+        sourceClass: 'DETERMINISTIC',
+        label: 'Official Actor',
+        category: 'identity',
+        actorCandidate: unknownValue('INSUFFICIENT_DATA'),
+        sourceConfidence: 0.99,
+        evidenceIds: [sourceEvidence[0]!.id],
+        observedAt: sourceEvidence[0]!.observedAt,
+        validFrom: unknownValue('INSUFFICIENT_DATA'),
+        validTo: unknownValue('INSUFFICIENT_DATA'),
+        deterministic: true,
+        licensePolicy: 'Official attribution observation only.',
+        rawPayloadHash: sourceEvidence[0]!.payloadHash,
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000003',
+        subjectId: subject.id,
+        ledger: subject.ledger,
+        chainId: subject.chainId,
+        subjectType: subject.subjectType,
+        normalizedIdentifier: subject.normalizedIdentifier,
+        source: sourceEvidence[1]!.source,
+        sourceClass: 'CURATED',
+        label: 'Different Actor',
+        category: 'identity',
+        actorCandidate: unknownValue('INSUFFICIENT_DATA'),
+        sourceConfidence: 0.8,
+        evidenceIds: [sourceEvidence[1]!.id],
+        observedAt: sourceEvidence[1]!.observedAt,
+        validFrom: unknownValue('INSUFFICIENT_DATA'),
+        validTo: unknownValue('INSUFFICIENT_DATA'),
+        deterministic: false,
+        licensePolicy: 'Curated observation metadata only.',
+        rawPayloadHash: sourceEvidence[1]!.payloadHash,
+      },
+    ];
+    const durableEvidence = new Map<string, EvidenceNode>(
+      sourceEvidence.map((evidence) => [evidence.id, { evidence, sourceEvidenceIds: [] }]),
+    );
+    runtime.evidenceRepository = repository({
+      put: vi.fn(async (evidence, sourceEvidenceIds = [], snapshot) => {
+        const node: EvidenceNode = {
+          evidence,
+          sourceEvidenceIds: [...sourceEvidenceIds].sort(),
+          ...(snapshot === undefined ? {} : { snapshot }),
+        };
+        durableEvidence.set(evidence.id, node);
+        return node;
+      }),
+      get: vi.fn(async (id) => durableEvidence.get(id)),
+    });
+    const reports = new Map<string, StoredLabelIntelligenceReport>();
+    runtime.labelIntelligenceReports = {
+      loadObservationSet: vi.fn(async () => ({ subject, observations })),
+      put: vi.fn(async (report: LabelIntelligenceReport) => {
+        const resultHash = hashPayload(report);
+        const record: StoredLabelIntelligenceReport = {
+          id: `lir_${hashPayload({ schema: 'zerotrace-label-intelligence-report-v1', resultHash }).slice(0, 24)}`,
+          ledger: subject.ledger,
+          chainId: subject.chainId,
+          subjectId: subject.id,
+          subjectType: subject.subjectType,
+          normalizedIdentifier: subject.normalizedIdentifier,
+          labelSnapshotId: report.result.snapshot.id,
+          observationSetHash: report.result.snapshot.observationSetHash,
+          resultHash,
+          report,
+          terminalEvidenceId: report.terminalEvidenceId,
+          evidenceIds: report.result.metadata.evidenceIds,
+          sourceSet: report.result.metadata.sourceSet,
+          modelVersion: 'label-intelligence-v0.1.0',
+          asOf: report.result.request.asOf,
+          createdAt: '2026-08-12T00:00:01.000Z',
+        };
+        reports.set(record.id, record);
+        return record;
+      }),
+      latest: vi.fn(async () => [...reports.values()][0]),
+      get: vi.fn(async (id: string) => reports.get(id)),
+      health: vi.fn(async () => ({
+        status: 'UP' as const,
+        backend: 'POSTGRES' as const,
+        durable: true as const,
+        checkedAt: '2026-08-12T00:00:00.000Z',
+      })),
+      close: vi.fn(async () => undefined),
+    } as NonNullable<AppRuntime['labelIntelligenceReports']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const materialized = await app.inject({
+      method: 'POST',
+      url: '/api/v1/labels/reports',
+      payload: {
+        ledger: subject.ledger,
+        chainId: subject.chainId,
+        subjectType: subject.subjectType,
+        normalizedIdentifier: subject.normalizedIdentifier,
+        asOf: '2026-08-12T00:00:00.1234567Z',
+        staleAfterSeconds: 86_400,
+      },
+    });
+
+    expect(materialized.statusCode, materialized.body).toBe(200);
+    expect(materialized.json()).toMatchObject({
+      replayed: false,
+      record: {
+        modelVersion: 'label-intelligence-v0.1.0',
+        report: {
+          result: {
+            summary: { observationCount: 2, conflictCount: 1 },
+            conflicts: [{ disposition: 'PRESERVED' }],
+            metadata: {
+              conclusionConfidence: { state: 'unknown', reason: 'CONFLICTING_SOURCES' },
+              requestedObservationSetCoverage: { state: 'known', value: 1 },
+              globalSourceCoverage: { state: 'unknown', reason: 'NOT_QUERIED' },
+            },
+            automaticEntityMergeAllowed: false,
+            riskLabelOwnershipInferenceAllowed: false,
+            crossChainSameLabelMergeAllowed: false,
+          },
+        },
+      },
+    });
+    const body = materialized.json();
+    expect(body.record.asOf).toBe('2026-08-12T00:00:00.123Z');
+    expect(body.record.report.result.request.asOf).toBe('2026-08-12T00:00:00.123Z');
+    expect(
+      body.record.report.evidence.find(
+        (evidence: { id: string }) => evidence.id === body.record.terminalEvidenceId,
+      ).observedAt,
+    ).toBe('2026-08-12T00:00:00.123Z');
+    const reportId = body.record.id as string;
+    const terminalId = body.record.terminalEvidenceId as string;
+    expect(durableEvidence.get(terminalId)?.sourceEvidenceIds).toEqual(
+      sourceEvidence.map((evidence) => evidence.id).sort(),
+    );
+
+    const latest = await app.inject({
+      method: 'GET',
+      url:
+        '/api/v1/labels/reports/latest?ledger=EVM&chainId=eip155%3A1&subjectType=ADDRESS&normalizedIdentifier=' +
+        subject.normalizedIdentifier,
+    });
+    const exact = await app.inject({
+      method: 'GET',
+      url: `/api/v1/labels/reports/${reportId}`,
+    });
+    expect(latest.statusCode, latest.body).toBe(200);
+    expect(exact.statusCode, exact.body).toBe(200);
+    expect(latest.json()).toMatchObject({ replayed: true, record: { id: reportId } });
+    expect(exact.json()).toMatchObject({ replayed: true, record: { id: reportId } });
+  });
+
+  it('requires durable Label observations and Evidence before materialization', async () => {
+    const app = await createApp({ config, runtime: runtimeWithEvm(), logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/labels/reports',
+      payload: {
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        subjectType: 'ADDRESS',
+        normalizedIdentifier: '0x52908400098527886e0f7030069857d2e4169ee7',
+        asOf: '2026-08-12T00:00:00.000Z',
+        staleAfterSeconds: 86_400,
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(503);
+    expect(response.json()).toMatchObject({ error: { code: 'DURABLE_STORAGE_REQUIRED' } });
   });
 
   it('binds a subject fact to a snapshot and evidence record', async () => {
