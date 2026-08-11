@@ -1814,6 +1814,195 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
       }),
     });
   });
+  await page.route('**/api/v1/rv/flap-pancake-v2-pension-entry-scenarios', async (route) => {
+    const pensionWallet = '0x8d50a68b4f9ada119d198d6472eaf0cb6db302d9';
+    const pensionTerminalEvidenceId = 'ev_2468ace02468ace02468ace0';
+    const candidateEvidenceId = 'ev_fd1eaba3374aa73bf4eb1230';
+    const reportTerminalEvidenceId = 'ev_dda9728dd1f05d64175d9f4d';
+    const entry = (
+      quoteInput: string,
+      netToken: string,
+      shareEquivalent: string,
+      wholeShares: string,
+      averageCost: string,
+      committed: string,
+      remainder: string,
+      postPrice: string,
+    ) => ({
+      buyScenario: {
+        quoteInput: { atomic: `${quoteInput}000000000000000000`, decimal: quoteInput },
+        officialRouterGrossTokenOutput: { atomic: netToken.replace('.', ''), decimal: netToken },
+        deterministicPoolGrossTokenOutput: { atomic: netToken.replace('.', ''), decimal: netToken },
+        configuredTaxNetTokenOutput: {
+          state: 'known',
+          value: { atomic: netToken.replace('.', ''), decimal: netToken },
+        },
+        executionNetTokenOutput: { state: 'unknown', reason: 'NOT_QUERIED' },
+        averageGrossBuyPrice: { state: 'known', value: averageCost },
+        averageConfiguredTaxBuyPrice: { state: 'known', value: averageCost },
+        modeledPostBuySpotPrice: postPrice,
+        modeledPriceChangeBps: '10',
+        deterministicQuoteErrorBps: '0',
+        deterministicToleranceBps: '10',
+        withinDeterministicTolerance: true,
+        assumption: 'Pool-only exact-input model.',
+      },
+      modeledNetTokenOutput: {
+        state: 'known',
+        value: { atomic: netToken.replace('.', ''), decimal: netToken },
+      },
+      modeledShareEquivalent: { state: 'known', value: shareEquivalent },
+      modeledWholeShares: { state: 'known', value: wholeShares },
+      modeledCommittedTokenAmount: {
+        state: 'known',
+        value: { atomic: committed.replace('.', ''), decimal: committed },
+      },
+      modeledRemainderTokenAmount: {
+        state: 'known',
+        value: { atomic: remainder.replace('.', ''), decimal: remainder },
+      },
+      modeledQuoteCostForCommittedShares: {
+        state: 'known',
+        value: { atomic: quoteInput, decimal: quoteInput },
+      },
+      modeledAverageQuoteCostPerShare: {
+        state: 'known',
+        value: { atomic: averageCost.replace('.', ''), decimal: averageCost },
+      },
+      modeledPostDepositSpotPrice: { state: 'known', value: postPrice },
+      executionNetTokenOutput: { state: 'unknown', reason: 'NOT_QUERIED' },
+      executionWholeShares: { state: 'unknown', reason: 'NOT_QUERIED' },
+      executionPostDepositSpotPrice: { state: 'unknown', reason: 'NOT_QUERIED' },
+      assumption: 'Custody-only modeled deposit.',
+    });
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        platform: 'flap',
+        token: bscTokenAddress,
+        behavior: {
+          reportId: 'pcr_ff8cd2b24f23d71758cf3e63',
+          resultHash: '4'.repeat(64),
+          wallet: pensionWallet,
+          shareUnit: {
+            atomic: '1000000000000000000000000',
+            decimal: '1000000',
+          },
+          fromBlock: '113485950',
+          toBlock: '115257276',
+          snapshotHash: `0x${'7'.repeat(64)}`,
+          observedWholeShares: '164',
+          candidateEvidenceId,
+          reportTerminalEvidenceId,
+          roleAttribution: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+          participantExitPolicy: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+          dividendExecution: { state: 'unknown', reason: 'NOT_QUERIED' },
+        },
+        market: { state: 'known', value: { token: bscTokenAddress } },
+        entries: [
+          entry(
+            '100',
+            '233314.699805256356457359',
+            '0.233314699805256356',
+            '0',
+            '428.605675',
+            '0',
+            '233314.699805256356457359',
+            '0.000416057',
+          ),
+          entry(
+            '1000',
+            '2266745.991147',
+            '2.266745991147',
+            '2',
+            '441.16',
+            '2000000',
+            '266745.991147',
+            '0.00044075',
+          ),
+          entry(
+            '10000',
+            '17645560.396656',
+            '17.645560396656',
+            '17',
+            '566.75',
+            '17000000',
+            '645560.396656',
+            '0.000721',
+          ),
+        ],
+        validation: {
+          status: 'PASS',
+          deterministicToleranceBps: '10',
+          evaluatedScenarioCount: 3,
+          failedScenarioCount: 0,
+        },
+        destinationTreatment: 'NON_ZERO_CUSTODY_ADDRESS',
+        totalSupplyReduction: { state: 'unknown', reason: 'NOT_QUERIED' },
+        custodyIrreversible: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+        terminalEvidenceId: pensionTerminalEvidenceId,
+        metadata: {
+          snapshot: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            blockNumber: '115257276',
+            blockHash: `0x${'7'.repeat(64)}`,
+            finality: 'finalized',
+          },
+          dataCoverage: 0.85,
+          sourceCoverage: 0.5,
+          historyCoverage: 1,
+          simulationCoverage: 0.5,
+          freshness: '2026-08-11T05:32:07.000Z',
+          sourceSet: ['bsc-rpc-fixture', 'sqd:binance-mainnet'],
+          modelVersion: 'flap-pension-entry-economics-v0.1.0',
+          confidence: 0.8,
+          evidenceIds: [candidateEvidenceId, reportTerminalEvidenceId, pensionTerminalEvidenceId],
+        },
+        evidence: [
+          {
+            id: candidateEvidenceId,
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:evm-pension-candidate-discovery-v1.0.0',
+            locator: `pension-behavior-candidate:${pensionWallet}`,
+            payloadHash: '1'.repeat(64),
+            observedAt: '2026-08-11T05:32:07.000Z',
+            blockOrSlot: '115257276',
+            finality: 'finalized',
+            summary: 'Repeated exact-unit deposit behavior candidate.',
+          },
+          {
+            id: reportTerminalEvidenceId,
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:evm-pension-candidate-discovery-v1.0.0',
+            locator: `pension-behavior-discovery:${bscTokenAddress}`,
+            payloadHash: '2'.repeat(64),
+            observedAt: '2026-08-11T05:32:07.000Z',
+            blockOrSlot: '115257276',
+            finality: 'finalized',
+            summary: 'Complete FFT pension behavior range.',
+          },
+          {
+            id: pensionTerminalEvidenceId,
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            kind: 'DERIVED_FEATURE',
+            source: 'zerotrace:flap-pension-entry-economics-v0.1.0',
+            locator: `rv:flap-pension-entry:${bscTokenAddress}@115257276`,
+            payloadHash: '3'.repeat(64),
+            observedAt: '2026-08-11T05:32:07.000Z',
+            blockOrSlot: '115257276',
+            finality: 'finalized',
+            summary: 'Pension-entry share capacity and average acquisition cost derived.',
+          },
+        ],
+      }),
+    });
+  });
   await page.route('**/api/v1/rv/flap-pancake-v2-sell-scenarios', async (route) => {
     const point = (
       tokenInput: string,
@@ -2354,6 +2543,20 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
   await expect(scenarioPanel).toContainText('movable custody, not supply burn');
   await expect(scenarioPanel.getByText(/Pass 0 Bps/).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Pancake V2 scenario Evidence' })).toBeVisible();
+
+  const pensionEntryPanel = page.locator('.quote-panel').filter({
+    has: page.getByRole('heading', { name: 'Pension entry economics' }),
+  });
+  await expect(pensionEntryPanel).toBeVisible();
+  await pensionEntryPanel.getByRole('button', { name: 'Calculate pension entry' }).click();
+  await expect(pensionEntryPanel).toContainText('1000000');
+  await expect(pensionEntryPanel).toContainText('0.233314699805256356');
+  await expect(pensionEntryPanel).toContainText('2.266745991147');
+  await expect(pensionEntryPanel).toContainText('441.16');
+  await expect(pensionEntryPanel).toContainText('Custody is not supply burn');
+  await expect(pensionEntryPanel).toContainText('Not Queried');
+  await expect(pensionEntryPanel).toContainText('Insufficient Data');
+  await expect(page.getByRole('heading', { name: 'Pension entry Evidence' })).toBeVisible();
 
   const exitPanel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: 'Pancake V2 exit-size scenarios' }),

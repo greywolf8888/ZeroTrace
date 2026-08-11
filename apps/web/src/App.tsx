@@ -20,6 +20,7 @@ import {
   type FlapEventTransactionResponse,
   type FlapInspectionResponse,
   type FlapPancakeV2BuyScenarioResponse,
+  type FlapPancakeV2PensionEntryResponse,
   type FlapPancakeV2ReconciliationResponse,
   type FlapPancakeV2SellScenarioResponse,
   type FlapSellQuoteResponse,
@@ -4813,6 +4814,235 @@ function FlapPancakeV2BuyScenarioPanel({
   );
 }
 
+function FlapPensionEntryScenarioPanel({
+  token,
+  blockNumber,
+}: {
+  token: string;
+  blockNumber: string;
+}) {
+  const [amounts, setAmounts] = useState('100, 1000, 10000');
+  const [reportId, setReportId] = useState('');
+  const [wallet, setWallet] = useState('');
+  const [result, setResult] = useState<FlapPancakeV2PensionEntryResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const parsedInputs = amounts
+    .split(/[\s,]+/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  const inputsValid =
+    parsedInputs.length >= 1 &&
+    parsedInputs.length <= 8 &&
+    new Set(parsedInputs).size === parsedInputs.length &&
+    parsedInputs.every(
+      (value) => /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value) && !/^0(?:\.0+)?$/.test(value),
+    );
+  const reportValid = reportId.length === 0 || /^pcr_[0-9a-f]{24}$/.test(reportId);
+  const walletValid = wallet.length === 0 || /^0x[0-9a-fA-F]{40}$/.test(wallet);
+
+  async function runEntryScenarios(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!inputsValid || !reportValid || !walletValid) return;
+    setBusy(true);
+    setError(undefined);
+    setResult(undefined);
+    try {
+      setResult(
+        await api.flapPancakeV2PensionEntryScenarios(
+          token,
+          parsedInputs,
+          blockNumber,
+          reportId,
+          wallet,
+        ),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Pension entry analysis failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <section
+        className="panel subject-panel quote-panel"
+        aria-labelledby="flap-pension-entry-heading"
+      >
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Durable behavior report × same-Snapshot market</span>
+            <h3 id="flap-pension-entry-heading">Pension entry economics</h3>
+          </div>
+          <span className="snapshot-badge">Scenario, no transaction</span>
+        </div>
+        <p className="panel-copy">
+          Estimate how many complete observed share units each quote amount can acquire, the average
+          quote cost per share, and the remainder. Leave report and wallet blank to use the latest
+          report when it contains exactly one candidate.
+        </p>
+        <form
+          className="quote-form pension-entry-form"
+          onSubmit={(event) => void runEntryScenarios(event)}
+        >
+          <label htmlFor="flap-pension-entry-amounts">Quote amounts (comma separated)</label>
+          <input
+            id="flap-pension-entry-amounts"
+            inputMode="decimal"
+            value={amounts}
+            onChange={(event) => setAmounts(event.target.value)}
+          />
+          <label htmlFor="flap-pension-entry-report">Behavior report ID (optional)</label>
+          <input
+            id="flap-pension-entry-report"
+            placeholder="Latest durable report"
+            value={reportId}
+            onChange={(event) => setReportId(event.target.value.trim())}
+          />
+          <label htmlFor="flap-pension-entry-wallet">Candidate wallet (optional)</label>
+          <input
+            id="flap-pension-entry-wallet"
+            placeholder="Auto-select only candidate"
+            value={wallet}
+            onChange={(event) => setWallet(event.target.value.trim())}
+          />
+          <button
+            className="secondary-button"
+            type="submit"
+            disabled={busy || !inputsValid || !reportValid || !walletValid}
+          >
+            {busy ? 'Joining Evidence…' : 'Calculate pension entry'}
+          </button>
+        </form>
+        <p className="quote-note">
+          This is a read-only configured-tax model. Actual wallet receipt and the later transfer
+          require pinned-fork execution before ZeroTrace will call them Known.
+        </p>
+        {error === undefined ? null : (
+          <div className="alert alert-warning">
+            <strong>Pension entry unavailable</strong>
+            {error}
+          </div>
+        )}
+        {result === undefined ? null : (
+          <div data-testid="pension-entry-result">
+            <div className="fact-grid quote-facts">
+              <div className="fact-row">
+                <span>Behavior candidate</span>
+                <strong>{shortId(result.behavior.wallet)}</strong>
+              </div>
+              <div className="fact-row">
+                <span>Observed share unit</span>
+                <strong>{result.behavior.shareUnit.decimal}</strong>
+              </div>
+              <div className="fact-row">
+                <span>Behavior report</span>
+                <strong>{shortId(result.behavior.reportId)}</strong>
+              </div>
+              <div className="fact-row">
+                <span>Behavior range</span>
+                <strong>
+                  {result.behavior.fromBlock}–{result.behavior.toBlock}
+                </strong>
+              </div>
+              <div className="fact-row">
+                <span>Official pension role</span>
+                <KnowledgeDisplay data={result.behavior.roleAttribution} />
+              </div>
+              <div className="fact-row">
+                <span>No-exit policy</span>
+                <KnowledgeDisplay data={result.behavior.participantExitPolicy} />
+              </div>
+              <div className="fact-row">
+                <span>Dividend execution</span>
+                <KnowledgeDisplay data={result.behavior.dividendExecution} />
+              </div>
+              <div className="fact-row">
+                <span>Automatic quote check</span>
+                <StatusPill status={result.validation.status} />
+              </div>
+            </div>
+            <div className="table-scroll scenario-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Quote in</th>
+                    <th>Modeled net token</th>
+                    <th>Share equivalent</th>
+                    <th>Whole shares</th>
+                    <th>Average cost / share</th>
+                    <th>Committed token</th>
+                    <th>Remainder token</th>
+                    <th>Post-deposit spot</th>
+                    <th>Execution shares</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.entries.map((entry) => (
+                    <tr key={entry.buyScenario.quoteInput.atomic}>
+                      <td>{entry.buyScenario.quoteInput.decimal}</td>
+                      <td>
+                        <TokenAmountKnowledge data={entry.modeledNetTokenOutput} />
+                      </td>
+                      <td>
+                        <KnowledgeDisplay data={entry.modeledShareEquivalent} />
+                      </td>
+                      <td>
+                        <KnowledgeDisplay data={entry.modeledWholeShares} />
+                      </td>
+                      <td>
+                        <TokenAmountKnowledge data={entry.modeledAverageQuoteCostPerShare} />
+                      </td>
+                      <td>
+                        <TokenAmountKnowledge data={entry.modeledCommittedTokenAmount} />
+                      </td>
+                      <td>
+                        <TokenAmountKnowledge data={entry.modeledRemainderTokenAmount} />
+                      </td>
+                      <td>
+                        <KnowledgeDisplay data={entry.modeledPostDepositSpotPrice} />
+                      </td>
+                      <td>
+                        <KnowledgeDisplay data={entry.executionWholeShares} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="alert alert-warning pension-boundary">
+              <strong>Custody is not supply burn</strong>
+              The candidate is a non-zero custody address. Total-supply reduction and irreversible
+              custody remain <KnowledgeDisplay data={result.totalSupplyReduction} /> and{' '}
+              <KnowledgeDisplay data={result.custodyIrreversible} />. A plain wallet transfer leaves
+              the modeled pool price unchanged; tax/swapback execution may not.
+            </div>
+            <div className="snapshot-strip">
+              <span>
+                <b>Market block</b> {String(result.metadata.snapshot?.blockNumber ?? 'Unknown')}
+              </span>
+              <span>
+                <b>Candidate Evidence</b> {shortId(result.behavior.candidateEvidenceId)}
+              </span>
+              <span>
+                <b>Terminal Evidence</b> {shortId(result.terminalEvidenceId)}
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
+      {result === undefined ? null : (
+        <EvidencePanel
+          evidence={result.evidence}
+          eyebrow="Behavior report → Router/pool quote → share economics"
+          title="Pension entry Evidence"
+        />
+      )}
+    </>
+  );
+}
+
 function FlapPancakeV2SellScenarioPanel({
   token,
   blockNumber,
@@ -5108,6 +5338,10 @@ function FlapLaunchPanel({ inspection }: { inspection: FlapInspectionResponse })
         <>
           <FlapPancakeV2ReconciliationPanel token={inspection.token} />
           <FlapPancakeV2BuyScenarioPanel
+            token={inspection.token}
+            blockNumber={launch.sourceBlockOrSlot}
+          />
+          <FlapPensionEntryScenarioPanel
             token={inspection.token}
             blockNumber={launch.sourceBlockOrSlot}
           />

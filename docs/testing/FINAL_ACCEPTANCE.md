@@ -191,6 +191,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Same-Snapshot migrated-Flap Pancake V2 pool/factory/router verification, reserve spot,
       multi-size buy scenarios and automatic 0.10% Router/model arithmetic checks, including one
       named FFT point-in-time run
+- [x] Durable pension-candidate-to-market composition with same-or-later finalized Snapshot binding,
+      exact multi-size share/cost arithmetic, three-parent Evidence root, custody-not-burn semantics,
+      API/UI coverage and a five-size live FFT fixed-block validation
 - [x] Same-Snapshot Pancake V2 nominal/gross/configured-tax exit-size scenarios with price impact,
       quote-reserve consumption, automatic Router/model checks and one named FFT partial-RV run
 - [x] Versioned BSC source-operator registry, official-document attestations, exact-state zero-error
@@ -230,6 +233,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       readiness, human-review gate and Unknown pension-address rendering
 - [x] Responsive pension behavior discovery/latest replay with editable FFT acceptance profile,
       candidate flow/share metrics, durable provenance and no identity promotion on desktop/mobile
+- [x] Responsive candidate-bound pension-entry economics with multi-size share/cost output,
+      immutable report/Snapshot/Evidence provenance, custody-not-burn and execution Unknown
 - [x] Responsive exact-block burn certificate review on desktop/mobile with status, supply/event
       arithmetic, generated actions and terminal Evidence
 - [x] Responsive burn-candidate range review with event scope, candidate blocks, terminal Evidence
@@ -280,6 +285,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Named FFT pension behavior scan from block `113485950` through `115257276`: 14,020 Transfers,
       one policy-matching address, immutable report `pcr_ff8cd2b24f23d71758cf3e63`, identical
       provider-free latest/exact replay, and explicit Unknown official role/no-exit/dividend meaning
+- [x] Named FFT fixed-block pension-entry model for quote inputs `100/500/1000/5000/10000`, bound to
+      the durable report and one candidate; exact repeated economics and the 10 bps Router/model gate
+      passed while actual buy-plus-transfer settlement remained Unknown
 - [ ] RV reconciliation against historical executable quotes
 - [ ] Run the registered
       [Flap/BSC FFT terminal acceptance](FLAP_FFT_ACCEPTANCE.md) for

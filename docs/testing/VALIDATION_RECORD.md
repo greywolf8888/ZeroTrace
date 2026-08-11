@@ -1713,3 +1713,49 @@ PostgreSQL/ClickHouse/MinIO coverage (568 tests), production build, licenses, au
 Chromium desktop/mobile flows and all six production container targets:
 [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31463334371) and
 [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31463334340).
+
+## FFT pension-candidate entry economics: 2026-08-11
+
+ZeroTrace added `flap-pension-entry-economics-v0.1.0` as a composition over existing durable
+pension discovery, verified Flap inspection and Pancake V2 buy scenarios. It accepts only a wallet
+contained in the referenced `pcr_...` report, loads every durable report Evidence node before any
+market read, and requires a finalized market Snapshot at or after the report range end. Equal-height
+hash disagreement fails closed. The result terminal derives from the buy root, candidate node and
+report terminal; behavioral candidacy never becomes official attribution.
+
+The exact-integer RV kernel calculates share equivalent, floor whole shares, committed/remainder
+tokens, allocated quote cost and conservatively rounded average cost per share. Schema invariants
+preserve all arithmetic/Knowledge-state relationships. A zero modeled receipt is Known zero, while
+its mathematically undefined average share cost is `Unknown(NOT_APPLICABLE)`. Actual receipt,
+transfer tax/swapback, final reserves, supply reduction, custody irreversibility, no-exit policy and
+dividend execution remain Unknown. The API and responsive DEX-trading panel expose the report,
+wallet, Snapshot and Evidence and have no signing, approval, swap or broadcast path.
+
+The live read-only run used FFT `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, report
+`pcr_ff8cd2b24f23d71758cf3e63`, candidate
+`0x8d50a68b4f9ada119d198d6472eaf0cb6db302d9`, and finalized market block `115265311`, hash
+`0x9bd0a695d141d8b82dd0b4d8e0a70ac67b51d1f5b8a85fb4d0c4da2b9924b8ef`. Quote asset
+`0x55d398326f99059ff775485246999027b3197955` had reserve spot
+`0.000341100094559429` quote units/FFT; configured buy tax was 300 bps. Quote inputs
+`100/500/1000/5000/10000` yielded modeled net FFT
+`282647.37658617146978887/1393281.561909105530168668/2738232.3153520601510885/
+12022932.892192772219846144/20867551.78035526377570956` and whole-share counts
+`0/1/2/12/20`. Full price/share outputs and the registered error policy are recorded in
+[FLAP_FFT_ACCEPTANCE.md](FLAP_FFT_ACCEPTANCE.md#scoped-pension-entry-economics-acceptance-2026-08-11).
+
+Router/model validation passed. Two fixed-block repeats reproduced every economic value exactly;
+terminal Evidence differed (`ev_67d98a881251dfaa92762341` and
+`ev_a044441475ebcaa714f8aa78`) because a new capture timestamp intentionally creates a distinct
+observation. Focused validation passed 39 RV/platform tests, the API durable-report composition test,
+both Chromium desktop/mobile pension-entry flows, web typecheck/build and repository typecheck.
+
+The complete local gate then passed 478 unit tests across 71 files, 71 environment-free integration
+tests, all 97 integration tests with PostgreSQL/ClickHouse/MinIO enabled, one Entity structural
+evaluation and all 34 Chromium desktop/mobile flows. The durable coverage run passed all 575 tests
+at 83.36% statements, 77.84% branches, 93.51% functions and 84.53% lines. Formatting, lint,
+typecheck, production build, license allowlist, development/production vulnerability audits,
+CycloneDX SBOM and Compose validation passed. All six production Dockerfile targets built. Rebuilt
+Compose API/Web/PostgreSQL/Valkey remained healthy on the non-destructive local port overrides;
+live was `UP`, readiness explicitly `DEGRADED` under fail-closed private-range provider DNS,
+`readOnly=true`, all four provider states were reported, and the web root returned HTTP 200. Remote
+exact-SHA CI is pending the immutable commit.

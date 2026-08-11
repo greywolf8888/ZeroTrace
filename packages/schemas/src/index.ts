@@ -2308,6 +2308,196 @@ export const FlapPancakeV2BuyScenarioResultSchema = z
   });
 export type FlapPancakeV2BuyScenarioResult = z.infer<typeof FlapPancakeV2BuyScenarioResultSchema>;
 
+export const FlapPancakeV2PensionBehaviorReferenceSchema = z
+  .object({
+    reportId: z.string().regex(/^pcr_[0-9a-f]{24}$/),
+    resultHash: Hash256Schema,
+    wallet: z.string().regex(/^0x[0-9a-f]{40}$/),
+    shareUnit: FlapPancakeV2TokenAmountSchema,
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    snapshotHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+    observedWholeShares: UnsignedQuantityStringSchema,
+    candidateEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    reportTerminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    roleAttribution: knowledgeValueSchema(z.literal('PENSION_VAULT')),
+    participantExitPolicy: knowledgeValueSchema(z.boolean()),
+    dividendExecution: knowledgeValueSchema(z.boolean()),
+  })
+  .superRefine((value, context) => {
+    if (
+      BigInt(value.toBlock) < BigInt(value.fromBlock) ||
+      BigInt(value.shareUnit.atomic) === 0n ||
+      value.roleAttribution.state === 'known' ||
+      value.participantExitPolicy.state === 'known' ||
+      value.dividendExecution.state === 'known'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['roleAttribution'],
+        message:
+          'Pension behavior references require a valid range/share unit and cannot promote role, exit, or dividend policy to fact.',
+      });
+    }
+  });
+export type FlapPancakeV2PensionBehaviorReference = z.infer<
+  typeof FlapPancakeV2PensionBehaviorReferenceSchema
+>;
+
+export const FlapPancakeV2PensionEntryScenarioPointSchema = z
+  .object({
+    buyScenario: FlapPancakeV2BuyScenarioPointSchema,
+    modeledNetTokenOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledShareEquivalent: knowledgeValueSchema(DecimalStringSchema),
+    modeledWholeShares: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    modeledCommittedTokenAmount: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledRemainderTokenAmount: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledQuoteCostForCommittedShares: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledAverageQuoteCostPerShare: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledPostDepositSpotPrice: knowledgeValueSchema(DecimalStringSchema),
+    executionNetTokenOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    executionWholeShares: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    executionPostDepositSpotPrice: knowledgeValueSchema(DecimalStringSchema),
+    assumption: z.string().min(1),
+  })
+  .superRefine((value, context) => {
+    const modeledFields = [
+      value.modeledShareEquivalent,
+      value.modeledWholeShares,
+      value.modeledCommittedTokenAmount,
+      value.modeledRemainderTokenAmount,
+      value.modeledQuoteCostForCommittedShares,
+    ];
+    const modeledState = value.modeledNetTokenOutput.state;
+    if (modeledFields.some((field) => field.state !== modeledState)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['modeledNetTokenOutput'],
+        message: 'Pension entry modeled quantities must share the modeled net-output state.',
+      });
+    }
+    if (value.modeledNetTokenOutput.state === 'known') {
+      const isZeroReceipt = BigInt(value.modeledNetTokenOutput.value.atomic) === 0n;
+      if (
+        (isZeroReceipt &&
+          (value.modeledAverageQuoteCostPerShare.state !== 'unknown' ||
+            value.modeledAverageQuoteCostPerShare.reason !== 'NOT_APPLICABLE')) ||
+        (!isZeroReceipt && value.modeledAverageQuoteCostPerShare.state !== 'known')
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['modeledAverageQuoteCostPerShare'],
+          message:
+            'Average share cost must be known for a positive modeled receipt and Unknown/NOT_APPLICABLE for a zero receipt.',
+        });
+      }
+    } else if (value.modeledAverageQuoteCostPerShare.state !== modeledState) {
+      context.addIssue({
+        code: 'custom',
+        path: ['modeledAverageQuoteCostPerShare'],
+        message: 'Unavailable or Unknown modeled receipts must propagate to average share cost.',
+      });
+    }
+    if (
+      value.modeledPostDepositSpotPrice.state !== 'known' ||
+      value.modeledPostDepositSpotPrice.value !== value.buyScenario.modeledPostBuySpotPrice
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['modeledPostDepositSpotPrice'],
+        message:
+          'The custody-only pension deposit model must preserve the post-buy pool spot price.',
+      });
+    }
+    if (
+      value.executionWholeShares.state === 'known' ||
+      value.executionPostDepositSpotPrice.state === 'known'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['executionNetTokenOutput'],
+        message:
+          'Executed pension-wallet shares and post-deposit price remain unresolved without buy-plus-transfer fork execution.',
+      });
+    }
+  });
+export type FlapPancakeV2PensionEntryScenarioPoint = z.infer<
+  typeof FlapPancakeV2PensionEntryScenarioPointSchema
+>;
+
+export const FlapPancakeV2PensionEntryResultSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    behavior: FlapPancakeV2PensionBehaviorReferenceSchema,
+    market: knowledgeValueSchema(FlapPancakeV2MarketSchema),
+    entries: z.array(FlapPancakeV2PensionEntryScenarioPointSchema).max(8),
+    validation: z.object({
+      status: z.enum(['PASS', 'FAIL', 'NOT_RUN']),
+      deterministicToleranceBps: DecimalStringSchema,
+      evaluatedScenarioCount: z.number().int().nonnegative(),
+      failedScenarioCount: z.number().int().nonnegative(),
+    }),
+    destinationTreatment: z.literal('NON_ZERO_CUSTODY_ADDRESS'),
+    totalSupplyReduction: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    custodyIrreversible: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('flap-pension-entry-economics-v0.1.0'),
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    const evidenceIds = new Set(value.evidence.map((item) => item.id));
+    const requiredEvidenceIds = [
+      value.behavior.candidateEvidenceId,
+      value.behavior.reportTerminalEvidenceId,
+      value.terminalEvidenceId,
+    ];
+    if (
+      snapshot?.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      BigInt(snapshot.blockNumber) < BigInt(value.behavior.toBlock) ||
+      (snapshot.blockNumber === value.behavior.toBlock &&
+        snapshot.blockHash.toLowerCase() !== value.behavior.snapshotHash) ||
+      value.totalSupplyReduction.state === 'known' ||
+      value.custodyIrreversible.state === 'known' ||
+      requiredEvidenceIds.some(
+        (evidenceId) =>
+          !evidenceIds.has(evidenceId) || !value.metadata.evidenceIds.includes(evidenceId),
+      ) ||
+      value.evidence.length !== evidenceIds.size
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message:
+          'Pension entry economics require a later same-chain Snapshot, unique complete Evidence, and Unknown supply/irreversibility effects.',
+      });
+    }
+    if (value.market.state === 'known') {
+      if (
+        value.market.value.token !== value.token ||
+        value.entries.length === 0 ||
+        value.entries.length !== value.validation.evaluatedScenarioCount
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['entries'],
+          message: 'A known pension-entry market requires matching token scenarios and validation.',
+        });
+      }
+    } else if (value.entries.length !== 0 || value.validation.status !== 'NOT_RUN') {
+      context.addIssue({
+        code: 'custom',
+        path: ['entries'],
+        message: 'Unavailable pension-entry markets cannot expose modeled entries.',
+      });
+    }
+  });
+export type FlapPancakeV2PensionEntryResult = z.infer<typeof FlapPancakeV2PensionEntryResultSchema>;
+
 export const FlapPancakeV2SellScenarioPointSchema = z.object({
   tokenInput: FlapPancakeV2TokenAmountSchema,
   nominalSpotQuoteValue: FlapPancakeV2TokenAmountSchema,

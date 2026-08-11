@@ -251,6 +251,22 @@ impact; this boundary is returned explicitly rather than encoded as a price adju
 operator plus official documentation yields source coverage `0.5`, not independent-source
 acceptance.
 
+The pension-entry composition crosses Claim Verification and Realizable Value without collapsing
+their meanings. It loads one immutable `pcr_...` behavior report and its complete Evidence set,
+requires the selected wallet to be an actual report candidate, then joins that report only to a
+finalized Pancake V2 market Snapshot at or after the report range end. Equal-height hashes must be
+identical. The terminal derivation has three mandatory parents: the buy-scenario root, candidate
+Evidence and behavior-report terminal Evidence.
+
+For each requested quote input, exact integers derive configured-tax net tokens, fractional share
+equivalent, floor whole shares, committed token amount, remainder, proportionally allocated quote
+cost and conservatively rounded average quote cost per share. A non-zero candidate destination is
+modeled as custody-only, so it cannot mutate AMM reserves or reduce `totalSupply` merely by receiving
+tokens. A zero modeled receipt is a Known zero, while average cost per share becomes
+`Unknown(NOT_APPLICABLE)`. Actual buy receipt, transfer tax/swapback, post-transfer reserves,
+irreversibility, exit rights and dividends remain Unknown until pinned-fork execution and separate
+Claim Evidence resolve them.
+
 The exit-size composition reuses that complete market certificate and checks the official Router in
 the token-to-quote direction. For each size it separates marginal-price nominal value, full-input
 Router gross output, a configured sell-tax pool estimate, and the unobserved settlement balance
@@ -351,6 +367,11 @@ Evidence and exact transfer-parent edge set, and a terminal root derived from th
 queries plus candidate nodes. Updates and deletes are forbidden. Live discovery fails closed
 without durable Evidence/report storage; latest/exact replay is provider-free. This projection
 establishes only “address satisfied policy P in range R”, never “the community statement is true”.
+
+The first consumer of this durable projection is the pension-entry RV composition described above.
+It never upgrades behavioral candidacy into official attribution: the candidate/report Evidence is
+used to bind the share unit and observed wallet, while role, membership, no-exit and dividend claims
+remain independently unresolved.
 
 The first action derivation path is an exact finalized-block ERC-20 burn certificate. It requires
 adjacent parent/target lineage, reads `totalSupply` at both positions, captures every target-block

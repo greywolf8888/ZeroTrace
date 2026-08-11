@@ -224,6 +224,56 @@ The synchronous live request took 407 seconds because 14,020 source Evidence nod
 and written individually. Checkpointed asynchronous execution and batch persistence remain a
 production performance gate; the range was not reduced or sampled to hide this limitation.
 
+## Scoped pension-entry economics acceptance: 2026-08-11
+
+ZeroTrace joined immutable behavior report `pcr_ff8cd2b24f23d71758cf3e63` and its sole candidate
+`0x8d50a68b4f9ada119d198d6472eaf0cb6db302d9` to the existing verified Pancake V2 buy path. The
+market observation was finalized BSC block `115265311`, hash
+`0x9bd0a695d141d8b82dd0b4d8e0a70ac67b51d1f5b8a85fb4d0c4da2b9924b8ef`. Its quote asset was
+`0x55d398326f99059ff775485246999027b3197955`, reserve spot was
+`0.000341100094559429` quote units per FFT, and Flap inspection reported configured buy tax
+`300` bps. The market Snapshot is later than the behavior report's range-end Snapshot, so the model
+does not project a future behavior report backward into older reserves.
+
+The configured-tax, same-Snapshot model returned:
+
+| Quote input | Modeled net FFT               | Share equivalent        | Whole shares | Average quote cost/share | Modeled post-deposit spot |
+| ----------: | ----------------------------- | ----------------------- | -----------: | ------------------------ | ------------------------- |
+|         100 | `282647.37658617146978887`    | `0.282647376586171469`  |            0 | `353.797729198143573313` | `0.000343559068884722`    |
+|         500 | `1393281.561909105530168668`  | `1.39328156190910553`   |            1 | `358.865008817664124603` | `0.000353483281147803`    |
+|        1000 | `2738232.3153520601510885`    | `2.738232315352060151`  |            2 | `365.199108342064813716` | `0.000366087255140944`    |
+|        5000 | `12022932.892192772219846144` | `12.022932892192772219` |           12 | `415.871904537270326618` | `0.000474867393657673`    |
+|       10000 | `20867551.78035526377570956`  | `20.867551780355263775` |           20 | `479.212899781277217747` | `0.000630713433232594`    |
+
+The table answers the modeled acquisition question in units of the identified quote asset. It is
+not a claim about an executed wallet receipt. Whole shares are `floor(configured-tax net FFT /
+1,000,000 FFT)`; committed token amount plus remainder equals the modeled net at atomic precision.
+Average quote cost per share is conservatively rounded up at quote-asset atomic precision. A
+sub-share purchase can therefore have zero committed shares and quote cost while still retaining a
+non-zero share-equivalent acquisition cost. If modeled net receipt is exactly zero, average share
+cost is `Unknown(NOT_APPLICABLE)`, not zero.
+
+The official Router and clean-room 25 bps constant-product calculation stayed inside the registered
+10 bps automatic gate. Two calls pinned to the same block reproduced every economic field exactly.
+Their terminal Evidence IDs were `ev_67d98a881251dfaa92762341` and
+`ev_a044441475ebcaa714f8aa78`; different IDs are expected because each capture time is a distinct
+observation. Each terminal derivation links the buy-scenario root, behavior candidate Evidence and
+behavior-report terminal Evidence.
+
+Error policy for this surface is:
+
+- exact atomic share, commitment and remainder arithmetic: `0` atomic-unit tolerance;
+- official Router versus clean-room deterministic pool model: pass within `10` bps (`0.10%`);
+- independently operated quote/RV comparison: pass at `<=0.50%`, warning at `>0.50%` through
+  `1.00%`, fail above `1.00%`;
+- actual buy-plus-transfer execution: not scored and explicitly Unknown until a Snapshot-pinned
+  fork measures wallet deltas, transfer tax/swapback, final reserves, gas and reverts.
+
+The candidate is a non-zero custody address. Depositing FFT there is not an ERC-20 supply burn and
+does not by itself prove irreversibility, participant no-exit enforcement, an official pension role
+or weekly dividends. `totalSupplyReduction`, `custodyIrreversible`, execution receipt/shares and
+post-transfer spot therefore remain Unknown.
+
 ## Scoped EVM control/source acceptance: 2026-08-11
 
 Alchemy and BNB Chain independently read FFT at finalized block `115204533`, hash

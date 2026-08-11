@@ -7,7 +7,13 @@ import {
   type TransportObservation,
   type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
-import { EvidenceLedger } from '@zerotrace/evidence';
+import { createEvidence, EvidenceLedger } from '@zerotrace/evidence';
+import {
+  unknownValue,
+  type AnalysisSnapshot,
+  type EvmPensionCandidateDiscovery,
+  type Evidence,
+} from '@zerotrace/schemas';
 import { encodeAbiParameters } from 'viem';
 
 import {
@@ -18,6 +24,7 @@ import {
   inspectFlapToken,
   quoteFlapPancakeV2BuyScenarios,
   quoteFlapPancakeV2SellScenarios,
+  quoteFlapPensionEntryScenarios,
   quoteFlapSell,
   type FlapDeployment,
 } from './index.js';
@@ -251,6 +258,22 @@ function flapFixture(callResults: unknown[], deployment = FLAP_BSC_MAINNET_DEPLO
         writeEvidence: async (item, sources = [], snapshot) =>
           evidence.add(item, sources, snapshot).evidence,
       }),
+    pensionEntry: (options: {
+      quoteInputs: readonly string[];
+      pensionWallet: string;
+      behaviorReport: EvmPensionCandidateDiscovery;
+      behaviorReportId: string;
+      behaviorResultHash: string;
+      behaviorEvidence: readonly Evidence[];
+    }) =>
+      quoteFlapPensionEntryScenarios({
+        adapter,
+        deployment,
+        token: tokenAddress,
+        ...options,
+        writeEvidence: async (item, sources = [], snapshot) =>
+          evidence.add(item, sources, snapshot).evidence,
+      }),
     sellScenarios: (tokenInputs: readonly string[]) =>
       quoteFlapPancakeV2SellScenarios({
         adapter,
@@ -261,6 +284,120 @@ function flapFixture(callResults: unknown[], deployment = FLAP_BSC_MAINNET_DEPLO
           evidence.add(item, sources, snapshot).evidence,
       }),
   };
+}
+
+function pensionBehaviorFixture(evidence: EvidenceLedger) {
+  const snapshot: Extract<AnalysisSnapshot, { ledger: 'EVM' }> = {
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    blockNumber: '15',
+    blockHash: `0x${'3'.repeat(64)}`,
+    parentBlockHash: `0x${'4'.repeat(64)}`,
+    blockTimestamp: '1970-01-01T00:01:40.000Z',
+    finality: 'finalized',
+    capturedAt: '1970-01-01T00:01:40.000Z',
+    providerVersions: { fixture: '1' },
+    adapterVersions: { evm: '1' },
+    configHash: '5'.repeat(64),
+    entityModelVersion: 'entity-v0.1.0',
+    labelSnapshot: 'labels-v1',
+  };
+  const coverage = createEvidence({
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    kind: 'LOG',
+    source: 'bsc-history-fixture',
+    locator: `pension-transfer-range:${tokenAddress}:1-15`,
+    payload: { fromBlock: '1', toBlock: '15', complete: true },
+    observedAt: snapshot.capturedAt,
+    blockOrSlot: snapshot.blockNumber,
+    finality: snapshot.finality,
+    summary: 'Complete fixture transfer range.',
+  });
+  evidence.add(coverage, [], snapshot);
+  const wallet = `0x${'d'.repeat(40)}`;
+  const candidateEvidence = createEvidence({
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    kind: 'DERIVED_FEATURE',
+    source: 'zerotrace:evm-pension-candidate-discovery-v1.0.0',
+    locator: `pension-behavior-candidate:${tokenAddress}:${wallet}:1-15`,
+    payload: { wallet, exactUnitDeposits: 5 },
+    observedAt: snapshot.capturedAt,
+    blockOrSlot: snapshot.blockNumber,
+    finality: snapshot.finality,
+    summary: 'Fixture pension behavior candidate.',
+    sourceEvidenceIds: [coverage.id],
+  });
+  evidence.add(candidateEvidence, [coverage.id], snapshot);
+  const terminal = createEvidence({
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    kind: 'DERIVED_FEATURE',
+    source: 'zerotrace:evm-pension-candidate-discovery-v1.0.0',
+    locator: `pension-behavior-discovery:${tokenAddress}:1-15`,
+    payload: { candidateCount: 1 },
+    observedAt: snapshot.capturedAt,
+    blockOrSlot: snapshot.blockNumber,
+    finality: snapshot.finality,
+    summary: 'Fixture pension behavior discovery completed.',
+    sourceEvidenceIds: [coverage.id, candidateEvidence.id],
+  });
+  evidence.add(terminal, [coverage.id, candidateEvidence.id], snapshot);
+  const evidenceItems = [coverage, candidateEvidence, terminal];
+  const report: EvmPensionCandidateDiscovery = {
+    tokenAddress,
+    fromBlock: '1',
+    toBlock: '15',
+    policy: {
+      shareUnitAtomic: (1_000n * 10n ** 18n).toString(),
+      minimumExactUnitDeposits: 5,
+      minimumUniqueExactUnitDepositors: 5,
+      maximumCandidates: 20,
+    },
+    scannedTransferCount: 5,
+    candidates: [
+      {
+        address: wallet,
+        inflowTransferCount: 5,
+        outflowTransferCount: 0,
+        exactUnitDepositCount: 5,
+        exactMultipleDepositCount: 5,
+        nonMultipleDepositCount: 0,
+        uniqueExactUnitDepositorCount: 5,
+        uniqueOutflowDestinationCount: 0,
+        observedInflowAmount: (5_000n * 10n ** 18n).toString(),
+        observedOutflowAmount: '0',
+        observedNetAmount: (5_000n * 10n ** 18n).toString(),
+        observedWholeShares: '5',
+        firstInflowAt: snapshot.capturedAt,
+        lastInflowAt: snapshot.capturedAt,
+        firstOutflowAt: unknownValue('NOT_APPLICABLE'),
+        lastOutflowAt: unknownValue('NOT_APPLICABLE'),
+        criteria: ['EXACT_SHARE_UNIT_DEPOSITS', 'UNIQUE_DEPOSITOR_THRESHOLD'],
+        transferEvidenceIds: [coverage.id],
+        evidenceId: candidateEvidence.id,
+        roleAttribution: unknownValue('INSUFFICIENT_DATA'),
+        participantExitPolicy: unknownValue('INSUFFICIENT_DATA'),
+        dividendExecution: unknownValue('INSUFFICIENT_DATA'),
+      },
+    ],
+    coverageEvidenceIds: [coverage.id],
+    terminalEvidenceId: terminal.id,
+    metadata: {
+      snapshot,
+      dataCoverage: 1,
+      sourceCoverage: 0.5,
+      historyCoverage: 1,
+      simulationCoverage: 0,
+      freshness: snapshot.blockTimestamp ?? null,
+      sourceSet: ['bsc-history-fixture'],
+      modelVersion: 'evm-pension-candidate-discovery-v1.0.0',
+      confidence: 0.8,
+      evidenceIds: evidenceItems.map((item) => item.id).sort(),
+    },
+  };
+  return { report, wallet, evidenceItems };
 }
 
 describe('platform registry', () => {
@@ -678,6 +815,135 @@ describe('Flap migrated Pancake V2 buy-size scenarios', () => {
     expect(result.scenarios[0]?.averageConfiguredTaxBuyPrice).toMatchObject({
       state: 'unknown',
       reason: 'NOT_APPLICABLE',
+    });
+  });
+});
+
+describe('Flap pension-entry economics', () => {
+  it('binds share economics to a durable behavior candidate without calling custody a burn', async () => {
+    const fixture = marketFixture();
+    const behavior = pensionBehaviorFixture(fixture.evidence);
+    const result = await fixture.pensionEntry({
+      quoteInputs: ['100', '1000'],
+      pensionWallet: behavior.wallet,
+      behaviorReport: behavior.report,
+      behaviorReportId: `pcr_${'1'.repeat(24)}`,
+      behaviorResultHash: '1'.repeat(64),
+      behaviorEvidence: behavior.evidenceItems,
+    });
+
+    expect(result.behavior).toMatchObject({
+      wallet: behavior.wallet,
+      shareUnit: { decimal: '1000' },
+      roleAttribution: { state: 'unknown' },
+      participantExitPolicy: { state: 'unknown' },
+      dividendExecution: { state: 'unknown' },
+    });
+    expect(result.entries).toHaveLength(2);
+    const first = result.entries[0];
+    expect(first?.modeledNetTokenOutput.state).toBe('known');
+    if (first?.modeledNetTokenOutput.state === 'known') {
+      const net = BigInt(first.modeledNetTokenOutput.value.atomic);
+      expect(first.modeledWholeShares).toEqual({
+        state: 'known',
+        value: (net / BigInt(result.behavior.shareUnit.atomic)).toString(),
+      });
+      expect(
+        BigInt(
+          first.modeledCommittedTokenAmount.state === 'known'
+            ? first.modeledCommittedTokenAmount.value.atomic
+            : '-1',
+        ) +
+          BigInt(
+            first.modeledRemainderTokenAmount.state === 'known'
+              ? first.modeledRemainderTokenAmount.value.atomic
+              : '-1',
+          ),
+      ).toBe(net);
+    }
+    expect(first?.modeledPostDepositSpotPrice).toEqual({
+      state: 'known',
+      value: first?.buyScenario.modeledPostBuySpotPrice,
+    });
+    expect(first?.executionWholeShares).toMatchObject({
+      state: 'unknown',
+      reason: 'NOT_QUERIED',
+    });
+    expect(result.destinationTreatment).toBe('NON_ZERO_CUSTODY_ADDRESS');
+    expect(result.totalSupplyReduction).toMatchObject({ state: 'unknown' });
+    expect(result.custodyIrreversible).toMatchObject({ state: 'unknown' });
+    expect(result.metadata).toMatchObject({
+      snapshot: { blockNumber: '16' },
+      modelVersion: 'flap-pension-entry-economics-v0.1.0',
+    });
+    expect(result.evidence.at(-1)?.id).toBe(result.terminalEvidenceId);
+    expect(fixture.evidence.get(result.terminalEvidenceId)?.sourceEvidenceIds).toEqual(
+      [
+        result.behavior.candidateEvidenceId,
+        result.behavior.reportTerminalEvidenceId,
+        result.evidence.find(
+          (item) => item.source === 'zerotrace:flap-pancake-v2-pool-buy-scenarios-v0.1.0',
+        )?.id,
+      ].sort(),
+    );
+  });
+
+  it('rejects a wallet that is not in the referenced behavior report before provider reads', async () => {
+    const fixture = marketFixture();
+    const behavior = pensionBehaviorFixture(fixture.evidence);
+
+    await expect(
+      fixture.pensionEntry({
+        quoteInputs: ['100', '1000'],
+        pensionWallet: `0x${'e'.repeat(40)}`,
+        behaviorReport: behavior.report,
+        behaviorReportId: `pcr_${'1'.repeat(24)}`,
+        behaviorResultHash: '1'.repeat(64),
+        behaviorEvidence: behavior.evidenceItems,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringContaining('not a candidate'),
+    });
+    expect(fixture.transport.calls).toHaveLength(0);
+  });
+
+  it('rejects an incomplete behavior Evidence set before provider reads', async () => {
+    const fixture = marketFixture();
+    const behavior = pensionBehaviorFixture(fixture.evidence);
+
+    await expect(
+      fixture.pensionEntry({
+        quoteInputs: ['100'],
+        pensionWallet: behavior.wallet,
+        behaviorReport: behavior.report,
+        behaviorReportId: `pcr_${'1'.repeat(24)}`,
+        behaviorResultHash: '1'.repeat(64),
+        behaviorEvidence: behavior.evidenceItems.slice(0, 1),
+      }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      message: expect.stringContaining('Evidence set is incomplete'),
+    });
+    expect(fixture.transport.calls).toHaveLength(0);
+  });
+
+  it('keeps a known zero receipt distinct from an undefined average share cost', async () => {
+    const fixture = marketFixture({ buyTaxBps: 10_000n });
+    const behavior = pensionBehaviorFixture(fixture.evidence);
+    const result = await fixture.pensionEntry({
+      quoteInputs: ['100'],
+      pensionWallet: behavior.wallet,
+      behaviorReport: behavior.report,
+      behaviorReportId: `pcr_${'1'.repeat(24)}`,
+      behaviorResultHash: '1'.repeat(64),
+      behaviorEvidence: behavior.evidenceItems,
+    });
+
+    expect(result.entries[0]).toMatchObject({
+      modeledNetTokenOutput: { state: 'known', value: { atomic: '0', decimal: '0' } },
+      modeledWholeShares: { state: 'known', value: '0' },
+      modeledAverageQuoteCostPerShare: { state: 'unknown', reason: 'NOT_APPLICABLE' },
     });
   });
 });

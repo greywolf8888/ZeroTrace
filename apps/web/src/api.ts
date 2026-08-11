@@ -324,6 +324,49 @@ export interface FlapPancakeV2BuyScenarioResponse {
   evidence: EvidenceRecord[];
 }
 
+export interface FlapPancakeV2PensionEntryResponse {
+  platform: 'flap';
+  token: string;
+  behavior: {
+    reportId: string;
+    resultHash: string;
+    wallet: string;
+    shareUnit: FlapTokenAmount;
+    fromBlock: string;
+    toBlock: string;
+    snapshotHash: string;
+    observedWholeShares: string;
+    candidateEvidenceId: string;
+    reportTerminalEvidenceId: string;
+    roleAttribution: KnowledgeValue<'PENSION_VAULT'>;
+    participantExitPolicy: KnowledgeValue<boolean>;
+    dividendExecution: KnowledgeValue<boolean>;
+  };
+  market: KnowledgeValue<FlapPancakeV2Market>;
+  entries: Array<{
+    buyScenario: FlapPancakeV2BuyScenarioResponse['scenarios'][number];
+    modeledNetTokenOutput: KnowledgeValue<FlapTokenAmount>;
+    modeledShareEquivalent: KnowledgeValue<string>;
+    modeledWholeShares: KnowledgeValue<string>;
+    modeledCommittedTokenAmount: KnowledgeValue<FlapTokenAmount>;
+    modeledRemainderTokenAmount: KnowledgeValue<FlapTokenAmount>;
+    modeledQuoteCostForCommittedShares: KnowledgeValue<FlapTokenAmount>;
+    modeledAverageQuoteCostPerShare: KnowledgeValue<FlapTokenAmount>;
+    modeledPostDepositSpotPrice: KnowledgeValue<string>;
+    executionNetTokenOutput: KnowledgeValue<FlapTokenAmount>;
+    executionWholeShares: KnowledgeValue<string>;
+    executionPostDepositSpotPrice: KnowledgeValue<string>;
+    assumption: string;
+  }>;
+  validation: FlapPancakeV2BuyScenarioResponse['validation'];
+  destinationTreatment: 'NON_ZERO_CUSTODY_ADDRESS';
+  totalSupplyReduction: KnowledgeValue<FlapTokenAmount>;
+  custodyIrreversible: KnowledgeValue<boolean>;
+  terminalEvidenceId: string;
+  metadata: AnalysisMetadata;
+  evidence: EvidenceRecord[];
+}
+
 export interface FlapPancakeV2SellScenarioResponse {
   platform: 'flap';
   token: string;
@@ -1306,6 +1349,28 @@ export const api = {
         blockNumber,
       }),
     }),
+  flapPancakeV2PensionEntryScenarios: (
+    token: string,
+    quoteInputs: readonly string[],
+    blockNumber: string,
+    pensionReportId: string,
+    pensionWallet: string,
+  ) =>
+    requestJson<FlapPancakeV2PensionEntryResponse>(
+      '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          chainId: 'eip155:56',
+          platform: 'flap',
+          token,
+          quoteInputs,
+          blockNumber,
+          ...(pensionReportId.length === 0 ? {} : { pensionReportId }),
+          ...(pensionWallet.length === 0 ? {} : { pensionWallet }),
+        }),
+      },
+    ),
   flapPancakeV2SellScenarios: (
     token: string,
     tokenInputs: readonly string[],

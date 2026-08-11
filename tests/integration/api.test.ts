@@ -24,7 +24,12 @@ import {
   type AnchorReconciliationTarget,
   type ChainAnchorReader,
 } from '@zerotrace/data-quality';
-import { createEvidence, EvidenceLedger, hashPayload } from '@zerotrace/evidence';
+import {
+  createEvidence,
+  EvidenceLedger,
+  hashPayload,
+  type EvidenceNode,
+} from '@zerotrace/evidence';
 import {
   ERC20_TRANSFER_TOPIC,
   PANCAKE_V2_BSC_DEPLOYMENT,
@@ -136,9 +141,25 @@ class FakeTransport implements JsonRpcTransport {
 class FlapQuoteTransport implements JsonRpcTransport {
   readonly endpointId = 'bsc-quote-fixture';
   readonly #callResults: unknown[];
+  readonly #blockNumber: bigint;
+  readonly #blockHash: string;
+  readonly #parentBlockHash: string;
+  readonly #timestamp: string;
 
-  constructor(callResults: unknown[]) {
+  constructor(
+    callResults: unknown[],
+    anchor: {
+      blockNumber?: bigint;
+      blockHash?: string;
+      parentBlockHash?: string;
+      timestamp?: string;
+    } = {},
+  ) {
     this.#callResults = [...callResults];
+    this.#blockNumber = anchor.blockNumber ?? 16n;
+    this.#blockHash = anchor.blockHash ?? `0x${'6'.repeat(64)}`;
+    this.#parentBlockHash = anchor.parentBlockHash ?? `0x${'5'.repeat(64)}`;
+    this.#timestamp = anchor.timestamp ?? '0x65';
   }
 
   async request<T>(method: string, params: readonly unknown[] = []): Promise<T> {
@@ -153,10 +174,10 @@ class FlapQuoteTransport implements JsonRpcTransport {
     if (method === 'eth_getBlockByNumber') {
       return {
         value: {
-          number: '0x10',
-          hash: `0x${'6'.repeat(64)}`,
-          parentHash: `0x${'5'.repeat(64)}`,
-          timestamp: '0x65',
+          number: `0x${this.#blockNumber.toString(16)}`,
+          hash: this.#blockHash,
+          parentHash: this.#parentBlockHash,
+          timestamp: this.#timestamp,
         } as T,
         endpointId: 'bsc-anchor',
       };
@@ -5061,7 +5082,7 @@ describe('ZeroTrace API contract', () => {
       ),
     );
     const candidate = `0x${'d'.repeat(40)}`;
-    const shareUnit = 1_000_000n;
+    const shareUnit = 1_000_000n * 10n ** 18n;
     const indexed = (address: string) => `0x${'0'.repeat(24)}${address.slice(2)}`;
     const logs: EvmLogRecord[] = [2, 3, 4].map((digit, index) => ({
       address: fixtureFlapToken,
@@ -5086,7 +5107,19 @@ describe('ZeroTrace API contract', () => {
       return { endpointId: 'sqd:binance-mainnet', value: logs };
     });
     runtime.sqdBscLogReader = { getLogsObservation };
-    runtime.evidenceRepository = repository();
+    const durableEvidence = new Map<string, EvidenceNode>();
+    runtime.evidenceRepository = repository({
+      put: vi.fn(async (evidence, sourceEvidenceIds = [], snapshot) => {
+        const node: EvidenceNode = {
+          evidence,
+          sourceEvidenceIds: [...sourceEvidenceIds].sort(),
+          ...(snapshot === undefined ? {} : { snapshot }),
+        };
+        durableEvidence.set(evidence.id, node);
+        return node;
+      }),
+      get: vi.fn(async (evidenceId) => durableEvidence.get(evidenceId)),
+    });
     let storedRecord: Record<string, unknown> | undefined;
     const put = vi.fn(async (report: Record<string, unknown>) => {
       storedRecord = {
@@ -5165,6 +5198,94 @@ describe('ZeroTrace API contract', () => {
     expect(exactReplay.json()).toEqual({ record: storedRecord });
     expect(latest).toHaveBeenCalledWith(fixtureFlapToken);
     expect(get).toHaveBeenCalledWith(`pcr_${'3'.repeat(24)}`);
+
+    const quoteReserve = 1_000n * 10n ** 18n;
+    const tokenReserve = 1_000_000_000n * 10n ** 18n;
+    const quoteInputs = [100n * 10n ** 18n, 1_000n * 10n ** 18n];
+    runtime.evmAdapters.set(
+      56,
+      new EvmLedgerAdapter(
+        {
+          id: 'bsc-rpc',
+          chainId: 56,
+          chainName: 'BNB Smart Chain',
+          snapshotBlockTag: 'finalized',
+        },
+        new FlapQuoteTransport(
+          [
+            fixtureFlapV8SafeResult({
+              status: 4,
+              quoteTokenAddress: fixtureFlapQuoteAsset,
+              pool: fixtureFlapPool,
+              dexId: 0,
+            }),
+            fixtureAddressResult(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+            fixtureAddressResult(fixtureFlapQuoteAsset),
+            fixtureAddressResult(fixtureFlapToken),
+            fixtureReservesResult(quoteReserve, tokenReserve),
+            fixtureAddressResult(fixtureFlapPool),
+            fixtureAddressResult(PANCAKE_V2_BSC_DEPLOYMENT.factory),
+            fixtureDecimalsResult(18),
+            fixtureDecimalsResult(18),
+            ...quoteInputs.map((input) =>
+              fixtureAmountsOutResult(
+                input,
+                fixturePancakeAmountOut(input, quoteReserve, tokenReserve),
+              ),
+            ),
+          ],
+          {
+            blockNumber: 110n,
+            blockHash: `0x${'f'.repeat(64)}`,
+            parentBlockHash: `0x${'e'.repeat(64)}`,
+            timestamp: '0x65c95abc',
+          },
+        ),
+      ),
+    );
+    const entry = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        pensionReportId: `pcr_${'3'.repeat(24)}`,
+        pensionWallet: candidate,
+        quoteInputs: ['100', '1000'],
+        blockNumber: '110',
+      },
+    });
+    expect(entry.statusCode, entry.body).toBe(200);
+    expect(entry.json()).toMatchObject({
+      behavior: {
+        reportId: `pcr_${'3'.repeat(24)}`,
+        wallet: candidate,
+        shareUnit: { decimal: '1000000' },
+        roleAttribution: { state: 'unknown' },
+        participantExitPolicy: { state: 'unknown' },
+        dividendExecution: { state: 'unknown' },
+      },
+      entries: [
+        {
+          buyScenario: { quoteInput: { decimal: '100' } },
+          modeledWholeShares: { state: 'known' },
+          executionWholeShares: { state: 'unknown', reason: 'NOT_QUERIED' },
+          modeledPostDepositSpotPrice: { state: 'known' },
+          executionPostDepositSpotPrice: { state: 'unknown', reason: 'NOT_QUERIED' },
+        },
+        { buyScenario: { quoteInput: { decimal: '1000' } } },
+      ],
+      destinationTreatment: 'NON_ZERO_CUSTODY_ADDRESS',
+      totalSupplyReduction: { state: 'unknown', reason: 'NOT_QUERIED' },
+      custodyIrreversible: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      metadata: {
+        snapshot: { blockNumber: '110', blockHash: `0x${'f'.repeat(64)}` },
+        modelVersion: 'flap-pension-entry-economics-v0.1.0',
+      },
+    });
+    const entryTerminal = durableEvidence.get(entry.json().terminalEvidenceId);
+    expect(entryTerminal?.sourceEvidenceIds).toHaveLength(3);
   });
 
   it('requires durable storage for live pension candidate discovery', async () => {

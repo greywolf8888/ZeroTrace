@@ -2,6 +2,7 @@ import { unknownValue, type Ledger } from '@zerotrace/schemas';
 
 export * from './flap.js';
 export * from './flap-market.js';
+export * from './flap-pension-entry.js';
 export * from './flap-market-reconciliation.js';
 export * from './flap-events.js';
 export * from './flap-history.js';

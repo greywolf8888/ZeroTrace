@@ -40,6 +40,7 @@ import {
   inspectSolanaControlSurface,
   quoteFlapPancakeV2BuyScenarios,
   quoteFlapPancakeV2SellScenarios,
+  quoteFlapPensionEntryScenarios,
   reconcileFlapPancakeV2Market,
   quoteFlapSell,
   replayErc20BurnPromotionResult,
@@ -499,6 +500,40 @@ const FlapPancakeV2SellScenarioRequestSchema = z
       )
       .min(1)
       .max(8),
+    blockNumber: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  })
+  .strict();
+
+const FlapPancakeV2PensionEntryRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    quoteInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
+    pensionReportId: z
+      .string()
+      .regex(/^pcr_[0-9a-f]{24}$/)
+      .optional(),
+    pensionWallet: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/)
+      .optional(),
     blockNumber: z
       .string()
       .regex(/^(?:0|[1-9]\d*)$/)
@@ -1396,6 +1431,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                 : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
         detail:
           'A caller-supplied, versioned share-unit/depositor policy scans a complete finalized BSC ERC-20 Transfer range, emits only behavioral wallet candidates, and persists an immutable Evidence-linked report for provider-free replay. Official pension role, participant exit policy and dividend execution remain Unknown until independent source and flow Evidence support them.',
+      },
+      {
+        id: 'flap-pension-entry-economics',
+        status:
+          runtime.evidenceRepository === undefined || runtime.pensionCandidateReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : !runtime.evmAdapters.has(56)
+              ? 'BSC_PROVIDER_REQUIRED'
+              : 'IMPLEMENTED_PENDING_PINNED_FORK_EXECUTION',
+        detail:
+          'A durable pension-behavior candidate is joined to same-Snapshot Pancake V2 buy scenarios to calculate modeled whole-share capacity, remainder and average acquisition cost across input sizes. The non-zero destination remains custody rather than supply burn; actual receipt, transfer tax/swapback, irreversibility and dividend execution remain Unknown.',
       },
       {
         id: 'erc20-supply-continuity',
@@ -2558,6 +2604,111 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         token: input.token,
         quoteInputs: input.quoteInputs,
         deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+    },
+  );
+
+  app.post(
+    '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPancakeV2PensionEntryRequestSchema.parse(request.body);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A BNB Smart Chain read-only provider is required for pension-entry economics.',
+              true,
+            ),
+          );
+      }
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.pensionCandidateReports === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_STORAGE_REQUIRED',
+              'Pension-entry economics require durable Evidence and pension-candidate report storage.',
+              false,
+            ),
+          );
+      }
+      const token = input.token.toLowerCase();
+      const record =
+        input.pensionReportId === undefined
+          ? await runtime.pensionCandidateReports.latest(token)
+          : await runtime.pensionCandidateReports.get(input.pensionReportId);
+      if (
+        record === undefined ||
+        record.chainId !== input.chainId ||
+        record.tokenAddress !== token
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_NOT_FOUND',
+              'No matching durable BSC pension candidate report was found.',
+              false,
+            ),
+          );
+      }
+      const selectedCandidate =
+        input.pensionWallet === undefined
+          ? record.report.candidates.length === 1
+            ? record.report.candidates[0]
+            : undefined
+          : record.report.candidates.find(
+              (candidate) => candidate.address === input.pensionWallet?.toLowerCase(),
+            );
+      if (selectedCandidate === undefined) {
+        return reply
+          .code(422)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_SELECTION_REQUIRED',
+              'Select one wallet contained in the referenced report; omission is allowed only when the report has exactly one candidate.',
+              false,
+            ),
+          );
+      }
+      const evidenceNodes = await Promise.all(
+        record.evidenceIds.map((evidenceId) => runtime.evidenceRepository?.get(evidenceId)),
+      );
+      if (evidenceNodes.some((node) => node === undefined)) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_EVIDENCE_INCOMPLETE',
+              'The pension candidate report references unavailable durable Evidence.',
+              false,
+            ),
+          );
+      }
+      return quoteFlapPensionEntryScenarios({
+        adapter,
+        token,
+        quoteInputs: input.quoteInputs,
+        pensionWallet: selectedCandidate.address,
+        behaviorReportId: record.id,
+        behaviorResultHash: record.resultHash,
+        behaviorReport: record.report,
+        behaviorEvidence: evidenceNodes.map((node) => node?.evidence as Evidence),
         writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
           addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
         ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),

@@ -38,6 +38,55 @@ function formatRatio(numerator: bigint, denominator: bigint, decimalPlaces = 18)
   return negative && result !== '0' ? `-${result}` : result;
 }
 
+export interface PensionEntryEconomicsInput {
+  quoteInputAtomic: string;
+  modeledNetTokenOutputAtomic: string;
+  shareUnitAtomic: string;
+}
+
+export interface PensionEntryEconomics {
+  modeledShareEquivalent: string;
+  modeledWholeShares: string;
+  modeledCommittedTokenAtomic: string;
+  modeledRemainderTokenAtomic: string;
+  modeledQuoteCostForCommittedSharesAtomic: string;
+  modeledAverageQuoteCostPerShareAtomic: string | null;
+}
+
+function ceilDivide(numerator: bigint, denominator: bigint): bigint {
+  return numerator === 0n ? 0n : (numerator + denominator - 1n) / denominator;
+}
+
+export function calculatePensionEntryEconomics(
+  input: PensionEntryEconomicsInput,
+): PensionEntryEconomics {
+  const quoteInput = parseAtomic(input.quoteInputAtomic, 'quoteInputAtomic');
+  const modeledNetTokenOutput = parseAtomic(
+    input.modeledNetTokenOutputAtomic,
+    'modeledNetTokenOutputAtomic',
+  );
+  const shareUnit = parseAtomic(input.shareUnitAtomic, 'shareUnitAtomic');
+  if (quoteInput === 0n) throw new Error('quoteInputAtomic must be positive.');
+  if (shareUnit === 0n) throw new Error('shareUnitAtomic must be positive.');
+
+  const wholeShares = modeledNetTokenOutput / shareUnit;
+  const committedTokens = wholeShares * shareUnit;
+  const remainderTokens = modeledNetTokenOutput - committedTokens;
+  const committedQuoteCost =
+    modeledNetTokenOutput === 0n ? 0n : (quoteInput * committedTokens) / modeledNetTokenOutput;
+  const averageQuoteCostPerShare =
+    modeledNetTokenOutput === 0n ? null : ceilDivide(quoteInput * shareUnit, modeledNetTokenOutput);
+
+  return {
+    modeledShareEquivalent: formatRatio(modeledNetTokenOutput, shareUnit),
+    modeledWholeShares: wholeShares.toString(),
+    modeledCommittedTokenAtomic: committedTokens.toString(),
+    modeledRemainderTokenAtomic: remainderTokens.toString(),
+    modeledQuoteCostForCommittedSharesAtomic: committedQuoteCost.toString(),
+    modeledAverageQuoteCostPerShareAtomic: averageQuoteCostPerShare?.toString() ?? null,
+  };
+}
+
 export interface ConstantProductPoolSnapshot {
   id: string;
   baseReserve: string;

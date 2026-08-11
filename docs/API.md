@@ -45,6 +45,7 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/claims/EVM/:token/supply-continuity/:id`             | provider-free all-block supply-continuity replay                 |
 | POST   | `/api/v1/rv/flap-sell`                                        | fixed-block read-only Flap Portal `previewSell` quote            |
 | POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                    | migrated Flap Pancake V2 spot and multi-size buy model           |
+| POST   | `/api/v1/rv/flap-pancake-v2-pension-entry-scenarios`          | durable candidate-bound pension entry/share economics            |
 | POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                   | migrated Flap Pancake V2 nominal/gross/tax exit-size model       |
 | POST   | `/api/v1/rv/flap-pancake-v2-reconciliation`                   | common-block multi-source market and RV discrepancy certificate  |
 | POST   | `/api/v1/data-quality/discrepancies`                          | typed error-budget and discrepancy audit                         |
@@ -485,6 +486,34 @@ Sending bought tokens to a pension or treasury wallet is never treated as a burn
 keeps `pensionSinkTreatment=Unknown(INSUFFICIENT_DATA)` and counts no extra price effect beyond the
 modeled pool buy until custody and transfer execution are separately evidenced. The route performs
 only bytecode reads and `eth_call`; it cannot approve, sign, swap, or broadcast.
+
+`POST /api/v1/rv/flap-pancake-v2-pension-entry-scenarios` accepts the same BSC chain, platform,
+token, one-to-eight positive decimal `quoteInputs`, and optional `blockNumber`, plus optional
+`pensionReportId` and `pensionWallet`. Durable PostgreSQL Evidence and pension-candidate report
+storage are mandatory. Without an explicit report the latest report for the token is selected;
+without an explicit wallet the report must contain exactly one candidate. Missing report Evidence,
+token/report mismatch, or an unlisted candidate fails closed before market reads.
+
+The market Snapshot must be at or after the behavior report's finalized range end. At an equal
+height, its block hash must match exactly. Each result composes the existing verified buy scenario
+with exact-integer share arithmetic:
+
+- share equivalent = configured-tax modeled net tokens / observed report share unit;
+- whole shares = floor(net tokens / share unit);
+- committed tokens and remainder preserve the exact net-token atomic total;
+- committed quote cost is allocated proportionally, and average quote cost per share is conservatively
+  rounded up by one quote-asset atomic unit when division is not exact;
+- the custody transfer has no additional modeled pool impact, so modeled post-deposit spot equals
+  the buy scenario's modeled post-buy spot.
+
+Exact arithmetic and allocations have zero atomic-unit tolerance. The inherited Router versus
+clean-room pool check uses the versioned `10 bps` budget. A known zero token receipt remains zero,
+but its average cost per share is `Unknown(NOT_APPLICABLE)`, never numeric zero. Actual wallet
+receipt, whole shares after transfer, transfer tax/swapback, final post-transfer pool price, total
+supply reduction, custody irreversibility, participant exit policy and dividend execution remain
+typed Unknown until a pinned-fork buy-plus-transfer and independent Claim Evidence exist. The
+terminal derivation must link the buy-scenario root, candidate Evidence and durable report terminal
+Evidence. This endpoint is read-only and cannot approve, transfer, swap, sign or broadcast.
 
 `POST /api/v1/rv/flap-pancake-v2-sell-scenarios` accepts the same chain, platform, token and optional
 block fields plus one to eight positive decimal `tokenInputs`. It reuses the complete same-Snapshot
