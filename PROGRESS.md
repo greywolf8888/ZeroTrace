@@ -19,7 +19,7 @@ completed feature.
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                    |
 | Integration tests                | **72 environment-free plus 27 real-storage passing; 99 with PostgreSQL, ClickHouse and object store enabled** |
 | Real-browser E2E                 | **36 passing: Chromium desktop and Pixel 7**                                                                  |
-| Remote CI                        | **Latest recorded exact-SHA pass: `c0430e8`; Draft PR #5 remains the pre-merge gate**                         |
+| Remote CI                        | **Feature `f1c8a57` and post-merge main `33f20e5` passed CI/CodeQL; PR #5 merged**                            |
 | Coverage                         | **Current local: 83.26% statements / 77.78% branches / 93.47% functions / 84.45% lines**                      |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed      |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/Scenario, control, and Solana reports wired               |
@@ -1035,7 +1035,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                          | fresh bootstrap passed through migration 018; current persistent Compose volume upgraded non-destructively     |
 | Runtime/browser smoke          | Pass                                          | rebuilt API/Web healthy; Entity/Scenario replay served, storage UP and read-only/broadcast boundary preserved  |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed |
-| Remote CI                      | Exact-SHA pass `c0430e8`                      | CI/CodeQL green for the immutable pension-entry Scenario Report/docs batch; Entity batch is awaiting push      |
+| Remote CI                      | Exact-SHA passes `f1c8a57` / main `33f20e5`   | PR #5 feature head and protected-main squash both passed CI and CodeQL                                         |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
