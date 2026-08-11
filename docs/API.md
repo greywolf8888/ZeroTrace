@@ -737,6 +737,11 @@ repository, `POSTGRES`/`DOWN` with a safe error code when configured storage is 
 `MEMORY`/`EPHEMERAL` for an intentional no-`POSTGRES_URL` development runtime. Configured storage
 failure makes `/health/ready` return HTTP 503.
 
+When PostgreSQL is configured, aggregate storage readiness also checks migration
+`024_capture_schedules`. This verifies the durable schedule/run/attempt authority only; there is no
+public scheduling or worker-lease endpoint yet, and health never claims that Temporal/NATS handlers
+are running.
+
 `dataQuality` reports aggregate anchor state, safe per-chain results, configured/observed source
 counts, continuity coverage, Evidence IDs, alerts, and its own `POSTGRES` or `MEMORY` storage state.
 A source disagreement, reorg/regression alert, or failed data-quality repository degrades full

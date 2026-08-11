@@ -6,10 +6,5 @@
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [
-    { "path": "../schemas" },
-    { "path": "../evidence" },
-    { "path": "../data-quality" },
-    { "path": "../capture-scheduler" }
-  ]
+  "references": [{ "path": "../schemas" }, { "path": "../evidence" }]
 }

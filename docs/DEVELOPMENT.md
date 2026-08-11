@@ -445,6 +445,47 @@ Database guards reject report mutation, missing/mismatched source Evidence, alte
 payloads, or any attempt to enable label-driven Entity merge, risk-to-control inference, or
 cross-chain same-label merge.
 
+## Durable capture scheduling foundation
+
+Migration `024_capture_schedules` and `@zerotrace/capture-scheduler` define one reusable scheduling
+boundary for EVM, Bitcoin, Solana and every analysis domain. A schedule contains an exact target,
+JSON parameters, one-shot or anchored interval trigger, bounded retry policy and the literal
+`READ_ONLY_CAPTURE` operation. Its content identity excludes creation time, so retries and process
+restarts cannot create a second logical schedule.
+
+`PostgresCaptureScheduleRepository.claimDue()` uses row leases and `FOR UPDATE SKIP LOCKED`; only
+one worker can own an occurrence. Leases carry opaque tokens and expiry. Retryable failures use
+bounded deterministic backoff, lease expiry is written as an immutable attempt outcome, and an
+exhausted one-shot becomes terminal without a fabricated result. `runCaptureCycle()` dispatches only
+registered production handlers and records an unregistered kind as a typed terminal failure.
+
+Successful completion is stricter than “the handler returned”: the result must carry a durable
+Snapshot, terminal and complete sorted Evidence IDs, coverage, freshness, source set, model version
+and confidence. PostgreSQL verifies that every Evidence node binds the identical Snapshot and ledger
+target, that the submitted set is exactly the terminal Evidence's recursive closure, and that the
+source set exactly matches non-derived Evidence sources. This module currently supplies durable
+state and handler-neutral dispatch. Temporal Schedule/Workflow wiring, JetStream publication and
+concrete continuous multi-chain handlers remain open; FFT is not embedded in any schedule or
+default parameter.
+
+## Generic Action Semantics
+
+`@zerotrace/action-semantics` is the chain-neutral boundary between raw ledger observations and
+Claim Verification. It can classify transfer, swap, mint, burn, liquidity, LP custody,
+distribution and contract-call primitives only when the candidate carries the required execution
+proof, asset-delta shape and exact-Snapshot Evidence. A reverted or otherwise failed call remains a
+proved `NOT_APPLIED` attempt; missing execution data and incomplete proof remain Unknown.
+
+```powershell
+npx vitest run packages/action-semantics/src/index.test.ts
+```
+
+The primitive engine intentionally does not infer promotional purpose: a Swap is not automatically
+a buyback, a distribution is not automatically a dividend, and custody is not automatically burn
+or an irreversible lock. Current output is an in-process deterministic Evidence-backed report.
+Production ledger adapters, PostgreSQL report persistence and scheduler-handler composition remain
+open.
+
 ## Continuous Flap lifetime heads
 
 The fourth semantic-worker entrypoint maintains one append-only accepted lifetime chain. It requires
@@ -482,7 +523,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `023`, are in
+local upgrade commands, including migrations `007` through `024`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

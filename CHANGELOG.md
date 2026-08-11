@@ -8,6 +8,20 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- generic `action-semantics-v0.1.0` primitive classification for transfers, swaps, burns, mints,
+  liquidity changes, LP custody, distributions and contract calls, with proof-shape gates,
+  explicit `APPLIED` / `NOT_APPLIED` / `UNKNOWN` execution state, terminal Evidence and no automatic
+  promotional-purpose inference;
+- generic `READ_ONLY_CAPTURE` schedule/run contracts and `capture-scheduler-v0.1.0`, including
+  deterministic content identity, anchored skip-missed intervals, bounded retries, typed handler
+  dispatch and strict successful-result Snapshot/Evidence/coverage/freshness/source/model/confidence
+  requirements;
+- PostgreSQL migration `024` and repository support for exclusive worker leases, expired-lease
+  recovery, append-only attempt outcomes, one-shot terminal state and completion guarded by one
+  exact Snapshot, complete terminal-Evidence reachability and exact non-derived source sets;
+- production Docker dependency-layer coverage for the Action Semantics and capture-scheduler
+  workspaces, preventing stale install-cache behavior as those packages evolve;
+
 - immutable `label-intelligence-v0.1.0` observation-set reports with ledger-scoped Subject identity,
   deterministic/curated/commercial/community/inference review priority, future/active/stale/expired
   states, preserved label/actor/determinism conflicts, conservative Service Hub suppression,

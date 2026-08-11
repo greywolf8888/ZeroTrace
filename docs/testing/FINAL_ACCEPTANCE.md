@@ -144,8 +144,8 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       and hard no-label/risk/cross-chain Entity merge rules
 - [x] Immutable PostgreSQL Label Snapshots/reports with exact Subject/observation/Evidence binding,
       update/delete guards, materialize/latest/exact API and search projection
-- [ ] Durable GraphSense/official/commercial/community label-source adapters, license/term enforcement,
-      capture schedules, complete Subject Registry coverage and real cross-source conflict corpus
+- [ ] Durable GraphSense/official/commercial/community label-source adapters, scheduler handlers,
+      license/term enforcement, complete Subject Registry coverage and real cross-source conflict corpus
 - [ ] Calibrated entity-resolution model and labeled evaluation corpus
 - [ ] Controller/control-right extraction across terminal scope
   - [x] Finalized EVM ERC-1167/EIP-1967/ERC-173/registered-Safe standard surface with complete
@@ -230,6 +230,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Exact finalized-block ERC-20 burn action derivation with adjacent `totalSupply`, complete
       mint/burn Transfer conservation, contradiction/no-action states, Evidence replay, API/UI and
       one named FFT Alchemy no-action certificate
+- [x] Generic proof-gated Action Semantics for transfer, swap, mint/burn, liquidity, LP custody,
+      distribution and contract-call primitives, with explicit failed/Unknown execution and no
+      automatic promotional-purpose inference
 - [x] Finalized BSC SQD long-range zero-address Transfer candidate discovery with bounded sparse
       queries, terminal Evidence, responsive API/UI and silent-supply state retained as Unknown
 - [x] Restart-safe bounded burn-candidate promotion with exact-block certificates before cursor
@@ -237,8 +240,12 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Bounded all-block supply-continuity scanning with EIP-1898 canonical reads, exact multi-source
       reconciliation, changed-block certificates, operator gate, provider-free replay and a named
       independent-source FFT interval
-- [ ] Complete generic historical supply backfill, durable capture scheduling, reviewed-draft
-      promotion, independent claim-flow reconciliation and reusable Claim Audit action proof
+- [x] Add the generic read-only durable schedule/run/lease state machine with deterministic
+      occurrence identity, bounded retries, expired-lease recovery, immutable attempts and
+      Evidence/Snapshot-gated completion
+- [ ] Bind Temporal Schedules/Workflows, NATS JetStream events and production multi-chain handlers;
+      persist Action Semantics reports and complete production ledger adapters, historical supply
+      backfill, reviewed-draft promotion and independent claim-flow reconciliation
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures

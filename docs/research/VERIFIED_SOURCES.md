@@ -1,10 +1,18 @@
 # Verified Source Ledger
 
-Research snapshot: **2026-08-11**
+Research snapshot: **2026-08-12**
 
 This ledger records sources inspected for the initial architecture. It is not a claim that every
 listed project is integrated. GitHub heads are immutable observations at the research date; release
 work must refresh them.
+
+## Durable workflow and queue semantics
+
+| Source                                                                                                                                                                  | Verified behavior                                                                                                                       | ZeroTrace boundary                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| [Temporal documentation](https://docs.temporal.io/) and [TypeScript SDK reference](https://typescript.temporal.io/)                                                     | Temporal supplies durable workflow execution and an official TypeScript client/worker surface                                           | The current scheduler state machine is the persistence/Activity contract; Temporal Schedule/Workflow code is not yet integrated         |
+| [NATS JetStream](https://docs.nats.io/nats-concepts/jetstream) and [message deduplication](https://docs.nats.io/using-nats/developer/develop_jetstream/model_deep_dive) | JetStream is at-least-once by default; publisher IDs and acknowledgment protocols provide bounded deduplication/exactly-once mechanisms | Future events must use deterministic run IDs as message IDs and consumers must remain idempotent; no event adapter is currently claimed |
+| [PostgreSQL locking clause](https://www.postgresql.org/docs/17/sql-select.html)                                                                                         | `FOR UPDATE SKIP LOCKED` is explicitly suitable for queue-like multiple-consumer access, not a consistent general query view            | Due-run claiming uses it only inside a transaction; PostgreSQL remains authoritative for schedule/run/attempt state                     |
 
 ## Chain data and runtimes
 

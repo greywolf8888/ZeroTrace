@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const workspacePackages = [
+  'action-semantics',
   'chain-adapters',
+  'capture-scheduler',
   'claim-audit',
   'data-quality',
   'entity-engine',
