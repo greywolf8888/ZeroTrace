@@ -1758,4 +1758,8 @@ CycloneDX SBOM and Compose validation passed. All six production Dockerfile targ
 Compose API/Web/PostgreSQL/Valkey remained healthy on the non-destructive local port overrides;
 live was `UP`, readiness explicitly `DEGRADED` under fail-closed private-range provider DNS,
 `readOnly=true`, all four provider states were reported, and the web root returned HTTP 200. Remote
-exact-SHA CI is pending the immutable commit.
+exact-SHA GitHub Actions and CodeQL then passed for immutable feature commit `f439eef` on Draft PR
+#5. CI repeated formatting, lint, typecheck, all 575 durable coverage tests, production build,
+license/audit/SBOM gates, all 34 Chromium flows and all six production container targets:
+[CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31467827833) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31467827806).

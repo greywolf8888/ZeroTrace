@@ -998,7 +998,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                          | fresh bootstrap passed; current persistent Compose volume upgraded non-destructively through migration 016       |
 | Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web healthy; pension-entry UI served, storage available and broadcast remains forbidden    |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed   |
-| Remote CI                      | Exact-SHA pass `d450dd0`                      | CI/CodeQL green for the FFT pension-behavior candidate batch; Draft PR #5 remains open                           |
+| Remote CI                      | Exact-SHA pass `f439eef`                      | CI/CodeQL green for the FFT candidate-bound pension-entry batch; Draft PR #5 remains open                        |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
