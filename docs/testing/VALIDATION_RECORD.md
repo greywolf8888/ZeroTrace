@@ -1706,3 +1706,10 @@ production build, license allowlist, development/production vulnerability audits
 Compose validation and runtime health also passed. The first full E2E attempt exposed two ambiguous
 legacy text locators after the new panel added similar copy; the locators were scoped to the
 declaration panel and the complete 34-test rerun passed.
+
+Exact-SHA GitHub Actions and CodeQL passed for immutable pension-behavior candidate commit
+`d450dd0` on Draft PR #5. CI independently repeated formatting, lint, typecheck, disposable
+PostgreSQL/ClickHouse/MinIO coverage (568 tests), production build, licenses, audit, SBOM, all 34
+Chromium desktop/mobile flows and all six production container targets:
+[CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31463334371) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31463334340).

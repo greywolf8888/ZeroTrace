@@ -19,7 +19,7 @@ completed feature.
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                     |
 | Integration tests                | **71 environment-free plus 26 real-storage passing; 97 with PostgreSQL, ClickHouse and object store enabled**  |
 | Real-browser E2E                 | **34 passing: Chromium desktop and Pixel 7**                                                                   |
-| Remote CI                        | **Latest recorded exact-SHA pass: `1ea3780`; Draft PR #5 remains the pre-merge gate**                          |
+| Remote CI                        | **Latest recorded exact-SHA pass: `d450dd0`; Draft PR #5 remains the pre-merge gate**                          |
 | Coverage                         | **Current local: 83.37% statements / 77.95% branches / 93.41% functions / 84.55% lines**                       |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior, Solana and Bitcoin reads passed |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim, pension, control, and Solana transaction reports wired           |
@@ -182,6 +182,10 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31460030151) passed on immutable
   durable Solana transaction-report commit `1ea3780`, including all repository quality, durable
   storage, browser, production-container and security-analysis gates.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31463334371) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31463334340) passed on immutable FFT
+  pension-behavior candidate commit `d450dd0`, including all 568 coverage tests, 34 Chromium
+  desktop/mobile flows, all six production-container targets and security analysis.
 
 ### Read-only chain foundation
 
@@ -953,7 +957,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                          | fresh bootstrap passed; current persistent Compose volume upgraded non-destructively through migration 016        |
 | Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web healthy; durable pension/Solana replay visible and broadcast remains forbidden          |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines plus scoped FFT pension/market/control, Solana semantics/controls and Bitcoin reads passed |
-| Remote CI                      | Exact-SHA pass `1ea3780`                      | CI/CodeQL green for the durable Solana transaction-report batch; Draft PR #5 remains open                         |
+| Remote CI                      | Exact-SHA pass `d450dd0`                      | CI/CodeQL green for the FFT pension-behavior candidate batch; Draft PR #5 remains open                            |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
