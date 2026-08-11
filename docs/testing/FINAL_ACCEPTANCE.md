@@ -94,9 +94,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31427784207) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31427784193) pass on immutable
       independent BSC market/RV reconciliation commit `e6087c4`
-- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31542652738) and
-      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31542652768) pass on immutable
-      generic durable Action Semantics code commit `c4047a5`, including 654 disposable-store tests,
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31543286842) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31543286847) pass on immutable
+      protected-main Action Semantics squash commit `e7f1383`, including 654 disposable-store tests,
       36 Chromium flows and all six production container targets
 
 ## Evidence and data
