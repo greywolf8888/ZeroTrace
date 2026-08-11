@@ -173,7 +173,11 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
 - Action Semantics tests require exact Snapshot/Evidence identity and per-primitive proof shapes.
   They assert that a proved Swap does not become a buyback claim, custody does not become burn
   without supply-conservation proof, a failed liquidity attempt remains `NOT_APPLIED`, incomplete
-  execution remains Unknown, and report identity is stable under input reordering.
+  execution remains Unknown, and report identity is stable under input reordering. Migration `025`
+  integration additionally requires canonical per-ledger transaction identity, content/result hash
+  revalidation, byte-identical durable Snapshots for every Evidence node, exact recursive terminal
+  closure, exact non-derived sources, close/reopen latest/exact replay, and SQL update/delete
+  rejection. A report submitted before its Evidence graph exists must fail closed.
 - no-evidence entity input remains Unknown and is not persisted as an observed conclusion.
 - common services and CoinJoin suppress controller confidence; naked service flags and risk labels
   cannot merge subjects.

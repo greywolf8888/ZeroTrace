@@ -25,6 +25,7 @@ import {
 import { EvidenceLedger, hashPayload } from '@zerotrace/evidence';
 import {
   ClickHouseRawFactRepository,
+  PostgresActionSemanticsReportRepository,
   PostgresCaptureScheduleRepository,
   PostgresClaimReportRepository,
   PostgresEvmControlSurfaceRepository,
@@ -74,6 +75,7 @@ export interface AppRuntime {
   controlSurfaces?: PostgresEvmControlSurfaceRepository;
   solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
   solanaTransactionReports?: PostgresSolanaTransactionReportRepository;
+  actionSemanticsReports?: PostgresActionSemanticsReportRepository;
   pensionCandidateReports?: PostgresPensionCandidateReportRepository;
   pensionEntryReports?: PostgresFlapPensionEntryReportRepository;
   entityRelationshipReports?: PostgresEntityRelationshipReportRepository;
@@ -527,6 +529,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const actionSemanticsReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresActionSemanticsReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const pensionCandidateReports =
     config.postgresUrl === undefined
       ? undefined
@@ -643,6 +654,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       controlSurfaces?.close(),
       solanaControlSurfaces?.close(),
       solanaTransactionReports?.close(),
+      actionSemanticsReports?.close(),
       pensionCandidateReports?.close(),
       pensionEntryReports?.close(),
       entityRelationshipReports?.close(),
@@ -683,6 +695,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
     ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
     ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),
+    ...(actionSemanticsReports === undefined ? {} : { actionSemanticsReports }),
     ...(pensionCandidateReports === undefined ? {} : { pensionCandidateReports }),
     ...(pensionEntryReports === undefined ? {} : { pensionEntryReports }),
     ...(entityRelationshipReports === undefined ? {} : { entityRelationshipReports }),

@@ -11,6 +11,7 @@ import {
   type TransportObservation,
   type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
+import { buildActionSemanticsReport, createActionCandidate } from '@zerotrace/action-semantics';
 import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
 import {
   ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION,
@@ -50,6 +51,7 @@ import {
 } from '@zerotrace/platform-adapters';
 import {
   PostgresClaimReportRepository,
+  PostgresActionSemanticsReportRepository,
   PostgresDataQualityRepository,
   PostgresEntityRelationshipReportRepository,
   PostgresEntityRelationshipTimelineRepository,
@@ -1980,6 +1982,116 @@ postgresDescribe('PostgreSQL durable Solana transaction intelligence integration
       ).rejects.toThrow(/immutable/);
       await expect(
         pool.query('DELETE FROM solana_transaction_reports WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL durable generic Action Semantics integration', () => {
+  let evidence: PostgresEvidenceRepository;
+  let reports: PostgresActionSemanticsReportRepository;
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    reports = new PostgresActionSemanticsReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), reports.close()]);
+  });
+
+  it('fails closed without durable Evidence, then persists, restarts and rejects mutation', async () => {
+    const transactionId = `0x${hashPayload({ checkpointTestRunId, kind: 'action' })}`;
+    const snapshot = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      blockNumber: '50000000',
+      blockHash: `0x${'ab'.repeat(32)}`,
+      finality: 'finalized' as const,
+      capturedAt: '2026-08-12T00:00:10.000Z',
+      providerVersions: { 'bsc-rpc@integration': '1' },
+      adapterVersions: { actions: 'action-semantics-v0.1.0' },
+      configHash: hashPayload({ checkpointTestRunId, kind: 'action-snapshot' }),
+      entityModelVersion: 'entity-v1',
+      labelSnapshot: 'labels-v1',
+    };
+    const source = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'RECEIPT',
+      source: 'bsc-rpc@integration',
+      locator: `action-semantics-integration:${checkpointTestRunId}`,
+      payload: { status: '0x1' },
+      observedAt: '2026-08-12T00:00:09.000Z',
+      blockOrSlot: snapshot.blockNumber,
+      finality: 'finalized',
+      summary: 'Generic Action Semantics integration source.',
+    });
+    const candidate = createActionCandidate({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      transactionId: transactionId.toUpperCase().replace('0X', '0x'),
+      blockOrSlot: snapshot.blockNumber,
+      observedAt: source.observedAt,
+      proposedKind: 'CONTRACT_CALL',
+      application: 'APPLIED',
+      actor: unknownValue('INSUFFICIENT_DATA'),
+      proofKinds: ['EXECUTION_RECEIPT'],
+      evidenceIds: [source.id],
+    });
+    const report = buildActionSemanticsReport({
+      snapshot,
+      candidates: [candidate],
+      evidence: [source],
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 0,
+    });
+
+    await expect(reports.put(report)).rejects.toMatchObject({
+      code: 'ACTION_SEMANTICS_REPORT_CONFLICT',
+      retryable: false,
+    });
+
+    await evidence.put(source, [], snapshot);
+    const terminal = report.evidence.find((item) => item.id === report.terminalEvidenceId);
+    expect(terminal).toBeDefined();
+    await evidence.put(terminal!, [source.id], snapshot);
+
+    const stored = await reports.put(report);
+    await expect(reports.put(report)).resolves.toEqual(stored);
+    await reports.close();
+    reports = new PostgresActionSemanticsReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(reports.get(stored.id)).resolves.toEqual(stored);
+    await expect(
+      reports.latest({
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        transactionId: transactionId.toUpperCase().replace('0X', '0x'),
+      }),
+    ).resolves.toEqual(stored);
+    await expect(reports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE action_semantics_reports SET report = report WHERE id = $1', [
+          stored.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM action_semantics_reports WHERE id = $1', [stored.id]),
       ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();
