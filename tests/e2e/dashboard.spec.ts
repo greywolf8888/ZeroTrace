@@ -398,6 +398,175 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
       evidence: timelineEvidence,
     },
   };
+  const revisedGraphId = `eig_${'a'.repeat(24)}`;
+  const revisedGraphTerminalEvidenceId = `ev_${'d'.repeat(24)}`;
+  const graphTimelineId = `eit_${'e'.repeat(24)}`;
+  const graphTimelineTerminalEvidenceId = `ev_${'9'.repeat(24)}`;
+  const graphTerminalEvidence = {
+    ...evidence.find((item) => item.id === terminalEvidenceId),
+    id: graphTerminalEvidenceId,
+    source: 'zerotrace:entity-investigation-graph-v0.1.0',
+    locator: `entity-investigation-graph:EVM:eip155:56:115279243:${'6'.repeat(64)}`,
+    payloadHash: '8'.repeat(64),
+    summary: 'First durable investigation graph terminal Evidence.',
+  };
+  const revisedGraphTerminalEvidence = {
+    ...graphTerminalEvidence,
+    id: revisedGraphTerminalEvidenceId,
+    payloadHash: 'a'.repeat(64),
+    summary: 'Revised durable investigation graph terminal Evidence.',
+  };
+  const graphTimelineTerminalEvidence = {
+    ...graphTerminalEvidence,
+    id: graphTimelineTerminalEvidenceId,
+    source: 'zerotrace:entity-investigation-graph-timeline-v0.1.0',
+    locator: `entity-investigation-graph-timeline:EVM:eip155:56:115279243-115279243:${'b'.repeat(64)}`,
+    payloadHash: 'b'.repeat(64),
+    summary: 'Cross-Snapshot graph evolution derived from exact immutable investigation reports.',
+  };
+  const firstGraphPairState = {
+    timelineId,
+    classification: 'PROBABLE_SAME_CONTROLLER',
+    sameControllerProbability: { state: 'known', value: 0.91 },
+    coordinationProbability: { state: 'known', value: 0.72 },
+    independenceProbability: { state: 'known', value: 0.12 },
+    serviceSuppressionApplied: false,
+    projectionState: 'PROJECTED',
+    relation: { state: 'known', value: 'SAME_CONTROLLER' },
+    terminalEvidenceId: timelineTerminalEvidenceId,
+    automaticOwnershipPropagationAllowed: false,
+  };
+  const revisedGraphPairState = {
+    ...firstGraphPairState,
+    classification: 'COORDINATED_BUT_INDEPENDENT',
+    sameControllerProbability: { state: 'known', value: 0.34 },
+    coordinationProbability: { state: 'known', value: 0.94 },
+    independenceProbability: { state: 'known', value: 0.63 },
+    relation: { state: 'known', value: 'COORDINATED_WITH' },
+  };
+  const graphTimelineRecord = {
+    id: graphTimelineId,
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    fromPosition: '115279243',
+    toPosition: '115279243',
+    graphSetHash: 'b'.repeat(64),
+    resultHash: 'c'.repeat(64),
+    terminalEvidenceId: graphTimelineTerminalEvidenceId,
+    graphIds: [graphId, revisedGraphId],
+    subjectIds: [subjectA, subjectB],
+    evidenceIds: [
+      graphTerminalEvidenceId,
+      revisedGraphTerminalEvidenceId,
+      graphTimelineTerminalEvidenceId,
+    ].sort(),
+    sourceSet: ['sqd:binance-mainnet'],
+    modelVersion: 'entity-investigation-graph-timeline-v0.1.0',
+    capturedAt: snapshot.capturedAt,
+    createdAt: '2026-08-11T08:17:17.000Z',
+    report: {
+      schemaVersion: 'entity-investigation-graph-timeline-report-v1',
+      sourceOfTruth: 'DURABLE_ENTITY_INVESTIGATION_GRAPHS',
+      automaticOwnershipMergeAllowed: false,
+      automaticEntityMembershipMutationAllowed: false,
+      relationshipTerminationInferenceAllowed: false,
+      timeline: {
+        request: {
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          graphIds: [graphId, revisedGraphId],
+          graphSetHash: 'b'.repeat(64),
+          fromPosition: '115279243',
+          toPosition: '115279243',
+        },
+        observations: [
+          {
+            graphId,
+            resultHash: graphRecord.resultHash,
+            timelineSetHash: graphRecord.timelineSetHash,
+            subjectIds: [subjectA, subjectB],
+            pairs: [{ subjectA, subjectB, state: firstGraphPairState }],
+            terminalEvidenceId: graphTerminalEvidenceId,
+            metadata: graphCore.metadata,
+          },
+          {
+            graphId: revisedGraphId,
+            resultHash: 'a'.repeat(64),
+            timelineSetHash: graphRecord.timelineSetHash,
+            subjectIds: [subjectA, subjectB],
+            pairs: [{ subjectA, subjectB, state: revisedGraphPairState }],
+            terminalEvidenceId: revisedGraphTerminalEvidenceId,
+            metadata: {
+              ...graphCore.metadata,
+              snapshot: {
+                ...snapshot,
+                capturedAt: '2026-08-11T08:17:16.000Z',
+              },
+            },
+          },
+        ],
+        transitions: [
+          {
+            fromGraphId: graphId,
+            toGraphId: revisedGraphId,
+            fromPosition: '115279243',
+            toPosition: '115279243',
+            kind: 'REVISION',
+            unobservedPositionCount: '0',
+            snapshotContinuity: { state: 'known', value: true },
+            addedSubjectIds: [],
+            omittedSubjectIds: [],
+            pairChanges: [
+              {
+                subjectA,
+                subjectB,
+                kind: 'RELATION_CHANGED',
+                before: { state: 'known', value: firstGraphPairState },
+                after: { state: 'known', value: revisedGraphPairState },
+                evidenceIds: [timelineTerminalEvidenceId],
+                relationshipStartEstablished: false,
+                relationshipEndEstablished: false,
+                automaticEntityMembershipMutationAllowed: false,
+              },
+            ],
+            unchangedPairCount: 0,
+            evidenceIds: [graphTerminalEvidenceId, revisedGraphTerminalEvidenceId].sort(),
+            omittedSubjectsEstablishExit: false,
+            omittedPairsEstablishRelationshipEnd: false,
+            automaticEntityMembershipMutationAllowed: false,
+          },
+        ],
+        summary: {
+          observationCount: 2,
+          transitionCount: 1,
+          subjectAdditionCount: 0,
+          subjectOmissionCount: 0,
+          pairChangeCount: 1,
+          currentGraphId: revisedGraphId,
+          completeRequestedGraphSet: true,
+          rawTransferEdgesCopied: false,
+          absenceEstablishesRelationshipTermination: false,
+          automaticEntityMembershipMutationAllowed: false,
+          chainObservationContinuity: { state: 'known', value: true },
+        },
+        metadata: {
+          ...metadata,
+          snapshot: {
+            ...snapshot,
+            capturedAt: '2026-08-11T08:17:16.000Z',
+          },
+          modelVersion: 'entity-investigation-graph-timeline-v0.1.0',
+          evidenceIds: [graphTerminalEvidenceId, revisedGraphTerminalEvidenceId].sort(),
+        },
+      },
+      terminalEvidenceId: graphTimelineTerminalEvidenceId,
+      evidence: [
+        graphTerminalEvidence,
+        revisedGraphTerminalEvidence,
+        graphTimelineTerminalEvidence,
+      ].sort((left, right) => (left?.id ?? '').localeCompare(right?.id ?? '')),
+    },
+  };
   await page.route('**/api/v1/entities/relationships/reports/latest?*', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -429,6 +598,30 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
       }),
     });
   });
+  await page.route(
+    '**/api/v1/entities/investigation-graph-timelines/materialize',
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ replayed: false, record: graphTimelineRecord }),
+      });
+    },
+  );
+  await page.route('**/api/v1/entities/investigation-graph-timelines/latest?*', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ replayed: true, record: graphTimelineRecord }),
+    });
+  });
+  await page.route(
+    `**/api/v1/entities/investigation-graph-timelines/${graphTimelineId}?*`,
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ replayed: true, record: graphTimelineRecord }),
+      });
+    },
+  );
   await page.route(`**/api/v1/evidence/${timelineTerminalEvidenceId}/drilldown`, async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -441,6 +634,21 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
       }),
     });
   });
+  await page.route(
+    `**/api/v1/evidence/${graphTimelineTerminalEvidenceId}/drilldown`,
+    async (route) => {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          nodes: [
+            graphTerminalEvidence,
+            revisedGraphTerminalEvidence,
+            graphTimelineTerminalEvidence,
+          ].map((item) => ({ evidence: item, sourceEvidenceIds: [], snapshot })),
+        }),
+      });
+    },
+  );
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Entity Intelligence' }).click();
@@ -471,7 +679,10 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   await expect(page.getByRole('heading', { name: 'Timeline Evidence' })).toBeVisible();
 
   const graphWorkspace = page.getByTestId('investigation-graph-workspace');
-  await graphWorkspace.getByRole('button', { name: 'Load latest' }).click();
+  await graphWorkspace
+    .locator('section[aria-labelledby="graph-controls-heading"]')
+    .getByRole('button', { name: 'Load latest' })
+    .click();
   const graphResult = page.getByTestId('investigation-graph-result');
   await expect(graphResult).toContainText('Evidence-backed investigation projection');
   await expect(graphResult).toContainText('Raw transfer copy');
@@ -482,6 +693,28 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   const graphEvidence = page.getByTestId('controller-graph-evidence-ledger');
   await expect(graphEvidence.getByRole('heading', { name: 'Evidence Ledger' })).toBeVisible();
   await expect(graphEvidence).toContainText('Durable relationship timeline Evidence.');
+
+  const graphTimelineWorkspace = page.getByTestId('investigation-graph-timeline-workspace');
+  await graphTimelineWorkspace
+    .getByLabel('Graph IDs (two or more, comma or whitespace separated)')
+    .fill(`${graphId}\n${revisedGraphId}`);
+  await graphTimelineWorkspace.getByRole('button', { name: 'Materialize evolution' }).click();
+  const graphTimelineResult = page.getByTestId('investigation-graph-timeline-result');
+  await expect(graphTimelineResult).toContainText('Evidence-backed graph evolution');
+  await expect(graphTimelineResult).toContainText(graphTimelineId);
+  await expect(graphTimelineResult).toContainText('Relationship termination');
+  await expect(graphTimelineWorkspace.getByText('Absence ≠ relationship end')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Cross-Snapshot transitions' })).toBeVisible();
+  await expect(page.getByText('Relation Changed')).toBeVisible();
+  await expect(page.getByText('true continuity')).toBeVisible();
+  await graphTimelineWorkspace.getByRole('button', { name: 'Open terminal Evidence' }).click();
+  const evolutionEvidence = page.getByTestId('investigation-graph-timeline-evidence-ledger');
+  await expect(
+    evolutionEvidence.getByRole('heading', { name: 'Evolution Evidence Ledger' }),
+  ).toBeVisible();
+  await expect(evolutionEvidence).toContainText(
+    'Cross-Snapshot graph evolution derived from exact immutable investigation reports.',
+  );
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

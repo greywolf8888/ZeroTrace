@@ -44,6 +44,7 @@ import {
   type EntityRelationshipReport,
   type EntityRelationshipTimelineReport,
   type EntityInvestigationGraphReport,
+  type EntityInvestigationGraphTimelineReport,
 } from '@zerotrace/schemas';
 import {
   StorageError,
@@ -51,6 +52,7 @@ import {
   type StoredEntityRelationshipReport,
   type StoredEntityRelationshipTimeline,
   type StoredEntityInvestigationGraph,
+  type StoredEntityInvestigationGraphTimeline,
 } from '@zerotrace/storage';
 import { encodeAbiParameters, toEventSelector } from 'viem';
 
@@ -1029,6 +1031,7 @@ function attachEntityReportDurability(runtime: AppRuntime) {
   const records = new Map<string, StoredEntityRelationshipReport>();
   const timelines = new Map<string, StoredEntityRelationshipTimeline>();
   const graphs = new Map<string, StoredEntityInvestigationGraph>();
+  const graphTimelines = new Map<string, StoredEntityInvestigationGraphTimeline>();
   const durableEvidence = new Map<string, EvidenceNode>();
   const evidenceRepository: EvidenceRepository = {
     put: async (evidence, sourceEvidenceIds = [], snapshot) => {
@@ -1211,6 +1214,49 @@ function attachEntityReportDurability(runtime: AppRuntime) {
     }),
     close: async () => undefined,
   } as NonNullable<AppRuntime['entityInvestigationGraphs']>;
+  runtime.entityInvestigationGraphTimelines = {
+    put: async (report: EntityInvestigationGraphTimelineReport) => {
+      const timeline = report.timeline;
+      const resultHash = hashPayload(report);
+      const record: StoredEntityInvestigationGraphTimeline = {
+        id: `eit_${hashPayload({ schema: 'zerotrace-entity-investigation-graph-timeline-report-v1', resultHash }).slice(0, 24)}`,
+        ledger: timeline.request.ledger,
+        chainId: timeline.request.chainId,
+        fromPosition: timeline.request.fromPosition,
+        toPosition: timeline.request.toPosition,
+        graphSetHash: timeline.request.graphSetHash,
+        resultHash,
+        report,
+        terminalEvidenceId: report.terminalEvidenceId,
+        graphIds: timeline.request.graphIds,
+        subjectIds: [
+          ...new Set(timeline.observations.flatMap((observation) => observation.subjectIds)),
+        ].sort(),
+        evidenceIds: report.evidence.map((item) => item.id).sort(),
+        sourceSet: timeline.metadata.sourceSet,
+        modelVersion: 'entity-investigation-graph-timeline-v0.1.0',
+        capturedAt: timeline.metadata.snapshot.capturedAt,
+        createdAt: '2026-08-09T00:00:05.000Z',
+      };
+      graphTimelines.set(record.id, record);
+      return record;
+    },
+    get: async (id: string) => graphTimelines.get(id),
+    latest: async ({ ledger, chainId, subjectId }) =>
+      [...graphTimelines.values()].find(
+        (record) =>
+          record.ledger === ledger &&
+          record.chainId === chainId &&
+          (subjectId === undefined || record.subjectIds.includes(subjectId)),
+      ),
+    health: async () => ({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+      checkedAt: '2026-08-09T00:00:01.000Z',
+    }),
+    close: async () => undefined,
+  } as NonNullable<AppRuntime['entityInvestigationGraphTimelines']>;
   return records;
 }
 
@@ -4505,6 +4551,88 @@ describe('ZeroTrace API contract', () => {
     });
     expect(graphEvidence.statusCode, graphEvidence.body).toBe(200);
     expect(graphEvidence.json().nodes.length).toBeGreaterThanOrEqual(4);
+
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    const materializedGraphRevision = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/investigation-graphs/materialize',
+      payload: {
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        timelineIds: [timelineId],
+      },
+    });
+    expect(materializedGraphRevision.statusCode, materializedGraphRevision.body).toBe(200);
+    const graphRevisionId = materializedGraphRevision.json().record.id as string;
+    expect(graphRevisionId).not.toBe(graphId);
+    const materializedGraphTimeline = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/investigation-graph-timelines/materialize',
+      payload: {
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        graphIds: [graphRevisionId, graphId],
+      },
+    });
+    expect(materializedGraphTimeline.statusCode, materializedGraphTimeline.body).toBe(200);
+    expect(materializedGraphTimeline.json()).toMatchObject({
+      replayed: false,
+      record: {
+        id: expect.stringMatching(/^eit_[0-9a-f]{24}$/),
+        report: {
+          sourceOfTruth: 'DURABLE_ENTITY_INVESTIGATION_GRAPHS',
+          automaticOwnershipMergeAllowed: false,
+          automaticEntityMembershipMutationAllowed: false,
+          relationshipTerminationInferenceAllowed: false,
+          timeline: {
+            transitions: [
+              {
+                kind: 'REVISION',
+                fromPosition: '16',
+                toPosition: '16',
+                snapshotContinuity: { state: 'known', value: true },
+                pairChanges: [],
+                unchangedPairCount: 1,
+                omittedSubjectsEstablishExit: false,
+                omittedPairsEstablishRelationshipEnd: false,
+                automaticEntityMembershipMutationAllowed: false,
+              },
+            ],
+            summary: {
+              completeRequestedGraphSet: true,
+              rawTransferEdgesCopied: false,
+              absenceEstablishesRelationshipTermination: false,
+              automaticEntityMembershipMutationAllowed: false,
+              chainObservationContinuity: { state: 'known', value: true },
+            },
+          },
+        },
+      },
+    });
+    const graphTimelineId = materializedGraphTimeline.json().record.id as string;
+    const graphTimelineEvidenceId = materializedGraphTimeline.json().record
+      .terminalEvidenceId as string;
+    const latestGraphTimeline = await app.inject({
+      method: 'GET',
+      url: '/api/v1/entities/investigation-graph-timelines/latest?ledger=EVM&chainId=eip155%3A1&subjectId=controller',
+    });
+    expect(latestGraphTimeline.statusCode, latestGraphTimeline.body).toBe(200);
+    expect(latestGraphTimeline.json()).toMatchObject({
+      replayed: true,
+      record: { id: graphTimelineId },
+    });
+    const exactGraphTimeline = await app.inject({
+      method: 'GET',
+      url: `/api/v1/entities/investigation-graph-timelines/${graphTimelineId}?ledger=EVM&chainId=eip155%3A1&subjectId=module`,
+    });
+    expect(exactGraphTimeline.statusCode, exactGraphTimeline.body).toBe(200);
+    expect(exactGraphTimeline.json()).toEqual(latestGraphTimeline.json());
+    const graphTimelineEvidence = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${graphTimelineEvidenceId}/drilldown`,
+    });
+    expect(graphTimelineEvidence.statusCode, graphTimelineEvidence.body).toBe(200);
+    expect(graphTimelineEvidence.json().nodes.length).toBeGreaterThanOrEqual(5);
 
     const scenario = await app.inject({
       method: 'POST',

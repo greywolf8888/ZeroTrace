@@ -8,6 +8,11 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- immutable `entity-investigation-graph-timeline-v0.1.0` reports over two to 100 durable graph
+  observations, with deterministic revisions/position advances, explicit Snapshot continuity,
+  typed request-scope additions/omissions, PostgreSQL source/Evidence/immutability enforcement,
+  provider-free materialize/latest/exact API replay, responsive UI and hard no-relationship-end /
+  no-membership-mutation boundaries;
 - bounded `entity-investigation-graph-v0.1.0` materialization from exact-Snapshot durable Entity
   timelines, with strict controller/coordination separation, retained negative/service/Unknown
   observations, immutable PostgreSQL report and Evidence guards, optional transactional Apache AGE

@@ -1868,3 +1868,64 @@ recovered, AGE was restarted explicitly, and the isolated web rebuild/recreate t
 Compose health reported PostgreSQL storage and AGE projection `UP`, API live HTTP 200, web HTTP 200,
 `readOnly=true`, and explicit provider-dependent readiness rather than converting provider failure
 to a successful or zero-valued state.
+
+## Cross-Snapshot Entity investigation graph timelines: 2026-08-12
+
+ZeroTrace added `entity-investigation-graph-timeline-v0.1.0` as a generic temporal read model over
+two to 100 immutable `eig_...` reports from one ledger and chain. Deterministic ordering separates
+same-position revisions from position advances. Same-position hash equality and direct-parent
+identity produce exact continuity Knowledge; skipped positions or missing parent identity remain
+`Unknown(INSUFFICIENT_DATA)`, and conflicts remain Known false. Pair additions and omissions are
+changes in the two requested graph scopes only. They never establish a relationship start/end,
+Entity exit, graph merge/split, or automatic membership mutation.
+
+Migration `021_entity_investigation_graph_timelines` stores content-addressed `eit_...` reports and
+validates every observation and pair against its immutable investigation graph, exact terminal
+Evidence payloads, transition continuity, canonical result/source/Evidence arrays and the hard
+no-termination/no-membership invariants. Transition changes are also recomputed from the two
+durable pair observations: exact before/after state, precedence-ordered change kind, Evidence,
+canonical order, changed count and unchanged count must all match. Direct-SQL count and state
+tampering tests are rejected. Updates and deletes are rejected. An isolated empty
+PostgreSQL database applied migrations `001` through `021` in filename order. The complete 23-test
+PostgreSQL suite then passed and the temporary database was removed. The same 23 tests passed
+against the current PostgreSQL plus Apache AGE `1.7.0`; AGE remains an optional exact-Snapshot
+accelerator and is not used by graph-timeline authority or replay.
+
+A production build was started on host port `18082` against the current durable stores. It
+materialized `eit_ea900ad3c0aedf0618298d94` from two exact graph observations at EVM position
+`910000`. Materialize/latest/exact report hashes matched; the one revision was Known continuous,
+one pair was unchanged, relationship termination and Entity-membership mutation were false, and
+the terminal Evidence drilldown returned seven nodes. A headed Chromium session loaded the exact
+report through the production web build, displayed `Absence ≠ relationship end`, revision and
+continuity state, and opened the Evolution Evidence Ledger. All API requests returned HTTP 200.
+This is provider-free durable replay, not a real-chain controller or membership conclusion.
+
+The complete repository gate passed formatting, ESLint, typecheck, 512 unit tests across 79 files,
+72 environment-free API integration tests, one Entity structural evaluation, production builds,
+the production license allowlist and a zero-vulnerability dependency audit. All 36 Chromium desktop
+and Pixel 7 flows passed. Coverage passed 608 tests at 83.32% statements, 77.25% branches, 93.93%
+functions and 84.48% lines.
+
+The initial 611-test coverage run executed all configured stores. The 608 non-ClickHouse tests
+passed, while the three historical-ingestion cases failed because the preserved long-lived
+ClickHouse volume again reached error `241 MEMORY_LIMIT_EXCEEDED` (about `1.06 GiB` projected versus
+about `805 MiB` then permitted). PostgreSQL, AGE, MinIO and the new graph timeline were not the
+failure. The ClickHouse volume was preserved; a restart did not clear its long-lived capacity
+condition. The final passing coverage run therefore omitted those three unavailable cases rather
+than misreporting them as passing. Disposable-store GitHub CI remains the required independent
+all-611 gate, and long-lived ClickHouse retention/compaction/memory sizing remains a production
+operations gate.
+
+The affected API, web and PostgreSQL production image targets built successfully; the PostgreSQL
+image contains migration `021`. Docker Desktop could inspect, build and restart existing containers
+but could not start any newly created container, including a minimal Alpine diagnostic, which
+remained in `Created` until removed. Existing volumes and project data were not deleted. Compose
+API/Web recreation was therefore not claimed; the production artifacts were exercised through the
+host runtime/browser path above, and disposable-container startup remains a remote CI gate for this
+commit.
+
+Exact code commit `c9c6a17` then passed [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31513348630)
+and [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31513348679) on PR #12. Quality
+and contracts, Chromium E2E, every production container target, JavaScript/TypeScript analysis and
+CodeQL all passed. This independently closes the disposable-container gate for the code commit; it
+does not remove the separate long-lived local ClickHouse capacity and Docker Desktop start defects.

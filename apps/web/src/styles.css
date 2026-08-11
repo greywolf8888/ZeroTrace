@@ -1791,6 +1791,51 @@ tbody tr:hover {
   color: var(--text-secondary);
 }
 
+.graph-timeline-workspace {
+  display: grid;
+  gap: 18px;
+  padding-top: 2px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+.graph-timeline-list {
+  display: grid;
+  gap: 11px;
+}
+
+.graph-timeline-card {
+  padding: 14px;
+  background: linear-gradient(135deg, var(--surface-soft), rgba(85, 184, 255, 0.035));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.graph-timeline-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.graph-timeline-card-heading strong {
+  color: var(--text);
+  font-size: 0.76rem;
+}
+
+.graph-timeline-card-heading span,
+.graph-timeline-card > p {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.graph-timeline-card > p {
+  margin: 8px 0 0;
+}
+
+.graph-timeline-change-list {
+  margin-top: 8px;
+}
+
 .health-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2105,6 +2150,11 @@ footer a {
 
   .graph-actions {
     align-items: stretch;
+    flex-direction: column;
+  }
+
+  .graph-timeline-card-heading {
+    align-items: flex-start;
     flex-direction: column;
   }
 

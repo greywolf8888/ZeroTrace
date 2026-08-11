@@ -24,6 +24,7 @@ export * from './flap-pension-entry-reports.js';
 export * from './entity-relationship-reports.js';
 export * from './entity-relationship-timelines.js';
 export * from './entity-investigation-graphs.js';
+export * from './entity-investigation-graph-timelines.js';
 export * from './age-investigation-graph.js';
 
 type DatabaseRow = Record<string, unknown>;

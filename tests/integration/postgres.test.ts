@@ -15,7 +15,9 @@ import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrac
 import {
   ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION,
   ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION,
+  ENTITY_INVESTIGATION_GRAPH_TIMELINE_MODEL_VERSION,
   buildEntityInvestigationGraph,
+  buildEntityInvestigationGraphTimeline,
   buildEntityRelationshipTimeline,
   canonicalizeEntityRelationshipInput,
   resolveEntityRelationship,
@@ -25,6 +27,7 @@ import {
   EntityRelationshipReportSchema,
   EntityRelationshipTimelineReportSchema,
   EntityInvestigationGraphReportSchema,
+  EntityInvestigationGraphTimelineReportSchema,
   EvmControlCoverageDomainSchema,
   SolanaControlCoverageDomainSchema,
   SolanaTransactionIntelligenceReportSchema,
@@ -49,6 +52,7 @@ import {
   PostgresEntityRelationshipReportRepository,
   PostgresEntityRelationshipTimelineRepository,
   PostgresEntityInvestigationGraphRepository,
+  PostgresEntityInvestigationGraphTimelineRepository,
   AgeInvestigationGraphProjectionRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
@@ -1952,6 +1956,7 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
   let reports: PostgresEntityRelationshipReportRepository;
   let timelines: PostgresEntityRelationshipTimelineRepository;
   let graphs: PostgresEntityInvestigationGraphRepository;
+  let graphTimelines: PostgresEntityInvestigationGraphTimelineRepository;
 
   beforeAll(() => {
     evidence = PostgresEvidenceRepository.fromConnectionString({
@@ -1970,10 +1975,20 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       connectionString: connectionString as string,
       maxConnections: 2,
     });
+    graphTimelines = new PostgresEntityInvestigationGraphTimelineRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
   });
 
   afterAll(async () => {
-    await Promise.all([evidence.close(), reports.close(), timelines.close(), graphs.close()]);
+    await Promise.all([
+      evidence.close(),
+      reports.close(),
+      timelines.close(),
+      graphs.close(),
+      graphTimelines.close(),
+    ]);
   });
 
   it('persists one canonical no-auto-merge hypothesis, replays it, and rejects mutation', async () => {
@@ -2251,6 +2266,103 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       },
     });
 
+    const graphRevisionTerminal = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'DERIVED_FEATURE',
+      source: `zerotrace:${ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION}`,
+      locator: `entity-investigation-graph:EVM:eip155:1:910000:${graph.request.timelineSetHash}`,
+      payload: { graph },
+      observedAt: new Date(new Date(capturedAt).getTime() + 1_000).toISOString(),
+      blockOrSlot: '910000',
+      finality: 'finalized',
+      summary: 'Same-Snapshot integration investigation graph replay observation.',
+      sourceEvidenceIds: graph.metadata.evidenceIds,
+    });
+    await evidence.put(graphRevisionTerminal, graph.metadata.evidenceIds, snapshot);
+    const graphRevisionReport = EntityInvestigationGraphReportSchema.parse({
+      schemaVersion: 'entity-investigation-graph-report-v1',
+      sourceOfTruth: 'DURABLE_ENTITY_RELATIONSHIP_TIMELINES',
+      automaticOwnershipMergeAllowed: false,
+      graph,
+      terminalEvidenceId: graphRevisionTerminal.id,
+      evidence: [timelineTerminal, graphRevisionTerminal].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      ),
+    });
+    const storedGraphRevision = await graphs.put(graphRevisionReport);
+    const graphTimeline = buildEntityInvestigationGraphTimeline({
+      sources: [storedGraphRevision, storedGraph].map((item) => ({
+        graphId: item.id,
+        resultHash: item.resultHash,
+        terminalEvidenceId: item.terminalEvidenceId,
+        graph: item.report.graph,
+      })),
+    });
+    const graphTimelineTerminal = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'DERIVED_FEATURE',
+      source: `zerotrace:${ENTITY_INVESTIGATION_GRAPH_TIMELINE_MODEL_VERSION}`,
+      locator:
+        `entity-investigation-graph-timeline:EVM:eip155:1:` +
+        `${graphTimeline.request.fromPosition}-${graphTimeline.request.toPosition}:` +
+        graphTimeline.request.graphSetHash,
+      payload: { timeline: graphTimeline },
+      blockOrSlot: graphTimeline.request.toPosition,
+      finality: 'finalized',
+      summary: 'Immutable same-Snapshot investigation graph revision timeline.',
+      sourceEvidenceIds: graphTimeline.metadata.evidenceIds,
+    });
+    await evidence.put(
+      graphTimelineTerminal,
+      graphTimeline.metadata.evidenceIds,
+      graphTimeline.metadata.snapshot,
+    );
+    const graphTimelineReport = EntityInvestigationGraphTimelineReportSchema.parse({
+      schemaVersion: 'entity-investigation-graph-timeline-report-v1',
+      sourceOfTruth: 'DURABLE_ENTITY_INVESTIGATION_GRAPHS',
+      automaticOwnershipMergeAllowed: false,
+      automaticEntityMembershipMutationAllowed: false,
+      relationshipTerminationInferenceAllowed: false,
+      timeline: graphTimeline,
+      terminalEvidenceId: graphTimelineTerminal.id,
+      evidence: [graphTerminal, graphRevisionTerminal, graphTimelineTerminal].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      ),
+    });
+    const storedGraphTimeline = await graphTimelines.put(graphTimelineReport);
+    await expect(graphTimelines.put(graphTimelineReport)).resolves.toEqual(storedGraphTimeline);
+    await graphTimelines.close();
+    graphTimelines = new PostgresEntityInvestigationGraphTimelineRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(graphTimelines.get(storedGraphTimeline.id)).resolves.toEqual(storedGraphTimeline);
+    await expect(
+      graphTimelines.latest({
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        subjectId: input.subjectA,
+      }),
+    ).resolves.toEqual(storedGraphTimeline);
+    await expect(graphTimelines.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+    expect(storedGraphTimeline).toMatchObject({
+      id: expect.stringMatching(/^eit_[0-9a-f]{24}$/),
+      fromPosition: '910000',
+      toPosition: '910000',
+      report: {
+        relationshipTerminationInferenceAllowed: false,
+        timeline: {
+          summary: {
+            automaticEntityMembershipMutationAllowed: false,
+            absenceEstablishesRelationshipTermination: false,
+            chainObservationContinuity: { state: 'known', value: true },
+          },
+        },
+      },
+    });
+
     if (ageConnectionString !== undefined) {
       const ageProjection = new AgeInvestigationGraphProjectionRepository({
         connectionString: ageConnectionString,
@@ -2357,6 +2469,51 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       await expect(
         pool.query('DELETE FROM entity_investigation_graph_reports WHERE id = $1', [
           storedGraph.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      const tamperedGraphTimelineId = `eit_${randomUUID().replaceAll('-', '').slice(0, 24)}`;
+      const tamperedGraphTimelineHash = hashPayload({ tamperedGraphTimelineId });
+      await expect(
+        pool.query(
+          `INSERT INTO entity_investigation_graph_timeline_reports (
+             id, ledger, chain_id, from_position, to_position, graph_set_hash, result_hash,
+             report, terminal_evidence_id, graph_ids, subject_ids, evidence_ids, source_set,
+             model_version, captured_at, created_at
+           )
+           SELECT $1, ledger, chain_id, from_position, to_position, graph_set_hash, $2,
+             jsonb_set(report, '{relationshipTerminationInferenceAllowed}', 'true'::jsonb),
+             terminal_evidence_id, graph_ids, subject_ids, evidence_ids, source_set,
+             model_version, captured_at, created_at
+           FROM entity_investigation_graph_timeline_reports WHERE id = $3`,
+          [tamperedGraphTimelineId, tamperedGraphTimelineHash, storedGraphTimeline.id],
+        ),
+      ).rejects.toThrow(/stored identity/);
+      const tamperedGraphTimelineCountId = `eit_${randomUUID().replaceAll('-', '').slice(0, 24)}`;
+      const tamperedGraphTimelineCountHash = hashPayload({ tamperedGraphTimelineCountId });
+      await expect(
+        pool.query(
+          `INSERT INTO entity_investigation_graph_timeline_reports (
+             id, ledger, chain_id, from_position, to_position, graph_set_hash, result_hash,
+             report, terminal_evidence_id, graph_ids, subject_ids, evidence_ids, source_set,
+             model_version, captured_at, created_at
+           )
+           SELECT $1, ledger, chain_id, from_position, to_position, graph_set_hash, $2,
+             jsonb_set(report, '{timeline,transitions,0,unchangedPairCount}', '0'::jsonb),
+             terminal_evidence_id, graph_ids, subject_ids, evidence_ids, source_set,
+             model_version, captured_at, created_at
+           FROM entity_investigation_graph_timeline_reports WHERE id = $3`,
+          [tamperedGraphTimelineCountId, tamperedGraphTimelineCountHash, storedGraphTimeline.id],
+        ),
+      ).rejects.toThrow(/temporal boundaries/);
+      await expect(
+        pool.query(
+          'UPDATE entity_investigation_graph_timeline_reports SET report = report WHERE id = $1',
+          [storedGraphTimeline.id],
+        ),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM entity_investigation_graph_timeline_reports WHERE id = $1', [
+          storedGraphTimeline.id,
         ]),
       ).rejects.toThrow(/immutable/);
     } finally {

@@ -151,6 +151,12 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   durable Evidence payload/Snapshot/terminal-parent constraints, idempotent close/reopen replay and
   SQL update/delete rejection. Featureful POSTs fail closed without durable Evidence/report storage;
   latest/exact replay remains provider-free and fixes `automaticOwnershipMergeAllowed=false`.
+- Entity temporal tests require migrations `019`–`021`: pair timelines must preserve same-position
+  revisions, position gaps and Knowledge-state deltas; exact-Snapshot graphs must keep controller
+  and coordination edges distinct; graph timelines must validate every source graph/pair/Evidence
+  identity, continuity and request-scope change while forbidding inferred relationship termination
+  and Entity-membership mutation. All three report families require idempotent close/reopen replay,
+  SQL update/delete rejection and provider-free latest/exact APIs.
 - no-evidence entity input remains Unknown and is not persisted as an observed conclusion.
 - common services and CoinJoin suppress controller confidence; naked service flags and risk labels
   cannot merge subjects.
