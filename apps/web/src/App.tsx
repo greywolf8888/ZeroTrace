@@ -11,6 +11,7 @@ import {
   type StoredPensionCandidateReport,
   type EvmSupplyContinuityReplayResponse,
   type EvmControlSurfaceResponse,
+  type EntityRelationshipReportReplayResponse,
   type EvidenceRecord,
   type FlapConfigurationField,
   type FlapEventHistoryResponse,
@@ -34,24 +35,20 @@ import {
   type SubjectResponse,
 } from './api.js';
 
-type View = 'overview' | 'search' | 'control' | 'claims' | 'scenario' | 'health';
+type View = 'overview' | 'search' | 'entities' | 'control' | 'claims' | 'scenario' | 'health';
 type Theme = 'dark' | 'light';
 
 const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
   { id: 'overview', label: 'Market Reality', marker: 'MR' },
   { id: 'search', label: 'Intelligence Search', marker: 'IS' },
+  { id: 'entities', label: 'Entity Intelligence', marker: 'EI' },
   { id: 'control', label: 'Control Rights', marker: 'CR' },
   { id: 'claims', label: 'Claim Audit', marker: 'CA' },
   { id: 'scenario', label: 'Scenario Lab', marker: 'SL' },
   { id: 'health', label: 'Data Health', marker: 'DH' },
 ];
 
-const FUTURE_DOMAINS = [
-  'Entity Intelligence',
-  'Evidence Ledger',
-  'Control Timeline',
-  'Analyst Workbench',
-];
+const FUTURE_DOMAINS = ['Evidence Ledger', 'Control Timeline', 'Analyst Workbench'];
 
 function shortId(value: string, length = 12): string {
   if (value.length <= length * 2 + 1) return value;
@@ -1932,10 +1929,10 @@ function ClaimBurnCandidateDiscoveryPanel() {
 }
 
 function PensionCandidateDiscoveryPanel() {
-  const [token, setToken] = useState('0xdcfb441a1f38802820a4e7b4cc8aab37833c7777');
-  const [fromBlock, setFromBlock] = useState('113485950');
+  const [token, setToken] = useState('');
+  const [fromBlock, setFromBlock] = useState('');
   const [toBlock, setToBlock] = useState('');
-  const [shareUnitAtomic, setShareUnitAtomic] = useState('1000000000000000000000000');
+  const [shareUnitAtomic, setShareUnitAtomic] = useState('');
   const [minimumDeposits, setMinimumDeposits] = useState('5');
   const [minimumDepositors, setMinimumDepositors] = useState('5');
   const [maximumCandidates, setMaximumCandidates] = useState('20');
@@ -2009,8 +2006,8 @@ function PensionCandidateDiscoveryPanel() {
       </div>
       <p className="panel-copy">
         Find wallets receiving repeated exact share-unit deposits across a complete finalized
-        Transfer range. The FFT acceptance profile is prefilled with the stated 1,000,000-token unit
-        and the 2026-08-02 start block; every value remains editable and versioned in the report.
+        Transfer range. Token, range and policy inputs are explicit, asset-independent and versioned
+        in the report; a named acceptance case must supply its own reviewed values.
       </p>
       <div className="alert alert-warning">
         <strong>Behavior is not identity</strong>
@@ -2709,6 +2706,250 @@ function ClaimAuditWorkspace() {
   );
 }
 
+function EntityIntelligenceWorkspace() {
+  const [ledger, setLedger] = useState<'EVM' | 'BITCOIN' | 'SOLANA'>('EVM');
+  const [chainId, setChainId] = useState('eip155:56');
+  const [subjectA, setSubjectA] = useState('');
+  const [subjectB, setSubjectB] = useState('');
+  const [reportId, setReportId] = useState('');
+  const [response, setResponse] = useState<EntityRelationshipReportReplayResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const validPair =
+    chainId.trim().length > 0 &&
+    subjectA.trim().length > 0 &&
+    subjectB.trim().length > 0 &&
+    subjectA.trim() !== subjectB.trim();
+  const validReportId = /^erh_[0-9a-f]{24}$/.test(reportId);
+
+  function changeLedger(next: 'EVM' | 'BITCOIN' | 'SOLANA') {
+    setLedger(next);
+    setChainId(
+      next === 'EVM' ? 'eip155:56' : next === 'BITCOIN' ? 'bitcoin-mainnet' : 'solana-mainnet',
+    );
+    setResponse(undefined);
+    setError(undefined);
+  }
+
+  async function load(mode: 'latest' | 'exact') {
+    if (!validPair || (mode === 'exact' && !validReportId)) return;
+    setBusy(true);
+    setError(undefined);
+    setResponse(undefined);
+    try {
+      setResponse(
+        mode === 'latest'
+          ? await api.latestEntityRelationshipReport(ledger, chainId, subjectA, subjectB)
+          : await api.entityRelationshipReport(reportId, ledger, chainId, subjectA, subjectB),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : 'Entity relationship report replay failed.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const record = response?.record;
+  const report = record?.report;
+  const result = report?.result;
+
+  return (
+    <>
+      <div className="page-heading page-heading-row">
+        <div>
+          <span className="eyebrow">Pairwise hypothesis · Evidence · no automatic merge</span>
+          <h1>Entity Intelligence</h1>
+          <p>
+            Replay immutable relationship hypotheses without contacting a chain provider. Similar
+            behavior, a risk label, or shared service infrastructure is never ownership proof.
+          </p>
+        </div>
+        <StatusPill status="READ_ONLY" />
+      </div>
+      <section
+        className="panel subject-panel quote-panel"
+        aria-labelledby="entity-report-replay-heading"
+        data-testid="entity-report-replay"
+      >
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Provider-free latest / exact replay</span>
+            <h3 id="entity-report-replay-heading">Relationship hypothesis report</h3>
+          </div>
+          <span className="snapshot-badge">No labels-to-merge path</span>
+        </div>
+        <form
+          className="quote-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void load('latest');
+          }}
+        >
+          <label htmlFor="entity-ledger">Ledger</label>
+          <select
+            id="entity-ledger"
+            value={ledger}
+            onChange={(event) => changeLedger(event.target.value as 'EVM' | 'BITCOIN' | 'SOLANA')}
+          >
+            <option value="EVM">EVM</option>
+            <option value="BITCOIN">Bitcoin</option>
+            <option value="SOLANA">Solana</option>
+          </select>
+          <label htmlFor="entity-chain">Chain ID</label>
+          <input
+            id="entity-chain"
+            spellCheck={false}
+            value={chainId}
+            onChange={(event) => setChainId(event.target.value.trim())}
+          />
+          <label htmlFor="entity-subject-a">Subject A</label>
+          <input
+            id="entity-subject-a"
+            spellCheck={false}
+            value={subjectA}
+            onChange={(event) => setSubjectA(event.target.value.trim())}
+            placeholder="Canonical address, account, or subject ID"
+          />
+          <label htmlFor="entity-subject-b">Subject B</label>
+          <input
+            id="entity-subject-b"
+            spellCheck={false}
+            value={subjectB}
+            onChange={(event) => setSubjectB(event.target.value.trim())}
+            placeholder="A distinct canonical subject ID"
+          />
+          <label htmlFor="entity-report-id">Exact report ID (optional)</label>
+          <input
+            id="entity-report-id"
+            spellCheck={false}
+            value={reportId}
+            onChange={(event) => setReportId(event.target.value.trim())}
+            placeholder="erh_…"
+          />
+          <div className="control-actions">
+            <button className="primary-button" type="submit" disabled={!validPair || busy}>
+              {busy ? 'Loading…' : 'Load latest'}
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={!validPair || !validReportId || busy}
+              onClick={() => void load('exact')}
+            >
+              Replay exact
+            </button>
+          </div>
+        </form>
+        {error === undefined ? null : <div className="provider-error">{error}</div>}
+      </section>
+      {record === undefined || report === undefined || result === undefined ? null : (
+        <>
+          <section className="panel" data-testid="entity-report-result">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">{record.id}</span>
+                <h3>{titleCase(result.classification)}</h3>
+              </div>
+              <StatusPill status="REPLAYED" />
+            </div>
+            <div className="metric-grid">
+              <article className="metric-tile metric-known">
+                <div className="metric-label">Same controller</div>
+                <div className="metric-value">
+                  <KnowledgeDisplay data={result.sameControllerProbability} />
+                </div>
+                <div className="metric-detail">Evidence-weighted hypothesis</div>
+              </article>
+              <article className="metric-tile metric-known">
+                <div className="metric-label">Coordination</div>
+                <div className="metric-value">
+                  <KnowledgeDisplay data={result.coordinationProbability} />
+                </div>
+                <div className="metric-detail">Distinct from common control</div>
+              </article>
+              <article className="metric-tile metric-known">
+                <div className="metric-label">Independence</div>
+                <div className="metric-value">
+                  <KnowledgeDisplay data={result.independenceProbability} />
+                </div>
+                <div className="metric-detail">Negative Evidence retained</div>
+              </article>
+              <MetricTile
+                label="Automatic ownership merge"
+                value="Blocked"
+                detail="Hard report invariant"
+                state="unknown"
+              />
+            </div>
+            <div className="snapshot-strip">
+              <span>
+                <b>Pair</b> <code>{shortId(record.subjectA)}</code> ↔{' '}
+                <code>{shortId(record.subjectB)}</code>
+              </span>
+              <span>
+                <b>Snapshot</b> {record.snapshotPosition} ·{' '}
+                <code title={record.snapshotHash}>{shortId(record.snapshotHash, 8)}</code>
+              </span>
+              <span>
+                <b>Result hash</b>{' '}
+                <code title={record.resultHash}>{shortId(record.resultHash, 8)}</code>
+              </span>
+              <span>
+                <b>Captured</b> {formatTime(record.capturedAt)}
+              </span>
+            </div>
+            <div className="contract-list">
+              <div>
+                <strong>Service suppression</strong>
+                <span>{result.serviceSuppressionApplied ? 'Applied' : 'Not triggered'}</span>
+              </div>
+              <div>
+                <strong>Positive Evidence</strong>
+                <span>{result.positiveEvidenceIds.length}</span>
+              </div>
+              <div>
+                <strong>Negative Evidence</strong>
+                <span>{result.negativeEvidenceIds.length}</span>
+              </div>
+              <div>
+                <strong>Model</strong>
+                <span>{record.modelVersion}</span>
+              </div>
+            </div>
+          </section>
+          <section className="panel" aria-labelledby="entity-features-heading">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Canonical direct inputs</span>
+                <h3 id="entity-features-heading">Relationship features</h3>
+              </div>
+              <span className="snapshot-badge">{report.input.features.length} features</span>
+            </div>
+            <div className="contract-list">
+              {report.input.features.map((feature) => (
+                <div key={`${feature.kind}:${feature.evidenceId}`}>
+                  <strong>{titleCase(feature.kind)}</strong>
+                  <span>
+                    strength {feature.strength.toFixed(3)} · reliability{' '}
+                    {feature.reliability.toFixed(3)} · {shortId(feature.evidenceId, 8)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+          <EvidencePanel
+            evidence={report.evidence}
+            eyebrow="Source observations → terminal hypothesis"
+            title="Entity relationship Evidence"
+          />
+        </>
+      )}
+    </>
+  );
+}
+
 function ControlRightsWorkspace() {
   const [ledger, setLedger] = useState<'EVM' | 'SOLANA'>('EVM');
   return (
@@ -2741,9 +2982,7 @@ function ControlRightsWorkspace() {
 }
 
 function EvmControlRightsWorkspace() {
-  const [subjectAddress, setSubjectAddress] = useState(
-    '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
-  );
+  const [subjectAddress, setSubjectAddress] = useState('');
   const [blockNumber, setBlockNumber] = useState('');
   const [result, setResult] = useState<EvmControlSurfaceResponse>();
   const [error, setError] = useState<string>();
@@ -6133,6 +6372,7 @@ export function App() {
         />
       );
     }
+    if (view === 'entities') return <EntityIntelligenceWorkspace />;
     if (view === 'control') return <ControlRightsWorkspace />;
     if (view === 'scenario') return <ScenarioLab />;
     if (view === 'claims') return <ClaimAuditWorkspace />;

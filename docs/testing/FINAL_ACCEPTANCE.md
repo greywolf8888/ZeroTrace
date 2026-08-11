@@ -1,6 +1,8 @@
 # Final Acceptance Checklist
 
 This checklist tracks the terminal-product Definition of Done. It is intentionally not complete.
+Named assets are reference cases for the shared architecture. They never define a standalone
+roadmap phase, shared runtime defaults, protocol constants or token-specific inference behavior.
 
 ## Foundation
 
@@ -111,6 +113,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       decoding, owner/account separation, per-flow Evidence, and zero-tolerance token reconciliation
 - [x] Content-addressed Solana transaction semantic reports with exact/latest provider-free replay,
       append-only database guards and explicit provider-failure fallback provenance
+- [x] Content-addressed Entity relationship hypothesis reports with exact durable Evidence payload,
+      Snapshot and terminal-parent validation, append-only database guards, latest/exact
+      provider-free replay and `automaticOwnershipMergeAllowed=false`
 - [ ] Continuous Solana semantic history projection plus platform/program-specific instruction and event decoding
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [x] Deterministic common-position disagreement, source-failure, continuity, and reorg-detection tests
@@ -122,6 +127,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 ## Intelligence
 
 - [x] Baseline evidence fusion with critical suppression cases
+- [x] Canonical pairwise Entity hypothesis persistence rejects duplicate features, ungrounded service
+      flags and label-driven merge hints; fixed-version results replay without providers and expose
+      controller, coordination and independence separately
 - [ ] Calibrated entity-resolution model and labeled evaluation corpus
 - [ ] Controller/control-right extraction across terminal scope
   - [x] Finalized EVM ERC-1167/EIP-1967/ERC-173/registered-Safe standard surface with complete
@@ -169,7 +177,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       derived, quote/RV, aggregate, freshness and API/UI classes
 - [x] Exact-decimal class budgets, warning bands, zero-reference handling, coverage gates, missing
       Evidence rejection and Unknown exclusion from numeric denominators
-- [x] Deterministic FFT-style claim-allocation and terminal-action kernel with fake-burn,
+- [x] Deterministic policy-shaped claim-allocation and terminal-action kernel with fake-burn,
       removable-LP, controller-return, multi-hop and incomplete-coverage tests
 - [x] Claim Audit v1.1 fail-closed single-asset, duplicate-observation, Snapshot-time and
       chronological actor/path integrity gates
@@ -213,8 +221,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Bounded all-block supply-continuity scanning with EIP-1898 canonical reads, exact multi-source
       reconciliation, changed-block certificates, operator gate, provider-free replay and a named
       independent-source FFT interval
-- [ ] Complete historical supply backfill, continuous candidate capture, reviewed-draft promotion,
-      independent claim-flow reconciliation, complete Claim Audit and terminal named FFT conclusion
+- [ ] Complete generic historical supply backfill, durable capture scheduling, reviewed-draft
+      promotion, independent claim-flow reconciliation and reusable Claim Audit action proof
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures
@@ -231,12 +239,15 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       terminal Evidence in API plus desktop/mobile UI
 - [x] Responsive Claim Audit declaration review with no production fixtures, warnings, draft
       readiness, human-review gate and Unknown pension-address rendering
-- [x] Responsive pension behavior discovery/latest replay with editable FFT acceptance profile,
+- [x] Responsive pension behavior discovery/latest replay with explicit caller-supplied policy,
       candidate flow/share metrics, durable provenance and no identity promotion on desktop/mobile
 - [x] Responsive candidate-bound pension-entry economics with multi-size share/cost output,
       immutable report/Snapshot/Evidence provenance, custody-not-burn and execution Unknown
 - [x] Append-only content-addressed pension-entry Scenario Reports with fail-closed persistence,
       exact/latest provider-free API replay and desktop/mobile replay state
+- [x] Responsive Entity Intelligence latest/exact replay with Snapshot/result identity, canonical
+      features, complete Evidence, Service Hub suppression and no automatic ownership merge on
+      desktop/mobile
 - [x] Responsive exact-block burn certificate review on desktop/mobile with status, supply/event
       arithmetic, generated actions and terminal Evidence
 - [x] Responsive burn-candidate range review with event scope, candidate blocks, terminal Evidence
@@ -292,7 +303,7 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       passed while actual buy-plus-transfer settlement remained Unknown
 - [ ] RV reconciliation against historical executable quotes
 - [ ] Run the registered
-      [Flap/BSC FFT terminal acceptance](FLAP_FFT_ACCEPTANCE.md) for
+      [Flap/BSC FFT reference acceptance case](FLAP_FFT_ACCEPTANCE.md) for
       `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, including entity, market, RV, Evidence replay,
       typed error budgets, and automatic multi-source discrepancy checks
 

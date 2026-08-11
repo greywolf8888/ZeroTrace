@@ -146,8 +146,14 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   schema/hash revalidation after repository close/reopen, canonical source/Evidence sets, exact
   candidate/report/terminal lineage, SQL update/delete rejection, and latest/exact replay without a
   market provider. The live POST must fail closed if the report cannot be persisted.
-- no-evidence entity input remains Unknown.
-- common services and CoinJoin suppress controller confidence.
+- Entity hypothesis-report tests require migration `018`, canonical subject/feature ordering,
+  duplicate-feature rejection, grounded `SERVICE_HUB` Evidence, fixed engine provenance, exact
+  durable Evidence payload/Snapshot/terminal-parent constraints, idempotent close/reopen replay and
+  SQL update/delete rejection. Featureful POSTs fail closed without durable Evidence/report storage;
+  latest/exact replay remains provider-free and fixes `automaticOwnershipMergeAllowed=false`.
+- no-evidence entity input remains Unknown and is not persisted as an observed conclusion.
+- common services and CoinJoin suppress controller confidence; naked service flags and risk labels
+  cannot merge subjects.
 - sell-disabled RV is unavailable rather than zero.
 - exit-race simulations are deterministic for the same seed.
 - incomplete API domains return HTTP 501 and typed Unknown.
@@ -215,6 +221,9 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - candidate-bound pension-entry scenarios across three quote sizes, including share arithmetic,
   custody-not-burn wording, execution Unknown, immutable Scenario Report identity, latest
   provider-free replay and mobile containment;
+- immutable Entity relationship latest replay on desktop/mobile, including independent controller,
+  coordination and independence probabilities, Snapshot/result identity, direct features, complete
+  Evidence and the hard no-automatic-merge boundary;
 - anchor-reconciliation status, common-position/operator-independence explanation, four configured
   chain targets, and process-local data-quality storage truth;
 - mobile viewport layout;

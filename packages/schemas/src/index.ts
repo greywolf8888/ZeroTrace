@@ -728,6 +728,76 @@ export const EntityResolutionClassSchema = z.enum([
   'BOT_MM_ARBITRAGE',
   'UNKNOWN',
 ]);
+export const EntityFeatureKindSchema = z.enum([
+  'SHARED_ONCHAIN_AUTHORITY',
+  'COMMON_FUNDER',
+  'SHARED_FEE_PAYER',
+  'SETTLEMENT_CONVERGENCE',
+  'TRANSACTION_GRAMMAR',
+  'TIMING_SYNCHRONY',
+  'EARLY_BUYER_COHORT',
+  'TOKEN_DISTRIBUTION',
+  'INDEPENDENT_HISTORY',
+  'DISTINCT_FUNDING',
+  'DISTINCT_SETTLEMENT',
+  'CEX_PATH_BREAK',
+  'SERVICE_HUB',
+  'COINJOIN',
+  'BOT_COMMON_INFRASTRUCTURE',
+]);
+export type EntityFeatureKind = z.infer<typeof EntityFeatureKindSchema>;
+
+export const EntityFeatureSchema = z
+  .object({
+    kind: EntityFeatureKindSchema,
+    strength: z.number().min(0).max(1),
+    reliability: z.number().min(0).max(1),
+    evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  })
+  .strict();
+export type EntityFeature = z.infer<typeof EntityFeatureSchema>;
+
+export const EntityRelationshipInputSchema = z
+  .object({
+    subjectA: z.string().trim().min(1).max(512),
+    subjectB: z.string().trim().min(1).max(512),
+    features: z.array(EntityFeatureSchema).max(1_000),
+    metadata: AnalysisMetadataSchema,
+    subjectAIsService: z.boolean().optional(),
+    subjectBIsService: z.boolean().optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.subjectA === value.subjectB) {
+      context.addIssue({
+        code: 'custom',
+        path: ['subjectB'],
+        message: 'Entity relationship subjects must be distinct.',
+      });
+    }
+    const featureIdentities = value.features.map(
+      (feature) => `${feature.kind}:${feature.evidenceId}`,
+    );
+    if (new Set(featureIdentities).size !== featureIdentities.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['features'],
+        message: 'Entity features may not repeat one kind/Evidence identity.',
+      });
+    }
+    if (
+      (value.subjectAIsService === true || value.subjectBIsService === true) &&
+      !value.features.some((feature) => feature.kind === 'SERVICE_HUB')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['features'],
+        message: 'Service status requires a SERVICE_HUB feature with Evidence.',
+      });
+    }
+  });
+export type EntityRelationshipInput = z.infer<typeof EntityRelationshipInputSchema>;
+
 export const EntityResolutionSchema = z.object({
   subjectA: z.string().min(1),
   subjectB: z.string().min(1),
@@ -741,6 +811,116 @@ export const EntityResolutionSchema = z.object({
   metadata: AnalysisMetadataSchema,
 });
 export type EntityResolution = z.infer<typeof EntityResolutionSchema>;
+
+export const EntityRelationshipReportSchema = z
+  .object({
+    schemaVersion: z.literal('entity-relationship-report-v1'),
+    automaticOwnershipMergeAllowed: z.literal(false),
+    input: EntityRelationshipInputSchema.safeExtend({
+      features: z.array(EntityFeatureSchema).min(1).max(1_000),
+      metadata: AnalysisMetadataSchema.extend({
+        snapshot: AnalysisSnapshotSchema,
+      }),
+    }),
+    result: EntityResolutionSchema.extend({
+      metadata: AnalysisMetadataSchema.extend({
+        snapshot: AnalysisSnapshotSchema,
+        modelVersion: z.literal('entity-v0.1.0'),
+      }),
+    }),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidence: z.array(EvidenceSchema).min(2),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const snapshot = value.input.metadata.snapshot;
+    const position =
+      snapshot.ledger === 'EVM'
+        ? { value: snapshot.blockNumber, finality: snapshot.finality }
+        : snapshot.ledger === 'BITCOIN'
+          ? { value: snapshot.height, finality: snapshot.finality }
+          : { value: snapshot.slot, finality: snapshot.commitment };
+    const featureOrder = [...value.input.features].sort((left, right) =>
+      [left.kind, left.evidenceId, left.strength, left.reliability]
+        .join(':')
+        .localeCompare([right.kind, right.evidenceId, right.strength, right.reliability].join(':')),
+    );
+    const evidenceIds = value.evidence.map((item) => item.id);
+    const expectedSourceIds = [
+      ...new Set([
+        ...value.input.metadata.evidenceIds,
+        ...value.input.features.map((feature) => feature.evidenceId),
+      ]),
+    ].sort();
+    const expectedResultEvidenceIds = [...expectedSourceIds, value.terminalEvidenceId].sort();
+    const expectedSourceSet = [...new Set(value.input.metadata.sourceSet)].sort();
+    const positiveEvidenceIds = [...value.result.positiveEvidenceIds].sort();
+    const negativeEvidenceIds = [...value.result.negativeEvidenceIds].sort();
+    const expectedSuppression =
+      value.input.features.some((feature) => ['SERVICE_HUB', 'COINJOIN'].includes(feature.kind)) &&
+      !value.input.features.some(
+        (feature) =>
+          feature.kind === 'SHARED_ONCHAIN_AUTHORITY' &&
+          feature.strength >= 0.95 &&
+          feature.reliability >= 0.98,
+      );
+    const terminal = value.evidence.find((item) => item.id === value.terminalEvidenceId);
+    const expectedLocator = `entity-relationship:${value.input.subjectA}:${value.input.subjectB}`;
+    const issues =
+      value.input.subjectA >= value.input.subjectB ||
+      value.input.features.some((item, index) => item !== featureOrder[index]) ||
+      value.result.subjectA !== value.input.subjectA ||
+      value.result.subjectB !== value.input.subjectB ||
+      JSON.stringify(value.result.metadata.snapshot) !== JSON.stringify(snapshot) ||
+      value.result.metadata.dataCoverage !== value.input.metadata.dataCoverage ||
+      value.result.metadata.sourceCoverage !== value.input.metadata.sourceCoverage ||
+      value.result.metadata.historyCoverage !== value.input.metadata.historyCoverage ||
+      value.result.metadata.simulationCoverage !== value.input.metadata.simulationCoverage ||
+      value.result.metadata.freshness !== value.input.metadata.freshness ||
+      value.result.metadata.confidence !== value.input.metadata.confidence ||
+      value.input.metadata.sourceSet.length !== expectedSourceSet.length ||
+      value.input.metadata.sourceSet.some((item, index) => item !== expectedSourceSet[index]) ||
+      value.result.metadata.sourceSet.length !== expectedSourceSet.length ||
+      value.result.metadata.sourceSet.some((item, index) => item !== expectedSourceSet[index]) ||
+      value.input.metadata.evidenceIds.length !== expectedSourceIds.length ||
+      value.input.metadata.evidenceIds.some((item, index) => item !== expectedSourceIds[index]) ||
+      value.result.metadata.evidenceIds.length !== expectedResultEvidenceIds.length ||
+      value.result.metadata.evidenceIds.some(
+        (item, index) => item !== expectedResultEvidenceIds[index],
+      ) ||
+      evidenceIds.length !== new Set(evidenceIds).size ||
+      evidenceIds.some((item, index) => item !== [...evidenceIds].sort()[index]) ||
+      evidenceIds.length !== expectedResultEvidenceIds.length ||
+      evidenceIds.some((item, index) => item !== expectedResultEvidenceIds[index]) ||
+      value.result.positiveEvidenceIds.length !== new Set(positiveEvidenceIds).size ||
+      value.result.positiveEvidenceIds.some(
+        (item, index) => item !== positiveEvidenceIds[index] || !expectedSourceIds.includes(item),
+      ) ||
+      value.result.negativeEvidenceIds.length !== new Set(negativeEvidenceIds).size ||
+      value.result.negativeEvidenceIds.some(
+        (item, index) => item !== negativeEvidenceIds[index] || !expectedSourceIds.includes(item),
+      ) ||
+      value.result.serviceSuppressionApplied !== expectedSuppression ||
+      terminal?.kind !== 'DERIVED_FEATURE' ||
+      terminal.source !== 'zerotrace:entity-v0.1.0' ||
+      terminal.locator !== expectedLocator ||
+      value.evidence.some(
+        (item) =>
+          item.ledger !== snapshot.ledger ||
+          item.chainId !== snapshot.chainId ||
+          item.blockOrSlot !== position.value ||
+          item.finality !== position.finality,
+      );
+    if (issues) {
+      context.addIssue({
+        code: 'custom',
+        path: ['result'],
+        message:
+          'Entity relationship reports require a canonical distinct pair, ordered unique features, one Snapshot, complete direct Evidence, and a valid terminal derivation.',
+      });
+    }
+  });
+export type EntityRelationshipReport = z.infer<typeof EntityRelationshipReportSchema>;
 
 export const BitcoinScriptClassSchema = z.enum([
   'P2PKH',

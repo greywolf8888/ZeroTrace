@@ -4,12 +4,15 @@ import {
   type EntityEvaluationCase,
   type EntityFeature,
 } from '../../packages/entity-engine/src/index.js';
-import type { AnalysisMetadata, EntityResolution } from '../../packages/schemas/src/index.js';
+import type {
+  EntityRelationshipInput,
+  EntityResolution,
+} from '../../packages/schemas/src/index.js';
 
 export const ENTITY_STRUCTURAL_GOLDEN_REVISION = 'entity-structural-golden-v1';
 export const ENTITY_STRUCTURAL_MODEL_VERSION = 'entity-v0.1.0';
 
-function metadata(id: string): AnalysisMetadata {
+function metadata(id: string): EntityRelationshipInput['metadata'] {
   return {
     snapshot: null,
     dataCoverage: 1,
@@ -103,6 +106,7 @@ export function entityStructuralGoldenCases(): EntityEvaluationCase[] {
     entry({
       id: 'labeled-service-hub',
       features: [
+        feature('labeled-service-hub', 'SERVICE_HUB'),
         feature('labeled-service-hub', 'COMMON_FUNDER'),
         feature('labeled-service-hub', 'TIMING_SYNCHRONY'),
       ],

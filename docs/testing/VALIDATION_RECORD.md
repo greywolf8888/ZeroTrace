@@ -436,7 +436,7 @@ The requested Flap/BSC FFT contract
 [terminal acceptance specification](FLAP_FFT_ACCEPTANCE.md). Official deployment, inspection,
 event-indexing, bonding-curve and migrated-market sources have been located. Later entries in this
 record accept one same-Snapshot custody/flow observation and one point-in-time Pancake V2 market/buy
-slice, but no terminal FFT product conclusion is recorded because entity calibration, complete
+slice, but no complete FFT reference-case conclusion is recorded because entity calibration, complete
 event/migration history, independent-source reconciliation and multi-route sell/execution RV remain
 unfinished. The specification uses zero tolerance for exact chain state, field-class error budgets
 for derived values, Brier/ECE gates for entity probabilities, and excludes Unknown from numeric error
@@ -829,7 +829,7 @@ This acceptance is deterministic and storage-backed; it is not a named token con
 quorum does not prove operator independence, the BSC sources were not certified archive-grade, and
 no forced real reorg drill was accepted in this batch. Market/RV/entity linkage and
 independent-source validation remain pending. A later section records the first named FFT claim
-observations; it does not claim terminal FFT acceptance.
+observations; it does not close the FFT reference case.
 
 ## FFT claim-observation acceptance (2026-08-10)
 
@@ -972,7 +972,7 @@ exercised real PostgreSQL, including the new Claim Report path. The temporary se
 its data directory removed.
 
 This is durable observation replay, not automatic capture, official pension-wallet attribution,
-dividend/action proof, independent-source reconciliation, market pricing or terminal FFT acceptance.
+dividend/action proof, independent-source reconciliation, market pricing or FFT reference-case closure.
 
 ## FFT Pancake V2 market and buy-size validation (2026-08-10)
 
@@ -1008,7 +1008,7 @@ test-only direct-fetch transport to the production `EvmLedgerAdapter`, market co
 execution-net is `Unknown(NOT_QUERIED)` because no pinned-fork swap observed tax/swapback behavior.
 Pension-wallet transfer remains `Unknown(INSUFFICIENT_DATA)` for pricing and is treated as movable
 custody rather than burn. This run is not independent-provider, sell-route, gas/capacity, entity,
-claim-action, or terminal FFT acceptance.
+claim-action, or complete FFT reference-case acceptance.
 
 ## FFT Pancake V2 exit-size and partial-RV validation (2026-08-10)
 
@@ -1035,7 +1035,7 @@ production bypass was added.
 Nominal value is not RV, and the configured-tax result is still not wallet settlement. Actual
 execution-net and executable capacity are `Unknown(NOT_QUERIED)` until a pinned fork tests dynamic
 tax, exemptions, max-sell, blacklist/whitelist, swapback, gas, reverts and the final balance delta.
-This is one route and one chain operator, not independent-source or terminal FFT acceptance.
+This is one route and one chain operator, not independent-source or complete FFT reference-case acceptance.
 
 ## Entity structural Precision/False-Merge validation (2026-08-10)
 
@@ -1062,7 +1062,7 @@ coordination (`0.000462835742` / `0.020685`) and independence (`0.168571890082` 
 values are `DIAGNOSTIC_ONLY`: a seven-case structural suite is not a real calibration corpus. The
 real-world gate requires Snapshot-bound prediction Evidence, label source references, at least 100
 labeled cases per probability axis, Brier `<= 0.15`, and ECE `<= 0.05`; missing cases or denominators
-produce `INSUFFICIENT_DATA`. Therefore entity calibration and terminal FFT acceptance remain open.
+produce `INSUFFICIENT_DATA`. Therefore entity calibration and the FFT reference case remain open.
 
 ## Claim Audit input-integrity validation (2026-08-10)
 
@@ -1081,7 +1081,7 @@ scan is complete, not because missing data was coerced. Incomplete coverage cont
 The focused Claim Audit suite passed 12 tests; the complete unit suite passed 369 tests and the
 coverage run passed 413 tests with 22 opt-in durable tests skipped. No provider endpoint, fixture,
 or manually supplied action was added to a production route in this batch. Same-Snapshot action
-derivation and terminal FFT Claim Audit remain pending.
+derivation and complete reference-case Claim Audit remain pending.
 
 ## Claim declaration review acceptance (2026-08-11)
 
@@ -1156,7 +1156,7 @@ parent-block call. These states were retained as provider failures. The user-sup
 was injected only into the validation process from the local attachment, never printed, persisted
 or written to the repository. The successful certificate has `sourceCoverage=0.5` because it is one
 provider. Wide-range silent-supply analysis, independent-provider reconciliation, official wallet
-attribution, reviewed-draft promotion and terminal FFT acceptance remain open.
+attribution, reviewed-draft promotion and FFT reference-case closure remain open.
 
 ## Burn candidate range acceptance (2026-08-11)
 
@@ -1176,7 +1176,7 @@ terminal Evidence and explicit `Unknown(NOT_QUERIED)` silent-supply state.
 `ERC20_ZERO_ADDRESS_TRANSFER_EVENTS`. An empty result is named `NO_EVENT_CANDIDATES`; it is not a
 statement that `totalSupply` never changed through custom or silent storage writes. Durable
 promotion scheduling, all-block silent-supply discovery, independent-source reconciliation and
-terminal FFT acceptance remain open.
+FFT reference-case closure remain open.
 
 The production discovery path was then replayed against FFT over the exact inclusive range
 `113485950-115154970`. Alchemy supplied the finalized range-end Snapshot at hash
@@ -1235,8 +1235,8 @@ scan was rejected with HTTP 502. An unmocked headed Chromium session then replay
 the rebuilt Web container and rendered both segment Evidence IDs, the terminal root and Unknown
 boundary. The focused panel screenshot is retained under ignored local test output, not committed as
 product data.
-Continuous scheduling, complete all-block history, official wallet attribution and terminal FFT
-acceptance remain pending.
+Continuous scheduling, complete all-block history, official wallet attribution and FFT
+reference-case closure remain pending.
 
 ## FFT bounded all-block supply continuity (2026-08-11)
 
@@ -1265,7 +1265,7 @@ same scan ID, counts, status and terminal Evidence in 1.6 seconds, proving the c
 replayed from PostgreSQL without RPC or SQD access. The credential supplied by the user was loaded
 process-locally, never printed, persisted or committed. This acceptance is exact-range only and
 does not prove the 2 August-to-head history, wallet attribution, burn irreversibility, dividend
-semantics or terminal FFT conclusions.
+semantics or complete FFT reference-case conclusions.
 
 The production semantic-worker image repeated that invalid-credential replay successfully. Rebuilt
 API/Web containers were healthy and read-only; the API returned the same scan/status/Evidence from
@@ -1374,7 +1374,7 @@ Evidence replay.
 This closes the scoped independent-source gate for current Flap/Pancake V2 market and modeled RV.
 It does not close historical executable-quote calibration, fork settlement, additional routes,
 official pension-wallet attribution, complete claim flows, entity calibration, archive retention,
-forced-reorg behavior or terminal FFT acceptance.
+forced-reorg behavior or FFT reference-case closure.
 
 ## FFT EVM control-surface validation (2026-08-11)
 

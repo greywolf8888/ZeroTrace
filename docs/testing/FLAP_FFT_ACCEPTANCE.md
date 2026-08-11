@@ -1,7 +1,9 @@
-# Flap FFT Terminal Acceptance
+# Flap/FFT Reference Acceptance Case
 
-This specification registers the final real-chain acceptance target requested for ZeroTrace. It is
-an acceptance contract, not a completed analysis.
+This specification registers the first real-world completion case requested for ZeroTrace. It is an
+acceptance contract for the generic multi-chain architecture, not a product phase, standalone
+feature track, token-specific engine or completed analysis. No FFT address, date, threshold or
+community-policy value may become a shared production default or generic inference rule.
 
 ## Target and boundary
 
@@ -16,12 +18,12 @@ an acceptance contract, not a completed analysis.
 The test may run only after the versioned Flap adapter, semantic token/market normalization, control
 entity analysis, realizable-value routing, and automatic discrepancy engine are implemented. Until
 then, a generic address or transaction read is foundation evidence only and cannot be presented as
-an FFT product conclusion.
+a complete reference-case conclusion.
 
 Implementation note: the deterministic same-Snapshot discrepancy core, class budgets,
 target-indexed claim-address observation, immutable report replay, migrated Pancake V2 buy/exit
 slices, and the scoped Alchemy/BNB Chain independent market reconciliation are implemented. Named
-FFT market and partial-RV runs are recorded below. The terminal run remains gated by complete
+FFT market and partial-RV runs are recorded below. Reference-case closure remains gated by complete
 event/migration history, independent claim-flow reconciliation, pinned-fork tax and swapback
 execution, sell-route capacity/gas, controller/control-right analysis, claim-action semantics,
 corpus-level entity calibration, and complete multi-route realizable value.
@@ -218,7 +220,7 @@ coverage and counts, not an invented accuracy percentage. The public statement i
 Analyst Evidence. Official pension-wallet attribution, participant membership and no-exit
 enforcement, weekly-dividend classification, controller identity, funding source and payout cadence
 all remain Unknown. This scoped result therefore identifies an early-launch behavior candidate but
-does not complete the Claim Audit or terminal FFT acceptance.
+does not complete the Claim Audit or the FFT reference case.
 
 The synchronous live request took 407 seconds because 14,020 source Evidence nodes were validated
 and written individually. Checkpointed asynchronous execution and batch persistence remain a
@@ -336,7 +338,8 @@ treasury and LP authorization, plus historical validity and recursive controller
 require state/event/semantic proof. Migration `013_evm_control_source_provenance` additionally
 enforces logic/source identity and declared-capability Evidence at PostgreSQL insertion. Legacy v1.0
 reports remain immutable and provider-free replayable without fabricated v1.1 fields. This closes
-only the point-in-time EVM proxy/code/source slice, not terminal FFT control/entity acceptance.
+only the point-in-time EVM proxy/code/source slice, not complete FFT reference-case control/entity
+acceptance.
 The current API/Web runtime was finally recreated with an empty Alchemy key and two public BNB Chain
 RPC URLs; a container-local residue check passed, health remained `UP`/read-only, and the latest
 route replayed this same v1.1 report ID, result hash, Snapshot, code hash, exact source and 8/25
@@ -344,7 +347,7 @@ coverage without provider access.
 
 ## Required output
 
-The terminal acceptance artifact must contain:
+The completed reference-case artifact must contain:
 
 - Flap mechanism/version/status and launch-to-market lifecycle;
 - holder distribution, controller candidates, coordination/independence probabilities, service-hub

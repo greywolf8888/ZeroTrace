@@ -41,8 +41,13 @@ import {
   unknownValue,
   type ChainAnchorRead,
   type ComparisonObservation,
+  type EntityRelationshipReport,
 } from '@zerotrace/schemas';
-import { StorageError, type EvidenceRepository } from '@zerotrace/storage';
+import {
+  StorageError,
+  type EvidenceRepository,
+  type StoredEntityRelationshipReport,
+} from '@zerotrace/storage';
 import { encodeAbiParameters, toEventSelector } from 'viem';
 
 import { createApp } from '../../apps/api/src/app.js';
@@ -1014,6 +1019,81 @@ function addFixtureEvidence(runtime: AppRuntime, blockOrSlot = '16') {
   });
   runtime.evidenceLedger.add(evidence, [], { ...fixtureSnapshot, blockNumber: blockOrSlot });
   return evidence;
+}
+
+function attachEntityReportDurability(runtime: AppRuntime) {
+  const records = new Map<string, StoredEntityRelationshipReport>();
+  const durableEvidence = new Map<string, EvidenceNode>();
+  const evidenceRepository: EvidenceRepository = {
+    put: async (evidence, sourceEvidenceIds = [], snapshot) => {
+      const node: EvidenceNode = {
+        evidence,
+        sourceEvidenceIds: [...new Set(sourceEvidenceIds)].sort(),
+        ...(snapshot === undefined ? {} : { snapshot }),
+      };
+      durableEvidence.set(evidence.id, node);
+      return node;
+    },
+    get: async (id) => durableEvidence.get(id) ?? runtime.evidenceLedger.get(id),
+    drilldown: async (id) => runtime.evidenceLedger.drilldown(id),
+    health: async () => ({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+      checkedAt: '2026-08-09T00:00:01.000Z',
+    }),
+    close: async () => undefined,
+  };
+  runtime.evidenceRepository = evidenceRepository;
+  runtime.entityRelationshipReports = {
+    put: async (report: EntityRelationshipReport) => {
+      const snapshot = report.result.metadata.snapshot;
+      const snapshotPosition =
+        snapshot.ledger === 'EVM'
+          ? snapshot.blockNumber
+          : snapshot.ledger === 'BITCOIN'
+            ? snapshot.height
+            : snapshot.slot;
+      const snapshotHash = snapshot.ledger === 'SOLANA' ? snapshot.blockhash : snapshot.blockHash;
+      const resultHash = hashPayload(report);
+      const record: StoredEntityRelationshipReport = {
+        id: `erh_${hashPayload({ schema: 'zerotrace-entity-relationship-report-v1', resultHash }).slice(0, 24)}`,
+        ledger: snapshot.ledger,
+        chainId: snapshot.chainId,
+        subjectA: report.result.subjectA,
+        subjectB: report.result.subjectB,
+        snapshotPosition,
+        snapshotHash,
+        resultHash,
+        report,
+        terminalEvidenceId: report.terminalEvidenceId,
+        evidenceIds: report.result.metadata.evidenceIds,
+        sourceSet: report.result.metadata.sourceSet,
+        modelVersion: 'entity-v0.1.0',
+        capturedAt: snapshot.capturedAt,
+        createdAt: '2026-08-09T00:00:02.000Z',
+      };
+      records.set(record.id, record);
+      return record;
+    },
+    get: async (id: string) => records.get(id),
+    latest: async ({ ledger, chainId, subjectA, subjectB }) =>
+      [...records.values()].find(
+        (record) =>
+          record.ledger === ledger &&
+          record.chainId === chainId &&
+          record.subjectA === subjectA &&
+          record.subjectB === subjectB,
+      ),
+    health: async () => ({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+      checkedAt: '2026-08-09T00:00:01.000Z',
+    }),
+    close: async () => undefined,
+  } as NonNullable<AppRuntime['entityRelationshipReports']>;
+  return records;
 }
 
 const apps: Awaited<ReturnType<typeof createApp>>[] = [];
@@ -4113,6 +4193,7 @@ describe('ZeroTrace API contract', () => {
   it('grounds entity and exit-race derivations in snapshot-compatible evidence', async () => {
     const runtime = runtimeWithEvm();
     const source = addFixtureEvidence(runtime);
+    attachEntityReportDurability(runtime);
     const app = await createApp({ config, runtime, logger: false });
     apps.push(app);
 
@@ -4133,11 +4214,39 @@ describe('ZeroTrace API contract', () => {
         metadata: fixtureMetadata(source.id),
       },
     });
-    expect(entity.statusCode).toBe(200);
+    expect(entity.statusCode, entity.body).toBe(200);
     expect(entity.json()).toMatchObject({
       classification: 'CONFIRMED_SAME_CONTROLLER',
-      evidence: [expect.objectContaining({ kind: 'DERIVED_FEATURE' })],
+      automaticOwnershipMergeAllowed: false,
+      terminalEvidenceId: expect.stringMatching(/^ev_[0-9a-f]{24}$/),
+      evidence: expect.arrayContaining([expect.objectContaining({ kind: 'DERIVED_FEATURE' })]),
+      durableReport: {
+        id: expect.stringMatching(/^erh_[0-9a-f]{24}$/),
+        resultHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+        replayed: false,
+      },
     });
+    const reportId = entity.json().durableReport.id as string;
+    runtime.providerRegistry = new ProviderRegistry([]);
+    runtime.evmAdapters = new Map();
+    const latest = await app.inject({
+      method: 'GET',
+      url: '/api/v1/entities/relationships/reports/latest?ledger=EVM&chainId=eip155%3A1&subjectA=module&subjectB=controller',
+    });
+    expect(latest.statusCode).toBe(200);
+    expect(latest.json()).toMatchObject({
+      replayed: true,
+      record: {
+        id: reportId,
+        report: { automaticOwnershipMergeAllowed: false },
+      },
+    });
+    const exact = await app.inject({
+      method: 'GET',
+      url: `/api/v1/entities/relationships/reports/${reportId}?ledger=EVM&chainId=eip155%3A1&subjectA=controller&subjectB=module`,
+    });
+    expect(exact.statusCode).toBe(200);
+    expect(exact.json()).toEqual(latest.json());
 
     const scenario = await app.inject({
       method: 'POST',
@@ -4165,6 +4274,55 @@ describe('ZeroTrace API contract', () => {
       iterations: 1,
       evidence: [expect.objectContaining({ kind: 'DERIVED_FEATURE' })],
     });
+  });
+
+  it('fails featureful Entity inference closed without durability and rejects ungrounded merge hints', async () => {
+    const runtime = runtimeWithEvm();
+    const source = addFixtureEvidence(runtime);
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const basePayload = {
+      subjectA: 'controller',
+      subjectB: 'module',
+      features: [
+        {
+          kind: 'COMMON_FUNDER',
+          strength: 0.8,
+          reliability: 0.9,
+          evidenceId: source.id,
+        },
+      ],
+      metadata: fixtureMetadata(source.id),
+    };
+
+    const unavailable = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/resolve',
+      payload: basePayload,
+    });
+    expect(unavailable.statusCode).toBe(503);
+    expect(unavailable.json()).toMatchObject({ error: { code: 'DURABLE_STORAGE_REQUIRED' } });
+
+    const serviceWithoutEvidence = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/resolve',
+      payload: { ...basePayload, subjectAIsService: true },
+    });
+    expect(serviceWithoutEvidence.statusCode).toBe(400);
+
+    const duplicateFeature = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/resolve',
+      payload: { ...basePayload, features: [basePayload.features[0], basePayload.features[0]] },
+    });
+    expect(duplicateFeature.statusCode).toBe(400);
+
+    const labelMergeHint = await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities/resolve',
+      payload: { ...basePayload, features: [], riskLabel: 'SCAM' },
+    });
+    expect(labelMergeHint.statusCode).toBe(400);
   });
 
   it('runs an Evidence-grounded typed discrepancy audit with exact, warning, and Unknown states', async () => {

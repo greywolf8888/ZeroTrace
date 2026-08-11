@@ -55,6 +55,139 @@ test('renders capability truth and unknown values without fake market data', asy
   expect(browserErrors).toEqual([]);
 });
 
+test('replays an immutable Entity relationship hypothesis without enabling ownership merge', async ({
+  page,
+}) => {
+  const reportId = `erh_${'a'.repeat(24)}`;
+  const sourceEvidenceId = `ev_${'b'.repeat(24)}`;
+  const terminalEvidenceId = `ev_${'c'.repeat(24)}`;
+  const subjectA = `0x${'1'.repeat(40)}`;
+  const subjectB = `0x${'2'.repeat(40)}`;
+  const snapshot = {
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    blockNumber: '115279243',
+    blockHash: `0x${'d'.repeat(64)}`,
+    finality: 'finalized',
+    capturedAt: '2026-08-11T08:17:11.381Z',
+  };
+  const metadata = {
+    snapshot,
+    dataCoverage: 0.8,
+    sourceCoverage: 0.5,
+    historyCoverage: 0.7,
+    simulationCoverage: 0,
+    freshness: '2026-08-11T08:17:11.381Z',
+    sourceSet: ['sqd:binance-mainnet'],
+    modelVersion: 'entity-v0.1.0',
+    confidence: 0.75,
+    evidenceIds: [sourceEvidenceId, terminalEvidenceId].sort(),
+  };
+  const evidence = [
+    {
+      id: sourceEvidenceId,
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'TRANSACTION',
+      source: 'sqd:binance-mainnet',
+      locator: 'funding-path@115279243',
+      payloadHash: 'e'.repeat(64),
+      observedAt: '2026-08-11T08:17:11.381Z',
+      blockOrSlot: '115279243',
+      finality: 'finalized',
+      summary: 'Observed a common funding path at the report Snapshot.',
+    },
+    {
+      id: terminalEvidenceId,
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:entity-v0.1.0',
+      locator: `entity-relationship:${subjectA}:${subjectB}`,
+      payloadHash: 'f'.repeat(64),
+      observedAt: '2026-08-11T08:17:12.000Z',
+      blockOrSlot: '115279243',
+      finality: 'finalized',
+      summary: 'Evidence-weighted controller, coordination, and independence inference.',
+    },
+  ].sort((left, right) => left.id.localeCompare(right.id));
+  const result = {
+    subjectA,
+    subjectB,
+    classification: 'COORDINATED_BUT_INDEPENDENT',
+    sameControllerProbability: { state: 'known', value: 0.31 },
+    coordinationProbability: { state: 'known', value: 0.96 },
+    independenceProbability: { state: 'known', value: 0.62 },
+    positiveEvidenceIds: [sourceEvidenceId],
+    negativeEvidenceIds: [],
+    serviceSuppressionApplied: false,
+    metadata,
+  };
+  const report = {
+    schemaVersion: 'entity-relationship-report-v1',
+    automaticOwnershipMergeAllowed: false,
+    input: {
+      subjectA,
+      subjectB,
+      features: [
+        {
+          kind: 'COMMON_FUNDER',
+          strength: 0.9,
+          reliability: 0.8,
+          evidenceId: sourceEvidenceId,
+        },
+      ],
+      metadata: { ...metadata, modelVersion: 'entity-feature-extractor-v1' },
+    },
+    result,
+    terminalEvidenceId,
+    evidence,
+  };
+  const record = {
+    id: reportId,
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    subjectA,
+    subjectB,
+    snapshotPosition: '115279243',
+    snapshotHash: snapshot.blockHash,
+    resultHash: '1'.repeat(64),
+    report,
+    terminalEvidenceId,
+    evidenceIds: metadata.evidenceIds,
+    sourceSet: metadata.sourceSet,
+    modelVersion: 'entity-v0.1.0',
+    capturedAt: snapshot.capturedAt,
+    createdAt: '2026-08-11T08:17:13.000Z',
+  };
+  await page.route('**/api/v1/entities/relationships/reports/latest?*', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ replayed: true, record }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Entity Intelligence' }).click();
+  await page.getByLabel('Subject A').fill(subjectB);
+  await page.getByLabel('Subject B').fill(subjectA);
+  await page.getByRole('button', { name: 'Load latest' }).click();
+
+  const resultPanel = page.getByTestId('entity-report-result');
+  await expect(resultPanel).toContainText('Coordinated But Independent');
+  await expect(resultPanel).toContainText('Automatic ownership merge');
+  await expect(resultPanel).toContainText('Blocked');
+  await expect(resultPanel).toContainText(reportId);
+  await expect(page.getByRole('heading', { name: 'Entity relationship Evidence' })).toBeVisible();
+  await expect(page.getByText('No labels-to-merge path')).toBeVisible();
+
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
 test('classifies a checksummed EVM address without claiming provider facts', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Address or transaction identifier').fill(checksummedEvmAddress);
@@ -2815,6 +2948,9 @@ test('shows durable pension behavior candidates on mobile without inventing soci
     has: page.getByRole('heading', { name: 'Pension Vault Candidates' }),
   });
   await expect(panel).toContainText('Behavior is not identity');
+  await panel.getByLabel('BSC token').fill(fftToken);
+  await panel.getByLabel('From block').fill('113485950');
+  await panel.getByLabel('Share unit (atomic)').fill('1000000000000000000000000');
   await expect(panel.getByLabel('BSC token')).toHaveValue(fftToken);
   await expect(panel.getByLabel('From block')).toHaveValue('113485950');
   await panel.getByLabel('Finalized to block').fill('115154970');
@@ -3449,6 +3585,7 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
   await page.goto('/');
   await page.getByRole('button', { name: 'Control Rights' }).click();
   await expect(page.getByRole('heading', { name: 'EVM Control Rights' })).toBeVisible();
+  await page.getByLabel('Contract address').fill(subject);
   await page.getByRole('button', { name: 'Inspect and persist' }).click();
 
   await expect(page.getByText('Erc1167 Minimal Proxy')).toBeVisible();

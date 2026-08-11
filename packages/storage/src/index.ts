@@ -21,6 +21,7 @@ export * from './solana-control-surface-reports.js';
 export * from './solana-transaction-reports.js';
 export * from './pension-candidate-reports.js';
 export * from './flap-pension-entry-reports.js';
+export * from './entity-relationship-reports.js';
 
 type DatabaseRow = Record<string, unknown>;
 

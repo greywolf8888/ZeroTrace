@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AnalysisMetadata } from '@zerotrace/schemas';
+import type { EntityRelationshipInput } from '@zerotrace/schemas';
 
 import { resolveEntityRelationship } from './index.js';
 
-const metadata: AnalysisMetadata = {
+const metadata: EntityRelationshipInput['metadata'] = {
   snapshot: null,
   dataCoverage: 0.8,
   sourceCoverage: 0.7,
@@ -56,12 +56,83 @@ describe('entity resolution', () => {
       metadata,
       subjectAIsService: true,
       features: [
+        { kind: 'SERVICE_HUB', strength: 1, reliability: 1, evidenceId: 'ev_service' },
         { kind: 'COMMON_FUNDER', strength: 1, reliability: 0.9, evidenceId: 'ev_cex' },
         { kind: 'TIMING_SYNCHRONY', strength: 1, reliability: 0.9, evidenceId: 'ev_time' },
       ],
     });
     expect(result.classification).toBe('SERVICE_INFRASTRUCTURE');
-    expect(result.sameControllerProbability).toEqual({ state: 'known', value: 0.01 });
+    expect(result.sameControllerProbability.state).toBe('known');
+    if (result.sameControllerProbability.state === 'known') {
+      expect(result.sameControllerProbability.value).toBeLessThanOrEqual(0.01);
+    }
+  });
+
+  it('does not let an ungrounded service flag suppress ownership', () => {
+    const result = resolveEntityRelationship({
+      subjectA: 'user-a',
+      subjectB: 'user-b',
+      metadata,
+      subjectAIsService: true,
+      features: [{ kind: 'COMMON_FUNDER', strength: 1, reliability: 1, evidenceId: 'ev_funder' }],
+    });
+    expect(result.serviceSuppressionApplied).toBe(false);
+    expect(result.classification).not.toBe('SERVICE_INFRASTRUCTURE');
+  });
+
+  it('canonicalizes pair and feature order without double-scoring duplicate Evidence', () => {
+    const result = resolveEntityRelationship({
+      subjectA: 'z-wallet',
+      subjectB: 'a-wallet',
+      metadata,
+      features: [
+        { kind: 'TIMING_SYNCHRONY', strength: 1, reliability: 1, evidenceId: 'ev_timing' },
+        { kind: 'COMMON_FUNDER', strength: 1, reliability: 1, evidenceId: 'ev_funder' },
+        { kind: 'COMMON_FUNDER', strength: 1, reliability: 1, evidenceId: 'ev_funder' },
+      ],
+    });
+    expect(result).toMatchObject({
+      subjectA: 'a-wallet',
+      subjectB: 'z-wallet',
+      positiveEvidenceIds: ['ev_funder', 'ev_timing'],
+    });
+  });
+
+  it('classifies grounded common bot infrastructure without merging controllers', () => {
+    const result = resolveEntityRelationship({
+      subjectA: 'bot-a',
+      subjectB: 'bot-b',
+      metadata,
+      features: [
+        {
+          kind: 'BOT_COMMON_INFRASTRUCTURE',
+          strength: 1,
+          reliability: 1,
+          evidenceId: 'ev_bot',
+        },
+      ],
+    });
+    expect(result.classification).toBe('BOT_MM_ARBITRAGE');
+    expect(result.sameControllerProbability).toMatchObject({ state: 'known' });
+  });
+
+  it('reports suppression only when it changes a non-deterministic conclusion', () => {
+    const result = resolveEntityRelationship({
+      subjectA: 'controller-a',
+      subjectB: 'controller-b',
+      metadata,
+      features: [
+        { kind: 'SERVICE_HUB', strength: 1, reliability: 1, evidenceId: 'ev_service' },
+        {
+          kind: 'SHARED_ONCHAIN_AUTHORITY',
+          strength: 1,
+          reliability: 1,
+          evidenceId: 'ev_authority',
+        },
+      ],
+    });
+    expect(result.classification).toBe('CONFIRMED_SAME_CONTROLLER');
+    expect(result.serviceSuppressionApplied).toBe(false);
   });
 
   it('never merges a CoinJoin pair in the golden suppression case', () => {

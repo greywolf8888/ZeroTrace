@@ -1,35 +1,17 @@
 import {
   knownValue,
   unknownValue,
-  type AnalysisMetadata,
+  type EntityFeature as SchemaEntityFeature,
+  type EntityFeatureKind as SchemaEntityFeatureKind,
+  type EntityRelationshipInput,
   type EntityResolution,
 } from '@zerotrace/schemas';
 
 export * from './evaluation.js';
 
-export type EntityFeatureKind =
-  | 'SHARED_ONCHAIN_AUTHORITY'
-  | 'COMMON_FUNDER'
-  | 'SHARED_FEE_PAYER'
-  | 'SETTLEMENT_CONVERGENCE'
-  | 'TRANSACTION_GRAMMAR'
-  | 'TIMING_SYNCHRONY'
-  | 'EARLY_BUYER_COHORT'
-  | 'TOKEN_DISTRIBUTION'
-  | 'INDEPENDENT_HISTORY'
-  | 'DISTINCT_FUNDING'
-  | 'DISTINCT_SETTLEMENT'
-  | 'CEX_PATH_BREAK'
-  | 'SERVICE_HUB'
-  | 'COINJOIN'
-  | 'BOT_COMMON_INFRASTRUCTURE';
-
-export interface EntityFeature {
-  kind: EntityFeatureKind;
-  strength: number;
-  reliability: number;
-  evidenceId: string;
-}
+export const ENTITY_RELATIONSHIP_MODEL_VERSION = 'entity-v0.1.0' as const;
+export type EntityFeatureKind = SchemaEntityFeatureKind;
+export type EntityFeature = SchemaEntityFeature;
 
 interface FeatureWeights {
   sameController: number;
@@ -73,17 +55,57 @@ function roundedProbability(value: number): number {
   return Number(Math.min(1, Math.max(0, value)).toFixed(6));
 }
 
-export interface ResolveEntityInput {
-  subjectA: string;
-  subjectB: string;
-  features: EntityFeature[];
-  metadata: AnalysisMetadata;
-  subjectAIsService?: boolean | undefined;
-  subjectBIsService?: boolean | undefined;
+export type ResolveEntityInput = EntityRelationshipInput;
+
+function featureIdentity(feature: EntityFeature): string {
+  return [feature.kind, feature.evidenceId, feature.strength, feature.reliability].join(':');
+}
+
+export function canonicalizeEntityRelationshipInput(input: ResolveEntityInput): ResolveEntityInput {
+  const subjectsInOrder = input.subjectA < input.subjectB;
+  const features = [...input.features]
+    .sort((left, right) => featureIdentity(left).localeCompare(featureIdentity(right)))
+    .filter(
+      (feature, index, items) =>
+        index === 0 ||
+        feature.kind !== items[index - 1]?.kind ||
+        feature.evidenceId !== items[index - 1]?.evidenceId,
+    );
+  const evidenceIds = [
+    ...new Set([...input.metadata.evidenceIds, ...features.map((feature) => feature.evidenceId)]),
+  ].sort();
+  return {
+    subjectA: subjectsInOrder ? input.subjectA : input.subjectB,
+    subjectB: subjectsInOrder ? input.subjectB : input.subjectA,
+    features,
+    metadata: {
+      ...input.metadata,
+      sourceSet: [...new Set(input.metadata.sourceSet)].sort(),
+      evidenceIds,
+    },
+    ...(subjectsInOrder
+      ? {
+          ...(input.subjectAIsService === undefined
+            ? {}
+            : { subjectAIsService: input.subjectAIsService }),
+          ...(input.subjectBIsService === undefined
+            ? {}
+            : { subjectBIsService: input.subjectBIsService }),
+        }
+      : {
+          ...(input.subjectBIsService === undefined
+            ? {}
+            : { subjectAIsService: input.subjectBIsService }),
+          ...(input.subjectAIsService === undefined
+            ? {}
+            : { subjectBIsService: input.subjectAIsService }),
+        }),
+  };
 }
 
 export function resolveEntityRelationship(input: ResolveEntityInput): EntityResolution {
-  const groundedFeatures = input.features.filter(
+  const canonicalInput = canonicalizeEntityRelationshipInput(input);
+  const groundedFeatures = canonicalInput.features.filter(
     (feature) =>
       feature.evidenceId.length > 0 &&
       Number.isFinite(feature.strength) &&
@@ -93,18 +115,27 @@ export function resolveEntityRelationship(input: ResolveEntityInput): EntityReso
       feature.reliability >= 0 &&
       feature.reliability <= 1,
   );
-  const evidenceIds = [...new Set(groundedFeatures.map((feature) => feature.evidenceId))];
+  const evidenceIds = [
+    ...new Set([
+      ...canonicalInput.metadata.evidenceIds,
+      ...groundedFeatures.map((feature) => feature.evidenceId),
+    ]),
+  ].sort();
   const positiveEvidenceIds = groundedFeatures
     .filter((feature) => !NEGATIVE_FEATURES.has(feature.kind))
-    .map((feature) => feature.evidenceId);
+    .map((feature) => feature.evidenceId)
+    .filter((id, index, items) => items.indexOf(id) === index)
+    .sort();
   const negativeEvidenceIds = groundedFeatures
     .filter((feature) => NEGATIVE_FEATURES.has(feature.kind))
-    .map((feature) => feature.evidenceId);
-  const serviceSuppression =
-    input.subjectAIsService === true ||
-    input.subjectBIsService === true ||
-    groundedFeatures.some((feature) => feature.kind === 'SERVICE_HUB');
+    .map((feature) => feature.evidenceId)
+    .filter((id, index, items) => items.indexOf(id) === index)
+    .sort();
+  const serviceSuppression = groundedFeatures.some((feature) => feature.kind === 'SERVICE_HUB');
   const coinjoinSuppression = groundedFeatures.some((feature) => feature.kind === 'COINJOIN');
+  const botInfrastructure = groundedFeatures.some(
+    (feature) => feature.kind === 'BOT_COMMON_INFRASTRUCTURE',
+  );
   const deterministicControl = groundedFeatures.some(
     (feature) =>
       feature.kind === 'SHARED_ONCHAIN_AUTHORITY' &&
@@ -112,15 +143,16 @@ export function resolveEntityRelationship(input: ResolveEntityInput): EntityReso
       feature.reliability >= 0.98,
   );
 
-  const metadata: AnalysisMetadata = {
-    ...input.metadata,
+  const metadata = {
+    ...canonicalInput.metadata,
+    modelVersion: ENTITY_RELATIONSHIP_MODEL_VERSION,
     evidenceIds,
   };
 
   if (groundedFeatures.length === 0) {
     return {
-      subjectA: input.subjectA,
-      subjectB: input.subjectB,
+      subjectA: canonicalInput.subjectA,
+      subjectB: canonicalInput.subjectB,
       classification: 'UNKNOWN',
       sameControllerProbability: unknownValue('INSUFFICIENT_DATA'),
       coordinationProbability: unknownValue('INSUFFICIENT_DATA'),
@@ -159,6 +191,7 @@ export function resolveEntityRelationship(input: ResolveEntityInput): EntityReso
   let classification: EntityResolution['classification'] = 'UNKNOWN';
   if (deterministicControl) classification = 'CONFIRMED_SAME_CONTROLLER';
   else if (serviceSuppression) classification = 'SERVICE_INFRASTRUCTURE';
+  else if (botInfrastructure) classification = 'BOT_MM_ARBITRAGE';
   else if (same >= 0.98 && groundedFeatures.length >= 3)
     classification = 'HIGHLY_PROBABLE_SAME_CONTROLLER';
   else if (same >= 0.9 && groundedFeatures.length >= 2) classification = 'PROBABLE_SAME_CONTROLLER';
@@ -166,15 +199,15 @@ export function resolveEntityRelationship(input: ResolveEntityInput): EntityReso
   else if (independence >= 0.9 && same < 0.2) classification = 'LIKELY_INDEPENDENT';
 
   return {
-    subjectA: input.subjectA,
-    subjectB: input.subjectB,
+    subjectA: canonicalInput.subjectA,
+    subjectB: canonicalInput.subjectB,
     classification,
     sameControllerProbability: knownValue(same),
     coordinationProbability: knownValue(coordination),
     independenceProbability: knownValue(independence),
-    positiveEvidenceIds: [...new Set(positiveEvidenceIds)],
-    negativeEvidenceIds: [...new Set(negativeEvidenceIds)],
-    serviceSuppressionApplied: serviceSuppression || coinjoinSuppression,
+    positiveEvidenceIds,
+    negativeEvidenceIds,
+    serviceSuppressionApplied: (serviceSuppression || coinjoinSuppression) && !deterministicControl,
     metadata,
   };
 }

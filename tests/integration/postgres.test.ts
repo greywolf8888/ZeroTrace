@@ -12,8 +12,13 @@ import {
   type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
 import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
-import { createEvidence } from '@zerotrace/evidence';
 import {
+  canonicalizeEntityRelationshipInput,
+  resolveEntityRelationship,
+} from '@zerotrace/entity-engine';
+import { createEvidence, hashPayload } from '@zerotrace/evidence';
+import {
+  EntityRelationshipReportSchema,
   EvmControlCoverageDomainSchema,
   SolanaControlCoverageDomainSchema,
   SolanaTransactionIntelligenceReportSchema,
@@ -35,6 +40,7 @@ import {
 import {
   PostgresClaimReportRepository,
   PostgresDataQualityRepository,
+  PostgresEntityRelationshipReportRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaTransactionReportRepository,
@@ -1924,6 +1930,150 @@ postgresDescribe('PostgreSQL durable EVM pension candidate integration', () => {
       ).rejects.toThrow(/immutable/);
       await expect(
         pool.query('DELETE FROM flap_pension_entry_reports WHERE id = $1', [storedEntry.id]),
+      ).rejects.toThrow(/immutable/);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration', () => {
+  let evidence: PostgresEvidenceRepository;
+  let reports: PostgresEntityRelationshipReportRepository;
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    reports = new PostgresEntityRelationshipReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), reports.close()]);
+  });
+
+  it('persists one canonical no-auto-merge hypothesis, replays it, and rejects mutation', async () => {
+    const runId = randomUUID();
+    const capturedAt = new Date().toISOString();
+    const snapshot = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:1',
+      blockNumber: '910000',
+      blockHash: `0x${hashPayload({ runId, kind: 'block' })}`,
+      parentBlockHash: `0x${hashPayload({ runId, kind: 'parent' })}`,
+      finality: 'finalized' as const,
+      blockTimestamp: capturedAt,
+      capturedAt,
+      providerVersions: { 'integration:entity-source': '1' },
+      adapterVersions: { evm: 'evm-ledger-v0.1.0' },
+      configHash: hashPayload({ runId, kind: 'config' }),
+      entityModelVersion: 'entity-v0.1.0',
+      labelSnapshot: 'labels-unapplied',
+    };
+    const source = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'CONTRACT_STATE',
+      source: 'integration:entity-source',
+      locator: `authority:${runId}@910000`,
+      payload: { runId, authority: 'shared' },
+      blockOrSlot: '910000',
+      finality: 'finalized',
+      summary: 'Integration fixture proves one shared on-chain authority at the Snapshot.',
+    });
+    await evidence.put(source, [], snapshot);
+    const input = canonicalizeEntityRelationshipInput({
+      subjectA: `account:${runId}:b`,
+      subjectB: `account:${runId}:a`,
+      features: [
+        {
+          kind: 'SHARED_ONCHAIN_AUTHORITY',
+          strength: 1,
+          reliability: 1,
+          evidenceId: source.id,
+        },
+      ],
+      metadata: {
+        snapshot,
+        dataCoverage: 1,
+        sourceCoverage: 1,
+        historyCoverage: 0,
+        simulationCoverage: 0,
+        freshness: capturedAt,
+        sourceSet: [source.source],
+        modelVersion: 'integration-feature-extractor-v1',
+        confidence: 1,
+        evidenceIds: [source.id],
+      },
+    });
+    const result = resolveEntityRelationship(input);
+    const terminal = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:entity-v0.1.0',
+      locator: `entity-relationship:${input.subjectA}:${input.subjectB}`,
+      payload: { input, result },
+      blockOrSlot: '910000',
+      finality: 'finalized',
+      summary: 'Evidence-weighted controller, coordination, and independence inference.',
+      sourceEvidenceIds: [source.id],
+    });
+    await evidence.put(terminal, [source.id], snapshot);
+    const resultWithTerminal = {
+      ...result,
+      metadata: {
+        ...result.metadata,
+        evidenceIds: [...result.metadata.evidenceIds, terminal.id].sort(),
+      },
+    };
+    const report = EntityRelationshipReportSchema.parse({
+      schemaVersion: 'entity-relationship-report-v1',
+      automaticOwnershipMergeAllowed: false,
+      input,
+      result: resultWithTerminal,
+      terminalEvidenceId: terminal.id,
+      evidence: [source, terminal].sort((left, right) => left.id.localeCompare(right.id)),
+    });
+
+    const stored = await reports.put(report);
+    await expect(reports.put(report)).resolves.toEqual(stored);
+    await reports.close();
+    reports = new PostgresEntityRelationshipReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(reports.get(stored.id)).resolves.toEqual(stored);
+    await expect(
+      reports.latest({
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        subjectA: input.subjectB,
+        subjectB: input.subjectA,
+      }),
+    ).resolves.toEqual(stored);
+    await expect(reports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+    expect(stored).toMatchObject({
+      id: expect.stringMatching(/^erh_[0-9a-f]{24}$/),
+      subjectA: input.subjectA,
+      subjectB: input.subjectB,
+      terminalEvidenceId: terminal.id,
+      report: { automaticOwnershipMergeAllowed: false },
+    });
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE entity_relationship_reports SET report = report WHERE id = $1', [
+          stored.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM entity_relationship_reports WHERE id = $1', [stored.id]),
       ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();

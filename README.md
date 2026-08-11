@@ -110,6 +110,10 @@ The current foundation includes:
   regression alerts, and operator independence retained as Unknown until verified;
 - content-addressed evidence nodes and deterministic evidence drilldown;
 - baseline evidence fusion with explicit service-hub, CoinJoin, and independence suppression;
+- immutable, content-addressed Entity relationship hypothesis reports with canonical pair/feature
+  ordering, grounded Service Hub suppression, a database-enforced no-automatic-merge invariant,
+  complete Snapshot/Evidence lineage, provider-free latest/exact replay, and a responsive Entity
+  Intelligence workspace;
 - Snapshot-bound Bitcoin transaction-entity screening that exposes common-input and bounded change
   candidates, exact fee arithmetic, address reuse, equal-output CoinJoin-like and fanout patterns,
   while BIP78/Payjoin and unqueried service attribution block every automatic ownership merge;
@@ -197,6 +201,7 @@ flowchart LR
   W -->|"Evidence and checkpoints"| DB
   W -->|"content-addressed raw artifacts"| OBJ
   EV -->|"snapshots, nodes, edges"| DB
+  ER -->|"immutable pair hypotheses"| DB
   DQ -->|"anchors and alerts"| DB
   DQ --> UI
 ```
@@ -236,11 +241,11 @@ distributed workflows remain open work. Read
 | EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound queries, finalized raw execution/state, strict ERC-1167/EIP-1967/ERC-173/registered-Safe reads, recursive logic-code hashing, and Sourcify V2 exact-source binding; effective custom-role controllers, validity history and archive/semantic validation pending                                                                                                                                                                            |
 | Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/address/transaction/outpoint reads, standard-script control and conservative common-input/change candidates with CoinJoin/Payjoin/fanout suppression; Core policy, complete graph/history, calibrated classification and asset protocols pending                                                                                                                                                                                     |
 | Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound legacy/v0 semantics with ALT/CPI, official System/SPL/Token-2022 instruction identification, owner-aware core transfer/mint/burn flows, zero-tolerance atomic token reconciliation, immutable transaction-report replay, and finalized token/loader authority reports; continuous projection, Token-2022 extension execution, platform/AMM decoders, PDA/Squads/history/build provenance, other loaders and archive reconciliation pending |
-| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                                                                                                                                                               |
+| Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline, immutable pairwise hypothesis reports, provider-free API/UI replay and executable structural Precision/False-Merge gates implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                                                                                           |
 | Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                                                                                                                                                               |
-| Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                                                                                                                                                                                                   |
+| Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg and other platform adapters pending                                                                                                                                                                                                                                        |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, verified Pancake V2 buy/exit models, and immutable candidate-bound pension-entry Scenario Reports with provider-free replay work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                                                                   |
-| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, immutable Claim Report replay, finalized pension-behavior discovery and same-Snapshot entry economics validated on FFT; complete backfill, scheduling, official attribution, dividend-policy proof and terminal acceptance pending                                                                |
+| Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, immutable Claim Report replay, finalized pension-behavior discovery and same-Snapshot entry economics validated through a registered FFT reference case; generic backfill, scheduling, attribution and action-proof coverage remain                                                               |
 | Evidence           | immutable provenance, source snapshot, derivation graph, confidence and coverage              | Durable Snapshot/node/edge graph plus versioned raw artifacts for every implemented ingestion record                                                                                                                                                                                                                                                                                                                                                      |
 
 Platform status is also available at `GET /api/v1/platforms`. GMGN is treated only as an optional
@@ -636,6 +641,7 @@ This roadmap describes implementation progress rather than product marketing pha
 - [x] Decode official System/SPL Token/Token-2022 core asset flows with owner mapping, failed-execution state, per-flow Evidence and exact atomic reconciliation
 - [x] Persist content-addressed Solana transaction semantic reports with exact/latest provider-free replay and explicitly degraded provider-failure fallback
 - [x] Add Bitcoin transaction common-input/change candidates with CoinJoin/Payjoin/service suppression and no automatic entity merge
+- [x] Persist immutable Entity relationship hypothesis reports with complete Evidence lineage, provider-free replay and no automatic merge
 - [x] Add version-pinned Flap BSC Portal-state inspection with Evidence/Unknown UI rendering
 - [x] Add fixed-block Flap Portal sell previews with provider Evidence and no-fake-zero UI states
 - [x] Add exact-receipt Flap creation/configuration/migration event decoding with default provenance
@@ -671,15 +677,17 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Extend control rights to effective custom EVM roles/history and controller recursion, Bitcoin custody, and Solana PDA/Squads/history/build provenance
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
-- [ ] Backfill complete supply history and add continuous capture scheduling, reviewed-draft promotion and terminal FFT audit
+- [ ] Complete generic Claim Verification coverage: durable scheduling, historical backfill, reviewed-draft promotion and independently evidenced action paths
 - [ ] Complete search, timeline, evidence graph, comparison, scenario and export workflows in the UI
 - [ ] Run archive-grade, multi-provider, real-chain fixtures and production load/failure testing
 
-The named terminal real-chain acceptance target is Flap/BSC token FFT at
+Flap/BSC token FFT at
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`; its error budget and automatic discrepancy rules are
-defined in [the FFT acceptance specification](docs/testing/FLAP_FFT_ACCEPTANCE.md). Named
+registered as the first real-world reference case in
+[the FFT acceptance specification](docs/testing/FLAP_FFT_ACCEPTANCE.md). It is a completion test of
+the generic architecture, not a product phase or a token-specific engine. Named
 same-Snapshot Pancake V2 buy/exit-size slices now pass their deterministic arithmetic checks; this is
-not a terminal FFT conclusion. Live Alchemy + BNB Chain runs pass the independent-source market/RV
+not a complete reference-case conclusion. Live Alchemy + BNB Chain runs pass the independent-source market/RV
 gate and identify the FFT token as an ERC-1167 proxy with a fixed implementation and zero-valued
 ERC-173 owner. The implementation logic is an exact Sourcify match for `FlapTaxTokenV3`; its ABI
 declares owner-transfer and migration mutations, but their current reachability and controllers are

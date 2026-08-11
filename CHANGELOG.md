@@ -8,6 +8,11 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- immutable content-addressed Entity relationship hypothesis reports with canonical pair and
+  feature ordering, grounded Service Hub suppression, fixed model provenance, exact
+  Snapshot/Evidence/derivation constraints, PostgreSQL update/delete guards, provider-free
+  latest/exact API replay, a first-class responsive Entity Intelligence workspace and a hard
+  `automaticOwnershipMergeAllowed=false` boundary;
 - durable pension-candidate-to-market composition for migrated Flap/Pancake V2 tokens, with
   exact-integer multi-size share economics, same-Snapshot ordering, three-parent Evidence lineage,
   append-only content-addressed PostgreSQL Scenario Reports, exact/latest provider-free API/UI

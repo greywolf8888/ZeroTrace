@@ -12,7 +12,11 @@ import {
   DISCREPANCY_MODEL_VERSION,
   resolveSourceOperators,
 } from '@zerotrace/data-quality';
-import { resolveEntityRelationship } from '@zerotrace/entity-engine';
+import {
+  canonicalizeEntityRelationshipInput,
+  ENTITY_RELATIONSHIP_MODEL_VERSION,
+  resolveEntityRelationship,
+} from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
 import {
@@ -51,6 +55,7 @@ import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
   ClaimReportStorageError,
   ControlSurfaceReportStorageError,
+  EntityRelationshipReportStorageError,
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   FlapPensionEntryReportStorageError,
@@ -66,6 +71,8 @@ import {
 import {
   AnalysisMetadataSchema,
   DiscrepancyCheckInputSchema,
+  EntityRelationshipInputSchema,
+  EntityRelationshipReportSchema,
   FlapEventHistoryProjectionSchema,
   FlapLifetimeMaterializationSchema,
   SolanaTransactionIntelligenceReportSchema,
@@ -557,6 +564,28 @@ const FlapPensionEntryReportParamsSchema = z
   .object({ reportId: z.string().regex(/^per_[0-9a-f]{24}$/) })
   .strict();
 
+const EntityRelationshipReportQuerySchema = z
+  .object({
+    ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']),
+    chainId: z.string().trim().min(1).max(128),
+    subjectA: z.string().trim().min(1).max(512),
+    subjectB: z.string().trim().min(1).max(512),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.subjectA === value.subjectB) {
+      context.addIssue({
+        code: 'custom',
+        path: ['subjectB'],
+        message: 'Entity relationship subjects must be distinct.',
+      });
+    }
+  });
+
+const EntityRelationshipReportParamsSchema = z
+  .object({ reportId: z.string().regex(/^erh_[0-9a-f]{24}$/) })
+  .strict();
+
 const FlapPancakeV2ReconciliationRequestSchema = z
   .object({
     chainId: z.literal('eip155:56'),
@@ -594,38 +623,6 @@ const DiscrepancyAuditRequestSchema = z
     metadata: AnalysisMetadataSchema,
   })
   .strict();
-
-const EntityFeatureSchema = z.object({
-  kind: z.enum([
-    'SHARED_ONCHAIN_AUTHORITY',
-    'COMMON_FUNDER',
-    'SHARED_FEE_PAYER',
-    'SETTLEMENT_CONVERGENCE',
-    'TRANSACTION_GRAMMAR',
-    'TIMING_SYNCHRONY',
-    'EARLY_BUYER_COHORT',
-    'TOKEN_DISTRIBUTION',
-    'INDEPENDENT_HISTORY',
-    'DISTINCT_FUNDING',
-    'DISTINCT_SETTLEMENT',
-    'CEX_PATH_BREAK',
-    'SERVICE_HUB',
-    'COINJOIN',
-    'BOT_COMMON_INFRASTRUCTURE',
-  ]),
-  strength: z.number().min(0).max(1),
-  reliability: z.number().min(0).max(1),
-  evidenceId: z.string().min(1),
-});
-
-const EntityRequestSchema = z.object({
-  subjectA: z.string().min(1),
-  subjectB: z.string().min(1),
-  features: z.array(EntityFeatureSchema).max(1_000),
-  metadata: AnalysisMetadataSchema,
-  subjectAIsService: z.boolean().optional(),
-  subjectBIsService: z.boolean().optional(),
-});
 
 const AtomicQuantitySchema = z.string().regex(/^(0|[1-9]\d*)$/);
 const PositiveAtomicQuantitySchema = AtomicQuantitySchema.refine((value) => BigInt(value) > 0n, {
@@ -759,6 +756,10 @@ function uniqueEvidenceIds(ids: readonly string[]): string[] {
 
 function uniqueSourceIds(ids: readonly string[]): string[] {
   return [...new Set(ids)].sort();
+}
+
+function canonicalSubjectPair(subjectA: string, subjectB: string): [string, string] {
+  return subjectA < subjectB ? [subjectA, subjectB] : [subjectB, subjectA];
 }
 
 function evidenceSourceId(ids: readonly string[]): string {
@@ -975,6 +976,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionCandidateReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionEntryReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipReports']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -1006,6 +1008,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         solanaTransactionReports,
         pensionCandidateReports,
         pensionEntryReports,
+        entityRelationshipReports,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -1017,6 +1020,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.solanaTransactionReports?.health(),
         runtime.pensionCandidateReports?.health(),
         runtime.pensionEntryReports?.health(),
+        runtime.entityRelationshipReports?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -1039,7 +1043,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                           ? pensionCandidateReports
                           : pensionEntryReports?.status === 'DOWN'
                             ? pensionEntryReports
-                            : evidence;
+                            : entityRelationshipReports?.status === 'DOWN'
+                              ? entityRelationshipReports
+                              : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1268,6 +1274,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof FlapPensionEntryReportStorageError) {
       const status = error.code === 'FLAP_PENSION_ENTRY_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof EntityRelationshipReportStorageError) {
+      const status = error.code === 'ENTITY_RELATIONSHIP_REPORT_INVALID' ? 400 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1595,9 +1607,13 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       },
       {
         id: 'entity-evidence-fusion',
-        status: 'IMPLEMENTED_BASELINE',
+        status:
+          runtime.evidenceRepository === undefined ||
+          runtime.entityRelationshipReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_BASELINE',
         detail:
-          'Evidence-weighted pair scoring and structural precision gates are joined by Bitcoin transaction-level candidate extraction. Common input and change signals never auto-merge; CoinJoin-like, fanout, incomplete input context, unresolved Payjoin and unqueried service attribution are explicit suppressors. Temporal graph extraction and real-world calibration remain pending.',
+          'Evidence-weighted pair scoring emits an immutable Snapshot-bound relationship hypothesis report with provider-free latest/exact replay. Canonical pair ordering, duplicate-feature rejection, grounded service-hub suppression, explicit Unknown and a hard no-automatic-merge boundary are enforced. Bitcoin common-input/change signals never auto-merge; CoinJoin-like, fanout, incomplete input context, unresolved Payjoin and unqueried service attribution remain explicit suppressors. Temporal graph extraction and real-world calibration remain pending.',
       },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },
       { id: 'shared-liquidity-exit-race', status: 'IMPLEMENTED_DETERMINISTIC' },
@@ -2926,7 +2942,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     async (request, reply) => {
       const input = DiscrepancyAuditRequestSchema.parse(request.body);
       if (input.checks.length === 0) return auditDiscrepancies(input.checks, input.metadata);
-      if (input.metadata.snapshot === null) {
+      const snapshot = input.metadata.snapshot;
+      if (snapshot === null) {
         return rejectUngroundedAnalysis(
           request,
           reply,
@@ -2958,11 +2975,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           missingIds,
         );
       }
-      const incompatibleIds = await incompatibleEvidenceIds(
-        runtime,
-        sourceEvidenceIds,
-        input.metadata.snapshot,
-      );
+      const incompatibleIds = await incompatibleEvidenceIds(runtime, sourceEvidenceIds, snapshot);
       if (incompatibleIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -2975,7 +2988,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       const result = auditDiscrepancies(input.checks, input.metadata);
       const derived = await addDerivedAnalysisEvidence(
         runtime,
-        input.metadata.snapshot,
+        snapshot,
         sourceEvidenceIds,
         DISCREPANCY_MODEL_VERSION,
         `data-quality:discrepancy-audit:${hashPayload(input.checks)}`,
@@ -3001,19 +3014,37 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     '/api/v1/entities/resolve',
     { schema: { tags: ['analysis'] } },
     async (request, reply) => {
-      const input = EntityRequestSchema.parse(request.body);
+      let input = canonicalizeEntityRelationshipInput(
+        EntityRelationshipInputSchema.parse(request.body),
+      );
       if (input.features.length === 0) return resolveEntityRelationship(input);
-      if (input.metadata.snapshot === null) {
+      const snapshot = input.metadata.snapshot;
+      if (snapshot === null) {
         return rejectUngroundedAnalysis(
           request,
           reply,
           'Entity conclusions with features require a ledger snapshot.',
         );
       }
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.entityRelationshipReports === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_STORAGE_REQUIRED',
+              'Entity relationship hypotheses require durable Evidence and report storage.',
+              false,
+            ),
+          );
+      }
       const sourceEvidenceIds = uniqueEvidenceIds([
         ...input.metadata.evidenceIds,
         ...input.features.map((feature) => feature.evidenceId),
-      ]);
+      ]).sort();
       const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
       if (missingIds.length > 0) {
         return rejectUngroundedAnalysis(
@@ -3023,11 +3054,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           missingIds,
         );
       }
-      const incompatibleIds = await incompatibleEvidenceIds(
-        runtime,
-        sourceEvidenceIds,
-        input.metadata.snapshot,
-      );
+      const incompatibleIds = await incompatibleEvidenceIds(runtime, sourceEvidenceIds, snapshot);
       if (incompatibleIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -3037,24 +3064,155 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'SNAPSHOT_INCOMPATIBLE',
         );
       }
+      const sourceNodes = await Promise.all(
+        sourceEvidenceIds.map((evidenceId) => runtime.evidenceRepository?.get(evidenceId)),
+      );
+      if (sourceNodes.some((node) => node === undefined)) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_EVIDENCE_INCOMPLETE',
+              'Entity relationship source Evidence became unavailable before persistence.',
+              true,
+            ),
+          );
+      }
+      const sourceEvidence = sourceNodes.map((node) => node?.evidence as Evidence);
+      input = canonicalizeEntityRelationshipInput({
+        ...input,
+        metadata: {
+          ...input.metadata,
+          evidenceIds: sourceEvidenceIds,
+          sourceSet: uniqueSourceIds(sourceEvidence.map((evidence) => evidence.source)),
+        },
+      });
       const result = resolveEntityRelationship(input);
       const derived = await addDerivedAnalysisEvidence(
         runtime,
-        input.metadata.snapshot,
+        snapshot,
         sourceEvidenceIds,
-        'zerotrace-entity-engine@0.1.0',
+        `zerotrace:${ENTITY_RELATIONSHIP_MODEL_VERSION}`,
         'entity-relationship:' + input.subjectA + ':' + input.subjectB,
         { input, result },
         'Evidence-weighted controller, coordination, and independence inference.',
       );
-      return {
+      const resultWithTerminal = {
         ...result,
         metadata: {
           ...result.metadata,
-          evidenceIds: uniqueEvidenceIds([...result.metadata.evidenceIds, derived.id]),
+          evidenceIds: uniqueSourceIds([...result.metadata.evidenceIds, derived.id]),
         },
-        evidence: [derived],
       };
+      const evidence = [...sourceEvidence, derived].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      );
+      const report = EntityRelationshipReportSchema.parse({
+        schemaVersion: 'entity-relationship-report-v1',
+        automaticOwnershipMergeAllowed: false,
+        input,
+        result: resultWithTerminal,
+        terminalEvidenceId: derived.id,
+        evidence,
+      });
+      const stored = await runtime.entityRelationshipReports.put(report);
+      return {
+        ...resultWithTerminal,
+        automaticOwnershipMergeAllowed: false,
+        terminalEvidenceId: derived.id,
+        evidence,
+        durableReport: {
+          id: stored.id,
+          resultHash: stored.resultHash,
+          createdAt: stored.createdAt,
+          replayed: false,
+        },
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/relationships/reports/latest',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityRelationshipReportQuerySchema.parse(request.query);
+      const repository = runtime.entityRelationshipReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_REPORT_UNAVAILABLE',
+              'Durable Entity relationship report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const [subjectA, subjectB] = canonicalSubjectPair(input.subjectA, input.subjectB);
+      const record = await repository.latest({
+        ledger: input.ledger,
+        chainId: input.chainId,
+        subjectA,
+        subjectB,
+      });
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_REPORT_NOT_FOUND',
+              'No durable Entity relationship hypothesis report exists for this pair.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/relationships/reports/:reportId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityRelationshipReportQuerySchema.parse(request.query);
+      const params = EntityRelationshipReportParamsSchema.parse(request.params);
+      const repository = runtime.entityRelationshipReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_REPORT_UNAVAILABLE',
+              'Durable Entity relationship report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const [subjectA, subjectB] = canonicalSubjectPair(input.subjectA, input.subjectB);
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.ledger !== input.ledger ||
+        record.chainId !== input.chainId ||
+        record.subjectA !== subjectA ||
+        record.subjectB !== subjectB
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_REPORT_NOT_FOUND',
+              'The durable Entity relationship hypothesis report was not found for this pair.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
     },
   );
 

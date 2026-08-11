@@ -187,6 +187,61 @@ export interface EvidenceRecord {
   finality?: string;
 }
 
+export interface EntityRelationshipResolution {
+  subjectA: string;
+  subjectB: string;
+  classification: string;
+  sameControllerProbability: KnowledgeValue<number>;
+  coordinationProbability: KnowledgeValue<number>;
+  independenceProbability: KnowledgeValue<number>;
+  positiveEvidenceIds: string[];
+  negativeEvidenceIds: string[];
+  serviceSuppressionApplied: boolean;
+  metadata: AnalysisMetadata;
+}
+
+export interface StoredEntityRelationshipReport {
+  id: string;
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  subjectA: string;
+  subjectB: string;
+  snapshotPosition: string;
+  snapshotHash: string;
+  resultHash: string;
+  terminalEvidenceId: string;
+  evidenceIds: string[];
+  sourceSet: string[];
+  modelVersion: 'entity-v0.1.0';
+  capturedAt: string;
+  createdAt: string;
+  report: {
+    schemaVersion: 'entity-relationship-report-v1';
+    automaticOwnershipMergeAllowed: false;
+    input: {
+      subjectA: string;
+      subjectB: string;
+      features: Array<{
+        kind: string;
+        strength: number;
+        reliability: number;
+        evidenceId: string;
+      }>;
+      metadata: AnalysisMetadata;
+      subjectAIsService?: boolean;
+      subjectBIsService?: boolean;
+    };
+    result: EntityRelationshipResolution;
+    terminalEvidenceId: string;
+    evidence: EvidenceRecord[];
+  };
+}
+
+export interface EntityRelationshipReportReplayResponse {
+  replayed: true;
+  record: StoredEntityRelationshipReport;
+}
+
 export interface SubjectResponse {
   subject: SubjectCandidate;
   facts: Record<string, KnowledgeValue<unknown>>;
@@ -1629,6 +1684,29 @@ export const api = {
     const parameters = new URLSearchParams({ chainId: 'solana-mainnet' });
     return requestJson<SolanaControlSurfaceResponse>(
       `/api/v1/control-rights/SOLANA/${encodeURIComponent(subject)}/reports/latest?${parameters.toString()}`,
+    );
+  },
+  latestEntityRelationshipReport: (
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA',
+    chainId: string,
+    subjectA: string,
+    subjectB: string,
+  ) => {
+    const parameters = new URLSearchParams({ ledger, chainId, subjectA, subjectB });
+    return requestJson<EntityRelationshipReportReplayResponse>(
+      `/api/v1/entities/relationships/reports/latest?${parameters.toString()}`,
+    );
+  },
+  entityRelationshipReport: (
+    reportId: string,
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA',
+    chainId: string,
+    subjectA: string,
+    subjectB: string,
+  ) => {
+    const parameters = new URLSearchParams({ ledger, chainId, subjectA, subjectB });
+    return requestJson<EntityRelationshipReportReplayResponse>(
+      `/api/v1/entities/relationships/reports/${encodeURIComponent(reportId)}?${parameters.toString()}`,
     );
   },
   exitRace: (payload: unknown) =>

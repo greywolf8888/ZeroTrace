@@ -30,6 +30,9 @@ transactions.
 9. Raw facts are append-only; derived state is reproducible from evidence, model version, and
    parameters.
 10. The public runtime exposes no write-capable chain method.
+11. Named assets and platform acceptance cases validate generic domains; they never introduce
+    token-specific branches, defaults, thresholds, addresses, or inference rules into shared
+    ingestion, Evidence, Entity Resolution, Control Rights, Claim, Scenario, or RV engines.
 
 ## Logical architecture
 
@@ -210,6 +213,17 @@ The engine returns independent controller, coordination, and independence probab
 weights incorporate reliability and evidence IDs. Service hubs and privacy/co-spend patterns suppress
 overconfident merging.
 
+Every featureful API result is materialized as an immutable, content-addressed pairwise hypothesis
+report. The API canonicalizes the subject pair, features, direct Evidence IDs and actual Evidence
+source set; rejects duplicate kind/Evidence inputs and ungrounded service flags; fixes the engine
+version to `entity-v0.1.0`; and fails closed unless durable Evidence and report repositories are
+available. Migration `018_entity_relationship_reports` binds the report to one non-null Snapshot,
+the exact durable Evidence payloads and terminal derivation parents, and database-enforces
+`automaticOwnershipMergeAllowed=false`. Latest and exact `erh_...` routes are PostgreSQL-only and
+remain usable without chain providers. A featureless pair remains explicit `UNKNOWN` and is not
+persisted as if it were an observed conclusion. These reports are hypotheses, not entity-membership
+mutations or label-driven merges.
+
 The separate versioned evaluation system uses millionth-scale fixed-point probabilities and exact
 integer comparisons. It gates high-confidence controller precision at `>= 0.98`, coordination
 precision at `>= 0.95`, Service Hub false merges at `<= 0.001`, and CoinJoin false merges at exactly
@@ -300,6 +314,11 @@ pension-vault and dividend roles. A percentage becomes exact basis points; `100w
 as 1,000,000 human token units rather than guessed atomic units. Missing addresses and exact
 timezone-qualified windows remain typed Unknown. Every draft requires human review, and neither a
 draft nor its promotional wording is a chain fact or terminal-action observation.
+
+Declaration compilation, durable capture scheduling and action semantics are reusable Claim and
+ingestion capabilities. They are not an asset-specific product stage. Named cases such as FFT are
+registered only as external acceptance inputs to the generic adapters and engines; their addresses,
+dates, share units and policy thresholds remain outside shared production defaults.
 
 The first deterministic claim kernel accepts human- or agent-structured rules separately from chain
 observations. A rule identifies the asset, source, destination, role, percentage, terminal action and
@@ -403,9 +422,9 @@ segments. It captures a finalized range-end Snapshot, completes zero-address dis
 every candidate against its exact finalized block, persists the Evidence graph, and only then
 advances the semantic cursor. A completed checkpoint can be replayed through PostgreSQL-only API/UI
 paths; a partial or structurally inconsistent checkpoint has no terminal result and fails closed.
-This is scoped event/candidate proof, so silent-supply coverage remains Unknown. Continuous capture
-scheduling, complete historical supply coverage, official wallet attribution and the terminal FFT
-report remain pending.
+This is scoped event/candidate proof, so silent-supply coverage remains Unknown. Generic continuous
+capture scheduling, complete historical supply coverage, official wallet attribution and closure of
+registered reference-case reports remain pending.
 
 Silent/custom supply discovery has a separate bounded all-block path. The
 `erc20-supply-continuity-v1.0.0` worker samples `totalSupply()` at `from - 1` and every finalized
@@ -553,14 +572,14 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Flap history, EVM Claim/pension-entry Scenario Reports, and Solana control/transaction reports wired; other repositories pending |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                                                                                     |
-| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                          |
-| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                                                                                                             |
-| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                         |
-| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                                                                                                |
+| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Entity hypotheses, Flap history, EVM Claim/pension-entry Scenario Reports, and Solana control/transaction reports wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                                                                                                        |
+| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                                             |
+| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                                                                                                                                |
+| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                                            |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                                                                                                                   |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, ingestion-run,
 and semantic-scan-run tables include append-only or monotonic guards. Semantic checkpoints bind an
@@ -577,6 +596,13 @@ report/signature/Snapshot identity, canonical Evidence/source arrays, terminal E
 the complete derivation-edge set. Repository reads re-parse the canonical report and verify its
 result hash; conflicting idempotent writes, updates, deletes, or incomplete Evidence graphs fail
 closed.
+
+Entity relationship reports are append-only, content-addressed pairwise hypotheses rather than
+entity rows or membership mutations. PostgreSQL validates canonical subject/report identity, one
+exact Snapshot across every Evidence node, exact Evidence JSON against the durable Evidence table,
+the complete direct terminal-parent set, canonical Evidence/source arrays, fixed model version and
+the no-automatic-merge literal. Repository reads re-parse and re-hash the report; idempotent
+conflicts, corruption, update and deletion fail closed.
 
 Flap history projection segments are append-only bounded results keyed to one semantic scan UUID.
 An insert must begin at that running scan's exact cursor and cover precisely one configured chunk.
@@ -685,8 +711,9 @@ active accepted lineage. Every participating endpoint must return the same hash 
 position; unavailable history defers, cross-source disagreement creates a critical alert, and no
 majority winner is selected. The newest unanimously matching ancestor survives, the divergent suffix
 is invalidated append-only, and the next worker cycle immediately rematerializes or extends the new
-branch. Forced real-reorg, independent-operator acceptance and terminal FFT validation remain later
-stages. The API/UI latest-head path is provider-free and cannot initiate a scan.
+branch. Forced real-reorg and independent-operator acceptance remain generic launch-history gates;
+FFT exercises them only as a registered reference case. The API/UI latest-head path is provider-free
+and cannot initiate a scan.
 
 The creation-origin layer uses SQD's finalized EVM create-trace filter as a sparse stream: omitted
 non-matching blocks are expected, while returned blocks and source-head completion are validated.
