@@ -8,6 +8,11 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- official Codama-generated System/SPL Token/Token-2022 instruction identification plus strict core
+  SOL transfer and token transfer/mint/burn asset-flow decoding, recorded owner mapping,
+  failed-transaction application state, per-flow Evidence, zero-tolerance classic token
+  reconciliation, and explicit Partial/Unknown boundaries for Token-2022 fees, hooks and unmodeled
+  effects;
 - strict Solana legacy/v0 transaction semantics with Address Lookup Table account resolution,
   fee-payer/signer/writable flags, outer and inner CPI instruction paths, exact lamport and recorded
   SPL token deltas, failed-execution preservation, per-instruction Evidence, responsive UI and a

@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  TOKEN_PROGRAM_ADDRESS,
+  getTransferCheckedInstructionDataEncoder,
+} from '@solana-program/token';
+import bs58 from 'bs58';
 
 import {
   BitcoinUtxoLedgerAdapter,
@@ -1833,7 +1838,7 @@ describe('ZeroTrace API contract', () => {
               },
             }),
           ],
-          modelVersion: 'solana-transaction-semantics-v1.0.0',
+          modelVersion: 'solana-transaction-semantics-v1.1.0',
         },
       },
     });
@@ -1851,7 +1856,7 @@ describe('ZeroTrace API contract', () => {
       }),
       expect.objectContaining({
         kind: 'DERIVED_FEATURE',
-        source: 'zerotrace:solana-transaction-semantics-v1.0.0',
+        source: 'zerotrace:solana-transaction-semantics-v1.1.0',
       }),
     ]);
     expect(runtime.evidenceLedger.get(solanaEvidence[1].id)?.sourceEvidenceIds).toEqual([
@@ -1876,21 +1881,37 @@ describe('ZeroTrace API contract', () => {
             message: {
               accountKeys: [
                 '11111111111111111111111111111111',
+                'So11111111111111111111111111111111111111112',
                 'Vote111111111111111111111111111111111111111',
+                String(TOKEN_PROGRAM_ADDRESS),
               ],
               addressTableLookups: [
                 {
                   accountKey: 'AddressLookupTab1e1111111111111111111111111',
-                  writableIndexes: [0],
-                  readonlyIndexes: [1],
+                  writableIndexes: [0, 1],
+                  readonlyIndexes: [2],
                 },
               ],
               header: {
                 numRequiredSignatures: 1,
                 numReadonlySignedAccounts: 0,
-                numReadonlyUnsignedAccounts: 1,
+                numReadonlyUnsignedAccounts: 3,
               },
-              instructions: [{ accounts: [0, 2], data: '', programIdIndex: 3, stackHeight: 1 }],
+              instructions: [
+                {
+                  accounts: [4, 1, 5, 2],
+                  data: bs58.encode(
+                    Uint8Array.from(
+                      getTransferCheckedInstructionDataEncoder().encode({
+                        amount: 30n,
+                        decimals: 9,
+                      }),
+                    ),
+                  ),
+                  programIdIndex: 3,
+                  stackHeight: 1,
+                },
+              ],
               recentBlockhash: '11111111111111111111111111111111',
             },
           },
@@ -1898,20 +1919,23 @@ describe('ZeroTrace API contract', () => {
             err: null,
             fee: 5000,
             loadedAddresses: {
-              writable: ['SysvarRent111111111111111111111111111111111'],
+              writable: [
+                'SysvarRent111111111111111111111111111111111',
+                'Stake11111111111111111111111111111111111111',
+              ],
               readonly: ['ComputeBudget111111111111111111111111111111'],
             },
             innerInstructions: [
               {
                 index: 0,
-                instructions: [{ accounts: [2], data: '1', programIdIndex: 3, stackHeight: 2 }],
+                instructions: [{ accounts: [4], data: '1', programIdIndex: 6, stackHeight: 2 }],
               },
             ],
-            preBalances: [10000, 1, 2039280, 1],
-            postBalances: [5000, 1, 2039280, 1],
+            preBalances: [10000, 1461600, 1, 1, 2039280, 2039280, 1],
+            postBalances: [5000, 1461600, 1, 1, 2039280, 2039280, 1],
             preTokenBalances: [
               {
-                accountIndex: 2,
+                accountIndex: 4,
                 mint: 'So11111111111111111111111111111111111111112',
                 owner: '11111111111111111111111111111111',
                 programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
@@ -1922,10 +1946,22 @@ describe('ZeroTrace API contract', () => {
                   uiAmountString: '0.0000001',
                 },
               },
+              {
+                accountIndex: 5,
+                mint: 'So11111111111111111111111111111111111111112',
+                owner: 'Vote111111111111111111111111111111111111111',
+                programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+                uiTokenAmount: {
+                  amount: '10',
+                  decimals: 9,
+                  uiAmount: null,
+                  uiAmountString: '0.00000001',
+                },
+              },
             ],
             postTokenBalances: [
               {
-                accountIndex: 2,
+                accountIndex: 4,
                 mint: 'So11111111111111111111111111111111111111112',
                 owner: '11111111111111111111111111111111',
                 programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
@@ -1934,6 +1970,18 @@ describe('ZeroTrace API contract', () => {
                   decimals: 9,
                   uiAmount: null,
                   uiAmountString: '0.00000007',
+                },
+              },
+              {
+                accountIndex: 5,
+                mint: 'So11111111111111111111111111111111111111112',
+                owner: 'Vote111111111111111111111111111111111111111',
+                programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+                uiTokenAmount: {
+                  amount: '40',
+                  decimals: 9,
+                  uiAmount: null,
+                  uiAmountString: '0.00000004',
                 },
               },
             ],
@@ -1961,11 +2009,36 @@ describe('ZeroTrace API contract', () => {
       facts: {
         cpiCount: { state: 'known', value: 1 },
         accountResolutionComplete: { state: 'known', value: true },
-        tokenBalanceChangeCount: { state: 'known', value: 1 },
+        tokenBalanceChangeCount: { state: 'known', value: 2 },
+        coreAssetFlowCount: { state: 'known', value: 1 },
+        tokenFlowReconciliation: {
+          state: 'known',
+          value: {
+            status: 'MATCHED',
+            recommendedMaxRelativeError: 0,
+            observedRelativeError: { state: 'known', value: 0 },
+          },
+        },
         transactionSemantics: {
           state: 'known',
           value: {
-            loadedWritableAccountCount: 1,
+            assetFlows: [
+              expect.objectContaining({
+                instructionName: 'TransferChecked',
+                assetKind: 'WRAPPED_SOL',
+                amount: { state: 'known', value: '30' },
+                sourceOwner: {
+                  state: 'known',
+                  value: '11111111111111111111111111111111',
+                },
+                destinationOwner: {
+                  state: 'known',
+                  value: 'Vote111111111111111111111111111111111111111',
+                },
+              }),
+            ],
+            tokenFlowReconciliation: expect.objectContaining({ status: 'MATCHED' }),
+            loadedWritableAccountCount: 2,
             loadedReadonlyAccountCount: 1,
             accountCoverage: 1,
             recordingCoverage: 1,
@@ -1980,11 +2053,10 @@ describe('ZeroTrace API contract', () => {
             ],
             tokenBalanceChanges: [
               expect.objectContaining({
-                account: {
-                  state: 'known',
-                  value: 'SysvarRent111111111111111111111111111111111',
-                },
-                deltaAmount: { state: 'known', value: '-30' },
+                account: expect.objectContaining({ state: 'known' }),
+              }),
+              expect.objectContaining({
+                account: expect.objectContaining({ state: 'known' }),
               }),
             ],
           },
@@ -1992,7 +2064,7 @@ describe('ZeroTrace API contract', () => {
       },
       metadata: {
         dataCoverage: 1,
-        modelVersion: 'solana-transaction-query-v1.0.0',
+        modelVersion: 'solana-transaction-query-v1.1.0',
       },
     });
     const evidence = response.json().evidence;
@@ -2001,9 +2073,17 @@ describe('ZeroTrace API contract', () => {
       'DERIVED_FEATURE',
       'DERIVED_FEATURE',
       'DERIVED_FEATURE',
+      'DERIVED_FEATURE',
     ]);
+    expect(evidence[3]).toMatchObject({
+      source: 'zerotrace:solana-asset-flow-v1.0.0',
+      locator: expect.stringContaining('asset-flow:'),
+    });
     expect(runtime.evidenceLedger.get(evidence[3].id)?.sourceEvidenceIds).toEqual(
-      [evidence[0].id, evidence[1].id, evidence[2].id].sort(),
+      [evidence[0].id, evidence[1].id].sort(),
+    );
+    expect(runtime.evidenceLedger.get(evidence[4].id)?.sourceEvidenceIds).toEqual(
+      [evidence[0].id, evidence[1].id, evidence[2].id, evidence[3].id].sort(),
     );
   });
 

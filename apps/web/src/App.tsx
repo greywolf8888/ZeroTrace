@@ -226,6 +226,26 @@ interface SolanaTransactionSemanticsView {
   innerInstructions: SolanaInstructionView[];
   cpiCount: KnowledgeValue<number>;
   programIds: string[];
+  officialProgramInstructionCount: number;
+  identifiedOfficialProgramInstructionCount: number;
+  officialProgramIdentificationCoverage: KnowledgeValue<number>;
+  assetFlowCandidateCount: number;
+  assetFlowDecodeCoverage: KnowledgeValue<number>;
+  assetFlowCoverage: KnowledgeValue<number>;
+  assetFlows: SolanaAssetFlowView[];
+  tokenFlowReconciliation: {
+    status: 'MATCHED' | 'PARTIAL' | 'CONFLICT' | 'NOT_APPLICABLE' | 'UNKNOWN';
+    expectedIdentityCount: number;
+    observedIdentityCount: number;
+    matchedIdentityCount: number;
+    conflictingIdentityCount: number;
+    unknownIdentityCount: number;
+    unmodeledTokenInstructionCount: number;
+    coverage: number;
+    recommendedMaxRelativeError: 0;
+    observedRelativeError: KnowledgeValue<number>;
+    detail: string;
+  };
   tokenBalanceRecording: KnowledgeValue<boolean>;
   tokenBalanceChanges: Array<{
     accountIndex: number;
@@ -246,6 +266,32 @@ interface SolanaInstructionView {
   programId: KnowledgeValue<string>;
   accountIndexes: number[];
   accounts: KnowledgeValue<string[]>;
+  programSemantic: KnowledgeValue<{
+    programFamily: string;
+    instructionName: string;
+    category: string;
+    application: string;
+  }>;
+}
+
+interface SolanaAssetFlowView {
+  id: string;
+  instructionPath: string;
+  programFamily: string;
+  instructionName: string;
+  application: 'APPLIED' | 'NOT_APPLIED' | 'UNKNOWN';
+  flowKind: 'TRANSFER' | 'MINT' | 'BURN';
+  assetKind: string;
+  sourceAccount: KnowledgeValue<string>;
+  destinationAccount: KnowledgeValue<string>;
+  sourceOwner: KnowledgeValue<string>;
+  destinationOwner: KnowledgeValue<string>;
+  mint: KnowledgeValue<string>;
+  authority: KnowledgeValue<string>;
+  amount: KnowledgeValue<string>;
+  decimals: KnowledgeValue<number>;
+  expectedFeeAmount: KnowledgeValue<string>;
+  expectedRecipientAmount: KnowledgeValue<string>;
 }
 
 function knownObject<T>(value: KnowledgeValue<unknown> | undefined): T | undefined {
@@ -551,6 +597,7 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
   );
   if (semantics === undefined) return null;
   const instructions = [...semantics.outerInstructions, ...semantics.innerInstructions];
+  const reconciliation = semantics.tokenFlowReconciliation;
   const resolutionComplete =
     semantics.accountResolutionComplete.state === 'known' &&
     semantics.accountResolutionComplete.value;
@@ -590,6 +637,14 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
         <div>
           <span>Recording coverage</span>
           <strong>{Math.round(semantics.recordingCoverage * 100)}%</strong>
+        </div>
+        <div>
+          <span>Official identification</span>
+          <KnowledgeDisplay data={semantics.officialProgramIdentificationCoverage} />
+        </div>
+        <div>
+          <span>Core asset flows</span>
+          <strong>{semantics.assetFlows.length}</strong>
         </div>
       </div>
       <div className="bitcoin-control-grid solana-transaction-boundaries">
@@ -665,13 +720,14 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
               <th>Instruction</th>
               <th>Program</th>
               <th>Accounts</th>
+              <th>Semantic</th>
               <th>Stack</th>
             </tr>
           </thead>
           <tbody>
             {instructions.length === 0 ? (
               <tr>
-                <td colSpan={4} className="empty-cell">
+                <td colSpan={5} className="empty-cell">
                   No compiled instructions were present in this transaction message.
                 </td>
               </tr>
@@ -690,6 +746,17 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
                     )}
                   </td>
                   <td>
+                    {instruction.programSemantic.state === 'known' &&
+                    instruction.programSemantic.value !== undefined ? (
+                      <span>
+                        {titleCase(instruction.programSemantic.value.programFamily)} ·{' '}
+                        {instruction.programSemantic.value.instructionName}
+                      </span>
+                    ) : (
+                      <KnowledgeDisplay data={instruction.programSemantic} />
+                    )}
+                  </td>
+                  <td>
                     {instruction.accounts.state === 'known' &&
                     instruction.accounts.value !== undefined ? (
                       `${instruction.accounts.value.length} resolved`
@@ -699,6 +766,112 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
                   </td>
                   <td>
                     <KnowledgeDisplay data={instruction.stackHeight} />
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="solana-flow-audit" data-testid="solana-asset-flow-audit">
+        <div className="panel-header compact-header">
+          <div>
+            <span className="eyebrow">
+              Instruction intent · owner resolution · exact atomic check
+            </span>
+            <h4>Core asset-flow audit</h4>
+          </div>
+          <StatusPill status={reconciliation.status} />
+        </div>
+        <div className="bitcoin-summary-grid solana-flow-summary">
+          <div>
+            <span>Flow coverage</span>
+            <KnowledgeDisplay data={semantics.assetFlowCoverage} />
+          </div>
+          <div>
+            <span>Balance match</span>
+            <strong>
+              {reconciliation.matchedIdentityCount}/{reconciliation.expectedIdentityCount}
+            </strong>
+          </div>
+          <div>
+            <span>Unknown identities</span>
+            <strong>{reconciliation.unknownIdentityCount}</strong>
+          </div>
+          <div>
+            <span>Allowed atomic error</span>
+            <strong>{reconciliation.recommendedMaxRelativeError}%</strong>
+          </div>
+          <div>
+            <span>Observed relative error</span>
+            {reconciliation.observedRelativeError.state === 'known' &&
+            reconciliation.observedRelativeError.value !== undefined ? (
+              <strong>{(reconciliation.observedRelativeError.value * 100).toFixed(6)}%</strong>
+            ) : (
+              <KnowledgeDisplay data={reconciliation.observedRelativeError} />
+            )}
+          </div>
+        </div>
+        <p>{reconciliation.detail}</p>
+      </div>
+      <div className="table-scroll solana-asset-flow-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Instruction</th>
+              <th>Application</th>
+              <th>Asset</th>
+              <th>Source owner</th>
+              <th>Destination owner</th>
+              <th>Gross amount</th>
+              <th>Expected fee / recipient</th>
+            </tr>
+          </thead>
+          <tbody>
+            {semantics.assetFlows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="empty-cell">
+                  No supported System/SPL core asset-flow instruction was decoded. This is not a
+                  claim that the transaction had zero economic effect.
+                </td>
+              </tr>
+            ) : (
+              semantics.assetFlows.map((flow) => (
+                <tr key={flow.id}>
+                  <td>
+                    <strong>{flow.instructionName}</strong>
+                    <small>{flow.instructionPath}</small>
+                  </td>
+                  <td>
+                    <StatusPill status={flow.application} />
+                  </td>
+                  <td>{titleCase(flow.assetKind)}</td>
+                  <td>
+                    <KnowledgeDisplay data={flow.sourceOwner} />
+                    {flow.sourceAccount.state === 'known' &&
+                      flow.sourceAccount.value !== undefined && (
+                        <small title={flow.sourceAccount.value}>
+                          account {shortId(flow.sourceAccount.value, 8)}
+                        </small>
+                      )}
+                  </td>
+                  <td>
+                    <KnowledgeDisplay data={flow.destinationOwner} />
+                    {flow.destinationAccount.state === 'known' &&
+                      flow.destinationAccount.value !== undefined && (
+                        <small title={flow.destinationAccount.value}>
+                          account {shortId(flow.destinationAccount.value, 8)}
+                        </small>
+                      )}
+                  </td>
+                  <td>
+                    <KnowledgeDisplay data={flow.amount} />
+                    <small>atomic units</small>
+                  </td>
+                  <td>
+                    <KnowledgeDisplay data={flow.expectedFeeAmount} />
+                    <span> / </span>
+                    <KnowledgeDisplay data={flow.expectedRecipientAmount} />
                   </td>
                 </tr>
               ))

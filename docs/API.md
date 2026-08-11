@@ -240,9 +240,25 @@ transaction, each normalized instruction and the terminal semantic result are se
 Evidence nodes. `recordingCoverage` measures six explicit response dimensions: execution metadata,
 lamport tables, CPI, token balances, logs and compute units. The token dimension uses the fraction of
 account/mint identities recorded on both sides, not merely the presence of both arrays. Overall
-response coverage uses the weaker of account resolution and recording coverage, and confidence is
-conservatively scaled by that coverage. This generic layer does not claim decoded protocol events,
-controllers, launchpad lifecycle or realizable value.
+response coverage uses the weaker of account resolution, recording coverage, and applicable core
+asset-flow coverage; confidence is conservatively scaled by that coverage.
+
+Version `solana-transaction-semantics-v1.1.0` uses the official generated System, SPL Token and
+Token-2022 discriminators to identify instructions. It strictly decodes native SOL transfers and
+the core `Transfer`, `TransferChecked`, `TransferCheckedWithFee`, `MintTo`, `MintToChecked`, `Burn`
+and `BurnChecked` token variants into `assetFlows`. Each flow records whether its instruction was
+`APPLIED`, `NOT_APPLIED` because the transaction failed, or `UNKNOWN` because execution metadata is
+absent. Token-account addresses remain distinct from owners; source/destination owners are emitted
+only from recorded pre/post token metadata. Every decoded flow has a child Evidence node beneath its
+normalized instruction and the raw transaction.
+
+Classic token effects reconcile modeled per-account atomic deltas with zero allowed integer error.
+Token-2022 transfers without same-Snapshot mint extension state keep fee and recipient net output
+Unknown even when the instructed gross amount is known. Explicit `TransferCheckedWithFee` data can
+establish its expected fee, but unmodeled withheld-fee, confidential, close/sync, hook, or missing
+CPI effects keep the reconciliation `PARTIAL`. Gross instruction flows are not equated to net
+pre/post balances. This foundation does not claim decoded Jupiter/launchpad/AMM events, controller
+identity, full Token-2022 extension execution, launch lifecycle or realizable value.
 
 Bitcoin transaction facts expose `locktime`, every validated input sequence and direct opt-in RBF
 signaling. `transactionEntityAnalysis` additionally reconciles input/output/fee arithmetic, records

@@ -1563,3 +1563,55 @@ because external provider DNS resolves through the host's private-range intercep
 [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31454676771) then passed for exact
 Solana transaction-semantics commit `bb9f098`, including Quality/contracts, both Chromium viewports,
 all six production container targets and JavaScript/TypeScript analysis.
+
+## Solana official instruction and core asset-flow validation (2026-08-11)
+
+The read-only production query function re-read the same finalized mainnet transaction
+`5TVTwAzh85bCJ5tMxLprQPC6yBw2pKTuQTp6qaJapA2m21X9pgUK1QYDKJLKPt3JXVTZQiauxsNEGKFr76iDjqAN`
+from `api.mainnet.solana.com` and rebound it to slot `438523420`, blockhash
+`DG63SznvcBCHpRVqoZGdXdpNHfRrgwsM2VMG38EBu4pU`. The v1.1 model retained six outer and 26 CPI
+instructions. Official generated discriminators identified all 20 observed System/SPL
+Token/Token-2022 instructions. Strict amount decoders accepted all nine supported core flow
+candidates: three classic `Transfer`, four classic `TransferChecked`, one System `TransferSol`, and
+one Token-2022 `TransferChecked`.
+
+All nine flows were `APPLIED` and produced separate child Evidence nodes. The response contained 43
+Evidence nodes: one raw transaction, 32 normalized instructions, nine asset flows, and one terminal
+semantic node with 42 direct derivation edges. Model versions were
+`solana-transaction-query-v1.1.0`, `solana-transaction-semantics-v1.1.0`, and
+`solana-asset-flow-v1.0.0`.
+
+Flow knowledge coverage was `0.9222222222222223`, which conservatively reduced overall response
+coverage to the same value and confidence to `0.876111`. The automatic token audit modeled eleven
+account/mint identities, matched nine exactly, found zero conflicts, and retained two Unknown. One
+classic close-account lifecycle effect was recognized but intentionally unmodeled. The Token-2022
+checked transfer exposed gross amount but not same-Snapshot transfer-fee/hook state, so its fee and
+recipient net remained `Unknown(NOT_QUERIED)`. Reconciliation therefore correctly reported
+`PARTIAL`, coverage `0.8181818181818182`, and an Unknown observed relative error rather than a false
+pass. The deterministic recommended/allowed error for fully modeled atomic token accounting is
+exactly zero.
+
+The validation used the repository's SSRF-protected transport with the exact public hostname. This
+host's private-range DNS interception required `allowPrivateNetworks=true` only in the bounded
+read-only validation process; repository defaults remain fail-closed. The result validates official
+core instruction/flow semantics and Evidence lineage, not a Jupiter route, DEX trade, controller,
+launchpad event, independent-provider agreement, archive replay, or complete Token-2022 extension
+execution.
+
+The completed local gate passed 460 unit tests across 67 files, 68 environment-free integration
+tests, all 92 integration tests with PostgreSQL/ClickHouse/MinIO enabled, one Entity structural
+evaluation, and 32 Chromium desktop/mobile flows. The durable coverage run passed 528 tests with 24
+opt-in tests skipped and reached 82.21% statements, 76.57% branches, 91.94% functions, and 83.42%
+lines. Formatting, lint, typecheck, production build, production/development dependency audits,
+license allowlist, CycloneDX SBOM, Compose validation, and all six production Docker targets passed.
+The rebuilt API/Web containers returned live `UP`, `readOnly=true`, and HTTP 200 from the web root.
+Because another local project occupied host ports 5432 and 6379, this non-destructive runtime check
+used the documented `POSTGRES_PORT=15432` and `VALKEY_PORT=16379` overrides; the ZeroTrace service
+network still used canonical internal ports. Readiness correctly remained `DEGRADED` when the
+fail-closed SSRF policy rejected the host's private-range provider DNS interception.
+
+Exact-SHA GitHub Actions and CodeQL validation for this batch remains pending until the reviewed
+commit is pushed to Draft PR #5. The latest recorded exact-SHA remote pass before this batch is
+commit `506bece`:
+[CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31455436239) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31455436215).

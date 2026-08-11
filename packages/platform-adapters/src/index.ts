@@ -19,6 +19,7 @@ export * from './evm-control-rights.js';
 export * from './bitcoin-control-rights.js';
 export * from './bitcoin-transaction-entity.js';
 export * from './solana-control-rights.js';
+export * from './solana-asset-flow.js';
 export * from './solana-transaction-semantics.js';
 export * from './sourcify.js';
 

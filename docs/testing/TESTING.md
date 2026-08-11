@@ -182,7 +182,9 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - scenario gating;
 - data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
 - typed Solana legacy/v0 transaction rendering with Snapshot, per-instruction Evidence, ALT account
-  coverage, access flags, outer/CPI paths, recorded SOL/SPL effects and explicit Unknown boundaries;
+  coverage, access flags, outer/CPI paths, official System/SPL/Token-2022 semantics, owner-aware core
+  asset flows, exact/Partial token reconciliation, recorded SOL/SPL effects and explicit Unknown
+  boundaries;
 - classic/Token-2022/upgradeable-program Solana Control Rights rendering with one-slot provenance,
   explicit incomplete Squads/history coverage and mobile containment;
 - Flap fixed-block state, transaction-local creation/default provenance, bounded range/lifetime

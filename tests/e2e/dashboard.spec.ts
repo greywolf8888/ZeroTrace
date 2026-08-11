@@ -93,7 +93,8 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
           outerInstructionCount: { state: 'known', value: 1 },
           cpiCount: { state: 'known', value: 1 },
           accountResolutionComplete: { state: 'known', value: true },
-          tokenBalanceChangeCount: { state: 'known', value: 1 },
+          tokenBalanceChangeCount: { state: 'known', value: 2 },
+          coreAssetFlowCount: { state: 'known', value: 1 },
           transactionSemantics: {
             state: 'known',
             value: {
@@ -140,7 +141,7 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
                 },
                 {
                   index: 3,
-                  address: 'ComputeBudget111111111111111111111111111111',
+                  address: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
                   source: 'LOOKUP_READONLY',
                   signer: false,
                   writable: false,
@@ -161,15 +162,25 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
                   stackHeight: { state: 'known', value: 1 },
                   programId: {
                     state: 'known',
-                    value: 'ComputeBudget111111111111111111111111111111',
+                    value: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
                   },
-                  accountIndexes: [0, 2],
+                  accountIndexes: [2, 1, 0],
                   accounts: {
                     state: 'known',
                     value: [
-                      '11111111111111111111111111111111',
                       'SysvarRent111111111111111111111111111111111',
+                      'Vote111111111111111111111111111111111111111',
+                      '11111111111111111111111111111111',
                     ],
+                  },
+                  programSemantic: {
+                    state: 'known',
+                    value: {
+                      programFamily: 'SPL_TOKEN',
+                      instructionName: 'Transfer',
+                      category: 'ASSET_TRANSFER',
+                      application: 'APPLIED',
+                    },
                   },
                 },
               ],
@@ -187,13 +198,76 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
                     state: 'known',
                     value: ['SysvarRent111111111111111111111111111111111'],
                   },
+                  programSemantic: {
+                    state: 'unknown',
+                    reason: 'UNSUPPORTED',
+                  },
                 },
               ],
               cpiCount: { state: 'known', value: 1 },
               programIds: [
-                'ComputeBudget111111111111111111111111111111',
+                'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
                 'Vote111111111111111111111111111111111111111',
               ],
+              officialProgramInstructionCount: 1,
+              identifiedOfficialProgramInstructionCount: 1,
+              officialProgramIdentificationCoverage: { state: 'known', value: 1 },
+              assetFlowCandidateCount: 1,
+              assetFlowDecodeCoverage: { state: 'known', value: 1 },
+              assetFlowCoverage: { state: 'known', value: 1 },
+              assetFlows: [
+                {
+                  id: 'outer:0:flow:0',
+                  instructionPath: 'outer:0',
+                  programFamily: 'SPL_TOKEN',
+                  instructionName: 'Transfer',
+                  application: 'APPLIED',
+                  flowKind: 'TRANSFER',
+                  assetKind: 'WRAPPED_SOL',
+                  sourceAccount: {
+                    state: 'known',
+                    value: 'SysvarRent111111111111111111111111111111111',
+                  },
+                  destinationAccount: {
+                    state: 'known',
+                    value: 'Vote111111111111111111111111111111111111111',
+                  },
+                  sourceOwner: {
+                    state: 'known',
+                    value: '11111111111111111111111111111111',
+                  },
+                  destinationOwner: {
+                    state: 'known',
+                    value: 'Stake11111111111111111111111111111111111111',
+                  },
+                  mint: {
+                    state: 'known',
+                    value: 'So11111111111111111111111111111111111111112',
+                  },
+                  authority: {
+                    state: 'known',
+                    value: '11111111111111111111111111111111',
+                  },
+                  amount: { state: 'known', value: '30' },
+                  decimals: { state: 'known', value: 9 },
+                  expectedFeeAmount: { state: 'known', value: '0' },
+                  expectedRecipientAmount: { state: 'known', value: '30' },
+                },
+              ],
+              tokenFlowReconciliation: {
+                status: 'MATCHED',
+                expectedIdentityCount: 2,
+                observedIdentityCount: 2,
+                matchedIdentityCount: 2,
+                conflictingIdentityCount: 0,
+                unknownIdentityCount: 0,
+                unmodeledTokenInstructionCount: 0,
+                coverage: 1,
+                recommendedMaxRelativeError: 0,
+                observedRelativeError: { state: 'known', value: 0 },
+                detail:
+                  'Every modeled token-account atomic delta matched exactly; integer accounting tolerance is zero.',
+              },
               tokenBalanceRecording: { state: 'known', value: true },
               tokenBalanceChanges: [
                 {
@@ -206,6 +280,17 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
                   preAmount: { state: 'known', value: '100' },
                   postAmount: { state: 'known', value: '70' },
                   deltaAmount: { state: 'known', value: '-30' },
+                },
+                {
+                  accountIndex: 1,
+                  account: {
+                    state: 'known',
+                    value: 'Vote111111111111111111111111111111111111111',
+                  },
+                  mint: 'So11111111111111111111111111111111111111112',
+                  preAmount: { state: 'known', value: '10' },
+                  postAmount: { state: 'known', value: '40' },
+                  deltaAmount: { state: 'known', value: '30' },
                 },
               ],
               computeUnitsConsumed: { state: 'known', value: '2300' },
@@ -228,7 +313,7 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
           simulationCoverage: 0,
           freshness: '2026-08-10T00:00:00.000Z',
           sourceSet: ['solana-rpc'],
-          modelVersion: 'solana-transaction-query-v1.0.0',
+          modelVersion: 'solana-transaction-query-v1.1.0',
           confidence: 1,
           evidenceIds: ['ev_111111111111111111111111'],
         },
@@ -267,6 +352,14 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
   await expect(semantics.getByText('Lookup Writable', { exact: true })).toBeVisible();
   await expect(semantics.getByText('outer:0/inner:0', { exact: true })).toBeVisible();
   await expect(semantics.getByText('-30', { exact: true })).toBeVisible();
+  const assetFlowAudit = page.getByTestId('solana-asset-flow-audit');
+  await expect(
+    assetFlowAudit.getByRole('heading', { name: 'Core asset-flow audit' }),
+  ).toBeVisible();
+  await expect(assetFlowAudit.getByText('Matched', { exact: true })).toBeVisible();
+  await expect(assetFlowAudit.getByText('0.000000%', { exact: true })).toBeVisible();
+  await expect(semantics.getByText('Transfer', { exact: true }).first()).toBeVisible();
+  await expect(semantics.getByText('Stake11111111111111111111111111111111111111')).toBeVisible();
   await expect(semantics.getByText(/never coerced to an atomic zero/)).toBeVisible();
   await expect(page.getByText('Snapshot-bound ledger record')).toBeVisible();
   await expect(page.getByText('Fee Lamports')).toBeVisible();

@@ -5,9 +5,10 @@ Inventory date: **2026-08-11**
 The current-state Snapshot, request-provenance, anchor reconciliation, 2026-08-11 BSC
 operator-attestation/market-reconciliation, EIP-1898 all-block supply continuity, and EVM
 ERC-1167/ERC-173/ERC-1967/Safe control-surface and Sourcify V2 exact-source work use clean HTTP
-adapters, pinned `viem`, `pg`, and Node.js built-ins. Solana control-state decoding uses the official
-Codama-generated SPL Token, Token-2022, and loader-v3 interface packages listed below; no validator,
-indexer, wallet, signing, or transaction package is linked. Safe v1.3.0 remains an LGPL-3.0-only
+adapters, pinned `viem`, `pg`, and Node.js built-ins. Solana control-state and core instruction
+decoding use the official Codama-generated System, SPL Token, Token-2022, and loader-v3 interface
+packages listed below; no validator, indexer, wallet, signing, or transaction package is linked.
+Safe v1.3.0 remains an LGPL-3.0-only
 reference boundary with clean ABI-compatible reads; the EIP specifications are CC0 references.
 Sourcify is consumed only as a hosted read API; no Sourcify server package or source is copied or
 linked.
@@ -21,26 +22,27 @@ captured by `npm run sbom` in CycloneDX JSON and checked by `npm run license:che
 
 ## Runtime npm packages
 
-| Package                      | Version | Purpose                                       | License      | Repository                                                                                        |
-| ---------------------------- | ------: | --------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------- |
-| `fastify`                    |  5.11.3 | HTTP API framework                            | MIT          | [fastify/fastify](https://github.com/fastify/fastify)                                             |
-| `@fastify/cors`              |  11.3.0 | explicit browser-origin policy                | MIT          | [fastify-cors](https://github.com/fastify/fastify-cors)                                           |
-| `@fastify/swagger`           |   9.8.1 | OpenAPI generation                            | MIT          | [fastify-swagger](https://github.com/fastify/fastify-swagger)                                     |
-| `@fastify/swagger-ui`        |   6.1.1 | local API documentation UI                    | MIT          | [fastify-swagger-ui](https://github.com/fastify/fastify-swagger-ui)                               |
-| `dotenv`                     |  17.4.2 | local environment loading                     | BSD-2-Clause | [motdotla/dotenv](https://github.com/motdotla/dotenv)                                             |
-| `prom-client`                |  15.1.3 | Prometheus metrics                            | Apache-2.0   | [siimon/prom-client](https://github.com/siimon/prom-client)                                       |
-| `zod`                        |   4.4.3 | canonical runtime validation                  | MIT          | [colinhacks/zod](https://github.com/colinhacks/zod)                                               |
-| `react` / `react-dom`        |  19.2.8 | analyst UI                                    | MIT          | [facebook/react](https://github.com/facebook/react)                                               |
-| `viem`                       | 2.55.11 | EVM checksum/address normalization only       | MIT          | [wevm/viem](https://github.com/wevm/viem)                                                         |
-| `bitcoin-address-validation` |   3.0.0 | Bitcoin network/type/checksum validation      | MIT          | [ruigomeseu/bitcoin-address-validation](https://github.com/ruigomeseu/bitcoin-address-validation) |
-| `bitcoinjs-lib`              |   7.0.1 | Bitcoin script/address/hash parsing only      | MIT          | [bitcoinjs/bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib)                             |
-| `bs58`                       |   6.0.0 | lossless Solana public-key/signature decoding | MIT          | [cryptocoinjs/bs58](https://github.com/cryptocoinjs/bs58)                                         |
-| `@solana-program/token`      |  0.15.0 | official classic SPL Token account decoders   | Apache-2.0   | [solana-program/token](https://github.com/solana-program/token)                                   |
-| `@solana-program/token-2022` |  0.14.1 | official Token-2022 base/TLV decoders         | Apache-2.0   | [solana-program/token-2022](https://github.com/solana-program/token-2022)                         |
-| `@solana-program/loader-v3`  |   0.5.0 | official loader-v3 program identity/interface | MIT          | [solana-program/loader-v3](https://github.com/solana-program/loader-v3)                           |
-| `pg`                         |  8.23.0 | pooled, parameterized PostgreSQL access       | MIT          | [brianc/node-postgres](https://github.com/brianc/node-postgres)                                   |
-| `@clickhouse/client`         |  1.23.1 | parameterized ClickHouse Raw Fact access      | Apache-2.0   | [ClickHouse/clickhouse-js](https://github.com/ClickHouse/clickhouse-js)                           |
-| `minio`                      |   8.0.7 | S3-compatible versioned artifact client       | Apache-2.0   | [minio/minio-js](https://github.com/minio/minio-js)                                               |
+| Package                      | Version | Purpose                                                               | License      | Repository                                                                                        |
+| ---------------------------- | ------: | --------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------- |
+| `fastify`                    |  5.11.3 | HTTP API framework                                                    | MIT          | [fastify/fastify](https://github.com/fastify/fastify)                                             |
+| `@fastify/cors`              |  11.3.0 | explicit browser-origin policy                                        | MIT          | [fastify-cors](https://github.com/fastify/fastify-cors)                                           |
+| `@fastify/swagger`           |   9.8.1 | OpenAPI generation                                                    | MIT          | [fastify-swagger](https://github.com/fastify/fastify-swagger)                                     |
+| `@fastify/swagger-ui`        |   6.1.1 | local API documentation UI                                            | MIT          | [fastify-swagger-ui](https://github.com/fastify/fastify-swagger-ui)                               |
+| `dotenv`                     |  17.4.2 | local environment loading                                             | BSD-2-Clause | [motdotla/dotenv](https://github.com/motdotla/dotenv)                                             |
+| `prom-client`                |  15.1.3 | Prometheus metrics                                                    | Apache-2.0   | [siimon/prom-client](https://github.com/siimon/prom-client)                                       |
+| `zod`                        |   4.4.3 | canonical runtime validation                                          | MIT          | [colinhacks/zod](https://github.com/colinhacks/zod)                                               |
+| `react` / `react-dom`        |  19.2.8 | analyst UI                                                            | MIT          | [facebook/react](https://github.com/facebook/react)                                               |
+| `viem`                       | 2.55.11 | EVM checksum/address normalization only                               | MIT          | [wevm/viem](https://github.com/wevm/viem)                                                         |
+| `bitcoin-address-validation` |   3.0.0 | Bitcoin network/type/checksum validation                              | MIT          | [ruigomeseu/bitcoin-address-validation](https://github.com/ruigomeseu/bitcoin-address-validation) |
+| `bitcoinjs-lib`              |   7.0.1 | Bitcoin script/address/hash parsing only                              | MIT          | [bitcoinjs/bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib)                             |
+| `bs58`                       |   6.0.0 | lossless Solana public-key/signature decoding                         | MIT          | [cryptocoinjs/bs58](https://github.com/cryptocoinjs/bs58)                                         |
+| `@solana-program/system`     |  0.13.0 | official System instruction identification and transfer-data decoding | Apache-2.0   | [solana-program/system](https://github.com/solana-program/system)                                 |
+| `@solana-program/token`      |  0.15.0 | official classic SPL Token account decoders                           | Apache-2.0   | [solana-program/token](https://github.com/solana-program/token)                                   |
+| `@solana-program/token-2022` |  0.14.1 | official Token-2022 base/TLV decoders                                 | Apache-2.0   | [solana-program/token-2022](https://github.com/solana-program/token-2022)                         |
+| `@solana-program/loader-v3`  |   0.5.0 | official loader-v3 program identity/interface                         | MIT          | [solana-program/loader-v3](https://github.com/solana-program/loader-v3)                           |
+| `pg`                         |  8.23.0 | pooled, parameterized PostgreSQL access                               | MIT          | [brianc/node-postgres](https://github.com/brianc/node-postgres)                                   |
+| `@clickhouse/client`         |  1.23.1 | parameterized ClickHouse Raw Fact access                              | Apache-2.0   | [ClickHouse/clickhouse-js](https://github.com/ClickHouse/clickhouse-js)                           |
+| `minio`                      |   8.0.7 | S3-compatible versioned artifact client                               | Apache-2.0   | [minio/minio-js](https://github.com/minio/minio-js)                                               |
 
 Internal `@zerotrace/*` workspace packages are not third-party dependencies.
 

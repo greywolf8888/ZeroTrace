@@ -15,13 +15,13 @@ completed feature.
 | Runnable foundation              | **Yes; clean Docker build/start verified**                                                                    |
 | Production acceptance            | **No**                                                                                                        |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                |
-| Unit tests                       | **453 passing across 67 files**                                                                               |
+| Unit tests                       | **460 passing across 67 files**                                                                               |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                    |
 | Integration tests                | **68 environment-free plus 24 real-storage passing; 92 with PostgreSQL, ClickHouse and object store enabled** |
 | Real-browser E2E                 | **32 passing: Chromium desktop and Pixel 7**                                                                  |
-| Remote CI                        | **Latest recorded exact-SHA pass: `bb9f098`; Draft PR #5 remains the pre-merge gate**                         |
-| Coverage                         | **Current local: 83.41% statements / 77.99% branches / 93.60% functions / 84.60% lines**                      |
-| Real-chain validation            | Four-chain raw/anchors, FFT EVM control, Solana v0 semantics/three controls, and scoped Bitcoin reads passed  |
+| Remote CI                        | **Latest recorded exact-SHA pass: `506bece`; Draft PR #5 remains the pre-merge gate**                         |
+| Coverage                         | **Current local: 82.21% statements / 76.57% branches / 91.94% functions / 83.42% lines**                      |
+| Real-chain validation            | Four-chain raw/anchors, FFT EVM control, Solana v0/core-flow/three controls, and scoped Bitcoin reads passed  |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim and EVM/Solana Control Surface Reports wired                     |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
@@ -170,6 +170,10 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31454676771) passed on immutable
   Solana transaction-semantics commit `bb9f098`: 545 coverage tests, 32 browser flows and all six
   production container targets.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31455436239) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31455436215) passed on immutable
+  Solana v0/ALT/CPI/balance-semantics follow-up commit `506bece`, including all repository quality,
+  browser, production-container and security-analysis gates.
 
 ### Read-only chain foundation
 
@@ -308,6 +312,37 @@ The only allowed status vocabulary in this ledger is:
   `DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY` and upgrade authority
   `AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz`; these are point-in-time observations, not an
   assertion about historical or effective governance.
+
+### Solana instruction and core asset-flow foundation
+
+- `solana-transaction-semantics-v1.1.0` identifies canonical System, SPL Token and Token-2022
+  instructions through the official Codama-generated clients. Strict data decoding covers native
+  SOL `TransferSol`/`TransferSolWithSeed` plus token `Transfer`, `TransferChecked`,
+  `TransferCheckedWithFee`, `MintTo`, `MintToChecked`, `Burn` and `BurnChecked` variants in outer
+  and recorded CPI paths;
+- every core flow keeps gross instruction intent separate from recorded net balance effects and is
+  marked `APPLIED`, `NOT_APPLIED` for a failed transaction, or `UNKNOWN` when execution metadata is
+  absent. A failed transaction never becomes an applied transfer;
+- SPL/Token-2022 token accounts remain ledger accounts, not holder entities. Source and destination
+  owners are emitted only from matching RPC pre/post token metadata; missing or conflicting owners,
+  unchecked mints, and one-sided balances remain typed Unknown;
+- classic token and explicit `TransferCheckedWithFee` flows are automatically reconciled against
+  aggregate per-account atomic deltas with a recommended and allowed deterministic error rate of
+  exactly `0`. Token-2022 `TransferChecked` fee/net output remains Unknown without same-Snapshot
+  mint extension state; close/sync, withheld-fee, confidential, hook, batch, or missing-CPI effects
+  keep the audit Partial rather than passing by omission;
+- each flow has child Evidence linked to its normalized instruction and raw transaction. The API/UI
+  expose official identification, flow/decode coverage, owner/account separation, reconciliation,
+  zero-error policy and explicit boundaries on desktop and mobile;
+- a bounded finalized mainnet replay of transaction
+  `5TVTwAzh85bCJ5tMxLprQPC6yBw2pKTuQTp6qaJapA2m21X9pgUK1QYDKJLKPt3JXVTZQiauxsNEGKFr76iDjqAN`
+  at slot `438523420` identified all 20 observed official instructions and strictly decoded all nine
+  core flow candidates: three classic transfers, four classic checked transfers, one System SOL
+  transfer, and one Token-2022 checked transfer. Flow coverage was `0.9222222222222223`; token
+  reconciliation matched nine of eleven modeled identities with zero conflicts and remained
+  `PARTIAL` because two identities, one close-account effect, and Token-2022 extension output were
+  not fully observable. This is a transaction-level result, not a decoded Jupiter route or market
+  event conclusion.
 
 ### Bitcoin UTXO and observable-control foundation
 
@@ -794,8 +829,11 @@ The only allowed status vocabulary in this ledger is:
 
 ### Solana terminal scope
 
-- program-specific instruction/event decoding, semantic transfer graph projection and effects that
-  cannot be established from the recorded SOL/SPL pre/post balance tables;
+- protocol-specific Jupiter, Pump/PumpSwap, Raydium, Meteora, Moonshot and other instruction/event
+  decoding beyond the implemented official core System/SPL/Token-2022 flow layer;
+- same-Snapshot Token-2022 transfer-fee/hook execution, confidential and withheld-fee flows,
+  account close/sync lamport projection, plus semantic effects that cannot be established from the
+  recorded SOL/SPL pre/post tables;
 - authority/controller history, PDA and Squads recursion, IDL/verifiable-build provenance, other
   loader families and independent-source reconciliation beyond the implemented finalized
   SPL Token/Token-2022/multisig/upgradeable-loader point-in-time surface;
@@ -821,7 +859,7 @@ The only allowed status vocabulary in this ledger is:
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | EVM current state      | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Bitcoin current state  | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Public address/UTXO, spent P2WPKH, unspent P2TR and two transaction-entity production paths passed; equal-output CoinJoin-like structure suppressed merging/change candidates, while Core/archive/policy and calibrated graph reconciliation remain pending                                                                                                                                                                                                                                                                                                 |
-| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot/account smoke and a live v0 production-path replay with six ALTs, 43 loaded accounts, 26 CPI instructions and explicit one-sided token Unknown passed; independent RPC/archive reconciliation remains pending                                                                                                                                                                                                                                                                                                               |
+| Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot/account smoke and a live v0 production-path replay with six ALTs, 43 loaded accounts, 26 CPI instructions, 20/20 official instruction identification, 9/9 core flow decoding, zero token-delta conflicts and explicit Partial/Unknown extension boundaries passed; independent RPC/archive reconciliation remains pending                                                                                                                                                                                                   |
 | Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Test-only structural golden passes exact Precision/False-Merge gates; Snapshot/Evidence-backed real-world labels and calibration remain pending                                                                                                                                                                                                                                                                                                                                                                                                             |
 | EVM control rights     | Independent standard/source reads plus effective custom-role/history/controller reconstruction                            | Alchemy and BNB Chain agreed on FFT proxy and implementation logic at one finalized Snapshot; Sourcify V2 exact-matched `FlapTaxTokenV3`, and the UI separates declared owner/migration functions from current rights. Effective custom token controllers, role/event history, authorization reachability and non-EVM surfaces remain pending                                                                                                                                                                                                               |
 | Solana control rights  | Finalized atomic account-set decode plus dedicated archive and independent-source history                                 | Wrapped SOL mint, native Token-2022 mint and Token-2022 upgradeable program reports passed and replayed from PostgreSQL with nested Evidence. Live extension-bearing mint, Squads/PDA recursion, history, IDL/build verification, other loaders and independent-source/archive acceptance remain pending                                                                                                                                                                                                                                                    |
@@ -830,7 +868,7 @@ The only allowed status vocabulary in this ledger is:
 | RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels, Portal preview, named FFT buy/exit Router/model checks and two-operator same-block reconciliation pass; actual fork settlement, additional routes, gas/executable capacity and history remain pending                                                                                                                                                                                                                                                                                                                                |
 | Provider resilience    | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic disagreement/rollback tests, live common-position BSC continuity and scoped Alchemy/BNB market reconciliation passed; forced real reorg/outage and archive-grade acceptance remain pending                                                                                                                                                                                                                                                                                                                                                    |
 | Finalized block ingest | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; generic Solana v0/ALT/CPI/balance semantics now work at query time, while durable semantic projection and protocol decoders remain pending                                                                                                                                                                                                                                                                                                                                                                   |
+| Raw transaction ingest | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; generic Solana v0/ALT/CPI/balance semantics and official core System/SPL asset flows work at query time, while durable semantic projection and platform/program-specific decoders remain pending                                                                                                                                                                                                                                                                                                             |
 | Raw ledger records     | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 Public BSC, Bitcoin, and Solana endpoints in `.env.example` are development fallbacks. Rate-limited responses do not count
@@ -840,25 +878,25 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                                 | Scope                                                                                                                         |
-| ------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Reproducible install/build     | Pass                                          | locked npm install in production container; all packages/API/web                                                              |
-| Unit tests                     | 453 pass                                      | 67 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                  |
-| Integration tests              | 68 environment-free plus 24 real-storage pass | 92 total with PostgreSQL, ClickHouse and object store; immutable EVM/Solana/Bitcoin controls and market/RV guards pass        |
-| Model evaluation tests         | 1 pass                                        | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                |
-| Restart regression             | Pass                                          | same-anchor recapture persists across repository/API restart without Snapshot collision                                       |
-| Coverage gate                  | Pass                                          | current local: 83.41% statements, 77.99% branches, 93.60% functions, 84.60% lines on all 545 tests including 24 durable tests |
-| Chromium E2E                   | 32 pass                                       | desktop and Pixel 7 include Solana v0 semantics, chain controls, supply, market/RV, burn, Claim reports and Unknown           |
-| Formatting / ESLint / types    | Pass                                          | full repository                                                                                                               |
-| Dependency vulnerability audit | Pass                                          | 0 vulnerabilities across the complete npm dependency graph                                                                    |
-| Dependency license allowlist   | Pass                                          | production dependency graph                                                                                                   |
-| CycloneDX SBOM                 | Pass                                          | npm dependency graph                                                                                                          |
-| Compose model                  | Pass                                          | rendered default topology                                                                                                     |
-| Docker image build/start       | Pass                                          | API, web and all ingest/semantic worker production targets built; rebuilt API/Web are healthy and read-only                   |
-| Database bootstrap             | Pass                                          | fresh bootstrap passed; current persistent Compose volume upgraded non-destructively through migration 014                    |
-| Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web healthy; Solana semantic capability visible and broadcast remains forbidden                         |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines, scoped Alchemy/BNB market, Solana v0 semantics and three Solana controls passed; archive pending      |
-| Remote CI                      | Latest recorded exact-SHA pass `bb9f098`      | CI/CodeQL green; the continuously updated Draft PR #5 remains required before merge                                           |
+| Check                          | Latest result                                 | Scope                                                                                                                     |
+| ------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible install/build     | Pass                                          | locked npm install in production container; all packages/API/web                                                          |
+| Unit tests                     | 460 pass                                      | 67 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime              |
+| Integration tests              | 68 environment-free plus 24 real-storage pass | 92 total with PostgreSQL, ClickHouse and object store; immutable EVM/Solana/Bitcoin controls and market/RV guards pass    |
+| Model evaluation tests         | 1 pass                                        | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                            |
+| Restart regression             | Pass                                          | same-anchor recapture persists across repository/API restart without Snapshot collision                                   |
+| Coverage gate                  | Pass                                          | current local: 82.21% statements, 76.57% branches, 91.94% functions, 83.42% lines; 528 passed and 24 opt-in tests skipped |
+| Chromium E2E                   | 32 pass                                       | desktop and Pixel 7 include Solana v0 semantics, chain controls, supply, market/RV, burn, Claim reports and Unknown       |
+| Formatting / ESLint / types    | Pass                                          | full repository                                                                                                           |
+| Dependency vulnerability audit | Pass                                          | 0 vulnerabilities across the complete npm dependency graph                                                                |
+| Dependency license allowlist   | Pass                                          | production dependency graph                                                                                               |
+| CycloneDX SBOM                 | Pass                                          | npm dependency graph                                                                                                      |
+| Compose model                  | Pass                                          | rendered default topology                                                                                                 |
+| Docker image build/start       | Pass                                          | API, web and all ingest/semantic worker production targets built; rebuilt API/Web are healthy and read-only               |
+| Database bootstrap             | Pass                                          | fresh bootstrap passed; current persistent Compose volume upgraded non-destructively through migration 014                |
+| Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web healthy; Solana semantic capability visible and broadcast remains forbidden                     |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines, scoped Alchemy/BNB market, Solana v0 semantics and three Solana controls passed; archive pending  |
+| Remote CI                      | Latest recorded exact-SHA pass `506bece`      | CI/CodeQL green; this uncommitted batch still requires its own exact-SHA run before merge                                 |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

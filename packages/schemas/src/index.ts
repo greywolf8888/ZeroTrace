@@ -1208,8 +1208,59 @@ export const SolanaInstructionObservationSchema = z.object({
   accountIndexes: z.array(z.number().int().nonnegative()),
   accounts: knowledgeValueSchema(z.array(SolanaPublicKeySchema)),
   dataBase58: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]*$/),
+  programSemantic: knowledgeValueSchema(
+    z.object({
+      programFamily: z.enum(['SYSTEM', 'SPL_TOKEN', 'TOKEN_2022']),
+      instructionName: z.string().min(1).max(128),
+      category: z.enum([
+        'ASSET_TRANSFER',
+        'SUPPLY_INCREASE',
+        'SUPPLY_DECREASE',
+        'ACCOUNT_LIFECYCLE',
+        'CONTROL_CHANGE',
+        'OTHER',
+      ]),
+      application: z.enum(['APPLIED', 'NOT_APPLIED', 'UNKNOWN']),
+    }),
+  ),
 });
 export type SolanaInstructionObservation = z.infer<typeof SolanaInstructionObservationSchema>;
+
+export const SolanaAssetFlowSchema = z.object({
+  id: z.string().regex(/^outer:\d+(?:\/inner:\d+)?:flow:\d+$/),
+  instructionPath: z.string().regex(/^outer:\d+(?:\/inner:\d+)?$/),
+  programFamily: z.enum(['SYSTEM', 'SPL_TOKEN', 'TOKEN_2022']),
+  instructionName: z.string().min(1).max(128),
+  application: z.enum(['APPLIED', 'NOT_APPLIED', 'UNKNOWN']),
+  flowKind: z.enum(['TRANSFER', 'MINT', 'BURN']),
+  assetKind: z.enum(['NATIVE_SOL', 'WRAPPED_SOL', 'SPL_TOKEN', 'TOKEN_2022']),
+  sourceAccount: knowledgeValueSchema(SolanaPublicKeySchema),
+  destinationAccount: knowledgeValueSchema(SolanaPublicKeySchema),
+  sourceOwner: knowledgeValueSchema(SolanaPublicKeySchema),
+  destinationOwner: knowledgeValueSchema(SolanaPublicKeySchema),
+  mint: knowledgeValueSchema(SolanaPublicKeySchema),
+  authority: knowledgeValueSchema(SolanaPublicKeySchema),
+  amount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  decimals: knowledgeValueSchema(z.number().int().min(0).max(255)),
+  expectedFeeAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  expectedRecipientAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+});
+export type SolanaAssetFlow = z.infer<typeof SolanaAssetFlowSchema>;
+
+export const SolanaTokenFlowReconciliationSchema = z.object({
+  status: z.enum(['MATCHED', 'PARTIAL', 'CONFLICT', 'NOT_APPLICABLE', 'UNKNOWN']),
+  expectedIdentityCount: z.number().int().nonnegative(),
+  observedIdentityCount: z.number().int().nonnegative(),
+  matchedIdentityCount: z.number().int().nonnegative(),
+  conflictingIdentityCount: z.number().int().nonnegative(),
+  unknownIdentityCount: z.number().int().nonnegative(),
+  unmodeledTokenInstructionCount: z.number().int().nonnegative(),
+  coverage: CoverageRatioSchema,
+  recommendedMaxRelativeError: z.literal(0),
+  observedRelativeError: knowledgeValueSchema(z.number().nonnegative()),
+  detail: z.string().min(1),
+});
+export type SolanaTokenFlowReconciliation = z.infer<typeof SolanaTokenFlowReconciliationSchema>;
 
 export const SolanaTokenBalanceChangeSchema = z.object({
   accountIndex: z.number().int().nonnegative(),
@@ -1247,12 +1298,20 @@ export const SolanaTransactionSemanticsSchema = z.object({
   innerInstructions: z.array(SolanaInstructionObservationSchema),
   cpiCount: knowledgeValueSchema(z.number().int().nonnegative()),
   programIds: z.array(SolanaPublicKeySchema),
+  officialProgramInstructionCount: z.number().int().nonnegative(),
+  identifiedOfficialProgramInstructionCount: z.number().int().nonnegative(),
+  officialProgramIdentificationCoverage: knowledgeValueSchema(CoverageRatioSchema),
+  assetFlowCandidateCount: z.number().int().nonnegative(),
+  assetFlowDecodeCoverage: knowledgeValueSchema(CoverageRatioSchema),
+  assetFlowCoverage: knowledgeValueSchema(CoverageRatioSchema),
+  assetFlows: z.array(SolanaAssetFlowSchema),
+  tokenFlowReconciliation: SolanaTokenFlowReconciliationSchema,
   tokenBalanceRecording: knowledgeValueSchema(z.boolean()),
   tokenBalanceChanges: z.array(SolanaTokenBalanceChangeSchema),
   computeUnitsConsumed: knowledgeValueSchema(UnsignedQuantityStringSchema),
   logRecording: knowledgeValueSchema(z.boolean()),
   logCount: knowledgeValueSchema(z.number().int().nonnegative()),
-  modelVersion: z.literal('solana-transaction-semantics-v1.0.0'),
+  modelVersion: z.literal('solana-transaction-semantics-v1.1.0'),
 });
 export type SolanaTransactionSemantics = z.infer<typeof SolanaTransactionSemanticsSchema>;
 

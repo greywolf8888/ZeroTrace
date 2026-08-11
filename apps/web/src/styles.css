@@ -1134,14 +1134,60 @@ tbody tr:hover {
 
 .solana-account-table,
 .solana-instruction-table,
+.solana-asset-flow-table,
 .solana-token-change-table {
   border-top: 1px solid var(--border);
 }
 
 .solana-account-table td,
 .solana-instruction-table td,
+.solana-asset-flow-table td,
 .solana-token-change-table td {
   white-space: nowrap;
+}
+
+.solana-flow-audit {
+  margin: 16px 18px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%),
+    var(--surface-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  border-radius: 10px;
+}
+
+.solana-flow-audit .compact-header {
+  padding: 13px 14px 8px;
+  border-bottom: 0;
+}
+
+.solana-flow-audit h4 {
+  margin: 3px 0 0;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.solana-flow-audit > p {
+  margin: 0;
+  padding: 0 14px 13px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.solana-flow-summary {
+  padding: 8px 14px 12px;
+}
+
+.solana-asset-flow-table td strong,
+.solana-asset-flow-table td small {
+  display: block;
+}
+
+.solana-asset-flow-table td small {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.61rem;
 }
 
 .solana-transaction-summary code {

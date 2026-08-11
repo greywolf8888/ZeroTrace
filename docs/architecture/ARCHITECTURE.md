@@ -420,7 +420,15 @@ available, and each normalized instruction is a child Evidence derivation of the
 Pre/post lamport and token-balance tables produce exact integer deltas only when both observations
 exist. Missing metadata, unrecorded inner instructions, unresolved lookup addresses, and one-sided
 token records remain typed Unknown and reduce coverage; they never become zero or a decoded protocol
-action.
+action. An official generated System/SPL Token/Token-2022 layer then identifies canonical program
+instructions and decodes core SOL transfer plus token transfer/mint/burn data. The derived asset-flow
+projection preserves instruction application state, maps token accounts to recorded owners without
+merging them, and creates a child Evidence node per flow. Classic token-account effects require exact
+atomic reconciliation with zero tolerance. Token-2022 fee/net output remains Unknown unless the
+instruction itself carries the expected fee or a future same-Snapshot extension read establishes it;
+unmodeled extension, close/sync, confidential, hook, or missing-CPI effects keep reconciliation
+Partial rather than passing by omission. Program-specific Jupiter, launchpad and AMM semantics remain
+separate adapter work.
 
 ## Finalized ingestion commit sequence
 

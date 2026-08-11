@@ -107,6 +107,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Finalized provider-shaped raw-transaction ingestion on EVM, Bitcoin, and Solana
 - [x] Finalized EVM logs, Bitcoin inputs/outputs, and Solana instruction/CPI raw records
 - [x] Finalized EVM trace/state-diff and Solana log/balance/token-balance/reward raw records
+- [x] Official System/SPL Token/Token-2022 instruction identification, strict core asset-flow
+      decoding, owner/account separation, per-flow Evidence, and zero-tolerance token reconciliation
+- [ ] Durable Solana semantic projection plus platform/program-specific instruction and event decoding
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [x] Deterministic common-position disagreement, source-failure, continuity, and reorg-detection tests
 - [x] Deterministic Flap accepted-lineage rollback/replay with append-only invalidation and no
@@ -251,12 +254,15 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       Token-2022 upgradeable Program/ProgramData, followed by provider-free PostgreSQL replay
 - [x] Scoped public-mainnet Solana v0 production-path replay with six lookup tables, 43 loaded
       accounts, 26 CPI instructions, exact recorded token deltas and one one-sided Unknown delta
+- [x] Scoped public-mainnet Solana core-flow replay with 20/20 official instructions identified,
+      9/9 supported flow candidates decoded, 43-node Evidence graph, and conservative Partial token
+      reconciliation where Token-2022 extension and close-account effects remained unmodeled
 - [x] Scoped public Esplora Bitcoin address/UTXO and P2WPKH/P2TR outpoint validation through the
       production API path with Snapshot and Evidence; Core policy/archive reconciliation remains open
 - [ ] Ethereum archive/current-state fixture suite
 - [ ] BNB Smart Chain archive/current-state fixture suite
 - [ ] Bitcoin Core plus Esplora archive/policy reconciliation fixture suite
-- [ ] Solana archive plus dedicated independent-RPC fixture suite and program-specific instruction decoding
+- [ ] Solana archive plus dedicated independent-RPC fixture suite and platform/program-specific instruction decoding
 - [ ] Named launch/migration fixtures for every declared platform/version
 - [x] Named FFT migrated Pancake V2 point-in-time market plus buy/exit-size arithmetic fixtures
 - [x] Named live FFT Alchemy + BNB Chain common-finalized-block market/RV reconciliation: 37/37

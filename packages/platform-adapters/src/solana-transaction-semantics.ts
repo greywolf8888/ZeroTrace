@@ -15,7 +15,9 @@ import {
   type SolanaTransactionSemantics,
 } from '@zerotrace/schemas';
 
-export const SOLANA_TRANSACTION_SEMANTICS_MODEL_VERSION = 'solana-transaction-semantics-v1.0.0';
+import { analyzeSolanaAssetFlows } from './solana-asset-flow.js';
+
+export const SOLANA_TRANSACTION_SEMANTICS_MODEL_VERSION = 'solana-transaction-semantics-v1.1.0';
 
 function unresolvedAddress(index: number): KnowledgeValue<string> {
   return unknownValue(
@@ -70,6 +72,10 @@ function resolveInstruction(options: {
           'At least one compiled account index depends on unrecorded loaded addresses.',
         ),
     dataBase58: options.instruction.data,
+    programSemantic: unknownValue(
+      'NOT_QUERIED',
+      'Program semantics are attached after every compiled account is normalized.',
+    ),
   };
 }
 
@@ -243,10 +249,10 @@ export function analyzeSolanaTransactionSemantics(
   ];
   const recordingCoverage =
     recordingDimensions.reduce((total, value) => total + value, 0) / recordingDimensions.length;
-  const outerInstructions = transaction.instructions.map((instruction, outerIndex) =>
+  const unresolvedOuterInstructions = transaction.instructions.map((instruction, outerIndex) =>
     resolveInstruction({ instruction, outerIndex, resolvedAddresses }),
   );
-  const innerInstructions =
+  const unresolvedInnerInstructions =
     transaction.innerInstructions?.flatMap((group) =>
       group.instructions.map((instruction, innerIndex) =>
         resolveInstruction({
@@ -257,6 +263,26 @@ export function analyzeSolanaTransactionSemantics(
         }),
       ),
     ) ?? [];
+  const changes = tokenBalanceChanges(transaction, resolvedAddresses);
+  const execution =
+    transaction.success === undefined
+      ? 'METADATA_UNAVAILABLE'
+      : transaction.success
+        ? 'SUCCESS'
+        : 'FAILED';
+  const assetFlowAnalysis = analyzeSolanaAssetFlows({
+    instructions: [...unresolvedOuterInstructions, ...unresolvedInnerInstructions],
+    execution,
+    tokenBalanceChanges: changes,
+    innerInstructionRecordingComplete: transaction.innerInstructions !== undefined,
+  });
+  const outerInstructions = assetFlowAnalysis.instructions.slice(
+    0,
+    unresolvedOuterInstructions.length,
+  );
+  const innerInstructions = assetFlowAnalysis.instructions.slice(
+    unresolvedOuterInstructions.length,
+  );
   const programIds = [...outerInstructions, ...innerInstructions]
     .flatMap((instruction) =>
       instruction.programId.state === 'known' ? [instruction.programId.value] : [],
@@ -268,12 +294,7 @@ export function analyzeSolanaTransactionSemantics(
     signature: transaction.signature,
     version: transaction.version,
     recentBlockhash: transaction.recentBlockhash,
-    execution:
-      transaction.success === undefined
-        ? 'METADATA_UNAVAILABLE'
-        : transaction.success
-          ? 'SUCCESS'
-          : 'FAILED',
+    execution,
     executionError:
       transaction.success === undefined
         ? unknownValue('INSUFFICIENT_DATA', 'Transaction metadata was not returned.')
@@ -316,6 +337,15 @@ export function analyzeSolanaTransactionSemantics(
           )
         : knownValue(innerInstructions.length),
     programIds,
+    officialProgramInstructionCount: assetFlowAnalysis.officialProgramInstructionCount,
+    identifiedOfficialProgramInstructionCount:
+      assetFlowAnalysis.identifiedOfficialProgramInstructionCount,
+    officialProgramIdentificationCoverage: assetFlowAnalysis.officialProgramIdentificationCoverage,
+    assetFlowCandidateCount: assetFlowAnalysis.assetFlowCandidateCount,
+    assetFlowDecodeCoverage: assetFlowAnalysis.assetFlowDecodeCoverage,
+    assetFlowCoverage: assetFlowAnalysis.assetFlowCoverage,
+    assetFlows: assetFlowAnalysis.assetFlows,
+    tokenFlowReconciliation: assetFlowAnalysis.tokenFlowReconciliation,
     tokenBalanceRecording:
       transaction.preTokenBalances === undefined || transaction.postTokenBalances === undefined
         ? unknownValue(
@@ -323,7 +353,7 @@ export function analyzeSolanaTransactionSemantics(
             'Pre/post token-balance recording was unavailable for this transaction.',
           )
         : knownValue(true),
-    tokenBalanceChanges: tokenBalanceChanges(transaction, resolvedAddresses),
+    tokenBalanceChanges: changes,
     computeUnitsConsumed:
       transaction.computeUnitsConsumed === undefined
         ? unknownValue('INSUFFICIENT_DATA', 'Compute-unit consumption was not recorded.')

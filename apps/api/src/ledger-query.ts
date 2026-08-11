@@ -10,6 +10,8 @@ import {
   analyzeBitcoinScriptControl,
   analyzeBitcoinTransactionEntity,
   analyzeSolanaTransactionSemantics,
+  SOLANA_ASSET_FLOW_MODEL_VERSION,
+  SOLANA_TRANSACTION_SEMANTICS_MODEL_VERSION,
 } from '@zerotrace/platform-adapters';
 import {
   BitcoinAddressUtxoSetSchema,
@@ -1053,25 +1055,52 @@ export async function querySolanaTransaction(
   );
   const semantics = analyzeSolanaTransactionSemantics(transaction);
   const instructionEvidence: Evidence[] = [];
+  const instructionEvidenceByPath = new Map<string, Evidence>();
   for (const instruction of [...semantics.outerInstructions, ...semantics.innerInstructions]) {
-    instructionEvidence.push(
+    const evidence = await writeEvidence(
+      createEvidence({
+        ledger: 'SOLANA',
+        chainId: snapshot.chainId,
+        kind: 'DERIVED_FEATURE',
+        source: `zerotrace:${SOLANA_TRANSACTION_SEMANTICS_MODEL_VERSION}`,
+        locator: `instruction:${transaction.signature}:${instruction.path}@${transaction.slot}`,
+        payload: instruction,
+        blockOrSlot: transaction.slot,
+        finality: snapshotFinality(snapshot),
+        summary:
+          instruction.innerIndex.state === 'known'
+            ? `Normalized Solana CPI instruction ${instruction.path}.`
+            : `Normalized Solana outer instruction ${instruction.path}.`,
+        sourceEvidenceIds: [transactionEvidence.id],
+      }),
+      [transactionEvidence.id],
+      snapshot,
+    );
+    instructionEvidence.push(evidence);
+    instructionEvidenceByPath.set(instruction.path, evidence);
+  }
+  const assetFlowEvidence: Evidence[] = [];
+  for (const flow of semantics.assetFlows) {
+    const instruction = instructionEvidenceByPath.get(flow.instructionPath);
+    const sourceEvidenceIds = [
+      transactionEvidence.id,
+      ...(instruction === undefined ? [] : [instruction.id]),
+    ];
+    assetFlowEvidence.push(
       await writeEvidence(
         createEvidence({
           ledger: 'SOLANA',
           chainId: snapshot.chainId,
           kind: 'DERIVED_FEATURE',
-          source: 'zerotrace:solana-transaction-semantics-v1.0.0',
-          locator: `instruction:${transaction.signature}:${instruction.path}@${transaction.slot}`,
-          payload: instruction,
+          source: `zerotrace:${SOLANA_ASSET_FLOW_MODEL_VERSION}`,
+          locator: `asset-flow:${transaction.signature}:${flow.id}@${transaction.slot}`,
+          payload: flow,
           blockOrSlot: transaction.slot,
           finality: snapshotFinality(snapshot),
-          summary:
-            instruction.innerIndex.state === 'known'
-              ? `Normalized Solana CPI instruction ${instruction.path}.`
-              : `Normalized Solana outer instruction ${instruction.path}.`,
-          sourceEvidenceIds: [transactionEvidence.id],
+          summary: `${flow.application} ${flow.programFamily} ${flow.instructionName} ${flow.flowKind.toLowerCase()} flow.`,
+          sourceEvidenceIds,
         }),
-        [transactionEvidence.id],
+        sourceEvidenceIds,
         snapshot,
       ),
     );
@@ -1081,7 +1110,7 @@ export async function querySolanaTransaction(
       ledger: 'SOLANA',
       chainId: snapshot.chainId,
       kind: 'DERIVED_FEATURE',
-      source: 'zerotrace:solana-transaction-semantics-v1.0.0',
+      source: `zerotrace:${SOLANA_TRANSACTION_SEMANTICS_MODEL_VERSION}`,
       locator: `transaction-semantics:${transaction.signature}@${transaction.slot}`,
       payload: semantics,
       blockOrSlot: transaction.slot,
@@ -1090,13 +1119,30 @@ export async function querySolanaTransaction(
         semantics.accountResolutionComplete.state === 'known'
           ? 'Solana transaction accounts, instructions and recorded balance effects were normalized.'
           : 'Solana transaction semantics retain unresolved loaded-address and effect coverage.',
-      sourceEvidenceIds: [transactionEvidence.id, ...instructionEvidence.map((item) => item.id)],
+      sourceEvidenceIds: [
+        transactionEvidence.id,
+        ...instructionEvidence.map((item) => item.id),
+        ...assetFlowEvidence.map((item) => item.id),
+      ],
     }),
-    [transactionEvidence.id, ...instructionEvidence.map((item) => item.id)],
+    [
+      transactionEvidence.id,
+      ...instructionEvidence.map((item) => item.id),
+      ...assetFlowEvidence.map((item) => item.id),
+    ],
     snapshot,
   );
-  const evidence = [transactionEvidence, ...instructionEvidence, semanticEvidence];
-  const semanticDataCoverage = Math.min(semantics.accountCoverage, semantics.recordingCoverage);
+  const evidence = [
+    transactionEvidence,
+    ...instructionEvidence,
+    ...assetFlowEvidence,
+    semanticEvidence,
+  ];
+  const semanticDataCoverage = Math.min(
+    semantics.accountCoverage,
+    semantics.recordingCoverage,
+    semantics.assetFlowCoverage.state === 'known' ? semantics.assetFlowCoverage.value : 1,
+  );
   return {
     subject,
     facts: {
@@ -1128,11 +1174,22 @@ export async function querySolanaTransaction(
               'INSUFFICIENT_DATA',
               'Token-balance change count is Unknown without pre/post recording.',
             ),
+      coreAssetFlowCount:
+        semantics.accountResolutionComplete.state === 'known' &&
+        semantics.innerInstructionRecording.state === 'known' &&
+        (semantics.assetFlowDecodeCoverage.state !== 'known' ||
+          semantics.assetFlowDecodeCoverage.value === 1)
+          ? knownValue(semantics.assetFlows.length)
+          : unknownValue(
+              'INSUFFICIENT_DATA',
+              'Core asset-flow count requires resolved accounts, inner-instruction recording and successful official decoding.',
+            ),
+      tokenFlowReconciliation: knownValue(semantics.tokenFlowReconciliation),
     },
     metadata: metadata(
       snapshot,
       [observation.endpointId],
-      'solana-transaction-query-v1.0.0',
+      'solana-transaction-query-v1.1.0',
       evidence.map((item) => item.id),
       {
         dataCoverage: semanticDataCoverage,
