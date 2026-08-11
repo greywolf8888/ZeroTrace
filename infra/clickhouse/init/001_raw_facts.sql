@@ -1,7 +1,17 @@
 CREATE DATABASE IF NOT EXISTS zerotrace;
 
+CREATE TABLE IF NOT EXISTS zerotrace.schema_migrations
+(
+  version String,
+  applied_at DateTime64(3, 'UTC') DEFAULT now64(3)
+)
+ENGINE = ReplacingMergeTree(applied_at)
+ORDER BY version;
+
 CREATE TABLE IF NOT EXISTS zerotrace.raw_chain_facts
 (
+  fact_id FixedString(64),
+  schema_version LowCardinality(String),
   ledger LowCardinality(String),
   chain_id LowCardinality(String),
   block_or_slot UInt64,
@@ -12,12 +22,18 @@ CREATE TABLE IF NOT EXISTS zerotrace.raw_chain_facts
   finality LowCardinality(String),
   payload String,
   payload_hash FixedString(64),
+  evidence_id String,
+  raw_artifact_ref String,
   observed_at DateTime64(3, 'UTC'),
-  ingested_at DateTime64(3, 'UTC') DEFAULT now64(3)
+  ingested_at DateTime64(3, 'UTC') DEFAULT now64(3),
+  CONSTRAINT fact_id_format CHECK match(fact_id, '^[0-9a-f]{64}$'),
+  CONSTRAINT payload_hash_format CHECK match(payload_hash, '^[0-9a-f]{64}$'),
+  CONSTRAINT evidence_id_format CHECK match(evidence_id, '^ev_[0-9a-f]{24}$'),
+  CONSTRAINT artifact_ref_required CHECK startsWith(raw_artifact_ref, 's3://')
 )
-ENGINE = MergeTree
+ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY (ledger, toYYYYMM(observed_at))
-ORDER BY (ledger, chain_id, fact_type, block_or_slot, subject, payload_hash);
+ORDER BY (ledger, chain_id, fact_type, block_or_slot, subject, fact_id);
 
 CREATE TABLE IF NOT EXISTS zerotrace.platform_events
 (
@@ -56,3 +72,6 @@ CREATE TABLE IF NOT EXISTS zerotrace.metric_series
 ENGINE = MergeTree
 PARTITION BY toYYYYMM(observed_at)
 ORDER BY (metric, subject, observed_at, analysis_id);
+
+INSERT INTO zerotrace.schema_migrations (version)
+VALUES ('001_raw_facts');

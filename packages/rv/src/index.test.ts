@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { AnalysisMetadata } from '@zerotrace/schemas';
 
-import { quoteConstantProductExit, simulateExitRace } from './index.js';
+import {
+  calculatePensionEntryEconomics,
+  quoteConstantProductExit,
+  simulateExitRace,
+} from './index.js';
 
 const metadata: AnalysisMetadata = {
   snapshot: null,
@@ -25,6 +29,73 @@ const pool = {
   sellEnabled: true,
   evidenceIds: ['ev_pool_state'],
 };
+
+describe('pension entry economics', () => {
+  it('separates whole committed shares, remainder, and conservative average share cost', () => {
+    expect(
+      calculatePensionEntryEconomics({
+        quoteInputAtomic: '100000000000000000000',
+        modeledNetTokenOutputAtomic: '2500000000000000000000000',
+        shareUnitAtomic: '1000000000000000000000000',
+      }),
+    ).toEqual({
+      modeledShareEquivalent: '2.5',
+      modeledWholeShares: '2',
+      modeledCommittedTokenAtomic: '2000000000000000000000000',
+      modeledRemainderTokenAtomic: '500000000000000000000000',
+      modeledQuoteCostForCommittedSharesAtomic: '80000000000000000000',
+      modeledAverageQuoteCostPerShareAtomic: '40000000000000000000',
+    });
+  });
+
+  it('keeps a sub-share purchase distinct from zero cost and rejects invalid policy inputs', () => {
+    expect(
+      calculatePensionEntryEconomics({
+        quoteInputAtomic: '3',
+        modeledNetTokenOutputAtomic: '2',
+        shareUnitAtomic: '5',
+      }),
+    ).toEqual({
+      modeledShareEquivalent: '0.4',
+      modeledWholeShares: '0',
+      modeledCommittedTokenAtomic: '0',
+      modeledRemainderTokenAtomic: '2',
+      modeledQuoteCostForCommittedSharesAtomic: '0',
+      modeledAverageQuoteCostPerShareAtomic: '8',
+    });
+    expect(() =>
+      calculatePensionEntryEconomics({
+        quoteInputAtomic: '0',
+        modeledNetTokenOutputAtomic: '2',
+        shareUnitAtomic: '5',
+      }),
+    ).toThrow('quoteInputAtomic must be positive');
+    expect(() =>
+      calculatePensionEntryEconomics({
+        quoteInputAtomic: '3',
+        modeledNetTokenOutputAtomic: '2',
+        shareUnitAtomic: '0',
+      }),
+    ).toThrow('shareUnitAtomic must be positive');
+  });
+
+  it('keeps average share cost undefined when the modeled receipt is exactly zero', () => {
+    expect(
+      calculatePensionEntryEconomics({
+        quoteInputAtomic: '100',
+        modeledNetTokenOutputAtomic: '0',
+        shareUnitAtomic: '1000000',
+      }),
+    ).toEqual({
+      modeledShareEquivalent: '0',
+      modeledWholeShares: '0',
+      modeledCommittedTokenAtomic: '0',
+      modeledRemainderTokenAtomic: '0',
+      modeledQuoteCostForCommittedSharesAtomic: '0',
+      modeledAverageQuoteCostPerShareAtomic: null,
+    });
+  });
+});
 
 describe('constant-product realizable value', () => {
   it('calculates actual reserve output rather than balance times spot price', () => {

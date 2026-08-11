@@ -143,10 +143,23 @@ export function classifyIdentifier(
     }
   }
 
-  if (allow(hint, 'SOLANA', 'ADDRESS')) {
+  if (hint.ledger === undefined || hint.ledger === 'SOLANA') {
     try {
       const decoded = bs58.decode(query);
-      if (decoded.length === 32) {
+      if (decoded.length === 64 && allow(hint, 'SOLANA', 'TRANSACTION')) {
+        candidates.push(
+          candidate(
+            'SOLANA',
+            'solana-mainnet',
+            'TRANSACTION',
+            query,
+            query,
+            'STRUCTURALLY_VALID',
+            hint.ledger === 'SOLANA' ? 1 : 0.9,
+          ),
+        );
+      }
+      if (decoded.length === 32 && allow(hint, 'SOLANA', 'ADDRESS')) {
         candidates.push(
           candidate(
             'SOLANA',
@@ -165,6 +178,19 @@ export function classifyIdentifier(
   }
 
   if (/^(0|[1-9]\d*)$/.test(query)) {
+    if (allow(hint, 'EVM', 'BLOCK')) {
+      candidates.push(
+        candidate(
+          'EVM',
+          hint.chainId ?? 'eip155:unknown',
+          'BLOCK',
+          query,
+          query,
+          'AMBIGUOUS',
+          hint.ledger === 'EVM' ? 0.8 : 0.4,
+        ),
+      );
+    }
     if (allow(hint, 'BITCOIN', 'BLOCK')) {
       candidates.push(
         candidate(

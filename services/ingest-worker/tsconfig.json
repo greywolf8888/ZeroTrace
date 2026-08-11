@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../../packages/schemas" },
+    { "path": "../../packages/evidence" },
+    { "path": "../../packages/storage" },
+    { "path": "../../packages/chain-adapters" },
+    { "path": "../../packages/ingestion" }
+  ]
+}

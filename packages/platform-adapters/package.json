@@ -12,6 +12,18 @@
     }
   },
   "dependencies": {
-    "@zerotrace/schemas": "*"
+    "@solana-program/loader-v3": "^0.5.0",
+    "@solana-program/system": "0.13.0",
+    "@solana-program/token": "^0.15.0",
+    "@solana-program/token-2022": "^0.14.1",
+    "@zerotrace/chain-adapters": "*",
+    "@zerotrace/claim-audit": "*",
+    "@zerotrace/data-quality": "*",
+    "@zerotrace/evidence": "*",
+    "@zerotrace/rv": "*",
+    "@zerotrace/schemas": "*",
+    "bitcoinjs-lib": "7.0.1",
+    "bs58": "^6.0.0",
+    "viem": "2.55.11"
   }
 }

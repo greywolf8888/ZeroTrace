@@ -10,31 +10,68 @@ services:
       NODE_ENV: production
       HOST: 0.0.0.0
       API_PORT: 8080
-      CORS_ORIGIN: http://localhost:${WEB_PORT:-5173}
+      CORS_ORIGIN: http://localhost:${WEB_PORT:-5173},http://127.0.0.1:${WEB_PORT:-5173}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-8000}
       HEALTH_CACHE_TTL_MS: ${HEALTH_CACHE_TTL_MS:-15000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-api.mainnet.solana.com,blockstream.info}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-eth-mainnet.g.alchemy.com,bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org,portal.sqd.dev,sourcify.dev,api.mainnet.solana.com,blockstream.info}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-100}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-2000}
+      PROVIDER_CIRCUIT_FAILURE_THRESHOLD: ${PROVIDER_CIRCUIT_FAILURE_THRESHOLD:-5}
+      PROVIDER_CIRCUIT_RESET_MS: ${PROVIDER_CIRCUIT_RESET_MS:-30000}
+      PROVIDER_CACHE_TTL_MS: ${PROVIDER_CACHE_TTL_MS:-1000}
+      PROVIDER_CACHE_MAX_ENTRIES: ${PROVIDER_CACHE_MAX_ENTRIES:-500}
+      DATA_QUALITY_MIN_SOURCES: ${DATA_QUALITY_MIN_SOURCES:-2}
+      ALCHEMY_API_KEY: ${ALCHEMY_API_KEY:-}
+      ETH_RPC_URL: ${ETH_RPC_URL:-}
       EVM_ETHEREUM_RPC_URL: ${EVM_ETHEREUM_RPC_URL:-}
+      EVM_ETHEREUM_RPC_URLS: ${EVM_ETHEREUM_RPC_URLS:-}
       EVM_ETHEREUM_CHAIN_ID: ${EVM_ETHEREUM_CHAIN_ID:-1}
+      EVM_ETHEREUM_SNAPSHOT_TAG: ${EVM_ETHEREUM_SNAPSHOT_TAG:-finalized}
+      EVM_ETHEREUM_REQUESTS_PER_SECOND: ${EVM_ETHEREUM_REQUESTS_PER_SECOND:-5}
+      BSC_RPC_URL: ${BSC_RPC_URL:-}
       EVM_BSC_RPC_URL: ${EVM_BSC_RPC_URL:-}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
       EVM_BSC_CHAIN_ID: ${EVM_BSC_CHAIN_ID:-56}
-      BITCOIN_ESPLORA_URL: ${BITCOIN_ESPLORA_URL:-https://blockstream.info/api}
+      EVM_BSC_SNAPSHOT_TAG: ${EVM_BSC_SNAPSHOT_TAG:-finalized}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      BTC_ESPLORA_URL: ${BTC_ESPLORA_URL:-}
+      BITCOIN_ESPLORA_URL: ${BITCOIN_ESPLORA_URL:-}
+      BITCOIN_ESPLORA_URLS: ${BITCOIN_ESPLORA_URLS:-https://blockstream.info/api}
+      BITCOIN_ESPLORA_REQUESTS_PER_SECOND: ${BITCOIN_ESPLORA_REQUESTS_PER_SECOND:-2}
       SOLANA_RPC_URL: ${SOLANA_RPC_URL:-https://api.mainnet.solana.com}
+      SOLANA_RPC_URLS: ${SOLANA_RPC_URLS:-}
+      SOLANA_REQUESTS_PER_SECOND: ${SOLANA_REQUESTS_PER_SECOND:-4}
       SOLANA_COMMITMENT: ${SOLANA_COMMITMENT:-finalized}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SOURCIFY_V2_URL: ${SOURCIFY_V2_URL:-https://sourcify.dev/server}
+      SOURCIFY_REQUESTS_PER_SECOND: ${SOURCIFY_REQUESTS_PER_SECOND:-2}
       POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
       CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
       VALKEY_URL: redis://valkey:6379
       NATS_URL: nats://nats:4222
       OBJECT_STORE_ENDPOINT: http://minio:9000
+      OBJECT_STORE_ACCESS_KEY: ${OBJECT_STORE_ACCESS_KEY:-zerotrace}
+      OBJECT_STORE_SECRET_KEY: ${OBJECT_STORE_SECRET_KEY:-change-me-in-non-local-environments}
+      OBJECT_STORE_BUCKET: ${OBJECT_STORE_BUCKET:-zerotrace-raw}
       GMGN_API_KEY: ${GMGN_API_KEY:-}
+      JUPITER_API_KEY: ${JUPITER_API_KEY:-}
+      ETHERSCAN_API_KEY: ${ETHERSCAN_API_KEY:-}
+      DUNE_API_KEY: ${DUNE_API_KEY:-}
+      NANSEN_API_KEY: ${NANSEN_API_KEY:-}
+      ARKHAM_API_KEY: ${ARKHAM_API_KEY:-}
     ports:
       - '${API_PORT:-8080}:8080'
     depends_on:
       postgres:
         condition: service_healthy
       clickhouse:
+        condition: service_healthy
+      minio:
         condition: service_healthy
       valkey:
         condition: service_healthy
@@ -49,6 +86,258 @@ services:
       - '${WEB_PORT:-5173}:80'
     depends_on:
       api:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  ingest-worker:
+    profiles: [ingest]
+    build:
+      context: .
+      target: ingest-worker
+    environment:
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      SQD_MAX_RANGE_BLOCKS: ${SQD_MAX_RANGE_BLOCKS:-50000}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+      CLICKHOUSE_URL: http://clickhouse:8123
+      OBJECT_STORE_ENDPOINT: http://minio:9000
+      OBJECT_STORE_ACCESS_KEY: ${OBJECT_STORE_ACCESS_KEY:-zerotrace}
+      OBJECT_STORE_SECRET_KEY: ${OBJECT_STORE_SECRET_KEY:-change-me-in-non-local-environments}
+      OBJECT_STORE_BUCKET: ${OBJECT_STORE_BUCKET:-zerotrace-raw}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  flap-origin-worker:
+    profiles: [semantic]
+    build:
+      context: .
+      target: semantic-worker
+    environment:
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+    command:
+      - --token
+      - ${FLAP_ORIGIN_TOKEN:-}
+      - --from
+      - ${FLAP_ORIGIN_FROM_BLOCK:-0}
+      - --to
+      - ${FLAP_ORIGIN_TO_BLOCK:-0}
+      - --chunk-size
+      - ${FLAP_ORIGIN_CHUNK_SIZE:-1000000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  flap-history-worker:
+    profiles: [semantic]
+    build:
+      context: .
+      target: semantic-worker
+    environment:
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+    entrypoint: ['node', 'services/semantic-worker/dist/src/history-cli.js']
+    command:
+      - --token
+      - ${FLAP_HISTORY_TOKEN:-}
+      - --from
+      - ${FLAP_HISTORY_FROM_BLOCK:-0}
+      - --to
+      - ${FLAP_HISTORY_TO_BLOCK:-0}
+      - --segment-size
+      - ${FLAP_HISTORY_SEGMENT_SIZE:-50000}
+      - --chunk-size
+      - ${FLAP_HISTORY_CHUNK_SIZE:-2000}
+      - --max-transactions
+      - ${FLAP_HISTORY_MAX_TRANSACTIONS:-250}
+      - --max-logs
+      - ${FLAP_HISTORY_MAX_LOGS:-25000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  burn-promotion-worker:
+    profiles: [burn-promotion]
+    build:
+      context: .
+      target: semantic-worker
+    environment:
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+    entrypoint: ['node', 'services/semantic-worker/dist/src/burn-promotion-cli.js']
+    command:
+      - --token
+      - ${BURN_PROMOTION_TOKEN:-}
+      - --from
+      - ${BURN_PROMOTION_FROM_BLOCK:-0}
+      - --to
+      - ${BURN_PROMOTION_TO_BLOCK:-0}
+      - --segment-size
+      - ${BURN_PROMOTION_SEGMENT_SIZE:-1000000}
+      - --max-transfers
+      - ${BURN_PROMOTION_MAX_TRANSFERS:-25000}
+      - --max-candidates-per-segment
+      - ${BURN_PROMOTION_MAX_CANDIDATES_PER_SEGMENT:-512}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  supply-continuity-worker:
+    profiles: [supply-continuity]
+    build:
+      context: .
+      target: semantic-worker
+    environment:
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+    entrypoint: ['node', 'services/semantic-worker/dist/src/supply-continuity-cli.js']
+    command:
+      - --token
+      - ${SUPPLY_CONTINUITY_TOKEN:-}
+      - --from
+      - ${SUPPLY_CONTINUITY_FROM_BLOCK:-1}
+      - --to
+      - ${SUPPLY_CONTINUITY_TO_BLOCK:-1}
+      - --segment-size
+      - ${SUPPLY_CONTINUITY_SEGMENT_SIZE:-128}
+      - --max-transfers
+      - ${SUPPLY_CONTINUITY_MAX_TRANSFERS:-25000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  flap-lifetime-worker:
+    profiles: [semantic]
+    build:
+      context: .
+      target: semantic-worker
+    environment:
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+      FLAP_LIFETIME_TARGET_BLOCK: ${FLAP_LIFETIME_TARGET_BLOCK:-}
+    entrypoint: ['node', 'services/semantic-worker/dist/src/lifetime-cli.js']
+    command:
+      - --token
+      - ${FLAP_LIFETIME_TOKEN:-}
+      - --origin-chunk-size
+      - ${FLAP_LIFETIME_ORIGIN_CHUNK_SIZE:-1000000}
+      - --history-segment-size
+      - ${FLAP_LIFETIME_HISTORY_SEGMENT_SIZE:-50000}
+      - --history-chunk-size
+      - ${FLAP_LIFETIME_HISTORY_CHUNK_SIZE:-2000}
+      - --history-max-transactions
+      - ${FLAP_LIFETIME_HISTORY_MAX_TRANSACTIONS:-250}
+      - --history-max-logs
+      - ${FLAP_LIFETIME_HISTORY_MAX_LOGS:-25000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [zerotrace]
+
+  flap-lifetime-head-worker:
+    profiles: [semantic]
+    build:
+      context: .
+      target: semantic-worker
+    restart: unless-stopped
+    environment:
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      DATA_QUALITY_MIN_SOURCES: ${DATA_QUALITY_MIN_SOURCES:-2}
+      FLAP_LIFETIME_HEAD_INTERVAL_MS: ${FLAP_LIFETIME_HEAD_INTERVAL_MS:-60000}
+      FLAP_LIFETIME_HEAD_MAX_CYCLES: ${FLAP_LIFETIME_HEAD_MAX_CYCLES:-}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+    entrypoint: ['node', 'services/semantic-worker/dist/src/lifetime-head-cli.js']
+    command:
+      - --token
+      - ${FLAP_LIFETIME_HEAD_TOKEN:-}
+      - --origin-chunk-size
+      - ${FLAP_LIFETIME_ORIGIN_CHUNK_SIZE:-1000000}
+      - --history-segment-size
+      - ${FLAP_LIFETIME_HISTORY_SEGMENT_SIZE:-50000}
+      - --history-chunk-size
+      - ${FLAP_LIFETIME_HISTORY_CHUNK_SIZE:-2000}
+      - --history-max-transactions
+      - ${FLAP_LIFETIME_HISTORY_MAX_TRANSACTIONS:-250}
+      - --history-max-logs
+      - ${FLAP_LIFETIME_HISTORY_MAX_LOGS:-25000}
+    depends_on:
+      postgres:
         condition: service_healthy
     networks: [zerotrace]
 
@@ -131,6 +420,11 @@ services:
       - '${MINIO_CONSOLE_PORT:-9001}:9001'
     volumes:
       - minio-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null']
+      interval: 5s
+      timeout: 4s
+      retries: 20
     networks: [zerotrace]
 
   temporal:

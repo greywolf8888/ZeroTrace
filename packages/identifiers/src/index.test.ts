@@ -31,6 +31,22 @@ describe('classifyIdentifier', () => {
     );
   });
 
+  it('recognizes a 64-byte Solana signature as a transaction identifier', () => {
+    const signature =
+      '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
+    expect(
+      classifyIdentifier(signature, { ledger: 'SOLANA', type: 'TRANSACTION' }).candidates,
+    ).toEqual([
+      expect.objectContaining({
+        ledger: 'SOLANA',
+        type: 'TRANSACTION',
+        normalizedId: signature,
+        validation: 'STRUCTURALLY_VALID',
+        confidence: 1,
+      }),
+    ]);
+  });
+
   it('does not turn arbitrary text into an address', () => {
     expect(classifyIdentifier('not-an-address').candidates).toHaveLength(0);
   });
@@ -68,7 +84,7 @@ describe('classifyIdentifier', () => {
 
   it('uses ledger and type hints to suppress incompatible candidates', () => {
     const solana = '11111111111111111111111111111111';
-    expect(classifyIdentifier(solana, { ledger: 'EVM' }).candidates).toEqual([]);
+    expect(classifyIdentifier(solana, { ledger: 'EVM', type: 'ADDRESS' }).candidates).toEqual([]);
     expect(
       classifyIdentifier('0x52908400098527886e0f7030069857d2e4169ee7', {
         ledger: 'EVM',
@@ -77,10 +93,11 @@ describe('classifyIdentifier', () => {
     ).toEqual([]);
   });
 
-  it('keeps a decimal height ambiguous unless the ledger is supplied', () => {
+  it('keeps a decimal block position ambiguous unless the ledger is supplied', () => {
     const automatic = classifyIdentifier('840000');
     expect(automatic.candidates).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ ledger: 'EVM', type: 'BLOCK' }),
         expect.objectContaining({ ledger: 'BITCOIN', type: 'BLOCK' }),
         expect.objectContaining({ ledger: 'SOLANA', type: 'BLOCK' }),
       ]),

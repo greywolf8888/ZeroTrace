@@ -1,8 +1,37 @@
 import { unknownValue, type Ledger } from '@zerotrace/schemas';
 
+export * from './flap.js';
+export * from './flap-market.js';
+export * from './flap-pension-entry.js';
+export * from './flap-market-reconciliation.js';
+export * from './flap-events.js';
+export * from './flap-history.js';
+export * from './flap-history-projection.js';
+export * from './flap-lifetime-extension.js';
+export * from './flap-lifetime.js';
+export * from './flap-origin.js';
+export * from './claim-evm.js';
+export * from './claim-evm-burn.js';
+export * from './claim-evm-burn-discovery.js';
+export * from './claim-evm-burn-promotion.js';
+export * from './claim-evm-supply-continuity.js';
+export * from './claim-evm-observation.js';
+export * from './claim-evm-pension-discovery.js';
+export * from './evm-control-rights.js';
+export * from './bitcoin-control-rights.js';
+export * from './bitcoin-transaction-entity.js';
+export * from './solana-control-rights.js';
+export * from './solana-asset-flow.js';
+export * from './solana-transaction-semantics.js';
+export * from './sourcify.js';
+
 export type PlatformRole = 'LAUNCH_MECHANISM' | 'EXECUTION_PLATFORM' | 'LABEL_PROVIDER';
 export type AdapterImplementationStatus =
-  'INTERFACE_READY' | 'IMPLEMENTED' | 'EXTERNAL_VALIDATION_REQUIRED' | 'LICENSE_ISOLATION_REQUIRED';
+  | 'INTERFACE_READY'
+  | 'PARTIALLY_IMPLEMENTED'
+  | 'IMPLEMENTED'
+  | 'EXTERNAL_VALIDATION_REQUIRED'
+  | 'LICENSE_ISOLATION_REQUIRED';
 
 export interface PlatformDescriptor {
   id: string;
@@ -20,13 +49,13 @@ export const PLATFORM_REGISTRY: readonly PlatformDescriptor[] = Object.freeze([
     name: 'Flap',
     roles: ['LAUNCH_MECHANISM'],
     ledgers: ['EVM'],
-    implementationStatus: 'EXTERNAL_VALIDATION_REQUIRED',
+    implementationStatus: 'PARTIALLY_IMPLEMENTED',
     officialSources: [
       'https://docs.flap.sh/flap/developers/inspect-a-token',
       'https://docs.flap.sh/flap/developers/basic-and-mechanism/bonding-curve',
     ],
     integrationBoundary:
-      'Read Portal/VaultPortal token state dynamically; never hard-code curve deployments.',
+      'Versioned Portal V8Safe/V6/V5 inspection, fixed-block previewSell, exact receipt events, durable origin/history scans, exact lifetime materialization, continuous accepted heads, deterministic rollback, provider-free replay, and verified Pancake V2 migrated-pool spot/buy/exit-size scenarios are wired; real-reorg acceptance, fork tax execution, vault, migration control, LP ownership, additional routes, gas, and executable capacity remain pending.',
   },
   {
     id: 'pump',

@@ -3,14 +3,20 @@
 ## Current deployment classification
 
 The repository supports a reproducible local/staging topology. It is **not production-approved**:
-durable repositories, authentication/authorization, multi-provider reconciliation, historical
-ingestion, backup recovery, load testing, and real-chain acceptance remain incomplete.
+Evidence/Snapshot persistence, bounded finalized raw-ledger ingestion, restart-safe bounded Flap
+history projection, and incremental finalized Flap lifetime heads are wired; authentication/
+authorization, remaining durable repositories, general continuous semantic history,
+archive-grade independent-operator and forced real-reorg acceptance, backup recovery, load testing,
+and terminal real-chain acceptance remain incomplete. Common-position endpoint reconciliation,
+parent-history continuity detection, append-only Flap rollback/replay, Evidence-linked Data Quality
+Alerts, and scoped Alchemy/BNB Chain market-RV reconciliation are implemented.
 
 ## Build
 
 ```bash
 docker compose config --quiet
-docker compose build api web postgres clickhouse
+docker compose build api web ingest-worker flap-origin-worker flap-history-worker \
+  flap-lifetime-worker flap-lifetime-head-worker postgres clickhouse
 ```
 
 The API image runs as the unprivileged Node user and is pruned of test, build, and development-log
@@ -39,8 +45,118 @@ Add the optional graph projection store:
 docker compose --profile graph up -d
 ```
 
-Profiles expose architecture seams; starting them does not mean their application repositories or
-workers are implemented.
+Profiles expose architecture seams. The `ingest` worker is implemented for bounded finalized blocks,
+transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana
+instructions/logs/balances/token balances/rewards; the `full` workflow and `graph` profiles do not
+imply their application projections or orchestration are implemented.
+
+Run one bounded finalized range through the implemented worker profile:
+
+```bash
+docker compose --profile ingest run --rm ingest-worker \
+  --dataset binance-mainnet --profile ledger-records --from 0 --to 100
+```
+
+The worker checks PostgreSQL Evidence/checkpoint schemas, ClickHouse Raw Facts, and the versioned
+object bucket before reading SQD. `block-headers` is the default profile; `transactions` adds strict
+ledger-specific raw transaction identities; `ledger-records` also adds the applicable EVM
+log/trace/state-diff, Bitcoin input/output, or Solana instruction/log/balance/token-balance/reward
+tables. These records retain provider shape and do not claim semantic transfer or protocol decoding.
+The worker is restart-safe for the same dataset/range/query identity and does not contain any
+chain-write operation. Scheduling and continuous-head following are not yet supplied.
+
+Run a wide, restart-safe Flap creation-origin scan through the separate semantic profile:
+
+```bash
+docker compose --profile semantic run --rm flap-origin-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 999999 --chunk-size 1000000
+```
+
+This one-shot worker requires initialized PostgreSQL Evidence and semantic checkpoint schemas. It
+persists completed chunks and a terminal Evidence-bearing result, but it is not a scheduler and does
+not project continuous event history.
+
+Run a wide, restart-safe Flap event-history projection through immutable bounded segments:
+
+```bash
+docker compose --profile semantic run --rm flap-history-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 0 --to 99999 --segment-size 50000 --chunk-size 10000
+```
+
+This worker requires migrations `001-008`. It preflights Evidence, semantic checkpoints, and the
+projection repository before reading SQD or BSC RPC. A segment is committed before its cursor is
+advanced; the identical command resumes from a safe boundary and completed runs replay without
+provider access. The terminal JSON contains a stable scan ID. With the API connected to the same
+PostgreSQL database, retrieve stored pages at:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/projections/<scan-id>?chainId=eip155:56&platform=flap&limit=20
+```
+
+The API endpoint and UI read only immutable projection rows. They never initiate an SQD/RPC scan.
+The worker is one-shot and does not claim deployment-origin-to-head continuity or lifetime coverage.
+
+Run an exact point-in-time lifetime materialization at the current finalized BSC head:
+
+```bash
+docker compose --profile semantic run --rm flap-lifetime-worker \
+  --token 0x0000000000000000000000000000000000000000
+```
+
+This service requires migrations `001-008` and preflights Evidence, semantic checkpoints and the
+immutable history projection before provider access. It obtains the official SQD dataset start,
+captures one finalized target, and composes origin plus origin-to-target event history. Set
+`FLAP_LIFETIME_TARGET_BLOCK` or pass `--target <block>` to pin an exact rerun; the worker proves that
+the target is no higher than the current finalized head. The terminal scan ID replays through:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/lifetime/materializations/<scan-id>?chainId=eip155:56&platform=flap
+```
+
+The endpoint and UI do not contact providers. A running checkpoint exposes progress but no terminal
+conclusion; a corrupt completed result fails closed. This one-shot proof can establish exact
+lifetime coverage at one Snapshot.
+
+Maintain accepted finalized lifetime heads continuously:
+
+```bash
+docker compose --profile semantic up --build flap-lifetime-head-worker
+```
+
+Set `FLAP_LIFETIME_HEAD_TOKEN`, two or more `EVM_BSC_RPC_URLS`, and an optional
+`FLAP_LIFETIME_HEAD_INTERVAL_MS`. This service requires migrations `001-010`. It reconciles a common
+finalized BSC target, appends only the missing delta after Evidence-proving the stored predecessor,
+and emits credential-free complete/deferred JSON events. The latest accepted state is available at:
+
+```text
+GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56&platform=flap
+```
+
+`FLAP_LIFETIME_HEAD_MAX_CYCLES` is for bounded tests and operations only; blank means continuous.
+Provider disagreement and retryable outages defer advancement. For a finalized conflict, all
+participating endpoints must agree over the active historical lineage before the worker appends an
+invalidation and immediately re-enters safe materialization/extension. Historical disagreement or
+unavailability never selects a branch. Forced real-reorg and independent-operator acceptance remain
+deployment gates.
+
+Run a bounded all-block ERC-20 supply-continuity scan as an isolated one-shot service:
+
+```bash
+docker compose --profile supply-continuity run --rm supply-continuity-worker \
+  --token 0x0000000000000000000000000000000000000000 \
+  --from 100000000 --to 100000127 --segment-size 128
+```
+
+Set `SUPPLY_CONTINUITY_TOKEN`, `SUPPLY_CONTINUITY_FROM_BLOCK`,
+`SUPPLY_CONTINUITY_TO_BLOCK`, `SUPPLY_CONTINUITY_SEGMENT_SIZE` and optionally
+`SUPPLY_CONTINUITY_MAX_TRANSFERS` for Compose defaults. The service requires PostgreSQL migrations
+for Evidence and semantic checkpoints, SQD for changed-block event conservation, and one or more
+BSC RPC endpoints with EIP-1898/historical-state support. Exact state conflicts cannot advance the
+cursor. Operator independence is verified only through the versioned official registry; endpoint
+count alone is insufficient. The service is read-only, exits after one range, accepts no signing
+material and does not schedule itself.
 
 ## Health and smoke checks
 
@@ -48,16 +164,34 @@ workers are implemented.
 docker compose ps
 npm run health
 curl http://localhost:8080/api/v1/capabilities
+curl http://localhost:8080/api/v1/data-quality/anchors
 curl http://localhost:8080/metrics
 ```
 
 Expected invariants:
 
 - `/health/live` returns HTTP 200, `status: UP`, and `readOnly: true`;
-- readiness is `UP` when at least one provider is healthy and `DEGRADED` otherwise;
+- readiness is `UP` when at least one provider is healthy and configured storage, if any, is healthy;
+- configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
+- missing or unhealthy Flap projection/head or Claim Report migrations `008`/`010`/`011` return
+  readiness HTTP 503 when PostgreSQL is configured;
+- `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
+- `/health` and `/api/v1/data-quality/anchors` distinguish agreement, disagreement, insufficient
+  sources, provider unavailability, continuity state, and data-quality storage health;
+- disagreement or a reorg/regression alert degrades full health, retains Evidence, and never chooses
+  a majority winner; one source cannot report agreement;
+- provider diagnostics expose request cache hits/misses/bypasses and a safe active endpoint ID;
+- a configured historical backend failure degrades aggregate health, while API readiness continues
+  to describe whether current API requests can be served;
 - capability output marks signing, broadcasting, and key storage as `FORBIDDEN`;
 - missing capabilities return 501 rather than fabricated data;
 - the UI renders provider failures and Unknown values visibly.
+
+For the Flap/Pancake V2 market reconciliation capability, configure at least two BSC endpoints
+whose operators appear in the versioned registry. The two keyless Compose defaults are both BNB
+Chain-operated and intentionally yield `SAME_OPERATOR`/`INCONCLUSIVE`. A local Alchemy endpoint plus
+a BNB Chain endpoint can satisfy the scoped independence gate, but does not by itself satisfy
+archive retention, outage, load, or forced-reorg acceptance.
 
 ## Production requirements not supplied by Compose
 
@@ -67,10 +201,13 @@ Before internet-facing deployment, add and verify:
 - SSO or equivalent authentication, role-based authorization, tenancy isolation, and audit logging;
 - a managed secret store and credential rotation;
 - provider egress allowlists and per-provider quotas;
-- redundant archive-grade providers with consistency checks;
+- redundant, independently operated archive-grade providers with common-position consistency checks;
+- explicit per-network EVM finality policy (`EVM_*_SNAPSHOT_TAG`, default `finalized`) and alerts
+  for unsupported or regressed provider finality;
 - encrypted persistent volumes, backups, restore drills, retention, and deletion policy;
-- PostgreSQL/ClickHouse migrations and application repository wiring;
-- object-store immutability/versioning;
+- migration automation plus remaining PostgreSQL and ClickHouse application repositories;
+- managed object retention/object-lock policy beyond the implemented versioned content-addressed
+  bucket;
 - metrics, logs, traces, alerts, SLOs, and incident response;
 - worker scaling and replay-safe workflow semantics;
 - image digest pinning, signature/provenance, vulnerability scan, and SBOM archival;
@@ -107,6 +244,103 @@ databases. It is not a substitute for production migrations. Before the first pe
 3. verify upgrade and rollback/roll-forward on a restored production-sized copy;
 4. monitor schema and ingestion version compatibility;
 5. test point-in-time restore and evidence-hash reconciliation.
+
+An existing local PostgreSQL volume does not rerun image entrypoint scripts. After backing it up,
+query `schema_migrations` and apply every missing append-only migration in numeric order. For a
+volume that currently contains only `001-002`, run:
+
+```bash
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/003_evidence_integrity.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/004_ingestion_checkpoints.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/005_data_quality.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/006_snapshot_observation_identity.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/007_semantic_scan_checkpoints.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/008_flap_history_projection.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/009_flap_lifetime_heads.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/010_flap_lifetime_reorgs.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/011_evm_claim_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/012_evm_control_surface_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/013_evm_control_source_provenance.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/014_solana_control_surface_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/015_solana_transaction_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/016_evm_pension_candidate_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/017_flap_pension_entry_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/018_entity_relationship_reports.sql
+```
+
+PowerShell equivalent:
+
+```powershell
+Get-Content -Raw infra/postgres/init/003_evidence_integrity.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/004_ingestion_checkpoints.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/005_data_quality.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/006_snapshot_observation_identity.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/007_semantic_scan_checkpoints.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/008_flap_history_projection.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/009_flap_lifetime_heads.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/010_flap_lifetime_reorgs.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/011_evm_claim_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/012_evm_control_surface_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/013_evm_control_source_provenance.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/014_solana_control_surface_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/015_solana_transaction_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/016_evm_pension_candidate_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/017_flap_pension_entry_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/018_entity_relationship_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+```
+
+Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`; missing report
+migrations surface explicit repository-specific `*_NOT_INITIALIZED` errors. Never delete a
+persistent volume as a migration strategy.
+
+Early development ClickHouse volumes may contain a pre-Evidence `raw_chain_facts` table using
+`MergeTree` and lacking `fact_id`, `schema_version`, `evidence_id`, and `raw_artifact_ref`. Do not
+invent those values for legacy rows. Inspect `SHOW CREATE TABLE zerotrace.raw_chain_facts` and
+`SELECT count()` first. If the table is empty, rename it to a dated `raw_chain_facts_legacy_*`
+backup and reapply `infra/clickhouse/init/001_raw_facts.sql`; this preserves the old table while
+creating the canonical `ReplacingMergeTree`. If it contains rows, export and retain them under the
+legacy schema for explicit provenance review instead of silently coercing them into current Raw
+Facts. Automated production migration for this legacy development schema remains an operations
+gate.
+
+Long-lived ClickHouse volumes also need explicit part/merge, retention and memory capacity policy.
+Error `241 MEMORY_LIMIT_EXCEEDED` is an availability failure, not permission to drop the volume or
+coerce missing reads to zero. Preserve the volume, inspect part counts/merge pressure and server
+memory settings from a restored copy, and prove compaction/retention changes under load before
+production. CI and acceptance use disposable initialized volumes so schema correctness remains
+separate from lifecycle capacity.
 
 ## Shutdown
 

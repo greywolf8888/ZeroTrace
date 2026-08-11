@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { SafeJsonRpcTransport, SafeRestTransport } from './transport.js';
+import {
+  FailoverJsonRpcTransport,
+  FailoverRestTransport,
+  SafeJsonRpcTransport,
+  SafeRestTransport,
+} from './transport.js';
 
 const localPolicy = {
   allowedHosts: ['localhost'],
@@ -9,6 +14,309 @@ const localPolicy = {
 };
 
 describe('safe transports', () => {
+  it('retries bounded transient failures and records diagnostics', async () => {
+    const fakeFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('temporary', { status: 503 }))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    const transport = new SafeRestTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: {
+        maxAttempts: 2,
+        retryBaseDelayMs: 0,
+        retryMaxDelayMs: 0,
+      },
+      fetchImplementation: fakeFetch,
+    });
+
+    await expect(transport.getText('/health')).resolves.toBe('ok');
+    expect(fakeFetch).toHaveBeenCalledTimes(2);
+    expect(transport.diagnostics()).toMatchObject({
+      logicalRequests: 1,
+      attempts: 2,
+      successes: 1,
+      failures: 0,
+      retries: 1,
+      circuitState: 'CLOSED',
+    });
+  });
+
+  it('uses a bounded Retry-After delay for rate-limited responses', async () => {
+    const delays: number[] = [];
+    const fakeFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response('limited', { status: 429, headers: { 'retry-after': '2' } }),
+      )
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    const transport = new SafeRestTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: { maxAttempts: 2, retryMaxDelayMs: 250 },
+      fetchImplementation: fakeFetch,
+      sleepImplementation: (milliseconds) => {
+        delays.push(milliseconds);
+        return Promise.resolve();
+      },
+    });
+
+    await expect(transport.getText('/health')).resolves.toBe('ok');
+    expect(delays).toEqual([250]);
+  });
+
+  it('caches successful reads with bounded freshness and refetches after expiry', async () => {
+    let now = 1_000;
+    const fakeFetch = vi
+      .fn<typeof fetch>()
+      .mockImplementation(async () => new Response('ok', { status: 200 }));
+    const transport = new SafeRestTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: { cacheTtlMs: 1_000, cacheMaxEntries: 2 },
+      fetchImplementation: fakeFetch,
+      nowImplementation: () => now,
+    });
+
+    await expect(transport.getText('/health')).resolves.toBe('ok');
+    await expect(transport.getText('/health')).resolves.toBe('ok');
+    expect(fakeFetch).toHaveBeenCalledTimes(1);
+    expect(transport.diagnostics()).toMatchObject({ cacheHits: 1, cacheMisses: 1 });
+
+    now += 1_001;
+    await expect(transport.getText('/health')).resolves.toBe('ok');
+    expect(fakeFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('bypasses stored responses for dynamic anchors without replacing the normal cache', async () => {
+    let responseNumber = 0;
+    const fakeFetch = vi.fn<typeof fetch>().mockImplementation(async () => {
+      responseNumber += 1;
+      return new Response(`head-${responseNumber}`, { status: 200 });
+    });
+    const transport = new SafeRestTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: { cacheTtlMs: 1_000, cacheMaxEntries: 2 },
+      fetchImplementation: fakeFetch,
+    });
+
+    await expect(transport.getText('/head')).resolves.toBe('head-1');
+    await expect(transport.getText('/head')).resolves.toBe('head-1');
+    await expect(transport.getText('/head', { cacheMode: 'bypass' })).resolves.toBe('head-2');
+    await expect(transport.getText('/head', { cacheMode: 'bypass' })).resolves.toBe('head-3');
+    await expect(transport.getText('/head')).resolves.toBe('head-1');
+    expect(fakeFetch).toHaveBeenCalledTimes(3);
+    expect(transport.diagnostics()).toMatchObject({
+      cacheHits: 2,
+      cacheMisses: 1,
+      cacheBypasses: 2,
+    });
+  });
+
+  it('paces distinct requests according to the configured endpoint rate', async () => {
+    let now = 10_000;
+    const delays: number[] = [];
+    const transport = new SafeRestTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: { requestsPerSecond: 2 },
+      fetchImplementation: vi
+        .fn<typeof fetch>()
+        .mockImplementation(async () => new Response('ok', { status: 200 })),
+      nowImplementation: () => now,
+      sleepImplementation: (milliseconds) => {
+        delays.push(milliseconds);
+        now += milliseconds;
+        return Promise.resolve();
+      },
+    });
+
+    await transport.getText('/one');
+    await transport.getText('/two');
+    expect(delays).toEqual([500]);
+    expect(transport.diagnostics().rateLimitDelays).toBe(1);
+  });
+
+  it('opens after the configured failure threshold and recovers through half-open', async () => {
+    let now = 1_000;
+    const fakeFetch = vi
+      .fn<typeof fetch>()
+      .mockRejectedValueOnce(new Error('socket failed'))
+      .mockResolvedValue(new Response('recovered', { status: 200 }));
+    const transport = new SafeRestTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: {
+        maxAttempts: 1,
+        circuitFailureThreshold: 1,
+        circuitResetMs: 1_000,
+      },
+      fetchImplementation: fakeFetch,
+      nowImplementation: () => now,
+    });
+
+    await expect(transport.getText('/health')).rejects.toMatchObject({ code: 'HTTP_ERROR' });
+    expect(transport.diagnostics().circuitState).toBe('OPEN');
+    await expect(transport.getText('/health')).rejects.toMatchObject({ code: 'CIRCUIT_OPEN' });
+    expect(fakeFetch).toHaveBeenCalledTimes(1);
+
+    now += 1_001;
+    await expect(transport.getText('/health')).resolves.toBe('recovered');
+    expect(transport.diagnostics().circuitState).toBe('CLOSED');
+    expect(fakeFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails over retryable JSON-RPC failures and keeps the healthy endpoint preferred', async () => {
+    const primaryFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('down', { status: 503 }));
+    const secondaryFetch = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as { id: number };
+      return new Response(JSON.stringify({ jsonrpc: '2.0', id: request.id, result: '0x1' }), {
+        status: 200,
+      });
+    });
+    const createEndpoint = (endpointId: string, fetchImplementation: typeof fetch) =>
+      new SafeJsonRpcTransport({
+        endpointId,
+        baseUrl: 'http://localhost:8545',
+        policy: localPolicy,
+        timeoutMs: 1000,
+        resilience: { maxAttempts: 1 },
+        fetchImplementation,
+      });
+    const transport = new FailoverJsonRpcTransport('pool', [
+      createEndpoint('primary', primaryFetch),
+      createEndpoint('secondary', secondaryFetch),
+    ]);
+
+    await expect(transport.requestSourced('eth_chainId')).resolves.toEqual({
+      value: '0x1',
+      endpointId: 'secondary',
+    });
+    await expect(transport.request('eth_chainId')).resolves.toBe('0x1');
+    expect(primaryFetch).toHaveBeenCalledTimes(1);
+    expect(secondaryFetch).toHaveBeenCalledTimes(2);
+    expect(transport.lastEndpointId).toBe('secondary');
+    expect(transport.diagnostics()).toMatchObject({ failovers: 1, activeEndpointId: 'secondary' });
+  });
+
+  it('keeps each concurrent response bound to its producer when failover changes the active endpoint', async () => {
+    let releasePrimary: (() => void) | undefined;
+    const primaryGate = new Promise<void>((resolve) => {
+      releasePrimary = resolve;
+    });
+    const rpcResponse = (init: RequestInit | undefined, result: string) => {
+      const request = JSON.parse(String(init?.body)) as { id: number };
+      return new Response(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }), {
+        status: 200,
+      });
+    };
+    const primaryFetch = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as { method: string };
+      if (request.method === 'switch_endpoint') return new Response('down', { status: 503 });
+      await primaryGate;
+      return rpcResponse(init, 'primary-result');
+    });
+    const secondaryFetch = vi
+      .fn<typeof fetch>()
+      .mockImplementation(async (_url, init) => rpcResponse(init, 'secondary-result'));
+    const endpoint = (endpointId: string, fetchImplementation: typeof fetch) =>
+      new SafeJsonRpcTransport({
+        endpointId,
+        baseUrl: 'http://localhost:8545',
+        policy: localPolicy,
+        timeoutMs: 1000,
+        resilience: { maxAttempts: 1 },
+        fetchImplementation,
+      });
+    const transport = new FailoverJsonRpcTransport('pool', [
+      endpoint('primary', primaryFetch),
+      endpoint('secondary', secondaryFetch),
+    ]);
+
+    const slowPrimary = transport.requestSourced('slow_primary');
+    const switched = await transport.requestSourced('switch_endpoint');
+    releasePrimary?.();
+    const primary = await slowPrimary;
+
+    expect(switched).toEqual({ value: 'secondary-result', endpointId: 'secondary' });
+    expect(primary).toEqual({ value: 'primary-result', endpointId: 'primary' });
+    expect(transport.lastEndpointId).toBe('primary');
+  });
+
+  it('fails over retryable REST failures without changing the requested path', async () => {
+    const primary = new SafeRestTransport({
+      endpointId: 'primary',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: { maxAttempts: 1 },
+      fetchImplementation: vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response('down', { status: 503 })),
+    });
+    const secondaryFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('ok', { status: 200 }));
+    const secondary = new SafeRestTransport({
+      endpointId: 'secondary',
+      baseUrl: 'http://localhost:8081',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      fetchImplementation: secondaryFetch,
+    });
+    const transport = new FailoverRestTransport('pool', [primary, secondary]);
+
+    await expect(transport.getTextSourced('/blocks/tip/height')).resolves.toEqual({
+      value: 'ok',
+      endpointId: 'secondary',
+    });
+    expect(String(secondaryFetch.mock.calls[0]?.[0])).toBe(
+      'http://localhost:8081/blocks/tip/height',
+    );
+    expect(transport.lastEndpointId).toBe('secondary');
+  });
+
+  it('maps JSON-RPC quota errors to retryable rate limiting', async () => {
+    const fakeFetch = vi.fn<typeof fetch>().mockImplementation(async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as { id: number };
+      return new Response(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: request.id,
+          error: { code: -32005, message: 'compute units per second capacity exceeded' },
+        }),
+        { status: 200 },
+      );
+    });
+    const transport = new SafeJsonRpcTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8545',
+      policy: localPolicy,
+      timeoutMs: 1000,
+      resilience: { maxAttempts: 1 },
+      fetchImplementation: fakeFetch,
+    });
+    await expect(transport.request('eth_blockNumber')).rejects.toMatchObject({
+      code: 'RATE_LIMITED',
+      retryable: true,
+    });
+  });
+
   it('rejects redirects instead of following them to an unvalidated host', async () => {
     const fakeFetch = vi.fn<typeof fetch>().mockResolvedValue(
       new Response('', {

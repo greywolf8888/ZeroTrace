@@ -6,13 +6,76 @@ import { Counter, Registry, collectDefaultMetrics } from 'prom-client';
 import { z, ZodError } from 'zod';
 
 import { ProviderError } from '@zerotrace/chain-adapters';
-import { resolveEntityRelationship } from '@zerotrace/entity-engine';
-import { createEvidence } from '@zerotrace/evidence';
+import { parseEvmClaimDeclaration } from '@zerotrace/claim-audit';
+import {
+  auditDiscrepancies,
+  DISCREPANCY_MODEL_VERSION,
+  resolveSourceOperators,
+} from '@zerotrace/data-quality';
+import {
+  canonicalizeEntityRelationshipInput,
+  ENTITY_RELATIONSHIP_MODEL_VERSION,
+  resolveEntityRelationship,
+} from '@zerotrace/entity-engine';
+import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
-import { PLATFORM_REGISTRY } from '@zerotrace/platform-adapters';
+import {
+  FLAP_BSC_MAINNET_DEPLOYMENT,
+  FLAP_EVENT_MODEL_VERSION,
+  FLAP_HISTORY_DEFAULT_CHUNK_SIZE,
+  FLAP_HISTORY_MAX_CHUNKS,
+  FLAP_HISTORY_MAX_RANGE_BLOCKS,
+  FLAP_HISTORY_MODEL_VERSION,
+  FLAP_LIFETIME_MATERIALIZATION_SOURCE,
+  FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
+  FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
+  FLAP_TOKEN_ORIGIN_MAX_CHUNKS,
+  FLAP_TOKEN_ORIGIN_MODEL_VERSION,
+  PLATFORM_REGISTRY,
+  discoverErc20BurnCandidates,
+  discoverEvmPensionCandidates,
+  discoverFlapEventHistory,
+  inspectFlapEventTransaction,
+  observeEvmClaimBurnBlock,
+  inspectFlapTokenOrigin,
+  inspectFlapTokenOriginRestartSafe,
+  inspectFlapToken,
+  inspectEvmControlSurface,
+  inspectSolanaControlSurface,
+  quoteFlapPancakeV2BuyScenarios,
+  quoteFlapPancakeV2SellScenarios,
+  quoteFlapPensionEntryScenarios,
+  reconcileFlapPancakeV2Market,
+  quoteFlapSell,
+  replayErc20BurnPromotionResult,
+  replayErc20SupplyContinuityResult,
+  type InspectFlapTokenOriginOptions,
+} from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
+  ClaimReportStorageError,
+  ControlSurfaceReportStorageError,
+  EntityRelationshipReportStorageError,
+  FlapHistoryProjectionError,
+  FlapLifetimeHeadError,
+  FlapPensionEntryReportStorageError,
+  PensionCandidateReportStorageError,
+  SemanticCheckpointError,
+  SolanaTransactionReportStorageError,
+  StorageError,
+  type ObjectStoreHealth,
+  type RawFactStorageHealth,
+  type StorageHealth,
+  type StoredSolanaTransactionReport,
+} from '@zerotrace/storage';
+import {
   AnalysisMetadataSchema,
+  DiscrepancyCheckInputSchema,
+  EntityRelationshipInputSchema,
+  EntityRelationshipReportSchema,
+  FlapEventHistoryProjectionSchema,
+  FlapLifetimeMaterializationSchema,
+  SolanaTransactionIntelligenceReportSchema,
   knownValue,
   unavailableValue,
   unknownValue,
@@ -23,6 +86,16 @@ import {
 } from '@zerotrace/schemas';
 
 import type { AppConfig } from './config.js';
+import {
+  queryBitcoinBlock,
+  queryBitcoinAddress,
+  queryBitcoinOutpoint,
+  queryBitcoinTransaction,
+  queryEvmBlock,
+  queryEvmTransaction,
+  querySolanaBlock,
+  querySolanaTransaction,
+} from './ledger-query.js';
 import { createRuntime, type AppRuntime } from './runtime.js';
 
 const SearchQuerySchema = z.object({
@@ -31,37 +104,525 @@ const SearchQuerySchema = z.object({
   chainId: z.string().min(1).max(128).optional(),
 });
 
-const EntityFeatureSchema = z.object({
-  kind: z.enum([
-    'SHARED_ONCHAIN_AUTHORITY',
-    'COMMON_FUNDER',
-    'SHARED_FEE_PAYER',
-    'SETTLEMENT_CONVERGENCE',
-    'TRANSACTION_GRAMMAR',
-    'TIMING_SYNCHRONY',
-    'EARLY_BUYER_COHORT',
-    'TOKEN_DISTRIBUTION',
-    'INDEPENDENT_HISTORY',
-    'DISTINCT_FUNDING',
-    'DISTINCT_SETTLEMENT',
-    'CEX_PATH_BREAK',
-    'SERVICE_HUB',
-    'COINJOIN',
-    'BOT_COMMON_INFRASTRUCTURE',
-  ]),
-  strength: z.number().min(0).max(1),
-  reliability: z.number().min(0).max(1),
-  evidenceId: z.string().min(1),
+const LedgerRecordParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.enum(['EVM', 'BITCOIN', 'SOLANA'])),
+  type: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.enum(['TRANSACTION', 'BLOCK', 'OUTPOINT'])),
+  id: z.string().trim().min(1).max(512),
 });
 
-const EntityRequestSchema = z.object({
-  subjectA: z.string().min(1),
-  subjectB: z.string().min(1),
-  features: z.array(EntityFeatureSchema).max(1_000),
-  metadata: AnalysisMetadataSchema,
-  subjectAIsService: z.boolean().optional(),
-  subjectBIsService: z.boolean().optional(),
+const LedgerRecordQuerySchema = z.object({
+  chainId: z.string().trim().min(1).max(128).optional(),
 });
+
+const SolanaTransactionReportParamsSchema = z.object({
+  signature: z
+    .string()
+    .trim()
+    .regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/),
+});
+
+const SolanaTransactionReportByIdParamsSchema = SolanaTransactionReportParamsSchema.extend({
+  reportId: z.string().regex(/^str_[0-9a-f]{24}$/),
+});
+
+const LaunchInspectionParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  token: z.string().trim().min(1).max(128),
+});
+
+const LaunchInspectionQuerySchema = z.object({
+  chainId: z.literal('eip155:56'),
+  platform: z.literal('flap').optional(),
+  blockNumber: z
+    .string()
+    .regex(/^(?:0|[1-9]\d*)$/)
+    .optional(),
+});
+
+const ClaimReportParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  token: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
+  address: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+const ClaimReportByIdParamsSchema = ClaimReportParamsSchema.extend({
+  reportId: z.string().regex(/^ecr_[0-9a-f]{24}$/),
+});
+
+const ClaimReportQuerySchema = z.object({
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+});
+
+const EvmControlSurfaceParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  subject: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
+});
+const SolanaControlSurfaceParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('SOLANA')),
+  subject: z
+    .string()
+    .trim()
+    .regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
+});
+const ControlSurfaceParamsSchema = z.union([
+  EvmControlSurfaceParamsSchema,
+  SolanaControlSurfaceParamsSchema,
+]);
+
+const ControlSurfaceByIdParamsSchema = z.union([
+  EvmControlSurfaceParamsSchema.extend({ reportId: z.string().regex(/^ecs_[0-9a-f]{24}$/) }),
+  SolanaControlSurfaceParamsSchema.extend({ reportId: z.string().regex(/^scs_[0-9a-f]{24}$/) }),
+]);
+
+const ControlSurfaceQuerySchema = z.object({
+  chainId: z.union([z.string().regex(/^eip155:[1-9]\d*$/), z.literal('solana-mainnet')]),
+});
+
+const ControlSurfaceInspectSchema = ControlSurfaceQuerySchema.extend({
+  blockNumber: z
+    .string()
+    .regex(/^(0|[1-9]\d*)$/)
+    .optional(),
+});
+
+const ControlSurfaceListQuerySchema = z.union([
+  ControlSurfaceQuerySchema.extend({
+    ledger: z
+      .string()
+      .transform((value) => value.toUpperCase())
+      .pipe(z.literal('EVM')),
+    subject: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+  }),
+  z.object({
+    ledger: z
+      .string()
+      .transform((value) => value.toUpperCase())
+      .pipe(z.literal('SOLANA')),
+    chainId: z.literal('solana-mainnet'),
+    subject: z
+      .string()
+      .trim()
+      .regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
+  }),
+]);
+
+const ClaimBurnParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  token: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+const ClaimBurnRequestSchema = z.object({
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  blockNumber: z.string().regex(/^[1-9]\d*$/),
+  maxTransfers: z.number().int().min(1).max(25_000).optional(),
+});
+
+const ClaimBurnPromotionParamsSchema = ClaimBurnParamsSchema.extend({
+  scanId: z.uuid(),
+});
+
+const ClaimSupplyContinuityParamsSchema = ClaimBurnParamsSchema.extend({
+  scanId: z.uuid(),
+});
+
+const ClaimBurnDiscoveryRequestSchema = z
+  .object({
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    fromBlock: z.string().regex(/^(0|[1-9]\d*)$/),
+    toBlock: z.string().regex(/^[1-9]\d*$/),
+    maxBlocksPerRequest: z.number().int().min(1).max(1_000_000).optional(),
+    maxTransfers: z.number().int().min(1).max(100_000).optional(),
+    maxCandidates: z.number().int().min(1).max(10_000).optional(),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    if (toBlock < fromBlock) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Burn candidate range must be ordered.',
+      });
+    } else if (toBlock - fromBlock + 1n > 5_000_000n) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Burn candidate range may contain at most 5000000 blocks.',
+      });
+    }
+  });
+
+const PensionCandidateReportByIdParamsSchema = ClaimBurnParamsSchema.extend({
+  reportId: z.string().regex(/^pcr_[0-9a-f]{24}$/),
+});
+
+const PensionCandidateDiscoveryRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    fromBlock: z.string().regex(/^(0|[1-9]\d*)$/),
+    toBlock: z.string().regex(/^[1-9]\d*$/),
+    shareUnitAtomic: z
+      .string()
+      .regex(/^[1-9]\d*$/)
+      .max(96),
+    minimumExactUnitDeposits: z.number().int().min(1).max(100_000),
+    minimumUniqueExactUnitDepositors: z.number().int().min(1).max(100_000),
+    maximumCandidates: z.number().int().min(1).max(1_000),
+    maxBlocksPerRequest: z.number().int().min(1).max(1_000_000).optional(),
+    maxRequests: z.number().int().min(1).max(10_000).optional(),
+    maxTransfers: z.number().int().min(1).max(1_000_000).optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    if (toBlock < fromBlock) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Pension candidate range must be ordered.',
+      });
+    } else if (toBlock - fromBlock + 1n > 5_000_000n) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Pension candidate range may contain at most 5000000 blocks.',
+      });
+    }
+  });
+
+const FlapEventTransactionParamsSchema = LaunchInspectionParamsSchema.extend({
+  transactionHash: z
+    .string()
+    .trim()
+    .regex(/^0x[0-9a-fA-F]{64}$/),
+});
+
+const FlapEventTransactionQuerySchema = z.object({
+  chainId: z.literal('eip155:56'),
+  platform: z.literal('flap').optional(),
+});
+
+const FlapEventHistoryQuerySchema = FlapEventTransactionQuerySchema.extend({
+  fromBlock: z
+    .string()
+    .max(32)
+    .regex(/^(?:0|[1-9]\d*)$/),
+  toBlock: z
+    .string()
+    .max(32)
+    .regex(/^(?:0|[1-9]\d*)$/),
+  chunkSize: z.coerce.number().int().min(1).max(10_000).optional(),
+}).superRefine((query, context) => {
+  const fromBlock = BigInt(query.fromBlock);
+  const toBlock = BigInt(query.toBlock);
+  if (toBlock < fromBlock) {
+    context.addIssue({ code: 'custom', path: ['toBlock'], message: 'toBlock precedes fromBlock.' });
+  } else if (toBlock - fromBlock + 1n > BigInt(FLAP_HISTORY_MAX_RANGE_BLOCKS)) {
+    context.addIssue({
+      code: 'custom',
+      path: ['toBlock'],
+      message: `History range exceeds ${FLAP_HISTORY_MAX_RANGE_BLOCKS} blocks.`,
+    });
+  } else {
+    const chunkSize = BigInt(query.chunkSize ?? FLAP_HISTORY_DEFAULT_CHUNK_SIZE);
+    const chunkCount = (toBlock - fromBlock + chunkSize) / chunkSize;
+    if (chunkCount > BigInt(FLAP_HISTORY_MAX_CHUNKS)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['chunkSize'],
+        message: `History query exceeds ${FLAP_HISTORY_MAX_CHUNKS} chunks.`,
+      });
+    }
+  }
+});
+
+const FlapHistoryProjectionParamsSchema = LaunchInspectionParamsSchema.extend({
+  scanId: z.string().uuid(),
+});
+
+const FlapHistoryProjectionPageQuerySchema = FlapEventTransactionQuerySchema.extend({
+  afterBlock: z.coerce.number().int().nonnegative().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+const FlapTokenOriginQuerySchema = FlapEventTransactionQuerySchema.extend({
+  fromBlock: z
+    .string()
+    .max(32)
+    .regex(/^(?:0|[1-9]\d*)$/),
+  toBlock: z
+    .string()
+    .max(32)
+    .regex(/^(?:0|[1-9]\d*)$/),
+  chunkSize: z.coerce.number().int().min(1).max(FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE).optional(),
+}).superRefine((query, context) => {
+  const fromBlock = BigInt(query.fromBlock);
+  const toBlock = BigInt(query.toBlock);
+  if (toBlock < fromBlock) {
+    context.addIssue({ code: 'custom', path: ['toBlock'], message: 'toBlock precedes fromBlock.' });
+  } else if (toBlock - fromBlock + 1n > BigInt(FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE)) {
+    context.addIssue({
+      code: 'custom',
+      path: ['toBlock'],
+      message: `Synchronous origin range exceeds ${FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE} blocks.`,
+    });
+  } else {
+    const selectedChunkSize = BigInt(query.chunkSize ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE);
+    const chunkCount = (toBlock - fromBlock + selectedChunkSize) / selectedChunkSize;
+    if (chunkCount > BigInt(FLAP_TOKEN_ORIGIN_MAX_CHUNKS)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['chunkSize'],
+        message: `Origin query exceeds ${FLAP_TOKEN_ORIGIN_MAX_CHUNKS} chunks.`,
+      });
+    }
+  }
+});
+
+const FlapSellQuoteRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z.string().trim().min(1).max(128),
+    inputQuantity: z.string().regex(/^(?:0|[1-9]\d*)$/),
+    blockNumber: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  })
+  .strict();
+
+const ClaimDeclarationParseRequestSchema = z
+  .object({
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    assetId: z
+      .string()
+      .trim()
+      .regex(/^eip155:[1-9]\d*:erc20:0x[0-9a-fA-F]{40}$/),
+    text: z.string().trim().min(1).max(100_000),
+    sourceUri: z
+      .url()
+      .max(2_048)
+      .refine((value) => /^https?:\/\//i.test(value), {
+        message: 'Claim declaration sourceUri must use HTTP(S).',
+      })
+      .optional(),
+    auditWindow: z
+      .object({
+        from: z.iso.datetime({ offset: true }),
+        to: z.iso.datetime({ offset: true }),
+      })
+      .refine((window) => Date.parse(window.from) <= Date.parse(window.to), {
+        message: 'Audit window must not end before it begins.',
+      })
+      .optional(),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (!input.assetId.startsWith(`${input.chainId}:`)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['assetId'],
+        message: 'Claim declaration assetId must belong to the requested EVM chain.',
+      });
+    }
+  });
+
+const FlapPancakeV2BuyScenarioRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    quoteInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
+    blockNumber: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  })
+  .strict();
+
+const FlapPancakeV2SellScenarioRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    tokenInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
+    blockNumber: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  })
+  .strict();
+
+const FlapPancakeV2PensionEntryRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    quoteInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
+    pensionReportId: z
+      .string()
+      .regex(/^pcr_[0-9a-f]{24}$/)
+      .optional(),
+    pensionWallet: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/)
+      .optional(),
+    blockNumber: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  })
+  .strict();
+
+const FlapPensionEntryReportQuerySchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+  })
+  .strict();
+
+const FlapPensionEntryReportParamsSchema = z
+  .object({ reportId: z.string().regex(/^per_[0-9a-f]{24}$/) })
+  .strict();
+
+const EntityRelationshipReportQuerySchema = z
+  .object({
+    ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']),
+    chainId: z.string().trim().min(1).max(128),
+    subjectA: z.string().trim().min(1).max(512),
+    subjectB: z.string().trim().min(1).max(512),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.subjectA === value.subjectB) {
+      context.addIssue({
+        code: 'custom',
+        path: ['subjectB'],
+        message: 'Entity relationship subjects must be distinct.',
+      });
+    }
+  });
+
+const EntityRelationshipReportParamsSchema = z
+  .object({ reportId: z.string().regex(/^erh_[0-9a-f]{24}$/) })
+  .strict();
+
+const FlapPancakeV2ReconciliationRequestSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    platform: z.literal('flap').optional(),
+    token: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    quoteInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
+    tokenInputs: z
+      .array(
+        z
+          .string()
+          .trim()
+          .max(128)
+          .regex(/^(?:0|[1-9]\d*)(?:\.\d+)?$/),
+      )
+      .min(1)
+      .max(8),
+  })
+  .strict();
+
+const DiscrepancyAuditRequestSchema = z
+  .object({
+    checks: z.array(DiscrepancyCheckInputSchema).max(1_000),
+    metadata: AnalysisMetadataSchema,
+  })
+  .strict();
 
 const AtomicQuantitySchema = z.string().regex(/^(0|[1-9]\d*)$/);
 const PositiveAtomicQuantitySchema = AtomicQuantitySchema.refine((value) => BigInt(value) > 0n, {
@@ -136,23 +697,83 @@ function emptyMetadata(modelVersion: string, confidence = 0): AnalysisMetadata {
   };
 }
 
-function addEvidence(
+function solanaTransactionReportResponse(
+  record: StoredSolanaTransactionReport,
+  replayed: boolean,
+  liveRefresh:
+    ReturnType<typeof unavailableValue> | ReturnType<typeof knownValue<boolean>> = knownValue(true),
+) {
+  return {
+    ...record.report,
+    durableReport: {
+      id: record.id,
+      resultHash: record.resultHash,
+      createdAt: record.createdAt,
+      capturedAt: record.capturedAt,
+      replayed,
+      liveRefresh,
+    },
+  };
+}
+
+async function getEvidenceNode(runtime: AppRuntime, id: string) {
+  return runtime.evidenceLedger.get(id) ?? runtime.evidenceRepository?.get(id);
+}
+
+async function addEvidence(
   runtime: AppRuntime,
   evidence: Evidence,
   sourceEvidenceIds: readonly string[] = [],
-): Evidence {
-  const existing = runtime.evidenceLedger.get(evidence.id);
-  if (existing !== undefined) return existing.evidence;
-  runtime.evidenceLedger.add(evidence, sourceEvidenceIds);
-  return evidence;
+  snapshot?: AnalysisSnapshot,
+): Promise<Evidence> {
+  const existing = await getEvidenceNode(runtime, evidence.id);
+  if (existing !== undefined) {
+    const normalizedSources = uniqueEvidenceIds(sourceEvidenceIds).sort();
+    if (
+      hashPayload(existing.evidence) !== hashPayload(evidence) ||
+      hashPayload(existing.sourceEvidenceIds) !== hashPayload(normalizedSources)
+    ) {
+      throw new StorageError(
+        'EVIDENCE_CONFLICT',
+        'Existing Evidence conflicts with the canonical observation.',
+      );
+    }
+    if (hashPayload(existing.snapshot ?? null) !== hashPayload(snapshot ?? null)) {
+      throw new StorageError('SNAPSHOT_CONFLICT', 'Existing Evidence uses a different Snapshot.');
+    }
+    return existing.evidence;
+  }
+  const stored = await runtime.evidenceRepository?.put(evidence, sourceEvidenceIds, snapshot);
+  if (sourceEvidenceIds.every((id) => runtime.evidenceLedger.get(id) !== undefined)) {
+    runtime.evidenceLedger.add(evidence, sourceEvidenceIds, snapshot);
+  }
+  return stored?.evidence ?? evidence;
 }
 
 function uniqueEvidenceIds(ids: readonly string[]): string[] {
   return [...new Set(ids)];
 }
 
-function missingEvidenceIds(runtime: AppRuntime, ids: readonly string[]): string[] {
-  return uniqueEvidenceIds(ids).filter((id) => runtime.evidenceLedger.get(id) === undefined);
+function uniqueSourceIds(ids: readonly string[]): string[] {
+  return [...new Set(ids)].sort();
+}
+
+function canonicalSubjectPair(subjectA: string, subjectB: string): [string, string] {
+  return subjectA < subjectB ? [subjectA, subjectB] : [subjectB, subjectA];
+}
+
+function evidenceSourceId(ids: readonly string[]): string {
+  return uniqueSourceIds(ids).join('|');
+}
+
+function snapshotSourceIds(snapshot: AnalysisSnapshot): string[] {
+  return Object.keys(snapshot.providerVersions);
+}
+
+async function missingEvidenceIds(runtime: AppRuntime, ids: readonly string[]): Promise<string[]> {
+  const unique = uniqueEvidenceIds(ids);
+  const nodes = await Promise.all(unique.map((id) => getEvidenceNode(runtime, id)));
+  return unique.filter((_id, index) => nodes[index] === undefined);
 }
 
 function snapshotPosition(snapshot: AnalysisSnapshot): {
@@ -161,32 +782,37 @@ function snapshotPosition(snapshot: AnalysisSnapshot): {
 } {
   switch (snapshot.ledger) {
     case 'EVM':
-      return { blockOrSlot: snapshot.blockNumber, finality: 'snapshot-block' };
+      return { blockOrSlot: snapshot.blockNumber, finality: snapshot.finality };
     case 'BITCOIN':
-      return { blockOrSlot: snapshot.height, finality: 'best-chain' };
+      return { blockOrSlot: snapshot.height, finality: snapshot.finality };
     case 'SOLANA':
       return { blockOrSlot: snapshot.slot, finality: snapshot.commitment };
   }
 }
 
-function incompatibleEvidenceIds(
+async function incompatibleEvidenceIds(
   runtime: AppRuntime,
   ids: readonly string[],
   snapshot: AnalysisSnapshot,
-): string[] {
+): Promise<string[]> {
   const position = snapshotPosition(snapshot);
-  return uniqueEvidenceIds(ids).filter((id) => {
-    const node = runtime.evidenceLedger.get(id);
+  const unique = uniqueEvidenceIds(ids);
+  const nodes = await Promise.all(unique.map((id) => getEvidenceNode(runtime, id)));
+  return unique.filter((_id, index) => {
+    const node = nodes[index];
     if (node === undefined) return false;
-    return (
+    if (
       node.evidence.ledger !== snapshot.ledger ||
       node.evidence.chainId !== snapshot.chainId ||
       node.evidence.blockOrSlot !== position.blockOrSlot
-    );
+    ) {
+      return true;
+    }
+    return node.snapshot === undefined || hashPayload(node.snapshot) !== hashPayload(snapshot);
   });
 }
 
-function addDerivedAnalysisEvidence(
+async function addDerivedAnalysisEvidence(
   runtime: AppRuntime,
   snapshot: AnalysisSnapshot,
   sourceEvidenceIds: readonly string[],
@@ -194,7 +820,7 @@ function addDerivedAnalysisEvidence(
   locator: string,
   payload: unknown,
   summary: string,
-): Evidence {
+): Promise<Evidence> {
   const position = snapshotPosition(snapshot);
   return addEvidence(
     runtime,
@@ -208,8 +834,10 @@ function addDerivedAnalysisEvidence(
       blockOrSlot: position.blockOrSlot,
       finality: position.finality,
       summary,
+      sourceEvidenceIds,
     }),
     sourceEvidenceIds,
+    snapshot,
   );
 }
 
@@ -259,8 +887,16 @@ export interface CreateAppOptions {
   logger?: boolean;
 }
 
+class CorsOriginError extends Error {
+  constructor() {
+    super('Origin is not allowed.');
+    this.name = 'CorsOriginError';
+  }
+}
+
 export async function createApp(options: CreateAppOptions): Promise<FastifyInstance> {
   const runtime = options.runtime ?? createRuntime(options.config);
+  const ownsRuntime = options.runtime === undefined;
   const app = Fastify({
     logger:
       options.logger === false
@@ -279,7 +915,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   await app.register(cors, {
     origin: (origin, callback) => {
       if (origin === undefined || options.config.corsOrigins.includes(origin)) callback(null, true);
-      else callback(new Error('Origin is not allowed.'), false);
+      else callback(new CorsOriginError(), false);
     },
     methods: ['GET', 'POST', 'OPTIONS'],
   });
@@ -316,6 +952,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     });
     done();
   });
+  if (ownsRuntime && runtime.close !== undefined) {
+    app.addHook('onClose', runtime.close);
+  }
 
   let healthCache:
     | { expiresAt: number; value: Awaited<ReturnType<AppRuntime['providerRegistry']['health']>> }
@@ -326,8 +965,256 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     healthCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
   };
+  type RuntimeStorageHealth =
+    | StorageHealth
+    | Awaited<ReturnType<NonNullable<AppRuntime['semanticCheckpoints']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['flapHistoryProjection']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['flapLifetimeHeads']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['claimReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['pensionCandidateReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['pensionEntryReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipReports']>['health']>>
+    | {
+        status: 'EPHEMERAL';
+        backend: 'MEMORY';
+        durable: false;
+        checkedAt: string;
+      };
+  let storageCache: { expiresAt: number; value: RuntimeStorageHealth } | undefined;
+  const storageHealth = async (): Promise<RuntimeStorageHealth> => {
+    if (storageCache !== undefined && storageCache.expiresAt > Date.now()) {
+      return storageCache.value;
+    }
+    let value: RuntimeStorageHealth;
+    if (runtime.evidenceRepository === undefined) {
+      value = {
+        status: 'EPHEMERAL',
+        backend: 'MEMORY',
+        durable: false,
+        checkedAt: new Date().toISOString(),
+      };
+    } else {
+      const [
+        evidence,
+        semanticCheckpoints,
+        flapHistoryProjection,
+        flapLifetimeHeads,
+        claimReports,
+        controlSurfaces,
+        solanaControlSurfaces,
+        solanaTransactionReports,
+        pensionCandidateReports,
+        pensionEntryReports,
+        entityRelationshipReports,
+      ] = await Promise.all([
+        runtime.evidenceRepository.health(),
+        runtime.semanticCheckpoints?.health(),
+        runtime.flapHistoryProjection?.health(),
+        runtime.flapLifetimeHeads?.health(),
+        runtime.claimReports?.health(),
+        runtime.controlSurfaces?.health(),
+        runtime.solanaControlSurfaces?.health(),
+        runtime.solanaTransactionReports?.health(),
+        runtime.pensionCandidateReports?.health(),
+        runtime.pensionEntryReports?.health(),
+        runtime.entityRelationshipReports?.health(),
+      ]);
+      value =
+        evidence.status === 'DOWN'
+          ? evidence
+          : semanticCheckpoints?.status === 'DOWN'
+            ? semanticCheckpoints
+            : flapHistoryProjection?.status === 'DOWN'
+              ? flapHistoryProjection
+              : flapLifetimeHeads?.status === 'DOWN'
+                ? flapLifetimeHeads
+                : claimReports?.status === 'DOWN'
+                  ? claimReports
+                  : controlSurfaces?.status === 'DOWN'
+                    ? controlSurfaces
+                    : solanaControlSurfaces?.status === 'DOWN'
+                      ? solanaControlSurfaces
+                      : solanaTransactionReports?.status === 'DOWN'
+                        ? solanaTransactionReports
+                        : pensionCandidateReports?.status === 'DOWN'
+                          ? pensionCandidateReports
+                          : pensionEntryReports?.status === 'DOWN'
+                            ? pensionEntryReports
+                            : entityRelationshipReports?.status === 'DOWN'
+                              ? entityRelationshipReports
+                              : evidence;
+    }
+    storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
+    return value;
+  };
+  type UnconfiguredStorageHealth = {
+    status: 'UNCONFIGURED';
+    backend: 'CLICKHOUSE' | 'POSTGRES' | 'S3_COMPATIBLE';
+    durable: true;
+    checkedAt: string;
+  };
+  type IngestionStorageHealth = {
+    status: 'UP' | 'DOWN' | 'PARTIAL' | 'UNCONFIGURED';
+    configured: number;
+    required: 3;
+    checkedAt: string;
+    rawFacts: RawFactStorageHealth | UnconfiguredStorageHealth;
+    checkpoints:
+      | Awaited<ReturnType<NonNullable<AppRuntime['ingestionStorage']['checkpoints']>['health']>>
+      | UnconfiguredStorageHealth;
+    artifacts: ObjectStoreHealth | UnconfiguredStorageHealth;
+  };
+  let ingestionStorageCache: { expiresAt: number; value: IngestionStorageHealth } | undefined;
+  const ingestionStorageHealth = async (): Promise<IngestionStorageHealth> => {
+    if (ingestionStorageCache !== undefined && ingestionStorageCache.expiresAt > Date.now()) {
+      return ingestionStorageCache.value;
+    }
+    const checkedAt = new Date().toISOString();
+    const unconfigured = (
+      backend: UnconfiguredStorageHealth['backend'],
+    ): UnconfiguredStorageHealth => ({
+      status: 'UNCONFIGURED',
+      backend,
+      durable: true,
+      checkedAt,
+    });
+    const [rawFacts, checkpoints, artifacts] = await Promise.all([
+      runtime.ingestionStorage.rawFacts?.health() ?? unconfigured('CLICKHOUSE'),
+      runtime.ingestionStorage.checkpoints?.health() ?? unconfigured('POSTGRES'),
+      runtime.ingestionStorage.artifacts?.health() ?? unconfigured('S3_COMPATIBLE'),
+    ]);
+    const components = [rawFacts, checkpoints, artifacts];
+    const configured = components.filter((component) => component.status !== 'UNCONFIGURED').length;
+    const status =
+      configured === 0
+        ? 'UNCONFIGURED'
+        : components.some((component) => component.status === 'DOWN')
+          ? 'DOWN'
+          : configured === components.length
+            ? 'UP'
+            : 'PARTIAL';
+    const value: IngestionStorageHealth = {
+      status,
+      configured,
+      required: 3,
+      checkedAt,
+      rawFacts,
+      checkpoints,
+      artifacts,
+    };
+    ingestionStorageCache = {
+      expiresAt: Date.now() + options.config.healthCacheTtlMs,
+      value,
+    };
+    return value;
+  };
+  type EphemeralDataQualityStorageHealth = {
+    status: 'EPHEMERAL';
+    backend: 'MEMORY';
+    durable: false;
+    checkedAt: string;
+  };
+  type RuntimeDataQualityHealth = {
+    status: 'UP' | 'PARTIAL' | 'INSUFFICIENT_SOURCES' | 'UNCONFIGURED' | 'DEGRADED' | 'DOWN';
+    durable: boolean;
+    checkedAt: string;
+    configuredSources: Readonly<Record<string, number>>;
+    results: Awaited<ReturnType<AppRuntime['dataQuality']['inspectAll']>>;
+    storage:
+      | Awaited<ReturnType<NonNullable<AppRuntime['dataQualityStorage']>['health']>>
+      | EphemeralDataQualityStorageHealth;
+    errorCode?: string;
+  };
+  let dataQualityCache: { expiresAt: number; value: RuntimeDataQualityHealth } | undefined;
+  const dataQualityHealth = async (): Promise<RuntimeDataQualityHealth> => {
+    if (dataQualityCache !== undefined && dataQualityCache.expiresAt > Date.now()) {
+      return dataQualityCache.value;
+    }
+    const checkedAt = new Date().toISOString();
+    const configuredSources = runtime.dataQuality.configuredSources();
+    const storage =
+      runtime.dataQualityStorage === undefined
+        ? ({
+            status: 'EPHEMERAL',
+            backend: 'MEMORY',
+            durable: false,
+            checkedAt,
+          } as const)
+        : await runtime.dataQualityStorage.health();
+    let value: RuntimeDataQualityHealth;
+    try {
+      if (storage.status === 'DOWN') {
+        value = {
+          status: 'DOWN',
+          durable: storage.durable,
+          checkedAt,
+          configuredSources,
+          results: [],
+          storage,
+          ...(storage.errorCode === undefined ? {} : { errorCode: storage.errorCode }),
+        };
+      } else {
+        const results = await runtime.dataQuality.inspectAll();
+        const configuredTotal = Object.values(configuredSources).reduce(
+          (total, count) => total + count,
+          0,
+        );
+        const disagreement = results.some(
+          (result) => result.status === 'DISAGREEMENT' || result.alerts.length > 0,
+        );
+        const agreementCount = results.filter((result) => result.status === 'AGREEMENT').length;
+        const status = disagreement
+          ? 'DEGRADED'
+          : configuredTotal === 0
+            ? 'UNCONFIGURED'
+            : agreementCount === results.length
+              ? 'UP'
+              : agreementCount > 0
+                ? 'PARTIAL'
+                : 'INSUFFICIENT_SOURCES';
+        value = {
+          status,
+          durable: runtime.dataQuality.durable,
+          checkedAt,
+          configuredSources,
+          results,
+          storage,
+        };
+      }
+    } catch (error) {
+      const code =
+        typeof error === 'object' &&
+        error !== null &&
+        typeof (error as Record<string, unknown>).code === 'string' &&
+        /^[A-Z0-9_:-]{1,160}$/.test((error as Record<string, unknown>).code as string)
+          ? ((error as Record<string, unknown>).code as string)
+          : 'DATA_QUALITY_CHECK_FAILED';
+      value = {
+        status: 'DOWN',
+        durable: runtime.dataQuality.durable,
+        checkedAt,
+        configuredSources,
+        results: [],
+        storage,
+        errorCode: code,
+      };
+    }
+    dataQualityCache = {
+      expiresAt: Date.now() + options.config.healthCacheTtlMs,
+      value,
+    };
+    return value;
+  };
 
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof CorsOriginError) {
+      return reply
+        .code(403)
+        .send(errorResponse(request, 'CORS_ORIGIN_DENIED', error.message, false));
+    }
     if (error instanceof ZodError) {
       return reply.code(400).send({
         ...errorResponse(request, 'INVALID_REQUEST', 'Request validation failed.', false),
@@ -339,7 +1226,71 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof ProviderError) {
       const status =
-        error.code === 'METHOD_NOT_ALLOWED' || error.code === 'INVALID_RESPONSE' ? 400 : 503;
+        error.code === 'METHOD_NOT_ALLOWED' ? 400 : error.code === 'INVALID_RESPONSE' ? 502 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof StorageError) {
+      return reply
+        .code(503)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof FlapHistoryProjectionError) {
+      const status = error.code === 'FLAP_HISTORY_PROJECTION_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof FlapLifetimeHeadError) {
+      const status = error.code === 'FLAP_LIFETIME_HEAD_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ClaimReportStorageError) {
+      const status = error.code === 'CLAIM_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ControlSurfaceReportStorageError) {
+      const status = error.code === 'CONTROL_SURFACE_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof SolanaTransactionReportStorageError) {
+      const status = error.code === 'SOLANA_TRANSACTION_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof PensionCandidateReportStorageError) {
+      const status = error.code === 'PENSION_CANDIDATE_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof FlapPensionEntryReportStorageError) {
+      const status = error.code === 'FLAP_PENSION_ENTRY_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof EntityRelationshipReportStorageError) {
+      const status = error.code === 'ENTITY_RELATIONSHIP_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof SemanticCheckpointError) {
+      const status =
+        error.code === 'SEMANTIC_CHECKPOINT_INVALID'
+          ? 400
+          : error.code === 'SEMANTIC_CHECKPOINT_NOT_FOUND'
+            ? 404
+            : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -362,25 +1313,42 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     checkedAt: new Date().toISOString(),
   }));
 
-  app.get('/health/ready', { schema: { tags: ['system'] } }, async () => {
-    const providers = await providerHealth();
-    const status = providers.some((provider) => provider.status === 'UP') ? 'UP' : 'DEGRADED';
-    return {
+  app.get('/health/ready', { schema: { tags: ['system'] } }, async (_request, reply) => {
+    const [providers, storage] = await Promise.all([providerHealth(), storageHealth()]);
+    const serviceReady = storage.status !== 'DOWN';
+    const status =
+      providers.some((provider) => provider.status === 'UP') && serviceReady ? 'UP' : 'DEGRADED';
+    return reply.code(serviceReady ? 200 : 503).send({
       status,
       service: 'zerotrace-api',
       readOnly: true,
       providers,
+      storage,
       checkedAt: new Date().toISOString(),
-    };
+    });
   });
 
   app.get('/health', { schema: { tags: ['system'] } }, async () => {
-    const providers = await providerHealth();
+    const [providers, storage, ingestionStorage, dataQuality] = await Promise.all([
+      providerHealth(),
+      storageHealth(),
+      ingestionStorageHealth(),
+      dataQualityHealth(),
+    ]);
     return {
-      status: providers.some((provider) => provider.status === 'UP') ? 'UP' : 'DEGRADED',
+      status:
+        providers.some((provider) => provider.status === 'UP') &&
+        storage.status !== 'DOWN' &&
+        ingestionStorage.status !== 'DOWN' &&
+        !['DOWN', 'DEGRADED'].includes(dataQuality.status)
+          ? 'UP'
+          : 'DEGRADED',
       service: 'zerotrace-api',
       readOnly: true,
       providers,
+      storage,
+      ingestionStorage,
+      dataQuality,
       checkedAt: new Date().toISOString(),
     };
   });
@@ -390,14 +1358,40 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     return metricsRegistry.metrics();
   });
 
+  app.get('/api/v1/data-quality/anchors', { schema: { tags: ['system'] } }, async () =>
+    dataQualityHealth(),
+  );
+
+  const dataQualityConfiguredSources = runtime.dataQuality.configuredSources();
+  const dataQualityReady = Object.values(dataQualityConfiguredSources).some(
+    (count) => count >= options.config.dataQualityMinSources,
+  );
+  const bscReconciliationSources =
+    runtime.evmSourceAdapters?.get(56)?.map((adapter) => adapter.sourceId) ?? [];
+  const bscOperatorResolution = resolveSourceOperators(bscReconciliationSources);
+  const bscReconciliationStatus =
+    bscReconciliationSources.length < options.config.dataQualityMinSources
+      ? 'TWO_BSC_ENDPOINTS_REQUIRED'
+      : bscOperatorResolution.independence.state !== 'known'
+        ? 'IMPLEMENTED_OPERATOR_REGISTRY_INCOMPLETE'
+        : bscOperatorResolution.independence.value
+          ? 'IMPLEMENTED_OPERATOR_INDEPENDENCE_CONFIGURED'
+          : 'IMPLEMENTED_SAME_OPERATOR_INCONCLUSIVE';
+
   app.get('/api/v1/capabilities', { schema: { tags: ['system'] } }, async () => ({
     readOnly: true,
     core: [
       { id: 'canonical-schemas', status: 'IMPLEMENTED' },
       {
         id: 'evidence-ledger',
-        status: 'IMPLEMENTED_EPHEMERAL',
-        detail: 'PostgreSQL persistence is not wired yet.',
+        status:
+          runtime.evidenceRepository === undefined
+            ? 'IMPLEMENTED_EPHEMERAL'
+            : 'IMPLEMENTED_DURABLE',
+        detail:
+          runtime.evidenceRepository === undefined
+            ? 'POSTGRES_URL is absent; Evidence is process-local.'
+            : 'PostgreSQL append-only Evidence and Snapshot persistence is configured.',
       },
       {
         id: 'evm-current-state',
@@ -411,7 +1405,216 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         id: 'solana-current-state',
         status: runtime.solanaAdapter === undefined ? 'PROVIDER_REQUIRED' : 'IMPLEMENTED',
       },
-      { id: 'entity-evidence-fusion', status: 'IMPLEMENTED_BASELINE' },
+      {
+        id: 'typed-ledger-query',
+        status:
+          runtime.evmAdapters.size > 0 &&
+          runtime.bitcoinAdapter !== undefined &&
+          runtime.solanaAdapter !== undefined
+            ? 'IMPLEMENTED'
+            : 'PROVIDERS_PARTIALLY_CONFIGURED',
+        detail:
+          'Read-only EVM transaction/block, Bitcoin address/transaction/block/outpoint, and Solana transaction/slot queries use strict provider-response validation and bind observations to Evidence plus replayable Snapshots. Bitcoin transactions add conservative common-input/change candidates with CoinJoin/Payjoin/service suppression and no automatic entity merge. Solana transactions normalize legacy/v0 messages, loaded ALT accounts, signer/writable flags, outer/CPI instructions, official System/SPL/Token-2022 core asset-flow semantics and recorded SOL/SPL balance effects while preserving missing owners, extension state and metadata as Unknown. Null, pending, mempool, and provider failures remain distinct.',
+      },
+      {
+        id: 'flap-bsc-inspection',
+        status: runtime.evmAdapters.has(56)
+          ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
+          : 'BSC_PROVIDER_REQUIRED',
+        detail:
+          'Versioned read-only Flap Portal V8Safe/V6/V5 decoding binds deployment metadata, bytecode, raw state, normalized launch fields, Snapshot, and Evidence. Transaction-local TokenCreated/configuration/migration decoding is available separately; automatic history discovery, tax/vault internals, migration/LP control analysis, and complete realizable value remain pending.',
+      },
+      {
+        id: 'flap-event-transaction',
+        status: runtime.evmAdapters.has(56)
+          ? 'IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
+          : 'BSC_PROVIDER_REQUIRED',
+        detail:
+          'A caller-supplied Flap transaction hash is decoded against the versioned Portal event interface at its exact block. Creation defaults remain source-tagged, unavailable curve internals remain Unknown, and migration facts carry receipt/log/derived Evidence. Chain-wide discovery remains pending.',
+      },
+      {
+        id: 'flap-bounded-event-history',
+        status: runtime.evmAdapters.has(56)
+          ? 'IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
+          : 'BSC_PROVIDER_REQUIRED',
+        detail:
+          'Bounded Portal log ranges use the finalized SQD BSC stream when configured, with strict RPC-log fallback, then decode by token and replay exact RPC receipts/block hashes. Requested-range coverage is distinct from token-lifetime coverage, which remains Unknown until deployment-origin indexing is continuous.',
+      },
+      {
+        id: 'flap-event-history-projection',
+        status:
+          runtime.semanticCheckpoints === undefined || runtime.flapHistoryProjection === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A one-shot worker with separately configured SQD/BSC read providers projects wider finalized ranges as immutable bounded segments, persists each segment before cursor advancement, and resumes one exact pending segment after interruption. This API replays stored scan-ID pages without providers. Requested-range completion does not imply continuous token-lifetime coverage.',
+      },
+      {
+        id: 'erc20-burn-candidate-promotion',
+        status:
+          runtime.semanticCheckpoints === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_INDEPENDENT_VALIDATION',
+        detail:
+          'A read-only BSC worker checkpoints complete zero-address event segments only after every candidate has an exact-block totalSupply/Transfer conservation certificate. Scan-ID API/UI replay uses PostgreSQL only, rejects corrupt state, and keeps silent supply-change detection Unknown.',
+      },
+      {
+        id: 'evm-pension-behavior-candidate-discovery',
+        status:
+          runtime.evidenceRepository === undefined || runtime.pensionCandidateReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : !runtime.evmAdapters.has(56)
+              ? 'BSC_PROVIDER_REQUIRED'
+              : runtime.sqdBscLogReader === undefined
+                ? 'SQD_PROVIDER_REQUIRED'
+                : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A caller-supplied, versioned share-unit/depositor policy scans a complete finalized BSC ERC-20 Transfer range, emits only behavioral wallet candidates, and persists an immutable Evidence-linked report for provider-free replay. Official pension role, participant exit policy and dividend execution remain Unknown until independent source and flow Evidence support them.',
+      },
+      {
+        id: 'flap-pension-entry-economics',
+        status:
+          runtime.evidenceRepository === undefined ||
+          runtime.pensionCandidateReports === undefined ||
+          runtime.pensionEntryReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : !runtime.evmAdapters.has(56)
+              ? 'BSC_PROVIDER_REQUIRED'
+              : 'IMPLEMENTED_PENDING_PINNED_FORK_EXECUTION',
+        detail:
+          'A durable pension-behavior candidate is joined to same-Snapshot Pancake V2 buy scenarios to calculate modeled whole-share capacity, remainder and average acquisition cost across input sizes, then stored as an immutable content-addressed Scenario Report for provider-free replay. The non-zero destination remains custody rather than supply burn; actual receipt, transfer tax/swapback, irreversibility and dividend execution remain Unknown.',
+      },
+      {
+        id: 'erc20-supply-continuity',
+        status:
+          runtime.semanticCheckpoints === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : (runtime.evmSourceAdapters?.get(56)?.length ?? 0) < 2
+              ? 'IMPLEMENTED_DURABLE_INCONCLUSIVE_SOURCE_COVERAGE'
+              : 'IMPLEMENTED_DURABLE_OPERATOR_REGISTRY_GATED',
+        detail:
+          'A read-only BSC worker samples ERC-20 totalSupply at every finalized block transition with EIP-1898 canonical block-hash calls, compares every configured source exactly, and reconciles each supply change against complete same-block mint/burn Transfer Evidence before checkpoint advancement. Verified status additionally requires two officially registered operators; completed scan replay is provider-free.',
+      },
+      {
+        id: 'flap-lifetime-materialization',
+        status:
+          runtime.semanticCheckpoints === undefined || runtime.flapHistoryProjection === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A one-shot worker composes official SQD dataset-start metadata, unique Flap deployment origin, and immutable origin-to-target event history at one exact finalized BSC Snapshot. Lifetime coverage is Known only when every child proof is complete; this API replays the composite checkpoint by scan ID without contacting providers.',
+      },
+      {
+        id: 'flap-lifetime-heads',
+        status:
+          runtime.semanticCheckpoints === undefined ||
+          runtime.flapHistoryProjection === undefined ||
+          runtime.flapLifetimeHeads === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A continuous read-only worker reconciles a finalized BSC endpoint quorum, accepts one exact INITIAL lifetime materialization, then appends only Evidence-proven continuous deltas. A finalized conflict triggers all-source historical verification, append-only suffix invalidation and safe replay from the newest verified ancestor; unavailable or disagreeing sources cannot choose a branch. The latest accepted state replays without providers; forced real-reorg and independent-operator acceptance remain pending.',
+      },
+      {
+        id: 'flap-token-origin',
+        status: !runtime.evmAdapters.has(56)
+          ? 'BSC_PROVIDER_REQUIRED'
+          : runtime.sqdBscCreationReader === undefined
+            ? 'SQD_PROVIDER_REQUIRED'
+            : runtime.semanticCheckpoints === undefined
+              ? 'IMPLEMENTED_EPHEMERAL_PENDING_REAL_CHAIN_VALIDATION'
+              : 'IMPLEMENTED_DURABLE_PENDING_REAL_CHAIN_VALIDATION',
+        detail:
+          'A synchronous, range-limited finalized SQD create-trace search validates multi-response continuation metadata and rebinds a unique result to the exact BSC receipt, TokenCreated event, and Snapshot. When PostgreSQL is configured, every bounded chunk and terminal result resumes through immutable semantic checkpoints. Empty bounded ranges produce negative Evidence but never imply lifetime absence; the continuous lifetime scheduler composes this primitive only after exact coverage.',
+      },
+      {
+        id: 'flap-bsc-sell-preview',
+        status: runtime.evmAdapters.has(56)
+          ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
+          : 'BSC_PROVIDER_REQUIRED',
+        detail:
+          'Read-only Portal previewSell produces a fixed-block, provider-observed quote with Evidence. Non-tradable, migrated, unsupported, excessive-input, and provider-failure states never become zero proceeds.',
+      },
+      {
+        id: 'cross-source-anchor-reconciliation',
+        status: dataQualityReady
+          ? runtime.dataQuality.durable
+            ? 'IMPLEMENTED_DURABLE_PENDING_INDEPENDENT_VALIDATION'
+            : 'IMPLEMENTED_EPHEMERAL_PENDING_INDEPENDENT_VALIDATION'
+          : 'INDEPENDENT_PROVIDERS_REQUIRED',
+        detail:
+          'Common-position anchor comparison, continuity checks, reorg alerts, and explicit disagreement states are wired. Endpoint operator independence is not inferred from hostnames.',
+      },
+      {
+        id: 'typed-discrepancy-audit',
+        status: 'IMPLEMENTED_DETERMINISTIC',
+        detail:
+          'Evidence-grounded same-Snapshot comparisons enforce zero mismatch for exact state, exact-decimal typed budgets for derived/quote/aggregate values, warning bands, coverage gates, and Unknown exclusion from numeric denominators.',
+      },
+      {
+        id: 'flap-pancake-v2-multi-source-reconciliation',
+        status: bscReconciliationStatus,
+        detail:
+          'Each reconciled BSC endpoint independently reruns the complete Flap/Pancake V2 market, buy and sell certificate at one agreed finalized block. Exact state and typed 0.50% market/RV budgets fail closed; source independence becomes Known only for endpoints matched by the versioned official operator registry.',
+      },
+      {
+        id: 'evm-control-surface',
+        status:
+          runtime.controlSurfaces === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : runtime.evmAdapters.size === 0
+              ? 'EVM_PROVIDER_REQUIRED'
+              : runtime.evmSourceVerification === undefined
+                ? 'IMPLEMENTED_STANDARD_SURFACE_SOURCE_PROVIDER_OPTIONAL'
+                : 'IMPLEMENTED_STANDARD_AND_SOURCE_SURFACE',
+        detail:
+          'Finalized multi-source EVM inspection covers exact ERC-1167 bytecode, EIP-1967 implementation/admin/beacon slots, ERC-173 owner(), registered Safe owners/threshold, and Snapshot-bound runtime logic code. Optional Sourcify V2 metadata is accepted only on exact bytecode equality; declared ABI mutations stay separate from effective rights. Reports and Evidence replay without providers. Effective custom authorization, history, and controller recursion remain pending.',
+      },
+      {
+        id: 'solana-control-surface',
+        status:
+          runtime.solanaControlSurfaces === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : runtime.solanaAdapter === undefined
+              ? 'SOLANA_PROVIDER_REQUIRED'
+              : 'IMPLEMENTED_TOKEN_PROGRAM_AND_LOADER_V3',
+        detail:
+          'One finalized-slot account set is decoded with official SPL Token and Token-2022 codecs, including base authorities, classic multisig thresholds, extension authorities, and loader-v3 ProgramData upgrade authority. Reports replay without providers. Squads configuration, Anchor IDL, verifiable builds, authority history, and recursive controllers remain explicit Unknown.',
+      },
+      {
+        id: 'solana-transaction-semantic-replay',
+        status:
+          runtime.solanaTransactionReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : runtime.solanaAdapter === undefined
+              ? 'IMPLEMENTED_PROVIDER_FREE_REPLAY_ONLY'
+              : 'IMPLEMENTED_DURABLE_LIVE_AND_REPLAY',
+        detail:
+          'Finalized Solana transaction semantics, official core asset flows, exact token reconciliation and their complete Evidence set are stored as immutable content-addressed reports. Latest/exact replay remains available without a provider and is explicitly marked as replayed.',
+      },
+      {
+        id: 'finalized-historical-ingestion',
+        status:
+          runtime.ingestionStorage.rawFacts !== undefined &&
+          runtime.ingestionStorage.checkpoints !== undefined &&
+          runtime.ingestionStorage.artifacts !== undefined
+            ? 'IMPLEMENTED_DURABLE'
+            : Object.values(runtime.ingestionStorage).some((value) => value !== undefined)
+              ? 'STORAGE_PARTIALLY_CONFIGURED'
+              : 'STORAGE_REQUIRED',
+        detail:
+          'Restart-safe SQD finalized blocks, transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards are implemented with durable provenance. Anchor continuity/reorg detection is wired separately; semantic transfers, protocol decoding, continuous scheduling, and historical replay policy remain pending.',
+      },
+      {
+        id: 'entity-evidence-fusion',
+        status:
+          runtime.evidenceRepository === undefined ||
+          runtime.entityRelationshipReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_BASELINE',
+        detail:
+          'Evidence-weighted pair scoring emits an immutable Snapshot-bound relationship hypothesis report with provider-free latest/exact replay. Canonical pair ordering, duplicate-feature rejection, grounded service-hub suppression, explicit Unknown and a hard no-automatic-merge boundary are enforced. Bitcoin common-input/change signals never auto-merge; CoinJoin-like, fanout, incomplete input context, unresolved Payjoin and unqueried service attribution remain explicit suppressors. Temporal graph extraction and real-world calibration remain pending.',
+      },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },
       { id: 'shared-liquidity-exit-race', status: 'IMPLEMENTED_DETERMINISTIC' },
     ],
@@ -518,24 +1721,40 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         }
         const snapshot = await adapter.createSnapshot();
         const blockTag = `0x${BigInt(snapshot.blockNumber).toString(16)}`;
-        const [balanceHex, code] = await Promise.all([
-          adapter.getBalance(subject.normalizedId, blockTag),
-          adapter.getCode(subject.normalizedId, blockTag),
+        const [balanceObservation, codeObservation] = await Promise.all([
+          adapter.getBalanceObservation(subject.normalizedId, blockTag),
+          adapter.getCodeObservation(subject.normalizedId, blockTag),
         ]);
-        const payload = { balanceHex, code, blockTag, blockHash: snapshot.blockHash };
-        const evidence = addEvidence(
+        const balanceHex = balanceObservation.value;
+        const code = codeObservation.value;
+        const observationSources = {
+          balance: balanceObservation.endpointId,
+          code: codeObservation.endpointId,
+        };
+        const stateSourceIds = uniqueSourceIds(Object.values(observationSources));
+        const sourceSet = uniqueSourceIds([...snapshotSourceIds(snapshot), ...stateSourceIds]);
+        const payload = {
+          balanceHex,
+          code,
+          blockTag,
+          blockHash: snapshot.blockHash,
+          observationSources,
+        };
+        const evidence = await addEvidence(
           runtime,
           createEvidence({
             ledger: 'EVM',
             chainId: snapshot.chainId,
             kind: 'ACCOUNT_STATE',
-            source: adapter.config.id,
+            source: evidenceSourceId(stateSourceIds),
             locator: `address:${subject.normalizedId}@${snapshot.blockNumber}`,
             payload,
             blockOrSlot: snapshot.blockNumber,
-            finality: 'snapshot-head',
+            finality: snapshot.finality,
             summary: 'EVM native balance and bytecode at the snapshot block.',
           }),
+          [],
+          snapshot,
         );
         const metadata: AnalysisMetadata = {
           snapshot,
@@ -544,7 +1763,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           historyCoverage: 0,
           simulationCoverage: 0,
           freshness: snapshot.capturedAt,
-          sourceSet: [adapter.config.id],
+          sourceSet,
           modelVersion: 'evm-subject-v0.1.0',
           confidence: 1,
           evidenceIds: [evidence.id],
@@ -553,7 +1772,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           subject,
           facts: {
             nativeBalanceAtomic: knownValue(parseHexQuantity(balanceHex, 'EVM balance')),
-            accountKind: knownValue(code === '0x' || code === '0x0' ? 'EOA' : 'CONTRACT'),
+            accountKind: knownValue(code === '0x' ? 'EOA' : 'CONTRACT'),
           },
           metadata,
           evidence: [evidence],
@@ -569,51 +1788,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             metadata: emptyMetadata('btc-subject-v0.1.0'),
           });
         }
-        const snapshot = await adapter.createSnapshot();
-        const stats = await adapter.getAddress(subject.normalizedId);
-        const payload = {
-          stats,
-          snapshotHeight: snapshot.height,
-          snapshotHash: snapshot.blockHash,
-        };
-        const evidence = addEvidence(
-          runtime,
-          createEvidence({
-            ledger: 'BITCOIN',
-            chainId: snapshot.chainId,
-            kind: 'ACCOUNT_STATE',
-            source: adapter.config.id,
-            locator: `address:${subject.normalizedId}@${snapshot.height}`,
-            payload,
-            blockOrSlot: snapshot.height,
-            finality: 'best-chain',
-            summary: 'Bitcoin address chain and mempool statistics near the snapshot tip.',
-          }),
+        return queryBitcoinAddress(adapter, subject, (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
         );
-        const confirmedBalance = stats.chain_stats.funded_txo_sum - stats.chain_stats.spent_txo_sum;
-        const mempoolDelta = stats.mempool_stats.funded_txo_sum - stats.mempool_stats.spent_txo_sum;
-        return {
-          subject,
-          facts: {
-            confirmedBalanceSats: knownValue(String(confirmedBalance)),
-            mempoolDeltaSats: knownValue(String(mempoolDelta)),
-            transactionCount: knownValue(String(stats.chain_stats.tx_count)),
-          },
-          metadata: {
-            snapshot,
-            dataCoverage: 1,
-            sourceCoverage: 0.5,
-            historyCoverage: 0.5,
-            simulationCoverage: 0,
-            freshness: snapshot.capturedAt,
-            sourceSet: [adapter.config.id],
-            modelVersion: 'btc-subject-v0.1.0',
-            confidence: 0.9,
-            evidenceIds: [evidence.id],
-          },
-          evidence: [evidence],
-          consistency: 'BEST_EFFORT_ESPLORA_TIP',
-        };
       }
 
       const adapter = runtime.solanaAdapter;
@@ -625,48 +1802,47 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         });
       }
       const snapshot = await adapter.createSnapshot();
-      const response = await adapter.getAccountInfo(subject.normalizedId, Number(snapshot.slot));
-      const value = (response as { value?: unknown }).value;
+      const accountObservation = await adapter.getAccountInfoObservation(
+        subject.normalizedId,
+        Number(snapshot.slot),
+      );
+      const response = accountObservation.value;
+      const value = response.value;
+      const sourceSet = uniqueSourceIds([
+        ...snapshotSourceIds(snapshot),
+        accountObservation.endpointId,
+      ]);
       const payload = {
         response,
         snapshotSlot: snapshot.slot,
         snapshotBlockhash: snapshot.blockhash,
+        observationSource: accountObservation.endpointId,
       };
-      const evidence = addEvidence(
+      const evidence = await addEvidence(
         runtime,
         createEvidence({
           ledger: 'SOLANA',
           chainId: snapshot.chainId,
           kind: 'ACCOUNT_STATE',
-          source: adapter.config.id,
+          source: accountObservation.endpointId,
           locator: `account:${subject.normalizedId}@${snapshot.slot}`,
           payload,
           blockOrSlot: snapshot.slot,
           finality: snapshot.commitment,
           summary: 'Solana account state with a minimum snapshot slot.',
         }),
+        [],
+        snapshot,
       );
-      const account =
-        typeof value === 'object' && value !== null
-          ? (value as Record<string, unknown>)
-          : undefined;
-      const lamports = account?.lamports;
-      const lamportsValue =
-        account === undefined
-          ? knownValue('0')
-          : typeof lamports === 'string' && /^\d+$/.test(lamports)
-            ? knownValue(lamports)
-            : typeof lamports === 'number' && Number.isSafeInteger(lamports)
-              ? knownValue(String(lamports))
-              : unavailableValue(
-                  'PRECISION_UNSAFE',
-                  'Provider balance was not a lossless integer.',
-                );
+      const account = value ?? undefined;
       return {
         subject,
         facts: {
           exists: knownValue(account !== undefined),
-          lamports: lamportsValue,
+          lamports:
+            account === undefined
+              ? unknownValue('INSUFFICIENT_DATA', 'The account does not exist at this Snapshot.')
+              : knownValue(account.lamports),
           owner:
             account === undefined || typeof account.owner !== 'string'
               ? unknownValue('INSUFFICIENT_DATA')
@@ -683,7 +1859,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           historyCoverage: 0,
           simulationCoverage: 0,
           freshness: snapshot.capturedAt,
-          sourceSet: [adapter.config.id],
+          sourceSet,
           modelVersion: 'solana-subject-v0.1.0',
           confidence: 1,
           evidenceIds: [evidence.id],
@@ -694,11 +1870,250 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   );
 
   app.get(
+    '/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = SolanaTransactionReportParamsSchema.parse(request.params);
+      const repository = runtime.solanaTransactionReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_TRANSACTION_REPORT_UNAVAILABLE',
+              'Durable Solana transaction report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(params.signature);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_TRANSACTION_REPORT_NOT_FOUND',
+              'No durable Solana transaction report exists for this signature.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = SolanaTransactionReportByIdParamsSchema.parse(request.params);
+      const repository = runtime.solanaTransactionReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_TRANSACTION_REPORT_UNAVAILABLE',
+              'Durable Solana transaction report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined || record.signature !== params.signature) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_TRANSACTION_REPORT_NOT_FOUND',
+              'The durable Solana transaction report was not found for this signature.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/ledger/:ledger/:type/:id',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LedgerRecordParamsSchema.parse(request.params);
+      const query = LedgerRecordQuerySchema.parse(request.query);
+      if (params.type === 'OUTPOINT' && params.ledger !== 'BITCOIN') {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'UNSUPPORTED_IDENTIFIER_TYPE',
+              'Outpoints are only supported on Bitcoin.',
+              false,
+            ),
+          );
+      }
+      const canonicalNonEvmChainId =
+        params.ledger === 'BITCOIN'
+          ? 'bitcoin-mainnet'
+          : params.ledger === 'SOLANA'
+            ? 'solana-mainnet'
+            : undefined;
+      if (
+        query.chainId !== undefined &&
+        canonicalNonEvmChainId !== undefined &&
+        query.chainId !== canonicalNonEvmChainId
+      ) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_CHAIN_ID',
+              `${params.ledger} queries require chainId=${canonicalNonEvmChainId}.`,
+              false,
+            ),
+          );
+      }
+      const requestedChainId =
+        params.ledger === 'EVM'
+          ? (query.chainId ?? `eip155:${options.config.ethereumChainId}`)
+          : params.ledger === 'BITCOIN'
+            ? 'bitcoin-mainnet'
+            : 'solana-mainnet';
+      const classification = classifyIdentifier(params.id, {
+        ledger: params.ledger,
+        type: params.type,
+        chainId: requestedChainId,
+      });
+      const subject = classification.candidates.find(
+        (candidate) => candidate.ledger === params.ledger && candidate.type === params.type,
+      );
+      if (subject === undefined) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_IDENTIFIER',
+              `A structurally valid ${params.ledger} ${params.type.toLowerCase()} identifier is required.`,
+              false,
+            ),
+          );
+      }
+      const writeEvidence = (
+        evidence: Evidence,
+        sourceEvidenceIds: readonly string[] = [],
+        snapshot?: AnalysisSnapshot,
+      ) => addEvidence(runtime, evidence, sourceEvidenceIds, snapshot);
+
+      if (params.ledger === 'EVM') {
+        const match = /^eip155:([1-9]\d*)$/.exec(requestedChainId);
+        const numericChainId = match === null ? Number.NaN : Number(match[1]);
+        if (!Number.isSafeInteger(numericChainId)) {
+          return reply
+            .code(400)
+            .send(errorResponse(request, 'INVALID_CHAIN_ID', 'Invalid EIP-155 chain ID.', false));
+        }
+        const adapter = runtime.evmAdapters.get(numericChainId);
+        if (adapter === undefined) {
+          return reply.code(503).send({
+            subject,
+            facts: unavailableValue('PROVIDER_UNCONFIGURED'),
+            metadata: emptyMetadata(`evm-${params.type.toLowerCase()}-query-v0.1.0`),
+          });
+        }
+        return params.type === 'BLOCK'
+          ? queryEvmBlock(adapter, subject, writeEvidence)
+          : queryEvmTransaction(adapter, subject, writeEvidence);
+      }
+
+      if (params.ledger === 'BITCOIN') {
+        const adapter = runtime.bitcoinAdapter;
+        if (adapter === undefined) {
+          return reply.code(503).send({
+            subject,
+            facts: unavailableValue('PROVIDER_UNCONFIGURED'),
+            metadata: emptyMetadata(`bitcoin-${params.type.toLowerCase()}-query-v0.1.0`),
+          });
+        }
+        if (params.type === 'BLOCK') return queryBitcoinBlock(adapter, subject, writeEvidence);
+        if (params.type === 'OUTPOINT') {
+          return queryBitcoinOutpoint(adapter, subject, writeEvidence);
+        }
+        return queryBitcoinTransaction(adapter, subject, writeEvidence);
+      }
+
+      const adapter = runtime.solanaAdapter;
+      if (params.type === 'BLOCK') {
+        if (adapter === undefined) {
+          return reply.code(503).send({
+            subject,
+            facts: unavailableValue('PROVIDER_UNCONFIGURED'),
+            metadata: emptyMetadata('solana-block-query-v0.1.0'),
+          });
+        }
+        return querySolanaBlock(adapter, subject, writeEvidence);
+      }
+
+      const repository = runtime.solanaTransactionReports;
+      if (adapter === undefined) {
+        const record = await repository?.latest(subject.normalizedId);
+        if (record !== undefined) {
+          return solanaTransactionReportResponse(
+            record,
+            true,
+            unavailableValue(
+              'PROVIDER_UNCONFIGURED',
+              'The immutable report was replayed because no live Solana provider is configured.',
+            ),
+          );
+        }
+        return reply.code(503).send({
+          subject,
+          facts: unavailableValue('PROVIDER_UNCONFIGURED'),
+          metadata: emptyMetadata('solana-transaction-query-v1.1.0'),
+        });
+      }
+
+      try {
+        const result = await querySolanaTransaction(adapter, subject, writeEvidence);
+        const parsed = SolanaTransactionIntelligenceReportSchema.safeParse(result);
+        if (
+          !parsed.success ||
+          repository === undefined ||
+          runtime.evidenceRepository === undefined
+        ) {
+          return result;
+        }
+        const record = await repository.put(parsed.data);
+        return solanaTransactionReportResponse(record, false);
+      } catch (error) {
+        if (!(error instanceof ProviderError) || repository === undefined) throw error;
+        const record = await repository.latest(subject.normalizedId);
+        if (record === undefined) throw error;
+        return solanaTransactionReportResponse(
+          record,
+          true,
+          unavailableValue(
+            error.code === 'RATE_LIMITED' ? 'RATE_LIMITED' : 'PROVIDER_DOWN',
+            `Live refresh failed with ${error.code}; the immutable report was replayed without changing its Snapshot.`,
+          ),
+        );
+      }
+    },
+  );
+
+  app.get(
     '/api/v1/evidence/:id',
     { schema: { tags: ['intelligence'] } },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const node = runtime.evidenceLedger.get(id);
+      const node = await getEvidenceNode(runtime, id);
       if (node === undefined)
         return reply
           .code(404)
@@ -708,11 +2123,41 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   );
 
   app.get(
+    '/api/v1/launches/:ledger/:token',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LaunchInspectionParamsSchema.parse(request.params);
+      const query = LaunchInspectionQuerySchema.parse(request.query);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        return reply.code(503).send({
+          platform: 'flap',
+          token: params.token,
+          platformMatch: unavailableValue('PROVIDER_UNCONFIGURED'),
+          launch: null,
+          metadata: emptyMetadata('flap-inspector-v0.1.0'),
+        });
+      }
+      return inspectFlapToken({
+        adapter,
+        token: params.token,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(query.blockNumber === undefined ? {} : { blockNumber: query.blockNumber }),
+      });
+    },
+  );
+
+  app.get(
     '/api/v1/evidence/:id/drilldown',
     { schema: { tags: ['intelligence'] } },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      const nodes = runtime.evidenceLedger.drilldown(id);
+      const nodes =
+        runtime.evidenceRepository === undefined
+          ? runtime.evidenceLedger.drilldown(id)
+          : await runtime.evidenceRepository.drilldown(id);
       if (nodes.length === 0)
         return reply
           .code(404)
@@ -721,24 +2166,886 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     },
   );
 
+  app.get(
+    '/api/v1/launches/:ledger/:token/events/:transactionHash',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = FlapEventTransactionParamsSchema.parse(request.params);
+      FlapEventTransactionQuerySchema.parse(request.query);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        return reply.code(503).send({
+          platform: 'flap',
+          token: params.token,
+          transactionHash: params.transactionHash,
+          platformMatch: unavailableValue(
+            'PROVIDER_UNCONFIGURED',
+            'A BNB Smart Chain read-only provider is required.',
+          ),
+          transactionKind: null,
+          creation: null,
+          staged: null,
+          configuration: null,
+          migration: null,
+          decodedEventNames: [],
+          unrecognizedPortalLogCount: null,
+          metadata: emptyMetadata(FLAP_EVENT_MODEL_VERSION),
+          evidence: [],
+        });
+      }
+      return inspectFlapEventTransaction({
+        adapter,
+        token: params.token,
+        transactionHash: params.transactionHash,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      });
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/history',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LaunchInspectionParamsSchema.parse(request.params);
+      const query = FlapEventHistoryQuerySchema.parse(request.query);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        const chunkSize = query.chunkSize ?? FLAP_HISTORY_DEFAULT_CHUNK_SIZE;
+        const fromBlock = BigInt(query.fromBlock);
+        const toBlock = BigInt(query.toBlock);
+        const range = toBlock >= fromBlock ? toBlock - fromBlock + 1n : 0n;
+        return reply.code(503).send({
+          platform: 'flap',
+          token: params.token,
+          requestedRange: {
+            fromBlock: query.fromBlock,
+            toBlock: query.toBlock,
+            chunkSize,
+            chunkCount:
+              range === 0n ? 0 : Number((range + BigInt(chunkSize) - 1n) / BigInt(chunkSize)),
+          },
+          requestedRangeCoverage: 0,
+          lifetimeCoverage: unavailableValue(
+            'PROVIDER_UNCONFIGURED',
+            'A BNB Smart Chain read-only provider is required.',
+          ),
+          chronology: [],
+          transactions: [],
+          unrecognizedPortalLogCount: null,
+          metadata: emptyMetadata(FLAP_HISTORY_MODEL_VERSION),
+          evidence: [],
+        });
+      }
+      return discoverFlapEventHistory({
+        adapter,
+        ...(runtime.sqdBscLogReader === undefined ? {} : { logReader: runtime.sqdBscLogReader }),
+        token: params.token,
+        fromBlock: query.fromBlock,
+        toBlock: query.toBlock,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(query.chunkSize === undefined ? {} : { chunkSize: query.chunkSize }),
+      });
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/history/projections/:scanId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = FlapHistoryProjectionParamsSchema.parse(request.params);
+      const query = FlapHistoryProjectionPageQuerySchema.parse(request.query);
+      const classification = classifyIdentifier(params.token, {
+        ledger: 'EVM',
+        type: 'ADDRESS',
+        chainId: 'eip155:56',
+      });
+      const subject = classification.candidates.find(
+        (candidate) => candidate.ledger === 'EVM' && candidate.type === 'ADDRESS',
+      );
+      if (subject === undefined) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_IDENTIFIER',
+              'A structurally valid EVM token address is required.',
+              false,
+            ),
+          );
+      }
+      const checkpoints = runtime.semanticCheckpoints;
+      const projection = runtime.flapHistoryProjection;
+      if (checkpoints === undefined || projection === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_HISTORY_PROJECTION_UNAVAILABLE',
+              'Durable Flap history projection storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const run = await checkpoints.get(params.scanId);
+      if (
+        run === undefined ||
+        run.scanType !== 'FLAP_EVENT_HISTORY' ||
+        run.source !== 'sqd:binance-mainnet' ||
+        run.ledger !== 'EVM' ||
+        run.chainId !== 'eip155:56' ||
+        run.subject !== subject.normalizedId.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_HISTORY_PROJECTION_NOT_FOUND',
+              'The requested Flap history projection was not found.',
+              false,
+            ),
+          );
+      }
+      let terminalResult = null;
+      if (run.status === 'REQUESTED_RANGE_COMPLETE') {
+        const state =
+          typeof run.state === 'object' && run.state !== null && !Array.isArray(run.state)
+            ? run.state
+            : undefined;
+        const parsed = FlapEventHistoryProjectionSchema.safeParse(state?.result);
+        if (!parsed.success) {
+          throw new FlapHistoryProjectionError(
+            'FLAP_HISTORY_PROJECTION_CONFLICT',
+            'Completed Flap history projection terminal state is invalid.',
+            { cause: parsed.error },
+          );
+        }
+        terminalResult = parsed.data;
+      }
+      const stored = await projection.listSegments(run.id, {
+        ...(query.afterBlock === undefined ? {} : { afterBlock: query.afterBlock }),
+        limit: query.limit + 1,
+      });
+      const hasMore = stored.length > query.limit;
+      const segments = stored.slice(0, query.limit);
+      const last = segments.at(-1);
+      const requestedBlocks = run.toBlock - run.fromBlock + 1;
+      const completedBlocks = Math.max(0, Math.min(requestedBlocks, run.nextBlock - run.fromBlock));
+      return {
+        scan: {
+          id: run.id,
+          status: run.status,
+          source: run.source,
+          chainId: run.chainId,
+          token: run.subject,
+          requestedRange: {
+            fromBlock: String(run.fromBlock),
+            toBlock: String(run.toBlock),
+            segmentSize: run.chunkSize,
+          },
+          nextBlock: String(run.nextBlock),
+          requestedRangeCoverage: completedBlocks / requestedBlocks,
+          evidenceIds: [...run.evidenceIds],
+          lastErrorCode: run.lastErrorCode,
+          startedAt: run.startedAt,
+          updatedAt: run.updatedAt,
+          completedAt: run.completedAt,
+          terminalResult,
+        },
+        page: {
+          afterBlock: query.afterBlock ?? null,
+          limit: query.limit,
+          hasMore,
+          nextAfterBlock: hasMore && last !== undefined ? last.fromBlock : null,
+        },
+        segments,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/history/lifetime/heads/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LaunchInspectionParamsSchema.parse(request.params);
+      FlapEventTransactionQuerySchema.parse(request.query);
+      const classification = classifyIdentifier(params.token, {
+        ledger: 'EVM',
+        type: 'ADDRESS',
+        chainId: 'eip155:56',
+      });
+      const subject = classification.candidates.find(
+        (candidate) => candidate.ledger === 'EVM' && candidate.type === 'ADDRESS',
+      );
+      if (subject === undefined) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_IDENTIFIER',
+              'A structurally valid EVM token address is required.',
+              false,
+            ),
+          );
+      }
+      const heads = runtime.flapLifetimeHeads;
+      if (heads === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_LIFETIME_HEAD_UNAVAILABLE',
+              'Durable Flap lifetime head storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const head = await heads.latestHead('eip155:56', subject.normalizedId.toLowerCase());
+      if (head === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_LIFETIME_HEAD_NOT_FOUND',
+              'No accepted Flap lifetime head exists for this token.',
+              false,
+            ),
+          );
+      }
+      return { head };
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/history/lifetime/materializations/:scanId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = FlapHistoryProjectionParamsSchema.parse(request.params);
+      FlapEventTransactionQuerySchema.parse(request.query);
+      const classification = classifyIdentifier(params.token, {
+        ledger: 'EVM',
+        type: 'ADDRESS',
+        chainId: 'eip155:56',
+      });
+      const subject = classification.candidates.find(
+        (candidate) => candidate.ledger === 'EVM' && candidate.type === 'ADDRESS',
+      );
+      if (subject === undefined) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_IDENTIFIER',
+              'A structurally valid EVM token address is required.',
+              false,
+            ),
+          );
+      }
+      const checkpoints = runtime.semanticCheckpoints;
+      if (checkpoints === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_LIFETIME_MATERIALIZATION_UNAVAILABLE',
+              'Durable Flap lifetime materialization storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const run = await checkpoints.get(params.scanId);
+      if (
+        run === undefined ||
+        run.scanType !== 'FLAP_LIFETIME_MATERIALIZATION' ||
+        run.source !== FLAP_LIFETIME_MATERIALIZATION_SOURCE ||
+        run.ledger !== 'EVM' ||
+        run.chainId !== 'eip155:56' ||
+        run.subject !== subject.normalizedId.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_LIFETIME_MATERIALIZATION_NOT_FOUND',
+              'The requested Flap lifetime materialization was not found.',
+              false,
+            ),
+          );
+      }
+      let terminalResult = null;
+      if (run.status === 'REQUESTED_RANGE_COMPLETE') {
+        const state =
+          typeof run.state === 'object' && run.state !== null && !Array.isArray(run.state)
+            ? run.state
+            : undefined;
+        const parsed = FlapLifetimeMaterializationSchema.safeParse(state?.result);
+        if (!parsed.success) {
+          throw new SemanticCheckpointError(
+            'SEMANTIC_CHECKPOINT_CONFLICT',
+            'Completed Flap lifetime materialization terminal state is invalid.',
+            { cause: parsed.error },
+          );
+        }
+        terminalResult = parsed.data;
+      }
+      const requestedBlocks = run.toBlock - run.fromBlock + 1;
+      const completedBlocks = Math.max(0, Math.min(requestedBlocks, run.nextBlock - run.fromBlock));
+      return {
+        scan: {
+          id: run.id,
+          status: run.status,
+          source: run.source,
+          chainId: run.chainId,
+          token: run.subject,
+          dataset: 'binance-mainnet',
+          datasetStartBlock: String(run.fromBlock),
+          targetBlock: String(run.toBlock),
+          nextBlock: String(run.nextBlock),
+          requestedRangeCoverage: completedBlocks / requestedBlocks,
+          evidenceIds: [...run.evidenceIds],
+          lastErrorCode: run.lastErrorCode,
+          startedAt: run.startedAt,
+          updatedAt: run.updatedAt,
+          completedAt: run.completedAt,
+          terminalResult,
+        },
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/launches/:ledger/:token/origin',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = LaunchInspectionParamsSchema.parse(request.params);
+      const query = FlapTokenOriginQuerySchema.parse(request.query);
+      const adapter = runtime.evmAdapters.get(56);
+      const creationReader = runtime.sqdBscCreationReader;
+      if (adapter === undefined || creationReader === undefined) {
+        const detail =
+          adapter === undefined
+            ? 'A BNB Smart Chain read-only provider is required.'
+            : 'The finalized SQD BSC source is required for contract-creation trace discovery.';
+        return reply.code(503).send({
+          platform: 'flap',
+          token: params.token,
+          searchedRange: {
+            fromBlock: query.fromBlock,
+            toBlock: query.toBlock,
+            chunkSize: query.chunkSize ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
+            chunkCount: Number(
+              (BigInt(query.toBlock) -
+                BigInt(query.fromBlock) +
+                BigInt(query.chunkSize ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE)) /
+                BigInt(query.chunkSize ?? FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE),
+            ),
+          },
+          searchedRangeCoverage: 0,
+          origin: unavailableValue('PROVIDER_UNCONFIGURED', detail),
+          lifetimeCoverage: unavailableValue('PROVIDER_UNCONFIGURED', detail),
+          observedCreationCount: 0,
+          metadata: emptyMetadata(FLAP_TOKEN_ORIGIN_MODEL_VERSION),
+          evidence: [],
+        });
+      }
+      const originOptions: InspectFlapTokenOriginOptions = {
+        adapter,
+        creationReader,
+        token: params.token,
+        fromBlock: query.fromBlock,
+        toBlock: query.toBlock,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(query.chunkSize === undefined ? {} : { chunkSize: query.chunkSize }),
+      };
+      return runtime.semanticCheckpoints === undefined
+        ? inspectFlapTokenOrigin(originOptions)
+        : inspectFlapTokenOriginRestartSafe({
+            ...originOptions,
+            checkpoints: runtime.semanticCheckpoints,
+          });
+    },
+  );
+
+  app.post('/api/v1/rv/flap-sell', { schema: { tags: ['analysis'] } }, async (request, reply) => {
+    const input = FlapSellQuoteRequestSchema.parse(request.body);
+    const adapter = runtime.evmAdapters.get(56);
+    if (adapter === undefined) {
+      const unavailable = unavailableValue(
+        'PROVIDER_UNCONFIGURED',
+        'A BNB Smart Chain read-only provider is required.',
+      );
+      return reply.code(503).send({
+        platform: 'flap',
+        token: input.token,
+        quoteAsset: unavailable,
+        quote: {
+          inputQuantity: input.inputQuantity,
+          nominalValue: unavailable,
+          realizableValue: unavailable,
+          averageExitPrice: unavailable,
+          priceImpactBps: unavailable,
+          totalFeeBps: unavailable,
+          route: [],
+          metadata: emptyMetadata('flap-preview-sell-v0.1.0'),
+        },
+        evidence: [],
+      });
+    }
+    return quoteFlapSell({
+      adapter,
+      token: input.token,
+      inputQuantity: input.inputQuantity,
+      deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+      writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+        addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+    });
+  });
+
+  app.post(
+    '/api/v1/rv/flap-pancake-v2-buy-scenarios',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPancakeV2BuyScenarioRequestSchema.parse(request.body);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        const detail = 'A BNB Smart Chain read-only provider is required.';
+        return reply.code(503).send({
+          platform: 'flap',
+          token: input.token.toLowerCase(),
+          market: unavailableValue('PROVIDER_UNCONFIGURED', detail),
+          scenarios: [],
+          validation: {
+            status: 'NOT_RUN',
+            deterministicToleranceBps: '10',
+            evaluatedScenarioCount: 0,
+            failedScenarioCount: 0,
+          },
+          pensionSinkTreatment: unknownValue(
+            'INSUFFICIENT_DATA',
+            'Sending tokens to a wallet is not a burn; custody and execution Evidence are unavailable.',
+          ),
+          terminalEvidenceId: null,
+          metadata: emptyMetadata('flap-pancake-v2-pool-buy-scenarios-v0.1.0'),
+          evidence: [],
+        });
+      }
+      return quoteFlapPancakeV2BuyScenarios({
+        adapter,
+        token: input.token,
+        quoteInputs: input.quoteInputs,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+    },
+  );
+
+  app.post(
+    '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPancakeV2PensionEntryRequestSchema.parse(request.body);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A BNB Smart Chain read-only provider is required for pension-entry economics.',
+              true,
+            ),
+          );
+      }
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.pensionCandidateReports === undefined ||
+        runtime.pensionEntryReports === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_STORAGE_REQUIRED',
+              'Pension-entry economics require durable Evidence, pension-candidate and Scenario Report storage.',
+              false,
+            ),
+          );
+      }
+      const token = input.token.toLowerCase();
+      const record =
+        input.pensionReportId === undefined
+          ? await runtime.pensionCandidateReports.latest(token)
+          : await runtime.pensionCandidateReports.get(input.pensionReportId);
+      if (
+        record === undefined ||
+        record.chainId !== input.chainId ||
+        record.tokenAddress !== token
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_NOT_FOUND',
+              'No matching durable BSC pension candidate report was found.',
+              false,
+            ),
+          );
+      }
+      const selectedCandidate =
+        input.pensionWallet === undefined
+          ? record.report.candidates.length === 1
+            ? record.report.candidates[0]
+            : undefined
+          : record.report.candidates.find(
+              (candidate) => candidate.address === input.pensionWallet?.toLowerCase(),
+            );
+      if (selectedCandidate === undefined) {
+        return reply
+          .code(422)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_SELECTION_REQUIRED',
+              'Select one wallet contained in the referenced report; omission is allowed only when the report has exactly one candidate.',
+              false,
+            ),
+          );
+      }
+      const evidenceNodes = await Promise.all(
+        record.evidenceIds.map((evidenceId) => runtime.evidenceRepository?.get(evidenceId)),
+      );
+      if (evidenceNodes.some((node) => node === undefined)) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_EVIDENCE_INCOMPLETE',
+              'The pension candidate report references unavailable durable Evidence.',
+              false,
+            ),
+          );
+      }
+      const result = await quoteFlapPensionEntryScenarios({
+        adapter,
+        token,
+        quoteInputs: input.quoteInputs,
+        pensionWallet: selectedCandidate.address,
+        behaviorReportId: record.id,
+        behaviorResultHash: record.resultHash,
+        behaviorReport: record.report,
+        behaviorEvidence: evidenceNodes.map((node) => node?.evidence as Evidence),
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+      const stored = await runtime.pensionEntryReports.put(result);
+      return {
+        ...result,
+        durableReport: {
+          id: stored.id,
+          resultHash: stored.resultHash,
+          createdAt: stored.createdAt,
+        },
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPensionEntryReportQuerySchema.parse(request.query);
+      const repository = runtime.pensionEntryReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_PENSION_ENTRY_REPORT_UNAVAILABLE',
+              'Durable Flap pension entry Scenario Report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(input.token.toLowerCase());
+      if (
+        record === undefined ||
+        record.chainId !== input.chainId ||
+        record.tokenAddress !== input.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_PENSION_ENTRY_REPORT_NOT_FOUND',
+              'No durable Flap pension entry Scenario Report exists for this token.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/:reportId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPensionEntryReportQuerySchema.parse(request.query);
+      const params = FlapPensionEntryReportParamsSchema.parse(request.params);
+      const repository = runtime.pensionEntryReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_PENSION_ENTRY_REPORT_UNAVAILABLE',
+              'Durable Flap pension entry Scenario Report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.chainId !== input.chainId ||
+        record.tokenAddress !== input.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FLAP_PENSION_ENTRY_REPORT_NOT_FOUND',
+              'The durable Flap pension entry Scenario Report was not found for this BSC token.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.post(
+    '/api/v1/rv/flap-pancake-v2-sell-scenarios',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPancakeV2SellScenarioRequestSchema.parse(request.body);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        const detail = 'A BNB Smart Chain read-only provider is required.';
+        return reply.code(503).send({
+          platform: 'flap',
+          token: input.token.toLowerCase(),
+          market: unavailableValue('PROVIDER_UNCONFIGURED', detail),
+          scenarios: [],
+          validation: {
+            status: 'NOT_RUN',
+            deterministicToleranceBps: '10',
+            evaluatedScenarioCount: 0,
+            failedScenarioCount: 0,
+          },
+          executionCapacity: unknownValue(
+            'NOT_QUERIED',
+            'Pinned-fork sell-capacity validation requires a configured BNB Smart Chain provider.',
+          ),
+          terminalEvidenceId: null,
+          metadata: emptyMetadata('flap-pancake-v2-pool-sell-scenarios-v0.1.0'),
+          evidence: [],
+        });
+      }
+      return quoteFlapPancakeV2SellScenarios({
+        adapter,
+        token: input.token,
+        tokenInputs: input.tokenInputs,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+    },
+  );
+
+  app.post(
+    '/api/v1/rv/flap-pancake-v2-reconciliation',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = FlapPancakeV2ReconciliationRequestSchema.parse(request.body);
+      const sourceAdapters = runtime.evmSourceAdapters?.get(56) ?? [];
+      if (sourceAdapters.length < options.config.dataQualityMinSources) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'MULTIPLE_BSC_ENDPOINTS_REQUIRED',
+              `At least ${options.config.dataQualityMinSources} separately configured BSC endpoints are required.`,
+              true,
+            ),
+          );
+      }
+      const anchorReconciliation = await runtime.dataQuality.inspect('EVM', 'eip155:56');
+      if (anchorReconciliation.status !== 'AGREEMENT') {
+        const unavailable = ['UNAVAILABLE', 'INSUFFICIENT_SOURCES'].includes(
+          anchorReconciliation.status,
+        );
+        return reply.code(unavailable ? 503 : 409).send({
+          ...errorResponse(
+            request,
+            `ANCHOR_${anchorReconciliation.status}`,
+            'BSC endpoints did not establish one common finalized block identity.',
+            unavailable,
+          ),
+          anchorReconciliation,
+        });
+      }
+      return reconcileFlapPancakeV2Market({
+        sourceAdapters,
+        anchorReconciliation,
+        token: input.token,
+        quoteInputs: input.quoteInputs,
+        tokenInputs: input.tokenInputs,
+        deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      });
+    },
+  );
+
+  app.post(
+    '/api/v1/data-quality/discrepancies',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = DiscrepancyAuditRequestSchema.parse(request.body);
+      if (input.checks.length === 0) return auditDiscrepancies(input.checks, input.metadata);
+      const snapshot = input.metadata.snapshot;
+      if (snapshot === null) {
+        return rejectUngroundedAnalysis(
+          request,
+          reply,
+          'Discrepancy comparisons require a target ledger Snapshot.',
+        );
+      }
+      const sourceEvidenceIds = uniqueEvidenceIds([
+        ...input.metadata.evidenceIds,
+        ...input.checks.flatMap((check) => [
+          ...check.actual.evidenceIds,
+          ...check.reference.evidenceIds,
+          ...(check.sourceIndependenceEvidenceIds ?? []),
+          ...(check.explanationEvidenceIds ?? []),
+        ]),
+      ]);
+      if (sourceEvidenceIds.length === 0) {
+        return rejectUngroundedAnalysis(
+          request,
+          reply,
+          'A non-empty discrepancy audit requires at least one source Evidence node.',
+        );
+      }
+      const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
+      if (missingIds.length > 0) {
+        return rejectUngroundedAnalysis(
+          request,
+          reply,
+          'Discrepancy source or explanation Evidence is not present in the evidence ledger.',
+          missingIds,
+        );
+      }
+      const incompatibleIds = await incompatibleEvidenceIds(runtime, sourceEvidenceIds, snapshot);
+      if (incompatibleIds.length > 0) {
+        return rejectUngroundedAnalysis(
+          request,
+          reply,
+          'Discrepancy Evidence is not anchored to the target Snapshot.',
+          incompatibleIds,
+          'SNAPSHOT_INCOMPATIBLE',
+        );
+      }
+      const result = auditDiscrepancies(input.checks, input.metadata);
+      const derived = await addDerivedAnalysisEvidence(
+        runtime,
+        snapshot,
+        sourceEvidenceIds,
+        DISCREPANCY_MODEL_VERSION,
+        `data-quality:discrepancy-audit:${hashPayload(input.checks)}`,
+        { input, result },
+        'Typed same-Snapshot discrepancy and error-budget audit.',
+      );
+      return {
+        ...result,
+        checks: result.checks.map((check) => ({
+          ...check,
+          evidenceIds: uniqueEvidenceIds([...check.evidenceIds, derived.id]),
+        })),
+        metadata: {
+          ...result.metadata,
+          evidenceIds: uniqueEvidenceIds([...result.metadata.evidenceIds, derived.id]),
+        },
+        evidence: [derived],
+      };
+    },
+  );
+
   app.post(
     '/api/v1/entities/resolve',
     { schema: { tags: ['analysis'] } },
     async (request, reply) => {
-      const input = EntityRequestSchema.parse(request.body);
+      let input = canonicalizeEntityRelationshipInput(
+        EntityRelationshipInputSchema.parse(request.body),
+      );
       if (input.features.length === 0) return resolveEntityRelationship(input);
-      if (input.metadata.snapshot === null) {
+      const snapshot = input.metadata.snapshot;
+      if (snapshot === null) {
         return rejectUngroundedAnalysis(
           request,
           reply,
           'Entity conclusions with features require a ledger snapshot.',
         );
       }
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.entityRelationshipReports === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_STORAGE_REQUIRED',
+              'Entity relationship hypotheses require durable Evidence and report storage.',
+              false,
+            ),
+          );
+      }
       const sourceEvidenceIds = uniqueEvidenceIds([
         ...input.metadata.evidenceIds,
         ...input.features.map((feature) => feature.evidenceId),
-      ]);
-      const missingIds = missingEvidenceIds(runtime, sourceEvidenceIds);
+      ]).sort();
+      const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
       if (missingIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -747,11 +3054,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           missingIds,
         );
       }
-      const incompatibleIds = incompatibleEvidenceIds(
-        runtime,
-        sourceEvidenceIds,
-        input.metadata.snapshot,
-      );
+      const incompatibleIds = await incompatibleEvidenceIds(runtime, sourceEvidenceIds, snapshot);
       if (incompatibleIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -761,24 +3064,155 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'SNAPSHOT_INCOMPATIBLE',
         );
       }
+      const sourceNodes = await Promise.all(
+        sourceEvidenceIds.map((evidenceId) => runtime.evidenceRepository?.get(evidenceId)),
+      );
+      if (sourceNodes.some((node) => node === undefined)) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_EVIDENCE_INCOMPLETE',
+              'Entity relationship source Evidence became unavailable before persistence.',
+              true,
+            ),
+          );
+      }
+      const sourceEvidence = sourceNodes.map((node) => node?.evidence as Evidence);
+      input = canonicalizeEntityRelationshipInput({
+        ...input,
+        metadata: {
+          ...input.metadata,
+          evidenceIds: sourceEvidenceIds,
+          sourceSet: uniqueSourceIds(sourceEvidence.map((evidence) => evidence.source)),
+        },
+      });
       const result = resolveEntityRelationship(input);
-      const derived = addDerivedAnalysisEvidence(
+      const derived = await addDerivedAnalysisEvidence(
         runtime,
-        input.metadata.snapshot,
+        snapshot,
         sourceEvidenceIds,
-        'zerotrace-entity-engine@0.1.0',
+        `zerotrace:${ENTITY_RELATIONSHIP_MODEL_VERSION}`,
         'entity-relationship:' + input.subjectA + ':' + input.subjectB,
         { input, result },
         'Evidence-weighted controller, coordination, and independence inference.',
       );
-      return {
+      const resultWithTerminal = {
         ...result,
         metadata: {
           ...result.metadata,
-          evidenceIds: uniqueEvidenceIds([...result.metadata.evidenceIds, derived.id]),
+          evidenceIds: uniqueSourceIds([...result.metadata.evidenceIds, derived.id]),
         },
-        evidence: [derived],
       };
+      const evidence = [...sourceEvidence, derived].sort((left, right) =>
+        left.id.localeCompare(right.id),
+      );
+      const report = EntityRelationshipReportSchema.parse({
+        schemaVersion: 'entity-relationship-report-v1',
+        automaticOwnershipMergeAllowed: false,
+        input,
+        result: resultWithTerminal,
+        terminalEvidenceId: derived.id,
+        evidence,
+      });
+      const stored = await runtime.entityRelationshipReports.put(report);
+      return {
+        ...resultWithTerminal,
+        automaticOwnershipMergeAllowed: false,
+        terminalEvidenceId: derived.id,
+        evidence,
+        durableReport: {
+          id: stored.id,
+          resultHash: stored.resultHash,
+          createdAt: stored.createdAt,
+          replayed: false,
+        },
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/relationships/reports/latest',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityRelationshipReportQuerySchema.parse(request.query);
+      const repository = runtime.entityRelationshipReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_REPORT_UNAVAILABLE',
+              'Durable Entity relationship report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const [subjectA, subjectB] = canonicalSubjectPair(input.subjectA, input.subjectB);
+      const record = await repository.latest({
+        ledger: input.ledger,
+        chainId: input.chainId,
+        subjectA,
+        subjectB,
+      });
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_REPORT_NOT_FOUND',
+              'No durable Entity relationship hypothesis report exists for this pair.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/relationships/reports/:reportId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityRelationshipReportQuerySchema.parse(request.query);
+      const params = EntityRelationshipReportParamsSchema.parse(request.params);
+      const repository = runtime.entityRelationshipReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_REPORT_UNAVAILABLE',
+              'Durable Entity relationship report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const [subjectA, subjectB] = canonicalSubjectPair(input.subjectA, input.subjectB);
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.ledger !== input.ledger ||
+        record.chainId !== input.chainId ||
+        record.subjectA !== subjectA ||
+        record.subjectB !== subjectB
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_REPORT_NOT_FOUND',
+              'The durable Entity relationship hypothesis report was not found for this pair.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
     },
   );
 
@@ -798,7 +3232,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         ...input.metadata.evidenceIds,
         ...input.pool.evidenceIds,
       ]);
-      const missingIds = missingEvidenceIds(runtime, sourceEvidenceIds);
+      const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
       if (missingIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -807,7 +3241,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           missingIds,
         );
       }
-      const incompatibleIds = incompatibleEvidenceIds(
+      const incompatibleIds = await incompatibleEvidenceIds(
         runtime,
         sourceEvidenceIds,
         input.metadata.snapshot,
@@ -822,7 +3256,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         );
       }
       const result = quoteConstantProductExit(input);
-      const derived = addDerivedAnalysisEvidence(
+      const derived = await addDerivedAnalysisEvidence(
         runtime,
         input.metadata.snapshot,
         sourceEvidenceIds,
@@ -858,7 +3292,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         ...input.metadata.evidenceIds,
         ...input.pool.evidenceIds,
       ]);
-      const missingIds = missingEvidenceIds(runtime, sourceEvidenceIds);
+      const missingIds = await missingEvidenceIds(runtime, sourceEvidenceIds);
       if (missingIds.length > 0) {
         return rejectUngroundedAnalysis(
           request,
@@ -867,7 +3301,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           missingIds,
         );
       }
-      const incompatibleIds = incompatibleEvidenceIds(
+      const incompatibleIds = await incompatibleEvidenceIds(
         runtime,
         sourceEvidenceIds,
         input.metadata.snapshot,
@@ -882,7 +3316,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         );
       }
       const result = simulateExitRace(input);
-      const derived = addDerivedAnalysisEvidence(
+      const derived = await addDerivedAnalysisEvidence(
         runtime,
         input.metadata.snapshot,
         sourceEvidenceIds,
@@ -903,15 +3337,766 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     },
   );
 
-  const incompleteCapabilities = [
-    'assets',
-    'labels',
-    'control-rights',
-    'launches',
-    'markets',
-    'claims',
-    'timeline',
-  ];
+  app.post(
+    '/api/v1/claims/declarations/parse',
+    { schema: { tags: ['intelligence'] } },
+    async (request) => {
+      const input = ClaimDeclarationParseRequestSchema.parse(request.body);
+      const result = parseEvmClaimDeclaration({
+        text: input.text,
+        chainId: input.chainId,
+        assetId: input.assetId,
+        source: 'api:user-submitted-claim-declaration',
+        observedAt: new Date().toISOString(),
+        ...(input.sourceUri === undefined ? {} : { sourceUri: input.sourceUri }),
+        ...(input.auditWindow === undefined ? {} : { auditWindow: input.auditWindow }),
+      });
+      const evidence = await addEvidence(runtime, result.evidence);
+      return { ...result, evidence };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/pension-candidates/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const repository = runtime.pensionCandidateReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_UNAVAILABLE',
+              'Durable pension candidate report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(params.token.toLowerCase());
+      if (record === undefined || record.chainId !== 'eip155:56') {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_NOT_FOUND',
+              'No durable BSC pension candidate report exists for this token.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/pension-candidates/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = PensionCandidateReportByIdParamsSchema.parse(request.params);
+      const repository = runtime.pensionCandidateReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_UNAVAILABLE',
+              'Durable pension candidate report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.chainId !== 'eip155:56' ||
+        record.tokenAddress !== params.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'PENSION_CANDIDATE_REPORT_NOT_FOUND',
+              'The durable pension candidate report was not found for this BSC token.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/:ledger/:token/pension-candidates',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const input = PensionCandidateDiscoveryRequestSchema.parse(request.body);
+      const adapter = runtime.evmAdapters.get(56);
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured BSC provider is required for pension candidate discovery.',
+              true,
+            ),
+          );
+      }
+      if (runtime.sqdBscLogReader === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'HISTORY_PROVIDER_UNCONFIGURED',
+              'Pension candidate discovery requires the finalized BSC SQD dataset.',
+              true,
+            ),
+          );
+      }
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.pensionCandidateReports === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_STORAGE_REQUIRED',
+              'Pension candidate discovery requires durable Evidence and report storage.',
+              false,
+            ),
+          );
+      }
+      const anchor = await adapter.readAnchorAt(input.toBlock);
+      if (anchor.snapshot.ledger !== 'EVM' || anchor.snapshot.finality !== 'finalized') {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FINALIZED_PROVIDER_REQUIRED',
+              'Pension candidate discovery requires a finalized range-end Snapshot.',
+              true,
+            ),
+          );
+      }
+      const run = await discoverEvmPensionCandidates({
+        tokenAddress: params.token,
+        fromBlock: input.fromBlock,
+        toBlock: input.toBlock,
+        snapshot: anchor.snapshot,
+        policy: {
+          shareUnitAtomic: input.shareUnitAtomic,
+          minimumExactUnitDeposits: input.minimumExactUnitDeposits,
+          minimumUniqueExactUnitDepositors: input.minimumUniqueExactUnitDepositors,
+          maximumCandidates: input.maximumCandidates,
+        },
+        logReader: runtime.sqdBscLogReader,
+        blockReader: adapter,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.maxBlocksPerRequest === undefined
+          ? {}
+          : { maxBlocksPerRequest: input.maxBlocksPerRequest }),
+        ...(input.maxRequests === undefined ? {} : { maxRequests: input.maxRequests }),
+        ...(input.maxTransfers === undefined ? {} : { maxTransfers: input.maxTransfers }),
+      });
+      const durableReport = await runtime.pensionCandidateReports.put(run.report);
+      return { report: run.report, durableReport };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/:ledger/:token/burn-candidates',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const input = ClaimBurnDiscoveryRequestSchema.parse(request.body);
+      const numericChainId = Number(input.chainId.slice('eip155:'.length));
+      if (!Number.isSafeInteger(numericChainId)) {
+        return reply
+          .code(400)
+          .send(errorResponse(request, 'INVALID_CHAIN_ID', 'Invalid EIP-155 chain ID.', false));
+      }
+      const adapter = runtime.evmAdapters.get(numericChainId);
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured EVM provider is required for burn candidate discovery.',
+              true,
+            ),
+          );
+      }
+      if (numericChainId !== 56 || runtime.sqdBscLogReader === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'HISTORY_PROVIDER_UNCONFIGURED',
+              'The current long-range burn candidate path requires the BSC SQD dataset.',
+              true,
+            ),
+          );
+      }
+      const anchor = await adapter.readAnchorAt(input.toBlock);
+      if (anchor.snapshot.ledger !== 'EVM' || anchor.snapshot.finality !== 'finalized') {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FINALIZED_PROVIDER_REQUIRED',
+              'Burn candidate discovery requires a finalized range-end Snapshot.',
+              true,
+            ),
+          );
+      }
+      return discoverErc20BurnCandidates({
+        tokenAddress: params.token,
+        fromBlock: input.fromBlock,
+        toBlock: input.toBlock,
+        snapshot: anchor.snapshot,
+        logReader: runtime.sqdBscLogReader,
+        blockReader: adapter,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.maxBlocksPerRequest === undefined
+          ? {}
+          : { maxBlocksPerRequest: input.maxBlocksPerRequest }),
+        ...(input.maxTransfers === undefined ? {} : { maxTransfers: input.maxTransfers }),
+        ...(input.maxCandidates === undefined ? {} : { maxCandidates: input.maxCandidates }),
+      });
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/burn-promotions/:scanId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnPromotionParamsSchema.parse(request.params);
+      const checkpoints = runtime.semanticCheckpoints;
+      if (checkpoints === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'BURN_PROMOTION_REPLAY_UNAVAILABLE',
+              'Durable burn promotion storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const run = await checkpoints.get(params.scanId);
+      if (
+        run === undefined ||
+        run.scanType !== 'ERC20_BURN_CANDIDATE_PROMOTION' ||
+        run.source !== 'sqd:binance-mainnet' ||
+        run.ledger !== 'EVM' ||
+        run.chainId !== 'eip155:56' ||
+        run.subject !== params.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'BURN_PROMOTION_NOT_FOUND',
+              'The requested burn promotion scan was not found.',
+              false,
+            ),
+          );
+      }
+      const terminalResult = replayErc20BurnPromotionResult(run);
+      const totalBlocks = run.toBlock - run.fromBlock + 1;
+      const completedBlocks = Math.min(Math.max(run.nextBlock - run.fromBlock, 0), totalBlocks);
+      return {
+        scan: {
+          id: run.id,
+          status: run.status,
+          token: run.subject,
+          requestedRange: {
+            fromBlock: String(run.fromBlock),
+            toBlock: String(run.toBlock),
+            segmentSize: run.chunkSize,
+          },
+          nextBlock: String(run.nextBlock),
+          requestedRangeCoverage: completedBlocks / totalBlocks,
+          lastErrorCode: run.lastErrorCode,
+          updatedAt: run.updatedAt,
+        },
+        terminalResult,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/supply-continuity/:scanId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimSupplyContinuityParamsSchema.parse(request.params);
+      const checkpoints = runtime.semanticCheckpoints;
+      if (checkpoints === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SUPPLY_CONTINUITY_REPLAY_UNAVAILABLE',
+              'Durable supply-continuity storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const run = await checkpoints.get(params.scanId);
+      if (
+        run === undefined ||
+        run.scanType !== 'ERC20_SUPPLY_CONTINUITY' ||
+        run.source !== 'multi-source:bsc-rpc+sqd' ||
+        run.ledger !== 'EVM' ||
+        run.chainId !== 'eip155:56' ||
+        run.subject !== params.token.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SUPPLY_CONTINUITY_NOT_FOUND',
+              'The requested supply-continuity scan was not found.',
+              false,
+            ),
+          );
+      }
+      const terminalResult = replayErc20SupplyContinuityResult(run);
+      const totalBlocks = run.toBlock - run.fromBlock + 1;
+      const completedBlocks = Math.min(Math.max(run.nextBlock - run.fromBlock, 0), totalBlocks);
+      return {
+        scan: {
+          id: run.id,
+          status: run.status,
+          token: run.subject,
+          requestedRange: {
+            fromBlock: String(run.fromBlock),
+            toBlock: String(run.toBlock),
+            segmentSize: run.chunkSize,
+          },
+          nextBlock: String(run.nextBlock),
+          requestedRangeCoverage: completedBlocks / totalBlocks,
+          lastErrorCode: run.lastErrorCode,
+          updatedAt: run.updatedAt,
+        },
+        terminalResult,
+      };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/:ledger/:token/burn-conservation',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const input = ClaimBurnRequestSchema.parse(request.body);
+      const numericChainId = Number(input.chainId.slice('eip155:'.length));
+      if (!Number.isSafeInteger(numericChainId)) {
+        return reply
+          .code(400)
+          .send(errorResponse(request, 'INVALID_CHAIN_ID', 'Invalid EIP-155 chain ID.', false));
+      }
+      const adapter = runtime.evmAdapters.get(numericChainId);
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured EVM provider is required for burn conservation.',
+              true,
+            ),
+          );
+      }
+      const anchor = await adapter.readAnchorAt(input.blockNumber);
+      if (anchor.snapshot.ledger !== 'EVM' || anchor.snapshot.finality !== 'finalized') {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'FINALIZED_PROVIDER_REQUIRED',
+              'Burn conservation requires a finalized EVM Snapshot.',
+              true,
+            ),
+          );
+      }
+      const run = await observeEvmClaimBurnBlock({
+        tokenAddress: params.token,
+        snapshot: anchor.snapshot,
+        adapter,
+        logReader: adapter,
+        blockReader: adapter,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(input.maxTransfers === undefined ? {} : { maxTransfers: input.maxTransfers }),
+      });
+      return run;
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/addresses/:address/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimReportParamsSchema.parse(request.params);
+      const query = ClaimReportQuerySchema.parse(request.query);
+      const repository = runtime.claimReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_REPORT_UNAVAILABLE',
+              'Durable Claim Report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(
+        query.chainId,
+        params.token.toLowerCase(),
+        params.address.toLowerCase(),
+      );
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_REPORT_NOT_FOUND',
+              'No durable Claim Report exists for this token and address.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/:ledger/:token/addresses/:address/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimReportByIdParamsSchema.parse(request.params);
+      const query = ClaimReportQuerySchema.parse(request.query);
+      const repository = runtime.claimReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_REPORT_UNAVAILABLE',
+              'Durable Claim Report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (
+        record === undefined ||
+        record.chainId !== query.chainId ||
+        record.tokenAddress !== params.token.toLowerCase() ||
+        record.address !== params.address.toLowerCase()
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_REPORT_NOT_FOUND',
+              'The requested durable Claim Report was not found for this subject.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.post(
+    '/api/v1/control-rights/:ledger/:subject/inspect',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ControlSurfaceParamsSchema.parse(request.params);
+      const input = ControlSurfaceInspectSchema.parse(request.body);
+      if (
+        (params.ledger === 'EVM' && !input.chainId.startsWith('eip155:')) ||
+        (params.ledger === 'SOLANA' && input.chainId !== 'solana-mainnet')
+      ) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_CHAIN_ID',
+              'Control surface ledger and chain ID do not match.',
+              false,
+            ),
+          );
+      }
+      if (runtime.evidenceRepository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              'Durable Evidence storage is required for control inspection.',
+              false,
+            ),
+          );
+      }
+      if (params.ledger === 'SOLANA') {
+        if (input.blockNumber !== undefined) {
+          return reply
+            .code(400)
+            .send(
+              errorResponse(
+                request,
+                'HISTORICAL_STATE_UNSUPPORTED',
+                'Solana JSON-RPC does not provide arbitrary historical account state; inspect the finalized live account set instead.',
+                false,
+              ),
+            );
+        }
+        if (runtime.solanaControlSurfaces === undefined) {
+          return reply
+            .code(503)
+            .send(
+              errorResponse(
+                request,
+                'CONTROL_SURFACE_UNAVAILABLE',
+                'Durable Solana control surface storage is required.',
+                false,
+              ),
+            );
+        }
+        if (runtime.solanaAdapter === undefined) {
+          return reply
+            .code(503)
+            .send(
+              errorResponse(
+                request,
+                'PROVIDER_UNCONFIGURED',
+                'A configured finalized Solana provider is required for control inspection.',
+                true,
+              ),
+            );
+        }
+        const report = await inspectSolanaControlSurface({
+          subject: params.subject,
+          adapter: runtime.solanaAdapter,
+          writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+            addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        });
+        const record = await runtime.solanaControlSurfaces.put(report);
+        return { record };
+      }
+      const repository = runtime.controlSurfaces;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              'Durable EVM control surface storage is required.',
+              false,
+            ),
+          );
+      }
+      const numericChainId = Number(input.chainId.slice('eip155:'.length));
+      if (!Number.isSafeInteger(numericChainId)) {
+        return reply
+          .code(400)
+          .send(errorResponse(request, 'INVALID_CHAIN_ID', 'Invalid EIP-155 chain ID.', false));
+      }
+      const primary = runtime.evmAdapters.get(numericChainId);
+      if (primary === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured finalized EVM provider is required for control inspection.',
+              true,
+            ),
+          );
+      }
+      const adapters = runtime.evmSourceAdapters?.get(numericChainId) ?? [primary];
+      const report = await inspectEvmControlSurface({
+        subject: params.subject,
+        adapters,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        ...(runtime.evmSourceVerification === undefined
+          ? {}
+          : { sourceVerificationAdapter: runtime.evmSourceVerification }),
+        ...(input.blockNumber === undefined ? {} : { blockNumber: input.blockNumber }),
+      });
+      const record = await repository.put(report);
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/control-rights/:ledger/:subject/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ControlSurfaceParamsSchema.parse(request.params);
+      const query = ControlSurfaceQuerySchema.parse(request.query);
+      if (
+        (params.ledger === 'EVM' && !query.chainId.startsWith('eip155:')) ||
+        (params.ledger === 'SOLANA' && query.chainId !== 'solana-mainnet')
+      ) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(request, 'INVALID_CHAIN_ID', 'Ledger and chain ID do not match.', false),
+          );
+      }
+      const repository =
+        params.ledger === 'EVM' ? runtime.controlSurfaces : runtime.solanaControlSurfaces;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              `Durable ${params.ledger} control surface storage is not configured.`,
+              false,
+            ),
+          );
+      }
+      const record =
+        params.ledger === 'EVM'
+          ? await runtime.controlSurfaces?.latest(query.chainId, params.subject.toLowerCase())
+          : await runtime.solanaControlSurfaces?.latest(params.subject);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_NOT_FOUND',
+              `No durable ${params.ledger} control surface report was found for this subject.`,
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/control-rights/:ledger/:subject/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ControlSurfaceByIdParamsSchema.parse(request.params);
+      const query = ControlSurfaceQuerySchema.parse(request.query);
+      if (
+        (params.ledger === 'EVM' && !query.chainId.startsWith('eip155:')) ||
+        (params.ledger === 'SOLANA' && query.chainId !== 'solana-mainnet')
+      ) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(request, 'INVALID_CHAIN_ID', 'Ledger and chain ID do not match.', false),
+          );
+      }
+      const repository =
+        params.ledger === 'EVM' ? runtime.controlSurfaces : runtime.solanaControlSurfaces;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              `Durable ${params.ledger} control surface storage is not configured.`,
+              false,
+            ),
+          );
+      }
+      const record =
+        params.ledger === 'EVM'
+          ? await runtime.controlSurfaces?.get(params.reportId)
+          : await runtime.solanaControlSurfaces?.get(params.reportId);
+      if (
+        record === undefined ||
+        record.chainId !== query.chainId ||
+        record.subject !== (params.ledger === 'EVM' ? params.subject.toLowerCase() : params.subject)
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_NOT_FOUND',
+              `The requested durable ${params.ledger} control surface report was not found.`,
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/control-rights',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const query = ControlSurfaceListQuerySchema.parse(request.query);
+      const repository =
+        query.ledger === 'EVM' ? runtime.controlSurfaces : runtime.solanaControlSurfaces;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              `Durable ${query.ledger} control surface storage is not configured.`,
+              false,
+            ),
+          );
+      }
+      const record =
+        query.ledger === 'EVM'
+          ? await runtime.controlSurfaces?.latest(query.chainId, query.subject.toLowerCase())
+          : await runtime.solanaControlSurfaces?.latest(query.subject);
+      return { records: record === undefined ? [] : [record] };
+    },
+  );
+
+  const incompleteCapabilities = ['assets', 'labels', 'launches', 'markets', 'claims', 'timeline'];
   for (const capability of incompleteCapabilities) {
     app.all(`/api/v1/${capability}`, { schema: { tags: ['analysis'] } }, (request, reply) =>
       capabilityNotImplemented(request, reply, capability),

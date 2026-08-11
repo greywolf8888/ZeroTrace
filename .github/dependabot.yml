@@ -7,12 +7,23 @@ updates:
       day: monday
       time: '03:00'
       timezone: Asia/Singapore
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     groups:
-      runtime:
-        dependency-type: production
-      development:
-        dependency-type: development
+      npm-weekly:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
     commit-message:
       prefix: deps
 
@@ -23,7 +34,23 @@ updates:
       day: monday
       time: '03:30'
       timezone: Asia/Singapore
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    groups:
+      docker-weekly:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      docker-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
     commit-message:
       prefix: deps
 
@@ -34,6 +61,22 @@ updates:
       day: monday
       time: '04:00'
       timezone: Asia/Singapore
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    groups:
+      actions-weekly:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+      actions-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
     commit-message:
       prefix: ci

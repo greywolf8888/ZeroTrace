@@ -1,0 +1,18 @@
+{
+  "name": "@zerotrace/ingest-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/cli.js",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsx --tsconfig ../../tsconfig.base.json src/cli.ts",
+    "start": "node dist/src/cli.js"
+  },
+  "dependencies": {
+    "@zerotrace/chain-adapters": "*",
+    "@zerotrace/ingestion": "*",
+    "@zerotrace/storage": "*",
+    "dotenv": "17.4.2"
+  }
+}

@@ -1,23 +1,32 @@
 import { createHash } from 'node:crypto';
 
-import { EvidenceSchema, type Evidence, type EvidenceKind, type Ledger } from '@zerotrace/schemas';
+import {
+  AnalysisSnapshotSchema,
+  EvidenceSchema,
+  type AnalysisSnapshot,
+  type Evidence,
+  type EvidenceKind,
+  type Ledger,
+} from '@zerotrace/schemas';
 
-function canonicalize(value: unknown): string {
+export function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value);
+    const encoded = JSON.stringify(value);
+    if (encoded === undefined) throw new TypeError('Value is not JSON serializable.');
+    return encoded;
   }
   if (Array.isArray(value)) {
-    return `[${value.map(canonicalize).join(',')}]`;
+    return `[${value.map(canonicalJson).join(',')}]`;
   }
   const record = value as Record<string, unknown>;
   return `{${Object.keys(record)
     .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonicalize(record[key])}`)
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
     .join(',')}}`;
 }
 
 export function hashPayload(payload: unknown): string {
-  return createHash('sha256').update(canonicalize(payload)).digest('hex');
+  return createHash('sha256').update(canonicalJson(payload)).digest('hex');
 }
 
 export interface CreateEvidenceInput {
@@ -33,56 +42,124 @@ export interface CreateEvidenceInput {
   blockOrSlot?: string;
   finality?: string;
   rawArtifactRef?: string;
+  sourceEvidenceIds?: readonly string[];
+}
+
+function normalizedSourceIds(sourceEvidenceIds: readonly string[]): string[] {
+  return [...new Set(sourceEvidenceIds)].sort();
+}
+
+export function evidenceIdFor(
+  evidence: Omit<Evidence, 'id'> | Evidence,
+  sourceEvidenceIds: readonly string[] = [],
+): string {
+  const content = { ...evidence } as Partial<Evidence>;
+  delete content.id;
+  return `ev_${hashPayload({
+    schema: 'zerotrace-evidence-v1',
+    evidence: content,
+    sourceEvidenceIds: normalizedSourceIds(sourceEvidenceIds),
+  }).slice(0, 24)}`;
 }
 
 export function createEvidence(input: CreateEvidenceInput): Evidence {
   const payloadHash = hashPayload(input.payload);
-  const evidence: Evidence = {
-    id: `ev_${payloadHash.slice(0, 24)}`,
+  const rawObservedAt = input.observedAt ?? new Date().toISOString();
+  const parsedObservedAt = new Date(rawObservedAt);
+  const observedAt = Number.isNaN(parsedObservedAt.getTime())
+    ? rawObservedAt
+    : parsedObservedAt.toISOString();
+  const content = {
     ledger: input.ledger,
     chainId: input.chainId,
     kind: input.kind,
     source: input.source,
     locator: input.locator,
     payloadHash,
-    observedAt: input.observedAt ?? new Date().toISOString(),
+    observedAt,
     summary: input.summary,
     ...(input.sourceUri === undefined ? {} : { sourceUri: input.sourceUri }),
     ...(input.blockOrSlot === undefined ? {} : { blockOrSlot: input.blockOrSlot }),
     ...(input.finality === undefined ? {} : { finality: input.finality }),
     ...(input.rawArtifactRef === undefined ? {} : { rawArtifactRef: input.rawArtifactRef }),
   };
+  const evidence: Evidence = {
+    id: evidenceIdFor(content, input.sourceEvidenceIds),
+    ...content,
+  };
   return EvidenceSchema.parse(evidence);
 }
 
 export interface EvidenceNode {
   evidence: Evidence;
-  sourceEvidenceIds: string[];
+  sourceEvidenceIds: readonly string[];
+  snapshot?: AnalysisSnapshot;
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const item of Object.values(value as Record<string, unknown>)) deepFreeze(item);
+    Object.freeze(value);
+  }
+  return value;
 }
 
 export class EvidenceLedger {
   readonly #nodes = new Map<string, EvidenceNode>();
 
-  add(evidence: Evidence, sourceEvidenceIds: readonly string[] = []): EvidenceNode {
+  add(
+    evidence: Evidence,
+    sourceEvidenceIds: readonly string[] = [],
+    snapshot?: AnalysisSnapshot,
+  ): EvidenceNode {
     const parsed = EvidenceSchema.parse(evidence);
+    const parsedSnapshot =
+      snapshot === undefined ? undefined : AnalysisSnapshotSchema.parse(snapshot);
+    const sources = normalizedSourceIds(sourceEvidenceIds);
     if (this.#nodes.has(parsed.id)) {
       throw new Error(`Evidence ${parsed.id} already exists; observations are immutable.`);
     }
-    for (const sourceId of sourceEvidenceIds) {
+    if (
+      (parsed.kind === 'DERIVED_FEATURE' || parsed.kind === 'NEGATIVE_EVIDENCE') &&
+      sources.length === 0
+    ) {
+      throw new Error(`${parsed.kind} must link to at least one source observation.`);
+    }
+    if (
+      sources.length > 0 &&
+      !['DERIVED_FEATURE', 'NEGATIVE_EVIDENCE', 'ANALYST_OBSERVATION'].includes(parsed.kind)
+    ) {
+      throw new Error(`${parsed.kind} may not derive from another observation.`);
+    }
+    if (parsed.id !== evidenceIdFor(parsed, sources)) {
+      throw new Error(
+        'Evidence ID does not match its canonical observation and derivation sources.',
+      );
+    }
+    for (const sourceId of sources) {
       if (!this.#nodes.has(sourceId)) {
         throw new Error(`Source evidence ${sourceId} must exist before derived evidence is added.`);
       }
     }
-    if (
-      (parsed.kind === 'DERIVED_FEATURE' || parsed.kind === 'NEGATIVE_EVIDENCE') &&
-      sourceEvidenceIds.length === 0
-    ) {
-      throw new Error(`${parsed.kind} must link to at least one source observation.`);
+    if (parsedSnapshot !== undefined) {
+      if (parsedSnapshot.ledger !== parsed.ledger || parsedSnapshot.chainId !== parsed.chainId) {
+        throw new Error('Evidence snapshot must use the same ledger and chain.');
+      }
+      const position =
+        parsedSnapshot.ledger === 'EVM'
+          ? parsedSnapshot.blockNumber
+          : parsedSnapshot.ledger === 'BITCOIN'
+            ? parsedSnapshot.height
+            : parsedSnapshot.slot;
+      if (parsed.blockOrSlot !== undefined && parsed.blockOrSlot !== position) {
+        throw new Error('Evidence snapshot position does not match the observation.');
+      }
     }
-    const node = {
-      evidence: Object.freeze({ ...parsed }),
-      sourceEvidenceIds: [...sourceEvidenceIds],
-    };
+    const node = deepFreeze({
+      evidence: parsed,
+      sourceEvidenceIds: sources,
+      ...(parsedSnapshot === undefined ? {} : { snapshot: parsedSnapshot }),
+    });
     this.#nodes.set(parsed.id, node);
     return node;
   }

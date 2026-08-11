@@ -5,7 +5,11 @@ export const Hash256Schema = z.string().regex(/^[a-fA-F0-9]{64}$/);
 export const ConfidenceSchema = z.number().min(0).max(1);
 export const CoverageRatioSchema = z.number().min(0).max(1);
 export const QuantityStringSchema = z.string().regex(/^-?\d+$/);
+export const UnsignedQuantityStringSchema = z.string().regex(/^(?:0|[1-9]\d*)$/);
 export const DecimalStringSchema = z.string().regex(/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/);
+export const EvmCanonicalAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/);
+export const JsonValueSchema = z.json();
+export type JsonValue = z.infer<typeof JsonValueSchema>;
 
 export const LedgerSchema = z.enum(['EVM', 'BITCOIN', 'SOLANA']);
 export type Ledger = z.infer<typeof LedgerSchema>;
@@ -29,6 +33,7 @@ export type SubjectType = z.infer<typeof SubjectTypeSchema>;
 
 export const KnowledgeReasonSchema = z.enum([
   'NOT_QUERIED',
+  'NOT_APPLICABLE',
   'INSUFFICIENT_DATA',
   'UNSUPPORTED',
   'NOT_IMPLEMENTED',
@@ -89,6 +94,7 @@ export const EvidenceKindSchema = z.enum([
   'MEMPOOL',
   'CONTRACT_STATE',
   'PROGRAM_STATE',
+  'OFFICIAL_DOCUMENT',
   'PROVIDER_OBSERVATION',
   'DERIVED_FEATURE',
   'NEGATIVE_EVIDENCE',
@@ -106,12 +112,42 @@ export const EvidenceSchema = z.object({
   sourceUri: z.url().optional(),
   payloadHash: Hash256Schema,
   observedAt: IsoDateTimeSchema,
-  blockOrSlot: z.string().optional(),
+  blockOrSlot: QuantityStringSchema.optional(),
   finality: z.string().optional(),
   summary: z.string().min(1),
   rawArtifactRef: z.string().optional(),
 });
 export type Evidence = z.infer<typeof EvidenceSchema>;
+
+export const RawArtifactEnvelopeSchema = z.object({
+  schema: z.literal('zerotrace-raw-artifact-v1'),
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  blockOrSlot: z.string().regex(/^\d+$/),
+  provider: z.string().min(1),
+  capturedAt: IsoDateTimeSchema,
+  payload: JsonValueSchema,
+});
+export type RawArtifactEnvelope = z.infer<typeof RawArtifactEnvelopeSchema>;
+
+export const RawChainFactSchema = z.object({
+  id: Hash256Schema,
+  schemaVersion: z.literal('zerotrace-raw-fact-v1'),
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  blockOrSlot: z.string().regex(/^\d+$/),
+  blockHash: z.string().min(1),
+  factType: z.string().min(1),
+  subject: z.string().min(1),
+  provider: z.string().min(1),
+  finality: z.string().min(1),
+  payload: JsonValueSchema,
+  payloadHash: Hash256Schema,
+  evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  rawArtifactRef: z.string().regex(/^s3:\/\/[a-z0-9][a-z0-9.-]+\/.+#sha256=[0-9a-f]{64}$/),
+  observedAt: IsoDateTimeSchema,
+});
+export type RawChainFact = z.infer<typeof RawChainFactSchema>;
 
 const SnapshotBaseSchema = z.object({
   capturedAt: IsoDateTimeSchema,
@@ -127,6 +163,11 @@ export const EvmSnapshotSchema = SnapshotBaseSchema.extend({
   chainId: z.string().min(1),
   blockNumber: QuantityStringSchema,
   blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  parentBlockHash: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{64}$/)
+    .optional(),
+  finality: z.enum(['latest', 'safe', 'finalized']),
   blockTimestamp: IsoDateTimeSchema.optional(),
 });
 
@@ -135,6 +176,8 @@ export const BitcoinSnapshotSchema = SnapshotBaseSchema.extend({
   chainId: z.literal('bitcoin-mainnet'),
   height: QuantityStringSchema,
   blockHash: Hash256Schema,
+  previousBlockHash: Hash256Schema.optional(),
+  finality: z.literal('best-chain'),
   mempoolSnapshot: z.string().min(1).optional(),
 });
 
@@ -143,6 +186,8 @@ export const SolanaSnapshotSchema = SnapshotBaseSchema.extend({
   chainId: z.literal('solana-mainnet'),
   slot: QuantityStringSchema,
   blockhash: z.string().min(32),
+  parentSlot: UnsignedQuantityStringSchema.optional(),
+  previousBlockhash: z.string().min(32).optional(),
   commitment: z.enum(['processed', 'confirmed', 'finalized']),
   blockTimestamp: IsoDateTimeSchema.optional(),
 });
@@ -153,6 +198,326 @@ export const AnalysisSnapshotSchema = z.discriminatedUnion('ledger', [
   SolanaSnapshotSchema,
 ]);
 export type AnalysisSnapshot = z.infer<typeof AnalysisSnapshotSchema>;
+
+const EvmHashSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
+const BitcoinHashSchema = Hash256Schema;
+const SolanaHashSchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,64}$/);
+
+const ChainAnchorCommonShape = {
+  position: UnsignedQuantityStringSchema,
+  source: z.string().min(1),
+  observedAt: IsoDateTimeSchema,
+};
+
+export const EvmChainAnchorSchema = z.object({
+  ...ChainAnchorCommonShape,
+  ledger: z.literal('EVM'),
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  hash: EvmHashSchema,
+  parentPosition: UnsignedQuantityStringSchema.optional(),
+  parentHash: EvmHashSchema.optional(),
+  finality: z.enum(['latest', 'safe', 'finalized']),
+});
+
+export const BitcoinChainAnchorSchema = z.object({
+  ...ChainAnchorCommonShape,
+  ledger: z.literal('BITCOIN'),
+  chainId: z.literal('bitcoin-mainnet'),
+  hash: BitcoinHashSchema,
+  parentPosition: UnsignedQuantityStringSchema.optional(),
+  parentHash: BitcoinHashSchema.optional(),
+  finality: z.literal('best-chain'),
+});
+
+export const SolanaChainAnchorSchema = z.object({
+  ...ChainAnchorCommonShape,
+  ledger: z.literal('SOLANA'),
+  chainId: z.literal('solana-mainnet'),
+  hash: SolanaHashSchema,
+  parentPosition: UnsignedQuantityStringSchema,
+  parentHash: SolanaHashSchema,
+  finality: z.enum(['processed', 'confirmed', 'finalized']),
+});
+
+export const ChainAnchorSchema = z.discriminatedUnion('ledger', [
+  EvmChainAnchorSchema,
+  BitcoinChainAnchorSchema,
+  SolanaChainAnchorSchema,
+]);
+export type ChainAnchor = z.infer<typeof ChainAnchorSchema>;
+
+export const ReconciledChainAnchorSchema = z.discriminatedUnion('ledger', [
+  EvmChainAnchorSchema.omit({ source: true, observedAt: true }),
+  BitcoinChainAnchorSchema.omit({ source: true, observedAt: true }),
+  SolanaChainAnchorSchema.omit({ source: true, observedAt: true }),
+]);
+export type ReconciledChainAnchor = z.infer<typeof ReconciledChainAnchorSchema>;
+
+export const ChainAnchorReadSchema = z
+  .object({
+    anchor: ChainAnchorSchema,
+    snapshot: AnalysisSnapshotSchema,
+    payload: JsonValueSchema,
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.snapshot;
+    const position =
+      snapshot.ledger === 'EVM'
+        ? snapshot.blockNumber
+        : snapshot.ledger === 'BITCOIN'
+          ? snapshot.height
+          : snapshot.slot;
+    const hash = snapshot.ledger === 'SOLANA' ? snapshot.blockhash : snapshot.blockHash;
+    const finality =
+      snapshot.ledger === 'EVM'
+        ? snapshot.finality
+        : snapshot.ledger === 'BITCOIN'
+          ? snapshot.finality
+          : snapshot.commitment;
+    if (
+      snapshot.ledger !== value.anchor.ledger ||
+      snapshot.chainId !== value.anchor.chainId ||
+      position !== value.anchor.position ||
+      hash !== value.anchor.hash ||
+      finality !== value.anchor.finality
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Chain anchor and Snapshot identities must match.',
+      });
+    }
+    if (value.anchor.ledger === 'EVM') {
+      const isGenesis = value.anchor.position === '0';
+      const parentPosition = value.anchor.parentPosition;
+      const parentHash = value.anchor.parentHash;
+      const snapshotParentHash = snapshot.ledger === 'EVM' ? snapshot.parentBlockHash : undefined;
+      if (
+        isGenesis
+          ? parentPosition !== undefined ||
+            parentHash !== undefined ||
+            snapshotParentHash !== undefined
+          : parentPosition !== (BigInt(value.anchor.position) - 1n).toString() ||
+            parentHash === undefined ||
+            snapshotParentHash !== parentHash
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['anchor', 'parentHash'],
+          message: 'EVM anchor parent identity must match its replay Snapshot.',
+        });
+      }
+    } else if (value.anchor.ledger === 'BITCOIN') {
+      const isGenesis = value.anchor.position === '0';
+      const parentPosition = value.anchor.parentPosition;
+      const parentHash = value.anchor.parentHash;
+      const snapshotParentHash =
+        snapshot.ledger === 'BITCOIN' ? snapshot.previousBlockHash : undefined;
+      if (
+        isGenesis
+          ? parentPosition !== undefined ||
+            parentHash !== undefined ||
+            snapshotParentHash !== undefined
+          : parentPosition !== (BigInt(value.anchor.position) - 1n).toString() ||
+            parentHash === undefined ||
+            snapshotParentHash !== parentHash
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['anchor', 'parentHash'],
+          message: 'Bitcoin anchor parent identity must match its replay Snapshot.',
+        });
+      }
+    } else if (
+      snapshot.ledger !== 'SOLANA' ||
+      snapshot.parentSlot !== value.anchor.parentPosition ||
+      snapshot.previousBlockhash !== value.anchor.parentHash
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['anchor', 'parentHash'],
+        message: 'Solana anchor parent identity must match its replay Snapshot.',
+      });
+    }
+    const anchorSources = value.anchor.source.split('|');
+    if (
+      anchorSources.length === 0 ||
+      anchorSources.some((source) => !Object.hasOwn(snapshot.providerVersions, source))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['anchor', 'source'],
+        message: 'Chain anchor source must be represented in Snapshot provider versions.',
+      });
+    }
+  });
+export type ChainAnchorRead = z.infer<typeof ChainAnchorReadSchema>;
+
+export const ChainAnchorObservationRoleSchema = z.enum(['HEAD', 'COMPARISON', 'CONTINUITY_CHECK']);
+export type ChainAnchorObservationRole = z.infer<typeof ChainAnchorObservationRoleSchema>;
+
+const PersistedAnchorShape = {
+  id: z.string().regex(/^anchor_[0-9a-f]{24}$/),
+  role: ChainAnchorObservationRoleSchema,
+  evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+};
+
+export const PersistedChainAnchorObservationSchema = z.discriminatedUnion('ledger', [
+  EvmChainAnchorSchema.extend(PersistedAnchorShape),
+  BitcoinChainAnchorSchema.extend(PersistedAnchorShape),
+  SolanaChainAnchorSchema.extend(PersistedAnchorShape),
+]);
+export type PersistedChainAnchorObservation = z.infer<typeof PersistedChainAnchorObservationSchema>;
+
+export const AnchorContinuityStatusSchema = z.enum([
+  'FIRST_OBSERVATION',
+  'UNCHANGED',
+  'DIRECT_EXTENSION',
+  'HISTORICAL_MATCH',
+  'REORG_DETECTED',
+  'SOURCE_REGRESSION',
+  'CHECK_UNAVAILABLE',
+]);
+export type AnchorContinuityStatus = z.infer<typeof AnchorContinuityStatusSchema>;
+
+export const AnchorContinuityAssessmentSchema = z.object({
+  source: z.string().min(1),
+  status: AnchorContinuityStatusSchema,
+  continuous: knowledgeValueSchema(z.boolean()),
+  previousAnchorId: z
+    .string()
+    .regex(/^anchor_[0-9a-f]{24}$/)
+    .optional(),
+  currentAnchorId: z.string().regex(/^anchor_[0-9a-f]{24}$/),
+  checkAnchorId: z
+    .string()
+    .regex(/^anchor_[0-9a-f]{24}$/)
+    .optional(),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+  alertIds: z.array(z.string().regex(/^dqa_[0-9a-f]{24}$/)),
+});
+export type AnchorContinuityAssessment = z.infer<typeof AnchorContinuityAssessmentSchema>;
+
+export const DataQualityAlertKindSchema = z.enum([
+  'CROSS_SOURCE_DISAGREEMENT',
+  'REORG_DETECTED',
+  'SOURCE_REGRESSION',
+]);
+export const DataQualityAlertSeveritySchema = z.enum(['INFO', 'WARNING', 'CRITICAL']);
+export const DataQualityAlertSchema = z.object({
+  id: z.string().regex(/^dqa_[0-9a-f]{24}$/),
+  kind: DataQualityAlertKindSchema,
+  severity: DataQualityAlertSeveritySchema,
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  position: UnsignedQuantityStringSchema.optional(),
+  summary: z.string().min(1),
+  details: JsonValueSchema,
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+  observedAt: IsoDateTimeSchema,
+  modelVersion: z.string().min(1),
+});
+export type DataQualityAlert = z.infer<typeof DataQualityAlertSchema>;
+
+export const AnchorSourceAssessmentSchema = z.object({
+  source: z.string().min(1),
+  head: knowledgeValueSchema(PersistedChainAnchorObservationSchema),
+  comparison: knowledgeValueSchema(PersistedChainAnchorObservationSchema),
+  continuity: AnchorContinuityAssessmentSchema.optional(),
+});
+export type AnchorSourceAssessment = z.infer<typeof AnchorSourceAssessmentSchema>;
+
+export const AnchorReconciliationStatusSchema = z.enum([
+  'AGREEMENT',
+  'DISAGREEMENT',
+  'INSUFFICIENT_SOURCES',
+  'UNAVAILABLE',
+]);
+export type AnchorReconciliationStatus = z.infer<typeof AnchorReconciliationStatusSchema>;
+
+export const AnchorReconciliationResultSchema = z.object({
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  status: AnchorReconciliationStatusSchema,
+  requiredSources: z.number().int().min(2),
+  configuredSources: z.number().int().nonnegative(),
+  observedSources: z.number().int().nonnegative(),
+  comparisonPosition: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  canonicalAnchor: knowledgeValueSchema(ReconciledChainAnchorSchema),
+  sourceIndependence: knowledgeValueSchema(z.boolean()),
+  snapshotSet: z.array(AnalysisSnapshotSchema),
+  sources: z.array(AnchorSourceAssessmentSchema),
+  alerts: z.array(DataQualityAlertSchema),
+  metadata: z.lazy(() => AnalysisMetadataSchema),
+});
+export type AnchorReconciliationResult = z.infer<typeof AnchorReconciliationResultSchema>;
+
+export const SourceOperatorAttestationSchema = z.object({
+  sourceId: z.string().min(1),
+  hostname: z.string().min(1),
+  operatorId: z.string().min(1),
+  operatorName: z.string().min(1),
+  officialSource: z.url(),
+  registryObservedAt: IsoDateTimeSchema,
+  registryRevision: z.string().min(1),
+  evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type SourceOperatorAttestation = z.infer<typeof SourceOperatorAttestationSchema>;
+
+export const SourceIndependenceAssessmentSchema = z
+  .object({
+    status: z.enum(['VERIFIED_INDEPENDENT', 'SAME_OPERATOR', 'INCONCLUSIVE']),
+    independence: knowledgeValueSchema(z.boolean()),
+    requiredOperators: z.number().int().min(2),
+    observedSources: z.number().int().nonnegative(),
+    operatorCount: z.number().int().nonnegative(),
+    unresolvedSources: z.array(z.string().min(1)),
+    attestations: z.array(SourceOperatorAttestationSchema),
+    registryEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    modelVersion: z.literal('source-operator-registry-v1'),
+  })
+  .superRefine((value, context) => {
+    const sourceIds = value.attestations.map((item) => item.sourceId);
+    const operatorIds = new Set(value.attestations.map((item) => item.operatorId));
+    const expectedStatus =
+      value.independence.state !== 'known'
+        ? 'INCONCLUSIVE'
+        : value.independence.value
+          ? 'VERIFIED_INDEPENDENT'
+          : 'SAME_OPERATOR';
+    const expectedEvidenceIds = [
+      value.registryEvidenceId,
+      ...value.attestations.map((item) => item.evidenceId),
+      value.terminalEvidenceId,
+    ].sort();
+    const actualEvidenceIds = [...value.evidenceIds].sort();
+    if (
+      value.status !== expectedStatus ||
+      value.observedSources !== sourceIds.length + value.unresolvedSources.length ||
+      value.operatorCount !== operatorIds.size ||
+      new Set(sourceIds).size !== sourceIds.length ||
+      new Set(value.unresolvedSources).size !== value.unresolvedSources.length ||
+      value.unresolvedSources.some((source) => sourceIds.includes(source)) ||
+      expectedEvidenceIds.length !== new Set(expectedEvidenceIds).size ||
+      expectedEvidenceIds.length !== actualEvidenceIds.length ||
+      expectedEvidenceIds.some((id, index) => id !== actualEvidenceIds[index]) ||
+      (value.status === 'VERIFIED_INDEPENDENT' &&
+        (value.operatorCount < value.requiredOperators || value.unresolvedSources.length > 0)) ||
+      (value.status === 'SAME_OPERATOR' &&
+        (value.observedSources < 2 ||
+          value.operatorCount !== 1 ||
+          value.unresolvedSources.length > 0))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Source independence status, operator counts, and Evidence must be consistent.',
+      });
+    }
+  });
+export type SourceIndependenceAssessment = z.infer<typeof SourceIndependenceAssessmentSchema>;
 
 export const AnalysisMetadataSchema = z.object({
   snapshot: AnalysisSnapshotSchema.nullable(),
@@ -167,6 +532,96 @@ export const AnalysisMetadataSchema = z.object({
   evidenceIds: z.array(z.string()),
 });
 export type AnalysisMetadata = z.infer<typeof AnalysisMetadataSchema>;
+
+export const DiscrepancyClassSchema = z.enum([
+  'EXACT_IDENTITY_STATE',
+  'CONSERVATION',
+  'DETERMINISTIC_DERIVED',
+  'INDEPENDENT_MARKET_QUOTE_RV',
+  'HOLDER_ENTITY_AGGREGATE',
+  'FRESHNESS',
+  'API_UI_PARITY',
+]);
+export type DiscrepancyClass = z.infer<typeof DiscrepancyClassSchema>;
+
+export const DiscrepancyDispositionSchema = z.enum(['PASS', 'WARNING', 'FAIL', 'INCONCLUSIVE']);
+export type DiscrepancyDisposition = z.infer<typeof DiscrepancyDispositionSchema>;
+
+export const DiscrepancyAuditStatusSchema = z.enum([
+  'PASS',
+  'PASS_WITH_WARNINGS',
+  'FAIL',
+  'INCONCLUSIVE',
+]);
+export type DiscrepancyAuditStatus = z.infer<typeof DiscrepancyAuditStatusSchema>;
+
+export const DiscrepancySeveritySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
+export type DiscrepancySeverity = z.infer<typeof DiscrepancySeveritySchema>;
+
+export const ComparableValueSchema = z.union([z.string(), z.boolean()]);
+export type ComparableValue = z.infer<typeof ComparableValueSchema>;
+
+export const ComparisonObservationSchema = z.object({
+  value: knowledgeValueSchema(ComparableValueSchema),
+  snapshot: AnalysisSnapshotSchema.nullable(),
+  evidenceIds: z.array(z.string().min(1)),
+  sourceSet: z.array(z.string().min(1)),
+  modelVersion: z.string().min(1),
+});
+export type ComparisonObservation = z.infer<typeof ComparisonObservationSchema>;
+
+export const DiscrepancyCheckInputSchema = z.object({
+  fieldPath: z.string().min(1),
+  comparisonClass: DiscrepancyClassSchema,
+  actual: ComparisonObservationSchema,
+  reference: ComparisonObservationSchema,
+  sourceIndependence: knowledgeValueSchema(z.boolean()).optional(),
+  sourceIndependenceEvidenceIds: z.array(z.string().min(1)).optional(),
+  coverage: CoverageRatioSchema.optional(),
+  requiredCoverage: CoverageRatioSchema.optional(),
+  explanationEvidenceIds: z.array(z.string().min(1)).optional(),
+});
+export type DiscrepancyCheckInput = z.infer<typeof DiscrepancyCheckInputSchema>;
+
+export const DiscrepancyCheckResultSchema = z.object({
+  id: z.string().regex(/^dq_[0-9a-f]{24}$/),
+  fieldPath: z.string().min(1),
+  comparisonClass: DiscrepancyClassSchema,
+  disposition: DiscrepancyDispositionSchema,
+  severity: DiscrepancySeveritySchema,
+  actual: knowledgeValueSchema(ComparableValueSchema),
+  reference: knowledgeValueSchema(ComparableValueSchema),
+  absoluteError: knowledgeValueSchema(DecimalStringSchema),
+  relativeErrorPct: knowledgeValueSchema(DecimalStringSchema),
+  passThresholdPct: knowledgeValueSchema(DecimalStringSchema),
+  warningThresholdPct: knowledgeValueSchema(DecimalStringSchema),
+  coverage: CoverageRatioSchema,
+  requiredCoverage: CoverageRatioSchema,
+  sourceIndependence: knowledgeValueSchema(z.boolean()),
+  sourceIndependenceEvidenceIds: z.array(z.string().min(1)),
+  numericDenominatorIncluded: z.boolean(),
+  sourceSet: z.array(z.string().min(1)),
+  evidenceIds: z.array(z.string().min(1)),
+  explanationEvidenceIds: z.array(z.string().min(1)),
+  message: z.string().min(1),
+});
+export type DiscrepancyCheckResult = z.infer<typeof DiscrepancyCheckResultSchema>;
+
+export const DiscrepancyAuditResultSchema = z.object({
+  status: DiscrepancyAuditStatusSchema,
+  checks: z.array(DiscrepancyCheckResultSchema),
+  summary: z.object({
+    total: z.number().int().nonnegative(),
+    passed: z.number().int().nonnegative(),
+    warnings: z.number().int().nonnegative(),
+    failed: z.number().int().nonnegative(),
+    inconclusive: z.number().int().nonnegative(),
+    numericDenominator: z.number().int().nonnegative(),
+    coverageGaps: z.number().int().nonnegative(),
+  }),
+  metadata: AnalysisMetadataSchema,
+});
+export type DiscrepancyAuditResult = z.infer<typeof DiscrepancyAuditResultSchema>;
 
 export const ProviderCapabilitySchema = z.enum([
   'CURRENT_STATE',
@@ -198,6 +653,27 @@ export const ProviderStatusSchema = z.enum([
   'UNCONFIGURED',
   'RATE_LIMITED',
 ]);
+export const ProviderCircuitStateSchema = z.enum(['CLOSED', 'OPEN', 'HALF_OPEN']);
+export const TransportDiagnosticsSchema = z.object({
+  endpointId: z.string().min(1),
+  activeEndpointId: z.string().min(1).optional(),
+  circuitState: ProviderCircuitStateSchema,
+  circuitOpenUntil: IsoDateTimeSchema.nullable(),
+  logicalRequests: z.number().int().nonnegative(),
+  attempts: z.number().int().nonnegative(),
+  successes: z.number().int().nonnegative(),
+  failures: z.number().int().nonnegative(),
+  retries: z.number().int().nonnegative(),
+  rateLimitDelays: z.number().int().nonnegative(),
+  cacheHits: z.number().int().nonnegative(),
+  cacheMisses: z.number().int().nonnegative(),
+  cacheBypasses: z.number().int().nonnegative(),
+  failovers: z.number().int().nonnegative(),
+  lastAttemptAt: IsoDateTimeSchema.nullable(),
+  lastSuccessAt: IsoDateTimeSchema.nullable(),
+  lastFailureAt: IsoDateTimeSchema.nullable(),
+});
+export type TransportDiagnostics = z.infer<typeof TransportDiagnosticsSchema>;
 export const ProviderHealthSchema = z.object({
   id: z.string().min(1),
   ledger: LedgerSchema,
@@ -210,6 +686,7 @@ export const ProviderHealthSchema = z.object({
   lag: knowledgeValueSchema(z.number().nonnegative()),
   errorCode: z.string().optional(),
   errorDetail: z.string().optional(),
+  transport: TransportDiagnosticsSchema.optional(),
 });
 export type ProviderHealth = z.infer<typeof ProviderHealthSchema>;
 
@@ -251,6 +728,76 @@ export const EntityResolutionClassSchema = z.enum([
   'BOT_MM_ARBITRAGE',
   'UNKNOWN',
 ]);
+export const EntityFeatureKindSchema = z.enum([
+  'SHARED_ONCHAIN_AUTHORITY',
+  'COMMON_FUNDER',
+  'SHARED_FEE_PAYER',
+  'SETTLEMENT_CONVERGENCE',
+  'TRANSACTION_GRAMMAR',
+  'TIMING_SYNCHRONY',
+  'EARLY_BUYER_COHORT',
+  'TOKEN_DISTRIBUTION',
+  'INDEPENDENT_HISTORY',
+  'DISTINCT_FUNDING',
+  'DISTINCT_SETTLEMENT',
+  'CEX_PATH_BREAK',
+  'SERVICE_HUB',
+  'COINJOIN',
+  'BOT_COMMON_INFRASTRUCTURE',
+]);
+export type EntityFeatureKind = z.infer<typeof EntityFeatureKindSchema>;
+
+export const EntityFeatureSchema = z
+  .object({
+    kind: EntityFeatureKindSchema,
+    strength: z.number().min(0).max(1),
+    reliability: z.number().min(0).max(1),
+    evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  })
+  .strict();
+export type EntityFeature = z.infer<typeof EntityFeatureSchema>;
+
+export const EntityRelationshipInputSchema = z
+  .object({
+    subjectA: z.string().trim().min(1).max(512),
+    subjectB: z.string().trim().min(1).max(512),
+    features: z.array(EntityFeatureSchema).max(1_000),
+    metadata: AnalysisMetadataSchema,
+    subjectAIsService: z.boolean().optional(),
+    subjectBIsService: z.boolean().optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.subjectA === value.subjectB) {
+      context.addIssue({
+        code: 'custom',
+        path: ['subjectB'],
+        message: 'Entity relationship subjects must be distinct.',
+      });
+    }
+    const featureIdentities = value.features.map(
+      (feature) => `${feature.kind}:${feature.evidenceId}`,
+    );
+    if (new Set(featureIdentities).size !== featureIdentities.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['features'],
+        message: 'Entity features may not repeat one kind/Evidence identity.',
+      });
+    }
+    if (
+      (value.subjectAIsService === true || value.subjectBIsService === true) &&
+      !value.features.some((feature) => feature.kind === 'SERVICE_HUB')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['features'],
+        message: 'Service status requires a SERVICE_HUB feature with Evidence.',
+      });
+    }
+  });
+export type EntityRelationshipInput = z.infer<typeof EntityRelationshipInputSchema>;
+
 export const EntityResolutionSchema = z.object({
   subjectA: z.string().min(1),
   subjectB: z.string().min(1),
@@ -265,6 +812,301 @@ export const EntityResolutionSchema = z.object({
 });
 export type EntityResolution = z.infer<typeof EntityResolutionSchema>;
 
+export const EntityRelationshipReportSchema = z
+  .object({
+    schemaVersion: z.literal('entity-relationship-report-v1'),
+    automaticOwnershipMergeAllowed: z.literal(false),
+    input: EntityRelationshipInputSchema.safeExtend({
+      features: z.array(EntityFeatureSchema).min(1).max(1_000),
+      metadata: AnalysisMetadataSchema.extend({
+        snapshot: AnalysisSnapshotSchema,
+      }),
+    }),
+    result: EntityResolutionSchema.extend({
+      metadata: AnalysisMetadataSchema.extend({
+        snapshot: AnalysisSnapshotSchema,
+        modelVersion: z.literal('entity-v0.1.0'),
+      }),
+    }),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidence: z.array(EvidenceSchema).min(2),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const snapshot = value.input.metadata.snapshot;
+    const position =
+      snapshot.ledger === 'EVM'
+        ? { value: snapshot.blockNumber, finality: snapshot.finality }
+        : snapshot.ledger === 'BITCOIN'
+          ? { value: snapshot.height, finality: snapshot.finality }
+          : { value: snapshot.slot, finality: snapshot.commitment };
+    const featureOrder = [...value.input.features].sort((left, right) =>
+      [left.kind, left.evidenceId, left.strength, left.reliability]
+        .join(':')
+        .localeCompare([right.kind, right.evidenceId, right.strength, right.reliability].join(':')),
+    );
+    const evidenceIds = value.evidence.map((item) => item.id);
+    const expectedSourceIds = [
+      ...new Set([
+        ...value.input.metadata.evidenceIds,
+        ...value.input.features.map((feature) => feature.evidenceId),
+      ]),
+    ].sort();
+    const expectedResultEvidenceIds = [...expectedSourceIds, value.terminalEvidenceId].sort();
+    const expectedSourceSet = [...new Set(value.input.metadata.sourceSet)].sort();
+    const positiveEvidenceIds = [...value.result.positiveEvidenceIds].sort();
+    const negativeEvidenceIds = [...value.result.negativeEvidenceIds].sort();
+    const expectedSuppression =
+      value.input.features.some((feature) => ['SERVICE_HUB', 'COINJOIN'].includes(feature.kind)) &&
+      !value.input.features.some(
+        (feature) =>
+          feature.kind === 'SHARED_ONCHAIN_AUTHORITY' &&
+          feature.strength >= 0.95 &&
+          feature.reliability >= 0.98,
+      );
+    const terminal = value.evidence.find((item) => item.id === value.terminalEvidenceId);
+    const expectedLocator = `entity-relationship:${value.input.subjectA}:${value.input.subjectB}`;
+    const issues =
+      value.input.subjectA >= value.input.subjectB ||
+      value.input.features.some((item, index) => item !== featureOrder[index]) ||
+      value.result.subjectA !== value.input.subjectA ||
+      value.result.subjectB !== value.input.subjectB ||
+      JSON.stringify(value.result.metadata.snapshot) !== JSON.stringify(snapshot) ||
+      value.result.metadata.dataCoverage !== value.input.metadata.dataCoverage ||
+      value.result.metadata.sourceCoverage !== value.input.metadata.sourceCoverage ||
+      value.result.metadata.historyCoverage !== value.input.metadata.historyCoverage ||
+      value.result.metadata.simulationCoverage !== value.input.metadata.simulationCoverage ||
+      value.result.metadata.freshness !== value.input.metadata.freshness ||
+      value.result.metadata.confidence !== value.input.metadata.confidence ||
+      value.input.metadata.sourceSet.length !== expectedSourceSet.length ||
+      value.input.metadata.sourceSet.some((item, index) => item !== expectedSourceSet[index]) ||
+      value.result.metadata.sourceSet.length !== expectedSourceSet.length ||
+      value.result.metadata.sourceSet.some((item, index) => item !== expectedSourceSet[index]) ||
+      value.input.metadata.evidenceIds.length !== expectedSourceIds.length ||
+      value.input.metadata.evidenceIds.some((item, index) => item !== expectedSourceIds[index]) ||
+      value.result.metadata.evidenceIds.length !== expectedResultEvidenceIds.length ||
+      value.result.metadata.evidenceIds.some(
+        (item, index) => item !== expectedResultEvidenceIds[index],
+      ) ||
+      evidenceIds.length !== new Set(evidenceIds).size ||
+      evidenceIds.some((item, index) => item !== [...evidenceIds].sort()[index]) ||
+      evidenceIds.length !== expectedResultEvidenceIds.length ||
+      evidenceIds.some((item, index) => item !== expectedResultEvidenceIds[index]) ||
+      value.result.positiveEvidenceIds.length !== new Set(positiveEvidenceIds).size ||
+      value.result.positiveEvidenceIds.some(
+        (item, index) => item !== positiveEvidenceIds[index] || !expectedSourceIds.includes(item),
+      ) ||
+      value.result.negativeEvidenceIds.length !== new Set(negativeEvidenceIds).size ||
+      value.result.negativeEvidenceIds.some(
+        (item, index) => item !== negativeEvidenceIds[index] || !expectedSourceIds.includes(item),
+      ) ||
+      value.result.serviceSuppressionApplied !== expectedSuppression ||
+      terminal?.kind !== 'DERIVED_FEATURE' ||
+      terminal.source !== 'zerotrace:entity-v0.1.0' ||
+      terminal.locator !== expectedLocator ||
+      value.evidence.some(
+        (item) =>
+          item.ledger !== snapshot.ledger ||
+          item.chainId !== snapshot.chainId ||
+          item.blockOrSlot !== position.value ||
+          item.finality !== position.finality,
+      );
+    if (issues) {
+      context.addIssue({
+        code: 'custom',
+        path: ['result'],
+        message:
+          'Entity relationship reports require a canonical distinct pair, ordered unique features, one Snapshot, complete direct Evidence, and a valid terminal derivation.',
+      });
+    }
+  });
+export type EntityRelationshipReport = z.infer<typeof EntityRelationshipReportSchema>;
+
+export const BitcoinScriptClassSchema = z.enum([
+  'P2PKH',
+  'P2SH',
+  'P2WPKH',
+  'P2WSH',
+  'P2TR',
+  'BARE_MULTISIG',
+  'OP_RETURN',
+  'OTHER_SCRIPT',
+]);
+export type BitcoinScriptClass = z.infer<typeof BitcoinScriptClassSchema>;
+
+export const BitcoinSpendConditionVisibilitySchema = z.enum([
+  'FULLY_VISIBLE',
+  'HASH_COMMITTED_HIDDEN',
+  'REVEALED_AND_COMMITMENT_VERIFIED',
+  'TAPROOT_OUTPUT_KEY_ONLY',
+  'TAPROOT_SPEND_OBSERVED',
+  'UNSUPPORTED_SCRIPT',
+]);
+export type BitcoinSpendConditionVisibility = z.infer<typeof BitcoinSpendConditionVisibilitySchema>;
+
+export const BitcoinSignatureRequirementSchema = z.enum([
+  'SINGLE_KEY',
+  'MULTISIG',
+  'KEY_OR_SCRIPT',
+  'ARBITRARY_SCRIPT',
+  'PROVABLY_UNSPENDABLE',
+]);
+export type BitcoinSignatureRequirement = z.infer<typeof BitcoinSignatureRequirementSchema>;
+
+export const BitcoinTaprootSpendPathSchema = z.enum(['KEY_PATH', 'SCRIPT_PATH', 'UNDETERMINED']);
+export type BitcoinTaprootSpendPath = z.infer<typeof BitcoinTaprootSpendPathSchema>;
+
+export const BitcoinTimelockSchema = z.object({
+  kind: z.enum(['ABSOLUTE_HEIGHT', 'ABSOLUTE_TIME', 'RELATIVE_BLOCKS', 'RELATIVE_TIME']),
+  value: UnsignedQuantityStringSchema,
+  encodedValue: UnsignedQuantityStringSchema,
+  detail: z.string().min(1),
+});
+export type BitcoinTimelock = z.infer<typeof BitcoinTimelockSchema>;
+
+export const BitcoinMultisigObservationSchema = z.object({
+  threshold: z.number().int().min(1).max(20),
+  signerCount: z.number().int().min(1).max(20),
+  publicKeyFingerprints: z.array(Hash256Schema).min(1).max(20),
+});
+export type BitcoinMultisigObservation = z.infer<typeof BitcoinMultisigObservationSchema>;
+
+export const BitcoinScriptControlAnalysisSchema = z.object({
+  scriptClass: BitcoinScriptClassSchema,
+  scriptPubKey: z.string().regex(/^(?:[0-9a-f]{2})*$/),
+  addressMatch: knowledgeValueSchema(z.boolean()),
+  spendConditionVisibility: BitcoinSpendConditionVisibilitySchema,
+  signatureRequirement: knowledgeValueSchema(BitcoinSignatureRequirementSchema),
+  multisig: knowledgeValueSchema(BitcoinMultisigObservationSchema),
+  absoluteTimelocks: z.array(BitcoinTimelockSchema),
+  relativeTimelocks: z.array(BitcoinTimelockSchema),
+  hashPredicatePresent: knowledgeValueSchema(z.boolean()),
+  taprootSpendPath: knowledgeValueSchema(BitcoinTaprootSpendPathSchema),
+  revealedScript: knowledgeValueSchema(z.string().regex(/^(?:[0-9a-f]{2})*$/)),
+  controllerIdentity: knowledgeValueSchema(z.string().min(1)),
+  scriptConditionsComplete: knowledgeValueSchema(z.boolean()),
+  modelVersion: z.literal('bitcoin-script-control-v1.0.0'),
+});
+export type BitcoinScriptControlAnalysis = z.infer<typeof BitcoinScriptControlAnalysisSchema>;
+
+export const BitcoinAddressUtxoSchema = z.object({
+  outpoint: z.string().regex(/^[0-9a-f]{64}:(?:0|[1-9]\d*)$/),
+  txid: BitcoinHashSchema,
+  vout: UnsignedQuantityStringSchema,
+  valueSats: UnsignedQuantityStringSchema,
+  confirmed: z.boolean(),
+  blockHeight: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  blockHash: knowledgeValueSchema(BitcoinHashSchema),
+});
+export type BitcoinAddressUtxo = z.infer<typeof BitcoinAddressUtxoSchema>;
+
+export const BitcoinAddressUtxoSetSchema = z.object({
+  address: z.string().min(1),
+  utxos: z.array(BitcoinAddressUtxoSchema).max(100_000),
+  confirmedUtxoCount: z.number().int().nonnegative(),
+  mempoolUtxoCount: z.number().int().nonnegative(),
+  totalValueSats: UnsignedQuantityStringSchema,
+  statsNetValueSats: QuantityStringSchema,
+  balanceAgreement: knowledgeValueSchema(z.boolean()),
+  modelVersion: z.literal('bitcoin-address-utxo-v1.0.0'),
+});
+export type BitcoinAddressUtxoSet = z.infer<typeof BitcoinAddressUtxoSetSchema>;
+
+export const BitcoinTransactionPatternSchema = z.enum([
+  'NOT_APPLICABLE',
+  'EQUAL_OUTPUT_COINJOIN_LIKE',
+  'FANOUT_OR_BATCHING_RISK',
+  'NO_STRONG_PATTERN_OBSERVED',
+  'INCOMPLETE_INPUT_CONTEXT',
+]);
+export type BitcoinTransactionPattern = z.infer<typeof BitcoinTransactionPatternSchema>;
+
+export const BitcoinClusteringSuppressionReasonSchema = z.enum([
+  'COINJOIN_EQUAL_OUTPUT_PATTERN',
+  'PAYJOIN_NOT_EXCLUDABLE',
+  'FANOUT_OR_BATCHING_PATTERN',
+  'SERVICE_ATTRIBUTION_UNQUERIED',
+  'INCOMPLETE_PREVOUT_ADDRESS_COVERAGE',
+]);
+export type BitcoinClusteringSuppressionReason = z.infer<
+  typeof BitcoinClusteringSuppressionReasonSchema
+>;
+
+export const BitcoinEqualOutputGroupSchema = z.object({
+  valueSats: UnsignedQuantityStringSchema,
+  outputCount: z.number().int().min(2),
+  vouts: z.array(z.number().int().nonnegative()).min(2),
+});
+export type BitcoinEqualOutputGroup = z.infer<typeof BitcoinEqualOutputGroupSchema>;
+
+export const BitcoinChangeCandidateSchema = z.object({
+  vout: z.number().int().nonnegative(),
+  valueSats: UnsignedQuantityStringSchema,
+  scriptType: z.string().min(1),
+  address: knowledgeValueSchema(z.string().min(1)),
+  signals: z
+    .array(z.enum(['INPUT_SCRIPT_TYPE_MATCH', 'UNIQUE_OUTPUT_VALUE', 'INPUT_ADDRESS_NOT_REUSED']))
+    .min(1),
+});
+export type BitcoinChangeCandidate = z.infer<typeof BitcoinChangeCandidateSchema>;
+
+export const BitcoinTransactionEntityAnalysisSchema = z.object({
+  txid: BitcoinHashSchema,
+  coinbase: z.boolean(),
+  inputCount: z.number().int().nonnegative(),
+  outputCount: z.number().int().nonnegative(),
+  inputAddressCoverage: CoverageRatioSchema,
+  inputAddresses: z.array(z.string().min(1)),
+  outputAddresses: z.array(z.string().min(1)),
+  inputValueSats: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  outputValueSats: UnsignedQuantityStringSchema,
+  feeSats: UnsignedQuantityStringSchema,
+  feeReconciles: knowledgeValueSchema(z.boolean()),
+  virtualSizeBytes: UnsignedQuantityStringSchema,
+  feeRateSatPerVbyte: knowledgeValueSchema(DecimalStringSchema),
+  equalOutputGroups: z.array(BitcoinEqualOutputGroupSchema),
+  structuralPattern: BitcoinTransactionPatternSchema,
+  payjoinContaminationRisk: knowledgeValueSchema(z.boolean()),
+  serviceClusterRisk: knowledgeValueSchema(z.boolean()),
+  addressReuseOutputVouts: z.array(z.number().int().nonnegative()),
+  commonInputHeuristic: knowledgeValueSchema(z.boolean()),
+  commonInputOwnershipCandidate: knowledgeValueSchema(z.array(z.string().min(1)).min(2)),
+  automaticOwnershipMergeAllowed: z.literal(false),
+  suppressionReasons: z.array(BitcoinClusteringSuppressionReasonSchema),
+  changeCandidates: z.array(BitcoinChangeCandidateSchema),
+  selectedChangeOutput: knowledgeValueSchema(z.number().int().nonnegative()),
+  ownershipConclusion: knowledgeValueSchema(z.string().min(1)),
+  externalAttribution: knowledgeValueSchema(z.string().min(1)),
+  modelVersion: z.literal('bitcoin-transaction-entity-v1.0.0'),
+});
+export type BitcoinTransactionEntityAnalysis = z.infer<
+  typeof BitcoinTransactionEntityAnalysisSchema
+>;
+
+export const EvmControlRightTypeSchema = z.enum([
+  'OWNER',
+  'PROXY_ADMIN',
+  'UPGRADE',
+  'MINT',
+  'BURN',
+  'TAX_CHANGE',
+  'BLACKLIST',
+  'WHITELIST',
+  'TRADING_SWITCH',
+  'MAX_TX',
+  'MAX_WALLET',
+  'FEE_EXEMPTION',
+  'ROUTER_CHANGE',
+  'TREASURY',
+  'SAFE_OWNER',
+  'SAFE_MODULE',
+  'SAFE_GUARD',
+  'SAFE_FALLBACK_HANDLER',
+  'LP_POSITION',
+  'MIGRATION',
+]);
+export type EvmControlRightType = z.infer<typeof EvmControlRightTypeSchema>;
+
 export const ControlRightSchema = z.object({
   id: z.string().min(1),
   subject: z.string().min(1),
@@ -278,6 +1120,724 @@ export const ControlRightSchema = z.object({
   activeTo: IsoDateTimeSchema.optional(),
 });
 export type ControlRight = z.infer<typeof ControlRightSchema>;
+
+export const EvmControlRightSchema = z.object({
+  id: z.string().regex(/^cr_[0-9a-f]{24}$/),
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  subject: EvmCanonicalAddressSchema,
+  controller: EvmCanonicalAddressSchema,
+  rightType: EvmControlRightTypeSchema,
+  scope: z.string().min(1),
+  threshold: knowledgeValueSchema(DecimalStringSchema),
+  constraints: z.array(z.string().min(1)),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+  activeFrom: knowledgeValueSchema(IsoDateTimeSchema),
+  activeTo: knowledgeValueSchema(IsoDateTimeSchema),
+});
+export type EvmControlRight = z.infer<typeof EvmControlRightSchema>;
+
+export const EvmControlCoverageDomainSchema = z.enum([
+  'CONTRACT_CODE',
+  'LOGIC_CODE',
+  'ERC1167_IMPLEMENTATION',
+  'EIP1967_IMPLEMENTATION',
+  'EIP1967_ADMIN',
+  'EIP1967_BEACON',
+  'ERC173_OWNER',
+  'SAFE_OWNERS_THRESHOLD',
+  'SAFE_MODULES',
+  'SAFE_GUARD',
+  'SAFE_FALLBACK_HANDLER',
+  'UPGRADE_AUTHORIZATION',
+  'MINT',
+  'BURN',
+  'TAX_CHANGE',
+  'BLACKLIST',
+  'WHITELIST',
+  'TRADING_SWITCH',
+  'MAX_TX',
+  'MAX_WALLET',
+  'FEE_EXEMPTION',
+  'ROUTER_CHANGE',
+  'TREASURY',
+  'LP_POSITION',
+  'MIGRATION',
+]);
+export type EvmControlCoverageDomain = z.infer<typeof EvmControlCoverageDomainSchema>;
+
+export const EvmControlCoverageSchema = z.object({
+  domain: EvmControlCoverageDomainSchema,
+  observed: knowledgeValueSchema(z.boolean()),
+  detail: z.string().min(1),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+});
+export type EvmControlCoverage = z.infer<typeof EvmControlCoverageSchema>;
+
+export const EvmContractKindSchema = z.enum([
+  'EOA',
+  'DIRECT_CONTRACT',
+  'ERC1167_MINIMAL_PROXY',
+  'EIP1967_PROXY',
+  'EIP1967_BEACON_PROXY',
+  'SAFE_PROXY',
+]);
+export type EvmContractKind = z.infer<typeof EvmContractKindSchema>;
+
+export const EvmSafeControlSchema = z.object({
+  owners: z.array(EvmCanonicalAddressSchema).min(1).max(100),
+  threshold: UnsignedQuantityStringSchema.refine((value) => BigInt(value) > 0n),
+  nonce: UnsignedQuantityStringSchema,
+  implementationAddress: EvmCanonicalAddressSchema,
+  implementationVersion: z.string().min(1).max(64),
+});
+export type EvmSafeControl = z.infer<typeof EvmSafeControlSchema>;
+
+export const EvmLogicCodeRelationSchema = z.enum([
+  'SUBJECT',
+  'ERC1167_IMPLEMENTATION',
+  'EIP1967_IMPLEMENTATION',
+  'BEACON_IMPLEMENTATION',
+  'SAFE_SINGLETON',
+]);
+export type EvmLogicCodeRelation = z.infer<typeof EvmLogicCodeRelationSchema>;
+
+export const EvmLogicCodeSchema = z.object({
+  address: EvmCanonicalAddressSchema,
+  relation: EvmLogicCodeRelationSchema,
+  runtimeBytecodeHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  runtimeBytecodeBytes: z.number().int().positive().max(1_000_000),
+});
+export type EvmLogicCode = z.infer<typeof EvmLogicCodeSchema>;
+
+export const EvmVerifiedSourceDeploymentSchema = z.object({
+  blockNumber: UnsignedQuantityStringSchema,
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  deployer: EvmCanonicalAddressSchema,
+});
+export type EvmVerifiedSourceDeployment = z.infer<typeof EvmVerifiedSourceDeploymentSchema>;
+
+export const EvmVerifiedSourceSchema = z.object({
+  sourceId: z.string().min(1),
+  sourceUri: z.url(),
+  address: EvmCanonicalAddressSchema,
+  matchType: z.literal('exact_match'),
+  runtimeBytecodeHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  runtimeBytecodeBytes: z.number().int().positive().max(1_000_000),
+  contractName: z.string().min(1).max(256),
+  fullyQualifiedName: z.string().min(1).max(1_024),
+  language: z.string().min(1).max(64),
+  compilerVersion: z.string().min(1).max(256),
+  verifiedAt: IsoDateTimeSchema,
+  deployment: knowledgeValueSchema(EvmVerifiedSourceDeploymentSchema),
+  abiFunctionCount: z.number().int().nonnegative().max(2_048),
+  mutatingFunctionSignatures: z.array(z.string().min(1).max(2_048)).max(2_048),
+});
+export type EvmVerifiedSource = z.infer<typeof EvmVerifiedSourceSchema>;
+
+export const EvmDeclaredCapabilitySchema = z.object({
+  rightType: EvmControlRightTypeSchema,
+  functionSignatures: z.array(z.string().min(1).max(2_048)).min(1).max(64),
+  detail: z.string().min(1),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+});
+export type EvmDeclaredCapability = z.infer<typeof EvmDeclaredCapabilitySchema>;
+
+export const EvmControlSurfaceReportSchema = z
+  .object({
+    ledger: z.literal('EVM'),
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    subject: EvmCanonicalAddressSchema,
+    contractKind: knowledgeValueSchema(EvmContractKindSchema),
+    implementationAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
+    proxyAdminAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
+    beaconAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
+    ownerAddress: knowledgeValueSchema(EvmCanonicalAddressSchema),
+    safe: knowledgeValueSchema(EvmSafeControlSchema),
+    logicCode: knowledgeValueSchema(EvmLogicCodeSchema).optional(),
+    verifiedSource: knowledgeValueSchema(EvmVerifiedSourceSchema).optional(),
+    declaredCapabilities: z.array(EvmDeclaredCapabilitySchema).optional(),
+    sourceAgreement: knowledgeValueSchema(z.boolean()),
+    sourceIndependence: knowledgeValueSchema(z.boolean()),
+    rights: z.array(EvmControlRightSchema),
+    coverage: z.array(EvmControlCoverageSchema),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot?.ledger === 'EVM', {
+      message: 'EVM control surface requires an EVM Snapshot.',
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot?.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.chainId !== value.chainId
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Control surface identity requires one finalized matching EVM Snapshot.',
+      });
+    }
+    const domains = value.coverage.map((item) => item.domain);
+    const expectedDomains = EvmControlCoverageDomainSchema.options
+      .filter(
+        (domain) =>
+          value.metadata.modelVersion !== 'evm-control-surface-v1.0.0' ||
+          !['LOGIC_CODE', 'MIGRATION'].includes(domain),
+      )
+      .sort();
+    if (
+      domains.length !== expectedDomains.length ||
+      [...new Set(domains)].sort().some((domain, index) => domain !== expectedDomains[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['coverage'],
+        message: 'Control surface coverage must include every EVM control domain exactly once.',
+      });
+    }
+    const evidenceIds = value.evidence.map((item) => item.id).sort();
+    const metadataEvidenceIds = value.metadata.evidenceIds;
+    const nestedEvidenceIds = [
+      ...value.rights.flatMap((right) => right.evidenceIds),
+      ...value.coverage.flatMap((item) => item.evidenceIds),
+      ...(value.declaredCapabilities ?? []).flatMap((item) => item.evidenceIds),
+    ];
+    if (
+      metadataEvidenceIds.length !== new Set(metadataEvidenceIds).size ||
+      metadataEvidenceIds.some((id, index) => id !== evidenceIds[index]) ||
+      evidenceIds.length !== metadataEvidenceIds.length ||
+      !metadataEvidenceIds.includes(value.terminalEvidenceId) ||
+      nestedEvidenceIds.some((id) => !metadataEvidenceIds.includes(id))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'evidenceIds'],
+        message: 'Control surface provenance must be canonical and contain all nested Evidence.',
+      });
+    }
+    if (
+      value.logicCode?.state === 'known' &&
+      value.verifiedSource?.state === 'known' &&
+      (value.logicCode.value.address !== value.verifiedSource.value.address ||
+        value.logicCode.value.runtimeBytecodeHash !==
+          value.verifiedSource.value.runtimeBytecodeHash ||
+        value.logicCode.value.runtimeBytecodeBytes !==
+          value.verifiedSource.value.runtimeBytecodeBytes)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['verifiedSource'],
+        message: 'Verified source must match the exact Snapshot-bound logic bytecode.',
+      });
+    }
+    if (
+      value.metadata.modelVersion === 'evm-control-surface-v1.1.0' &&
+      (value.logicCode === undefined ||
+        value.verifiedSource === undefined ||
+        value.declaredCapabilities === undefined)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'modelVersion'],
+        message: 'Control surface v1.1 requires logic code and verified-source fields.',
+      });
+    }
+  });
+export type EvmControlSurfaceReport = z.infer<typeof EvmControlSurfaceReportSchema>;
+
+export const SolanaPublicKeySchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+
+export const SolanaTransactionAccountSourceSchema = z.enum([
+  'STATIC',
+  'LOOKUP_WRITABLE',
+  'LOOKUP_READONLY',
+]);
+export type SolanaTransactionAccountSource = z.infer<typeof SolanaTransactionAccountSourceSchema>;
+
+export const SolanaTransactionAccountSchema = z.object({
+  index: z.number().int().nonnegative(),
+  address: SolanaPublicKeySchema,
+  source: SolanaTransactionAccountSourceSchema,
+  signer: z.boolean(),
+  writable: z.boolean(),
+  feePayer: z.boolean(),
+  preBalanceLamports: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  postBalanceLamports: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  balanceDeltaLamports: knowledgeValueSchema(QuantityStringSchema),
+});
+export type SolanaTransactionAccount = z.infer<typeof SolanaTransactionAccountSchema>;
+
+export const SolanaAddressTableLookupObservationSchema = z.object({
+  accountKey: SolanaPublicKeySchema,
+  writableIndexes: z.array(z.number().int().min(0).max(255)),
+  readonlyIndexes: z.array(z.number().int().min(0).max(255)),
+});
+export type SolanaAddressTableLookupObservation = z.infer<
+  typeof SolanaAddressTableLookupObservationSchema
+>;
+
+export const SolanaInstructionObservationSchema = z.object({
+  path: z.string().regex(/^outer:\d+(?:\/inner:\d+)?$/),
+  outerIndex: z.number().int().nonnegative(),
+  innerIndex: knowledgeValueSchema(z.number().int().nonnegative()),
+  stackHeight: knowledgeValueSchema(z.number().int().nonnegative()),
+  programIdIndex: z.number().int().nonnegative(),
+  programId: knowledgeValueSchema(SolanaPublicKeySchema),
+  accountIndexes: z.array(z.number().int().nonnegative()),
+  accounts: knowledgeValueSchema(z.array(SolanaPublicKeySchema)),
+  dataBase58: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]*$/),
+  programSemantic: knowledgeValueSchema(
+    z.object({
+      programFamily: z.enum(['SYSTEM', 'SPL_TOKEN', 'TOKEN_2022']),
+      instructionName: z.string().min(1).max(128),
+      category: z.enum([
+        'ASSET_TRANSFER',
+        'SUPPLY_INCREASE',
+        'SUPPLY_DECREASE',
+        'ACCOUNT_LIFECYCLE',
+        'CONTROL_CHANGE',
+        'OTHER',
+      ]),
+      application: z.enum(['APPLIED', 'NOT_APPLIED', 'UNKNOWN']),
+    }),
+  ),
+});
+export type SolanaInstructionObservation = z.infer<typeof SolanaInstructionObservationSchema>;
+
+export const SolanaAssetFlowSchema = z.object({
+  id: z.string().regex(/^outer:\d+(?:\/inner:\d+)?:flow:\d+$/),
+  instructionPath: z.string().regex(/^outer:\d+(?:\/inner:\d+)?$/),
+  programFamily: z.enum(['SYSTEM', 'SPL_TOKEN', 'TOKEN_2022']),
+  instructionName: z.string().min(1).max(128),
+  application: z.enum(['APPLIED', 'NOT_APPLIED', 'UNKNOWN']),
+  flowKind: z.enum(['TRANSFER', 'MINT', 'BURN']),
+  assetKind: z.enum(['NATIVE_SOL', 'WRAPPED_SOL', 'SPL_TOKEN', 'TOKEN_2022']),
+  sourceAccount: knowledgeValueSchema(SolanaPublicKeySchema),
+  destinationAccount: knowledgeValueSchema(SolanaPublicKeySchema),
+  sourceOwner: knowledgeValueSchema(SolanaPublicKeySchema),
+  destinationOwner: knowledgeValueSchema(SolanaPublicKeySchema),
+  mint: knowledgeValueSchema(SolanaPublicKeySchema),
+  authority: knowledgeValueSchema(SolanaPublicKeySchema),
+  amount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  decimals: knowledgeValueSchema(z.number().int().min(0).max(255)),
+  expectedFeeAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  expectedRecipientAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+});
+export type SolanaAssetFlow = z.infer<typeof SolanaAssetFlowSchema>;
+
+export const SolanaTokenFlowReconciliationSchema = z.object({
+  status: z.enum(['MATCHED', 'PARTIAL', 'CONFLICT', 'NOT_APPLICABLE', 'UNKNOWN']),
+  expectedIdentityCount: z.number().int().nonnegative(),
+  observedIdentityCount: z.number().int().nonnegative(),
+  matchedIdentityCount: z.number().int().nonnegative(),
+  conflictingIdentityCount: z.number().int().nonnegative(),
+  unknownIdentityCount: z.number().int().nonnegative(),
+  unmodeledTokenInstructionCount: z.number().int().nonnegative(),
+  coverage: CoverageRatioSchema,
+  recommendedMaxRelativeError: z.literal(0),
+  observedRelativeError: knowledgeValueSchema(z.number().nonnegative()),
+  detail: z.string().min(1),
+});
+export type SolanaTokenFlowReconciliation = z.infer<typeof SolanaTokenFlowReconciliationSchema>;
+
+export const SolanaTokenBalanceChangeSchema = z.object({
+  accountIndex: z.number().int().nonnegative(),
+  account: knowledgeValueSchema(SolanaPublicKeySchema),
+  mint: SolanaPublicKeySchema,
+  ownerBefore: knowledgeValueSchema(SolanaPublicKeySchema),
+  ownerAfter: knowledgeValueSchema(SolanaPublicKeySchema),
+  programId: knowledgeValueSchema(SolanaPublicKeySchema),
+  decimals: knowledgeValueSchema(z.number().int().min(0).max(255)),
+  preAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  postAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  deltaAmount: knowledgeValueSchema(QuantityStringSchema),
+});
+export type SolanaTokenBalanceChange = z.infer<typeof SolanaTokenBalanceChangeSchema>;
+
+export const SolanaTransactionSemanticsSchema = z.object({
+  signature: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/),
+  version: z.union([z.literal('legacy'), UnsignedQuantityStringSchema]),
+  recentBlockhash: SolanaPublicKeySchema,
+  execution: z.enum(['SUCCESS', 'FAILED', 'METADATA_UNAVAILABLE']),
+  executionError: knowledgeValueSchema(JsonValueSchema),
+  feePayer: knowledgeValueSchema(SolanaPublicKeySchema),
+  signers: z.array(SolanaPublicKeySchema).min(1),
+  requiredSignatureCount: z.number().int().positive(),
+  staticAccountCount: z.number().int().positive(),
+  loadedWritableAccountCount: z.number().int().nonnegative(),
+  loadedReadonlyAccountCount: z.number().int().nonnegative(),
+  accountResolutionComplete: knowledgeValueSchema(z.boolean()),
+  accountCoverage: CoverageRatioSchema,
+  recordingCoverage: CoverageRatioSchema,
+  accounts: z.array(SolanaTransactionAccountSchema).min(1),
+  addressTableLookups: z.array(SolanaAddressTableLookupObservationSchema),
+  outerInstructions: z.array(SolanaInstructionObservationSchema),
+  innerInstructionRecording: knowledgeValueSchema(z.boolean()),
+  innerInstructions: z.array(SolanaInstructionObservationSchema),
+  cpiCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  programIds: z.array(SolanaPublicKeySchema),
+  officialProgramInstructionCount: z.number().int().nonnegative(),
+  identifiedOfficialProgramInstructionCount: z.number().int().nonnegative(),
+  officialProgramIdentificationCoverage: knowledgeValueSchema(CoverageRatioSchema),
+  assetFlowCandidateCount: z.number().int().nonnegative(),
+  assetFlowDecodeCoverage: knowledgeValueSchema(CoverageRatioSchema),
+  assetFlowCoverage: knowledgeValueSchema(CoverageRatioSchema),
+  assetFlows: z.array(SolanaAssetFlowSchema),
+  tokenFlowReconciliation: SolanaTokenFlowReconciliationSchema,
+  tokenBalanceRecording: knowledgeValueSchema(z.boolean()),
+  tokenBalanceChanges: z.array(SolanaTokenBalanceChangeSchema),
+  computeUnitsConsumed: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  logRecording: knowledgeValueSchema(z.boolean()),
+  logCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  modelVersion: z.literal('solana-transaction-semantics-v1.1.0'),
+});
+export type SolanaTransactionSemantics = z.infer<typeof SolanaTransactionSemanticsSchema>;
+
+export const SolanaTransactionFactsSchema = z.object({
+  status: knowledgeValueSchema(z.literal('CONFIRMED')),
+  slot: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  blockTime: knowledgeValueSchema(IsoDateTimeSchema),
+  version: knowledgeValueSchema(z.union([z.literal('legacy'), UnsignedQuantityStringSchema])),
+  feeLamports: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  execution: knowledgeValueSchema(z.enum(['SUCCESS', 'FAILED'])),
+  transactionSemantics: knowledgeValueSchema(SolanaTransactionSemanticsSchema),
+  feePayer: knowledgeValueSchema(SolanaPublicKeySchema),
+  signerCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  outerInstructionCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  cpiCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  accountResolutionComplete: knowledgeValueSchema(z.boolean()),
+  tokenBalanceChangeCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  coreAssetFlowCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  tokenFlowReconciliation: knowledgeValueSchema(SolanaTokenFlowReconciliationSchema),
+});
+export type SolanaTransactionFacts = z.infer<typeof SolanaTransactionFactsSchema>;
+
+export const SolanaTransactionIntelligenceReportSchema = z
+  .object({
+    ledger: z.literal('SOLANA'),
+    chainId: z.literal('solana-mainnet'),
+    signature: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/),
+    subject: SubjectReferenceSchema,
+    facts: SolanaTransactionFactsSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine(
+      (metadata) =>
+        metadata.snapshot?.ledger === 'SOLANA' &&
+        metadata.snapshot.chainId === 'solana-mainnet' &&
+        metadata.snapshot.commitment === 'finalized' &&
+        metadata.modelVersion === 'solana-transaction-query-v1.1.0',
+      { message: 'Solana transaction reports require one finalized v1.1 Solana Snapshot.' },
+    ),
+    evidence: z.array(EvidenceSchema).min(2),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    const solanaSnapshot = snapshot?.ledger === 'SOLANA' ? snapshot : undefined;
+    const semantics =
+      value.facts.transactionSemantics.state === 'known'
+        ? value.facts.transactionSemantics.value
+        : undefined;
+    const slot = value.facts.slot.state === 'known' ? value.facts.slot.value : undefined;
+    const status = value.facts.status.state === 'known' ? value.facts.status.value : undefined;
+    if (
+      solanaSnapshot === undefined ||
+      value.subject.ledger !== 'SOLANA' ||
+      value.subject.chainId !== value.chainId ||
+      value.subject.type !== 'TRANSACTION' ||
+      value.subject.id !== value.signature ||
+      value.subject.normalizedId !== value.signature ||
+      semantics?.signature !== value.signature ||
+      slot !== solanaSnapshot.slot ||
+      status !== 'CONFIRMED'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['signature'],
+        message: 'Solana transaction report identity, facts, semantics, and Snapshot must agree.',
+      });
+    }
+
+    const evidenceIds = value.evidence.map((item) => item.id).sort();
+    const metadataEvidenceIds = [...value.metadata.evidenceIds].sort();
+    const terminalEvidence = value.evidence.find((item) => item.id === value.terminalEvidenceId);
+    if (
+      evidenceIds.length !== new Set(evidenceIds).size ||
+      metadataEvidenceIds.length !== new Set(metadataEvidenceIds).size ||
+      evidenceIds.length !== metadataEvidenceIds.length ||
+      evidenceIds.some((id, index) => id !== metadataEvidenceIds[index]) ||
+      terminalEvidence?.ledger !== 'SOLANA' ||
+      terminalEvidence.chainId !== value.chainId ||
+      terminalEvidence.kind !== 'DERIVED_FEATURE' ||
+      terminalEvidence.source !== `zerotrace:${semantics?.modelVersion ?? ''}` ||
+      terminalEvidence.locator !==
+        `transaction-semantics:${value.signature}@${solanaSnapshot?.slot ?? ''}` ||
+      terminalEvidence.blockOrSlot !== solanaSnapshot?.slot ||
+      terminalEvidence.finality !== 'finalized'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message: 'Solana transaction report Evidence provenance is incomplete or inconsistent.',
+      });
+    }
+
+    const sourceSet = value.metadata.sourceSet;
+    if (
+      sourceSet.length === 0 ||
+      sourceSet.length !== new Set(sourceSet).size ||
+      sourceSet.some((source, index) => source !== [...sourceSet].sort()[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'sourceSet'],
+        message: 'Solana transaction report sourceSet must be non-empty, sorted, and unique.',
+      });
+    }
+  });
+export type SolanaTransactionIntelligenceReport = z.infer<
+  typeof SolanaTransactionIntelligenceReportSchema
+>;
+
+export const SolanaControlRightTypeSchema = z.enum([
+  'MINT_AUTHORITY',
+  'FREEZE_AUTHORITY',
+  'ACCOUNT_OWNER',
+  'ACCOUNT_CLOSE_AUTHORITY',
+  'MINT_CLOSE_AUTHORITY',
+  'ACCOUNT_DELEGATE',
+  'PERMANENT_DELEGATE',
+  'TRANSFER_FEE_CONFIG_AUTHORITY',
+  'WITHHELD_FEE_AUTHORITY',
+  'CONFIDENTIAL_TRANSFER_AUTHORITY',
+  'INTEREST_RATE_AUTHORITY',
+  'TRANSFER_HOOK_AUTHORITY',
+  'TRANSFER_HOOK_PROGRAM',
+  'METADATA_POINTER_AUTHORITY',
+  'METADATA_UPDATE_AUTHORITY',
+  'GROUP_POINTER_AUTHORITY',
+  'GROUP_UPDATE_AUTHORITY',
+  'GROUP_MEMBER_POINTER_AUTHORITY',
+  'SCALED_UI_AMOUNT_AUTHORITY',
+  'PAUSE_AUTHORITY',
+  'PERMISSIONED_BURN_AUTHORITY',
+  'PROGRAM_UPGRADE_AUTHORITY',
+  'MULTISIG_SIGNER',
+]);
+export type SolanaControlRightType = z.infer<typeof SolanaControlRightTypeSchema>;
+
+export const SolanaAccountKindSchema = z.enum([
+  'SYSTEM_ACCOUNT',
+  'SPL_TOKEN_MINT',
+  'SPL_TOKEN_ACCOUNT',
+  'SPL_TOKEN_MULTISIG',
+  'TOKEN_2022_MINT',
+  'TOKEN_2022_ACCOUNT',
+  'TOKEN_2022_MULTISIG',
+  'UPGRADEABLE_PROGRAM',
+  'UPGRADEABLE_PROGRAM_DATA',
+  'IMMUTABLE_PROGRAM',
+  'OTHER_ACCOUNT',
+]);
+export type SolanaAccountKind = z.infer<typeof SolanaAccountKindSchema>;
+
+export const SolanaTokenProgramSchema = z.enum(['SPL_TOKEN', 'TOKEN_2022']);
+export type SolanaTokenProgram = z.infer<typeof SolanaTokenProgramSchema>;
+
+export const SolanaMintControlSchema = z.object({
+  tokenProgram: SolanaTokenProgramSchema,
+  supply: UnsignedQuantityStringSchema,
+  decimals: z.number().int().min(0).max(255),
+  initialized: z.boolean(),
+  mintAuthority: knowledgeValueSchema(SolanaPublicKeySchema),
+  freezeAuthority: knowledgeValueSchema(SolanaPublicKeySchema),
+});
+export type SolanaMintControl = z.infer<typeof SolanaMintControlSchema>;
+
+export const SolanaTokenAccountControlSchema = z.object({
+  tokenProgram: SolanaTokenProgramSchema,
+  mint: SolanaPublicKeySchema,
+  owner: SolanaPublicKeySchema,
+  amount: UnsignedQuantityStringSchema,
+  state: z.string().min(1),
+  delegate: knowledgeValueSchema(SolanaPublicKeySchema),
+  delegatedAmount: UnsignedQuantityStringSchema,
+  closeAuthority: knowledgeValueSchema(SolanaPublicKeySchema),
+});
+export type SolanaTokenAccountControl = z.infer<typeof SolanaTokenAccountControlSchema>;
+
+export const SolanaMultisigControlSchema = z.object({
+  tokenProgram: SolanaTokenProgramSchema,
+  initialized: z.boolean(),
+  minimumSigners: z.number().int().min(1).max(11),
+  signerCount: z.number().int().min(1).max(11),
+  signers: z.array(SolanaPublicKeySchema).min(1).max(11),
+});
+export type SolanaMultisigControl = z.infer<typeof SolanaMultisigControlSchema>;
+
+export const SolanaTokenExtensionAuthoritySchema = z.object({
+  role: z.string().min(1).max(128),
+  address: SolanaPublicKeySchema,
+});
+export const SolanaTokenExtensionRelatedAddressSchema = z.object({
+  role: z.string().min(1).max(128),
+  address: SolanaPublicKeySchema,
+});
+export const SolanaTokenExtensionControlSchema = z.object({
+  extensionType: z.string().min(1).max(128),
+  authorities: z.array(SolanaTokenExtensionAuthoritySchema),
+  relatedAddresses: z.array(SolanaTokenExtensionRelatedAddressSchema),
+  settings: z.record(z.string(), z.union([z.string(), z.boolean(), z.null()])),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+});
+export type SolanaTokenExtensionControl = z.infer<typeof SolanaTokenExtensionControlSchema>;
+
+export const SolanaProgramControlSchema = z.object({
+  loader: SolanaPublicKeySchema,
+  programDataAddress: knowledgeValueSchema(SolanaPublicKeySchema),
+  upgradeAuthority: knowledgeValueSchema(SolanaPublicKeySchema),
+  immutable: knowledgeValueSchema(z.boolean()),
+  deploymentSlot: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  programDataBytes: knowledgeValueSchema(z.number().int().nonnegative()),
+});
+export type SolanaProgramControl = z.infer<typeof SolanaProgramControlSchema>;
+
+export const SolanaControlRightSchema = z.object({
+  id: z.string().regex(/^cr_[0-9a-f]{24}$/),
+  chainId: z.literal('solana-mainnet'),
+  subject: SolanaPublicKeySchema,
+  controller: SolanaPublicKeySchema,
+  rightType: SolanaControlRightTypeSchema,
+  scope: z.string().min(1),
+  threshold: knowledgeValueSchema(DecimalStringSchema),
+  constraints: z.array(z.string().min(1)),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+  activeFrom: knowledgeValueSchema(IsoDateTimeSchema),
+  activeTo: knowledgeValueSchema(IsoDateTimeSchema),
+});
+export type SolanaControlRight = z.infer<typeof SolanaControlRightSchema>;
+
+export const SolanaControlCoverageDomainSchema = z.enum([
+  'ACCOUNT_STATE',
+  'ACCOUNT_CLASSIFICATION',
+  'TOKEN_BASE_STATE',
+  'MINT_AUTHORITY',
+  'FREEZE_AUTHORITY',
+  'ACCOUNT_OWNER',
+  'ACCOUNT_CLOSE_AUTHORITY',
+  'ACCOUNT_DELEGATE',
+  'MULTISIG_CONFIGURATION',
+  'MINT_CLOSE_AUTHORITY',
+  'PERMANENT_DELEGATE',
+  'TRANSFER_FEE_CONFIG',
+  'WITHHELD_FEE_AUTHORITY',
+  'CONFIDENTIAL_TRANSFER',
+  'DEFAULT_ACCOUNT_STATE',
+  'NON_TRANSFERABLE',
+  'INTEREST_BEARING',
+  'TRANSFER_HOOK',
+  'METADATA_POINTER',
+  'TOKEN_METADATA',
+  'GROUP_POINTER',
+  'TOKEN_GROUP',
+  'GROUP_MEMBER_POINTER',
+  'TOKEN_GROUP_MEMBER',
+  'SCALED_UI_AMOUNT',
+  'PAUSABLE',
+  'PERMISSIONED_BURN',
+  'CPI_GUARD',
+  'MEMO_TRANSFER',
+  'IMMUTABLE_OWNER',
+  'PROGRAM_EXECUTABLE',
+  'PROGRAM_DATA',
+  'PROGRAM_UPGRADE_AUTHORITY',
+  'ANCHOR_IDL',
+  'VERIFIABLE_BUILD',
+  'SQUADS_CONFIGURATION',
+  'AUTHORITY_HISTORY',
+  'CONTROLLER_RECURSION',
+]);
+export type SolanaControlCoverageDomain = z.infer<typeof SolanaControlCoverageDomainSchema>;
+
+export const SolanaControlCoverageSchema = z.object({
+  domain: SolanaControlCoverageDomainSchema,
+  observed: knowledgeValueSchema(z.boolean()),
+  detail: z.string().min(1),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+});
+export type SolanaControlCoverage = z.infer<typeof SolanaControlCoverageSchema>;
+
+export const SolanaControlSurfaceReportSchema = z
+  .object({
+    ledger: z.literal('SOLANA'),
+    chainId: z.literal('solana-mainnet'),
+    subject: SolanaPublicKeySchema,
+    accountKind: knowledgeValueSchema(SolanaAccountKindSchema),
+    ownerProgram: knowledgeValueSchema(SolanaPublicKeySchema),
+    executable: knowledgeValueSchema(z.boolean()),
+    mint: knowledgeValueSchema(SolanaMintControlSchema),
+    tokenAccount: knowledgeValueSchema(SolanaTokenAccountControlSchema),
+    multisig: knowledgeValueSchema(SolanaMultisigControlSchema),
+    program: knowledgeValueSchema(SolanaProgramControlSchema),
+    extensions: z.array(SolanaTokenExtensionControlSchema),
+    sourceAgreement: knowledgeValueSchema(z.boolean()),
+    sourceIndependence: knowledgeValueSchema(z.boolean()),
+    rights: z.array(SolanaControlRightSchema),
+    coverage: z.array(SolanaControlCoverageSchema),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot?.ledger === 'SOLANA', {
+      message: 'Solana control surface requires a Solana Snapshot.',
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot?.ledger !== 'SOLANA' ||
+      snapshot.commitment !== 'finalized' ||
+      snapshot.chainId !== value.chainId
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Solana control identity requires one finalized matching Snapshot.',
+      });
+    }
+    const domains = value.coverage.map((item) => item.domain);
+    const expectedDomains = [...SolanaControlCoverageDomainSchema.options].sort();
+    if (
+      domains.length !== expectedDomains.length ||
+      [...new Set(domains)].sort().some((domain, index) => domain !== expectedDomains[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['coverage'],
+        message: 'Coverage must include every Solana control domain exactly once.',
+      });
+    }
+    const evidenceIds = value.evidence.map((item) => item.id).sort();
+    const metadataEvidenceIds = value.metadata.evidenceIds;
+    const nestedEvidenceIds = [
+      ...value.rights.flatMap((right) => right.evidenceIds),
+      ...value.coverage.flatMap((item) => item.evidenceIds),
+      ...value.extensions.flatMap((item) => item.evidenceIds),
+    ];
+    if (
+      metadataEvidenceIds.length !== new Set(metadataEvidenceIds).size ||
+      metadataEvidenceIds.some((id, index) => id !== evidenceIds[index]) ||
+      evidenceIds.length !== metadataEvidenceIds.length ||
+      !metadataEvidenceIds.includes(value.terminalEvidenceId) ||
+      nestedEvidenceIds.some((id) => !metadataEvidenceIds.includes(id))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'evidenceIds'],
+        message: 'Solana control provenance must be canonical and contain all nested Evidence.',
+      });
+    }
+  });
+export type SolanaControlSurfaceReport = z.infer<typeof SolanaControlSurfaceReportSchema>;
 
 export const LaunchLifecycleSchema = z.enum([
   'DISCOVERED',
@@ -296,6 +1856,7 @@ export const LaunchLifecycleSchema = z.enum([
 
 const OptionalDecimalKnowledgeSchema = knowledgeValueSchema(DecimalStringSchema);
 const OptionalStringKnowledgeSchema = knowledgeValueSchema(z.string());
+const OptionalJsonKnowledgeSchema = knowledgeValueSchema(JsonValueSchema);
 
 export const LaunchMechanismSnapshotSchema = z.object({
   platform: z.string().min(1),
@@ -303,32 +1864,492 @@ export const LaunchMechanismSnapshotSchema = z.object({
   deploymentId: OptionalStringKnowledgeSchema,
   ledger: LedgerSchema,
   chainId: z.string().min(1),
+  factoryOrProgram: OptionalStringKnowledgeSchema,
   creator: OptionalStringKnowledgeSchema,
   lifecycle: LaunchLifecycleSchema,
   quoteAsset: OptionalStringKnowledgeSchema,
+  spotPrice: OptionalDecimalKnowledgeSchema,
   curveType: OptionalStringKnowledgeSchema,
   realBaseReserve: OptionalDecimalKnowledgeSchema,
   realQuoteReserve: OptionalDecimalKnowledgeSchema,
   virtualBaseReserve: OptionalDecimalKnowledgeSchema,
   virtualQuoteReserve: OptionalDecimalKnowledgeSchema,
   totalSupply: OptionalDecimalKnowledgeSchema,
+  curveSupply: OptionalDecimalKnowledgeSchema,
+  circulatingSupply: OptionalDecimalKnowledgeSchema,
   remainingSupply: OptionalDecimalKnowledgeSchema,
   progress: OptionalDecimalKnowledgeSchema,
   graduationCondition: OptionalStringKnowledgeSchema,
+  graduationThreshold: OptionalDecimalKnowledgeSchema,
+  currentSellCapacity: OptionalDecimalKnowledgeSchema,
   buyFeeBps: OptionalDecimalKnowledgeSchema,
   sellFeeBps: OptionalDecimalKnowledgeSchema,
+  creatorFeeBps: OptionalDecimalKnowledgeSchema,
+  protocolFeeBps: OptionalDecimalKnowledgeSchema,
   taxModel: OptionalStringKnowledgeSchema,
+  buyTaxBps: OptionalDecimalKnowledgeSchema,
+  sellTaxBps: OptionalDecimalKnowledgeSchema,
+  taxAllocations: OptionalJsonKnowledgeSchema,
+  fundRecipient: OptionalStringKnowledgeSchema,
+  taxProcessor: OptionalStringKnowledgeSchema,
+  dividendContract: OptionalStringKnowledgeSchema,
+  vault: OptionalStringKnowledgeSchema,
   migrationTarget: OptionalStringKnowledgeSchema,
   migrationPool: OptionalStringKnowledgeSchema,
   lpOwner: OptionalStringKnowledgeSchema,
   lpLocked: knowledgeValueSchema(z.boolean()),
   lpBurned: knowledgeValueSchema(z.boolean()),
+  lpClaimRight: OptionalStringKnowledgeSchema,
+  antiSniperOrFarmerSettings: OptionalJsonKnowledgeSchema,
   rawConfigHash: Hash256Schema,
   sourceBlockOrSlot: z.string().min(1),
   sourceVersion: z.string().min(1),
   evidenceIds: z.array(z.string()).min(1),
 });
 export type LaunchMechanismSnapshot = z.infer<typeof LaunchMechanismSnapshotSchema>;
+
+export const EvmEventPositionSchema = z.object({
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  transactionIndex: UnsignedQuantityStringSchema,
+  logIndex: UnsignedQuantityStringSchema,
+});
+export type EvmEventPosition = z.infer<typeof EvmEventPositionSchema>;
+
+export const LaunchConfigurationSourceSchema = z.enum([
+  'EVENT',
+  'OFFICIAL_DEFAULT',
+  'NOT_APPLICABLE',
+]);
+
+export const LaunchConfigurationFieldSchema = z.object({
+  value: OptionalStringKnowledgeSchema,
+  source: LaunchConfigurationSourceSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type LaunchConfigurationField = z.infer<typeof LaunchConfigurationFieldSchema>;
+
+export const FlapCreationEventSchema = z.object({
+  timestampUnix: UnsignedQuantityStringSchema,
+  creator: z.string().regex(/^0x[0-9a-f]{40}$/),
+  nonce: UnsignedQuantityStringSchema,
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  name: z.string().max(1_024),
+  symbol: z.string().max(256),
+  metadataUri: z.string().max(4_096),
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapCreationEvent = z.infer<typeof FlapCreationEventSchema>;
+
+export const FlapStagedEventSchema = z.object({
+  timestampUnix: UnsignedQuantityStringSchema,
+  creator: z.string().regex(/^0x[0-9a-f]{40}$/),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapStagedEvent = z.infer<typeof FlapStagedEventSchema>;
+
+export const FlapExtensionConfigurationSchema = z.object({
+  extensionId: z.string().regex(/^0x[0-9a-f]{64}$/),
+  extensionAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
+  version: UnsignedQuantityStringSchema,
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapExtensionConfiguration = z.infer<typeof FlapExtensionConfigurationSchema>;
+
+export const FlapLaunchConfigurationSchema = z.object({
+  curveAddress: LaunchConfigurationFieldSchema,
+  curveParameter: LaunchConfigurationFieldSchema,
+  virtualQuoteReserve: LaunchConfigurationFieldSchema,
+  virtualBaseReserve: LaunchConfigurationFieldSchema,
+  virtualLiquiditySquared: LaunchConfigurationFieldSchema,
+  dexSupplyThreshold: LaunchConfigurationFieldSchema,
+  quoteTokenAddress: LaunchConfigurationFieldSchema,
+  migratorType: LaunchConfigurationFieldSchema,
+  tokenVersion: LaunchConfigurationFieldSchema,
+  buyTaxBps: LaunchConfigurationFieldSchema,
+  sellTaxBps: LaunchConfigurationFieldSchema,
+  dexId: LaunchConfigurationFieldSchema,
+  lpFeeProfile: LaunchConfigurationFieldSchema,
+  extensions: z.array(FlapExtensionConfigurationSchema),
+  rawConfigHash: Hash256Schema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapLaunchConfiguration = z.infer<typeof FlapLaunchConfigurationSchema>;
+
+export const FlapDexLaunchEventSchema = z.object({
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  pool: z.string().regex(/^0x[0-9a-f]{40}$/),
+  tokenAmount: UnsignedQuantityStringSchema,
+  quoteAmount: UnsignedQuantityStringSchema,
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const FlapPoolConfigurationEventSchema = z.object({
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  pool: z.string().regex(/^0x[0-9a-f]{40}$/),
+  fee: UnsignedQuantityStringSchema,
+  poolTypeCode: UnsignedQuantityStringSchema,
+  position: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const FlapMigrationEventSchema = z.object({
+  launchedToDex: FlapDexLaunchEventSchema.nullable(),
+  poolConfiguration: FlapPoolConfigurationEventSchema.nullable(),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type FlapMigrationEvent = z.infer<typeof FlapMigrationEventSchema>;
+
+export const FlapEventTransactionKindSchema = z.enum([
+  'CREATION_CONFIGURATION',
+  'STAGED',
+  'MIGRATION',
+  'MIXED',
+  'UNRECOGNIZED',
+]);
+
+export const FlapEventTransactionSchema = z.object({
+  platform: z.literal('flap'),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  platformMatch: knowledgeValueSchema(z.boolean()),
+  transactionKind: FlapEventTransactionKindSchema,
+  creation: FlapCreationEventSchema.nullable(),
+  staged: FlapStagedEventSchema.nullable(),
+  configuration: FlapLaunchConfigurationSchema.nullable(),
+  migration: FlapMigrationEventSchema.nullable(),
+  decodedEventNames: z.array(z.string().min(1)),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+  metadata: AnalysisMetadataSchema,
+  evidence: z.array(EvidenceSchema).min(1),
+});
+export type FlapEventTransaction = z.infer<typeof FlapEventTransactionSchema>;
+
+export const FlapEventHistoryRangeSchema = z.object({
+  fromBlock: UnsignedQuantityStringSchema,
+  toBlock: UnsignedQuantityStringSchema,
+  chunkSize: z.number().int().positive(),
+  chunkCount: z.number().int().positive(),
+});
+
+export const FlapEventChronologyItemSchema = z.object({
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  transactionIndex: UnsignedQuantityStringSchema,
+  transactionKind: FlapEventTransactionKindSchema,
+  decodedEventNames: z.array(z.string().min(1)).min(1),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const FlapEventHistorySchema = z.object({
+  platform: z.literal('flap'),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  requestedRange: FlapEventHistoryRangeSchema,
+  requestedRangeCoverage: CoverageRatioSchema,
+  lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+  chronology: z.array(FlapEventChronologyItemSchema),
+  transactions: z.array(FlapEventTransactionSchema),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+  metadata: AnalysisMetadataSchema,
+  evidence: z.array(EvidenceSchema).min(1),
+});
+export type FlapEventHistory = z.infer<typeof FlapEventHistorySchema>;
+
+export const FlapHistoryProjectionSegmentSchema = z.object({
+  id: z.string().regex(/^fhs_[0-9a-f]{24}$/),
+  fromBlock: UnsignedQuantityStringSchema,
+  toBlock: UnsignedQuantityStringSchema,
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  transactionCount: z.number().int().nonnegative(),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+});
+export type FlapHistoryProjectionSegment = z.infer<typeof FlapHistoryProjectionSegmentSchema>;
+
+export const FlapEventHistoryProjectionSchema = z.object({
+  platform: z.literal('flap'),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  requestedRange: z.object({
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    segmentSize: z.number().int().positive(),
+    segmentCount: z.number().int().positive(),
+  }),
+  requestedRangeCoverage: CoverageRatioSchema,
+  lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+  segments: z.array(FlapHistoryProjectionSegmentSchema).min(1).max(5_000),
+  transactionCount: z.number().int().nonnegative(),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  metadata: AnalysisMetadataSchema,
+  evidence: z.array(EvidenceSchema).min(1),
+});
+export type FlapEventHistoryProjection = z.infer<typeof FlapEventHistoryProjectionSchema>;
+
+export const EvmTracePositionSchema = z.object({
+  transactionHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  transactionIndex: UnsignedQuantityStringSchema,
+  traceAddress: z.array(z.number().int().nonnegative()).max(64),
+});
+export type EvmTracePosition = z.infer<typeof EvmTracePositionSchema>;
+
+export const FlapTokenOriginValueSchema = z.object({
+  contractCreator: z.string().regex(/^0x[0-9a-f]{40}$/),
+  launchCreator: z.string().regex(/^0x[0-9a-f]{40}$/),
+  bytecodeFingerprint: Hash256Schema,
+  creationTrace: EvmTracePositionSchema,
+  tokenCreatedPosition: EvmEventPositionSchema,
+  evidenceIds: z.array(z.string().min(1)).min(2),
+});
+export type FlapTokenOriginValue = z.infer<typeof FlapTokenOriginValueSchema>;
+
+export const FlapTokenOriginSchema = z.object({
+  platform: z.literal('flap'),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  searchedRange: z.object({
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    chunkSize: z.number().int().positive(),
+    chunkCount: z.number().int().positive(),
+  }),
+  searchedRangeCoverage: CoverageRatioSchema,
+  origin: knowledgeValueSchema(FlapTokenOriginValueSchema),
+  lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+  observedCreationCount: z.number().int().nonnegative(),
+  metadata: AnalysisMetadataSchema,
+  evidence: z.array(EvidenceSchema).min(2),
+});
+export type FlapTokenOrigin = z.infer<typeof FlapTokenOriginSchema>;
+
+export const FlapLifetimeHistorySummarySchema = z.object({
+  scanId: z.string().uuid(),
+  fromBlock: UnsignedQuantityStringSchema,
+  toBlock: UnsignedQuantityStringSchema,
+  segmentCount: z.number().int().positive().max(5_000),
+  transactionCount: z.number().int().nonnegative(),
+  unrecognizedPortalLogCount: z.number().int().nonnegative(),
+  requestedRangeCoverage: CoverageRatioSchema,
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type FlapLifetimeHistorySummary = z.infer<typeof FlapLifetimeHistorySummarySchema>;
+
+export const FlapLifetimeMaterializationSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    dataset: z.literal('binance-mainnet'),
+    datasetStartBlock: UnsignedQuantityStringSchema,
+    targetBlock: UnsignedQuantityStringSchema,
+    originScanId: z.string().uuid(),
+    originSearchCoverage: CoverageRatioSchema,
+    origin: knowledgeValueSchema(FlapTokenOriginValueSchema),
+    historyProjection: FlapLifetimeHistorySummarySchema.nullable(),
+    lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema,
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot !== null &&
+      (snapshot.ledger !== 'EVM' ||
+        snapshot.chainId !== 'eip155:56' ||
+        snapshot.blockNumber !== value.targetBlock ||
+        snapshot.finality !== 'finalized')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Flap lifetime metadata must use the exact finalized BSC target Snapshot.',
+      });
+    }
+    if (value.lifetimeCoverage.state !== 'known' || value.lifetimeCoverage.value !== true) return;
+    const history = value.historyProjection;
+    if (
+      value.origin.state !== 'known' ||
+      history === null ||
+      value.originSearchCoverage !== 1 ||
+      history.requestedRangeCoverage !== 1 ||
+      history.fromBlock !== value.origin.value.creationTrace.blockNumber ||
+      history.toBlock !== value.targetBlock ||
+      snapshot === null ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(history.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['lifetimeCoverage'],
+        message:
+          'Known Flap lifetime coverage requires a unique origin and complete origin-to-target history at one finalized Snapshot.',
+      });
+    }
+  });
+export type FlapLifetimeMaterialization = z.infer<typeof FlapLifetimeMaterializationSchema>;
+
+export const FlapLifetimeContinuityProofSchema = z.object({
+  status: z.enum(['DIRECT_EXTENSION', 'HISTORICAL_MATCH']),
+  continuous: knowledgeValueSchema(z.boolean()),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(2),
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type FlapLifetimeContinuityProof = z.infer<typeof FlapLifetimeContinuityProofSchema>;
+
+export const FlapLifetimeExtensionSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    dataset: z.literal('binance-mainnet'),
+    datasetStartBlock: UnsignedQuantityStringSchema,
+    targetBlock: UnsignedQuantityStringSchema,
+    predecessor: z.object({
+      scanId: z.string().uuid(),
+      targetBlock: UnsignedQuantityStringSchema,
+      targetHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+      terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    }),
+    originScanId: z.string().uuid(),
+    origin: knowledgeValueSchema(FlapTokenOriginValueSchema),
+    continuity: FlapLifetimeContinuityProofSchema,
+    historyProjection: FlapLifetimeHistorySummarySchema,
+    lifetimeCoverage: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema,
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      snapshot.blockNumber !== value.targetBlock ||
+      snapshot.finality !== 'finalized'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Flap lifetime extension must use the exact finalized BSC target Snapshot.',
+      });
+    }
+    if (value.lifetimeCoverage.state !== 'known' || value.lifetimeCoverage.value !== true) return;
+    const predecessorTarget = BigInt(value.predecessor.targetBlock);
+    const target = BigInt(value.targetBlock);
+    if (
+      value.origin.state !== 'known' ||
+      target <= predecessorTarget ||
+      value.historyProjection.fromBlock !== (predecessorTarget + 1n).toString() ||
+      value.historyProjection.toBlock !== value.targetBlock ||
+      value.historyProjection.requestedRangeCoverage !== 1 ||
+      value.continuity.continuous.state !== 'known' ||
+      value.continuity.continuous.value !== true ||
+      !value.continuity.evidenceIds.includes(value.continuity.terminalEvidenceId) ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      !value.metadata.evidenceIds.includes(value.predecessor.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(value.continuity.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(value.historyProjection.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['lifetimeCoverage'],
+        message:
+          'Known Flap lifetime extension requires a Known predecessor, continuous target chain, and complete predecessor-target delta history.',
+      });
+    }
+  });
+export type FlapLifetimeExtension = z.infer<typeof FlapLifetimeExtensionSchema>;
+
+export const FlapLifetimeStateSchema = z.union([
+  FlapLifetimeMaterializationSchema,
+  FlapLifetimeExtensionSchema,
+]);
+export type FlapLifetimeState = z.infer<typeof FlapLifetimeStateSchema>;
+
+export const FlapLifetimeHeadReferenceSchema = z.object({
+  headId: z.string().regex(/^flh_[0-9a-f]{24}$/),
+  scanId: z.string().uuid(),
+  targetBlock: UnsignedQuantityStringSchema,
+  targetHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type FlapLifetimeHeadReference = z.infer<typeof FlapLifetimeHeadReferenceSchema>;
+
+export const FlapLifetimeRollbackSchema = z
+  .object({
+    chainId: z.literal('eip155:56'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    reason: z.literal('FINALIZED_REORG'),
+    invalidatedHeads: z.array(FlapLifetimeHeadReferenceSchema).min(1),
+    rollbackTo: FlapLifetimeHeadReferenceSchema.nullable(),
+    observedTarget: z.object({
+      blockNumber: UnsignedQuantityStringSchema,
+      blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+    }),
+    lineageCoverage: CoverageRatioSchema,
+    alertId: z.string().regex(/^dqa_[0-9a-f]{24}$/),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema,
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== value.chainId ||
+      snapshot.blockNumber !== value.observedTarget.blockNumber ||
+      snapshot.blockHash !== value.observedTarget.blockHash ||
+      snapshot.finality !== 'finalized'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Flap lifetime rollback must bind the exact reconciled finalized BSC Snapshot.',
+      });
+    }
+    const invalidatedTargets = value.invalidatedHeads.map((head) => BigInt(head.targetBlock));
+    if (
+      invalidatedTargets.some(
+        (target, index) => index > 0 && target <= (invalidatedTargets[index - 1] ?? -1n),
+      ) ||
+      (value.rollbackTo !== null &&
+        BigInt(value.rollbackTo.targetBlock) >= (invalidatedTargets[0] ?? 0n)) ||
+      BigInt(value.observedTarget.blockNumber) <
+        (invalidatedTargets[invalidatedTargets.length - 1] ?? 0n) ||
+      value.lineageCoverage !== 1 ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.sourceCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      value.metadata.simulationCoverage !== 0 ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.invalidatedHeads.every((head) =>
+        value.metadata.evidenceIds.includes(head.terminalEvidenceId),
+      ) ||
+      (value.rollbackTo !== null &&
+        !value.metadata.evidenceIds.includes(value.rollbackTo.terminalEvidenceId)) ||
+      !value.evidence.some((evidence) => evidence.id === value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['lineageCoverage'],
+        message:
+          'Flap lifetime rollback requires a fully evidenced ordered invalidated suffix and exact surviving predecessor.',
+      });
+    }
+  });
+export type FlapLifetimeRollback = z.infer<typeof FlapLifetimeRollbackSchema>;
 
 export const RealizableValuePointSchema = z.object({
   inputQuantity: DecimalStringSchema,
@@ -342,12 +2363,1657 @@ export const RealizableValuePointSchema = z.object({
 });
 export type RealizableValuePoint = z.infer<typeof RealizableValuePointSchema>;
 
+export const FlapPancakeV2TokenAmountSchema = z.object({
+  atomic: UnsignedQuantityStringSchema,
+  decimal: DecimalStringSchema,
+});
+export type FlapPancakeV2TokenAmount = z.infer<typeof FlapPancakeV2TokenAmountSchema>;
+
+export const FlapPancakeV2MarketSchema = z.object({
+  venue: z.literal('PANCAKESWAP_V2'),
+  chainId: z.literal('eip155:56'),
+  pool: z.string().regex(/^0x[0-9a-f]{40}$/),
+  factory: z.string().regex(/^0x[0-9a-f]{40}$/),
+  router: z.string().regex(/^0x[0-9a-f]{40}$/),
+  token: z.string().regex(/^0x[0-9a-f]{40}$/),
+  quoteAsset: z.string().regex(/^0x[0-9a-f]{40}$/),
+  token0: z.string().regex(/^0x[0-9a-f]{40}$/),
+  token1: z.string().regex(/^0x[0-9a-f]{40}$/),
+  tokenDecimals: z.number().int().min(0).max(255),
+  quoteDecimals: z.number().int().min(0).max(255),
+  tokenReserve: FlapPancakeV2TokenAmountSchema,
+  quoteReserve: FlapPancakeV2TokenAmountSchema,
+  currentSpotPriceWad: UnsignedQuantityStringSchema,
+  currentSpotPrice: DecimalStringSchema,
+  dexFeeBps: UnsignedQuantityStringSchema,
+  configuredBuyTaxBps: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  configuredSellTaxBps: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  pairTimestampLast: UnsignedQuantityStringSchema,
+  sourceRevision: z.string().min(1),
+});
+export type FlapPancakeV2Market = z.infer<typeof FlapPancakeV2MarketSchema>;
+
+export const FlapPancakeV2BuyScenarioPointSchema = z.object({
+  quoteInput: FlapPancakeV2TokenAmountSchema,
+  officialRouterGrossTokenOutput: FlapPancakeV2TokenAmountSchema,
+  deterministicPoolGrossTokenOutput: FlapPancakeV2TokenAmountSchema,
+  configuredTaxNetTokenOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  executionNetTokenOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  averageGrossBuyPrice: knowledgeValueSchema(DecimalStringSchema),
+  averageConfiguredTaxBuyPrice: knowledgeValueSchema(DecimalStringSchema),
+  modeledPostBuySpotPrice: DecimalStringSchema,
+  modeledPriceChangeBps: DecimalStringSchema,
+  deterministicQuoteErrorBps: DecimalStringSchema,
+  deterministicToleranceBps: DecimalStringSchema,
+  withinDeterministicTolerance: z.boolean(),
+  assumption: z.string().min(1),
+});
+export type FlapPancakeV2BuyScenarioPoint = z.infer<typeof FlapPancakeV2BuyScenarioPointSchema>;
+
+export const FlapPancakeV2BuyScenarioResultSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    market: knowledgeValueSchema(FlapPancakeV2MarketSchema),
+    scenarios: z.array(FlapPancakeV2BuyScenarioPointSchema).max(8),
+    validation: z.object({
+      status: z.enum(['PASS', 'FAIL', 'NOT_RUN']),
+      deterministicToleranceBps: DecimalStringSchema,
+      evaluatedScenarioCount: z.number().int().nonnegative(),
+      failedScenarioCount: z.number().int().nonnegative(),
+    }),
+    pensionSinkTreatment: knowledgeValueSchema(z.string().min(1)),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+      message: 'Flap Pancake V2 buy scenarios require a replayable chain Snapshot.',
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.evidence.some((item) => item.id === value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message:
+          'Flap Pancake V2 buy scenarios must bind their terminal Evidence to one BSC Snapshot.',
+      });
+    }
+    if (value.market.state === 'known') {
+      const market = value.market.value;
+      const pairMatches =
+        (market.token0 === market.token && market.token1 === market.quoteAsset) ||
+        (market.token1 === market.token && market.token0 === market.quoteAsset);
+      const failedScenarioCount = value.scenarios.filter(
+        (scenario) => !scenario.withinDeterministicTolerance,
+      ).length;
+      if (
+        market.token !== value.token ||
+        !pairMatches ||
+        value.scenarios.length === 0 ||
+        market.tokenReserve.atomic === '0' ||
+        market.quoteReserve.atomic === '0' ||
+        value.validation.status === 'NOT_RUN' ||
+        value.validation.evaluatedScenarioCount !== value.scenarios.length ||
+        value.validation.failedScenarioCount !== failedScenarioCount ||
+        (failedScenarioCount === 0
+          ? value.validation.status !== 'PASS'
+          : value.validation.status !== 'FAIL')
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['market'],
+          message:
+            'A known Flap Pancake V2 market requires matching pair identities, positive reserves and scenarios.',
+        });
+      }
+    } else if (
+      value.scenarios.length !== 0 ||
+      value.validation.status !== 'NOT_RUN' ||
+      value.validation.evaluatedScenarioCount !== 0 ||
+      value.validation.failedScenarioCount !== 0
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['scenarios'],
+        message: 'Unavailable or unknown Flap Pancake V2 markets cannot contain scenarios.',
+      });
+    }
+  });
+export type FlapPancakeV2BuyScenarioResult = z.infer<typeof FlapPancakeV2BuyScenarioResultSchema>;
+
+export const FlapPancakeV2PensionBehaviorReferenceSchema = z
+  .object({
+    reportId: z.string().regex(/^pcr_[0-9a-f]{24}$/),
+    resultHash: Hash256Schema,
+    wallet: z.string().regex(/^0x[0-9a-f]{40}$/),
+    shareUnit: FlapPancakeV2TokenAmountSchema,
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    snapshotHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+    observedWholeShares: UnsignedQuantityStringSchema,
+    candidateEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    reportTerminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    roleAttribution: knowledgeValueSchema(z.literal('PENSION_VAULT')),
+    participantExitPolicy: knowledgeValueSchema(z.boolean()),
+    dividendExecution: knowledgeValueSchema(z.boolean()),
+  })
+  .superRefine((value, context) => {
+    if (
+      BigInt(value.toBlock) < BigInt(value.fromBlock) ||
+      BigInt(value.shareUnit.atomic) === 0n ||
+      value.roleAttribution.state === 'known' ||
+      value.participantExitPolicy.state === 'known' ||
+      value.dividendExecution.state === 'known'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['roleAttribution'],
+        message:
+          'Pension behavior references require a valid range/share unit and cannot promote role, exit, or dividend policy to fact.',
+      });
+    }
+  });
+export type FlapPancakeV2PensionBehaviorReference = z.infer<
+  typeof FlapPancakeV2PensionBehaviorReferenceSchema
+>;
+
+export const FlapPancakeV2PensionEntryScenarioPointSchema = z
+  .object({
+    buyScenario: FlapPancakeV2BuyScenarioPointSchema,
+    modeledNetTokenOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledShareEquivalent: knowledgeValueSchema(DecimalStringSchema),
+    modeledWholeShares: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    modeledCommittedTokenAmount: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledRemainderTokenAmount: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledQuoteCostForCommittedShares: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledAverageQuoteCostPerShare: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    modeledPostDepositSpotPrice: knowledgeValueSchema(DecimalStringSchema),
+    executionNetTokenOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    executionWholeShares: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    executionPostDepositSpotPrice: knowledgeValueSchema(DecimalStringSchema),
+    assumption: z.string().min(1),
+  })
+  .superRefine((value, context) => {
+    const modeledFields = [
+      value.modeledShareEquivalent,
+      value.modeledWholeShares,
+      value.modeledCommittedTokenAmount,
+      value.modeledRemainderTokenAmount,
+      value.modeledQuoteCostForCommittedShares,
+    ];
+    const modeledState = value.modeledNetTokenOutput.state;
+    if (modeledFields.some((field) => field.state !== modeledState)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['modeledNetTokenOutput'],
+        message: 'Pension entry modeled quantities must share the modeled net-output state.',
+      });
+    }
+    if (value.modeledNetTokenOutput.state === 'known') {
+      const isZeroReceipt = BigInt(value.modeledNetTokenOutput.value.atomic) === 0n;
+      if (
+        (isZeroReceipt &&
+          (value.modeledAverageQuoteCostPerShare.state !== 'unknown' ||
+            value.modeledAverageQuoteCostPerShare.reason !== 'NOT_APPLICABLE')) ||
+        (!isZeroReceipt && value.modeledAverageQuoteCostPerShare.state !== 'known')
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['modeledAverageQuoteCostPerShare'],
+          message:
+            'Average share cost must be known for a positive modeled receipt and Unknown/NOT_APPLICABLE for a zero receipt.',
+        });
+      }
+    } else if (value.modeledAverageQuoteCostPerShare.state !== modeledState) {
+      context.addIssue({
+        code: 'custom',
+        path: ['modeledAverageQuoteCostPerShare'],
+        message: 'Unavailable or Unknown modeled receipts must propagate to average share cost.',
+      });
+    }
+    if (
+      value.modeledPostDepositSpotPrice.state !== 'known' ||
+      value.modeledPostDepositSpotPrice.value !== value.buyScenario.modeledPostBuySpotPrice
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['modeledPostDepositSpotPrice'],
+        message:
+          'The custody-only pension deposit model must preserve the post-buy pool spot price.',
+      });
+    }
+    if (
+      value.executionWholeShares.state === 'known' ||
+      value.executionPostDepositSpotPrice.state === 'known'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['executionNetTokenOutput'],
+        message:
+          'Executed pension-wallet shares and post-deposit price remain unresolved without buy-plus-transfer fork execution.',
+      });
+    }
+  });
+export type FlapPancakeV2PensionEntryScenarioPoint = z.infer<
+  typeof FlapPancakeV2PensionEntryScenarioPointSchema
+>;
+
+export const FlapPancakeV2PensionEntryResultSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    behavior: FlapPancakeV2PensionBehaviorReferenceSchema,
+    market: knowledgeValueSchema(FlapPancakeV2MarketSchema),
+    entries: z.array(FlapPancakeV2PensionEntryScenarioPointSchema).max(8),
+    validation: z.object({
+      status: z.enum(['PASS', 'FAIL', 'NOT_RUN']),
+      deterministicToleranceBps: DecimalStringSchema,
+      evaluatedScenarioCount: z.number().int().nonnegative(),
+      failedScenarioCount: z.number().int().nonnegative(),
+    }),
+    destinationTreatment: z.literal('NON_ZERO_CUSTODY_ADDRESS'),
+    totalSupplyReduction: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+    custodyIrreversible: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('flap-pension-entry-economics-v0.1.0'),
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    const evidenceIds = new Set(value.evidence.map((item) => item.id));
+    const requiredEvidenceIds = [
+      value.behavior.candidateEvidenceId,
+      value.behavior.reportTerminalEvidenceId,
+      value.terminalEvidenceId,
+    ];
+    if (
+      snapshot?.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      BigInt(snapshot.blockNumber) < BigInt(value.behavior.toBlock) ||
+      (snapshot.blockNumber === value.behavior.toBlock &&
+        snapshot.blockHash.toLowerCase() !== value.behavior.snapshotHash) ||
+      value.totalSupplyReduction.state === 'known' ||
+      value.custodyIrreversible.state === 'known' ||
+      requiredEvidenceIds.some(
+        (evidenceId) =>
+          !evidenceIds.has(evidenceId) || !value.metadata.evidenceIds.includes(evidenceId),
+      ) ||
+      value.evidence.length !== evidenceIds.size
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message:
+          'Pension entry economics require a later same-chain Snapshot, unique complete Evidence, and Unknown supply/irreversibility effects.',
+      });
+    }
+    if (value.market.state === 'known') {
+      if (
+        value.market.value.token !== value.token ||
+        value.entries.length === 0 ||
+        value.entries.length !== value.validation.evaluatedScenarioCount
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['entries'],
+          message: 'A known pension-entry market requires matching token scenarios and validation.',
+        });
+      }
+    } else if (value.entries.length !== 0 || value.validation.status !== 'NOT_RUN') {
+      context.addIssue({
+        code: 'custom',
+        path: ['entries'],
+        message: 'Unavailable pension-entry markets cannot expose modeled entries.',
+      });
+    }
+  });
+export type FlapPancakeV2PensionEntryResult = z.infer<typeof FlapPancakeV2PensionEntryResultSchema>;
+
+export const FlapPancakeV2SellScenarioPointSchema = z.object({
+  tokenInput: FlapPancakeV2TokenAmountSchema,
+  nominalSpotQuoteValue: FlapPancakeV2TokenAmountSchema,
+  officialRouterGrossQuoteOutput: FlapPancakeV2TokenAmountSchema,
+  deterministicPoolGrossQuoteOutput: FlapPancakeV2TokenAmountSchema,
+  configuredTaxTokenInputToPool: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  configuredTaxNetQuoteOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  executionNetQuoteOutput: knowledgeValueSchema(FlapPancakeV2TokenAmountSchema),
+  averageGrossExitPrice: knowledgeValueSchema(DecimalStringSchema),
+  averageConfiguredTaxExitPrice: knowledgeValueSchema(DecimalStringSchema),
+  modeledGrossPostSellSpotPrice: DecimalStringSchema,
+  modeledConfiguredTaxPostSellSpotPrice: knowledgeValueSchema(DecimalStringSchema),
+  grossPriceImpactBps: DecimalStringSchema,
+  configuredTotalExitHaircutBps: knowledgeValueSchema(DecimalStringSchema),
+  grossQuoteReserveConsumedBps: DecimalStringSchema,
+  configuredTaxQuoteReserveConsumedBps: knowledgeValueSchema(DecimalStringSchema),
+  deterministicQuoteErrorBps: DecimalStringSchema,
+  deterministicToleranceBps: DecimalStringSchema,
+  withinDeterministicTolerance: z.boolean(),
+  assumption: z.string().min(1),
+});
+export type FlapPancakeV2SellScenarioPoint = z.infer<typeof FlapPancakeV2SellScenarioPointSchema>;
+
+export const FlapPancakeV2SellScenarioResultSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    market: knowledgeValueSchema(FlapPancakeV2MarketSchema),
+    scenarios: z.array(FlapPancakeV2SellScenarioPointSchema).max(8),
+    validation: z.object({
+      status: z.enum(['PASS', 'FAIL', 'NOT_RUN']),
+      deterministicToleranceBps: DecimalStringSchema,
+      evaluatedScenarioCount: z.number().int().nonnegative(),
+      failedScenarioCount: z.number().int().nonnegative(),
+    }),
+    executionCapacity: knowledgeValueSchema(z.string().min(1)),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+      message: 'Flap Pancake V2 sell scenarios require a replayable chain Snapshot.',
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.evidence.some((item) => item.id === value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message:
+          'Flap Pancake V2 sell scenarios must bind their terminal Evidence to one BSC Snapshot.',
+      });
+    }
+    if (value.market.state === 'known') {
+      const market = value.market.value;
+      const pairMatches =
+        (market.token0 === market.token && market.token1 === market.quoteAsset) ||
+        (market.token1 === market.token && market.token0 === market.quoteAsset);
+      const failedScenarioCount = value.scenarios.filter(
+        (scenario) => !scenario.withinDeterministicTolerance,
+      ).length;
+      if (
+        market.token !== value.token ||
+        !pairMatches ||
+        market.tokenReserve.atomic === '0' ||
+        market.quoteReserve.atomic === '0' ||
+        value.scenarios.length === 0 ||
+        value.validation.status === 'NOT_RUN' ||
+        value.validation.evaluatedScenarioCount !== value.scenarios.length ||
+        value.validation.failedScenarioCount !== failedScenarioCount ||
+        (failedScenarioCount === 0
+          ? value.validation.status !== 'PASS'
+          : value.validation.status !== 'FAIL')
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['market'],
+          message:
+            'A known Flap Pancake V2 market requires matching sell scenarios and validation counts.',
+        });
+      }
+    } else if (
+      value.scenarios.length !== 0 ||
+      value.validation.status !== 'NOT_RUN' ||
+      value.validation.evaluatedScenarioCount !== 0 ||
+      value.validation.failedScenarioCount !== 0
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['scenarios'],
+        message: 'Unavailable or unknown Flap Pancake V2 markets cannot contain sell scenarios.',
+      });
+    }
+  });
+export type FlapPancakeV2SellScenarioResult = z.infer<typeof FlapPancakeV2SellScenarioResultSchema>;
+
+export const FlapPancakeV2ReconciliationSourceSchema = z.object({
+  sourceId: z.string().min(1),
+  operatorId: knowledgeValueSchema(z.string().min(1)),
+  buy: FlapPancakeV2BuyScenarioResultSchema,
+  sell: FlapPancakeV2SellScenarioResultSchema,
+});
+export type FlapPancakeV2ReconciliationSource = z.infer<
+  typeof FlapPancakeV2ReconciliationSourceSchema
+>;
+
+export const FlapPancakeV2ReconciliationResultSchema = z
+  .object({
+    platform: z.literal('flap'),
+    token: z.string().regex(/^0x[0-9a-f]{40}$/),
+    status: DiscrepancyAuditStatusSchema,
+    blockNumber: UnsignedQuantityStringSchema,
+    blockHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+    anchorReconciliation: AnchorReconciliationResultSchema,
+    sourceIndependence: SourceIndependenceAssessmentSchema,
+    sources: z.array(FlapPancakeV2ReconciliationSourceSchema).min(2).max(8),
+    audit: DiscrepancyAuditResultSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('flap-pancake-v2-multi-source-reconciliation-v1.0.0'),
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    const canonical = value.anchorReconciliation.canonicalAnchor;
+    const sourceIds = value.sources.map((source) => source.sourceId);
+    const expectedStatus =
+      value.audit.status === 'FAIL'
+        ? 'FAIL'
+        : value.audit.status === 'PASS' &&
+            value.sourceIndependence.independence.state === 'known' &&
+            value.sourceIndependence.independence.value
+          ? 'PASS'
+          : value.audit.status === 'PASS_WITH_WARNINGS' &&
+              value.sourceIndependence.independence.state === 'known' &&
+              value.sourceIndependence.independence.value
+            ? 'PASS_WITH_WARNINGS'
+            : 'INCONCLUSIVE';
+    const invalidChild = value.sources.some((source) => {
+      const buySnapshot = source.buy.metadata.snapshot;
+      const sellSnapshot = source.sell.metadata.snapshot;
+      return (
+        source.buy.token !== value.token ||
+        source.sell.token !== value.token ||
+        buySnapshot === null ||
+        buySnapshot.ledger !== 'EVM' ||
+        buySnapshot.blockNumber !== value.blockNumber ||
+        buySnapshot.blockHash.toLowerCase() !== value.blockHash ||
+        sellSnapshot === null ||
+        sellSnapshot.ledger !== 'EVM' ||
+        sellSnapshot.blockNumber !== value.blockNumber ||
+        sellSnapshot.blockHash.toLowerCase() !== value.blockHash ||
+        !source.buy.metadata.sourceSet.includes(source.sourceId) ||
+        !source.sell.metadata.sourceSet.includes(source.sourceId)
+      );
+    });
+    if (
+      value.status !== expectedStatus ||
+      value.anchorReconciliation.status !== 'AGREEMENT' ||
+      canonical.state !== 'known' ||
+      (canonical.state === 'known' &&
+        (canonical.value.position !== value.blockNumber ||
+          canonical.value.hash.toLowerCase() !== value.blockHash)) ||
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.chainId !== 'eip155:56' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockNumber !== value.blockNumber ||
+      snapshot.blockHash.toLowerCase() !== value.blockHash ||
+      value.metadata.freshness !== snapshot.capturedAt ||
+      new Set(sourceIds).size !== sourceIds.length ||
+      sourceIds.some((source) => !value.metadata.sourceSet.includes(source)) ||
+      sourceIds.some((source) => !value.anchorReconciliation.metadata.sourceSet.includes(source)) ||
+      invalidChild ||
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      !value.metadata.evidenceIds.includes(value.sourceIndependence.terminalEvidenceId) ||
+      !value.evidence.some((evidence) => evidence.id === value.terminalEvidenceId)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message:
+          'Multi-source market reconciliation requires an agreed finalized Snapshot, complete source replay, and terminal Evidence.',
+      });
+    }
+  });
+export type FlapPancakeV2ReconciliationResult = z.infer<
+  typeof FlapPancakeV2ReconciliationResultSchema
+>;
+
 export const ClaimStatusSchema = z.enum([
   'VERIFIED',
   'PARTIALLY_VERIFIED',
   'CONTRADICTED',
   'INSUFFICIENT_DATA',
 ]);
+export type ClaimStatus = z.infer<typeof ClaimStatusSchema>;
+
+export const ClaimExpectedActionSchema = z.enum([
+  'RECEIVE',
+  'DISTRIBUTE',
+  'BUYBACK',
+  'BURN',
+  'ADD_LIQUIDITY',
+  'LOCK',
+  'PAY_DIVIDEND',
+]);
+export type ClaimExpectedAction = z.infer<typeof ClaimExpectedActionSchema>;
+export const ClaimWalletRoleSchema = z.enum([
+  'TAX_RECEIVER',
+  'COMMUNITY_FUND',
+  'BUYBACK_BURN',
+  'BUYBACK_LIQUIDITY',
+  'PENSION_VAULT',
+  'DIVIDEND_DISTRIBUTOR',
+  'OTHER',
+]);
+export type ClaimWalletRole = z.infer<typeof ClaimWalletRoleSchema>;
+export const ClaimCustodyKindSchema = z.enum([
+  'IRRECOVERABLE_BURN',
+  'SAFE_MULTISIG',
+  'TIMELOCK',
+  'EOA',
+  'CONTRACT',
+  'LP_POOL',
+  'UNKNOWN',
+]);
+export const ClaimObservedActionTypeSchema = z.enum([
+  'BUYBACK',
+  'BURN',
+  'ADD_LIQUIDITY',
+  'LP_LOCK',
+  'DIVIDEND',
+]);
+export const ClaimLiquidityControlSchema = z.enum([
+  'LP_IRRECOVERABLE',
+  'LP_TIMELOCKED',
+  'LP_EXTERNAL',
+  'LP_CONTROLLER',
+  'UNKNOWN',
+]);
+
+const ClaimBpsSchema = UnsignedQuantityStringSchema.refine((value) => BigInt(value) <= 10_000n, {
+  message: 'Basis points may not exceed 10000.',
+});
+
+export const ClaimWindowSchema = z
+  .object({ from: IsoDateTimeSchema, to: IsoDateTimeSchema })
+  .refine((value) => Date.parse(value.from) <= Date.parse(value.to), {
+    message: 'Claim window must not end before it begins.',
+  });
+export type ClaimWindow = z.infer<typeof ClaimWindowSchema>;
+
+export const ClaimRuleSchema = z.object({
+  id: z.string().min(1),
+  assetId: z.string().min(1),
+  sourceAddress: z.string().min(1),
+  destinationAddress: z.string().min(1),
+  role: ClaimWalletRoleSchema,
+  expectedAction: ClaimExpectedActionSchema,
+  expectedShareBps: ClaimBpsSchema.optional(),
+  window: ClaimWindowSchema,
+  shareUnit: UnsignedQuantityStringSchema.refine((value) => BigInt(value) > 0n, {
+    message: 'Share unit must be positive.',
+  }).optional(),
+  noExit: z.boolean().optional(),
+  cadenceSeconds: UnsignedQuantityStringSchema.refine((value) => BigInt(value) > 0n, {
+    message: 'Cadence must be positive.',
+  }).optional(),
+  claimEvidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type ClaimRule = z.infer<typeof ClaimRuleSchema>;
+
+export const ClaimDeclarationDraftSchema = z.object({
+  id: z.string().regex(/^cld_[0-9a-f]{24}$/),
+  assetId: z.string().min(1),
+  role: ClaimWalletRoleSchema,
+  expectedAction: ClaimExpectedActionSchema,
+  sourceAddress: knowledgeValueSchema(z.string().min(1)),
+  destinationAddress: knowledgeValueSchema(z.string().min(1)),
+  expectedShareBps: knowledgeValueSchema(ClaimBpsSchema),
+  shareUnitTokens: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  noExit: knowledgeValueSchema(z.boolean()),
+  cadenceSeconds: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  window: knowledgeValueSchema(ClaimWindowSchema),
+  matchedText: z.string().min(1),
+  missingFields: z.array(z.string().min(1)),
+  chainVerifyReadiness: z.enum(['READY_FOR_REVIEW', 'INCOMPLETE']),
+  requiresHumanReview: z.literal(true),
+  claimEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+});
+export type ClaimDeclarationDraft = z.infer<typeof ClaimDeclarationDraftSchema>;
+
+export const ClaimDeclarationParseResultSchema = z.object({
+  parserVersion: z.string().min(1),
+  documentHash: Hash256Schema,
+  assetId: z.string().min(1),
+  evidence: EvidenceSchema,
+  drafts: z.array(ClaimDeclarationDraftSchema),
+  unmatchedAddresses: z.array(z.string().min(1)),
+  warnings: z.array(z.string().min(1)),
+});
+export type ClaimDeclarationParseResult = z.infer<typeof ClaimDeclarationParseResultSchema>;
+
+export const ClaimTransferObservationSchema = z.object({
+  id: z.string().min(1),
+  from: z.string().min(1),
+  to: z.string().min(1),
+  amount: UnsignedQuantityStringSchema,
+  observedAt: IsoDateTimeSchema,
+  transactionId: z.string().min(1),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type ClaimTransferObservation = z.infer<typeof ClaimTransferObservationSchema>;
+
+export const EvmClaimTransferObservationSchema = ClaimTransferObservationSchema.extend({
+  from: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  to: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  transactionId: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  transactionIndex: UnsignedQuantityStringSchema,
+  logIndex: UnsignedQuantityStringSchema,
+});
+export type EvmClaimTransferObservation = z.infer<typeof EvmClaimTransferObservationSchema>;
+
+export const EvmPensionCandidatePolicySchema = z.object({
+  shareUnitAtomic: UnsignedQuantityStringSchema.refine((value) => BigInt(value) > 0n, {
+    message: 'Pension candidate share unit must be positive.',
+  }),
+  minimumExactUnitDeposits: z.number().int().min(1).max(100_000),
+  minimumUniqueExactUnitDepositors: z.number().int().min(1).max(100_000),
+  maximumCandidates: z.number().int().min(1).max(1_000),
+});
+export type EvmPensionCandidatePolicy = z.infer<typeof EvmPensionCandidatePolicySchema>;
+
+export const EvmPensionCandidateCriterionSchema = z.enum([
+  'EXACT_SHARE_UNIT_DEPOSITS',
+  'UNIQUE_DEPOSITOR_THRESHOLD',
+]);
+
+export const EvmPensionCandidateMetricsSchema = z
+  .object({
+    address: z.string().regex(/^0x[0-9a-f]{40}$/),
+    inflowTransferCount: z.number().int().positive(),
+    outflowTransferCount: z.number().int().nonnegative(),
+    exactUnitDepositCount: z.number().int().positive(),
+    exactMultipleDepositCount: z.number().int().positive(),
+    nonMultipleDepositCount: z.number().int().nonnegative(),
+    uniqueExactUnitDepositorCount: z.number().int().positive(),
+    uniqueOutflowDestinationCount: z.number().int().nonnegative(),
+    observedInflowAmount: UnsignedQuantityStringSchema,
+    observedOutflowAmount: UnsignedQuantityStringSchema,
+    observedNetAmount: QuantityStringSchema,
+    observedWholeShares: UnsignedQuantityStringSchema,
+    firstInflowAt: IsoDateTimeSchema,
+    lastInflowAt: IsoDateTimeSchema,
+    firstOutflowAt: knowledgeValueSchema(IsoDateTimeSchema),
+    lastOutflowAt: knowledgeValueSchema(IsoDateTimeSchema),
+    criteria: z.array(EvmPensionCandidateCriterionSchema).length(2),
+    transferEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.exactUnitDepositCount > value.exactMultipleDepositCount ||
+      value.exactMultipleDepositCount + value.nonMultipleDepositCount !==
+        value.inflowTransferCount ||
+      value.uniqueExactUnitDepositorCount > value.exactUnitDepositCount ||
+      BigInt(value.observedNetAmount) !==
+        BigInt(value.observedInflowAmount) - BigInt(value.observedOutflowAmount) ||
+      value.transferEvidenceIds.length !== new Set(value.transferEvidenceIds).size ||
+      value.transferEvidenceIds.some(
+        (evidenceId, index) => evidenceId !== [...value.transferEvidenceIds].sort()[index],
+      ) ||
+      value.criteria[0] !== 'EXACT_SHARE_UNIT_DEPOSITS' ||
+      value.criteria[1] !== 'UNIQUE_DEPOSITOR_THRESHOLD'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['address'],
+        message: 'Pension candidate metrics and canonical provenance must agree.',
+      });
+    }
+    const hasOutflow = value.outflowTransferCount > 0;
+    if (
+      value.uniqueOutflowDestinationCount > value.outflowTransferCount ||
+      (hasOutflow &&
+        (value.firstOutflowAt.state !== 'known' || value.lastOutflowAt.state !== 'known')) ||
+      (!hasOutflow &&
+        (value.firstOutflowAt.state !== 'unknown' || value.lastOutflowAt.state !== 'unknown'))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['outflowTransferCount'],
+        message: 'Pension candidate outflow timing must match observed outflows.',
+      });
+    }
+  });
+export type EvmPensionCandidateMetrics = z.infer<typeof EvmPensionCandidateMetricsSchema>;
+
+export const EvmPensionVaultCandidateSchema = EvmPensionCandidateMetricsSchema.extend({
+  evidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  roleAttribution: knowledgeValueSchema(z.literal('PENSION_VAULT')),
+  participantExitPolicy: knowledgeValueSchema(z.boolean()),
+  dividendExecution: knowledgeValueSchema(z.boolean()),
+}).superRefine((value, context) => {
+  for (const field of ['roleAttribution', 'participantExitPolicy', 'dividendExecution'] as const) {
+    if (value[field].state === 'known') {
+      context.addIssue({
+        code: 'custom',
+        path: [field],
+        message: 'Behavioral candidate discovery cannot promote social or policy meaning to fact.',
+      });
+    }
+  }
+});
+export type EvmPensionVaultCandidate = z.infer<typeof EvmPensionVaultCandidateSchema>;
+
+export const EvmPensionCandidateDiscoverySchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    policy: EvmPensionCandidatePolicySchema,
+    scannedTransferCount: z.number().int().nonnegative(),
+    candidates: z.array(EvmPensionVaultCandidateSchema),
+    coverageEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('evm-pension-candidate-discovery-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    const addresses = value.candidates.map((candidate) => candidate.address);
+    const coverageEvidenceIds = [...value.coverageEvidenceIds];
+    const expectedEvidenceIds = [
+      ...coverageEvidenceIds,
+      ...value.candidates.map((candidate) => candidate.evidenceId),
+      value.terminalEvidenceId,
+    ].sort();
+    const actualEvidenceIds = [...value.metadata.evidenceIds].sort();
+    if (
+      BigInt(value.toBlock) < BigInt(value.fromBlock) ||
+      snapshot?.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.toBlock ||
+      value.metadata.freshness !== snapshot.blockTimestamp ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      value.metadata.sourceSet.length === 0 ||
+      value.metadata.sourceSet.length !== new Set(value.metadata.sourceSet).size ||
+      value.metadata.sourceSet.some(
+        (source, index) => source !== [...value.metadata.sourceSet].sort()[index],
+      ) ||
+      addresses.length !== new Set(addresses).size ||
+      addresses.some((address, index) => address !== [...addresses].sort()[index]) ||
+      value.candidates.length > value.policy.maximumCandidates ||
+      coverageEvidenceIds.length !== new Set(coverageEvidenceIds).size ||
+      coverageEvidenceIds.some(
+        (evidenceId, index) => evidenceId !== [...coverageEvidenceIds].sort()[index],
+      ) ||
+      expectedEvidenceIds.length !== actualEvidenceIds.length ||
+      expectedEvidenceIds.some((evidenceId, index) => evidenceId !== actualEvidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Pension candidate report range, coverage, order and Evidence must be canonical.',
+      });
+    }
+    for (const candidate of value.candidates) {
+      if (
+        candidate.exactUnitDepositCount < value.policy.minimumExactUnitDeposits ||
+        candidate.uniqueExactUnitDepositorCount < value.policy.minimumUniqueExactUnitDepositors
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['candidates'],
+          message: 'Every emitted pension candidate must satisfy the recorded policy.',
+        });
+      }
+    }
+  });
+export type EvmPensionCandidateDiscovery = z.infer<typeof EvmPensionCandidateDiscoverySchema>;
+
+export const ClaimActionObservationSchema = z.object({
+  id: z.string().min(1),
+  type: ClaimObservedActionTypeSchema,
+  actor: z.string().min(1),
+  amount: UnsignedQuantityStringSchema,
+  observedAt: IsoDateTimeSchema,
+  transferIds: z.array(z.string().min(1)),
+  path: z.array(z.string().min(1)).min(1),
+  liquidityControl: ClaimLiquidityControlSchema.optional(),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type ClaimActionObservation = z.infer<typeof ClaimActionObservationSchema>;
+
+export const ClaimBurnConservationStatusSchema = z.enum([
+  'VERIFIED',
+  'CONTRADICTED',
+  'NOT_APPLICABLE',
+]);
+export const EvmClaimBurnConservationSchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    blockNumber: UnsignedQuantityStringSchema,
+    blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    parentBlockNumber: UnsignedQuantityStringSchema,
+    parentBlockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    totalSupplyBefore: UnsignedQuantityStringSchema,
+    totalSupplyAfter: UnsignedQuantityStringSchema,
+    mintedAmount: UnsignedQuantityStringSchema,
+    burnedAmount: UnsignedQuantityStringSchema,
+    supplyDelta: QuantityStringSchema,
+    eventNetSupplyDelta: QuantityStringSchema,
+    expectedSupplyAfter: QuantityStringSchema,
+    status: ClaimBurnConservationStatusSchema,
+    candidateBurnTransferIds: z.array(z.string().min(1)),
+    actions: z.array(ClaimActionObservationSchema),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('erc20-burn-conservation-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const before = BigInt(value.totalSupplyBefore);
+    const after = BigInt(value.totalSupplyAfter);
+    const minted = BigInt(value.mintedAmount);
+    const burned = BigInt(value.burnedAmount);
+    const expectedAfter = before + minted - burned;
+    const conserved = expectedAfter === after;
+    const snapshot = value.metadata.snapshot;
+    if (BigInt(value.parentBlockNumber) + 1n !== BigInt(value.blockNumber)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['parentBlockNumber'],
+        message: 'Burn conservation requires adjacent parent and target blocks.',
+      });
+    }
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.blockNumber ||
+      snapshot.blockHash.toLowerCase() !== value.blockHash.toLowerCase() ||
+      snapshot.parentBlockHash?.toLowerCase() !== value.parentBlockHash.toLowerCase() ||
+      value.metadata.freshness !== snapshot.blockTimestamp
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Burn conservation metadata must bind the exact target and parent block.',
+      });
+    }
+    if (value.metadata.dataCoverage !== 1 || value.metadata.historyCoverage !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Burn conservation requires complete target-block data and history.',
+      });
+    }
+    if (
+      value.supplyDelta !== (after - before).toString() ||
+      value.eventNetSupplyDelta !== (minted - burned).toString() ||
+      value.expectedSupplyAfter !== expectedAfter.toString()
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['supplyDelta'],
+        message: 'Burn conservation arithmetic is inconsistent.',
+      });
+    }
+    const expectedStatus = !conserved
+      ? 'CONTRADICTED'
+      : burned === 0n
+        ? 'NOT_APPLICABLE'
+        : 'VERIFIED';
+    if (value.status !== expectedStatus) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Burn conservation status does not match the supply/event result.',
+      });
+    }
+    if (
+      new Set(value.candidateBurnTransferIds).size !== value.candidateBurnTransferIds.length ||
+      new Set(value.actions.map((action) => action.id)).size !== value.actions.length ||
+      new Set(value.metadata.evidenceIds).size !== value.metadata.evidenceIds.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actions'],
+        message: 'Burn conservation action and transfer identities must be unique.',
+      });
+    }
+    if (!value.metadata.evidenceIds.includes(value.terminalEvidenceId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message: 'Burn conservation metadata must include terminal Evidence.',
+      });
+    }
+    if ((!conserved || burned === 0n) && value.actions.length > 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actions'],
+        message: 'Burn actions require verified non-zero supply/event conservation.',
+      });
+    }
+    const mappedTransferIds = value.actions.flatMap((action) => action.transferIds);
+    const metadataEvidenceIds = new Set(value.metadata.evidenceIds);
+    const snapshotBlockTimestamp = snapshot?.ledger === 'EVM' ? snapshot.blockTimestamp : undefined;
+    if (
+      conserved &&
+      burned > 0n &&
+      (value.actions.length !== value.candidateBurnTransferIds.length ||
+        new Set(mappedTransferIds).size !== mappedTransferIds.length ||
+        value.candidateBurnTransferIds.some((id) => !mappedTransferIds.includes(id)) ||
+        value.actions.reduce((total, action) => total + BigInt(action.amount), 0n) !== burned ||
+        value.actions.some(
+          (action) =>
+            action.type !== 'BURN' ||
+            action.liquidityControl !== undefined ||
+            action.transferIds.length !== 1 ||
+            !value.candidateBurnTransferIds.includes(action.transferIds[0] ?? '') ||
+            action.path.length !== 2 ||
+            !/^0x[a-fA-F0-9]{40}$/.test(action.actor) ||
+            !action.path.every((address) => /^0x[a-fA-F0-9]{40}$/.test(address)) ||
+            action.path[0]?.toLowerCase() !== action.actor.toLowerCase() ||
+            action.path[1]?.toLowerCase() !== `0x${'0'.repeat(40)}` ||
+            action.evidenceIds.includes(value.terminalEvidenceId) ||
+            new Set(action.evidenceIds).size !== action.evidenceIds.length ||
+            action.evidenceIds.some((id) => !metadataEvidenceIds.has(id)) ||
+            action.observedAt !== snapshotBlockTimestamp,
+        ))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actions'],
+        message: 'Verified burn actions must map one-to-one to conserved zero-address transfers.',
+      });
+    }
+  });
+export type EvmClaimBurnConservation = z.infer<typeof EvmClaimBurnConservationSchema>;
+
+export const EvmClaimBurnCandidateBlockSchema = z.object({
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  burnTransferIds: z.array(z.string().min(1)).min(1),
+  mintedEventAmount: UnsignedQuantityStringSchema,
+  burnedEventAmount: UnsignedQuantityStringSchema,
+});
+export type EvmClaimBurnCandidateBlock = z.infer<typeof EvmClaimBurnCandidateBlockSchema>;
+
+export const EvmClaimBurnCandidateDiscoverySchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    coverageScope: z.literal('ERC20_ZERO_ADDRESS_TRANSFER_EVENTS'),
+    status: z.enum(['CANDIDATES_DISCOVERED', 'NO_EVENT_CANDIDATES']),
+    zeroAddressEventCount: z.number().int().nonnegative(),
+    burnCandidateCount: z.number().int().nonnegative(),
+    candidates: z.array(EvmClaimBurnCandidateBlockSchema),
+    silentSupplyChangeDetection: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('erc20-burn-candidate-discovery-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const snapshot = value.metadata.snapshot;
+    const expectedStatus =
+      value.candidates.length === 0 ? 'NO_EVENT_CANDIDATES' : 'CANDIDATES_DISCOVERED';
+    if (toBlock < fromBlock) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Burn candidate discovery range must be ordered.',
+      });
+    }
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.toBlock ||
+      value.metadata.freshness !== snapshot.blockTimestamp
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Burn candidate discovery must bind the finalized range-end Snapshot.',
+      });
+    }
+    if (value.metadata.dataCoverage !== 1 || value.metadata.historyCoverage !== 1) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Burn candidate discovery requires complete event-query coverage.',
+      });
+    }
+    if (
+      value.status !== expectedStatus ||
+      value.burnCandidateCount !== value.candidates.length ||
+      value.zeroAddressEventCount <
+        value.candidates.reduce((total, candidate) => total + candidate.burnTransferIds.length, 0)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Burn candidate discovery counts and status are inconsistent.',
+      });
+    }
+    if (value.silentSupplyChangeDetection.state !== 'unknown') {
+      context.addIssue({
+        code: 'custom',
+        path: ['silentSupplyChangeDetection'],
+        message: 'Event-only discovery cannot claim silent supply-change coverage.',
+      });
+    }
+    const candidateBlocks = new Set<string>();
+    const transferIds = new Set<string>();
+    let previousBlock: bigint | undefined;
+    for (const candidate of value.candidates) {
+      const block = BigInt(candidate.blockNumber);
+      const invalidTransferIdentity = candidate.burnTransferIds.some((id) => {
+        if (transferIds.has(id)) return true;
+        transferIds.add(id);
+        return false;
+      });
+      if (
+        block < fromBlock ||
+        block > toBlock ||
+        (previousBlock !== undefined && block <= previousBlock) ||
+        candidateBlocks.has(candidate.blockNumber) ||
+        invalidTransferIdentity ||
+        BigInt(candidate.burnedEventAmount) <= 0n ||
+        (snapshot?.ledger === 'EVM' &&
+          candidate.blockNumber === snapshot.blockNumber &&
+          candidate.blockHash.toLowerCase() !== snapshot.blockHash.toLowerCase())
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['candidates'],
+          message: 'Burn candidates must be unique, ordered, in-range, and Snapshot-consistent.',
+        });
+        break;
+      }
+      candidateBlocks.add(candidate.blockNumber);
+      previousBlock = block;
+    }
+    if (
+      !value.metadata.evidenceIds.includes(value.terminalEvidenceId) ||
+      new Set(value.metadata.evidenceIds).size !== value.metadata.evidenceIds.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message: 'Burn candidate discovery requires unique metadata and terminal Evidence.',
+      });
+    }
+  });
+export type EvmClaimBurnCandidateDiscovery = z.infer<typeof EvmClaimBurnCandidateDiscoverySchema>;
+
+export const EvmClaimBurnPromotionCertificateSchema = z.object({
+  blockNumber: UnsignedQuantityStringSchema,
+  blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+  burnTransferIds: z.array(z.string().min(1)).min(1),
+  mintedEventAmount: UnsignedQuantityStringSchema,
+  burnedEventAmount: UnsignedQuantityStringSchema,
+  status: z.enum(['VERIFIED', 'CONTRADICTED']),
+  actionCount: z.number().int().nonnegative(),
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+});
+export type EvmClaimBurnPromotionCertificate = z.infer<
+  typeof EvmClaimBurnPromotionCertificateSchema
+>;
+
+export const EvmClaimBurnPromotionSegmentSchema = z
+  .object({
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    zeroAddressEventCount: z.number().int().nonnegative(),
+    burnCandidateCount: z.number().int().nonnegative(),
+    discoveryTerminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    certificates: z.array(EvmClaimBurnPromotionCertificateSchema),
+    snapshot: EvmSnapshotSchema,
+    sourceSet: z.array(z.string().min(1)).min(1),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const transferIds = new Set<string>();
+    let previousBlock: bigint | undefined;
+    if (
+      toBlock < fromBlock ||
+      value.burnCandidateCount !== value.certificates.length ||
+      value.snapshot.blockNumber !== value.toBlock ||
+      value.snapshot.finality !== 'finalized' ||
+      value.snapshot.blockTimestamp === undefined ||
+      new Set(value.sourceSet).size !== value.sourceSet.length ||
+      [...value.sourceSet].sort().some((source, index) => source !== value.sourceSet[index]) ||
+      Object.keys(value.snapshot.providerVersions).some(
+        (source) => !value.sourceSet.includes(source),
+      )
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['burnCandidateCount'],
+        message: 'Burn promotion segment range and candidate count must be consistent.',
+      });
+    }
+    for (const certificate of value.certificates) {
+      const block = BigInt(certificate.blockNumber);
+      const duplicateTransfer = certificate.burnTransferIds.some((id) => {
+        if (transferIds.has(id)) return true;
+        transferIds.add(id);
+        return false;
+      });
+      if (
+        block < fromBlock ||
+        block > toBlock ||
+        (previousBlock !== undefined && block <= previousBlock) ||
+        duplicateTransfer ||
+        BigInt(certificate.burnedEventAmount) <= 0n ||
+        (certificate.status === 'VERIFIED'
+          ? certificate.actionCount !== certificate.burnTransferIds.length
+          : certificate.actionCount !== 0)
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['certificates'],
+          message:
+            'Burn promotion certificates must be ordered, unique, in-range, and action-consistent.',
+        });
+        break;
+      }
+      previousBlock = block;
+    }
+  });
+export type EvmClaimBurnPromotionSegment = z.infer<typeof EvmClaimBurnPromotionSegmentSchema>;
+
+export const EvmClaimBurnPromotionSchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    coverageScope: z.literal(
+      'ERC20_ZERO_ADDRESS_TRANSFER_EVENTS_WITH_EXACT_BLOCK_SUPPLY_CONSERVATION',
+    ),
+    status: z.literal('REQUESTED_RANGE_COMPLETE'),
+    segmentCount: z.number().int().positive(),
+    zeroAddressEventCount: z.number().int().nonnegative(),
+    burnCandidateCount: z.number().int().nonnegative(),
+    verifiedCandidateCount: z.number().int().nonnegative(),
+    contradictedCandidateCount: z.number().int().nonnegative(),
+    verifiedActionCount: z.number().int().nonnegative(),
+    segments: z.array(EvmClaimBurnPromotionSegmentSchema).min(1),
+    silentSupplyChangeDetection: knowledgeValueSchema(z.boolean()),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('erc20-burn-candidate-promotion-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const snapshot = value.metadata.snapshot;
+    let nextBlock = fromBlock;
+    const terminalEvidenceIds: string[] = [];
+    const sourceSet = new Set<string>();
+    const certificates = value.segments.flatMap((segment) => {
+      if (BigInt(segment.fromBlock) !== nextBlock) {
+        context.addIssue({
+          code: 'custom',
+          path: ['segments'],
+          message: 'Burn promotion segments must be contiguous.',
+        });
+      }
+      nextBlock = BigInt(segment.toBlock) + 1n;
+      terminalEvidenceIds.push(
+        segment.discoveryTerminalEvidenceId,
+        ...segment.certificates.map((certificate) => certificate.terminalEvidenceId),
+      );
+      segment.sourceSet.forEach((source) => sourceSet.add(source));
+      return segment.certificates;
+    });
+    terminalEvidenceIds.push(value.terminalEvidenceId);
+    const verified = certificates.filter((item) => item.status === 'VERIFIED');
+    const contradicted = certificates.filter((item) => item.status === 'CONTRADICTED');
+    if (
+      toBlock < fromBlock ||
+      nextBlock !== toBlock + 1n ||
+      value.segmentCount !== value.segments.length ||
+      value.zeroAddressEventCount !==
+        value.segments.reduce((total, segment) => total + segment.zeroAddressEventCount, 0) ||
+      value.burnCandidateCount !== certificates.length ||
+      value.verifiedCandidateCount !== verified.length ||
+      value.contradictedCandidateCount !== contradicted.length ||
+      value.verifiedActionCount !==
+        verified.reduce((total, certificate) => total + certificate.actionCount, 0)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['segments'],
+        message: 'Burn promotion range and aggregate counts are inconsistent.',
+      });
+    }
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.toBlock ||
+      snapshot.blockHash.toLowerCase() !==
+        value.segments.at(-1)?.snapshot.blockHash.toLowerCase() ||
+      value.metadata.freshness !== snapshot.blockTimestamp ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      [...sourceSet].sort().some((source, index) => source !== value.metadata.sourceSet[index]) ||
+      sourceSet.size !== value.metadata.sourceSet.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Burn promotion must bind complete scoped coverage to its final Snapshot.',
+      });
+    }
+    if (value.silentSupplyChangeDetection.state !== 'unknown') {
+      context.addIssue({
+        code: 'custom',
+        path: ['silentSupplyChangeDetection'],
+        message: 'Event promotion cannot claim silent supply-change coverage.',
+      });
+    }
+    const expectedEvidenceIds = [...new Set(terminalEvidenceIds)].sort();
+    const actualEvidenceIds = [...value.metadata.evidenceIds].sort();
+    if (
+      expectedEvidenceIds.length !== terminalEvidenceIds.length ||
+      expectedEvidenceIds.length !== actualEvidenceIds.length ||
+      expectedEvidenceIds.some((id, index) => id !== actualEvidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'evidenceIds'],
+        message:
+          'Burn promotion metadata must contain each terminal Evidence identity exactly once.',
+      });
+    }
+  });
+export type EvmClaimBurnPromotion = z.infer<typeof EvmClaimBurnPromotionSchema>;
+
+export const EvmSupplyContinuityChangeSchema = z
+  .object({
+    blockNumber: UnsignedQuantityStringSchema,
+    blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    parentBlockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    totalSupplyBefore: UnsignedQuantityStringSchema,
+    totalSupplyAfter: UnsignedQuantityStringSchema,
+    supplyDelta: QuantityStringSchema,
+    mintedEventAmount: UnsignedQuantityStringSchema,
+    burnedEventAmount: UnsignedQuantityStringSchema,
+    eventNetSupplyDelta: QuantityStringSchema,
+    reconciliationStatus: z.enum(['EVENT_CONSERVED', 'UNEXPLAINED']),
+    certificateStatus: ClaimBurnConservationStatusSchema,
+    certificateTerminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  })
+  .superRefine((value, context) => {
+    const before = BigInt(value.totalSupplyBefore);
+    const after = BigInt(value.totalSupplyAfter);
+    const delta = after - before;
+    const eventDelta = BigInt(value.mintedEventAmount) - BigInt(value.burnedEventAmount);
+    const expectedStatus = delta === eventDelta ? 'EVENT_CONSERVED' : 'UNEXPLAINED';
+    if (
+      delta === 0n ||
+      value.supplyDelta !== delta.toString() ||
+      value.eventNetSupplyDelta !== eventDelta.toString() ||
+      value.reconciliationStatus !== expectedStatus ||
+      (expectedStatus === 'UNEXPLAINED' && value.certificateStatus !== 'CONTRADICTED') ||
+      (expectedStatus === 'EVENT_CONSERVED' && value.certificateStatus === 'CONTRADICTED')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['reconciliationStatus'],
+        message: 'Supply-continuity change arithmetic and event reconciliation must agree.',
+      });
+    }
+  });
+export type EvmSupplyContinuityChange = z.infer<typeof EvmSupplyContinuityChangeSchema>;
+
+export const EvmSupplyContinuitySegmentSchema = z
+  .object({
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    sampleCount: z.number().int().min(2),
+    startTotalSupply: UnsignedQuantityStringSchema,
+    endTotalSupply: UnsignedQuantityStringSchema,
+    supplyChangeCount: z.number().int().nonnegative(),
+    eventConservedChangeCount: z.number().int().nonnegative(),
+    unexplainedChangeCount: z.number().int().nonnegative(),
+    changes: z.array(EvmSupplyContinuityChangeSchema),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    snapshot: EvmSnapshotSchema,
+    sourceSet: z.array(z.string().min(1)).min(1),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const expectedSamples = Number(toBlock - fromBlock + 2n);
+    const eventConserved = value.changes.filter(
+      (change) => change.reconciliationStatus === 'EVENT_CONSERVED',
+    ).length;
+    const unexplained = value.changes.length - eventConserved;
+    let previous: bigint | undefined;
+    const invalidChange = value.changes.some((change) => {
+      const block = BigInt(change.blockNumber);
+      const invalid =
+        block < fromBlock ||
+        block > toBlock ||
+        (previous !== undefined && block <= previous) ||
+        (block === toBlock && change.blockHash.toLowerCase() !== value.snapshot.blockHash);
+      previous = block;
+      return invalid;
+    });
+    if (
+      fromBlock < 1n ||
+      toBlock < fromBlock ||
+      !Number.isSafeInteger(expectedSamples) ||
+      value.sampleCount !== expectedSamples ||
+      value.supplyChangeCount !== value.changes.length ||
+      value.eventConservedChangeCount !== eventConserved ||
+      value.unexplainedChangeCount !== unexplained ||
+      value.snapshot.ledger !== 'EVM' ||
+      value.snapshot.finality !== 'finalized' ||
+      value.snapshot.blockTimestamp === undefined ||
+      value.snapshot.blockNumber !== value.toBlock ||
+      new Set(value.sourceSet).size !== value.sourceSet.length ||
+      [...value.sourceSet].sort().some((source, index) => source !== value.sourceSet[index]) ||
+      invalidChange
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['changes'],
+        message: 'Supply-continuity segment range, samples, changes, and Snapshot must agree.',
+      });
+    }
+  });
+export type EvmSupplyContinuitySegment = z.infer<typeof EvmSupplyContinuitySegmentSchema>;
+
+export const EvmSupplyContinuitySchema = z
+  .object({
+    tokenAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    coverageScope: z.literal('ERC20_TOTAL_SUPPLY_EVERY_FINALIZED_BLOCK_WITH_EVENT_RECONCILIATION'),
+    status: z.enum([
+      'VERIFIED_NO_CHANGE',
+      'VERIFIED_EVENT_CONSERVED_CHANGES',
+      'UNEXPLAINED_SUPPLY_CHANGE',
+      'INCONCLUSIVE_SOURCE_INDEPENDENCE',
+    ]),
+    segmentCount: z.number().int().positive(),
+    scannedBlockCount: z.number().int().positive(),
+    supplySampleCount: z.number().int().min(2),
+    initialTotalSupply: UnsignedQuantityStringSchema,
+    finalTotalSupply: UnsignedQuantityStringSchema,
+    netSupplyDelta: QuantityStringSchema,
+    supplyChangeCount: z.number().int().nonnegative(),
+    eventConservedChangeCount: z.number().int().nonnegative(),
+    unexplainedChangeCount: z.number().int().nonnegative(),
+    segments: z.array(EvmSupplyContinuitySegmentSchema).min(1),
+    sourceIndependence: SourceIndependenceAssessmentSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('erc20-supply-continuity-v1.0.0'),
+    }),
+  })
+  .superRefine((value, context) => {
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const snapshot = value.metadata.snapshot;
+    const changes = value.segments.flatMap((segment) => segment.changes);
+    let nextBlock = fromBlock;
+    let sampleCount = 0;
+    const sourceSet = new Set<string>();
+    for (const [index, segment] of value.segments.entries()) {
+      if (BigInt(segment.fromBlock) !== nextBlock) {
+        context.addIssue({
+          code: 'custom',
+          path: ['segments', index],
+          message: 'Supply-continuity segments must be contiguous.',
+        });
+      }
+      nextBlock = BigInt(segment.toBlock) + 1n;
+      sampleCount += segment.sampleCount - (index === 0 ? 0 : 1);
+      segment.sourceSet.forEach((source) => sourceSet.add(source));
+    }
+    const eventConserved = changes.filter(
+      (change) => change.reconciliationStatus === 'EVENT_CONSERVED',
+    ).length;
+    const unexplained = changes.length - eventConserved;
+    const independentlyVerified =
+      value.sourceIndependence.independence.state === 'known' &&
+      value.sourceIndependence.independence.value;
+    const expectedStatus =
+      unexplained > 0
+        ? 'UNEXPLAINED_SUPPLY_CHANGE'
+        : !independentlyVerified
+          ? 'INCONCLUSIVE_SOURCE_INDEPENDENCE'
+          : changes.length === 0
+            ? 'VERIFIED_NO_CHANGE'
+            : 'VERIFIED_EVENT_CONSERVED_CHANGES';
+    const expectedEvidenceIds = [
+      ...value.segments.map((segment) => segment.terminalEvidenceId),
+      ...value.sourceIndependence.evidenceIds,
+      value.terminalEvidenceId,
+    ].sort();
+    const actualEvidenceIds = [...value.metadata.evidenceIds].sort();
+    const expectedScannedBlocks = toBlock - fromBlock + 1n;
+    if (
+      fromBlock < 1n ||
+      toBlock < fromBlock ||
+      expectedScannedBlocks > BigInt(Number.MAX_SAFE_INTEGER) ||
+      nextBlock !== toBlock + 1n ||
+      value.segmentCount !== value.segments.length ||
+      value.scannedBlockCount !== Number(expectedScannedBlocks) ||
+      value.supplySampleCount !== sampleCount ||
+      value.initialTotalSupply !== value.segments[0]?.startTotalSupply ||
+      value.finalTotalSupply !== value.segments.at(-1)?.endTotalSupply ||
+      value.netSupplyDelta !==
+        (BigInt(value.finalTotalSupply) - BigInt(value.initialTotalSupply)).toString() ||
+      value.supplyChangeCount !== changes.length ||
+      value.eventConservedChangeCount !== eventConserved ||
+      value.unexplainedChangeCount !== unexplained ||
+      value.status !== expectedStatus
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'Supply-continuity aggregate range, arithmetic, and status must agree.',
+      });
+    }
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      snapshot.finality !== 'finalized' ||
+      snapshot.blockTimestamp === undefined ||
+      snapshot.blockNumber !== value.toBlock ||
+      snapshot.blockHash.toLowerCase() !==
+        value.segments.at(-1)?.snapshot.blockHash.toLowerCase() ||
+      value.metadata.freshness !== snapshot.blockTimestamp ||
+      value.metadata.dataCoverage !== 1 ||
+      value.metadata.historyCoverage !== 1 ||
+      value.metadata.sourceCoverage !== (independentlyVerified ? 1 : 0.5) ||
+      value.metadata.confidence !== (independentlyVerified ? 1 : 0.5) ||
+      [...sourceSet].sort().some((source, index) => source !== value.metadata.sourceSet[index]) ||
+      sourceSet.size !== value.metadata.sourceSet.length
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message: 'Supply-continuity metadata must bind complete scoped coverage and source truth.',
+      });
+    }
+    if (
+      expectedEvidenceIds.length !== new Set(expectedEvidenceIds).size ||
+      expectedEvidenceIds.length !== actualEvidenceIds.length ||
+      expectedEvidenceIds.some((id, index) => id !== actualEvidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'evidenceIds'],
+        message: 'Supply-continuity metadata must contain each terminal Evidence identity once.',
+      });
+    }
+  });
+export type EvmSupplyContinuity = z.infer<typeof EvmSupplyContinuitySchema>;
+
+export const ClaimCustodyObservationSchema = z.object({
+  address: z.string().min(1),
+  kind: ClaimCustodyKindSchema,
+  canMoveFunds: knowledgeValueSchema(z.boolean()),
+  threshold: z.number().int().positive().optional(),
+  ownerCount: z.number().int().positive().optional(),
+  executedTransactions: z.number().int().nonnegative().optional(),
+  implementationAddress: z.string().min(1).optional(),
+  implementationVersion: z.string().min(1).optional(),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+export type ClaimCustodyObservation = z.infer<typeof ClaimCustodyObservationSchema>;
+
+export const ClaimAuditPolicySchema = z
+  .object({
+    verifiedAmountToleranceBps: ClaimBpsSchema,
+    partialAmountToleranceBps: ClaimBpsSchema,
+    maximumAttributionHops: z.number().int().min(0).max(8),
+  })
+  .refine(
+    (value) => BigInt(value.verifiedAmountToleranceBps) <= BigInt(value.partialAmountToleranceBps),
+    { message: 'Verified tolerance may not exceed partial tolerance.' },
+  );
+export type ClaimAuditPolicy = z.infer<typeof ClaimAuditPolicySchema>;
+
+export const ClaimAuditFindingCodeSchema = z.enum([
+  'ALLOCATION_WITHIN_TOLERANCE',
+  'ALLOCATION_DEVIATION',
+  'ACTION_OBSERVED',
+  'ACTION_NOT_OBSERVED',
+  'CLAIMED_BURN_IS_MOVABLE_CUSTODY',
+  'LP_REMAINS_CONTROLLER_WITHDRAWABLE',
+  'OUTFLOW_OBSERVED',
+  'FLOW_RETURNED_TO_CONTROLLER',
+  'POLICY_LOCK_NOT_TECHNICAL_LOCK',
+  'SHARE_UNIT_DEVIATION',
+  'CADENCE_NOT_YET_PROVABLE',
+  'COVERAGE_INCOMPLETE',
+]);
+
+export const ClaimAuditFindingSchema = z.object({
+  code: ClaimAuditFindingCodeSchema,
+  severity: z.enum(['INFO', 'WARNING', 'CRITICAL']),
+  message: z.string().min(1),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const ClaimShareUnitAssessmentSchema = z.object({
+  unit: UnsignedQuantityStringSchema,
+  observedDeposits: z.number().int().nonnegative(),
+  exactUnitDeposits: z.number().int().nonnegative(),
+  exactMultipleDeposits: z.number().int().nonnegative(),
+  nonMultipleDeposits: z.number().int().nonnegative(),
+  observedWholeShares: UnsignedQuantityStringSchema,
+  nonMultipleObservedAmount: UnsignedQuantityStringSchema,
+  exactMultipleCoverage: knowledgeValueSchema(CoverageRatioSchema),
+});
+
+export const ClaimFlowCounterpartySchema = z.object({
+  direction: z.enum(['INFLOW', 'OUTFLOW']),
+  address: z.string().min(1),
+  observedAmount: UnsignedQuantityStringSchema,
+  transferCount: z.number().int().positive(),
+  firstObservedAt: IsoDateTimeSchema,
+  lastObservedAt: IsoDateTimeSchema,
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const ClaimFlowAggregateSchema = z.object({
+  observedAmount: UnsignedQuantityStringSchema,
+  actualAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  transferCount: z.number().int().nonnegative(),
+  uniqueCounterparties: z.number().int().nonnegative(),
+  firstObservedAt: knowledgeValueSchema(IsoDateTimeSchema),
+  lastObservedAt: knowledgeValueSchema(IsoDateTimeSchema),
+  evidenceIds: z.array(z.string().min(1)),
+});
+
+export const ClaimAddressFlowSummarySchema = z.object({
+  address: z.string().min(1),
+  window: ClaimWindowSchema,
+  inflow: ClaimFlowAggregateSchema,
+  outflow: ClaimFlowAggregateSchema,
+  shareUnitAssessment: ClaimShareUnitAssessmentSchema.nullable(),
+  selfTransferCount: z.number().int().nonnegative(),
+  selfTransferObservedAmount: UnsignedQuantityStringSchema,
+  topCounterparties: z.array(ClaimFlowCounterpartySchema),
+  metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+    message: 'Claim flow summary requires a replayable chain Snapshot.',
+  }),
+});
+export type ClaimAddressFlowSummary = z.infer<typeof ClaimAddressFlowSummarySchema>;
+
+export const EvmClaimAddressObservationSchema = z.object({
+  tokenAddress: z.string().min(1),
+  address: z.string().min(1),
+  fromBlock: UnsignedQuantityStringSchema,
+  toBlock: UnsignedQuantityStringSchema,
+  window: ClaimWindowSchema,
+  custody: ClaimCustodyObservationSchema,
+  custodyMetadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+    message: 'Claim custody observation requires a replayable chain Snapshot.',
+  }),
+  flow: ClaimAddressFlowSummarySchema,
+  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+  metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+    message: 'EVM claim address observation requires a replayable chain Snapshot.',
+  }),
+});
+export type EvmClaimAddressObservation = z.infer<typeof EvmClaimAddressObservationSchema>;
+
+export const ClaimCadenceAssessmentSchema = z.object({
+  expectedSeconds: UnsignedQuantityStringSchema,
+  observedActions: z.number().int().nonnegative(),
+  observedIntervalsSeconds: z.array(UnsignedQuantityStringSchema),
+  status: ClaimStatusSchema,
+});
+
+export const ClaimRuleAuditSchema = z.object({
+  claim: ClaimRuleSchema,
+  status: ClaimStatusSchema,
+  expectedAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  observedReceivedAmount: UnsignedQuantityStringSchema,
+  actualReceivedAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  observedActionAmount: UnsignedQuantityStringSchema,
+  actualActionAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  observedOutflowAmount: UnsignedQuantityStringSchema,
+  deviationBps: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  verifiedPercent: knowledgeValueSchema(DecimalStringSchema),
+  custody: knowledgeValueSchema(ClaimCustodyKindSchema),
+  shareUnitAssessment: ClaimShareUnitAssessmentSchema.nullable(),
+  cadenceAssessment: ClaimCadenceAssessmentSchema.nullable(),
+  findings: z.array(ClaimAuditFindingSchema),
+  evidenceIds: z.array(z.string().min(1)).min(1),
+});
+
+export const ClaimAuditReportSchema = z.object({
+  status: ClaimStatusSchema,
+  policy: ClaimAuditPolicySchema,
+  items: z.array(ClaimRuleAuditSchema).min(1),
+  metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+    message: 'Claim audit report requires a replayable chain Snapshot.',
+  }),
+});
+export type ClaimAuditReport = z.infer<typeof ClaimAuditReportSchema>;
 
 export const ApiErrorSchema = z.object({
   error: z.object({

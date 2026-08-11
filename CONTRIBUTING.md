@@ -95,3 +95,8 @@ Use focused commits with an imperative subject, for example
 - changes to [PROGRESS.md](PROGRESS.md).
 
 Do not combine unrelated cleanup with a protocol or inference change.
+
+`main` is the only long-lived branch. Use one short-lived `agent/*` branch for an active delivery
+batch, squash-merge it through the protected checks, and delete it after merge. Do not create
+GitFlow, environment, or routine release branches. GitHub Releases are reserved for planned product
+milestones under [the release policy](docs/RELEASING.md).
