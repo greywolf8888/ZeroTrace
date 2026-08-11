@@ -5,8 +5,12 @@ import { knownValue, unknownValue, type ActionAssetDelta } from '@zerotrace/sche
 
 import {
   ACTION_SEMANTICS_MODEL_VERSION,
+  actionSemanticsReportId,
   buildActionSemanticsReport,
+  calculateActionSemanticsResultHash,
+  canonicalActionTransactionId,
   createActionCandidate,
+  expectedActionSemanticsTerminalEvidence,
 } from './index.js';
 
 const snapshot = {
@@ -218,5 +222,58 @@ describe('action semantics', () => {
     expect(reversed.resultHash).toBe(forward.resultHash);
     expect(reversed.terminalEvidenceId).toBe(forward.terminalEvidenceId);
     expect(reversed.actions).toEqual(forward.actions);
+  });
+
+  it('canonicalizes transaction identities without collapsing ledger formats', () => {
+    expect(canonicalActionTransactionId('EVM', `0x${'AB'.repeat(32)}`)).toBe(
+      `0x${'ab'.repeat(32)}`,
+    );
+    expect(canonicalActionTransactionId('BITCOIN', 'CD'.repeat(32))).toBe('cd'.repeat(32));
+    const signature =
+      '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
+    expect(canonicalActionTransactionId('SOLANA', signature)).toBe(signature);
+    expect(() => canonicalActionTransactionId('EVM', 'not-a-hash')).toThrow(/EVM transaction/);
+    expect(() => canonicalActionTransactionId('BITCOIN', `0x${'11'.repeat(32)}`)).toThrow(
+      /Bitcoin transaction/,
+    );
+  });
+
+  it('recomputes the report result, storage identity and terminal Evidence deterministically', () => {
+    const evidence = source('identity');
+    const candidate = createActionCandidate({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      transactionId: `0x${'AA'.repeat(32)}`,
+      blockOrSlot: snapshot.blockNumber,
+      observedAt: evidence.observedAt,
+      proposedKind: 'CONTRACT_CALL',
+      application: 'NOT_APPLIED',
+      actor: unknownValue('INSUFFICIENT_DATA'),
+      proofKinds: ['TRANSACTION_INPUT', 'EXECUTION_RECEIPT'],
+      evidenceIds: [evidence.id],
+    });
+    const report = buildActionSemanticsReport({
+      snapshot,
+      candidates: [candidate],
+      evidence: [evidence],
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 0,
+    });
+    expect(candidate.transactionId).toBe(`0x${'aa'.repeat(32)}`);
+    expect(calculateActionSemanticsResultHash(report)).toBe(report.resultHash);
+    expect(actionSemanticsReportId(report.resultHash)).toMatch(/^asr_[0-9a-f]{24}$/);
+    expect(expectedActionSemanticsTerminalEvidence(report)).toEqual(
+      report.evidence.find((item) => item.id === report.terminalEvidenceId),
+    );
+
+    const forged = {
+      ...report,
+      actions: report.actions.map((action) => ({
+        ...action,
+        primitive: knownValue('BURN' as const),
+      })),
+    };
+    expect(() => calculateActionSemanticsResultHash(forged)).toThrow(/canonical candidate/);
   });
 });

@@ -482,9 +482,19 @@ npx vitest run packages/action-semantics/src/index.test.ts
 
 The primitive engine intentionally does not infer promotional purpose: a Swap is not automatically
 a buyback, a distribution is not automatically a dividend, and custody is not automatically burn
-or an irreversible lock. Current output is an in-process deterministic Evidence-backed report.
-Production ledger adapters, PostgreSQL report persistence and scheduler-handler composition remain
-open.
+or an irreversible lock. Migration `025_action_semantics_reports` persists the deterministic result
+as an immutable content-addressed record after every source and terminal Evidence node has been
+stored with the exact report Snapshot. The public API is read-only:
+
+```text
+GET /api/v1/actions/semantics/reports/latest?ledger=EVM&chainId=eip155:56&transactionId=0x...
+GET /api/v1/actions/semantics/reports/asr_...
+```
+
+There is deliberately no public POST. Trusted ledger adapters or scheduler handlers call the
+repository only after producing proof-gated candidates and durable Evidence; callers cannot assert
+`proofKinds` through the HTTP surface. Production EVM/Bitcoin/Solana adapters,
+scheduler-handler composition and historical backfill remain open.
 
 ## Continuous Flap lifetime heads
 
@@ -523,7 +533,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `024`, are in
+local upgrade commands, including migrations `007` through `025`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

@@ -10,6 +10,7 @@
     { "path": "../schemas" },
     { "path": "../evidence" },
     { "path": "../data-quality" },
+    { "path": "../action-semantics" },
     { "path": "../capture-scheduler" }
   ]
 }

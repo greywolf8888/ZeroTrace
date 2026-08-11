@@ -507,8 +507,17 @@ asset-delta shape; failed execution is retained as `NOT_APPLIED`, unavailable ex
 `UNKNOWN`, and an unproved proposed primitive remains Unknown. A deterministic terminal Evidence
 node closes each report. The engine never converts a Swap into “buyback”, distribution into
 “dividend”, LP custody into “permanent lock”, or a transfer into “burn”; those purposes remain
-`Unknown(NOT_QUERIED)` until independently evidenced claim comparison. Production ledger adapters,
-durable report storage and continuous handler binding remain pending.
+`Unknown(NOT_QUERIED)` until independently evidenced claim comparison.
+
+Migration `025_action_semantics_reports` is the durable authority for these generic reports. It
+content-addresses the deterministic result, canonicalizes EVM and Bitcoin hashes separately from
+Solana signatures, indexes every represented transaction, and accepts a report only when every
+Evidence node is durably bound to the byte-identical Snapshot. The stored Evidence set must equal
+the terminal derivation's recursive closure, the terminal's direct parents must equal the Action
+Evidence union, and `sourceSet` must equal the non-derived durable sources. Records are immutable;
+provider-free latest/exact reads are public, while report writes remain an internal trusted-adapter
+boundary. Production ledger adapters, continuous handler binding and historical backfill remain
+pending.
 
 Candidate discovery is a separate event-only layer. The BSC implementation uses finalized sparse
 SQD `binance-mainnet` queries for both indexed zero-address directions, groups non-zero `to=0x0`
@@ -711,6 +720,12 @@ cannot publish success with an unrelated Snapshot, orphan Evidence, missing prov
 invented source. This state machine is the persistence/Activity boundary for Temporal and NATS
 adapters, not a replacement for the Master Prompt's Temporal workflow layer. No production capture
 handler or distributed event adapter is implied merely by registering a schedule.
+
+Migration `025_action_semantics_reports` stores chain-neutral Action Semantics results as immutable
+`asr_...` records. PostgreSQL validates report/result/Snapshot identity, canonical ledger-specific
+transaction IDs, complete terminal Evidence reachability, exact non-derived sources and the stored
+Evidence payload surface. A GIN transaction index supports provider-free latest replay across EVM,
+Bitcoin and Solana; exact replay uses the content address. No public write endpoint exists.
 
 Solana transaction reports are append-only, content-addressed projections. PostgreSQL validates
 report/signature/Snapshot identity, canonical Evidence/source arrays, terminal Evidence lineage and

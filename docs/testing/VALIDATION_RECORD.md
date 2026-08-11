@@ -2081,7 +2081,8 @@ coverage, freshness, source set, fixed model version and explicit per-action con
 
 This is deterministic semantic normalization, not a production chain adapter or a claim verdict.
 No FFT address, Flap constant, pension rule, promotional taxonomy or production mock exists in the
-package. Durable report persistence, real EVM/Bitcoin/Solana candidate adapters, continuous handler
+package. At this checkpoint durable report persistence was still pending; the follow-on acceptance
+below closes that storage/replay gap. Real EVM/Bitcoin/Solana candidate adapters, continuous handler
 binding and cross-ledger real-chain calibration remain pending.
 
 The complete repository gate then passed formatting, ESLint, typecheck, 538 unit tests across 84
@@ -2106,3 +2107,60 @@ existing ClickHouse container in that state; even a direct `docker start` blocke
 error log was produced and no data volume was deleted. Direct production-build API validation and
 real PostgreSQL tests passed, but a current full Compose start is therefore not claimed. Remote CI
 container build/E2E and exact-SHA CodeQL acceptance remain pending for this batch.
+
+## Durable generic Action Semantics report replay: 2026-08-12
+
+ZeroTrace added migration `025_action_semantics_reports` and a generic PostgreSQL repository without
+introducing a Flap, FFT, launchpad or token-specific field. EVM transaction hashes and Bitcoin
+txids are canonical lowercase hexadecimal under distinct ledger rules; Solana signatures remain
+base58. Each `asr_...` record is derived from the canonical report result, indexes every represented
+transaction, and is re-parsed, re-hashed and terminal-Evidence-checked on every repository read.
+
+The database accepts a report only after all source and terminal Evidence nodes already exist and
+each is bound to the byte-identical report Snapshot. It requires the reported Evidence IDs to equal
+the terminal node's full recursive derivation closure, the terminal's direct parents to equal the
+Action Evidence union, and `sourceSet` to equal the non-derived durable sources. Stored Evidence JSON
+must agree with the Evidence table. Reports are append-only; update and delete triggers fail closed.
+The API exposes provider-free latest-by-ledger/chain/transaction and exact content-addressed replay,
+but deliberately exposes no POST that could let an untrusted client assert `proofKinds`.
+
+An active preserved PostgreSQL volume upgraded non-destructively from migration `024` to `025`.
+The new real-database case first attempted report persistence before Evidence and received a closed
+failure, then stored source plus terminal Evidence, persisted idempotently, closed/reopened the
+repository, replayed by uppercase-input EVM transaction and exact ID, and observed SQL mutation
+rejection. A separate disposable database applied all 25 migrations in filename order, exposed
+`action_semantics_reports`, and was removed afterward.
+
+The focused schema/action/storage tests passed 11 cases; the full unit suite passed 544 tests across
+85 files; the environment-free API/integration suite passed 77 cases. With PostgreSQL, AGE, MinIO
+and the preserved ClickHouse volume configured, 107 integration cases passed. The same three
+historical-ingestion cases failed with ClickHouse error `241 MEMORY_LIMIT_EXCEEDED` at the preserved
+volume's approximately 727 MiB effective limit; no volume or data was deleted. This is an existing
+ClickHouse capacity gate and did not affect PostgreSQL migration 025 or Action Semantics replay.
+
+No live chain request was needed for this persistence acceptance, no FFT conclusion changed, and
+no mock entered a production path. Production ledger candidate adapters, scheduler binding,
+historical backfill, independent-source action reconciliation, full repository gates and remote CI
+for this follow-on batch remain pending at this checkpoint.
+
+The complete host gate subsequently passed format checking, ESLint, TypeScript, 544 unit tests, 77
+environment-free integrations, the Entity structural evaluation, all application/worker builds,
+the production license allowlist and a zero-vulnerability dependency audit. Durable coverage with
+PostgreSQL and AGE passed 651 tests with the same three ClickHouse cases explicitly skipped:
+83.14% statements, 77.03% branches, 93.91% functions and 84.28% lines. All 36 Chromium desktop and
+Pixel 7 E2E flows passed. Compose configuration and CycloneDX SBOM generation also passed.
+
+Before the current six-target Docker build, the existing API, web, PostgreSQL, ClickHouse, AGE,
+MinIO, NATS and Valkey Compose services reported healthy/running. The local BuildKit target loop
+then produced no result for ten minutes and left Docker CLI calls unresponsive. The two orphan
+build clients were stopped. A later attempt to stop the host API test process encountered duplicate
+Windows port records and also stopped the already wedged Docker backend process `38024`; no file,
+image, container or volume was deleted. Docker Desktop's normal restart command then also timed out
+after three minutes, so no further backend intervention was attempted.
+
+Before that host API process was stopped, it returned `readOnly=true` and
+`action-semantics=IMPLEMENTED_DURABLE_PROVIDER_FREE_REPLAY`. Because Docker/PostgreSQL had become
+unreachable, aggregate storage correctly returned `DOWN/STORAGE_UNAVAILABLE` and the replay query
+failed closed with HTTP 503. Local container-target/runtime status is therefore inconclusive, not
+failed or passed, and the isolated GitHub Buildx checks remain the acceptance authority for this
+batch.

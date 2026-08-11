@@ -19,6 +19,11 @@ import {
   type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
 import {
+  actionSemanticsReportId,
+  buildActionSemanticsReport,
+  createActionCandidate,
+} from '@zerotrace/action-semantics';
+import {
   AnchorDataQualityService,
   MemoryDataQualityRepository,
   type AnchorReconciliationTarget,
@@ -58,6 +63,7 @@ import {
   type StoredEntityInvestigationGraph,
   type StoredEntityInvestigationGraphTimeline,
   type StoredLabelIntelligenceReport,
+  type StoredActionSemanticsReport,
 } from '@zerotrace/storage';
 import { encodeAbiParameters, toEventSelector } from 'viem';
 
@@ -1633,6 +1639,131 @@ describe('ZeroTrace API contract', () => {
 
     expect(response.statusCode, response.body).toBe(503);
     expect(response.json()).toMatchObject({ error: { code: 'DURABLE_STORAGE_REQUIRED' } });
+  });
+
+  it('replays generic Action Semantics by transaction or exact report ID without a provider write path', async () => {
+    const actionSnapshot = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      blockNumber: '50000000',
+      blockHash: `0x${'ab'.repeat(32)}`,
+      finality: 'finalized' as const,
+      capturedAt: '2026-08-12T00:00:10.000Z',
+      providerVersions: { rpc: '1' },
+      adapterVersions: { actions: 'action-semantics-v0.1.0' },
+      configHash: 'ef'.repeat(32),
+      entityModelVersion: 'entity-v1',
+      labelSnapshot: 'labels-v1',
+    };
+    const sourceEvidence = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'RECEIPT',
+      source: 'bsc-rpc@api-test',
+      locator: 'action-api-replay',
+      payload: { status: '0x1' },
+      observedAt: '2026-08-12T00:00:09.000Z',
+      blockOrSlot: actionSnapshot.blockNumber,
+      finality: 'finalized',
+      summary: 'Action API replay source.',
+    });
+    const candidate = createActionCandidate({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      transactionId: `0x${'aa'.repeat(32)}`,
+      blockOrSlot: actionSnapshot.blockNumber,
+      observedAt: sourceEvidence.observedAt,
+      proposedKind: 'CONTRACT_CALL',
+      application: 'APPLIED',
+      actor: knownValue('0x1111111111111111111111111111111111111111'),
+      proofKinds: ['EXECUTION_RECEIPT'],
+      evidenceIds: [sourceEvidence.id],
+    });
+    const report = buildActionSemanticsReport({
+      snapshot: actionSnapshot,
+      candidates: [candidate],
+      evidence: [sourceEvidence],
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 0,
+    });
+    const record: StoredActionSemanticsReport = {
+      id: actionSemanticsReportId(report.resultHash),
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      snapshotPosition: actionSnapshot.blockNumber,
+      snapshotHash: actionSnapshot.blockHash,
+      transactionIds: [candidate.transactionId],
+      resultHash: report.resultHash,
+      report,
+      terminalEvidenceId: report.terminalEvidenceId,
+      evidenceIds: report.metadata.evidenceIds,
+      sourceSet: report.metadata.sourceSet,
+      modelVersion: 'action-semantics-v0.1.0',
+      classificationCoverage: report.classificationCoverage,
+      capturedAt: actionSnapshot.capturedAt,
+      createdAt: '2026-08-12T00:00:11.000Z',
+    };
+    const latest = vi.fn(async () => record);
+    const get = vi.fn(async () => record);
+    const runtime = runtimeWithEvm();
+    runtime.actionSemanticsReports = {
+      put: vi.fn(async () => record),
+      latest,
+      get,
+      health: vi.fn(async () => ({
+        status: 'UP' as const,
+        backend: 'POSTGRES' as const,
+        durable: true as const,
+        checkedAt: '2026-08-12T00:00:12.000Z',
+      })),
+      close: vi.fn(async () => undefined),
+    } as NonNullable<AppRuntime['actionSemanticsReports']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const byTransaction = await app.inject({
+      method: 'GET',
+      url:
+        '/api/v1/actions/semantics/reports/latest?ledger=evm&chainId=eip155%3A56&transactionId=' +
+        `0x${'AA'.repeat(32)}`,
+    });
+    const exact = await app.inject({
+      method: 'GET',
+      url: `/api/v1/actions/semantics/reports/${record.id}`,
+    });
+    const writeAttempt = await app.inject({
+      method: 'POST',
+      url: '/api/v1/actions/semantics/reports',
+      payload: report,
+    });
+
+    expect(byTransaction.statusCode, byTransaction.body).toBe(200);
+    expect(exact.statusCode, exact.body).toBe(200);
+    expect(byTransaction.json()).toMatchObject({ replayed: true, record: { id: record.id } });
+    expect(exact.json()).toMatchObject({ replayed: true, record: { id: record.id } });
+    expect(writeAttempt.statusCode).toBe(404);
+    expect(latest).toHaveBeenCalledWith({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      transactionId: `0x${'AA'.repeat(32)}`,
+    });
+    expect(get).toHaveBeenCalledWith(record.id);
+  });
+
+  it('reports Action Semantics replay as unavailable without durable storage', async () => {
+    const app = await createApp({ config, runtime: runtimeWithEvm(), logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'GET',
+      url:
+        '/api/v1/actions/semantics/reports/latest?ledger=EVM&chainId=eip155%3A56&transactionId=' +
+        `0x${'aa'.repeat(32)}`,
+    });
+    expect(response.statusCode, response.body).toBe(503);
+    expect(response.json()).toMatchObject({
+      error: { code: 'ACTION_SEMANTICS_REPORT_UNAVAILABLE' },
+    });
   });
 
   it('binds a subject fact to a snapshot and evidence record', async () => {

@@ -12,17 +12,17 @@ completed feature.
 | Measure                          | Current state                                                                                            |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Terminal architecture completion | **22% estimated**                                                                                        |
-| Runnable foundation              | **Yes; clean Docker build/start previously verified; current local Docker Desktop start is blocked**     |
+| Runnable foundation              | **Yes; host gates pass; existing Compose was healthy before current local BuildKit deadlock**            |
 | Production acceptance            | **No**                                                                                                   |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                           |
-| Unit tests                       | **538 passing across 84 files**                                                                          |
+| Unit tests                       | **544 passing across 85 files**                                                                          |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                               |
-| Integration tests                | **75 environment-free; 104 real-storage pass, 3 long-lived ClickHouse capacity failures**                |
+| Integration tests                | **77 environment-free; 107 real-storage pass, 3 long-lived ClickHouse capacity failures**                |
 | Real-browser E2E                 | **36 passing: Chromium desktop and Pixel 7**                                                             |
-| Remote CI                        | **Feature `3c5b8f3` passed CI/CodeQL on PR #14; protected main `8e42641`**                               |
-| Coverage                         | **Current durable: 83.17% statements / 77.04% branches / 93.83% functions / 84.32% lines**               |
+| Remote CI                        | **Protected main `569a0ed` passed CI and CodeQL after PR #15**                                           |
+| Coverage                         | **Current durable: 83.14% statements / 77.03% branches / 93.91% functions / 84.28% lines**               |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed |
-| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/Scenario, control, and Solana reports wired          |
+| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/Scenario/action, control, and Solana reports wired   |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
@@ -50,7 +50,7 @@ The only allowed status vocabulary in this ledger is:
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; forced-reorg validation and other platforms remain                                                                                                                                                   |
 | Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios, immutable candidate-bound pension-entry reports and two-operator reconciliation work; fork execution, routes, gas and capacity remain                                                                                                                              |
 | Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race plus immutable pension-entry Scenario Reports and provider-free replay; general portfolio/market scenarios remain                                                                                                                                                                                      |
-| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, behavioral pension candidates, event promotion, bounded supply continuity, proof-gated generic Action Semantics and scheduling work; production action adapters/persistence, handler binding, generic backfill and attribution remain                                     |
+| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, behavioral pension candidates, event promotion, bounded supply continuity, durable proof-gated generic Action Semantics replay and scheduling work; production action adapters, handler binding, generic backfill and attribution remain                                  |
 | Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger/Evidence, durable exact search, EVM/Solana controls, Bitcoin UTXO/script boundaries, pension/claim/burn, candidate-bound entry, market/RV and Entity investigation panels work; broader terminal workflows remain incomplete                                                                                                  |
 | Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                                                                                                                                                                              |
 
@@ -879,10 +879,17 @@ The only allowed status vocabulary in this ledger is:
   community allocation and similar purposes stay `Unknown(NOT_QUERIED)` until claim-specific
   Evidence supports them;
 - every deterministic report carries coverage, freshness, source set, model version, confidence,
-  complete Evidence and a derived terminal root. Five unit tests cover proof gates, failed actions,
-  Snapshot rejection and order-stable identity;
-- production ledger adapters, durable Action Semantics report persistence, scheduler-handler
-  composition and real-chain cross-ledger calibration remain pending.
+  complete Evidence and a derived terminal root. Seven engine unit tests cover proof gates, failed
+  actions, Snapshot rejection, canonical per-ledger transactions, recomputed identity and
+  order-stable output;
+- migration `025_action_semantics_reports` persists immutable `asr_...` records after recomputing
+  the result and terminal Evidence. PostgreSQL requires one byte-identical Snapshot across every
+  Evidence node, the exact recursive terminal closure and exact non-derived source set, indexes all
+  represented EVM/Bitcoin/Solana transaction IDs, and rejects update/delete;
+- latest transaction and exact content-addressed API replay is provider-free. The HTTP surface has
+  no Action Semantics write route, so untrusted clients cannot self-assert proof kinds;
+- production ledger adapters, scheduler-handler composition, historical backfill and real-chain
+  cross-ledger calibration remain pending.
 
 ### Flap migrated DEX market and buy scenarios
 
@@ -1165,25 +1172,25 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                                                           | Scope                                                                                                                                                                                                 |
-| ------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reproducible install/build     | Pass                                                                    | locked npm install in production container; all packages/API/web                                                                                                                                      |
-| Unit tests                     | 538 pass                                                                | 84 files, including generic Action Semantics and capture scheduling                                                                                                                                   |
-| Integration tests              | 75 environment-free; 104 real-storage pass                              | PostgreSQL/AGE coverage includes all 29 PostgreSQL report/search/scheduler cases; three ClickHouse ingestion cases remain unavailable on the preserved local volume                                   |
-| Model evaluation tests         | 1 pass                                                                  | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                                                                                        |
-| Restart regression             | Pass                                                                    | same-anchor recapture persists across repository/API restart without Snapshot collision                                                                                                               |
-| Coverage gate                  | Pass                                                                    | 83.17% statements, 77.04% branches, 93.83% functions, 84.32% lines; 642 pass and three ClickHouse cases explicitly skipped after coverage instrumentation exceeded the reused 1 GiB volume's capacity |
-| Chromium E2E                   | 36 pass                                                                 | desktop and Pixel 7 include Entity graph evolution/Evidence replay, investigation, pension entry, Solana semantics, controls, market/RV and Unknown                                                   |
-| Formatting / ESLint / types    | Pass                                                                    | full repository                                                                                                                                                                                       |
-| Dependency vulnerability audit | Pass                                                                    | 0 vulnerabilities across the complete npm dependency graph                                                                                                                                            |
-| Dependency license allowlist   | Pass                                                                    | production dependency graph                                                                                                                                                                           |
-| CycloneDX SBOM                 | Pass                                                                    | npm dependency graph                                                                                                                                                                                  |
-| Compose model                  | Pass                                                                    | rendered default topology                                                                                                                                                                             |
-| Docker image build/start       | Build pass; current local start blocked                                 | all six production targets build with locked workspace manifests; Docker Desktop leaves newly recreated API/web and the existing ClickHouse container in `Created`, so no volume was deleted          |
-| Database bootstrap             | Pass                                                                    | isolated empty PostgreSQL applied migrations 001-024 in order; scheduler concurrency/retry/Evidence tests passed and the temporary database was removed                                               |
-| Runtime/browser smoke          | Pass outside blocked Compose start                                      | production API build connected to migrated PostgreSQL: storage `UP`, read-only true and durable scheduler state advertised honestly; all 36 desktop/mobile Chromium flows passed                      |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope                               | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                                        |
-| Remote CI                      | Exact-SHA label-intelligence pass `3c5b8f3`; protected `main` `8e42641` | PR #14 passed quality/contracts, 36 Chromium flows, every production container target, JavaScript/TypeScript analysis and CodeQL; the current scheduling/action batch is pending remote validation    |
+| Check                          | Latest result                                   | Scope                                                                                                                                                                                                                         |
+| ------------------------------ | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible install/build     | Pass                                            | locked npm install in production container; all packages/API/web                                                                                                                                                              |
+| Unit tests                     | 544 pass                                        | 85 files, including generic Action Semantics persistence and capture scheduling                                                                                                                                               |
+| Integration tests              | 77 environment-free; 107 real-storage pass      | PostgreSQL/AGE/MinIO and all Action Semantics persistence/API cases pass; three ClickHouse ingestion cases remain unavailable on the preserved local volume                                                                   |
+| Model evaluation tests         | 1 pass                                          | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                                                                                                                |
+| Restart regression             | Pass                                            | same-anchor recapture persists across repository/API restart without Snapshot collision                                                                                                                                       |
+| Coverage gate                  | Pass                                            | 83.14% statements, 77.03% branches, 93.91% functions, 84.28% lines; 651 pass and three ClickHouse cases explicitly skipped because the reused volume remains above its effective memory capacity                              |
+| Chromium E2E                   | 36 pass                                         | desktop and Pixel 7 include Entity graph evolution/Evidence replay, investigation, pension entry, Solana semantics, controls, market/RV and Unknown                                                                           |
+| Formatting / ESLint / types    | Pass                                            | full repository                                                                                                                                                                                                               |
+| Dependency vulnerability audit | Pass                                            | 0 vulnerabilities across the complete npm dependency graph                                                                                                                                                                    |
+| Dependency license allowlist   | Pass                                            | production dependency graph                                                                                                                                                                                                   |
+| CycloneDX SBOM                 | Pass                                            | npm dependency graph                                                                                                                                                                                                          |
+| Compose model                  | Pass                                            | rendered default topology                                                                                                                                                                                                     |
+| Docker image build/start       | Prior remote pass; current local inconclusive   | existing Compose services were healthy before the six-target build; local BuildKit deadlocked past 10 minutes and made Docker CLI unresponsive, so only orphan build clients were stopped and no volume/container was deleted |
+| Database bootstrap             | Pass                                            | isolated empty PostgreSQL applied migrations 001-025 in order; migration 025 Evidence/immutability/restart tests passed and the temporary database was removed                                                                |
+| Runtime/browser smoke          | Host runtime and browser pass                   | production build and migrated PostgreSQL tests pass; all 36 desktop/mobile Chromium flows passed; current container target awaits isolated remote Buildx validation                                                           |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope       | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                                                                |
+| Remote CI                      | Protected `main` `569a0ed` passed CI and CodeQL | PR #15 passed quality/contracts, 36 Chromium flows, every production container target and JavaScript/TypeScript analysis; current Action Semantics persistence batch awaits its own PR checks                                 |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

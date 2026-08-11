@@ -5976,8 +5976,32 @@ export const ActionAssetDeltaSchema = z
     }),
     evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const evidenceIds = [...new Set(value.evidenceIds)].sort();
+    if (
+      evidenceIds.length !== value.evidenceIds.length ||
+      evidenceIds.some((item, index) => item !== value.evidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceIds'],
+        message: 'Action delta Evidence IDs must be sorted and unique.',
+      });
+    }
+  });
 export type ActionAssetDelta = z.infer<typeof ActionAssetDeltaSchema>;
+
+function isCanonicalActionTransactionId(ledger: Ledger, transactionId: string): boolean {
+  switch (ledger) {
+    case 'EVM':
+      return /^0x[0-9a-f]{64}$/.test(transactionId);
+    case 'BITCOIN':
+      return /^[0-9a-f]{64}$/.test(transactionId);
+    case 'SOLANA':
+      return /^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(transactionId);
+  }
+}
 
 export const ActionSemanticCandidateSchema = z
   .object({
@@ -6001,6 +6025,13 @@ export const ActionSemanticCandidateSchema = z
     const counterparties = canonical(value.counterparties);
     const proofs = canonical(value.proofKinds);
     const evidence = canonical(value.evidenceIds);
+    if (!isCanonicalActionTransactionId(value.ledger, value.transactionId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['transactionId'],
+        message: 'Action transaction ID must be canonical for its ledger.',
+      });
+    }
     if (counterparties.some((item, index) => item !== value.counterparties[index])) {
       context.addIssue({
         code: 'custom',
@@ -6070,7 +6101,41 @@ export const ActionSemanticObservationSchema = z
     findings: z.array(ActionSemanticFindingCodeSchema).min(1),
     evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    const canonical = (items: readonly string[]) => [...new Set(items)].sort();
+    if (!isCanonicalActionTransactionId(value.ledger, value.transactionId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['transactionId'],
+        message: 'Action transaction ID must be canonical for its ledger.',
+      });
+    }
+    for (const [field, items] of [
+      ['counterparties', value.counterparties],
+      ['proofKinds', value.proofKinds],
+      ['evidenceIds', value.evidenceIds],
+    ] as const) {
+      const expected = canonical(items);
+      if (
+        expected.length !== items.length ||
+        expected.some((item, index) => item !== items[index])
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: [field],
+          message: `Action ${field} must be sorted and unique.`,
+        });
+      }
+    }
+    if (new Set(value.findings).size !== value.findings.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['findings'],
+        message: 'Action findings must be unique.',
+      });
+    }
+  });
 export type ActionSemanticObservation = z.infer<typeof ActionSemanticObservationSchema>;
 
 export const ActionSemanticsReportSchema = z
@@ -6092,6 +6157,26 @@ export const ActionSemanticsReportSchema = z
     const metadataEvidence = [...value.metadata.evidenceIds].sort();
     const sortedEvidence = [...new Set(evidenceIds)].sort();
     const actionIds = value.actions.map((item) => item.id);
+    const sortedActionIds = [...actionIds].sort();
+    const actionEvidenceIds = [
+      ...new Set(value.actions.flatMap((item) => item.evidenceIds)),
+    ].sort();
+    const nonTerminalEvidenceIds = sortedEvidence.filter(
+      (item) => item !== value.terminalEvidenceId,
+    );
+    const nonDerivedSourceSet = [
+      ...new Set(
+        value.evidence
+          .filter(
+            (item) =>
+              item.kind !== 'DERIVED_FEATURE' &&
+              item.kind !== 'NEGATIVE_EVIDENCE' &&
+              item.kind !== 'ANALYST_OBSERVATION',
+          )
+          .map((item) => item.source),
+      ),
+    ].sort();
+    const metadataSourceSet = [...value.metadata.sourceSet];
     const knownActions = value.actions.filter((item) => item.primitive.state === 'known').length;
     const position =
       value.snapshot.ledger === 'EVM'
@@ -6103,10 +6188,19 @@ export const ActionSemanticsReportSchema = z
       value.metadata.snapshot === null ||
       JSON.stringify(value.metadata.snapshot) !== JSON.stringify(value.snapshot) ||
       value.metadata.freshness !== value.snapshot.capturedAt ||
+      value.metadata.modelVersion !== 'action-semantics-v0.1.0' ||
+      value.metadata.confidence !== 1 ||
       value.classificationCoverage !== knownActions / value.actions.length ||
       !evidenceIds.includes(value.terminalEvidenceId) ||
       sortedEvidence.length !== evidenceIds.length ||
+      sortedEvidence.some((item, index) => item !== evidenceIds[index]) ||
       new Set(actionIds).size !== actionIds.length ||
+      sortedActionIds.some((item, index) => item !== actionIds[index]) ||
+      actionEvidenceIds.length !== nonTerminalEvidenceIds.length ||
+      actionEvidenceIds.some((item, index) => item !== nonTerminalEvidenceIds[index]) ||
+      metadataSourceSet.length !== nonDerivedSourceSet.length ||
+      nonDerivedSourceSet.length === 0 ||
+      metadataSourceSet.some((item, index) => item !== nonDerivedSourceSet[index]) ||
       metadataEvidence.length !== evidenceIds.length ||
       metadataEvidence.some((item, index) => item !== sortedEvidence[index]) ||
       value.evidence.some(

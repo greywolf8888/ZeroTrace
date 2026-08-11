@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- immutable, content-addressed generic Action Semantics reports with migration `025`, canonical
+  EVM/Bitcoin/Solana transaction identities, result/terminal revalidation, exact durable
+  Snapshot/Evidence closure, non-derived source-set enforcement, provider-free latest/exact API,
+  storage health integration and no public write path;
 - generic `action-semantics-v0.1.0` primitive classification for transfers, swaps, burns, mints,
   liquidity changes, LP custody, distributions and contract calls, with proof-shape gates,
   explicit `APPLIED` / `NOT_APPLIED` / `UNKNOWN` execution state, terminal Evidence and no automatic

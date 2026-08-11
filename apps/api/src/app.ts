@@ -64,6 +64,7 @@ import {
 } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
+  ActionSemanticsReportStorageError,
   ClaimReportStorageError,
   ControlSurfaceReportStorageError,
   EntityRelationshipReportStorageError,
@@ -181,6 +182,21 @@ const SolanaTransactionReportParamsSchema = z.object({
 
 const SolanaTransactionReportByIdParamsSchema = SolanaTransactionReportParamsSchema.extend({
   reportId: z.string().regex(/^str_[0-9a-f]{24}$/),
+});
+
+const ActionSemanticsReportLookupQuerySchema = z
+  .object({
+    ledger: z
+      .string()
+      .transform((value) => value.toUpperCase())
+      .pipe(z.enum(['EVM', 'BITCOIN', 'SOLANA'])),
+    chainId: z.string().trim().min(1).max(128),
+    transactionId: z.string().trim().min(1).max(512),
+  })
+  .strict();
+
+const ActionSemanticsReportParamsSchema = z.object({
+  reportId: z.string().regex(/^asr_[0-9a-f]{24}$/),
 });
 
 const LaunchInspectionParamsSchema = z.object({
@@ -1120,6 +1136,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['actionSemanticsReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionCandidateReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionEntryReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipReports']>['health']>>
@@ -1158,6 +1175,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         controlSurfaces,
         solanaControlSurfaces,
         solanaTransactionReports,
+        actionSemanticsReports,
         pensionCandidateReports,
         pensionEntryReports,
         entityRelationshipReports,
@@ -1176,6 +1194,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.controlSurfaces?.health(),
         runtime.solanaControlSurfaces?.health(),
         runtime.solanaTransactionReports?.health(),
+        runtime.actionSemanticsReports?.health(),
         runtime.pensionCandidateReports?.health(),
         runtime.pensionEntryReports?.health(),
         runtime.entityRelationshipReports?.health(),
@@ -1196,6 +1215,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           controlSurfaces,
           solanaControlSurfaces,
           solanaTransactionReports,
+          actionSemanticsReports,
           pensionCandidateReports,
           pensionEntryReports,
           entityRelationshipReports,
@@ -1433,6 +1453,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof SolanaTransactionReportStorageError) {
       const status = error.code === 'SOLANA_TRANSACTION_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ActionSemanticsReportStorageError) {
+      const status = error.code === 'ACTION_SEMANTICS_REPORT_INVALID' ? 400 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1817,6 +1843,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               : 'IMPLEMENTED_DURABLE_LIVE_AND_REPLAY',
         detail:
           'Finalized Solana transaction semantics, official core asset flows, exact token reconciliation and their complete Evidence set are stored as immutable content-addressed reports. Latest/exact replay remains available without a provider and is explicitly marked as replayed.',
+      },
+      {
+        id: 'action-semantics',
+        status:
+          runtime.actionSemanticsReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PROVIDER_FREE_REPLAY',
+        detail:
+          'Chain-neutral EVM, Bitcoin and Solana action primitives persist as immutable content-addressed reports with canonical transaction identities, exact Snapshot-bound Evidence closure and non-derived source provenance. Latest/exact reads never contact a provider; trusted production ledger adapters, scheduler handler binding and historical backfill remain pending. There is no public report-write endpoint.',
       },
       {
         id: 'finalized-historical-ingestion',
@@ -2452,6 +2487,76 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           );
       }
       return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/actions/semantics/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const query = ActionSemanticsReportLookupQuerySchema.parse(request.query);
+      const repository = runtime.actionSemanticsReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ACTION_SEMANTICS_REPORT_UNAVAILABLE',
+              'Durable Action Semantics report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(query);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ACTION_SEMANTICS_REPORT_NOT_FOUND',
+              'No durable Action Semantics report exists for this transaction.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/actions/semantics/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ActionSemanticsReportParamsSchema.parse(request.params);
+      const repository = runtime.actionSemanticsReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ACTION_SEMANTICS_REPORT_UNAVAILABLE',
+              'Durable Action Semantics report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ACTION_SEMANTICS_REPORT_NOT_FOUND',
+              'The durable Action Semantics report was not found.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
     },
   );
 

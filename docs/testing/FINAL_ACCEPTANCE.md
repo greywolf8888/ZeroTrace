@@ -233,6 +233,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Generic proof-gated Action Semantics for transfer, swap, mint/burn, liquidity, LP custody,
       distribution and contract-call primitives, with explicit failed/Unknown execution and no
       automatic promotional-purpose inference
+- [x] Immutable content-addressed Action Semantics persistence with migration `025`, canonical
+      EVM/Bitcoin/Solana transaction lookup, exact Snapshot/Evidence closure and provider-free
+      latest/exact replay; no public proof-assertion write path
 - [x] Finalized BSC SQD long-range zero-address Transfer candidate discovery with bounded sparse
       queries, terminal Evidence, responsive API/UI and silent-supply state retained as Unknown
 - [x] Restart-safe bounded burn-candidate promotion with exact-block certificates before cursor
@@ -244,8 +247,8 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       occurrence identity, bounded retries, expired-lease recovery, immutable attempts and
       Evidence/Snapshot-gated completion
 - [ ] Bind Temporal Schedules/Workflows, NATS JetStream events and production multi-chain handlers;
-      persist Action Semantics reports and complete production ledger adapters, historical supply
-      backfill, reviewed-draft promotion and independent claim-flow reconciliation
+      complete trusted action adapters, historical supply backfill, reviewed-draft promotion and
+      independent claim-flow reconciliation
 - [ ] Snapshot/Evidence-backed real-world Entity corpus with at least 100 labels per probability
       axis, Brier score `<= 0.15` and ECE `<= 0.05`
 - [ ] Complete multi-route realizable value with taxes, fees, gas and execution failures

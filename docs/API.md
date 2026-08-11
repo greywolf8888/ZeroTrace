@@ -28,6 +28,8 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/ledger/:ledger/:type/:id`                                  | typed block/transaction or Bitcoin script-aware outpoint query  |
 | GET    | `/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/latest`       | latest provider-free immutable Solana semantic report replay    |
 | GET    | `/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/:id`          | exact content-addressed Solana semantic report replay           |
+| GET    | `/api/v1/actions/semantics/reports/latest`                          | latest generic action report by ledger/chain/transaction        |
+| GET    | `/api/v1/actions/semantics/reports/:id`                             | exact content-addressed generic action report replay            |
 | GET    | `/api/v1/launches/EVM/:token`                                       | version-pinned Flap BSC current Portal-state inspection         |
 | GET    | `/api/v1/launches/EVM/:token/events/:transactionHash`               | exact-receipt Flap creation/configuration/migration decoding    |
 | GET    | `/api/v1/launches/EVM/:token/history`                               | bounded Flap Portal log discovery with exact receipt replay     |
@@ -737,10 +739,24 @@ repository, `POSTGRES`/`DOWN` with a safe error code when configured storage is 
 `MEMORY`/`EPHEMERAL` for an intentional no-`POSTGRES_URL` development runtime. Configured storage
 failure makes `/health/ready` return HTTP 503.
 
-When PostgreSQL is configured, aggregate storage readiness also checks migration
-`024_capture_schedules`. This verifies the durable schedule/run/attempt authority only; there is no
-public scheduling or worker-lease endpoint yet, and health never claims that Temporal/NATS handlers
-are running.
+When PostgreSQL is configured, aggregate storage readiness also checks migrations
+`024_capture_schedules` and `025_action_semantics_reports`. The first verifies only the durable
+schedule/run/attempt authority; the second verifies immutable generic Action Semantics replay.
+There is no public scheduling, worker-lease or Action Semantics write endpoint, and health never
+claims that Temporal/NATS handlers or production action adapters are running.
+
+## Generic Action Semantics replay
+
+`GET /api/v1/actions/semantics/reports/latest` requires `ledger`, `chainId`, and `transactionId`.
+EVM hashes are normalized to lowercase `0x` plus 64 hexadecimal digits, Bitcoin txids to lowercase
+64-digit hexadecimal, and Solana signatures retain canonical base58. The endpoint returns the
+newest immutable report containing that transaction at the highest Snapshot position. `GET
+/api/v1/actions/semantics/reports/:id` replays one `asr_...` content address.
+
+Both responses carry `{ replayed: true, record }` and perform no provider call. Missing storage is
+HTTP 503 `ACTION_SEMANTICS_REPORT_UNAVAILABLE`; an absent record is HTTP 404
+`ACTION_SEMANTICS_REPORT_NOT_FOUND`; invalid ledger transaction identity is HTTP 400. There is no
+POST route: report construction and persistence are trusted internal adapter responsibilities.
 
 `dataQuality` reports aggregate anchor state, safe per-chain results, configured/observed source
 counts, continuity coverage, Evidence IDs, alerts, and its own `POSTGRES` or `MEMORY` storage state.
