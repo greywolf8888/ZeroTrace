@@ -1006,6 +1006,247 @@ export const EvmControlSurfaceReportSchema = z
   });
 export type EvmControlSurfaceReport = z.infer<typeof EvmControlSurfaceReportSchema>;
 
+export const SolanaPublicKeySchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+
+export const SolanaControlRightTypeSchema = z.enum([
+  'MINT_AUTHORITY',
+  'FREEZE_AUTHORITY',
+  'ACCOUNT_OWNER',
+  'ACCOUNT_CLOSE_AUTHORITY',
+  'MINT_CLOSE_AUTHORITY',
+  'ACCOUNT_DELEGATE',
+  'PERMANENT_DELEGATE',
+  'TRANSFER_FEE_CONFIG_AUTHORITY',
+  'WITHHELD_FEE_AUTHORITY',
+  'CONFIDENTIAL_TRANSFER_AUTHORITY',
+  'INTEREST_RATE_AUTHORITY',
+  'TRANSFER_HOOK_AUTHORITY',
+  'TRANSFER_HOOK_PROGRAM',
+  'METADATA_POINTER_AUTHORITY',
+  'METADATA_UPDATE_AUTHORITY',
+  'GROUP_POINTER_AUTHORITY',
+  'GROUP_UPDATE_AUTHORITY',
+  'GROUP_MEMBER_POINTER_AUTHORITY',
+  'SCALED_UI_AMOUNT_AUTHORITY',
+  'PAUSE_AUTHORITY',
+  'PERMISSIONED_BURN_AUTHORITY',
+  'PROGRAM_UPGRADE_AUTHORITY',
+  'MULTISIG_SIGNER',
+]);
+export type SolanaControlRightType = z.infer<typeof SolanaControlRightTypeSchema>;
+
+export const SolanaAccountKindSchema = z.enum([
+  'SYSTEM_ACCOUNT',
+  'SPL_TOKEN_MINT',
+  'SPL_TOKEN_ACCOUNT',
+  'SPL_TOKEN_MULTISIG',
+  'TOKEN_2022_MINT',
+  'TOKEN_2022_ACCOUNT',
+  'TOKEN_2022_MULTISIG',
+  'UPGRADEABLE_PROGRAM',
+  'UPGRADEABLE_PROGRAM_DATA',
+  'IMMUTABLE_PROGRAM',
+  'OTHER_ACCOUNT',
+]);
+export type SolanaAccountKind = z.infer<typeof SolanaAccountKindSchema>;
+
+export const SolanaTokenProgramSchema = z.enum(['SPL_TOKEN', 'TOKEN_2022']);
+export type SolanaTokenProgram = z.infer<typeof SolanaTokenProgramSchema>;
+
+export const SolanaMintControlSchema = z.object({
+  tokenProgram: SolanaTokenProgramSchema,
+  supply: UnsignedQuantityStringSchema,
+  decimals: z.number().int().min(0).max(255),
+  initialized: z.boolean(),
+  mintAuthority: knowledgeValueSchema(SolanaPublicKeySchema),
+  freezeAuthority: knowledgeValueSchema(SolanaPublicKeySchema),
+});
+export type SolanaMintControl = z.infer<typeof SolanaMintControlSchema>;
+
+export const SolanaTokenAccountControlSchema = z.object({
+  tokenProgram: SolanaTokenProgramSchema,
+  mint: SolanaPublicKeySchema,
+  owner: SolanaPublicKeySchema,
+  amount: UnsignedQuantityStringSchema,
+  state: z.string().min(1),
+  delegate: knowledgeValueSchema(SolanaPublicKeySchema),
+  delegatedAmount: UnsignedQuantityStringSchema,
+  closeAuthority: knowledgeValueSchema(SolanaPublicKeySchema),
+});
+export type SolanaTokenAccountControl = z.infer<typeof SolanaTokenAccountControlSchema>;
+
+export const SolanaMultisigControlSchema = z.object({
+  tokenProgram: SolanaTokenProgramSchema,
+  initialized: z.boolean(),
+  minimumSigners: z.number().int().min(1).max(11),
+  signerCount: z.number().int().min(1).max(11),
+  signers: z.array(SolanaPublicKeySchema).min(1).max(11),
+});
+export type SolanaMultisigControl = z.infer<typeof SolanaMultisigControlSchema>;
+
+export const SolanaTokenExtensionAuthoritySchema = z.object({
+  role: z.string().min(1).max(128),
+  address: SolanaPublicKeySchema,
+});
+export const SolanaTokenExtensionRelatedAddressSchema = z.object({
+  role: z.string().min(1).max(128),
+  address: SolanaPublicKeySchema,
+});
+export const SolanaTokenExtensionControlSchema = z.object({
+  extensionType: z.string().min(1).max(128),
+  authorities: z.array(SolanaTokenExtensionAuthoritySchema),
+  relatedAddresses: z.array(SolanaTokenExtensionRelatedAddressSchema),
+  settings: z.record(z.string(), z.union([z.string(), z.boolean(), z.null()])),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+});
+export type SolanaTokenExtensionControl = z.infer<typeof SolanaTokenExtensionControlSchema>;
+
+export const SolanaProgramControlSchema = z.object({
+  loader: SolanaPublicKeySchema,
+  programDataAddress: knowledgeValueSchema(SolanaPublicKeySchema),
+  upgradeAuthority: knowledgeValueSchema(SolanaPublicKeySchema),
+  immutable: knowledgeValueSchema(z.boolean()),
+  deploymentSlot: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  programDataBytes: knowledgeValueSchema(z.number().int().nonnegative()),
+});
+export type SolanaProgramControl = z.infer<typeof SolanaProgramControlSchema>;
+
+export const SolanaControlRightSchema = z.object({
+  id: z.string().regex(/^cr_[0-9a-f]{24}$/),
+  chainId: z.literal('solana-mainnet'),
+  subject: SolanaPublicKeySchema,
+  controller: SolanaPublicKeySchema,
+  rightType: SolanaControlRightTypeSchema,
+  scope: z.string().min(1),
+  threshold: knowledgeValueSchema(DecimalStringSchema),
+  constraints: z.array(z.string().min(1)),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+  activeFrom: knowledgeValueSchema(IsoDateTimeSchema),
+  activeTo: knowledgeValueSchema(IsoDateTimeSchema),
+});
+export type SolanaControlRight = z.infer<typeof SolanaControlRightSchema>;
+
+export const SolanaControlCoverageDomainSchema = z.enum([
+  'ACCOUNT_STATE',
+  'ACCOUNT_CLASSIFICATION',
+  'TOKEN_BASE_STATE',
+  'MINT_AUTHORITY',
+  'FREEZE_AUTHORITY',
+  'ACCOUNT_OWNER',
+  'ACCOUNT_CLOSE_AUTHORITY',
+  'ACCOUNT_DELEGATE',
+  'MULTISIG_CONFIGURATION',
+  'MINT_CLOSE_AUTHORITY',
+  'PERMANENT_DELEGATE',
+  'TRANSFER_FEE_CONFIG',
+  'WITHHELD_FEE_AUTHORITY',
+  'CONFIDENTIAL_TRANSFER',
+  'DEFAULT_ACCOUNT_STATE',
+  'NON_TRANSFERABLE',
+  'INTEREST_BEARING',
+  'TRANSFER_HOOK',
+  'METADATA_POINTER',
+  'TOKEN_METADATA',
+  'GROUP_POINTER',
+  'TOKEN_GROUP',
+  'GROUP_MEMBER_POINTER',
+  'TOKEN_GROUP_MEMBER',
+  'SCALED_UI_AMOUNT',
+  'PAUSABLE',
+  'PERMISSIONED_BURN',
+  'CPI_GUARD',
+  'MEMO_TRANSFER',
+  'IMMUTABLE_OWNER',
+  'PROGRAM_EXECUTABLE',
+  'PROGRAM_DATA',
+  'PROGRAM_UPGRADE_AUTHORITY',
+  'ANCHOR_IDL',
+  'VERIFIABLE_BUILD',
+  'SQUADS_CONFIGURATION',
+  'AUTHORITY_HISTORY',
+  'CONTROLLER_RECURSION',
+]);
+export type SolanaControlCoverageDomain = z.infer<typeof SolanaControlCoverageDomainSchema>;
+
+export const SolanaControlCoverageSchema = z.object({
+  domain: SolanaControlCoverageDomainSchema,
+  observed: knowledgeValueSchema(z.boolean()),
+  detail: z.string().min(1),
+  evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+});
+export type SolanaControlCoverage = z.infer<typeof SolanaControlCoverageSchema>;
+
+export const SolanaControlSurfaceReportSchema = z
+  .object({
+    ledger: z.literal('SOLANA'),
+    chainId: z.literal('solana-mainnet'),
+    subject: SolanaPublicKeySchema,
+    accountKind: knowledgeValueSchema(SolanaAccountKindSchema),
+    ownerProgram: knowledgeValueSchema(SolanaPublicKeySchema),
+    executable: knowledgeValueSchema(z.boolean()),
+    mint: knowledgeValueSchema(SolanaMintControlSchema),
+    tokenAccount: knowledgeValueSchema(SolanaTokenAccountControlSchema),
+    multisig: knowledgeValueSchema(SolanaMultisigControlSchema),
+    program: knowledgeValueSchema(SolanaProgramControlSchema),
+    extensions: z.array(SolanaTokenExtensionControlSchema),
+    sourceAgreement: knowledgeValueSchema(z.boolean()),
+    sourceIndependence: knowledgeValueSchema(z.boolean()),
+    rights: z.array(SolanaControlRightSchema),
+    coverage: z.array(SolanaControlCoverageSchema),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot?.ledger === 'SOLANA', {
+      message: 'Solana control surface requires a Solana Snapshot.',
+    }),
+    evidence: z.array(EvidenceSchema).min(1),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    if (
+      snapshot?.ledger !== 'SOLANA' ||
+      snapshot.commitment !== 'finalized' ||
+      snapshot.chainId !== value.chainId
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Solana control identity requires one finalized matching Snapshot.',
+      });
+    }
+    const domains = value.coverage.map((item) => item.domain);
+    const expectedDomains = [...SolanaControlCoverageDomainSchema.options].sort();
+    if (
+      domains.length !== expectedDomains.length ||
+      [...new Set(domains)].sort().some((domain, index) => domain !== expectedDomains[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['coverage'],
+        message: 'Coverage must include every Solana control domain exactly once.',
+      });
+    }
+    const evidenceIds = value.evidence.map((item) => item.id).sort();
+    const metadataEvidenceIds = value.metadata.evidenceIds;
+    const nestedEvidenceIds = [
+      ...value.rights.flatMap((right) => right.evidenceIds),
+      ...value.coverage.flatMap((item) => item.evidenceIds),
+      ...value.extensions.flatMap((item) => item.evidenceIds),
+    ];
+    if (
+      metadataEvidenceIds.length !== new Set(metadataEvidenceIds).size ||
+      metadataEvidenceIds.some((id, index) => id !== evidenceIds[index]) ||
+      evidenceIds.length !== metadataEvidenceIds.length ||
+      !metadataEvidenceIds.includes(value.terminalEvidenceId) ||
+      nestedEvidenceIds.some((id) => !metadataEvidenceIds.includes(id))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'evidenceIds'],
+        message: 'Solana control provenance must be canonical and contain all nested Evidence.',
+      });
+    }
+  });
+export type SolanaControlSurfaceReport = z.infer<typeof SolanaControlSurfaceReportSchema>;
+
 export const LaunchLifecycleSchema = z.enum([
   'DISCOVERED',
   'CREATED',

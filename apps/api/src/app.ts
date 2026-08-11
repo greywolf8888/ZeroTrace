@@ -36,6 +36,7 @@ import {
   inspectFlapTokenOriginRestartSafe,
   inspectFlapToken,
   inspectEvmControlSurface,
+  inspectSolanaControlSurface,
   quoteFlapPancakeV2BuyScenarios,
   quoteFlapPancakeV2SellScenarios,
   reconcileFlapPancakeV2Market,
@@ -144,7 +145,7 @@ const ClaimReportQuerySchema = z.object({
   chainId: z.string().regex(/^eip155:[1-9]\d*$/),
 });
 
-const ControlSurfaceParamsSchema = z.object({
+const EvmControlSurfaceParamsSchema = z.object({
   ledger: z
     .string()
     .transform((value) => value.toUpperCase())
@@ -154,13 +155,28 @@ const ControlSurfaceParamsSchema = z.object({
     .trim()
     .regex(/^0x[0-9a-fA-F]{40}$/),
 });
-
-const ControlSurfaceByIdParamsSchema = ControlSurfaceParamsSchema.extend({
-  reportId: z.string().regex(/^ecs_[0-9a-f]{24}$/),
+const SolanaControlSurfaceParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('SOLANA')),
+  subject: z
+    .string()
+    .trim()
+    .regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
 });
+const ControlSurfaceParamsSchema = z.union([
+  EvmControlSurfaceParamsSchema,
+  SolanaControlSurfaceParamsSchema,
+]);
+
+const ControlSurfaceByIdParamsSchema = z.union([
+  EvmControlSurfaceParamsSchema.extend({ reportId: z.string().regex(/^ecs_[0-9a-f]{24}$/) }),
+  SolanaControlSurfaceParamsSchema.extend({ reportId: z.string().regex(/^scs_[0-9a-f]{24}$/) }),
+]);
 
 const ControlSurfaceQuerySchema = z.object({
-  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  chainId: z.union([z.string().regex(/^eip155:[1-9]\d*$/), z.literal('solana-mainnet')]),
 });
 
 const ControlSurfaceInspectSchema = ControlSurfaceQuerySchema.extend({
@@ -170,16 +186,29 @@ const ControlSurfaceInspectSchema = ControlSurfaceQuerySchema.extend({
     .optional(),
 });
 
-const ControlSurfaceListQuerySchema = ControlSurfaceQuerySchema.extend({
-  ledger: z
-    .string()
-    .transform((value) => value.toUpperCase())
-    .pipe(z.literal('EVM')),
-  subject: z
-    .string()
-    .trim()
-    .regex(/^0x[0-9a-fA-F]{40}$/),
-});
+const ControlSurfaceListQuerySchema = z.union([
+  ControlSurfaceQuerySchema.extend({
+    ledger: z
+      .string()
+      .transform((value) => value.toUpperCase())
+      .pipe(z.literal('EVM')),
+    subject: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+  }),
+  z.object({
+    ledger: z
+      .string()
+      .transform((value) => value.toUpperCase())
+      .pipe(z.literal('SOLANA')),
+    chainId: z.literal('solana-mainnet'),
+    subject: z
+      .string()
+      .trim()
+      .regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
+  }),
+]);
 
 const ClaimBurnParamsSchema = z.object({
   ledger: z
@@ -816,6 +845,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['flapLifetimeHeads']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['claimReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -843,6 +873,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         flapLifetimeHeads,
         claimReports,
         controlSurfaces,
+        solanaControlSurfaces,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -850,6 +881,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.flapLifetimeHeads?.health(),
         runtime.claimReports?.health(),
         runtime.controlSurfaces?.health(),
+        runtime.solanaControlSurfaces?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -864,7 +896,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                   ? claimReports
                   : controlSurfaces?.status === 'DOWN'
                     ? controlSurfaces
-                    : evidence;
+                    : solanaControlSurfaces?.status === 'DOWN'
+                      ? solanaControlSurfaces
+                      : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1110,11 +1144,10 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
 
   app.get('/health/ready', { schema: { tags: ['system'] } }, async (_request, reply) => {
     const [providers, storage] = await Promise.all([providerHealth(), storageHealth()]);
+    const serviceReady = storage.status !== 'DOWN';
     const status =
-      providers.some((provider) => provider.status === 'UP') && storage.status !== 'DOWN'
-        ? 'UP'
-        : 'DEGRADED';
-    return reply.code(status === 'UP' ? 200 : 503).send({
+      providers.some((provider) => provider.status === 'UP') && serviceReady ? 'UP' : 'DEGRADED';
+    return reply.code(serviceReady ? 200 : 503).send({
       status,
       service: 'zerotrace-api',
       readOnly: true,
@@ -1338,7 +1371,18 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                 ? 'IMPLEMENTED_STANDARD_SURFACE_SOURCE_PROVIDER_OPTIONAL'
                 : 'IMPLEMENTED_STANDARD_AND_SOURCE_SURFACE',
         detail:
-          'Finalized multi-source EVM inspection covers exact ERC-1167 bytecode, EIP-1967 implementation/admin/beacon slots, ERC-173 owner(), registered Safe owners/threshold, and Snapshot-bound runtime logic code. Optional Sourcify V2 metadata is accepted only on exact bytecode equality; declared ABI mutations stay separate from effective rights. Reports and Evidence replay without providers. Effective custom authorization/history, controller recursion and non-EVM surfaces remain pending.',
+          'Finalized multi-source EVM inspection covers exact ERC-1167 bytecode, EIP-1967 implementation/admin/beacon slots, ERC-173 owner(), registered Safe owners/threshold, and Snapshot-bound runtime logic code. Optional Sourcify V2 metadata is accepted only on exact bytecode equality; declared ABI mutations stay separate from effective rights. Reports and Evidence replay without providers. Effective custom authorization, history, and controller recursion remain pending.',
+      },
+      {
+        id: 'solana-control-surface',
+        status:
+          runtime.solanaControlSurfaces === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : runtime.solanaAdapter === undefined
+              ? 'SOLANA_PROVIDER_REQUIRED'
+              : 'IMPLEMENTED_TOKEN_PROGRAM_AND_LOADER_V3',
+        detail:
+          'One finalized-slot account set is decoded with official SPL Token and Token-2022 codecs, including base authorities, classic multisig thresholds, extension authorities, and loader-v3 ProgramData upgrade authority. Reports replay without providers. Squads configuration, Anchor IDL, verifiable builds, authority history, and recursive controllers remain explicit Unknown.',
       },
       {
         id: 'finalized-historical-ingestion',
@@ -3022,15 +3066,88 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     async (request, reply) => {
       const params = ControlSurfaceParamsSchema.parse(request.params);
       const input = ControlSurfaceInspectSchema.parse(request.body);
-      const repository = runtime.controlSurfaces;
-      if (repository === undefined || runtime.evidenceRepository === undefined) {
+      if (
+        (params.ledger === 'EVM' && !input.chainId.startsWith('eip155:')) ||
+        (params.ledger === 'SOLANA' && input.chainId !== 'solana-mainnet')
+      ) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(
+              request,
+              'INVALID_CHAIN_ID',
+              'Control surface ledger and chain ID do not match.',
+              false,
+            ),
+          );
+      }
+      if (runtime.evidenceRepository === undefined) {
         return reply
           .code(503)
           .send(
             errorResponse(
               request,
               'CONTROL_SURFACE_UNAVAILABLE',
-              'Durable Evidence and EVM control surface storage are required.',
+              'Durable Evidence storage is required for control inspection.',
+              false,
+            ),
+          );
+      }
+      if (params.ledger === 'SOLANA') {
+        if (input.blockNumber !== undefined) {
+          return reply
+            .code(400)
+            .send(
+              errorResponse(
+                request,
+                'HISTORICAL_STATE_UNSUPPORTED',
+                'Solana JSON-RPC does not provide arbitrary historical account state; inspect the finalized live account set instead.',
+                false,
+              ),
+            );
+        }
+        if (runtime.solanaControlSurfaces === undefined) {
+          return reply
+            .code(503)
+            .send(
+              errorResponse(
+                request,
+                'CONTROL_SURFACE_UNAVAILABLE',
+                'Durable Solana control surface storage is required.',
+                false,
+              ),
+            );
+        }
+        if (runtime.solanaAdapter === undefined) {
+          return reply
+            .code(503)
+            .send(
+              errorResponse(
+                request,
+                'PROVIDER_UNCONFIGURED',
+                'A configured finalized Solana provider is required for control inspection.',
+                true,
+              ),
+            );
+        }
+        const report = await inspectSolanaControlSurface({
+          subject: params.subject,
+          adapter: runtime.solanaAdapter,
+          writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+            addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+        });
+        const record = await runtime.solanaControlSurfaces.put(report);
+        return { record };
+      }
+      const repository = runtime.controlSurfaces;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_SURFACE_UNAVAILABLE',
+              'Durable EVM control surface storage is required.',
               false,
             ),
           );
@@ -3076,7 +3193,18 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     async (request, reply) => {
       const params = ControlSurfaceParamsSchema.parse(request.params);
       const query = ControlSurfaceQuerySchema.parse(request.query);
-      const repository = runtime.controlSurfaces;
+      if (
+        (params.ledger === 'EVM' && !query.chainId.startsWith('eip155:')) ||
+        (params.ledger === 'SOLANA' && query.chainId !== 'solana-mainnet')
+      ) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(request, 'INVALID_CHAIN_ID', 'Ledger and chain ID do not match.', false),
+          );
+      }
+      const repository =
+        params.ledger === 'EVM' ? runtime.controlSurfaces : runtime.solanaControlSurfaces;
       if (repository === undefined) {
         return reply
           .code(503)
@@ -3084,12 +3212,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             errorResponse(
               request,
               'CONTROL_SURFACE_UNAVAILABLE',
-              'Durable EVM control surface storage is not configured.',
+              `Durable ${params.ledger} control surface storage is not configured.`,
               false,
             ),
           );
       }
-      const record = await repository.latest(query.chainId, params.subject.toLowerCase());
+      const record =
+        params.ledger === 'EVM'
+          ? await runtime.controlSurfaces?.latest(query.chainId, params.subject.toLowerCase())
+          : await runtime.solanaControlSurfaces?.latest(params.subject);
       if (record === undefined) {
         return reply
           .code(404)
@@ -3097,7 +3228,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             errorResponse(
               request,
               'CONTROL_SURFACE_NOT_FOUND',
-              'No durable EVM control surface report was found for this subject.',
+              `No durable ${params.ledger} control surface report was found for this subject.`,
               false,
             ),
           );
@@ -3112,7 +3243,18 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     async (request, reply) => {
       const params = ControlSurfaceByIdParamsSchema.parse(request.params);
       const query = ControlSurfaceQuerySchema.parse(request.query);
-      const repository = runtime.controlSurfaces;
+      if (
+        (params.ledger === 'EVM' && !query.chainId.startsWith('eip155:')) ||
+        (params.ledger === 'SOLANA' && query.chainId !== 'solana-mainnet')
+      ) {
+        return reply
+          .code(400)
+          .send(
+            errorResponse(request, 'INVALID_CHAIN_ID', 'Ledger and chain ID do not match.', false),
+          );
+      }
+      const repository =
+        params.ledger === 'EVM' ? runtime.controlSurfaces : runtime.solanaControlSurfaces;
       if (repository === undefined) {
         return reply
           .code(503)
@@ -3120,16 +3262,19 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             errorResponse(
               request,
               'CONTROL_SURFACE_UNAVAILABLE',
-              'Durable EVM control surface storage is not configured.',
+              `Durable ${params.ledger} control surface storage is not configured.`,
               false,
             ),
           );
       }
-      const record = await repository.get(params.reportId);
+      const record =
+        params.ledger === 'EVM'
+          ? await runtime.controlSurfaces?.get(params.reportId)
+          : await runtime.solanaControlSurfaces?.get(params.reportId);
       if (
         record === undefined ||
         record.chainId !== query.chainId ||
-        record.subject !== params.subject.toLowerCase()
+        record.subject !== (params.ledger === 'EVM' ? params.subject.toLowerCase() : params.subject)
       ) {
         return reply
           .code(404)
@@ -3137,7 +3282,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             errorResponse(
               request,
               'CONTROL_SURFACE_NOT_FOUND',
-              'The requested durable EVM control surface report was not found.',
+              `The requested durable ${params.ledger} control surface report was not found.`,
               false,
             ),
           );
@@ -3151,7 +3296,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     { schema: { tags: ['intelligence'] } },
     async (request, reply) => {
       const query = ControlSurfaceListQuerySchema.parse(request.query);
-      const repository = runtime.controlSurfaces;
+      const repository =
+        query.ledger === 'EVM' ? runtime.controlSurfaces : runtime.solanaControlSurfaces;
       if (repository === undefined) {
         return reply
           .code(503)
@@ -3159,12 +3305,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             errorResponse(
               request,
               'CONTROL_SURFACE_UNAVAILABLE',
-              'Durable EVM control surface storage is not configured.',
+              `Durable ${query.ledger} control surface storage is not configured.`,
               false,
             ),
           );
       }
-      const record = await repository.latest(query.chainId, query.subject.toLowerCase());
+      const record =
+        query.ledger === 'EVM'
+          ? await runtime.controlSurfaces?.latest(query.chainId, query.subject.toLowerCase())
+          : await runtime.solanaControlSurfaces?.latest(query.subject);
       return { records: record === undefined ? [] : [record] };
     },
   );

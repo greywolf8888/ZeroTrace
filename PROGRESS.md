@@ -9,20 +9,20 @@ completed feature.
 
 ## Executive status
 
-| Measure                          | Current state                                                                                                         |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Terminal architecture completion | **20% estimated**                                                                                                     |
-| Runnable foundation              | **Yes; clean Docker build/start verified**                                                                            |
-| Production acceptance            | **No**                                                                                                                |
-| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                        |
-| Unit tests                       | **425 passing across 62 files**                                                                                       |
-| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                            |
-| Integration tests                | **60 environment-free plus 23 real-storage passing; 83 with PostgreSQL, ClickHouse and object store enabled**         |
-| Real-browser E2E                 | **24 passing: Chromium desktop and Pixel 7**                                                                          |
-| Remote CI                        | **Pass on EVM-control commit `6f0efcf`: CI, 24 Chromium flows, production images, and CodeQL**                        |
-| Coverage                         | **Current local: 82.85% statements / 76.97% branches / 91.99% functions / 83.99% lines**                              |
-| Real-chain validation            | Four-chain anchors/raw ingestion, Flap history/origin, FFT market/supply and point-in-time EVM control surface passed |
-| Durable evidence/history         | Raw execution/state, semantic checkpoints, Flap history/lifetime, Claim and EVM Control Surface Reports wired         |
+| Measure                          | Current state                                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Terminal architecture completion | **20% estimated**                                                                                             |
+| Runnable foundation              | **Yes; clean Docker build/start verified**                                                                    |
+| Production acceptance            | **No**                                                                                                        |
+| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                |
+| Unit tests                       | **434 passing across 64 files**                                                                               |
+| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                    |
+| Integration tests                | **63 environment-free plus 24 real-storage passing; 87 with PostgreSQL, ClickHouse and object store enabled** |
+| Real-browser E2E                 | **26 passing: Chromium desktop and Pixel 7**                                                                  |
+| Remote CI                        | **Latest recorded exact-SHA pass: `921083b`; every new batch is gated on Draft PR #5 before merge**           |
+| Coverage                         | **Current local: 83.21% statements / 77.81% branches / 93.35% functions / 84.39% lines**                      |
+| Real-chain validation            | Four-chain raw/anchors, FFT EVM control, and three point-in-time Solana control subjects passed               |
+| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim and EVM/Solana Control Surface Reports wired                     |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
@@ -33,24 +33,24 @@ The only allowed status vocabulary in this ledger is:
 `IMPLEMENTED_AND_VERIFIED`, `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`,
 `PARTIALLY_IMPLEMENTED`, `BLOCKED_EXTERNAL`, and `NOT_IMPLEMENTED`.
 
-| Architecture domain                  | Status                                      | Current boundary                                                                                                                                                                                |
-| ------------------------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed                                                                                                                  |
-| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass and endpoint comparison work; forced outage drill pending                                                                                                   |
-| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                                                                                            |
-| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | height/hash/previous-hash Esplora anchor; public best-chain smoke passed                                                                                                                        |
-| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor and minimum-context account smoke passed                                                                                                                           |
-| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity and generic semantic checkpoints work; general scheduling and rollback/replay remain                                                                             |
-| Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                                                                                    |
-| Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; scoped Alchemy/BNB market reconciliation passed, while other domains and entity calibration remain                                         |
-| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline plus exact structural Precision/False-Merge gates work; real-world calibration and temporal graph are absent                                                              |
-| Control Rights                       | `PARTIALLY_IMPLEMENTED`                     | finalized ERC-1167/EIP-1967/ERC-173/registered-Safe standard surface, immutable reports and UI work; custom roles, history, recursive controllers, Bitcoin and Solana remain                    |
-| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; full FFT lifecycle and other platforms remain             |
-| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios and two-operator market reconciliation work; fork execution, additional routes, gas and capacity remain                  |
-| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                                                                        |
-| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, event promotion and bounded all-block supply continuity work; complete backfill, continuous scheduling and terminal FFT remain |
-| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger, Evidence, health, claim/burn review, migrated-market scenarios and multi-source discrepancy panels work; terminal investigation remains incomplete                                |
-| Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                                   |
+| Architecture domain                  | Status                                      | Current boundary                                                                                                                                                                                                       |
+| ------------------------------------ | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed                                                                                                                                         |
+| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass and endpoint comparison work; forced outage drill pending                                                                                                                          |
+| EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                                                                                                                   |
+| Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | height/hash/previous-hash Esplora anchor; public best-chain smoke passed                                                                                                                                               |
+| Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor and minimum-context account smoke passed                                                                                                                                                  |
+| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity and generic semantic checkpoints work; general scheduling and rollback/replay remain                                                                                                    |
+| Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus raw artifacts work; terminal graph is incomplete                                                                                                                           |
+| Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; scoped Alchemy/BNB market reconciliation passed, while other domains and entity calibration remain                                                                |
+| Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | conservative baseline plus exact structural Precision/False-Merge gates work; real-world calibration and temporal graph are absent                                                                                     |
+| Control Rights                       | `PARTIALLY_IMPLEMENTED`                     | finalized EVM standards/source and Solana SPL Token/Token-2022/loader-v3 point-in-time surfaces, immutable reports and UI work; effective custom roles, history, recursion, Bitcoin and Solana PDA/Squads depth remain |
+| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; full FFT lifecycle and other platforms remain                                    |
+| Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios and two-operator market reconciliation work; fork execution, additional routes, gas and capacity remain                                         |
+| Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race only                                                                                                                                                                               |
+| Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Declaration review, allocation, flow/custody, immutable reports, event promotion and bounded all-block supply continuity work; complete backfill, continuous scheduling and terminal FFT remain                        |
+| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger, Evidence, EVM/Solana Control Rights, health, claim/burn review, migrated-market scenarios and discrepancy panels work; terminal investigation remains incomplete                                         |
+| Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                                                          |
 
 ## Completed
 
@@ -277,6 +277,29 @@ The only allowed status vocabulary in this ledger is:
   exactly matched Sourcify contract `FlapTaxTokenV3` compiled with Solidity 0.8.24. The ABI declares
   owner-transfer and migration mutation surfaces, but ERC-173 `owner()` returned the zero address,
   no direct right was emitted, and 17 of 25 coverage domains correctly remain Unknown.
+
+### Solana control-right foundation
+
+- finalized Solana account-set reads use one common context slot and reject partial, duplicate,
+  malformed, reordered or slot-divergent responses before analysis;
+- official generated SPL Token and Token-2022 decoders cover classic mint/account/multisig state and
+  Token-2022 extension authorities, while the Agave upgradeable-loader state layout binds Program to
+  ProgramData and its current upgrade authority;
+- one bounded discovery read is followed by a stable, atomic re-read of the subject and every
+  discovered control account. A changing candidate set fails closed instead of mixing slots;
+- direct authorities and multisig thresholds carry nested Evidence, constraints and confidence. A
+  disabled option is explicit Not Applicable; unimplemented Squads, PDA recursion, IDL/build
+  verification and history domains remain typed Unknown;
+- the complete 38-domain coverage matrix, account/extension state and terminal derivation graph are
+  stored in immutable content-addressed PostgreSQL reports and replay through ledger-specific API/UI
+  paths without a provider;
+- bounded public-mainnet validation captured and replayed three finalized reports: wrapped SOL mint
+  `scs_4017675e59dc410595c4a75f`, native Token-2022 mint
+  `scs_d849ea6d4a182572a3e0cda5`, and the Token-2022 upgradeable program
+  `scs_e0fd07fafc43663af24144fb`. The program report identified ProgramData
+  `DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY` and upgrade authority
+  `AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz`; these are point-in-time observations, not an
+  assertion about historical or effective governance.
 
 ### Flap BSC inspection foundation
 
@@ -711,7 +734,9 @@ The only allowed status vocabulary in this ledger is:
 
 - transaction/instruction semantic normalization, Address Lookup Tables, loaded-address resolution,
   and decoded inner-instruction effects;
-- SPL Token/Token-2022 extension decoding, authorities, PDAs and multisig control;
+- authority/controller history, PDA and Squads recursion, IDL/verifiable-build provenance, other
+  loader families and independent-source reconciliation beyond the implemented finalized
+  SPL Token/Token-2022/multisig/upgradeable-loader point-in-time surface;
 - Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot and AMM lifecycle adapters;
 - Geyser/Yellowstone or equivalent archive-grade ingestion.
 
@@ -737,6 +762,7 @@ The only allowed status vocabulary in this ledger is:
 | Solana current state   | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot and account smoke passed; second continuity probe unavailable, archive pending                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Entity baseline        | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Test-only structural golden passes exact Precision/False-Merge gates; Snapshot/Evidence-backed real-world labels and calibration remain pending                                                                                                                                                                                                                                                                                                                                                                                                             |
 | EVM control rights     | Independent standard/source reads plus effective custom-role/history/controller reconstruction                            | Alchemy and BNB Chain agreed on FFT proxy and implementation logic at one finalized Snapshot; Sourcify V2 exact-matched `FlapTaxTokenV3`, and the UI separates declared owner/migration functions from current rights. Effective custom token controllers, role/event history, authorization reachability and non-EVM surfaces remain pending                                                                                                                                                                                                               |
+| Solana control rights  | Finalized atomic account-set decode plus dedicated archive and independent-source history                                 | Wrapped SOL mint, native Token-2022 mint and Token-2022 upgradeable program reports passed and replayed from PostgreSQL with nested Evidence. Live extension-bearing mint, Squads/PDA recursion, history, IDL/build verification, other loaders and independent-source/archive acceptance remain pending                                                                                                                                                                                                                                                    |
 | Launchpad decoders     | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction and the named FFT migrated Pancake V2 point-in-time market passed; complete FFT migration history, forced real reorg and other platforms remain pending                                                                                                                                                                                                                                                                                                                                             |
 | Flap FFT terminal run  | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Transfer/Safe, buy/exit, durable burn promotion, 37-check market/RV reconciliation, four-transition supply continuity, and scoped EVM proxy/source control passed. FFT is an ERC-1167 proxy with exact-verified `FlapTaxTokenV3` logic and zero-valued ERC-173 owner; declared owner/migration functions are not treated as current rights, and 17 authorization/control domains remain Unknown. Official wallet attribution, effective authorization/history, full-history supply, fork settlement and entity calibration still gate a terminal conclusion |
 | RV                     | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels, Portal preview, named FFT buy/exit Router/model checks and two-operator same-block reconciliation pass; actual fork settlement, additional routes, gas/executable capacity and history remain pending                                                                                                                                                                                                                                                                                                                                |
@@ -752,25 +778,25 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                                 | Scope                                                                                                                                  |
-| ------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Reproducible install/build     | Pass                                          | locked npm install in production container; all packages/API/web                                                                       |
-| Unit tests                     | 425 pass                                      | 62 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                           |
-| Integration tests              | 60 environment-free plus 23 real-storage pass | 83 total with PostgreSQL, ClickHouse and object store; immutable control-surface, supply replay and multi-source market/RV guards pass |
-| Model evaluation tests         | 1 pass                                        | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                         |
-| Restart regression             | Pass                                          | same-anchor recapture persists across repository/API restart without Snapshot collision                                                |
-| Coverage gate                  | Pass                                          | current local: 82.85% statements, 76.97% branches, 91.99% functions, 83.99% lines on 485 tests; 23 opt-in durable tests skipped        |
-| Chromium E2E                   | 24 pass                                       | desktop and Pixel 7 include EVM Control Rights, supply continuity, multi-source market/RV, burn, Claim Declaration/Report and Unknown  |
-| Formatting / ESLint / types    | Pass                                          | full repository                                                                                                                        |
-| Dependency vulnerability audit | Pass                                          | 0 vulnerabilities across the complete npm dependency graph                                                                             |
-| Dependency license allowlist   | Pass                                          | production dependency graph                                                                                                            |
-| CycloneDX SBOM                 | Pass                                          | npm dependency graph                                                                                                                   |
-| Compose model                  | Pass                                          | rendered default topology                                                                                                              |
-| Docker image build/start       | Pass                                          | API, web and all ingest/semantic worker production targets built; rebuilt API/Web are healthy and read-only                            |
-| Database bootstrap             | Pass                                          | fresh bootstrap passed; current persistent Compose volume was upgraded non-destructively through migration 013                         |
-| Runtime/browser smoke          | Pass                                          | rebuilt keyless API/Web healthy; immutable FFT control report/result hash/terminal Evidence replay passed                              |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines plus scoped Alchemy/BNB market reconciliation passed; archive/forced-reorg scope pending                        |
-| Remote CI                      | Pass on EVM-control commit `6f0efcf`          | CI/CodeQL green; full matrix, structural model gate, 24 Chromium flows and all six production targets                                  |
+| Check                          | Latest result                                 | Scope                                                                                                                         |
+| ------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible install/build     | Pass                                          | locked npm install in production container; all packages/API/web                                                              |
+| Unit tests                     | 434 pass                                      | 64 files across schemas, adapters, claim auditing, data quality, ingestion, storage, workers and API runtime                  |
+| Integration tests              | 63 environment-free plus 24 real-storage pass | 87 total with PostgreSQL, ClickHouse and object store; immutable EVM/Solana control, supply replay and market/RV guards pass  |
+| Model evaluation tests         | 1 pass                                        | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                |
+| Restart regression             | Pass                                          | same-anchor recapture persists across repository/API restart without Snapshot collision                                       |
+| Coverage gate                  | Pass                                          | current local: 83.21% statements, 77.81% branches, 93.35% functions, 84.39% lines on all 521 tests including 24 durable tests |
+| Chromium E2E                   | 26 pass                                       | desktop and Pixel 7 include EVM/Solana Control Rights, supply continuity, market/RV, burn, Claim reports and Unknown          |
+| Formatting / ESLint / types    | Pass                                          | full repository                                                                                                               |
+| Dependency vulnerability audit | Pass                                          | 0 vulnerabilities across the complete npm dependency graph                                                                    |
+| Dependency license allowlist   | Pass                                          | production dependency graph                                                                                                   |
+| CycloneDX SBOM                 | Pass                                          | npm dependency graph                                                                                                          |
+| Compose model                  | Pass                                          | rendered default topology                                                                                                     |
+| Docker image build/start       | Pass                                          | API, web and all ingest/semantic worker production targets built; rebuilt API/Web are healthy and read-only                   |
+| Database bootstrap             | Pass                                          | fresh bootstrap passed; current persistent Compose volume upgraded non-destructively through migration 014                    |
+| Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web; immutable FFT and three Solana control reports replayed provider-free                              |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines, scoped Alchemy/BNB market and three Solana control subjects passed; archive/forced-reorg pending      |
+| Remote CI                      | Latest recorded exact-SHA pass `921083b`      | CI/CodeQL green; every new batch must pass the existing Draft PR #5 checks before merge                                       |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

@@ -27,6 +27,7 @@ import {
   ClickHouseRawFactRepository,
   PostgresClaimReportRepository,
   PostgresEvmControlSurfaceRepository,
+  PostgresSolanaControlSurfaceRepository,
   DataQualityStorageError,
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
@@ -60,6 +61,7 @@ export interface AppRuntime {
   flapLifetimeHeads?: PostgresFlapLifetimeHeadRepository;
   claimReports?: PostgresClaimReportRepository;
   controlSurfaces?: PostgresEvmControlSurfaceRepository;
+  solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -485,6 +487,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const solanaControlSurfaces =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresSolanaControlSurfaceRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -509,6 +520,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       flapLifetimeHeads?.close(),
       claimReports?.close(),
       controlSurfaces?.close(),
+      solanaControlSurfaces?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -537,6 +549,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(flapLifetimeHeads === undefined ? {} : { flapLifetimeHeads }),
     ...(claimReports === undefined ? {} : { claimReports }),
     ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
+    ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

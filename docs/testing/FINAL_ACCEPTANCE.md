@@ -122,8 +122,10 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
         independent-source FFT acceptance
   - [x] Same-Snapshot recursive EVM logic bytecode plus exact Sourcify V2 provenance, with verified
         ABI declarations separated from effective rights and legacy report replay retained
+  - [x] Finalized one-slot Solana SPL Token/Token-2022/multisig/upgradeable-loader control surface,
+        immutable Evidence-bound reports, API/UI, deterministic tests and scoped mainnet validation
   - [ ] Effective custom EVM authorization/history and controller recursion, Bitcoin custody semantics,
-        Solana authorities/PDAs/multisigs, and cross-ledger temporal validity
+        Solana PDA/Squads/history/build provenance and cross-ledger temporal validity
 - [ ] Versioned launchpad and market lifecycle adapters
   - [x] Deterministic Flap BSC fixed-block Portal V8Safe/V6/V5 inspection, negative Evidence, API and UI
   - [x] Deterministic caller-supplied Flap creation/configuration/migration transaction decoding,
@@ -240,6 +242,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Named finalized raw-transaction capture and terminal replay on four SQD datasets
 - [x] Named finalized ledger-record capture, three-store reverse read, and terminal replay on four SQD datasets
 - [x] Named EVM execution/state and Solana balance-table capture with integrity-checked artifact replay
+- [x] Scoped finalized Solana control-surface validation for classic SPL mint, Token-2022 mint and
+      Token-2022 upgradeable Program/ProgramData, followed by provider-free PostgreSQL replay
 - [ ] Ethereum archive/current-state fixture suite
 - [ ] BNB Smart Chain archive/current-state fixture suite
 - [ ] Bitcoin Core plus Esplora fixture suite

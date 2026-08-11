@@ -4,11 +4,13 @@ Inventory date: **2026-08-11**
 
 The current-state Snapshot, request-provenance, anchor reconciliation, 2026-08-11 BSC
 operator-attestation/market-reconciliation, EIP-1898 all-block supply continuity, and EVM
-ERC-1167/ERC-173/ERC-1967/Safe control-surface and Sourcify V2 exact-source work use the existing clean HTTP adapters, pinned
-`viem`, `pg` client, and Node.js built-ins; they add no third-party runtime package or copied
-upstream code. Safe v1.3.0 remains an LGPL-3.0-only reference boundary with clean ABI-compatible
-reads; the EIP specifications are CC0 references. Sourcify is consumed only as a hosted read API;
-no Sourcify server package or source is copied or linked.
+ERC-1167/ERC-173/ERC-1967/Safe control-surface and Sourcify V2 exact-source work use clean HTTP
+adapters, pinned `viem`, `pg`, and Node.js built-ins. Solana control-state decoding uses the official
+Codama-generated SPL Token, Token-2022, and loader-v3 interface packages listed below; no validator,
+indexer, wallet, signing, or transaction package is linked. Safe v1.3.0 remains an LGPL-3.0-only
+reference boundary with clean ABI-compatible reads; the EIP specifications are CC0 references.
+Sourcify is consumed only as a hosted read API; no Sourcify server package or source is copied or
+linked.
 `@zerotrace/data-quality` is an internal workspace package reused by the platform adapter.
 
 Direct versions are pinned in manifests or container configuration. Transitive npm components are
@@ -29,6 +31,9 @@ captured by `npm run sbom` in CycloneDX JSON and checked by `npm run license:che
 | `viem`                       | 2.55.11 | EVM checksum/address normalization only       | MIT          | [wevm/viem](https://github.com/wevm/viem)                                                         |
 | `bitcoin-address-validation` |   3.0.0 | Bitcoin network/type/checksum validation      | MIT          | [ruigomeseu/bitcoin-address-validation](https://github.com/ruigomeseu/bitcoin-address-validation) |
 | `bs58`                       |   6.0.0 | lossless Solana public-key/signature decoding | MIT          | [cryptocoinjs/bs58](https://github.com/cryptocoinjs/bs58)                                         |
+| `@solana-program/token`      |  0.15.0 | official classic SPL Token account decoders   | Apache-2.0   | [solana-program/token](https://github.com/solana-program/token)                                   |
+| `@solana-program/token-2022` |  0.14.1 | official Token-2022 base/TLV decoders         | Apache-2.0   | [solana-program/token-2022](https://github.com/solana-program/token-2022)                         |
+| `@solana-program/loader-v3`  |   0.5.0 | official loader-v3 program identity/interface | MIT          | [solana-program/loader-v3](https://github.com/solana-program/loader-v3)                           |
 | `pg`                         |  8.23.0 | pooled, parameterized PostgreSQL access       | MIT          | [brianc/node-postgres](https://github.com/brianc/node-postgres)                                   |
 | `@clickhouse/client`         |  1.23.1 | parameterized ClickHouse Raw Fact access      | Apache-2.0   | [ClickHouse/clickhouse-js](https://github.com/ClickHouse/clickhouse-js)                           |
 | `minio`                      |   8.0.7 | S3-compatible versioned artifact client       | Apache-2.0   | [minio/minio-js](https://github.com/minio/minio-js)                                               |

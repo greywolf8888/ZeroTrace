@@ -88,6 +88,9 @@ The current foundation includes:
   typed Unknown;
 - immutable PostgreSQL control-surface reports with Snapshot/source/terminal Evidence constraints,
   provider-free latest/exact replay, and a responsive Control Rights workspace;
+- finalized one-slot Solana control-surface inspection for classic SPL Token, Token-2022 extensions
+  and multisigs, plus upgradeable Program/ProgramData authority state, with a complete 38-domain
+  Known/Unknown coverage matrix and immutable provider-free report replay;
 - request-scoped provider provenance across failover pools, with dynamic head/tip/slot anchors
   explicitly bypassing stored TTL responses;
 - common-position chain-anchor reconciliation across configured endpoints, with explicit
@@ -199,9 +202,9 @@ distributed workflows remain open work. Read
 | ------------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | EVM                | Ethereum-compatible state, traces, token flows, proxies, multisigs, launchpads, DEX liquidity | Snapshot-bound queries, finalized raw execution/state, strict ERC-1167/EIP-1967/ERC-173/registered-Safe reads, recursive logic-code hashing, and Sourcify V2 exact-source binding; effective custom-role controllers, validity history and archive/semantic validation pending                                            |
 | Bitcoin            | UTXO history, spend graph, CoinJoin-aware entity evidence, inscriptions/runes where relevant  | Snapshot-bound block/transaction/outpoint queries, continuity checks and finalized raw transactions/I/O; Core/spend semantics pending                                                                                                                                                                                     |
-| Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound block/transaction queries, anchor continuity and finalized raw execution/balances; archive/semantic decoding pending                                                                                                                                                                                       |
+| Solana             | Accounts, Token/Token-2022, instruction/CPI history, authorities, PDAs, launchpads and AMMs   | Snapshot-bound queries/raw execution plus finalized atomic SPL Token/Token-2022/multisig/upgradeable-loader authority reports; PDA/Squads recursion, authority history, IDL/build provenance, other loaders and archive semantics pending                                                                                 |
 | Entity Resolution  | controller, coordination, and independence probabilities with evidence                        | Deterministic baseline plus executable structural Precision/False-Merge gate implemented; temporal graph and Snapshot/Evidence-backed real-world calibration corpus pending                                                                                                                                               |
-| Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard reads, recursive logic-bytecode/source provenance, declared-capability separation and desktop/mobile replay implemented; effective custom roles, controller identity/history, Bitcoin custody and Solana authority/PDA surfaces pending                                                            |
+| Control Rights     | point-in-time and historical authority, proxy, multisig, role and revocation facts            | Immutable EVM standard/source and Solana token/loader point-in-time reads plus desktop/mobile replay implemented; effective custom roles, controller history/recursion, Bitcoin custody and Solana PDA/Squads depth pending                                                                                               |
 | Launchpad          | Flap, Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme, FomoWell            | Flap state, exact transaction decode, durable origin/history, accepted heads/rollback, provider-free replay, and Pancake V2 migrated-market inspection work; forced real reorg, terminal FFT and other adapters pending                                                                                                   |
 | Realizable Value   | exact route quotes, tax/fee/gas, impact, capacity, shared-liquidity exit order                | Constant-product/exit-race kernels, Flap Portal preview, and verified Pancake V2 buy/exit-size models work; pinned-fork execution, additional routes, gas, executable capacity and multi-route RV remain                                                                                                                  |
 | Claim Verification | public tax/burn/LP/treasury/pension claims compared with replayable chain actions             | Evidence-bound statement compiler, allocation/action kernel, Transfer/Safe observation, event-candidate promotion, bounded all-block supply continuity, live FFT observations and Claim Report replay work; complete historical backfill, continuous scheduling, official attribution and terminal FFT acceptance pending |
@@ -386,6 +389,21 @@ when its exact runtime bytecode equals the logic bytecode returned by every RPC 
 selected finalized Snapshot. Matching ABI mutation functions are labeled `DECLARED_ONLY`; they do
 not become current rights without controller Evidence. Once captured, latest/exact report routes and
 the Control Rights UI replay PostgreSQL without contacting a provider.
+
+Inspect the current finalized Solana account-set control surface with:
+
+```bash
+curl -sS -X POST \
+  http://localhost:8080/api/v1/control-rights/SOLANA/So11111111111111111111111111111111111111112/inspect \
+  -H 'content-type: application/json' \
+  -d '{"chainId":"solana:mainnet"}'
+```
+
+The Solana path atomically re-reads the subject and discovered control accounts at one finalized
+slot, decodes classic SPL Token, Token-2022 and upgradeable-loader state, and persists nested
+Evidence. Public JSON-RPC does not provide arbitrary historical account state, so this endpoint
+rejects a caller-supplied historical slot instead of pretending the current account state existed
+there. Exact and latest persisted report routes remain provider-free.
 
 Temporal is opt-in with `docker compose --profile full up --build`; Apache AGE is opt-in with
 `--profile graph`.
@@ -586,7 +604,8 @@ This roadmap describes implementation progress rather than product marketing pha
 - [ ] Build temporal entity graph, real-world calibration datasets, analyst overrides and auditable recomputation
 - [x] Add finalized ERC-1167/EIP-1967/ERC-173/registered-Safe EVM control-surface reports and UI
 - [x] Bind recursive EVM logic bytecode to exact Sourcify V2 metadata and separate declared mutation surfaces from effective rights
-- [ ] Extend control rights to effective custom EVM roles/history and controller recursion, Bitcoin custody semantics, Solana authorities and PDAs
+- [x] Add finalized one-slot SPL Token/Token-2022/multisig/upgradeable-loader authority reports and UI
+- [ ] Extend control rights to effective custom EVM roles/history and controller recursion, Bitcoin custody, and Solana PDA/Squads/history/build provenance
 - [ ] Complete launch/market lifecycle plus multi-route sell RV, tax execution, gas, capacity and fork settlement
 - [x] Bind same-Snapshot claim-address observations to immutable, provider-free API/UI report replay
 - [ ] Backfill complete supply history and add continuous capture scheduling, reviewed-draft promotion and terminal FFT audit

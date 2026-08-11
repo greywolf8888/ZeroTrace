@@ -12,11 +12,15 @@
     }
   },
   "dependencies": {
+    "@solana-program/loader-v3": "^0.5.0",
+    "@solana-program/token": "^0.15.0",
+    "@solana-program/token-2022": "^0.14.1",
     "@zerotrace/chain-adapters": "*",
     "@zerotrace/claim-audit": "*",
     "@zerotrace/data-quality": "*",
     "@zerotrace/evidence": "*",
     "@zerotrace/schemas": "*",
+    "bs58": "^6.0.0",
     "viem": "2.55.11"
   }
 }

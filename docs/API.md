@@ -159,12 +159,18 @@ coverage-incomplete Actual values remain typed Unknown. Counterparties and outfl
 dividend, burn, controller, owner, withdrawal right or terminal action. Unconfigured storage returns
 `503`; an absent or identity-mismatched report returns `404` rather than a synthetic zero.
 
-### EVM control-surface inspection and replay
+### Control-surface inspection and replay
 
 - `POST /api/v1/control-rights/EVM/:subject/inspect`
 - `GET /api/v1/control-rights/EVM/:subject/reports/latest?chainId=eip155:56`
 - `GET /api/v1/control-rights/EVM/:subject/reports/:reportId?chainId=eip155:56`
 - `GET /api/v1/control-rights?ledger=EVM&chainId=eip155:56&subject=:subject`
+- `POST /api/v1/control-rights/SOLANA/:subject/inspect`
+- `GET /api/v1/control-rights/SOLANA/:subject/reports/latest?chainId=solana:mainnet`
+- `GET /api/v1/control-rights/SOLANA/:subject/reports/:reportId?chainId=solana:mainnet`
+- `GET /api/v1/control-rights?ledger=SOLANA&chainId=solana:mainnet&subject=:subject`
+
+#### EVM
 
 The inspection request body requires `chainId` and accepts an optional decimal `blockNumber`.
 Inspection requires a configured finalized EVM provider and durable PostgreSQL Evidence/report
@@ -189,6 +195,20 @@ Evidence, and exact derivation edges. Source disagreement fails closed and store
 independence is separately attested from the versioned official operator registry; two hostnames
 owned by one operator never count as independent. Latest, exact-ID, and list reads replay PostgreSQL
 only and do not contact providers.
+
+#### Solana
+
+Solana inspection accepts only `chainId=solana:mainnet` and the current finalized state. A caller-
+supplied historical slot returns `HISTORICAL_STATE_UNSUPPORTED` because standard JSON-RPC cannot
+prove arbitrary historical account state. The adapter discovers candidate control accounts, then
+requires the subject and all candidates to stabilize in a bounded same-context-slot re-read.
+
+The report decodes classic SPL Token mint/account/multisig state, Token-2022 base and extension
+authorities, and upgradeable-loader Program/ProgramData authority state. Its fixed 38-domain matrix
+preserves disabled authorities as Not Applicable and unimplemented Squads, PDA recursion,
+IDL/verifiable-build provenance, history and independent-source agreement as Unknown. Successful
+inspection stores an immutable `scs_...` report with nested Evidence and exact derivation edges.
+Latest, exact-ID and list routes replay PostgreSQL without contacting Solana RPC.
 
 ### Typed ledger records
 

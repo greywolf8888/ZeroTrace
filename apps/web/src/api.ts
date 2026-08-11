@@ -1014,6 +1014,95 @@ export interface EvmControlSurfaceResponse {
   };
 }
 
+export interface SolanaControlSurfaceResponse {
+  record: {
+    id: string;
+    chainId: 'solana-mainnet';
+    subject: string;
+    snapshotSlot: string;
+    snapshotHash: string;
+    resultHash: string;
+    terminalEvidenceId: string;
+    evidenceIds: string[];
+    sourceSet: string[];
+    modelVersion: string;
+    capturedAt: string;
+    createdAt: string;
+    report: {
+      ledger: 'SOLANA';
+      chainId: 'solana-mainnet';
+      subject: string;
+      accountKind: KnowledgeValue<string>;
+      ownerProgram: KnowledgeValue<string>;
+      executable: KnowledgeValue<boolean>;
+      mint: KnowledgeValue<{
+        tokenProgram: 'SPL_TOKEN' | 'TOKEN_2022';
+        supply: string;
+        decimals: number;
+        initialized: boolean;
+        mintAuthority: KnowledgeValue<string>;
+        freezeAuthority: KnowledgeValue<string>;
+      }>;
+      tokenAccount: KnowledgeValue<{
+        tokenProgram: 'SPL_TOKEN' | 'TOKEN_2022';
+        mint: string;
+        owner: string;
+        amount: string;
+        state: string;
+        delegate: KnowledgeValue<string>;
+        delegatedAmount: string;
+        closeAuthority: KnowledgeValue<string>;
+      }>;
+      multisig: KnowledgeValue<{
+        tokenProgram: 'SPL_TOKEN' | 'TOKEN_2022';
+        initialized: boolean;
+        minimumSigners: number;
+        signerCount: number;
+        signers: string[];
+      }>;
+      program: KnowledgeValue<{
+        loader: string;
+        programDataAddress: KnowledgeValue<string>;
+        upgradeAuthority: KnowledgeValue<string>;
+        immutable: KnowledgeValue<boolean>;
+        deploymentSlot: KnowledgeValue<string>;
+        programDataBytes: KnowledgeValue<number>;
+      }>;
+      extensions: Array<{
+        extensionType: string;
+        authorities: Array<{ role: string; address: string }>;
+        relatedAddresses: Array<{ role: string; address: string }>;
+        settings: Record<string, string | boolean | null>;
+        evidenceIds: string[];
+      }>;
+      sourceAgreement: KnowledgeValue<boolean>;
+      sourceIndependence: KnowledgeValue<boolean>;
+      rights: Array<{
+        id: string;
+        chainId: 'solana-mainnet';
+        subject: string;
+        controller: string;
+        rightType: string;
+        scope: string;
+        threshold: KnowledgeValue<string>;
+        constraints: string[];
+        evidenceIds: string[];
+        activeFrom: KnowledgeValue<string>;
+        activeTo: KnowledgeValue<string>;
+      }>;
+      coverage: Array<{
+        domain: string;
+        observed: KnowledgeValue<boolean>;
+        detail: string;
+        evidenceIds: string[];
+      }>;
+      terminalEvidenceId: string;
+      metadata: AnalysisMetadata;
+      evidence: EvidenceRecord[];
+    };
+  };
+}
+
 interface ClaimFlowAggregate {
   observedAmount: string;
   actualAmount: KnowledgeValue<string>;
@@ -1311,6 +1400,20 @@ export const api = {
     const parameters = new URLSearchParams({ chainId });
     return requestJson<EvmControlSurfaceResponse>(
       `/api/v1/control-rights/EVM/${encodeURIComponent(subject)}/reports/latest?${parameters.toString()}`,
+    );
+  },
+  inspectSolanaControlSurface: (subject: string) =>
+    requestJson<SolanaControlSurfaceResponse>(
+      `/api/v1/control-rights/SOLANA/${encodeURIComponent(subject)}/inspect`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ chainId: 'solana-mainnet' }),
+      },
+    ),
+  latestSolanaControlSurface: (subject: string) => {
+    const parameters = new URLSearchParams({ chainId: 'solana-mainnet' });
+    return requestJson<SolanaControlSurfaceResponse>(
+      `/api/v1/control-rights/SOLANA/${encodeURIComponent(subject)}/reports/latest?${parameters.toString()}`,
     );
   },
   exitRace: (payload: unknown) =>

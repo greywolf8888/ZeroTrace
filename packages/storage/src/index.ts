@@ -17,6 +17,7 @@ export * from './flap-history.js';
 export * from './flap-lifetime-heads.js';
 export * from './claim-reports.js';
 export * from './control-surface-reports.js';
+export * from './solana-control-surface-reports.js';
 
 type DatabaseRow = Record<string, unknown>;
 

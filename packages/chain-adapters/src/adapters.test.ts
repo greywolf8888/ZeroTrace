@@ -919,6 +919,92 @@ describe('capability probes and snapshots', () => {
     ).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 
+  it('reads a cardinality-preserving Solana account set at one minimum context slot', async () => {
+    const first = '11111111111111111111111111111111';
+    const second = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+    const account = {
+      data: [Buffer.alloc(4, 7).toString('base64'), 'base64'],
+      executable: false,
+      lamports: 2_039_280,
+      owner: second,
+      rentEpoch: 0,
+      space: 4,
+    };
+    const transport = new FakeJsonRpcTransport(
+      {
+        getMultipleAccounts: {
+          context: { slot: 44, apiVersion: '3.1.8' },
+          value: [account, null],
+        },
+      },
+      { getMultipleAccounts: 'solana-accounts-a' },
+    );
+    const adapter = new SolanaLedgerAdapter({ id: 'solana', commitment: 'finalized' }, transport);
+
+    await expect(adapter.getMultipleAccountsObservation([first, second], 42)).resolves.toEqual({
+      endpointId: 'solana-accounts-a',
+      value: {
+        context: { slot: 44, apiVersion: '3.1.8' },
+        value: [
+          {
+            data: account.data,
+            executable: false,
+            lamports: '2039280',
+            owner: second,
+            rentEpoch: '0',
+            space: 4,
+          },
+          null,
+        ],
+      },
+    });
+    expect(transport.calls[0]?.params).toEqual([
+      [first, second],
+      { encoding: 'base64', commitment: 'finalized', minContextSlot: 42 },
+    ]);
+  });
+
+  it('rejects ambiguous or malformed Solana multiple-account reads', async () => {
+    const first = '11111111111111111111111111111111';
+    const adapter = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({
+        getMultipleAccounts: { context: { slot: 10 }, value: [] },
+      }),
+    );
+    await expect(adapter.getMultipleAccounts([first], 10)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+    await expect(adapter.getMultipleAccounts([first, first])).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+    await expect(adapter.getMultipleAccounts([])).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+
+    const badLength = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({
+        getMultipleAccounts: {
+          context: { slot: 10 },
+          value: [
+            {
+              data: [Buffer.alloc(2).toString('base64'), 'base64'],
+              executable: false,
+              lamports: 1,
+              owner: first,
+              rentEpoch: 0,
+              space: 1,
+            },
+          ],
+        },
+      }),
+    );
+    await expect(badLength.getMultipleAccounts([first], 10)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+  });
+
   it('rejects malformed Solana snapshot state', async () => {
     const invalidSlot = new SolanaLedgerAdapter(
       { id: 'solana', commitment: 'finalized' },

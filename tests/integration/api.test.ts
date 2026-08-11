@@ -758,6 +758,10 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
           context: { slot: 300_000_000 },
           value: solanaAccountValue,
         },
+        getMultipleAccounts: {
+          context: { slot: 300_000_000 },
+          value: [solanaAccountValue],
+        },
         getTransaction: {
           slot: 300_000_000,
           blockTime: 1_700_000_000,
@@ -773,6 +777,7 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
         getSlot: 'solana-anchor-a',
         getBlock: 'solana-anchor-b',
         getAccountInfo: 'solana-state',
+        getMultipleAccounts: 'solana-state',
       },
     ),
   );
@@ -1178,6 +1183,23 @@ describe('ZeroTrace API contract', () => {
     expect(metrics.statusCode).toBe(200);
     expect(metrics.headers['content-type']).toContain('text/plain');
     expect(metrics.body).toContain('zerotrace_http_requests_total');
+  });
+
+  it('remains ready for provider-free replay while reporting upstreams as degraded', async () => {
+    const runtime = runtimeWithEvm();
+    runtime.providerRegistry = new ProviderRegistry([]);
+    runtime.evmAdapters = new Map();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const ready = await app.inject({ method: 'GET', url: '/health/ready' });
+    expect(ready.statusCode).toBe(200);
+    expect(ready.json()).toMatchObject({
+      status: 'DEGRADED',
+      readOnly: true,
+      providers: [],
+      storage: { status: 'EPHEMERAL' },
+    });
   });
 
   it('surfaces cross-source anchor disagreement as Unknown with Evidence-linked alerts', async () => {
@@ -4390,6 +4412,126 @@ describe('ZeroTrace API contract', () => {
     });
     expect(wrongSubject.statusCode).toBe(404);
     expect(wrongSubject.json().error.code).toBe('CONTROL_SURFACE_NOT_FOUND');
+  });
+
+  it('inspects and durably replays a finalized Solana control surface', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evidenceRepository = repository();
+    const subject = 'So11111111111111111111111111111111111111112';
+    let storedReport: unknown;
+    const put = vi.fn(
+      async (report: { terminalEvidenceId: string; metadata: { snapshot: unknown } }) => {
+        storedReport = report;
+        return {
+          id: `scs_${'1'.repeat(24)}`,
+          chainId: 'solana-mainnet' as const,
+          subject,
+          snapshotSlot: '300000000',
+          snapshotHash: '11111111111111111111111111111111',
+          resultHash: 'f'.repeat(64),
+          report,
+          terminalEvidenceId: report.terminalEvidenceId,
+          evidenceIds: [`ev_${'2'.repeat(24)}`],
+          sourceSet: ['solana-state'],
+          modelVersion: 'solana-control-surface-v1.0.0',
+          capturedAt: '2026-08-11T00:00:01.000Z',
+          createdAt: '2026-08-11T00:00:02.000Z',
+        };
+      },
+    );
+    runtime.solanaControlSurfaces = { put } as unknown as NonNullable<
+      AppRuntime['solanaControlSurfaces']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control-rights/SOLANA/${subject}/inspect`,
+      payload: { chainId: 'solana-mainnet' },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().record).toMatchObject({
+      id: `scs_${'1'.repeat(24)}`,
+      chainId: 'solana-mainnet',
+      subject,
+      snapshotSlot: '300000000',
+      report: {
+        ledger: 'SOLANA',
+        accountKind: { state: 'known', value: 'SYSTEM_ACCOUNT' },
+        rights: [],
+        sourceAgreement: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      },
+    });
+    expect(storedReport).toBeDefined();
+    expect(put).toHaveBeenCalledTimes(1);
+    expect(runtime.evidenceRepository.put).toHaveBeenCalledTimes(2);
+
+    const historical = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control-rights/SOLANA/${subject}/inspect`,
+      payload: { chainId: 'solana-mainnet', blockNumber: '299999999' },
+    });
+    expect(historical.statusCode).toBe(400);
+    expect(historical.json().error.code).toBe('HISTORICAL_STATE_UNSUPPORTED');
+  });
+
+  it('replays latest, exact, and generic Solana control reports without a provider', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const subject = 'So11111111111111111111111111111111111111112';
+    const reportId = `scs_${'3'.repeat(24)}`;
+    const record = {
+      id: reportId,
+      chainId: 'solana-mainnet' as const,
+      subject,
+      snapshotSlot: '300000000',
+      snapshotHash: '11111111111111111111111111111111',
+      resultHash: 'f'.repeat(64),
+      report: { ledger: 'SOLANA', terminalEvidenceId: `ev_${'4'.repeat(24)}` },
+      terminalEvidenceId: `ev_${'4'.repeat(24)}`,
+      evidenceIds: [`ev_${'4'.repeat(24)}`],
+      sourceSet: ['solana-rpc'],
+      modelVersion: 'solana-control-surface-v1.0.0',
+      capturedAt: '2026-08-11T00:00:01.000Z',
+      createdAt: '2026-08-11T00:00:02.000Z',
+    };
+    const latest = vi.fn(async () => record);
+    const get = vi.fn(async () => record);
+    runtime.solanaControlSurfaces = { latest, get } as unknown as NonNullable<
+      AppRuntime['solanaControlSurfaces']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const latestResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-rights/SOLANA/${subject}/reports/latest?chainId=solana-mainnet`,
+    });
+    expect(latestResponse.statusCode, latestResponse.body).toBe(200);
+    expect(latestResponse.json()).toEqual({ record });
+
+    const exactResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-rights/SOLANA/${subject}/reports/${reportId}?chainId=solana-mainnet`,
+    });
+    expect(exactResponse.statusCode, exactResponse.body).toBe(200);
+    expect(exactResponse.json()).toEqual({ record });
+
+    const genericResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-rights?ledger=SOLANA&chainId=solana-mainnet&subject=${subject}`,
+    });
+    expect(genericResponse.statusCode, genericResponse.body).toBe(200);
+    expect(genericResponse.json()).toEqual({ records: [record] });
+    expect(latest).toHaveBeenCalledTimes(2);
+    expect(get).toHaveBeenCalledWith(reportId);
+
+    const mismatchedChain = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-rights/SOLANA/${subject}/reports/latest?chainId=eip155:56`,
+    });
+    expect(mismatchedChain.statusCode).toBe(400);
+    expect(mismatchedChain.json().error.code).toBe('INVALID_CHAIN_ID');
   });
 
   it('keeps control surface inspection and replay explicitly unavailable without durable storage', async () => {

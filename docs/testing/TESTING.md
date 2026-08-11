@@ -123,6 +123,9 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   sources; Sourcify metadata becomes Known only on exact byte-for-byte equality, ABI declarations
   never create rights, mismatches remain conflicting, and immutable v1.0 reports replay without
   fabricated v1.1 fields;
+- Solana control inspection requires a stable, same-slot subject/control-account set; official SPL
+  Token and Token-2022 decoders plus the upgradeable-loader layout preserve disabled authorities,
+  extension state, multisig thresholds, incomplete domains and nested Evidence without fake zeros;
 - UI displays Unknown and read-only state without placeholder data.
 
 ## Real-chain fixture rules
@@ -160,6 +163,8 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - scenario gating;
 - data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
 - typed Solana transaction rendering with Snapshot, Evidence, and humanized field names;
+- classic/Token-2022/upgradeable-program Solana Control Rights rendering with one-slot provenance,
+  explicit incomplete Squads/history coverage and mobile containment;
 - Flap fixed-block state, transaction-local creation/default provenance, bounded range/lifetime
   history coverage, durable projection pagination, exact lifetime materialization replay, sell
   preview, multi-source market/RV discrepancy review, Unknown preservation and Evidence rendering;

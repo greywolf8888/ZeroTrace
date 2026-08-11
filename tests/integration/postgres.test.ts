@@ -12,9 +12,11 @@ import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrac
 import { createEvidence } from '@zerotrace/evidence';
 import {
   EvmControlCoverageDomainSchema,
+  SolanaControlCoverageDomainSchema,
   FlapEventHistorySchema,
   unknownValue,
   type EvmControlSurfaceReport,
+  type SolanaControlSurfaceReport,
   type EvmClaimAddressObservation,
 } from '@zerotrace/schemas';
 import {
@@ -27,6 +29,7 @@ import {
   PostgresClaimReportRepository,
   PostgresDataQualityRepository,
   PostgresEvmControlSurfaceRepository,
+  PostgresSolanaControlSurfaceRepository,
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
   PostgresIngestionCheckpointRepository,
@@ -1339,6 +1342,152 @@ postgresDescribe('PostgreSQL durable EVM control surface integration', () => {
       ).rejects.toThrow(/immutable/);
       await expect(
         pool.query('DELETE FROM evm_control_surface_reports WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL durable Solana control surface integration', () => {
+  let evidence: PostgresEvidenceRepository;
+  let reports: PostgresSolanaControlSurfaceRepository;
+  const subject = '4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi';
+  const capturedAt = '2026-08-11T12:30:01.000Z';
+  const snapshot = {
+    ledger: 'SOLANA' as const,
+    chainId: 'solana-mainnet' as const,
+    slot: '300000001',
+    blockhash: '3ySAYPQqMfpyZL6QhH4RzgT68HWpV72G2JAa2XWrpHEi',
+    parentSlot: '300000000',
+    previousBlockhash: '4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi',
+    commitment: 'finalized' as const,
+    blockTimestamp: '2026-08-11T12:30:00.000Z',
+    capturedAt,
+    providerVersions: { 'solana-rpc@integration': 'solana-json-rpc' },
+    adapterVersions: { solana: 'integration' },
+    configHash: '7'.repeat(64),
+    entityModelVersion: 'entity-v0.1.0',
+    labelSnapshot: 'labels-v1',
+  };
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    reports = new PostgresSolanaControlSurfaceRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), reports.close()]);
+  });
+
+  it('persists, replays, and rejects mutation of a Solana provenance root', async () => {
+    const raw = createEvidence({
+      ledger: 'SOLANA',
+      chainId: snapshot.chainId,
+      kind: 'ACCOUNT_STATE',
+      source: 'solana-rpc@integration',
+      locator: `solana-account-set:${subject}@${snapshot.slot}`,
+      payload: { owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', space: 82 },
+      observedAt: capturedAt,
+      blockOrSlot: snapshot.slot,
+      finality: snapshot.commitment,
+      summary: 'Solana control integration account state.',
+    });
+    const terminal = createEvidence({
+      ledger: 'SOLANA',
+      chainId: snapshot.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:solana-control-surface-v1.0.0',
+      locator: `solana-control-surface-report:${subject}@${snapshot.blockhash}`,
+      payload: { subject, snapshotHash: snapshot.blockhash },
+      observedAt: capturedAt,
+      blockOrSlot: snapshot.slot,
+      finality: snapshot.commitment,
+      summary: 'Solana control integration terminal root.',
+      sourceEvidenceIds: [raw.id],
+    });
+    await evidence.put(raw, [], snapshot);
+    await evidence.put(terminal, [raw.id], snapshot);
+
+    const report: SolanaControlSurfaceReport = {
+      ledger: 'SOLANA',
+      chainId: snapshot.chainId,
+      subject,
+      accountKind: { state: 'known', value: 'SPL_TOKEN_MINT' },
+      ownerProgram: {
+        state: 'known',
+        value: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+      },
+      executable: { state: 'known', value: false },
+      mint: {
+        state: 'known',
+        value: {
+          tokenProgram: 'SPL_TOKEN',
+          supply: '0',
+          decimals: 9,
+          initialized: true,
+          mintAuthority: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+          freezeAuthority: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+        },
+      },
+      tokenAccount: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+      multisig: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+      program: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+      extensions: [],
+      sourceAgreement: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      sourceIndependence: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+      rights: [],
+      coverage: SolanaControlCoverageDomainSchema.options.map((domain) => ({
+        domain,
+        observed:
+          domain === 'ACCOUNT_STATE'
+            ? ({ state: 'known', value: true } as const)
+            : ({ state: 'unknown', reason: 'NOT_QUERIED' } as const),
+        detail: `${domain} integration coverage.`,
+        evidenceIds: domain === 'ACCOUNT_STATE' ? [raw.id] : [],
+      })),
+      terminalEvidenceId: terminal.id,
+      metadata: {
+        snapshot,
+        dataCoverage: 1 / SolanaControlCoverageDomainSchema.options.length,
+        sourceCoverage: 0.5,
+        historyCoverage: 0,
+        simulationCoverage: 0,
+        freshness: snapshot.blockTimestamp,
+        sourceSet: ['solana-rpc@integration'],
+        modelVersion: 'solana-control-surface-v1.0.0',
+        confidence: 0.8,
+        evidenceIds: [raw.id, terminal.id].sort(),
+      },
+      evidence: [raw, terminal].sort((left, right) => left.id.localeCompare(right.id)),
+    };
+
+    const stored = await reports.put(report);
+    await expect(reports.put(report)).resolves.toEqual(stored);
+    await reports.close();
+    reports = new PostgresSolanaControlSurfaceRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(reports.get(stored.id)).resolves.toEqual(stored);
+    await expect(reports.latest(subject)).resolves.toEqual(stored);
+    await expect(reports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE solana_control_surface_reports SET report = report WHERE id = $1', [
+          stored.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM solana_control_surface_reports WHERE id = $1', [stored.id]),
       ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();

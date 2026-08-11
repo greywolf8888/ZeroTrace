@@ -46,6 +46,11 @@ export interface SolanaAccountInfoResponse {
   value: SolanaAccountState | null;
 }
 
+export interface SolanaMultipleAccountsResponse {
+  context: { slot: number; apiVersion?: string };
+  value: Array<SolanaAccountState | null>;
+}
+
 const ALLOWED_SOLANA_METHODS = new Set([
   'getHealth',
   'getVersion',
@@ -132,6 +137,16 @@ function requireBase58(value: unknown, field: string): string {
     throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
   }
   return value;
+}
+
+function requirePublicKey(value: unknown, field: string): string {
+  const encoded = requireBase58(value, field);
+  try {
+    if (bs58.decode(encoded).length !== 32) throw new Error('invalid public key length');
+  } catch {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
+  }
+  return encoded;
 }
 
 function requireSignature(value: unknown, field: string): string {
@@ -221,10 +236,44 @@ function optionalBlockTimestamp(value: unknown): string | undefined {
   return date.toISOString();
 }
 
-function parseAccountInfo(
+function parseAccountValue(raw: unknown): SolanaAccountState | null {
+  if (raw === null) return null;
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account value is invalid.');
+  }
+  const account = raw as Record<string, unknown>;
+  const data = account.data;
+  if (
+    !Array.isArray(data) ||
+    data.length !== 2 ||
+    typeof data[0] !== 'string' ||
+    !BASE64_DATA.test(data[0]) ||
+    data[1] !== 'base64'
+  ) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account data is invalid.');
+  }
+  if (typeof account.executable !== 'boolean') {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account executable flag is invalid.');
+  }
+  const space = requireSafeQuantityNumber(account.space, 'account space');
+  const bytes = Buffer.from(data[0], 'base64');
+  if (bytes.length !== space) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana account data length does not match space.');
+  }
+  return {
+    data: [data[0], 'base64'],
+    executable: account.executable,
+    lamports: requireUnsignedQuantity(account.lamports, 'account lamports'),
+    owner: requirePublicKey(account.owner, 'account owner'),
+    rentEpoch: requireUnsignedQuantity(account.rentEpoch, 'account rent epoch'),
+    space,
+  };
+}
+
+function parseAccountContext(
   raw: unknown,
   minimumContextSlot: number | undefined,
-): SolanaAccountInfoResponse {
+): { response: Record<string, unknown>; context: SolanaAccountInfoResponse['context'] } {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     throw new ProviderError('INVALID_RESPONSE', 'Solana account response must be an object.');
   }
@@ -245,44 +294,39 @@ function parseAccountInfo(
   if (apiVersion !== undefined && typeof apiVersion !== 'string') {
     throw new ProviderError('INVALID_RESPONSE', 'Solana account API version is invalid.');
   }
+  return {
+    response,
+    context: { slot, ...(apiVersion === undefined ? {} : { apiVersion }) },
+  };
+}
+
+function parseAccountInfo(
+  raw: unknown,
+  minimumContextSlot: number | undefined,
+): SolanaAccountInfoResponse {
+  const { response, context } = parseAccountContext(raw, minimumContextSlot);
   if (!Object.hasOwn(response, 'value')) {
     throw new ProviderError('INVALID_RESPONSE', 'Solana account response is missing value.');
   }
-  if (response.value === null) {
-    return {
-      context: { slot, ...(apiVersion === undefined ? {} : { apiVersion }) },
-      value: null,
-    };
-  }
-  if (typeof response.value !== 'object' || Array.isArray(response.value)) {
-    throw new ProviderError('INVALID_RESPONSE', 'Solana account value is invalid.');
-  }
-  const account = response.value as Record<string, unknown>;
-  const data = account.data;
-  if (
-    !Array.isArray(data) ||
-    data.length !== 2 ||
-    typeof data[0] !== 'string' ||
-    !BASE64_DATA.test(data[0]) ||
-    data[1] !== 'base64'
-  ) {
-    throw new ProviderError('INVALID_RESPONSE', 'Solana account data is invalid.');
-  }
-  if (typeof account.executable !== 'boolean') {
-    throw new ProviderError('INVALID_RESPONSE', 'Solana account executable flag is invalid.');
-  }
-  const space = requireSafeQuantityNumber(account.space, 'account space');
   return {
-    context: { slot, ...(apiVersion === undefined ? {} : { apiVersion }) },
-    value: {
-      data: [data[0], 'base64'],
-      executable: account.executable,
-      lamports: requireUnsignedQuantity(account.lamports, 'account lamports'),
-      owner: requireBase58(account.owner, 'account owner'),
-      rentEpoch: requireUnsignedQuantity(account.rentEpoch, 'account rent epoch'),
-      space,
-    },
+    context,
+    value: parseAccountValue(response.value),
   };
+}
+
+function parseMultipleAccounts(
+  raw: unknown,
+  expectedLength: number,
+  minimumContextSlot: number | undefined,
+): SolanaMultipleAccountsResponse {
+  const { response, context } = parseAccountContext(raw, minimumContextSlot);
+  if (!Array.isArray(response.value) || response.value.length !== expectedLength) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana multiple-account response cardinality is invalid.',
+    );
+  }
+  return { context, value: response.value.map((item) => parseAccountValue(item)) };
 }
 
 export class SolanaLedgerAdapter {
@@ -332,7 +376,7 @@ export class SolanaLedgerAdapter {
     address: string,
     minimumContextSlot?: number,
   ): Promise<TransportObservation<SolanaAccountInfoResponse>> {
-    requireBase58(address, 'account address');
+    requirePublicKey(address, 'account address');
     if (minimumContextSlot !== undefined) {
       requireSafeInteger(minimumContextSlot, 'minimum context slot');
     }
@@ -345,6 +389,53 @@ export class SolanaLedgerAdapter {
       },
     ]);
     return { ...observation, value: parseAccountInfo(observation.value, minimumContextSlot) };
+  }
+
+  async getMultipleAccounts(
+    addresses: readonly string[],
+    minimumContextSlot?: number,
+  ): Promise<SolanaMultipleAccountsResponse> {
+    return (await this.getMultipleAccountsObservation(addresses, minimumContextSlot)).value;
+  }
+
+  async getMultipleAccountsObservation(
+    addresses: readonly string[],
+    minimumContextSlot?: number,
+  ): Promise<TransportObservation<SolanaMultipleAccountsResponse>> {
+    if (addresses.length === 0 || addresses.length > 100) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Solana multiple-account reads require between one and 100 addresses.',
+      );
+    }
+    const canonicalAddresses = addresses.map((address) =>
+      requirePublicKey(address, 'account address'),
+    );
+    if (new Set(canonicalAddresses).size !== canonicalAddresses.length) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Solana multiple-account addresses must be unique.',
+      );
+    }
+    if (minimumContextSlot !== undefined) {
+      requireSafeInteger(minimumContextSlot, 'minimum context slot');
+    }
+    const observation = await this.readSourced<unknown>('getMultipleAccounts', [
+      canonicalAddresses,
+      {
+        encoding: 'base64',
+        commitment: this.config.commitment,
+        ...(minimumContextSlot === undefined ? {} : { minContextSlot: minimumContextSlot }),
+      },
+    ]);
+    return {
+      ...observation,
+      value: parseMultipleAccounts(
+        observation.value,
+        canonicalAddresses.length,
+        minimumContextSlot,
+      ),
+    };
   }
 
   async getTransaction(signature: string): Promise<SolanaTransactionRecord | null> {

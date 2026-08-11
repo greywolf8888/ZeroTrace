@@ -2511,3 +2511,158 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
   }));
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
+
+test('renders finalized Solana Token-2022 authority and explicit pending domains', async ({
+  page,
+}) => {
+  const subject = 'So11111111111111111111111111111111111111112';
+  const controller = '8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR';
+  const terminalEvidenceId = 'ev_000000000000000000000199';
+  await page.route(`**/api/v1/control-rights/SOLANA/${subject}/inspect`, async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        record: {
+          id: 'scs_000000000000000000000001',
+          chainId: 'solana-mainnet',
+          subject,
+          snapshotSlot: '360000000',
+          snapshotHash: '3ySAYPQqMfpyZL6QhH4RzgT68HWpV72G2JAa2XWrpHEi',
+          resultHash: 'f'.repeat(64),
+          terminalEvidenceId,
+          evidenceIds: [terminalEvidenceId],
+          sourceSet: ['solana-rpc@api.mainnet-beta.solana.com'],
+          modelVersion: 'solana-control-surface-v1.0.0',
+          capturedAt: '2026-08-11T06:00:01.000Z',
+          createdAt: '2026-08-11T06:00:02.000Z',
+          report: {
+            ledger: 'SOLANA',
+            chainId: 'solana-mainnet',
+            subject,
+            accountKind: { state: 'known', value: 'TOKEN_2022_MINT' },
+            ownerProgram: {
+              state: 'known',
+              value: 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
+            },
+            executable: { state: 'known', value: false },
+            mint: {
+              state: 'known',
+              value: {
+                tokenProgram: 'TOKEN_2022',
+                supply: '1000000000',
+                decimals: 9,
+                initialized: true,
+                mintAuthority: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+                freezeAuthority: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+              },
+            },
+            tokenAccount: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            multisig: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            program: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+            extensions: [
+              {
+                extensionType: 'PermanentDelegate',
+                authorities: [{ role: 'PERMANENT_DELEGATE', address: controller }],
+                relatedAddresses: [],
+                settings: {},
+                evidenceIds: [terminalEvidenceId],
+              },
+            ],
+            sourceAgreement: {
+              state: 'unknown',
+              reason: 'INSUFFICIENT_DATA',
+              detail: 'Only one Solana RPC observation source was used.',
+            },
+            sourceIndependence: {
+              state: 'unknown',
+              reason: 'INSUFFICIENT_DATA',
+              detail: 'No independent Solana operator registry is configured.',
+            },
+            rights: [
+              {
+                id: 'cr_000000000000000000000001',
+                chainId: 'solana-mainnet',
+                subject,
+                controller,
+                rightType: 'PERMANENT_DELEGATE',
+                scope: 'Control Token-2022 PermanentDelegate.',
+                threshold: {
+                  state: 'unknown',
+                  reason: 'INSUFFICIENT_DATA',
+                  detail: 'Controller threshold was not established.',
+                },
+                constraints: ['Controller account shape is unresolved; threshold remains Unknown.'],
+                evidenceIds: [terminalEvidenceId],
+                activeFrom: { state: 'unknown', reason: 'NOT_QUERIED' },
+                activeTo: { state: 'unknown', reason: 'NOT_QUERIED' },
+              },
+            ],
+            coverage: [
+              {
+                domain: 'PERMANENT_DELEGATE',
+                observed: { state: 'known', value: true },
+                detail: 'Permanent delegate extension state is present and decoded.',
+                evidenceIds: [terminalEvidenceId],
+              },
+              {
+                domain: 'SQUADS_CONFIGURATION',
+                observed: { state: 'unknown', reason: 'NOT_IMPLEMENTED' },
+                detail: 'Squads configuration was not inferred by this point-in-time adapter.',
+                evidenceIds: [],
+              },
+              {
+                domain: 'AUTHORITY_HISTORY',
+                observed: { state: 'unknown', reason: 'NOT_IMPLEMENTED' },
+                detail: 'Authority history remains an explicit pending boundary.',
+                evidenceIds: [],
+              },
+            ],
+            terminalEvidenceId,
+            metadata: {
+              snapshot: {
+                ledger: 'SOLANA',
+                chainId: 'solana-mainnet',
+                slot: '360000000',
+                blockhash: '3ySAYPQqMfpyZL6QhH4RzgT68HWpV72G2JAa2XWrpHEi',
+                commitment: 'finalized',
+              },
+              dataCoverage: 1 / 38,
+              sourceCoverage: 0.5,
+              historyCoverage: 0,
+              simulationCoverage: 0,
+              freshness: '2026-08-11T06:00:00.000Z',
+              sourceSet: ['solana-rpc@api.mainnet-beta.solana.com'],
+              modelVersion: 'solana-control-surface-v1.0.0',
+              confidence: 0.82,
+              evidenceIds: [terminalEvidenceId],
+            },
+            evidence: [],
+          },
+        },
+      }),
+    });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Control Rights' }).click();
+  await page.getByLabel('Ledger').selectOption('SOLANA');
+  await expect(page.getByRole('heading', { name: 'Solana Control Rights' })).toBeVisible();
+  await page.getByRole('button', { name: 'Inspect and persist' }).click();
+
+  await expect(page.getByText('Token 2022 Mint')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Decoded extensions' })).toBeVisible();
+  await expect(page.getByText('Permanent Delegate').first()).toBeVisible();
+  await expect(page.getByText(controller)).toBeVisible();
+  const coverage = page.locator('section.panel').filter({
+    has: page.getByRole('heading', { name: 'Coverage matrix' }),
+  });
+  await expect(coverage).toContainText('Squads Configuration');
+  await expect(coverage).toContainText('Not Implemented');
+  await expect(page.getByText(terminalEvidenceId)).toBeVisible();
+  const layout = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});

@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- finalized atomic Solana control-surface inspection for classic SPL Token mint/account/multisig,
+  Token-2022 extensions and the upgradeable Program/ProgramData loader, with official generated
+  decoders, a 38-domain Unknown-preserving coverage matrix, nested Evidence, immutable PostgreSQL
+  reports, provider-free API replay, responsive UI and scoped public-mainnet validation;
 - finalized multi-source EVM control-surface inspection for exact ERC-1167 runtime bytecode,
   EIP-1967 implementation/admin/beacon slots, ERC-173 owner, registered Safe owners/threshold,
   recursive logic bytecode and Sourcify V2 exact-source provenance, with ABI mutation declarations
@@ -171,6 +175,12 @@ All notable changes to ZeroTrace will be documented here. The project follows
 - Docker Compose topology and multi-stage production images;
 - database initialization images that work from Windows Unicode workspace paths;
 - repository governance, dependency policy, CI, test, deployment, and release documentation.
+
+### Fixed
+
+- readiness now remains HTTP-ready for provider-free report replay when optional upstream providers
+  are unavailable, while retaining a `DEGRADED` payload and continuing to fail closed when durable
+  request-serving storage is down.
 
 ### Security
 
