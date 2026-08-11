@@ -838,9 +838,33 @@ function runtimeWithAllLedgers(solanaAccountValue: unknown = defaultSolanaAccoun
           version: 0,
           transaction: {
             signatures: [fixtureSolanaSignature],
-            message: { accountKeys: [], instructions: [], recentBlockhash: '1'.repeat(32) },
+            message: {
+              accountKeys: [
+                '11111111111111111111111111111111',
+                'Vote111111111111111111111111111111111111111',
+              ],
+              addressTableLookups: [],
+              header: {
+                numRequiredSignatures: 1,
+                numReadonlySignedAccounts: 0,
+                numReadonlyUnsignedAccounts: 1,
+              },
+              instructions: [{ accounts: [0], data: '', programIdIndex: 1, stackHeight: 1 }],
+              recentBlockhash: '11111111111111111111111111111111',
+            },
           },
-          meta: { err: null, fee: 5000 },
+          meta: {
+            err: null,
+            fee: 5000,
+            loadedAddresses: { writable: [], readonly: [] },
+            innerInstructions: [],
+            preBalances: [10000, 1],
+            postBalances: [5000, 1],
+            preTokenBalances: [],
+            postTokenBalances: [],
+            logMessages: [],
+            computeUnitsConsumed: 2100,
+          },
         },
       },
       {
@@ -1775,15 +1799,212 @@ describe('ZeroTrace API contract', () => {
       slot: { state: 'known', value: '300000000' },
       feeLamports: { state: 'known', value: '5000' },
       execution: { state: 'known', value: 'SUCCESS' },
+      feePayer: { state: 'known', value: '11111111111111111111111111111111' },
+      signerCount: { state: 'known', value: 1 },
+      outerInstructionCount: { state: 'known', value: 1 },
+      cpiCount: { state: 'known', value: 0 },
+      accountResolutionComplete: { state: 'known', value: true },
+      tokenBalanceChangeCount: { state: 'known', value: 0 },
+      transactionSemantics: {
+        state: 'known',
+        value: {
+          version: '0',
+          accountCoverage: 1,
+          accounts: [
+            expect.objectContaining({
+              address: '11111111111111111111111111111111',
+              signer: true,
+              writable: true,
+              feePayer: true,
+              balanceDeltaLamports: { state: 'known', value: '-5000' },
+            }),
+            expect.objectContaining({
+              address: 'Vote111111111111111111111111111111111111111',
+              signer: false,
+              writable: false,
+            }),
+          ],
+          outerInstructions: [
+            expect.objectContaining({
+              path: 'outer:0',
+              programId: {
+                state: 'known',
+                value: 'Vote111111111111111111111111111111111111111',
+              },
+            }),
+          ],
+          modelVersion: 'solana-transaction-semantics-v1.0.0',
+        },
+      },
     });
     expect(solana.json().metadata.snapshot).toMatchObject({
       ledger: 'SOLANA',
       slot: '300000000',
       commitment: 'finalized',
     });
-    expect(solana.json().evidence).toEqual([
+    const solanaEvidence = solana.json().evidence;
+    expect(solanaEvidence).toEqual([
       expect.objectContaining({ kind: 'TRANSACTION', blockOrSlot: '300000000' }),
+      expect.objectContaining({
+        kind: 'DERIVED_FEATURE',
+        locator: expect.stringContaining(':outer:0@300000000'),
+      }),
+      expect.objectContaining({
+        kind: 'DERIVED_FEATURE',
+        source: 'zerotrace:solana-transaction-semantics-v1.0.0',
+      }),
     ]);
+    expect(runtime.evidenceLedger.get(solanaEvidence[1].id)?.sourceEvidenceIds).toEqual([
+      solanaEvidence[0].id,
+    ]);
+    expect(runtime.evidenceLedger.get(solanaEvidence[2].id)?.sourceEvidenceIds).toEqual(
+      [solanaEvidence[0].id, solanaEvidence[1].id].sort(),
+    );
+  });
+
+  it('normalizes Solana v0 loaded accounts, CPI and token effects without hiding coverage', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.solanaAdapter = new SolanaLedgerAdapter(
+      { id: 'solana-rpc', commitment: 'finalized' },
+      new FakeTransport({
+        getTransaction: {
+          slot: 300_000_000,
+          blockTime: 1_700_000_000,
+          version: 0,
+          transaction: {
+            signatures: [fixtureSolanaSignature],
+            message: {
+              accountKeys: [
+                '11111111111111111111111111111111',
+                'Vote111111111111111111111111111111111111111',
+              ],
+              addressTableLookups: [
+                {
+                  accountKey: 'AddressLookupTab1e1111111111111111111111111',
+                  writableIndexes: [0],
+                  readonlyIndexes: [1],
+                },
+              ],
+              header: {
+                numRequiredSignatures: 1,
+                numReadonlySignedAccounts: 0,
+                numReadonlyUnsignedAccounts: 1,
+              },
+              instructions: [{ accounts: [0, 2], data: '', programIdIndex: 3, stackHeight: 1 }],
+              recentBlockhash: '11111111111111111111111111111111',
+            },
+          },
+          meta: {
+            err: null,
+            fee: 5000,
+            loadedAddresses: {
+              writable: ['SysvarRent111111111111111111111111111111111'],
+              readonly: ['ComputeBudget111111111111111111111111111111'],
+            },
+            innerInstructions: [
+              {
+                index: 0,
+                instructions: [{ accounts: [2], data: '1', programIdIndex: 3, stackHeight: 2 }],
+              },
+            ],
+            preBalances: [10000, 1, 2039280, 1],
+            postBalances: [5000, 1, 2039280, 1],
+            preTokenBalances: [
+              {
+                accountIndex: 2,
+                mint: 'So11111111111111111111111111111111111111112',
+                owner: '11111111111111111111111111111111',
+                programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+                uiTokenAmount: {
+                  amount: '100',
+                  decimals: 9,
+                  uiAmount: null,
+                  uiAmountString: '0.0000001',
+                },
+              },
+            ],
+            postTokenBalances: [
+              {
+                accountIndex: 2,
+                mint: 'So11111111111111111111111111111111111111112',
+                owner: '11111111111111111111111111111111',
+                programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+                uiTokenAmount: {
+                  amount: '70',
+                  decimals: 9,
+                  uiAmount: null,
+                  uiAmountString: '0.00000007',
+                },
+              },
+            ],
+            logMessages: ['Program invoke [1]', 'Program invoke [2]', 'Program success'],
+            computeUnitsConsumed: 2300,
+          },
+        },
+        getBlock: {
+          blockhash: '11111111111111111111111111111111',
+          previousBlockhash: '22222222222222222222222222222222',
+          parentSlot: 299_999_999,
+          blockTime: 1_700_000_000,
+        },
+      }),
+    );
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/SOLANA/TRANSACTION/${fixtureSolanaSignature}`,
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      facts: {
+        cpiCount: { state: 'known', value: 1 },
+        accountResolutionComplete: { state: 'known', value: true },
+        tokenBalanceChangeCount: { state: 'known', value: 1 },
+        transactionSemantics: {
+          state: 'known',
+          value: {
+            loadedWritableAccountCount: 1,
+            loadedReadonlyAccountCount: 1,
+            accountCoverage: 1,
+            recordingCoverage: 1,
+            innerInstructions: [
+              expect.objectContaining({
+                path: 'outer:0/inner:0',
+                programId: {
+                  state: 'known',
+                  value: 'ComputeBudget111111111111111111111111111111',
+                },
+              }),
+            ],
+            tokenBalanceChanges: [
+              expect.objectContaining({
+                account: {
+                  state: 'known',
+                  value: 'SysvarRent111111111111111111111111111111111',
+                },
+                deltaAmount: { state: 'known', value: '-30' },
+              }),
+            ],
+          },
+        },
+      },
+      metadata: {
+        dataCoverage: 1,
+        modelVersion: 'solana-transaction-query-v1.0.0',
+      },
+    });
+    const evidence = response.json().evidence;
+    expect(evidence.map((item: { kind: string }) => item.kind)).toEqual([
+      'TRANSACTION',
+      'DERIVED_FEATURE',
+      'DERIVED_FEATURE',
+      'DERIVED_FEATURE',
+    ]);
+    expect(runtime.evidenceLedger.get(evidence[3].id)?.sourceEvidenceIds).toEqual(
+      [evidence[0].id, evidence[1].id, evidence[2].id].sort(),
+    );
   });
 
   it('suppresses automatic Bitcoin ownership merges for CoinJoin-like transaction structure', async () => {

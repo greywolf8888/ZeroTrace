@@ -79,6 +79,13 @@ interpreted as unchanged supply.
   The official [confirmed-block JSON structure](https://solana.com/docs/rpc/json-structures)
   includes `parentSlot` and `previousBlockhash`. ZeroTrace binds those fields to the anchor, enforces
   the account-context distinction, and preserves explicit null account state.
+- Solana's official [`getTransaction`](https://solana.com/docs/rpc/http/gettransaction),
+  [transaction core documentation](https://solana.com/docs/core/transactions), and
+  [RPC JSON structures](https://solana.com/docs/rpc/json-structures) (retrieved 2026-08-11) define
+  versioned messages, header-based signer/readonly partitions, address-table lookups, loaded-address
+  ordering, compiled outer/inner instructions, execution errors, and recorded pre/post lamport and
+  token-balance tables. ZeroTrace normalizes only those observed fields and keeps omitted recording
+  or unresolved addresses Unknown.
 
 ### Anchor reconciliation source policy
 

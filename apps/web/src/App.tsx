@@ -193,6 +193,61 @@ interface BitcoinTransactionEntityView {
   externalAttribution: KnowledgeValue<string>;
 }
 
+interface SolanaTransactionSemanticsView {
+  version: string;
+  recentBlockhash: string;
+  execution: 'SUCCESS' | 'FAILED' | 'METADATA_UNAVAILABLE';
+  executionError: KnowledgeValue<unknown>;
+  feePayer: KnowledgeValue<string>;
+  signers: string[];
+  requiredSignatureCount: number;
+  staticAccountCount: number;
+  loadedWritableAccountCount: number;
+  loadedReadonlyAccountCount: number;
+  accountResolutionComplete: KnowledgeValue<boolean>;
+  accountCoverage: number;
+  recordingCoverage: number;
+  accounts: Array<{
+    index: number;
+    address: string;
+    source: string;
+    signer: boolean;
+    writable: boolean;
+    feePayer: boolean;
+    balanceDeltaLamports: KnowledgeValue<string>;
+  }>;
+  addressTableLookups: Array<{
+    accountKey: string;
+    writableIndexes: number[];
+    readonlyIndexes: number[];
+  }>;
+  outerInstructions: SolanaInstructionView[];
+  innerInstructionRecording: KnowledgeValue<boolean>;
+  innerInstructions: SolanaInstructionView[];
+  cpiCount: KnowledgeValue<number>;
+  programIds: string[];
+  tokenBalanceRecording: KnowledgeValue<boolean>;
+  tokenBalanceChanges: Array<{
+    accountIndex: number;
+    account: KnowledgeValue<string>;
+    mint: string;
+    preAmount: KnowledgeValue<string>;
+    postAmount: KnowledgeValue<string>;
+    deltaAmount: KnowledgeValue<string>;
+  }>;
+  computeUnitsConsumed: KnowledgeValue<string>;
+  logRecording: KnowledgeValue<boolean>;
+  logCount: KnowledgeValue<number>;
+}
+
+interface SolanaInstructionView {
+  path: string;
+  stackHeight: KnowledgeValue<number>;
+  programId: KnowledgeValue<string>;
+  accountIndexes: number[];
+  accounts: KnowledgeValue<string[]>;
+}
+
 function knownObject<T>(value: KnowledgeValue<unknown> | undefined): T | undefined {
   return value?.state === 'known' && typeof value.value === 'object' && value.value !== null
     ? (value.value as T)
@@ -484,6 +539,234 @@ function BitcoinIntelligencePanel({ response }: { response: SubjectResponse }) {
             ))}
           </ul>
         )}
+      </div>
+    </section>
+  );
+}
+
+function SolanaTransactionIntelligencePanel({ response }: { response: SubjectResponse }) {
+  if (response.subject.ledger !== 'SOLANA' || response.subject.type !== 'TRANSACTION') return null;
+  const semantics = knownObject<SolanaTransactionSemanticsView>(
+    response.facts.transactionSemantics,
+  );
+  if (semantics === undefined) return null;
+  const instructions = [...semantics.outerInstructions, ...semantics.innerInstructions];
+  const resolutionComplete =
+    semantics.accountResolutionComplete.state === 'known' &&
+    semantics.accountResolutionComplete.value;
+  return (
+    <section
+      className="panel solana-transaction-intelligence"
+      data-testid="solana-transaction-semantics"
+    >
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Versioned message · recorded execution effects</span>
+          <h3>Solana transaction semantics</h3>
+        </div>
+        <StatusPill status={semantics.execution} />
+      </div>
+      <div className="bitcoin-summary-grid solana-transaction-summary">
+        <div>
+          <span>Version</span>
+          <strong>{semantics.version}</strong>
+        </div>
+        <div>
+          <span>Fee payer</span>
+          {semantics.feePayer.state === 'known' && semantics.feePayer.value !== undefined ? (
+            <code title={semantics.feePayer.value}>{shortId(semantics.feePayer.value, 12)}</code>
+          ) : (
+            <KnowledgeDisplay data={semantics.feePayer} />
+          )}
+        </div>
+        <div>
+          <span>Signers</span>
+          <strong>{semantics.signers.length}</strong>
+        </div>
+        <div>
+          <span>Account coverage</span>
+          <strong>{Math.round(semantics.accountCoverage * 100)}%</strong>
+        </div>
+        <div>
+          <span>Recording coverage</span>
+          <strong>{Math.round(semantics.recordingCoverage * 100)}%</strong>
+        </div>
+      </div>
+      <div className="bitcoin-control-grid solana-transaction-boundaries">
+        <div>
+          <span>Loaded-address resolution</span>
+          <StatusPill status={resolutionComplete ? 'RESOLVED' : 'INCOMPLETE'} />
+          <p>
+            {semantics.addressTableLookups.length} lookup table reference
+            {semantics.addressTableLookups.length === 1 ? '' : 's'} ·{' '}
+            {semantics.loadedWritableAccountCount} writable · {semantics.loadedReadonlyAccountCount}{' '}
+            readonly loaded accounts.
+          </p>
+        </div>
+        <div>
+          <span>Inner instruction recording</span>
+          <KnowledgeDisplay data={semantics.innerInstructionRecording} />
+          <p>
+            CPI count is preserved as Unknown when the RPC response did not record inner
+            instructions.
+          </p>
+        </div>
+        <div>
+          <span>Token balance recording</span>
+          <KnowledgeDisplay data={semantics.tokenBalanceRecording} />
+          <p>An absent pre/post token record is never coerced to an atomic zero.</p>
+        </div>
+        <div>
+          <span>Execution error</span>
+          <KnowledgeDisplay data={semantics.executionError} />
+          <p>Failed execution remains Evidence and is not treated as a missing transaction.</p>
+        </div>
+      </div>
+      <div className="table-scroll solana-account-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th>Source</th>
+              <th>Access</th>
+              <th>Lamport delta</th>
+            </tr>
+          </thead>
+          <tbody>
+            {semantics.accounts.map((account) => (
+              <tr key={`${account.index}:${account.address}`}>
+                <td>
+                  <code title={account.address}>
+                    #{account.index} · {shortId(account.address, 10)}
+                  </code>
+                </td>
+                <td>{titleCase(account.source)}</td>
+                <td>
+                  {[
+                    account.feePayer ? 'Fee payer' : undefined,
+                    account.signer ? 'Signer' : undefined,
+                    account.writable ? 'Writable' : 'Readonly',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </td>
+                <td>
+                  <KnowledgeDisplay data={account.balanceDeltaLamports} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="table-scroll solana-instruction-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Instruction</th>
+              <th>Program</th>
+              <th>Accounts</th>
+              <th>Stack</th>
+            </tr>
+          </thead>
+          <tbody>
+            {instructions.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="empty-cell">
+                  No compiled instructions were present in this transaction message.
+                </td>
+              </tr>
+            ) : (
+              instructions.map((instruction) => (
+                <tr key={instruction.path}>
+                  <td>{instruction.path}</td>
+                  <td>
+                    {instruction.programId.state === 'known' &&
+                    instruction.programId.value !== undefined ? (
+                      <code title={instruction.programId.value}>
+                        {shortId(instruction.programId.value, 10)}
+                      </code>
+                    ) : (
+                      <KnowledgeDisplay data={instruction.programId} />
+                    )}
+                  </td>
+                  <td>
+                    {instruction.accounts.state === 'known' &&
+                    instruction.accounts.value !== undefined ? (
+                      `${instruction.accounts.value.length} resolved`
+                    ) : (
+                      <KnowledgeDisplay data={instruction.accounts} />
+                    )}
+                  </td>
+                  <td>
+                    <KnowledgeDisplay data={instruction.stackHeight} />
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="table-scroll solana-token-change-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Token account</th>
+              <th>Mint</th>
+              <th>Pre</th>
+              <th>Post</th>
+              <th>Delta</th>
+            </tr>
+          </thead>
+          <tbody>
+            {semantics.tokenBalanceChanges.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="empty-cell">
+                  {semantics.tokenBalanceRecording.state === 'known'
+                    ? 'No token balance identities were recorded for this transaction.'
+                    : 'Token balance recording is unavailable; no zero balance is inferred.'}
+                </td>
+              </tr>
+            ) : (
+              semantics.tokenBalanceChanges.map((change) => (
+                <tr key={`${change.accountIndex}:${change.mint}`}>
+                  <td>
+                    {change.account.state === 'known' && change.account.value !== undefined ? (
+                      <code title={change.account.value}>{shortId(change.account.value, 10)}</code>
+                    ) : (
+                      <KnowledgeDisplay data={change.account} />
+                    )}
+                  </td>
+                  <td>
+                    <code title={change.mint}>{shortId(change.mint, 10)}</code>
+                  </td>
+                  <td>
+                    <KnowledgeDisplay data={change.preAmount} />
+                  </td>
+                  <td>
+                    <KnowledgeDisplay data={change.postAmount} />
+                  </td>
+                  <td>
+                    <KnowledgeDisplay data={change.deltaAmount} />
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="snapshot-strip">
+        <span>
+          <b>Outer instructions</b> {semantics.outerInstructions.length}
+        </span>
+        <span>
+          <b>CPI</b> <KnowledgeDisplay data={semantics.cpiCount} />
+        </span>
+        <span>
+          <b>Compute units</b> <KnowledgeDisplay data={semantics.computeUnitsConsumed} />
+        </span>
+        <span>
+          <b>Logs</b> <KnowledgeDisplay data={semantics.logCount} />
+        </span>
       </div>
     </section>
   );
@@ -4532,6 +4815,7 @@ function SearchWorkspace({
       {subject === undefined ? null : (
         <>
           <BitcoinIntelligencePanel response={subject} />
+          <SolanaTransactionIntelligencePanel response={subject} />
           <section className="panel subject-panel">
             <div className="panel-header">
               <div>
@@ -4546,7 +4830,12 @@ function SearchWorkspace({
               {Object.entries(subject.facts)
                 .filter(
                   ([label]) =>
-                    !['utxoSet', 'scriptControl', 'transactionEntityAnalysis'].includes(label),
+                    ![
+                      'utxoSet',
+                      'scriptControl',
+                      'transactionEntityAnalysis',
+                      'transactionSemantics',
+                    ].includes(label),
                 )
                 .map(([label, value]) => (
                   <div className="fact-row" key={label}>

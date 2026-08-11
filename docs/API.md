@@ -227,9 +227,20 @@ source-linked negative Evidence; the result stays Unknown because absence, pruni
 commitment delay cannot be conflated.
 
 The response contains `subject`, typed `facts`, `metadata`, and `evidence`. `metadata` always carries
-the Snapshot, coverage, freshness, source set, model version, confidence, and Evidence IDs. These
-records validate provider shape and placement but do not claim semantic transfer, protocol-event,
-controller, launchpad, or RV decoding.
+the Snapshot, coverage, freshness, source set, model version, confidence, and Evidence IDs.
+
+Solana transaction results additionally expose `transactionSemantics`. The versioned model resolves
+the canonical account order as static, loaded writable, then loaded readonly; derives fee payer,
+signer and writable flags from the message header; and keeps every compiled outer/CPI instruction at
+an explicit `outer:N` or `outer:N/inner:M` path. Recorded pre/post lamports and SPL token amounts use
+exact integer deltas. Missing loaded-address metadata leaves affected programs/accounts and account
+coverage incomplete. Missing inner-instruction or token-balance recording leaves CPI counts or token
+deltas Unknown; an account/mint present on only one side never implies a zero balance. The raw
+transaction, each normalized instruction and the terminal semantic result are separate, linked
+Evidence nodes. `recordingCoverage` measures six explicit response dimensions: execution metadata,
+lamport tables, CPI, token balances, logs and compute units. Overall response coverage uses the
+weaker of account resolution and recording coverage. This generic layer does not claim decoded
+protocol events, controllers, launchpad lifecycle or realizable value.
 
 Bitcoin transaction facts expose `locktime`, every validated input sequence and direct opt-in RBF
 signaling. `transactionEntityAnalysis` additionally reconciles input/output/fee arithmetic, records

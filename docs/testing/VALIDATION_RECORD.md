@@ -1523,3 +1523,37 @@ tests, 24 opt-in PostgreSQL/ClickHouse/MinIO integration tests, one Entity struc
 license allowlist, development and production dependency audits, CycloneDX SBOM generation,
 Compose validation, and all six production Docker targets passed. Exact-SHA remote CI remains a
 separate pre-merge gate for this batch.
+
+## Solana v0 transaction-semantics validation (2026-08-11)
+
+The production API query path read finalized public-mainnet transaction
+`5TVTwAzh85bCJ5tMxLprQPC6yBw2pKTuQTp6qaJapA2m21X9pgUK1QYDKJLKPt3JXVTZQiauxsNEGKFr76iDjqAN`
+from `api.mainnet.solana.com`. It rebound the transaction to slot `438523420` and blockhash
+`DG63SznvcBCHpRVqoZGdXdpNHfRrgwsM2VMG38EBu4pU`. The version-0 message referenced six Address
+Lookup Tables and resolved all 11 static, 20 loaded-writable and 23 loaded-readonly accounts, for
+54/54 account coverage.
+
+The normalized result retained six outer instructions and 26 recorded CPI instructions. The raw
+transaction, each normalized instruction and the terminal semantic result formed 34 linked Evidence
+nodes. The response reported full data coverage, confidence `0.95`, source set
+`solana-rpc@api.mainnet.solana.com`, and model versions
+`solana-transaction-query-v1.0.0` / `solana-transaction-semantics-v1.0.0`.
+
+Sixteen account/mint token-balance identities were observed. Fifteen had matching pre/post records
+and exact integer deltas. One identity existed only in the post-balance table; its pre amount and
+delta remained `Unknown(INSUFFICIENT_DATA)` instead of being coerced to zero. This validates the
+intended recording boundary on real data. It does not establish a decoded swap/event meaning,
+controller identity, launchpad lifecycle, independent-provider agreement or archive replay.
+
+This host resolves the public provider through a private-range interception proxy, so only the
+temporary validation process used `ALLOW_PRIVATE_PROVIDER_URLS=true`. The repository default stayed
+fail-closed, the allowed hostname remained exact, and all calls were read-only.
+
+The completed local gate passed 453 unit tests across 67 files, 68 environment-free integration
+tests, all 92 integration tests with PostgreSQL/ClickHouse/MinIO enabled, one Entity structural
+evaluation and 32 Chromium desktop/mobile flows. The 545-test durable coverage run reached 83.40%
+statements, 77.99% branches, 93.59% functions and 84.60% lines. Formatting, lint, typecheck,
+production build, license allowlist, development/production dependency audits, CycloneDX SBOM,
+Compose validation and all six production Docker targets passed. Rebuilt API/Web containers became
+healthy and returned `readOnly=true`; readiness remained `DEGRADED` under the fail-closed default
+because external provider DNS resolves through the host's private-range interception proxy.

@@ -412,6 +412,16 @@ mempool/outpoint observations use a captured head (plus a content digest for the
 view). A null EVM or Solana transaction response creates a raw provider observation followed by
 source-linked negative Evidence whose ambiguity remains explicit; it is not proof of non-existence.
 
+Confirmed Solana transaction semantics preserve the message/runtime boundary. Legacy and v0 messages
+share one strict contract; v0 account identity is resolved in protocol order from static keys and
+recorded loaded writable/readonly addresses. Header flags determine fee payer, signer and writable
+access. Outer and inner CPI instructions retain compiled indexes plus resolved addresses when
+available, and each normalized instruction is a child Evidence derivation of the raw transaction.
+Pre/post lamport and token-balance tables produce exact integer deltas only when both observations
+exist. Missing metadata, unrecorded inner instructions, unresolved lookup addresses, and one-sided
+token records remain typed Unknown and reduce coverage; they never become zero or a decoded protocol
+action.
+
 ## Finalized ingestion commit sequence
 
 ```mermaid

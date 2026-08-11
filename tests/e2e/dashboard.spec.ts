@@ -88,6 +88,131 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
           slot: { state: 'known', value: '300000000' },
           feeLamports: { state: 'known', value: '5000' },
           execution: { state: 'known', value: 'SUCCESS' },
+          feePayer: { state: 'known', value: '11111111111111111111111111111111' },
+          signerCount: { state: 'known', value: 1 },
+          outerInstructionCount: { state: 'known', value: 1 },
+          cpiCount: { state: 'known', value: 1 },
+          accountResolutionComplete: { state: 'known', value: true },
+          tokenBalanceChangeCount: { state: 'known', value: 1 },
+          transactionSemantics: {
+            state: 'known',
+            value: {
+              version: '0',
+              recentBlockhash: '11111111111111111111111111111111',
+              execution: 'SUCCESS',
+              executionError: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+              feePayer: { state: 'known', value: '11111111111111111111111111111111' },
+              signers: ['11111111111111111111111111111111'],
+              requiredSignatureCount: 1,
+              staticAccountCount: 2,
+              loadedWritableAccountCount: 1,
+              loadedReadonlyAccountCount: 1,
+              accountResolutionComplete: { state: 'known', value: true },
+              accountCoverage: 1,
+              recordingCoverage: 1,
+              accounts: [
+                {
+                  index: 0,
+                  address: '11111111111111111111111111111111',
+                  source: 'STATIC',
+                  signer: true,
+                  writable: true,
+                  feePayer: true,
+                  balanceDeltaLamports: { state: 'known', value: '-5000' },
+                },
+                {
+                  index: 1,
+                  address: 'Vote111111111111111111111111111111111111111',
+                  source: 'STATIC',
+                  signer: false,
+                  writable: false,
+                  feePayer: false,
+                  balanceDeltaLamports: { state: 'known', value: '0' },
+                },
+                {
+                  index: 2,
+                  address: 'SysvarRent111111111111111111111111111111111',
+                  source: 'LOOKUP_WRITABLE',
+                  signer: false,
+                  writable: true,
+                  feePayer: false,
+                  balanceDeltaLamports: { state: 'known', value: '0' },
+                },
+                {
+                  index: 3,
+                  address: 'ComputeBudget111111111111111111111111111111',
+                  source: 'LOOKUP_READONLY',
+                  signer: false,
+                  writable: false,
+                  feePayer: false,
+                  balanceDeltaLamports: { state: 'known', value: '0' },
+                },
+              ],
+              addressTableLookups: [
+                {
+                  accountKey: 'AddressLookupTab1e1111111111111111111111111',
+                  writableIndexes: [0],
+                  readonlyIndexes: [1],
+                },
+              ],
+              outerInstructions: [
+                {
+                  path: 'outer:0',
+                  stackHeight: { state: 'known', value: 1 },
+                  programId: {
+                    state: 'known',
+                    value: 'ComputeBudget111111111111111111111111111111',
+                  },
+                  accountIndexes: [0, 2],
+                  accounts: {
+                    state: 'known',
+                    value: [
+                      '11111111111111111111111111111111',
+                      'SysvarRent111111111111111111111111111111111',
+                    ],
+                  },
+                },
+              ],
+              innerInstructionRecording: { state: 'known', value: true },
+              innerInstructions: [
+                {
+                  path: 'outer:0/inner:0',
+                  stackHeight: { state: 'known', value: 2 },
+                  programId: {
+                    state: 'known',
+                    value: 'Vote111111111111111111111111111111111111111',
+                  },
+                  accountIndexes: [2],
+                  accounts: {
+                    state: 'known',
+                    value: ['SysvarRent111111111111111111111111111111111'],
+                  },
+                },
+              ],
+              cpiCount: { state: 'known', value: 1 },
+              programIds: [
+                'ComputeBudget111111111111111111111111111111',
+                'Vote111111111111111111111111111111111111111',
+              ],
+              tokenBalanceRecording: { state: 'known', value: true },
+              tokenBalanceChanges: [
+                {
+                  accountIndex: 2,
+                  account: {
+                    state: 'known',
+                    value: 'SysvarRent111111111111111111111111111111111',
+                  },
+                  mint: 'So11111111111111111111111111111111111111112',
+                  preAmount: { state: 'known', value: '100' },
+                  postAmount: { state: 'known', value: '70' },
+                  deltaAmount: { state: 'known', value: '-30' },
+                },
+              ],
+              computeUnitsConsumed: { state: 'known', value: '2300' },
+              logRecording: { state: 'known', value: true },
+              logCount: { state: 'known', value: 3 },
+            },
+          },
         },
         metadata: {
           snapshot: {
@@ -103,7 +228,7 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
           simulationCoverage: 0,
           freshness: '2026-08-10T00:00:00.000Z',
           sourceSet: ['solana-rpc'],
-          modelVersion: 'solana-transaction-query-v0.1.0',
+          modelVersion: 'solana-transaction-query-v1.0.0',
           confidence: 1,
           evidenceIds: ['ev_111111111111111111111111'],
         },
@@ -134,6 +259,15 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
   await expect(page.getByText('TRANSACTION', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Inspect' }).click();
 
+  const semantics = page.getByTestId('solana-transaction-semantics');
+  await expect(
+    semantics.getByRole('heading', { name: 'Solana transaction semantics' }),
+  ).toBeVisible();
+  await expect(semantics.getByText('Resolved', { exact: true })).toBeVisible();
+  await expect(semantics.getByText('Lookup Writable', { exact: true })).toBeVisible();
+  await expect(semantics.getByText('outer:0/inner:0', { exact: true })).toBeVisible();
+  await expect(semantics.getByText('-30', { exact: true })).toBeVisible();
+  await expect(semantics.getByText(/never coerced to an atomic zero/)).toBeVisible();
   await expect(page.getByText('Snapshot-bound ledger record')).toBeVisible();
   await expect(page.getByText('Fee Lamports')).toBeVisible();
   await expect(page.getByText('5000', { exact: true })).toBeVisible();

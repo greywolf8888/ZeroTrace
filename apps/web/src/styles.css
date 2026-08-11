@@ -1132,6 +1132,23 @@ tbody tr:hover {
   border-top: 1px solid var(--border);
 }
 
+.solana-account-table,
+.solana-instruction-table,
+.solana-token-change-table {
+  border-top: 1px solid var(--border);
+}
+
+.solana-account-table td,
+.solana-instruction-table td,
+.solana-token-change-table td {
+  white-space: nowrap;
+}
+
+.solana-transaction-summary code {
+  color: var(--text);
+  font-size: 0.78rem;
+}
+
 .bitcoin-suppression-ledger ul {
   display: flex;
   flex-wrap: wrap;

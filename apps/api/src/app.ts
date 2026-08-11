@@ -1244,7 +1244,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? 'IMPLEMENTED'
             : 'PROVIDERS_PARTIALLY_CONFIGURED',
         detail:
-          'Read-only EVM transaction/block, Bitcoin address/transaction/block/outpoint, and Solana transaction/slot queries use strict provider-response validation and bind observations to Evidence plus replayable Snapshots. Bitcoin transactions add conservative common-input/change candidates with CoinJoin/Payjoin/service suppression and no automatic entity merge. Null, pending, mempool, and provider failures remain distinct.',
+          'Read-only EVM transaction/block, Bitcoin address/transaction/block/outpoint, and Solana transaction/slot queries use strict provider-response validation and bind observations to Evidence plus replayable Snapshots. Bitcoin transactions add conservative common-input/change candidates with CoinJoin/Payjoin/service suppression and no automatic entity merge. Solana transactions normalize legacy/v0 messages, loaded ALT accounts, signer/writable flags, outer/CPI instructions and recorded SOL/SPL balance effects while preserving missing metadata as Unknown. Null, pending, mempool, and provider failures remain distinct.',
       },
       {
         id: 'flap-bsc-inspection',

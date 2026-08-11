@@ -964,9 +964,33 @@ describe('capability probes and snapshots', () => {
           version: 0,
           transaction: {
             signatures: [signature],
-            message: { accountKeys: [], instructions: [], recentBlockhash: '1'.repeat(32) },
+            message: {
+              accountKeys: [
+                '11111111111111111111111111111111',
+                'Vote111111111111111111111111111111111111111',
+              ],
+              addressTableLookups: [],
+              header: {
+                numRequiredSignatures: 1,
+                numReadonlySignedAccounts: 0,
+                numReadonlyUnsignedAccounts: 1,
+              },
+              instructions: [{ accounts: [0], data: '', programIdIndex: 1, stackHeight: 1 }],
+              recentBlockhash: '11111111111111111111111111111111',
+            },
           },
-          meta: { err: null, fee: '18446744073709551615' },
+          meta: {
+            err: null,
+            fee: '18446744073709551615',
+            loadedAddresses: { writable: [], readonly: [] },
+            innerInstructions: [],
+            preBalances: ['18446744073709551615', '1'],
+            postBalances: ['18446744073709546615', '1'],
+            preTokenBalances: [],
+            postTokenBalances: [],
+            logMessages: [],
+            computeUnitsConsumed: 2100,
+          },
         },
       },
       { getTransaction: 'solana-transaction' },
@@ -982,6 +1006,14 @@ describe('capability probes and snapshots', () => {
         version: '0',
         feeLamports: '18446744073709551615',
         success: true,
+        header: { numRequiredSignatures: 1 },
+        staticAccountKeys: [
+          '11111111111111111111111111111111',
+          'Vote111111111111111111111111111111111111111',
+        ],
+        loadedAddresses: { writable: [], readonly: [] },
+        innerInstructions: [],
+        computeUnitsConsumed: '2100',
       },
     });
     expect(transport.calls[0]).toEqual({
@@ -990,6 +1022,102 @@ describe('capability probes and snapshots', () => {
         signature,
         { encoding: 'json', commitment: 'finalized', maxSupportedTransactionVersion: 0 },
       ],
+    });
+  });
+
+  it('resolves strict v0 transaction metadata and rejects ALT or compiled-index conflicts', async () => {
+    const signature =
+      '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
+    const response = {
+      slot: 300_000_000,
+      blockTime: 1_700_000_000,
+      version: 0,
+      transaction: {
+        signatures: [signature],
+        message: {
+          accountKeys: [
+            '11111111111111111111111111111111',
+            'Vote111111111111111111111111111111111111111',
+          ],
+          addressTableLookups: [
+            {
+              accountKey: 'AddressLookupTab1e1111111111111111111111111',
+              writableIndexes: [0],
+              readonlyIndexes: [1],
+            },
+          ],
+          header: {
+            numRequiredSignatures: 1,
+            numReadonlySignedAccounts: 0,
+            numReadonlyUnsignedAccounts: 1,
+          },
+          instructions: [{ accounts: [0, 2], data: '', programIdIndex: 3, stackHeight: 1 }],
+          recentBlockhash: '11111111111111111111111111111111',
+        },
+      },
+      meta: {
+        err: { InstructionError: [0, { Custom: 7 }] },
+        fee: 5000,
+        loadedAddresses: {
+          writable: ['SysvarRent111111111111111111111111111111111'],
+          readonly: ['ComputeBudget111111111111111111111111111111'],
+        },
+        innerInstructions: [
+          {
+            index: 0,
+            instructions: [{ accounts: [2], data: '1', programIdIndex: 3, stackHeight: 2 }],
+          },
+        ],
+        preBalances: [10000, 1, 1, 1],
+        postBalances: [5000, 1, 1, 1],
+        preTokenBalances: [],
+        postTokenBalances: [],
+        logMessages: null,
+      },
+    };
+    const adapter = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({ getTransaction: response }),
+    );
+    await expect(adapter.getTransaction(signature)).resolves.toMatchObject({
+      success: false,
+      executionError: { InstructionError: [0, { Custom: 7 }] },
+      addressTableLookups: [{ writableIndexes: [0], readonlyIndexes: [1] }],
+      loadedAddresses: {
+        writable: ['SysvarRent111111111111111111111111111111111'],
+        readonly: ['ComputeBudget111111111111111111111111111111'],
+      },
+      innerInstructions: [{ index: 0, instructions: [{ programIdIndex: 3 }] }],
+    });
+
+    const mismatchedLookup = structuredClone(response);
+    mismatchedLookup.meta.loadedAddresses.readonly = [];
+    const invalidLookup = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({ getTransaction: mismatchedLookup }),
+    );
+    await expect(invalidLookup.getTransaction(signature)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+
+    const invalidIndexResponse = structuredClone(response);
+    invalidIndexResponse.transaction.message.instructions[0]!.programIdIndex = 4;
+    const invalidIndex = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({ getTransaction: invalidIndexResponse }),
+    );
+    await expect(invalidIndex.getTransaction(signature)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    });
+
+    const readonlyFeePayerResponse = structuredClone(response);
+    readonlyFeePayerResponse.transaction.message.header.numReadonlySignedAccounts = 1;
+    const readonlyFeePayer = new SolanaLedgerAdapter(
+      { id: 'solana', commitment: 'finalized' },
+      new FakeJsonRpcTransport({ getTransaction: readonlyFeePayerResponse }),
+    );
+    await expect(readonlyFeePayer.getTransaction(signature)).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
     });
   });
 

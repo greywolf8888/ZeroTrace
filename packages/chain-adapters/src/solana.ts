@@ -22,13 +22,66 @@ import {
 
 export type SolanaSnapshot = z.infer<typeof SolanaSnapshotSchema>;
 
+export interface SolanaMessageHeader {
+  numRequiredSignatures: number;
+  numReadonlySignedAccounts: number;
+  numReadonlyUnsignedAccounts: number;
+}
+
+export interface SolanaCompiledInstruction {
+  accounts: number[];
+  data: string;
+  programIdIndex: number;
+  stackHeight?: number;
+}
+
+export interface SolanaAddressTableLookup {
+  accountKey: string;
+  writableIndexes: number[];
+  readonlyIndexes: number[];
+}
+
+export interface SolanaLoadedAddresses {
+  writable: string[];
+  readonly: string[];
+}
+
+export interface SolanaInnerInstructionGroup {
+  index: number;
+  instructions: SolanaCompiledInstruction[];
+}
+
+export interface SolanaTokenBalanceRecord {
+  accountIndex: number;
+  mint: string;
+  owner?: string;
+  programId?: string;
+  amount: string;
+  decimals: number;
+}
+
 export interface SolanaTransactionRecord {
   signature: string;
+  signatures: string[];
   slot: string;
   blockTime?: string;
   version: 'legacy' | string;
+  recentBlockhash: string;
+  header: SolanaMessageHeader;
+  staticAccountKeys: string[];
+  addressTableLookups: SolanaAddressTableLookup[];
+  instructions: SolanaCompiledInstruction[];
   feeLamports?: string;
   success?: boolean;
+  executionError?: Readonly<Record<string, unknown>> | string;
+  loadedAddresses?: SolanaLoadedAddresses;
+  innerInstructions?: SolanaInnerInstructionGroup[];
+  preBalances?: string[];
+  postBalances?: string[];
+  preTokenBalances?: SolanaTokenBalanceRecord[];
+  postTokenBalances?: SolanaTokenBalanceRecord[];
+  logMessages?: string[];
+  computeUnitsConsumed?: string;
   raw: Readonly<Record<string, unknown>>;
 }
 
@@ -168,6 +221,211 @@ function requireRecord(value: unknown, field: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function requireUnsignedByte(value: unknown, field: string): number {
+  const parsed = requireSafeInteger(value, field);
+  if (parsed > 255) {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned an invalid ${field}.`);
+  }
+  return parsed;
+}
+
+function requireBase58Data(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned invalid ${field}.`);
+  }
+  try {
+    bs58.decode(value);
+  } catch {
+    throw new ProviderError('INVALID_RESPONSE', `Solana provider returned invalid ${field}.`);
+  }
+  return value;
+}
+
+function parseMessageHeader(value: unknown, staticAccountCount: number): SolanaMessageHeader {
+  const header = requireRecord(value, 'transaction message header');
+  const numRequiredSignatures = requireUnsignedByte(
+    header.numRequiredSignatures,
+    'required signature count',
+  );
+  const numReadonlySignedAccounts = requireUnsignedByte(
+    header.numReadonlySignedAccounts,
+    'readonly signed account count',
+  );
+  const numReadonlyUnsignedAccounts = requireUnsignedByte(
+    header.numReadonlyUnsignedAccounts,
+    'readonly unsigned account count',
+  );
+  if (
+    numRequiredSignatures === 0 ||
+    numRequiredSignatures > staticAccountCount ||
+    numReadonlySignedAccounts >= numRequiredSignatures ||
+    numReadonlyUnsignedAccounts > staticAccountCount - numRequiredSignatures
+  ) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana transaction message header is inconsistent with its static account keys.',
+    );
+  }
+  return {
+    numRequiredSignatures,
+    numReadonlySignedAccounts,
+    numReadonlyUnsignedAccounts,
+  };
+}
+
+function parseCompiledInstruction(value: unknown, field: string): SolanaCompiledInstruction {
+  const instruction = requireRecord(value, field);
+  if (!Array.isArray(instruction.accounts)) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      `Solana provider returned invalid ${field} accounts.`,
+    );
+  }
+  const stackHeight = instruction.stackHeight;
+  return {
+    accounts: instruction.accounts.map((account, index) =>
+      requireUnsignedByte(account, `${field} account index ${index}`),
+    ),
+    data: requireBase58Data(instruction.data, `${field} data`),
+    programIdIndex: requireUnsignedByte(instruction.programIdIndex, `${field} program index`),
+    ...(stackHeight === undefined || stackHeight === null
+      ? {}
+      : { stackHeight: requireUnsignedByte(stackHeight, `${field} stack height`) }),
+  };
+}
+
+function parseAddressTableLookups(value: unknown): SolanaAddressTableLookup[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana transaction address-table lookups are invalid.',
+    );
+  }
+  return value.map((item, lookupIndex) => {
+    const lookup = requireRecord(item, `address-table lookup ${lookupIndex}`);
+    if (!Array.isArray(lookup.writableIndexes) || !Array.isArray(lookup.readonlyIndexes)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        `Solana address-table lookup ${lookupIndex} indexes are invalid.`,
+      );
+    }
+    return {
+      accountKey: requirePublicKey(lookup.accountKey, `address-table lookup ${lookupIndex} key`),
+      writableIndexes: lookup.writableIndexes.map((index, position) =>
+        requireUnsignedByte(
+          index,
+          `address-table lookup ${lookupIndex} writable index ${position}`,
+        ),
+      ),
+      readonlyIndexes: lookup.readonlyIndexes.map((index, position) =>
+        requireUnsignedByte(
+          index,
+          `address-table lookup ${lookupIndex} readonly index ${position}`,
+        ),
+      ),
+    };
+  });
+}
+
+function parseLoadedAddresses(value: unknown): SolanaLoadedAddresses | undefined {
+  if (value === undefined) return undefined;
+  const loaded = requireRecord(value, 'loaded addresses');
+  if (!Array.isArray(loaded.writable) || !Array.isArray(loaded.readonly)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana loaded addresses are invalid.');
+  }
+  return {
+    writable: loaded.writable.map((address, index) =>
+      requirePublicKey(address, `loaded writable address ${index}`),
+    ),
+    readonly: loaded.readonly.map((address, index) =>
+      requirePublicKey(address, `loaded readonly address ${index}`),
+    ),
+  };
+}
+
+function parseInnerInstructions(
+  value: unknown,
+  outerInstructionCount: number,
+): SolanaInnerInstructionGroup[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana inner instructions are invalid.');
+  }
+  const groups = value.map((item, groupIndex) => {
+    const group = requireRecord(item, `inner instruction group ${groupIndex}`);
+    const index = requireUnsignedByte(group.index, `inner instruction group ${groupIndex} index`);
+    if (index >= outerInstructionCount || !Array.isArray(group.instructions)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        `Solana inner instruction group ${groupIndex} is inconsistent with the message.`,
+      );
+    }
+    return {
+      index,
+      instructions: group.instructions.map((instruction, instructionIndex) =>
+        parseCompiledInstruction(
+          instruction,
+          `inner instruction ${groupIndex}:${instructionIndex}`,
+        ),
+      ),
+    };
+  });
+  if (new Set(groups.map((group) => group.index)).size !== groups.length) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana inner instruction groups contain duplicate outer indexes.',
+    );
+  }
+  return groups.sort((left, right) => left.index - right.index);
+}
+
+function parseBalanceArray(value: unknown, field: string): string[] {
+  if (!Array.isArray(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `Solana transaction ${field} are invalid.`);
+  }
+  return value.map((balance, index) => requireUnsignedQuantity(balance, `${field} ${index}`));
+}
+
+function parseTokenBalances(value: unknown, field: string): SolanaTokenBalanceRecord[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new ProviderError('INVALID_RESPONSE', `Solana transaction ${field} are invalid.`);
+  }
+  const balances = value.map((item, index) => {
+    const balance = requireRecord(item, `${field} ${index}`);
+    const uiTokenAmount = requireRecord(balance.uiTokenAmount, `${field} ${index} token amount`);
+    const owner = balance.owner;
+    const programId = balance.programId;
+    return {
+      accountIndex: requireUnsignedByte(balance.accountIndex, `${field} ${index} account index`),
+      mint: requirePublicKey(balance.mint, `${field} ${index} mint`),
+      ...(owner === undefined ? {} : { owner: requirePublicKey(owner, `${field} ${index} owner`) }),
+      ...(programId === undefined
+        ? {}
+        : { programId: requirePublicKey(programId, `${field} ${index} program`) }),
+      amount: requireUnsignedQuantity(uiTokenAmount.amount, `${field} ${index} amount`),
+      decimals: requireUnsignedByte(uiTokenAmount.decimals, `${field} ${index} decimals`),
+    };
+  });
+  const identities = balances.map((balance) => `${balance.accountIndex}:${balance.mint}`);
+  if (new Set(identities).size !== identities.length) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      `Solana transaction ${field} contain duplicate account/mint identities.`,
+    );
+  }
+  return balances;
+}
+
+function parseLogMessages(value: unknown): string[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value) || value.some((message) => typeof message !== 'string')) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana transaction log messages are invalid.');
+  }
+  return value as string[];
+}
+
 function parseTransaction(
   value: unknown,
   expectedSignature: string,
@@ -179,14 +437,47 @@ function parseTransaction(
   if (!Array.isArray(transaction.signatures) || transaction.signatures.length === 0) {
     throw new ProviderError('INVALID_RESPONSE', 'Solana transaction signatures are invalid.');
   }
-  const primarySignature = requireSignature(transaction.signatures[0], 'transaction signature');
+  const signatures = transaction.signatures.map((signature, index) =>
+    requireSignature(signature, `transaction signature ${index}`),
+  );
+  const primarySignature = signatures[0]!;
   if (primarySignature !== expectedSignature) {
     throw new ProviderError(
       'INVALID_RESPONSE',
       'Solana transaction identity does not match the requested signature.',
     );
   }
-  requireRecord(transaction.message, 'transaction message');
+  const message = requireRecord(transaction.message, 'transaction message');
+  if (!Array.isArray(message.accountKeys) || message.accountKeys.length === 0) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana transaction message account keys are invalid.',
+    );
+  }
+  const staticAccountKeys = message.accountKeys.map((address, index) =>
+    requirePublicKey(address, `transaction static account ${index}`),
+  );
+  if (new Set(staticAccountKeys).size !== staticAccountKeys.length) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana transaction message contains duplicate static account keys.',
+    );
+  }
+  const header = parseMessageHeader(message.header, staticAccountKeys.length);
+  if (signatures.length !== header.numRequiredSignatures) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana transaction signature count does not match the message header.',
+    );
+  }
+  if (!Array.isArray(message.instructions)) {
+    throw new ProviderError('INVALID_RESPONSE', 'Solana transaction instructions are invalid.');
+  }
+  const instructions = message.instructions.map((instruction, index) =>
+    parseCompiledInstruction(instruction, `outer instruction ${index}`),
+  );
+  const addressTableLookups = parseAddressTableLookups(message.addressTableLookups);
+  const recentBlockhash = requirePublicKey(message.recentBlockhash, 'transaction recent blockhash');
   const version = response.version;
   if (
     version !== 'legacy' &&
@@ -194,9 +485,24 @@ function parseTransaction(
   ) {
     throw new ProviderError('INVALID_RESPONSE', 'Solana transaction version is invalid.');
   }
+  if (version === 'legacy' && addressTableLookups.length > 0) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Legacy Solana transactions cannot contain address-table lookups.',
+    );
+  }
   const blockTime = optionalBlockTimestamp(response.blockTime);
   let feeLamports: string | undefined;
   let success: boolean | undefined;
+  let executionError: Readonly<Record<string, unknown>> | string | undefined;
+  let loadedAddresses: SolanaLoadedAddresses | undefined;
+  let innerInstructions: SolanaInnerInstructionGroup[] | undefined;
+  let preBalances: string[] | undefined;
+  let postBalances: string[] | undefined;
+  let preTokenBalances: SolanaTokenBalanceRecord[] | undefined;
+  let postTokenBalances: SolanaTokenBalanceRecord[] | undefined;
+  let logMessages: string[] | undefined;
+  let computeUnitsConsumed: string | undefined;
   if (response.meta !== null) {
     const meta = requireRecord(response.meta, 'transaction metadata');
     if (!Object.hasOwn(meta, 'err')) {
@@ -204,14 +510,125 @@ function parseTransaction(
     }
     feeLamports = requireUnsignedQuantity(meta.fee, 'transaction fee');
     success = meta.err === null;
+    if (meta.err !== null) {
+      if (typeof meta.err === 'string' && meta.err.length > 0) {
+        executionError = meta.err;
+      } else if (typeof meta.err === 'object' && meta.err !== null && !Array.isArray(meta.err)) {
+        executionError = meta.err as Readonly<Record<string, unknown>>;
+      } else {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'Solana transaction execution error is invalid.',
+        );
+      }
+    }
+    loadedAddresses = parseLoadedAddresses(meta.loadedAddresses);
+    innerInstructions = parseInnerInstructions(meta.innerInstructions, instructions.length);
+    preBalances = parseBalanceArray(meta.preBalances, 'pre-balances');
+    postBalances = parseBalanceArray(meta.postBalances, 'post-balances');
+    if (preBalances.length !== postBalances.length) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Solana transaction pre/post balance cardinality does not match.',
+      );
+    }
+    preTokenBalances = parseTokenBalances(meta.preTokenBalances, 'pre-token balances');
+    postTokenBalances = parseTokenBalances(meta.postTokenBalances, 'post-token balances');
+    if ((preTokenBalances === undefined) !== (postTokenBalances === undefined)) {
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Solana transaction token-balance recording is incomplete.',
+      );
+    }
+    logMessages = parseLogMessages(meta.logMessages);
+    if (meta.computeUnitsConsumed !== undefined) {
+      computeUnitsConsumed = requireUnsignedQuantity(
+        meta.computeUnitsConsumed,
+        'transaction compute units consumed',
+      );
+    }
+  }
+  const expectedWritableLookupCount = addressTableLookups.reduce(
+    (count, lookup) => count + lookup.writableIndexes.length,
+    0,
+  );
+  const expectedReadonlyLookupCount = addressTableLookups.reduce(
+    (count, lookup) => count + lookup.readonlyIndexes.length,
+    0,
+  );
+  if (
+    loadedAddresses !== undefined &&
+    (loadedAddresses.writable.length !== expectedWritableLookupCount ||
+      loadedAddresses.readonly.length !== expectedReadonlyLookupCount)
+  ) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana loaded-address cardinality does not match address-table lookups.',
+    );
+  }
+  const addressResolutionComplete =
+    addressTableLookups.length === 0 || loadedAddresses !== undefined;
+  const resolvedAccountCount =
+    staticAccountKeys.length +
+    (loadedAddresses?.writable.length ?? 0) +
+    (loadedAddresses?.readonly.length ?? 0);
+  if (
+    preBalances !== undefined &&
+    addressResolutionComplete &&
+    preBalances.length !== resolvedAccountCount
+  ) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Solana balance cardinality does not match resolved transaction accounts.',
+    );
+  }
+  if (addressResolutionComplete) {
+    const compiledInstructions = [
+      ...instructions,
+      ...(innerInstructions?.flatMap((group) => group.instructions) ?? []),
+    ];
+    for (const instruction of compiledInstructions) {
+      if (
+        instruction.programIdIndex >= resolvedAccountCount ||
+        instruction.accounts.some((index) => index >= resolvedAccountCount)
+      ) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'Solana compiled instruction references an unresolved account index.',
+        );
+      }
+    }
+    for (const balance of [...(preTokenBalances ?? []), ...(postTokenBalances ?? [])]) {
+      if (balance.accountIndex >= resolvedAccountCount) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'Solana token balance references an unresolved account index.',
+        );
+      }
+    }
   }
   return {
     signature: primarySignature,
+    signatures,
     slot: String(slot),
     ...(blockTime === undefined ? {} : { blockTime }),
     version: version === 'legacy' ? version : String(version),
+    recentBlockhash,
+    header,
+    staticAccountKeys,
+    addressTableLookups,
+    instructions,
     ...(feeLamports === undefined ? {} : { feeLamports }),
     ...(success === undefined ? {} : { success }),
+    ...(executionError === undefined ? {} : { executionError }),
+    ...(loadedAddresses === undefined ? {} : { loadedAddresses }),
+    ...(innerInstructions === undefined ? {} : { innerInstructions }),
+    ...(preBalances === undefined ? {} : { preBalances }),
+    ...(postBalances === undefined ? {} : { postBalances }),
+    ...(preTokenBalances === undefined ? {} : { preTokenBalances }),
+    ...(postTokenBalances === undefined ? {} : { postTokenBalances }),
+    ...(logMessages === undefined ? {} : { logMessages }),
+    ...(computeUnitsConsumed === undefined ? {} : { computeUnitsConsumed }),
     raw: response,
   };
 }

@@ -1169,6 +1169,93 @@ export type EvmControlSurfaceReport = z.infer<typeof EvmControlSurfaceReportSche
 
 export const SolanaPublicKeySchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
 
+export const SolanaTransactionAccountSourceSchema = z.enum([
+  'STATIC',
+  'LOOKUP_WRITABLE',
+  'LOOKUP_READONLY',
+]);
+export type SolanaTransactionAccountSource = z.infer<typeof SolanaTransactionAccountSourceSchema>;
+
+export const SolanaTransactionAccountSchema = z.object({
+  index: z.number().int().nonnegative(),
+  address: SolanaPublicKeySchema,
+  source: SolanaTransactionAccountSourceSchema,
+  signer: z.boolean(),
+  writable: z.boolean(),
+  feePayer: z.boolean(),
+  preBalanceLamports: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  postBalanceLamports: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  balanceDeltaLamports: knowledgeValueSchema(QuantityStringSchema),
+});
+export type SolanaTransactionAccount = z.infer<typeof SolanaTransactionAccountSchema>;
+
+export const SolanaAddressTableLookupObservationSchema = z.object({
+  accountKey: SolanaPublicKeySchema,
+  writableIndexes: z.array(z.number().int().min(0).max(255)),
+  readonlyIndexes: z.array(z.number().int().min(0).max(255)),
+});
+export type SolanaAddressTableLookupObservation = z.infer<
+  typeof SolanaAddressTableLookupObservationSchema
+>;
+
+export const SolanaInstructionObservationSchema = z.object({
+  path: z.string().regex(/^outer:\d+(?:\/inner:\d+)?$/),
+  outerIndex: z.number().int().nonnegative(),
+  innerIndex: knowledgeValueSchema(z.number().int().nonnegative()),
+  stackHeight: knowledgeValueSchema(z.number().int().nonnegative()),
+  programIdIndex: z.number().int().nonnegative(),
+  programId: knowledgeValueSchema(SolanaPublicKeySchema),
+  accountIndexes: z.array(z.number().int().nonnegative()),
+  accounts: knowledgeValueSchema(z.array(SolanaPublicKeySchema)),
+  dataBase58: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]*$/),
+});
+export type SolanaInstructionObservation = z.infer<typeof SolanaInstructionObservationSchema>;
+
+export const SolanaTokenBalanceChangeSchema = z.object({
+  accountIndex: z.number().int().nonnegative(),
+  account: knowledgeValueSchema(SolanaPublicKeySchema),
+  mint: SolanaPublicKeySchema,
+  ownerBefore: knowledgeValueSchema(SolanaPublicKeySchema),
+  ownerAfter: knowledgeValueSchema(SolanaPublicKeySchema),
+  programId: knowledgeValueSchema(SolanaPublicKeySchema),
+  decimals: knowledgeValueSchema(z.number().int().min(0).max(255)),
+  preAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  postAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  deltaAmount: knowledgeValueSchema(QuantityStringSchema),
+});
+export type SolanaTokenBalanceChange = z.infer<typeof SolanaTokenBalanceChangeSchema>;
+
+export const SolanaTransactionSemanticsSchema = z.object({
+  signature: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/),
+  version: z.union([z.literal('legacy'), UnsignedQuantityStringSchema]),
+  recentBlockhash: SolanaPublicKeySchema,
+  execution: z.enum(['SUCCESS', 'FAILED', 'METADATA_UNAVAILABLE']),
+  executionError: knowledgeValueSchema(JsonValueSchema),
+  feePayer: knowledgeValueSchema(SolanaPublicKeySchema),
+  signers: z.array(SolanaPublicKeySchema).min(1),
+  requiredSignatureCount: z.number().int().positive(),
+  staticAccountCount: z.number().int().positive(),
+  loadedWritableAccountCount: z.number().int().nonnegative(),
+  loadedReadonlyAccountCount: z.number().int().nonnegative(),
+  accountResolutionComplete: knowledgeValueSchema(z.boolean()),
+  accountCoverage: CoverageRatioSchema,
+  recordingCoverage: CoverageRatioSchema,
+  accounts: z.array(SolanaTransactionAccountSchema).min(1),
+  addressTableLookups: z.array(SolanaAddressTableLookupObservationSchema),
+  outerInstructions: z.array(SolanaInstructionObservationSchema),
+  innerInstructionRecording: knowledgeValueSchema(z.boolean()),
+  innerInstructions: z.array(SolanaInstructionObservationSchema),
+  cpiCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  programIds: z.array(SolanaPublicKeySchema),
+  tokenBalanceRecording: knowledgeValueSchema(z.boolean()),
+  tokenBalanceChanges: z.array(SolanaTokenBalanceChangeSchema),
+  computeUnitsConsumed: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  logRecording: knowledgeValueSchema(z.boolean()),
+  logCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  modelVersion: z.literal('solana-transaction-semantics-v1.0.0'),
+});
+export type SolanaTransactionSemantics = z.infer<typeof SolanaTransactionSemanticsSchema>;
+
 export const SolanaControlRightTypeSchema = z.enum([
   'MINT_AUTHORITY',
   'FREEZE_AUTHORITY',

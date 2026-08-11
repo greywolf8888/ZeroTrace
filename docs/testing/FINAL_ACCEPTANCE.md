@@ -18,6 +18,8 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
       documented Alchemy and BNB Chain operators at one common finalized Snapshot
 - [x] Strict EVM/Bitcoin/Solana block and transaction plus Bitcoin outpoint queries bind confirmed
       records to exact Snapshots and pending/mempool/null observations to evidenced uncertainty
+- [x] Solana legacy/v0 transaction normalization resolves recorded ALT accounts, account access,
+      outer/CPI paths and SOL/SPL balance effects while preserving missing recording as Unknown
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
 - [x] API, UI, infrastructure schema, health, and test foundation exist
 - [x] Clean Docker build, database initialization, and runtime smoke check recorded
@@ -247,12 +249,14 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Named EVM execution/state and Solana balance-table capture with integrity-checked artifact replay
 - [x] Scoped finalized Solana control-surface validation for classic SPL mint, Token-2022 mint and
       Token-2022 upgradeable Program/ProgramData, followed by provider-free PostgreSQL replay
+- [x] Scoped public-mainnet Solana v0 production-path replay with six lookup tables, 43 loaded
+      accounts, 26 CPI instructions, exact recorded token deltas and one one-sided Unknown delta
 - [x] Scoped public Esplora Bitcoin address/UTXO and P2WPKH/P2TR outpoint validation through the
       production API path with Snapshot and Evidence; Core policy/archive reconciliation remains open
 - [ ] Ethereum archive/current-state fixture suite
 - [ ] BNB Smart Chain archive/current-state fixture suite
 - [ ] Bitcoin Core plus Esplora archive/policy reconciliation fixture suite
-- [ ] Solana archive plus dedicated RPC fixture suite
+- [ ] Solana archive plus dedicated independent-RPC fixture suite and program-specific instruction decoding
 - [ ] Named launch/migration fixtures for every declared platform/version
 - [x] Named FFT migrated Pancake V2 point-in-time market plus buy/exit-size arithmetic fixtures
 - [x] Named live FFT Alchemy + BNB Chain common-finalized-block market/RV reconciliation: 37/37

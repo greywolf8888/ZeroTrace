@@ -9,6 +9,7 @@ import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import {
   analyzeBitcoinScriptControl,
   analyzeBitcoinTransactionEntity,
+  analyzeSolanaTransactionSemantics,
 } from '@zerotrace/platform-adapters';
 import {
   BitcoinAddressUtxoSetSchema,
@@ -1035,7 +1036,7 @@ export async function querySolanaTransaction(
   }
   const anchor = await adapter.readAnchorAt(transaction.slot);
   const snapshot = anchor.snapshot;
-  const evidence = await writeEvidence(
+  const transactionEvidence = await writeEvidence(
     createEvidence({
       ledger: 'SOLANA',
       chainId: snapshot.chainId,
@@ -1050,6 +1051,52 @@ export async function querySolanaTransaction(
     [],
     snapshot,
   );
+  const semantics = analyzeSolanaTransactionSemantics(transaction);
+  const instructionEvidence: Evidence[] = [];
+  for (const instruction of [...semantics.outerInstructions, ...semantics.innerInstructions]) {
+    instructionEvidence.push(
+      await writeEvidence(
+        createEvidence({
+          ledger: 'SOLANA',
+          chainId: snapshot.chainId,
+          kind: 'DERIVED_FEATURE',
+          source: 'zerotrace:solana-transaction-semantics-v1.0.0',
+          locator: `instruction:${transaction.signature}:${instruction.path}@${transaction.slot}`,
+          payload: instruction,
+          blockOrSlot: transaction.slot,
+          finality: snapshotFinality(snapshot),
+          summary:
+            instruction.innerIndex.state === 'known'
+              ? `Normalized Solana CPI instruction ${instruction.path}.`
+              : `Normalized Solana outer instruction ${instruction.path}.`,
+          sourceEvidenceIds: [transactionEvidence.id],
+        }),
+        [transactionEvidence.id],
+        snapshot,
+      ),
+    );
+  }
+  const semanticEvidence = await writeEvidence(
+    createEvidence({
+      ledger: 'SOLANA',
+      chainId: snapshot.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:solana-transaction-semantics-v1.0.0',
+      locator: `transaction-semantics:${transaction.signature}@${transaction.slot}`,
+      payload: semantics,
+      blockOrSlot: transaction.slot,
+      finality: snapshotFinality(snapshot),
+      summary:
+        semantics.accountResolutionComplete.state === 'known'
+          ? 'Solana transaction accounts, instructions and recorded balance effects were normalized.'
+          : 'Solana transaction semantics retain unresolved loaded-address and effect coverage.',
+      sourceEvidenceIds: [transactionEvidence.id, ...instructionEvidence.map((item) => item.id)],
+    }),
+    [transactionEvidence.id, ...instructionEvidence.map((item) => item.id)],
+    snapshot,
+  );
+  const evidence = [transactionEvidence, ...instructionEvidence, semanticEvidence];
+  const semanticDataCoverage = Math.min(semantics.accountCoverage, semantics.recordingCoverage);
   return {
     subject,
     facts: {
@@ -1068,14 +1115,34 @@ export async function querySolanaTransaction(
         transaction.success === undefined
           ? unknownValue('INSUFFICIENT_DATA', 'Transaction metadata is unavailable.')
           : knownValue(transaction.success ? 'SUCCESS' : 'FAILED'),
+      transactionSemantics: knownValue(semantics),
+      feePayer: semantics.feePayer,
+      signerCount: knownValue(semantics.signers.length),
+      outerInstructionCount: knownValue(semantics.outerInstructions.length),
+      cpiCount: semantics.cpiCount,
+      accountResolutionComplete: semantics.accountResolutionComplete,
+      tokenBalanceChangeCount:
+        semantics.tokenBalanceRecording.state === 'known'
+          ? knownValue(semantics.tokenBalanceChanges.length)
+          : unknownValue(
+              'INSUFFICIENT_DATA',
+              'Token-balance change count is Unknown without pre/post recording.',
+            ),
     },
     metadata: metadata(
       snapshot,
       [observation.endpointId],
-      'solana-transaction-query-v0.1.0',
-      [evidence.id],
-      { historyCoverage: 1 },
+      'solana-transaction-query-v1.0.0',
+      evidence.map((item) => item.id),
+      {
+        dataCoverage: semanticDataCoverage,
+        historyCoverage: 1,
+        confidence:
+          semantics.accountResolutionComplete.state === 'known' && semanticDataCoverage === 1
+            ? 0.95
+            : 0.5,
+      },
     ),
-    evidence: [evidence],
+    evidence,
   };
 }

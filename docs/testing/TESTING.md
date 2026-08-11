@@ -120,6 +120,11 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
 - ClickHouse Raw Fact writes are idempotent and preserve Evidence/artifact provenance;
 - integers above `Number.MAX_SAFE_INTEGER` remain exact strings.
 - invalid EVM/Bitcoin/Solana checksums or structure do not become a valid address.
+- Solana legacy/v0 transaction parsing rejects inconsistent message headers, signature counts,
+  loaded-address cardinality and compiled account indexes. Semantic tests cover fee-payer and access
+  flags, ALT ordering, outer/CPI paths, failed execution, exact lamport/SPL deltas, and Unknown for
+  unrecorded metadata or a one-sided token balance. Overall data coverage cannot exceed either
+  account-resolution coverage or the six-dimension response-recording coverage.
 - no-evidence entity input remains Unknown.
 - common services and CoinJoin suppress controller confidence.
 - sell-disabled RV is unavailable rather than zero.
@@ -175,7 +180,8 @@ Playwright starts the built API and Vite preview servers. The E2E suite covers:
 - valid EVM identifier classification without a provider;
 - scenario gating;
 - data-health navigation and explicit Evidence plus three-backend ingestion-storage states;
-- typed Solana transaction rendering with Snapshot, Evidence, and humanized field names;
+- typed Solana legacy/v0 transaction rendering with Snapshot, per-instruction Evidence, ALT account
+  coverage, access flags, outer/CPI paths, recorded SOL/SPL effects and explicit Unknown boundaries;
 - classic/Token-2022/upgradeable-program Solana Control Rights rendering with one-slot provenance,
   explicit incomplete Squads/history coverage and mobile containment;
 - Flap fixed-block state, transaction-local creation/default provenance, bounded range/lifetime
