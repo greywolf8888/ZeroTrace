@@ -922,6 +922,286 @@ export const EntityRelationshipReportSchema = z
   });
 export type EntityRelationshipReport = z.infer<typeof EntityRelationshipReportSchema>;
 
+export const EntityRelationshipTimelineObservationSchema = z
+  .object({
+    reportId: z.string().regex(/^erh_[0-9a-f]{24}$/),
+    resultHash: Hash256Schema,
+    snapshot: AnalysisSnapshotSchema,
+    classification: EntityResolutionClassSchema,
+    sameControllerProbability: knowledgeValueSchema(ConfidenceSchema),
+    coordinationProbability: knowledgeValueSchema(ConfidenceSchema),
+    independenceProbability: knowledgeValueSchema(ConfidenceSchema),
+    serviceSuppressionApplied: z.boolean(),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    capturedAt: IsoDateTimeSchema,
+  })
+  .strict();
+export type EntityRelationshipTimelineObservation = z.infer<
+  typeof EntityRelationshipTimelineObservationSchema
+>;
+
+export const EntityRelationshipTimelineTransitionSchema = z
+  .object({
+    fromReportId: z.string().regex(/^erh_[0-9a-f]{24}$/),
+    toReportId: z.string().regex(/^erh_[0-9a-f]{24}$/),
+    fromPosition: UnsignedQuantityStringSchema,
+    toPosition: UnsignedQuantityStringSchema,
+    kind: z.enum(['REVISION', 'POSITION_ADVANCE']),
+    unobservedPositionCount: UnsignedQuantityStringSchema,
+    classificationBefore: EntityResolutionClassSchema,
+    classificationAfter: EntityResolutionClassSchema,
+    classificationChanged: z.boolean(),
+    serviceSuppressionBefore: z.boolean(),
+    serviceSuppressionAfter: z.boolean(),
+    serviceSuppressionChanged: z.boolean(),
+    sameControllerDelta: knowledgeValueSchema(z.number().min(-1).max(1)),
+    coordinationDelta: knowledgeValueSchema(z.number().min(-1).max(1)),
+    independenceDelta: knowledgeValueSchema(z.number().min(-1).max(1)),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).length(2),
+  })
+  .strict();
+export type EntityRelationshipTimelineTransition = z.infer<
+  typeof EntityRelationshipTimelineTransitionSchema
+>;
+
+export const EntityRelationshipTimelineRequestSchema = z
+  .object({
+    ledger: LedgerSchema,
+    chainId: z.string().trim().min(1).max(128),
+    subjectA: z.string().trim().min(1).max(512),
+    subjectB: z.string().trim().min(1).max(512),
+    fromPosition: UnsignedQuantityStringSchema,
+    toPosition: UnsignedQuantityStringSchema,
+  })
+  .strict();
+export type EntityRelationshipTimelineRequest = z.infer<
+  typeof EntityRelationshipTimelineRequestSchema
+>;
+
+export const EntityRelationshipTimelineCoreSchema = z
+  .object({
+    request: EntityRelationshipTimelineRequestSchema,
+    observations: z.array(EntityRelationshipTimelineObservationSchema).min(2).max(1_000),
+    transitions: z.array(EntityRelationshipTimelineTransitionSchema).min(1).max(999),
+    summary: z
+      .object({
+        observationCount: z.number().int().min(2).max(1_000),
+        transitionCount: z.number().int().min(1).max(999),
+        classificationChangeCount: z.number().int().nonnegative(),
+        serviceSuppressionChangeCount: z.number().int().nonnegative(),
+        currentClassification: EntityResolutionClassSchema,
+        currentSameControllerProbability: knowledgeValueSchema(ConfidenceSchema),
+        currentCoordinationProbability: knowledgeValueSchema(ConfidenceSchema),
+        currentIndependenceProbability: knowledgeValueSchema(ConfidenceSchema),
+        completePersistedReportSet: z.literal(true),
+        chainObservationContinuity: knowledgeValueSchema(z.boolean()),
+      })
+      .strict(),
+    metadata: AnalysisMetadataSchema.extend({
+      snapshot: AnalysisSnapshotSchema,
+      modelVersion: z.literal('entity-timeline-v0.1.0'),
+    }),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    type TimelineProbability = (typeof value.observations)[number]['sameControllerProbability'];
+    const expectedDelta = (
+      before: TimelineProbability,
+      after: TimelineProbability,
+      metric: string,
+    ) => {
+      if (before.state === 'known' && after.state === 'known') {
+        return knownValue(Number((after.value - before.value).toFixed(6)));
+      }
+      const unavailable =
+        before.state === 'unavailable' ? before : after.state === 'unavailable' ? after : undefined;
+      if (unavailable !== undefined) {
+        return unavailableValue(
+          unavailable.reason,
+          `${metric} delta is unavailable because at least one endpoint is unavailable.`,
+        );
+      }
+      const unknown =
+        before.state === 'unknown' ? before : after.state === 'unknown' ? after : undefined;
+      return unknownValue(
+        unknown?.reason ?? 'INSUFFICIENT_DATA',
+        `${metric} delta is unknown because both endpoint probabilities are not known.`,
+      );
+    };
+    const positions = value.observations.map((item) =>
+      item.snapshot.ledger === 'EVM'
+        ? item.snapshot.blockNumber
+        : item.snapshot.ledger === 'BITCOIN'
+          ? item.snapshot.height
+          : item.snapshot.slot,
+    );
+    const reportIds = value.observations.map((item) => item.reportId);
+    const terminalEvidenceIds = value.observations.map((item) => item.terminalEvidenceId).sort();
+    const latest = value.observations.at(-1);
+    const issues =
+      value.request.subjectA >= value.request.subjectB ||
+      BigInt(value.request.fromPosition) > BigInt(value.request.toPosition) ||
+      reportIds.length !== new Set(reportIds).size ||
+      value.observations.some(
+        (item, index) =>
+          item.snapshot.ledger !== value.request.ledger ||
+          item.snapshot.chainId !== value.request.chainId ||
+          item.capturedAt !== item.snapshot.capturedAt ||
+          (index > 0 &&
+            (BigInt(positions[index - 1] ?? '0') > BigInt(positions[index] ?? '0') ||
+              (positions[index - 1] === positions[index] &&
+                ((value.observations[index - 1]?.capturedAt ?? '') > item.capturedAt ||
+                  ((value.observations[index - 1]?.capturedAt ?? '') === item.capturedAt &&
+                    (value.observations[index - 1]?.reportId ?? '') >= item.reportId))))),
+      ) ||
+      positions[0] !== value.request.fromPosition ||
+      positions.at(-1) !== value.request.toPosition ||
+      value.transitions.length !== value.observations.length - 1 ||
+      value.transitions.some((transition, index) => {
+        const before = value.observations[index];
+        const after = value.observations[index + 1];
+        if (before === undefined || after === undefined) return true;
+        const beforePosition = BigInt(positions[index] ?? '0');
+        const afterPosition = BigInt(positions[index + 1] ?? '0');
+        const expectedEvidenceIds = [before.terminalEvidenceId, after.terminalEvidenceId].sort();
+        return (
+          transition.fromReportId !== before.reportId ||
+          transition.toReportId !== after.reportId ||
+          transition.fromPosition !== positions[index] ||
+          transition.toPosition !== positions[index + 1] ||
+          transition.kind !==
+            (beforePosition === afterPosition ? 'REVISION' : 'POSITION_ADVANCE') ||
+          transition.unobservedPositionCount !==
+            (beforePosition === afterPosition
+              ? '0'
+              : (afterPosition - beforePosition - 1n).toString()) ||
+          transition.classificationBefore !== before.classification ||
+          transition.classificationAfter !== after.classification ||
+          transition.classificationChanged !== (before.classification !== after.classification) ||
+          transition.serviceSuppressionBefore !== before.serviceSuppressionApplied ||
+          transition.serviceSuppressionAfter !== after.serviceSuppressionApplied ||
+          transition.serviceSuppressionChanged !==
+            (before.serviceSuppressionApplied !== after.serviceSuppressionApplied) ||
+          JSON.stringify(transition.sameControllerDelta) !==
+            JSON.stringify(
+              expectedDelta(
+                before.sameControllerProbability,
+                after.sameControllerProbability,
+                'Same-controller probability',
+              ),
+            ) ||
+          JSON.stringify(transition.coordinationDelta) !==
+            JSON.stringify(
+              expectedDelta(
+                before.coordinationProbability,
+                after.coordinationProbability,
+                'Coordination probability',
+              ),
+            ) ||
+          JSON.stringify(transition.independenceDelta) !==
+            JSON.stringify(
+              expectedDelta(
+                before.independenceProbability,
+                after.independenceProbability,
+                'Independence probability',
+              ),
+            ) ||
+          transition.evidenceIds.length !== expectedEvidenceIds.length ||
+          transition.evidenceIds.some(
+            (item, evidenceIndex) => item !== expectedEvidenceIds[evidenceIndex],
+          )
+        );
+      }) ||
+      value.summary.observationCount !== value.observations.length ||
+      value.summary.transitionCount !== value.transitions.length ||
+      value.summary.currentClassification !== latest?.classification ||
+      JSON.stringify(value.summary.currentSameControllerProbability) !==
+        JSON.stringify(latest?.sameControllerProbability) ||
+      JSON.stringify(value.summary.currentCoordinationProbability) !==
+        JSON.stringify(latest?.coordinationProbability) ||
+      JSON.stringify(value.summary.currentIndependenceProbability) !==
+        JSON.stringify(latest?.independenceProbability) ||
+      JSON.stringify(value.metadata.snapshot) !== JSON.stringify(latest?.snapshot) ||
+      value.metadata.evidenceIds.length !== terminalEvidenceIds.length ||
+      value.metadata.evidenceIds.some((item, index) => item !== terminalEvidenceIds[index]);
+    if (issues) {
+      context.addIssue({
+        code: 'custom',
+        path: ['observations'],
+        message:
+          'Entity relationship timelines require one canonical pair, strictly increasing Snapshot observations, exact transitions, and complete terminal Evidence references.',
+      });
+    }
+  });
+export type EntityRelationshipTimelineCore = z.infer<typeof EntityRelationshipTimelineCoreSchema>;
+
+export const EntityRelationshipTimelineReportSchema = z
+  .object({
+    schemaVersion: z.literal('entity-relationship-timeline-report-v1'),
+    automaticOwnershipMergeAllowed: z.literal(false),
+    timeline: EntityRelationshipTimelineCoreSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidence: z.array(EvidenceSchema).min(3).max(1_001),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const latest = value.timeline.observations.at(-1);
+    if (latest === undefined) return;
+    const position =
+      latest.snapshot.ledger === 'EVM'
+        ? { value: latest.snapshot.blockNumber, finality: latest.snapshot.finality }
+        : latest.snapshot.ledger === 'BITCOIN'
+          ? { value: latest.snapshot.height, finality: latest.snapshot.finality }
+          : { value: latest.snapshot.slot, finality: latest.snapshot.commitment };
+    const expectedEvidenceIds = [
+      ...value.timeline.metadata.evidenceIds,
+      value.terminalEvidenceId,
+    ].sort();
+    const evidenceIds = value.evidence.map((item) => item.id);
+    const terminal = value.evidence.find((item) => item.id === value.terminalEvidenceId);
+    const expectedLocator = `entity-relationship-timeline:${value.timeline.request.subjectA}:${value.timeline.request.subjectB}:${value.timeline.request.fromPosition}:${value.timeline.request.toPosition}`;
+    const issues =
+      evidenceIds.length !== new Set(evidenceIds).size ||
+      evidenceIds.some((item, index) => item !== [...evidenceIds].sort()[index]) ||
+      evidenceIds.length !== expectedEvidenceIds.length ||
+      evidenceIds.some((item, index) => item !== expectedEvidenceIds[index]) ||
+      value.evidence.some(
+        (item) =>
+          item.ledger !== value.timeline.request.ledger ||
+          item.chainId !== value.timeline.request.chainId,
+      ) ||
+      value.timeline.observations.some((observation) => {
+        const evidence = value.evidence.find((item) => item.id === observation.terminalEvidenceId);
+        const observationPosition =
+          observation.snapshot.ledger === 'EVM'
+            ? { value: observation.snapshot.blockNumber, finality: observation.snapshot.finality }
+            : observation.snapshot.ledger === 'BITCOIN'
+              ? { value: observation.snapshot.height, finality: observation.snapshot.finality }
+              : { value: observation.snapshot.slot, finality: observation.snapshot.commitment };
+        return (
+          evidence?.source !== 'zerotrace:entity-v0.1.0' ||
+          evidence.blockOrSlot !== observationPosition.value ||
+          evidence.finality !== observationPosition.finality
+        );
+      }) ||
+      terminal?.kind !== 'DERIVED_FEATURE' ||
+      terminal.source !== 'zerotrace:entity-timeline-v0.1.0' ||
+      terminal.locator !== expectedLocator ||
+      terminal.blockOrSlot !== position.value ||
+      terminal.finality !== position.finality;
+    if (issues) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidence'],
+        message:
+          'Entity relationship timeline reports require complete per-observation terminal Evidence and one latest-Snapshot timeline derivation.',
+      });
+    }
+  });
+export type EntityRelationshipTimelineReport = z.infer<
+  typeof EntityRelationshipTimelineReportSchema
+>;
+
 export const BitcoinScriptClassSchema = z.enum([
   'P2PKH',
   'P2SH',

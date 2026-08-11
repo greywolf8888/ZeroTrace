@@ -242,6 +242,92 @@ export interface EntityRelationshipReportReplayResponse {
   record: StoredEntityRelationshipReport;
 }
 
+export interface EntityRelationshipTimelineObservation {
+  reportId: string;
+  resultHash: string;
+  snapshot: Record<string, unknown>;
+  classification: string;
+  sameControllerProbability: KnowledgeValue<number>;
+  coordinationProbability: KnowledgeValue<number>;
+  independenceProbability: KnowledgeValue<number>;
+  serviceSuppressionApplied: boolean;
+  terminalEvidenceId: string;
+  capturedAt: string;
+}
+
+export interface EntityRelationshipTimelineTransition {
+  fromReportId: string;
+  toReportId: string;
+  fromPosition: string;
+  toPosition: string;
+  kind: 'REVISION' | 'POSITION_ADVANCE';
+  unobservedPositionCount: string;
+  classificationBefore: string;
+  classificationAfter: string;
+  classificationChanged: boolean;
+  serviceSuppressionBefore: boolean;
+  serviceSuppressionAfter: boolean;
+  serviceSuppressionChanged: boolean;
+  sameControllerDelta: KnowledgeValue<number>;
+  coordinationDelta: KnowledgeValue<number>;
+  independenceDelta: KnowledgeValue<number>;
+  evidenceIds: [string, string];
+}
+
+export interface StoredEntityRelationshipTimeline {
+  id: string;
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  subjectA: string;
+  subjectB: string;
+  fromPosition: string;
+  toPosition: string;
+  resultHash: string;
+  terminalEvidenceId: string;
+  reportIds: string[];
+  evidenceIds: string[];
+  sourceSet: string[];
+  modelVersion: 'entity-timeline-v0.1.0';
+  capturedAt: string;
+  createdAt: string;
+  report: {
+    schemaVersion: 'entity-relationship-timeline-report-v1';
+    automaticOwnershipMergeAllowed: false;
+    timeline: {
+      request: {
+        ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+        chainId: string;
+        subjectA: string;
+        subjectB: string;
+        fromPosition: string;
+        toPosition: string;
+      };
+      observations: EntityRelationshipTimelineObservation[];
+      transitions: EntityRelationshipTimelineTransition[];
+      summary: {
+        observationCount: number;
+        transitionCount: number;
+        classificationChangeCount: number;
+        serviceSuppressionChangeCount: number;
+        currentClassification: string;
+        currentSameControllerProbability: KnowledgeValue<number>;
+        currentCoordinationProbability: KnowledgeValue<number>;
+        currentIndependenceProbability: KnowledgeValue<number>;
+        completePersistedReportSet: true;
+        chainObservationContinuity: KnowledgeValue<boolean>;
+      };
+      metadata: AnalysisMetadata;
+    };
+    terminalEvidenceId: string;
+    evidence: EvidenceRecord[];
+  };
+}
+
+export interface EntityRelationshipTimelineReplayResponse {
+  replayed: boolean;
+  record: StoredEntityRelationshipTimeline;
+}
+
 export interface SubjectResponse {
   subject: SubjectCandidate;
   facts: Record<string, KnowledgeValue<unknown>>;
@@ -1707,6 +1793,41 @@ export const api = {
     const parameters = new URLSearchParams({ ledger, chainId, subjectA, subjectB });
     return requestJson<EntityRelationshipReportReplayResponse>(
       `/api/v1/entities/relationships/reports/${encodeURIComponent(reportId)}?${parameters.toString()}`,
+    );
+  },
+  materializeEntityRelationshipTimeline: (payload: {
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+    chainId: string;
+    subjectA: string;
+    subjectB: string;
+    fromPosition?: string;
+    toPosition?: string;
+  }) =>
+    requestJson<EntityRelationshipTimelineReplayResponse>(
+      '/api/v1/entities/relationships/timelines/materialize',
+      { method: 'POST', body: JSON.stringify(payload) },
+    ),
+  latestEntityRelationshipTimeline: (
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA',
+    chainId: string,
+    subjectA: string,
+    subjectB: string,
+  ) => {
+    const parameters = new URLSearchParams({ ledger, chainId, subjectA, subjectB });
+    return requestJson<EntityRelationshipTimelineReplayResponse>(
+      `/api/v1/entities/relationships/timelines/latest?${parameters.toString()}`,
+    );
+  },
+  entityRelationshipTimeline: (
+    timelineId: string,
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA',
+    chainId: string,
+    subjectA: string,
+    subjectB: string,
+  ) => {
+    const parameters = new URLSearchParams({ ledger, chainId, subjectA, subjectB });
+    return requestJson<EntityRelationshipTimelineReplayResponse>(
+      `/api/v1/entities/relationships/timelines/${encodeURIComponent(timelineId)}?${parameters.toString()}`,
     );
   },
   exitRace: (payload: unknown) =>

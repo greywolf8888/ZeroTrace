@@ -319,6 +319,22 @@ Subject order is canonicalized. An exact-ID request also verifies the requested 
 pair so a valid report ID cannot be replayed under a different investigation identity. Featureless
 input stays explicit `UNKNOWN` and is not stored as if it were an observed relationship.
 
+Migration `019_entity_relationship_timelines` adds immutable `ert_...` projections over two to
+1,000 persisted `erh_...` reports. Materialization is provider-free and fails closed when the range
+would be truncated, a report terminal is missing, or fewer than two reports exist:
+
+```text
+POST /api/v1/entities/relationships/timelines/materialize
+GET /api/v1/entities/relationships/timelines/latest?ledger=EVM&chainId=eip155:56&subjectA=<subject-a>&subjectB=<subject-b>
+GET /api/v1/entities/relationships/timelines/<ert-id>?ledger=EVM&chainId=eip155:56&subjectA=<subject-a>&subjectB=<subject-b>
+```
+
+The POST body accepts the same ledger/chain/pair identity and optional inclusive `fromPosition` /
+`toPosition`. Position gaps are reported as unobserved, while multiple reports at one position are
+ordered as revisions. `completePersistedReportSet` never claims continuous chain observation, and
+all three probability deltas stay Unknown or Unavailable unless both endpoints are Known. The UI
+can materialize or replay the projection, but cannot merge entities or write analyst overrides.
+
 ## Continuous Flap lifetime heads
 
 The fourth semantic-worker entrypoint maintains one append-only accepted lifetime chain. It requires
@@ -356,7 +372,7 @@ GET /api/v1/launches/EVM/<token>/history/lifetime/heads/latest?chainId=eip155:56
 Initialization scripts are intentionally idempotent where the engine supports it. Docker entrypoint
 scripts run only when the data volume is first created. Apply future schema changes through explicit
 migrations; do not delete a developer's volumes to simulate migration. The current non-destructive
-local upgrade commands, including migrations `007` through `018`, are in
+local upgrade commands, including migrations `007` through `019`, are in
 [Deployment](DEPLOYMENT.md#database-lifecycle).
 
 ## Configuration

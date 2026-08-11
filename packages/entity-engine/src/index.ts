@@ -8,6 +8,7 @@ import {
 } from '@zerotrace/schemas';
 
 export * from './evaluation.js';
+export * from './timeline.js';
 
 export const ENTITY_RELATIONSHIP_MODEL_VERSION = 'entity-v0.1.0' as const;
 export type EntityFeatureKind = SchemaEntityFeatureKind;

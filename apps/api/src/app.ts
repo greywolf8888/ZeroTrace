@@ -15,6 +15,8 @@ import {
 import {
   canonicalizeEntityRelationshipInput,
   ENTITY_RELATIONSHIP_MODEL_VERSION,
+  ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION,
+  buildEntityRelationshipTimeline,
   resolveEntityRelationship,
 } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
@@ -56,6 +58,7 @@ import {
   ClaimReportStorageError,
   ControlSurfaceReportStorageError,
   EntityRelationshipReportStorageError,
+  EntityRelationshipTimelineStorageError,
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   FlapPensionEntryReportStorageError,
@@ -73,6 +76,7 @@ import {
   DiscrepancyCheckInputSchema,
   EntityRelationshipInputSchema,
   EntityRelationshipReportSchema,
+  EntityRelationshipTimelineReportSchema,
   FlapEventHistoryProjectionSchema,
   FlapLifetimeMaterializationSchema,
   SolanaTransactionIntelligenceReportSchema,
@@ -586,6 +590,33 @@ const EntityRelationshipReportParamsSchema = z
   .object({ reportId: z.string().regex(/^erh_[0-9a-f]{24}$/) })
   .strict();
 
+const EntityRelationshipTimelineMaterializeSchema = EntityRelationshipReportQuerySchema.safeExtend({
+  fromPosition: z
+    .string()
+    .regex(/^(?:0|[1-9]\d*)$/)
+    .optional(),
+  toPosition: z
+    .string()
+    .regex(/^(?:0|[1-9]\d*)$/)
+    .optional(),
+}).superRefine((value, context) => {
+  if (
+    value.fromPosition !== undefined &&
+    value.toPosition !== undefined &&
+    BigInt(value.fromPosition) > BigInt(value.toPosition)
+  ) {
+    context.addIssue({
+      code: 'custom',
+      path: ['toPosition'],
+      message: 'Timeline toPosition must be greater than or equal to fromPosition.',
+    });
+  }
+});
+
+const EntityRelationshipTimelineParamsSchema = z
+  .object({ timelineId: z.string().regex(/^ert_[0-9a-f]{24}$/) })
+  .strict();
+
 const FlapPancakeV2ReconciliationRequestSchema = z
   .object({
     chainId: z.literal('eip155:56'),
@@ -977,6 +1008,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionCandidateReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionEntryReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipTimelines']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -1009,6 +1041,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         pensionCandidateReports,
         pensionEntryReports,
         entityRelationshipReports,
+        entityRelationshipTimelines,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -1021,6 +1054,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.pensionCandidateReports?.health(),
         runtime.pensionEntryReports?.health(),
         runtime.entityRelationshipReports?.health(),
+        runtime.entityRelationshipTimelines?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -1045,7 +1079,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                             ? pensionEntryReports
                             : entityRelationshipReports?.status === 'DOWN'
                               ? entityRelationshipReports
-                              : evidence;
+                              : entityRelationshipTimelines?.status === 'DOWN'
+                                ? entityRelationshipTimelines
+                                : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1280,6 +1316,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof EntityRelationshipReportStorageError) {
       const status = error.code === 'ENTITY_RELATIONSHIP_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof EntityRelationshipTimelineStorageError) {
+      const status = error.code === 'ENTITY_RELATIONSHIP_TIMELINE_INVALID' ? 400 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1609,11 +1651,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         id: 'entity-evidence-fusion',
         status:
           runtime.evidenceRepository === undefined ||
-          runtime.entityRelationshipReports === undefined
+          runtime.entityRelationshipReports === undefined ||
+          runtime.entityRelationshipTimelines === undefined
             ? 'DURABLE_STORAGE_REQUIRED'
-            : 'IMPLEMENTED_DURABLE_BASELINE',
+            : 'IMPLEMENTED_DURABLE_TEMPORAL_BASELINE',
         detail:
-          'Evidence-weighted pair scoring emits an immutable Snapshot-bound relationship hypothesis report with provider-free latest/exact replay. Canonical pair ordering, duplicate-feature rejection, grounded service-hub suppression, explicit Unknown and a hard no-automatic-merge boundary are enforced. Bitcoin common-input/change signals never auto-merge; CoinJoin-like, fanout, incomplete input context, unresolved Payjoin and unqueried service attribution remain explicit suppressors. Temporal graph extraction and real-world calibration remain pending.',
+          'Evidence-weighted pair scoring emits immutable Snapshot-bound hypotheses plus a durable cross-Snapshot timeline with explicit same-position revisions, position gaps, probability deltas and provider-free replay. Canonical ordering, grounded service-hub suppression, explicit Unknown and a hard no-automatic-merge boundary are enforced. Full graph extraction, analyst overrides and real-world calibration remain pending.',
       },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },
       { id: 'shared-liquidity-exit-race', status: 'IMPLEMENTED_DETERMINISTIC' },
@@ -3208,6 +3251,206 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               request,
               'ENTITY_RELATIONSHIP_REPORT_NOT_FOUND',
               'The durable Entity relationship hypothesis report was not found for this pair.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.post(
+    '/api/v1/entities/relationships/timelines/materialize',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityRelationshipTimelineMaterializeSchema.parse(request.body);
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.entityRelationshipReports === undefined ||
+        runtime.entityRelationshipTimelines === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_TIMELINE_UNAVAILABLE',
+              'Durable Evidence, relationship report, and timeline storage are required.',
+              false,
+            ),
+          );
+      }
+      const [subjectA, subjectB] = canonicalSubjectPair(input.subjectA, input.subjectB);
+      const records = await runtime.entityRelationshipReports.history({
+        ledger: input.ledger,
+        chainId: input.chainId,
+        subjectA,
+        subjectB,
+        ...(input.fromPosition === undefined ? {} : { fromPosition: input.fromPosition }),
+        ...(input.toPosition === undefined ? {} : { toPosition: input.toPosition }),
+        limit: 1_001,
+      });
+      if (records.length > 1_000) {
+        return reply
+          .code(422)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_TIMELINE_TOO_LARGE',
+              'The requested range contains more than 1,000 reports; provide a narrower position range.',
+              false,
+            ),
+          );
+      }
+      if (records.length < 2) {
+        return reply
+          .code(422)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_TIMELINE_INSUFFICIENT_REPORTS',
+              'At least two durable relationship reports are required to materialize a timeline.',
+              false,
+            ),
+          );
+      }
+      const terminalEvidenceIds = records.map((record) => record.terminalEvidenceId).sort();
+      const terminalNodes = await Promise.all(
+        terminalEvidenceIds.map((evidenceId) => runtime.evidenceRepository?.get(evidenceId)),
+      );
+      if (terminalNodes.some((node) => node === undefined)) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_EVIDENCE_INCOMPLETE',
+              'A relationship report terminal Evidence node is unavailable.',
+              true,
+            ),
+          );
+      }
+      const timeline = buildEntityRelationshipTimeline({
+        ledger: input.ledger,
+        chainId: input.chainId,
+        subjectA,
+        subjectB,
+        reports: records.map((record) => ({
+          observation: {
+            reportId: record.id,
+            resultHash: record.resultHash,
+            snapshot: record.report.result.metadata.snapshot,
+            classification: record.report.result.classification,
+            sameControllerProbability: record.report.result.sameControllerProbability,
+            coordinationProbability: record.report.result.coordinationProbability,
+            independenceProbability: record.report.result.independenceProbability,
+            serviceSuppressionApplied: record.report.result.serviceSuppressionApplied,
+            terminalEvidenceId: record.terminalEvidenceId,
+            capturedAt: record.capturedAt,
+          },
+          metadata: record.report.result.metadata,
+        })),
+      });
+      const derived = await addDerivedAnalysisEvidence(
+        runtime,
+        timeline.metadata.snapshot,
+        terminalEvidenceIds,
+        `zerotrace:${ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION}`,
+        `entity-relationship-timeline:${subjectA}:${subjectB}:${timeline.request.fromPosition}:${timeline.request.toPosition}`,
+        { timeline },
+        'Durable relationship evolution across persisted Snapshot hypotheses; chain-position continuity remains explicit Unknown.',
+      );
+      const evidence = [...terminalNodes.map((node) => node?.evidence as Evidence), derived].sort(
+        (left, right) => left.id.localeCompare(right.id),
+      );
+      const report = EntityRelationshipTimelineReportSchema.parse({
+        schemaVersion: 'entity-relationship-timeline-report-v1',
+        automaticOwnershipMergeAllowed: false,
+        timeline,
+        terminalEvidenceId: derived.id,
+        evidence,
+      });
+      const stored = await runtime.entityRelationshipTimelines.put(report);
+      return { replayed: false, record: stored };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/relationships/timelines/latest',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityRelationshipReportQuerySchema.parse(request.query);
+      const repository = runtime.entityRelationshipTimelines;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_TIMELINE_UNAVAILABLE',
+              'Durable Entity relationship timeline storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const [subjectA, subjectB] = canonicalSubjectPair(input.subjectA, input.subjectB);
+      const record = await repository.latest({
+        ledger: input.ledger,
+        chainId: input.chainId,
+        subjectA,
+        subjectB,
+      });
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_TIMELINE_NOT_FOUND',
+              'No durable Entity relationship timeline exists for this pair.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/relationships/timelines/:timelineId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityRelationshipReportQuerySchema.parse(request.query);
+      const params = EntityRelationshipTimelineParamsSchema.parse(request.params);
+      const repository = runtime.entityRelationshipTimelines;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_TIMELINE_UNAVAILABLE',
+              'Durable Entity relationship timeline storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const [subjectA, subjectB] = canonicalSubjectPair(input.subjectA, input.subjectB);
+      const record = await repository.get(params.timelineId);
+      if (
+        record === undefined ||
+        record.ledger !== input.ledger ||
+        record.chainId !== input.chainId ||
+        record.subjectA !== subjectA ||
+        record.subjectB !== subjectB
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_RELATIONSHIP_TIMELINE_NOT_FOUND',
+              'The durable Entity relationship timeline was not found for this pair.',
               false,
             ),
           );

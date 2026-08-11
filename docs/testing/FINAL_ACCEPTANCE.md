@@ -116,13 +116,16 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Content-addressed Entity relationship hypothesis reports with exact durable Evidence payload,
       Snapshot and terminal-parent validation, append-only database guards, latest/exact
       provider-free replay and `automaticOwnershipMergeAllowed=false`
+- [x] Bounded content-addressed pairwise Entity timelines with deterministic revisions/position
+      advances, explicit gaps, Knowledge-state-safe probability deltas, complete report-terminal
+      Evidence lineage, append-only guards and provider-free materialize/latest/exact replay
 - [ ] Continuous Solana semantic history projection plus platform/program-specific instruction and event decoding
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [x] Deterministic common-position disagreement, source-failure, continuity, and reorg-detection tests
 - [x] Deterministic Flap accepted-lineage rollback/replay with append-only invalidation and no
       majority branch selection
 - [ ] Forced real reorg and independently operated provider acceptance
-- [ ] Temporal graph projection and rebuild
+- [ ] Full temporal graph projection, traversal and rebuild beyond the pairwise timeline foundation
 
 ## Intelligence
 
@@ -248,6 +251,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] Responsive Entity Intelligence latest/exact replay with Snapshot/result identity, canonical
       features, complete Evidence, Service Hub suppression and no automatic ownership merge on
       desktop/mobile
+- [x] Responsive Entity timeline materialization/latest/exact replay with explicit revisions,
+      unobserved-position gaps, probability-delta knowledge states and no automatic merge on
+      desktop/mobile
 - [x] Responsive exact-block burn certificate review on desktop/mobile with status, supply/event
       arithmetic, generated actions and terminal Evidence
 - [x] Responsive burn-candidate range review with event scope, candidate blocks, terminal Evidence
@@ -256,7 +262,7 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       Evidence, partial-result suppression and silent-supply Unknown on desktop/mobile
 - [x] Responsive all-block supply-continuity replay with exact range/sample/change counts,
       independent-operator attestations, terminal Evidence and no range overclaim on desktop/mobile
-- [ ] Complete search, entity graph, timeline, comparison, scenario and export workflows
+- [ ] Complete search, full entity graph/traversal, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance
 

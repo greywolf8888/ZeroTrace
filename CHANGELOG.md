@@ -8,6 +8,10 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- bounded, immutable `entity-timeline-v0.1.0` pairwise relationship timelines with deterministic
+  same-position revisions and position advances, explicit observation gaps, Knowledge-state-safe
+  probability deltas, PostgreSQL report/Evidence lineage guards, provider-free API replay, and
+  responsive desktop/mobile review without automatic Entity membership changes;
 - immutable content-addressed Entity relationship hypothesis reports with canonical pair and
   feature ordering, grounded Service Hub suppression, fixed model provenance, exact
   Snapshot/Evidence/derivation constraints, PostgreSQL update/delete guards, provider-free
@@ -217,6 +221,8 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Fixed
 
+- bounded ClickHouse `FINAL` query and merge threads for local/CI Raw Fact replay so small durable
+  range checks do not exhaust the default container memory budget on high-core hosts;
 - readiness now remains HTTP-ready for provider-free report replay when optional upstream providers
   are unavailable, while retaining a `DEGRADED` payload and continuing to fail closed when durable
   request-serving storage is down.

@@ -36,6 +36,7 @@ import {
   PostgresFlapLifetimeHeadRepository,
   PostgresFlapPensionEntryReportRepository,
   PostgresEntityRelationshipReportRepository,
+  PostgresEntityRelationshipTimelineRepository,
   PostgresIngestionCheckpointRepository,
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
@@ -70,6 +71,7 @@ export interface AppRuntime {
   pensionCandidateReports?: PostgresPensionCandidateReportRepository;
   pensionEntryReports?: PostgresFlapPensionEntryReportRepository;
   entityRelationshipReports?: PostgresEntityRelationshipReportRepository;
+  entityRelationshipTimelines?: PostgresEntityRelationshipTimelineRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -540,6 +542,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const entityRelationshipTimelines =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresEntityRelationshipTimelineRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -569,6 +580,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       pensionCandidateReports?.close(),
       pensionEntryReports?.close(),
       entityRelationshipReports?.close(),
+      entityRelationshipTimelines?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -602,6 +614,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(pensionCandidateReports === undefined ? {} : { pensionCandidateReports }),
     ...(pensionEntryReports === undefined ? {} : { pensionEntryReports }),
     ...(entityRelationshipReports === undefined ? {} : { entityRelationshipReports }),
+    ...(entityRelationshipTimelines === undefined ? {} : { entityRelationshipTimelines }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

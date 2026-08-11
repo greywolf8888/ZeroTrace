@@ -13,12 +13,15 @@ import {
 } from '@zerotrace/chain-adapters';
 import { createDataQualityAlert, persistChainAnchorObservation } from '@zerotrace/data-quality';
 import {
+  ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION,
+  buildEntityRelationshipTimeline,
   canonicalizeEntityRelationshipInput,
   resolveEntityRelationship,
 } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import {
   EntityRelationshipReportSchema,
+  EntityRelationshipTimelineReportSchema,
   EvmControlCoverageDomainSchema,
   SolanaControlCoverageDomainSchema,
   SolanaTransactionIntelligenceReportSchema,
@@ -41,6 +44,7 @@ import {
   PostgresClaimReportRepository,
   PostgresDataQualityRepository,
   PostgresEntityRelationshipReportRepository,
+  PostgresEntityRelationshipTimelineRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaTransactionReportRepository,
@@ -1940,6 +1944,7 @@ postgresDescribe('PostgreSQL durable EVM pension candidate integration', () => {
 postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration', () => {
   let evidence: PostgresEvidenceRepository;
   let reports: PostgresEntityRelationshipReportRepository;
+  let timelines: PostgresEntityRelationshipTimelineRepository;
 
   beforeAll(() => {
     evidence = PostgresEvidenceRepository.fromConnectionString({
@@ -1950,10 +1955,14 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       connectionString: connectionString as string,
       maxConnections: 2,
     });
+    timelines = new PostgresEntityRelationshipTimelineRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
   });
 
   afterAll(async () => {
-    await Promise.all([evidence.close(), reports.close()]);
+    await Promise.all([evidence.close(), reports.close(), timelines.close()]);
   });
 
   it('persists one canonical no-auto-merge hypothesis, replays it, and rejects mutation', async () => {
@@ -2065,6 +2074,115 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       report: { automaticOwnershipMergeAllowed: false },
     });
 
+    const revisedInput = canonicalizeEntityRelationshipInput({
+      ...input,
+      features: input.features.map((feature) => ({ ...feature, strength: 0.5 })),
+    });
+    const revisedResult = resolveEntityRelationship(revisedInput);
+    const revisedTerminal = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:entity-v0.1.0',
+      locator: `entity-relationship:${input.subjectA}:${input.subjectB}`,
+      payload: { input: revisedInput, result: revisedResult },
+      blockOrSlot: '910000',
+      finality: 'finalized',
+      summary: 'Recomputed evidence-weighted relationship at the same Snapshot.',
+      sourceEvidenceIds: [source.id],
+    });
+    await evidence.put(revisedTerminal, [source.id], snapshot);
+    const revisedReport = EntityRelationshipReportSchema.parse({
+      schemaVersion: 'entity-relationship-report-v1',
+      automaticOwnershipMergeAllowed: false,
+      input: revisedInput,
+      result: {
+        ...revisedResult,
+        metadata: {
+          ...revisedResult.metadata,
+          evidenceIds: [...revisedResult.metadata.evidenceIds, revisedTerminal.id].sort(),
+        },
+      },
+      terminalEvidenceId: revisedTerminal.id,
+      evidence: [source, revisedTerminal].sort((left, right) => left.id.localeCompare(right.id)),
+    });
+    const revisedStored = await reports.put(revisedReport);
+    const history = await reports.history({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      subjectA: input.subjectA,
+      subjectB: input.subjectB,
+      fromPosition: '910000',
+      toPosition: '910000',
+    });
+    expect(history.map((item) => item.id).sort()).toEqual([stored.id, revisedStored.id].sort());
+    const timeline = buildEntityRelationshipTimeline({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      subjectA: input.subjectA,
+      subjectB: input.subjectB,
+      reports: history.map((item) => ({
+        observation: {
+          reportId: item.id,
+          resultHash: item.resultHash,
+          snapshot: item.report.result.metadata.snapshot,
+          classification: item.report.result.classification,
+          sameControllerProbability: item.report.result.sameControllerProbability,
+          coordinationProbability: item.report.result.coordinationProbability,
+          independenceProbability: item.report.result.independenceProbability,
+          serviceSuppressionApplied: item.report.result.serviceSuppressionApplied,
+          terminalEvidenceId: item.terminalEvidenceId,
+          capturedAt: item.capturedAt,
+        },
+        metadata: item.report.result.metadata,
+      })),
+    });
+    const timelineTerminal = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:1',
+      kind: 'DERIVED_FEATURE',
+      source: `zerotrace:${ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION}`,
+      locator: `entity-relationship-timeline:${input.subjectA}:${input.subjectB}:910000:910000`,
+      payload: { timeline },
+      blockOrSlot: '910000',
+      finality: 'finalized',
+      summary: 'Persisted relationship report revision timeline.',
+      sourceEvidenceIds: timeline.metadata.evidenceIds,
+    });
+    await evidence.put(timelineTerminal, timeline.metadata.evidenceIds, snapshot);
+    const relationshipTerminals = await Promise.all(
+      timeline.metadata.evidenceIds.map((id) => evidence.get(id)),
+    );
+    const timelineReport = EntityRelationshipTimelineReportSchema.parse({
+      schemaVersion: 'entity-relationship-timeline-report-v1',
+      automaticOwnershipMergeAllowed: false,
+      timeline,
+      terminalEvidenceId: timelineTerminal.id,
+      evidence: [...relationshipTerminals.map((node) => node?.evidence), timelineTerminal].sort(
+        (left, right) => (left?.id ?? '').localeCompare(right?.id ?? ''),
+      ),
+    });
+    const storedTimeline = await timelines.put(timelineReport);
+    await expect(timelines.put(timelineReport)).resolves.toEqual(storedTimeline);
+    await timelines.close();
+    timelines = new PostgresEntityRelationshipTimelineRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(timelines.get(storedTimeline.id)).resolves.toEqual(storedTimeline);
+    await expect(
+      timelines.latest({
+        ledger: 'EVM',
+        chainId: 'eip155:1',
+        subjectA: input.subjectB,
+        subjectB: input.subjectA,
+      }),
+    ).resolves.toEqual(storedTimeline);
+    await expect(timelines.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+    expect(storedTimeline.report.timeline.transitions).toEqual([
+      expect.objectContaining({ kind: 'REVISION', unobservedPositionCount: '0' }),
+    ]);
+
     const pool = new Pool({ connectionString: connectionString as string });
     try {
       await expect(
@@ -2074,6 +2192,17 @@ postgresDescribe('PostgreSQL durable Entity relationship hypothesis integration'
       ).rejects.toThrow(/immutable/);
       await expect(
         pool.query('DELETE FROM entity_relationship_reports WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query(
+          'UPDATE entity_relationship_timeline_reports SET report = report WHERE id = $1',
+          [storedTimeline.id],
+        ),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM entity_relationship_timeline_reports WHERE id = $1', [
+          storedTimeline.id,
+        ]),
       ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();
