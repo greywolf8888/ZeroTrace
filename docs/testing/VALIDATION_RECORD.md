@@ -1557,3 +1557,8 @@ production build, license allowlist, development/production dependency audits, C
 Compose validation and all six production Docker targets passed. Rebuilt API/Web containers became
 healthy and returned `readOnly=true`; readiness remained `DEGRADED` under the fail-closed default
 because external provider DNS resolves through the host's private-range interception proxy.
+
+[GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31454676767) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31454676771) then passed for exact
+Solana transaction-semantics commit `bb9f098`, including Quality/contracts, both Chromium viewports,
+all six production container targets and JavaScript/TypeScript analysis.
