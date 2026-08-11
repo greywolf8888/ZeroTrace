@@ -9,6 +9,7 @@ import {
 
 export * from './evaluation.js';
 export * from './investigation-graph.js';
+export * from './investigation-graph-timeline.js';
 export * from './timeline.js';
 
 export const ENTITY_RELATIONSHIP_MODEL_VERSION = 'entity-v0.1.0' as const;

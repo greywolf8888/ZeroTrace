@@ -7,6 +7,7 @@ import {
   type EntityInvestigationGraphNode,
   type EntityInvestigationGraphObservation,
   type EntityInvestigationGraphResponse,
+  type EntityInvestigationGraphTimelineResponse,
   type EvidenceDrilldownResponse,
 } from './api.js';
 
@@ -183,24 +184,31 @@ function EvidenceLedgerDrawer({
   result,
   busy,
   error,
+  eyebrow = 'Selected edge → derivation parents',
+  title = 'Evidence Ledger',
+  testId = 'controller-graph-evidence-ledger',
 }: {
   evidenceId?: string;
   result?: EvidenceDrilldownResponse;
   busy: boolean;
   error?: string;
+  eyebrow?: string;
+  title?: string;
+  testId?: string;
 }) {
   if (evidenceId === undefined) return null;
+  const headingId = `${testId}-heading`;
   return (
     <section
       className="panel graph-evidence-drawer"
-      id="controller-graph-evidence-ledger"
-      data-testid="controller-graph-evidence-ledger"
-      aria-labelledby="controller-graph-evidence-heading"
+      id={testId}
+      data-testid={testId}
+      aria-labelledby={headingId}
     >
       <div className="panel-header">
         <div>
-          <span className="eyebrow">Selected edge → derivation parents</span>
-          <h3 id="controller-graph-evidence-heading">Evidence Ledger</h3>
+          <span className="eyebrow">{eyebrow}</span>
+          <h3 id={headingId}>{title}</h3>
         </div>
         <code title={evidenceId}>{shortId(evidenceId, 8)}</code>
       </div>
@@ -553,6 +561,306 @@ export function InvestigationGraphWorkspace({
 
           <EvidenceLedgerDrawer
             busy={evidenceBusy}
+            {...(selectedEvidenceId === undefined ? {} : { evidenceId: selectedEvidenceId })}
+            {...(evidenceResult === undefined ? {} : { result: evidenceResult })}
+            {...(evidenceError === undefined ? {} : { error: evidenceError })}
+          />
+        </>
+      )}
+      <InvestigationGraphTimelineWorkspace
+        key={record?.id ?? `${ledger}:${chainId}:no-graph`}
+        ledger={ledger}
+        chainId={chainId}
+        {...(record === undefined ? {} : { suggestedGraphId: record.id })}
+        {...(seedSubjectId.trim().length === 0 ? {} : { suggestedSubjectId: seedSubjectId.trim() })}
+      />
+    </div>
+  );
+}
+
+export function InvestigationGraphTimelineWorkspace({
+  ledger,
+  chainId,
+  suggestedGraphId,
+  suggestedSubjectId,
+}: {
+  ledger: Ledger;
+  chainId: string;
+  suggestedGraphId?: string;
+  suggestedSubjectId?: string;
+}) {
+  const [graphIdsText, setGraphIdsText] = useState(suggestedGraphId ?? '');
+  const [timelineId, setTimelineId] = useState('');
+  const [subjectId, setSubjectId] = useState(suggestedSubjectId ?? '');
+  const [response, setResponse] = useState<EntityInvestigationGraphTimelineResponse>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState<string>();
+  const [evidenceResult, setEvidenceResult] = useState<EvidenceDrilldownResponse>();
+  const [evidenceError, setEvidenceError] = useState<string>();
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
+  const graphIds = useMemo(
+    () => [
+      ...new Set(
+        graphIdsText
+          .split(/[\s,]+/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ),
+    ],
+    [graphIdsText],
+  );
+  const validGraphIds =
+    graphIds.length >= 2 &&
+    graphIds.length <= 100 &&
+    graphIds.every((value) => /^eig_[0-9a-f]{24}$/.test(value));
+  const validTimelineId = /^eit_[0-9a-f]{24}$/.test(timelineId);
+
+  async function load(mode: 'materialize' | 'latest' | 'exact', event?: FormEvent) {
+    event?.preventDefault();
+    if (
+      chainId.trim().length === 0 ||
+      (mode === 'materialize' && !validGraphIds) ||
+      (mode === 'exact' && !validTimelineId)
+    )
+      return;
+    setBusy(true);
+    setError(undefined);
+    setResponse(undefined);
+    setSelectedEvidenceId(undefined);
+    setEvidenceResult(undefined);
+    try {
+      setResponse(
+        mode === 'materialize'
+          ? await api.materializeEntityInvestigationGraphTimeline({
+              ledger,
+              chainId,
+              graphIds,
+            })
+          : mode === 'latest'
+            ? await api.latestEntityInvestigationGraphTimeline(
+                ledger,
+                chainId,
+                subjectId.trim() || undefined,
+              )
+            : await api.entityInvestigationGraphTimeline(
+                timelineId,
+                ledger,
+                chainId,
+                subjectId.trim() || undefined,
+              ),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Graph timeline request failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openEvidence(evidenceId: string) {
+    setSelectedEvidenceId(evidenceId);
+    setEvidenceResult(undefined);
+    setEvidenceError(undefined);
+    setEvidenceBusy(true);
+    try {
+      setEvidenceResult(await api.evidenceDrilldown(evidenceId));
+    } catch (cause) {
+      setEvidenceError(cause instanceof Error ? cause.message : 'Evidence drilldown failed.');
+    } finally {
+      setEvidenceBusy(false);
+    }
+  }
+
+  const record = response?.record;
+  const timeline = record?.report.timeline;
+
+  return (
+    <div className="graph-timeline-workspace" data-testid="investigation-graph-timeline-workspace">
+      <section
+        className="panel subject-panel quote-panel"
+        aria-labelledby="graph-timeline-controls-heading"
+      >
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">
+              Cross-Snapshot · immutable graph reports · no membership mutation
+            </span>
+            <h3 id="graph-timeline-controls-heading">Investigation evolution</h3>
+          </div>
+          <span className="snapshot-badge">Absence ≠ relationship end</span>
+        </div>
+        <p className="panel-copy">
+          Compare two to 100 durable graph reports. Added or omitted pairs describe only the
+          requested graph scopes; they never establish controller membership, exits, relationship
+          starts, or relationship termination.
+        </p>
+        <form
+          className="quote-form graph-control-form"
+          onSubmit={(event) => void load('latest', event)}
+        >
+          <label htmlFor="graph-timeline-graph-ids">
+            Graph IDs (two or more, comma or whitespace separated)
+          </label>
+          <textarea
+            id="graph-timeline-graph-ids"
+            spellCheck={false}
+            value={graphIdsText}
+            onChange={(event) => setGraphIdsText(event.target.value)}
+            placeholder="eig_… eig_…"
+          />
+          <label htmlFor="graph-timeline-id">Exact timeline ID (optional)</label>
+          <input
+            id="graph-timeline-id"
+            spellCheck={false}
+            value={timelineId}
+            onChange={(event) => setTimelineId(event.target.value.trim())}
+            placeholder="eit_…"
+          />
+          <label htmlFor="graph-timeline-subject">Subject filter (optional)</label>
+          <input
+            id="graph-timeline-subject"
+            spellCheck={false}
+            value={subjectId}
+            onChange={(event) => setSubjectId(event.target.value.trim())}
+            placeholder="Filter latest or exact replay"
+          />
+          <div className="control-actions graph-actions">
+            <button
+              className="primary-button"
+              type="button"
+              disabled={!validGraphIds || busy}
+              onClick={() => void load('materialize')}
+            >
+              {busy ? 'Working…' : 'Materialize evolution'}
+            </button>
+            <button className="secondary-button" type="submit" disabled={busy}>
+              Load latest
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={!validTimelineId || busy}
+              onClick={() => void load('exact')}
+            >
+              Replay exact
+            </button>
+          </div>
+        </form>
+        {error === undefined ? null : <div className="provider-error">{error}</div>}
+      </section>
+
+      {timeline === undefined || record === undefined ? null : (
+        <>
+          <section className="panel" data-testid="investigation-graph-timeline-result">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">{record.id}</span>
+                <h3>Evidence-backed graph evolution</h3>
+              </div>
+              <span className="status-pill status-replayed">
+                {response?.replayed === true ? 'Replayed' : 'Materialized'}
+              </span>
+            </div>
+            <div className="metric-grid">
+              <article className="metric-tile metric-known">
+                <div className="metric-label">Graph observations</div>
+                <div className="metric-value">{timeline.summary.observationCount}</div>
+                <div className="metric-detail">Exact durable graph reports</div>
+              </article>
+              <article className="metric-tile metric-known">
+                <div className="metric-label">Pair changes</div>
+                <div className="metric-value">{timeline.summary.pairChangeCount}</div>
+                <div className="metric-detail">Typed deltas, not membership mutations</div>
+              </article>
+              <article className="metric-tile metric-unknown">
+                <div className="metric-label">Subject additions</div>
+                <div className="metric-value">{timeline.summary.subjectAdditionCount}</div>
+                <div className="metric-detail">Added to requested graph scope only</div>
+              </article>
+              <article className="metric-tile metric-unknown">
+                <div className="metric-label">Subject omissions</div>
+                <div className="metric-value">{timeline.summary.subjectOmissionCount}</div>
+                <div className="metric-detail">Never interpreted as an exit</div>
+              </article>
+            </div>
+            <div className="snapshot-strip">
+              <span>
+                <b>Range</b> {record.fromPosition} → {record.toPosition}
+              </span>
+              <span>
+                <b>Continuity</b> {knowledgeLabel(timeline.summary.chainObservationContinuity)}
+              </span>
+              <span>
+                <b>Graph set</b> {record.graphIds.length} exact reports
+              </span>
+              <span>
+                <b>Relationship termination</b> not inferred
+              </span>
+            </div>
+          </section>
+
+          <section className="panel" aria-labelledby="graph-timeline-transitions-heading">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Ordered revisions and position advances</span>
+                <h3 id="graph-timeline-transitions-heading">Cross-Snapshot transitions</h3>
+              </div>
+              <button
+                type="button"
+                className="evidence-button"
+                onClick={() => void openEvidence(record.terminalEvidenceId)}
+              >
+                Open terminal Evidence
+              </button>
+            </div>
+            <div className="graph-timeline-list">
+              {timeline.transitions.map((transition) => (
+                <article
+                  className="graph-timeline-card"
+                  key={`${transition.fromGraphId}:${transition.toGraphId}`}
+                >
+                  <div className="graph-timeline-card-heading">
+                    <strong>
+                      {transition.fromPosition} → {transition.toPosition} ·{' '}
+                      {titleCase(transition.kind)}
+                    </strong>
+                    <span>{knowledgeLabel(transition.snapshotContinuity)} continuity</span>
+                  </div>
+                  <p>
+                    {transition.pairChanges.length} pair changes · {transition.unchangedPairCount}{' '}
+                    unchanged · {transition.unobservedPositionCount} unobserved positions
+                  </p>
+                  {transition.pairChanges.length === 0 ? (
+                    <div className="inline-empty">No pair-state change in this graph revision.</div>
+                  ) : (
+                    <div className="contract-list graph-timeline-change-list">
+                      {transition.pairChanges.map((change) => (
+                        <div key={`${change.subjectA}:${change.subjectB}`}>
+                          <strong>{titleCase(change.kind)}</strong>
+                          <span>
+                            {shortId(change.subjectA, 7)} ↔ {shortId(change.subjectB, 7)} · before{' '}
+                            {change.before.state === 'known' && change.before.value !== undefined
+                              ? knowledgeLabel(change.before.value.relation)
+                              : titleCase(change.before.reason ?? 'unknown')}{' '}
+                            → after{' '}
+                            {change.after.state === 'known' && change.after.value !== undefined
+                              ? knowledgeLabel(change.after.value.relation)
+                              : titleCase(change.after.reason ?? 'unknown')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <EvidenceLedgerDrawer
+            busy={evidenceBusy}
+            eyebrow="Graph terminals → cross-Snapshot derivation"
+            title="Evolution Evidence Ledger"
+            testId="investigation-graph-timeline-evidence-ledger"
             {...(selectedEvidenceId === undefined ? {} : { evidenceId: selectedEvidenceId })}
             {...(evidenceResult === undefined ? {} : { result: evidenceResult })}
             {...(evidenceError === undefined ? {} : { error: evidenceError })}

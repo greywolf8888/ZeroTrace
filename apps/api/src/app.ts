@@ -17,7 +17,9 @@ import {
   ENTITY_RELATIONSHIP_MODEL_VERSION,
   ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION,
   ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION,
+  ENTITY_INVESTIGATION_GRAPH_TIMELINE_MODEL_VERSION,
   buildEntityInvestigationGraph,
+  buildEntityInvestigationGraphTimeline,
   buildEntityRelationshipTimeline,
   resolveEntityRelationship,
   traverseEntityInvestigationGraph,
@@ -63,6 +65,7 @@ import {
   EntityRelationshipReportStorageError,
   EntityRelationshipTimelineStorageError,
   EntityInvestigationGraphStorageError,
+  EntityInvestigationGraphTimelineStorageError,
   AgeInvestigationGraphProjectionError,
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
@@ -84,6 +87,7 @@ import {
   EntityRelationshipReportSchema,
   EntityRelationshipTimelineReportSchema,
   EntityInvestigationGraphReportSchema,
+  EntityInvestigationGraphTimelineReportSchema,
   FlapEventHistoryProjectionSchema,
   FlapLifetimeMaterializationSchema,
   SolanaTransactionIntelligenceReportSchema,
@@ -660,6 +664,38 @@ const EntityInvestigationGraphParamsSchema = z
   .object({ graphId: z.string().regex(/^eig_[0-9a-f]{24}$/) })
   .strict();
 
+const EntityInvestigationGraphTimelineMaterializeSchema = z
+  .object({
+    ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']),
+    chainId: z.string().trim().min(1).max(128),
+    graphIds: z
+      .array(z.string().regex(/^eig_[0-9a-f]{24}$/))
+      .min(2)
+      .max(100),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (new Set(value.graphIds).size !== value.graphIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['graphIds'],
+        message: 'Investigation graph timeline graph IDs must be unique.',
+      });
+    }
+  });
+
+const EntityInvestigationGraphTimelineQuerySchema = z
+  .object({
+    ledger: z.enum(['EVM', 'BITCOIN', 'SOLANA']),
+    chainId: z.string().trim().min(1).max(128),
+    subjectId: z.string().trim().min(1).max(512).optional(),
+  })
+  .strict();
+
+const EntityInvestigationGraphTimelineParamsSchema = z
+  .object({ timelineId: z.string().regex(/^eit_[0-9a-f]{24}$/) })
+  .strict();
+
 const FlapPancakeV2ReconciliationRequestSchema = z
   .object({
     chainId: z.literal('eip155:56'),
@@ -1053,6 +1089,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipTimelines']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphs']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphTimelines']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -1087,6 +1124,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         entityRelationshipReports,
         entityRelationshipTimelines,
         entityInvestigationGraphs,
+        entityInvestigationGraphTimelines,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -1101,6 +1139,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.entityRelationshipReports?.health(),
         runtime.entityRelationshipTimelines?.health(),
         runtime.entityInvestigationGraphs?.health(),
+        runtime.entityInvestigationGraphTimelines?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -1129,7 +1168,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                                 ? entityRelationshipTimelines
                                 : entityInvestigationGraphs?.status === 'DOWN'
                                   ? entityInvestigationGraphs
-                                  : evidence;
+                                  : entityInvestigationGraphTimelines?.status === 'DOWN'
+                                    ? entityInvestigationGraphTimelines
+                                    : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1387,6 +1428,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof EntityInvestigationGraphStorageError) {
       const status = error.code === 'ENTITY_INVESTIGATION_GRAPH_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof EntityInvestigationGraphTimelineStorageError) {
+      const status = error.code === 'ENTITY_INVESTIGATION_GRAPH_TIMELINE_INVALID' ? 400 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1731,13 +1778,14 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           runtime.evidenceRepository === undefined ||
           runtime.entityRelationshipReports === undefined ||
           runtime.entityRelationshipTimelines === undefined ||
-          runtime.entityInvestigationGraphs === undefined
+          runtime.entityInvestigationGraphs === undefined ||
+          runtime.entityInvestigationGraphTimelines === undefined
             ? 'DURABLE_STORAGE_REQUIRED'
             : runtime.ageInvestigationGraphProjection === undefined
-              ? 'IMPLEMENTED_DURABLE_INVESTIGATION_GRAPH'
-              : 'IMPLEMENTED_DURABLE_GRAPH_WITH_AGE_PROJECTION',
+              ? 'IMPLEMENTED_DURABLE_TEMPORAL_INVESTIGATION_GRAPH'
+              : 'IMPLEMENTED_DURABLE_TEMPORAL_GRAPH_WITH_AGE_PROJECTION',
         detail:
-          'Evidence-weighted pair scoring emits immutable Snapshot-bound hypotheses and cross-Snapshot timelines. Exact-Snapshot timeline sets now build bounded investigation graphs with separate same-controller and coordination edges, retained negative/Unknown observations, service-node suppression, provider-free replay, and Evidence drilldown. Apache AGE is an optional rebuildable acceleration index; PostgreSQL reports remain authoritative. Analyst overrides, protocol-scale relationship extraction and real-world calibration remain pending.',
+          'Evidence-weighted pair scoring emits immutable Snapshot-bound hypotheses and pair timelines. Exact-Snapshot graph reports now compose into cross-Snapshot investigation timelines with explicit pair/request-scope deltas, parent-linked continuity, retained Unknown/negative/service states, provider-free replay, and no inferred membership or relationship termination. Apache AGE remains an optional rebuildable exact-Snapshot acceleration index; PostgreSQL reports are authoritative. Analyst overrides, protocol-scale relationship extraction and real-world calibration remain pending.',
       },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },
       { id: 'shared-liquidity-exit-race', status: 'IMPLEMENTED_DETERMINISTIC' },
@@ -3867,6 +3915,192 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               }),
             }),
       };
+    },
+  );
+
+  app.post(
+    '/api/v1/entities/investigation-graph-timelines/materialize',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityInvestigationGraphTimelineMaterializeSchema.parse(request.body);
+      if (
+        runtime.evidenceRepository === undefined ||
+        runtime.entityInvestigationGraphs === undefined ||
+        runtime.entityInvestigationGraphTimelines === undefined
+      ) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_TIMELINE_UNAVAILABLE',
+              'Durable Evidence, investigation graph, and graph timeline storage are required.',
+              false,
+            ),
+          );
+      }
+      const records = await Promise.all(
+        input.graphIds.map((graphId) => runtime.entityInvestigationGraphs?.get(graphId)),
+      );
+      const missingGraphIds = input.graphIds.filter((_, index) => records[index] === undefined);
+      if (missingGraphIds.length > 0) {
+        return reply.code(404).send({
+          ...errorResponse(
+            request,
+            'ENTITY_INVESTIGATION_GRAPH_NOT_FOUND',
+            'At least one requested durable investigation graph was not found.',
+            false,
+          ),
+          graphIds: missingGraphIds,
+        });
+      }
+      const storedGraphs = records.map((record) => record!);
+      if (
+        storedGraphs.some(
+          (record) => record.ledger !== input.ledger || record.chainId !== input.chainId,
+        )
+      ) {
+        return reply
+          .code(422)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_TIMELINE_IDENTITY_MISMATCH',
+              'Every requested investigation graph must use the requested ledger and chain.',
+              false,
+            ),
+          );
+      }
+      const graphTerminalIds = storedGraphs.map((record) => record.terminalEvidenceId).sort();
+      const graphTerminalNodes = await Promise.all(
+        graphTerminalIds.map((evidenceId) => runtime.evidenceRepository?.get(evidenceId)),
+      );
+      if (graphTerminalNodes.some((node) => node === undefined)) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'DURABLE_EVIDENCE_INCOMPLETE',
+              'An investigation graph terminal Evidence node is unavailable.',
+              true,
+            ),
+          );
+      }
+      const timeline = buildEntityInvestigationGraphTimeline({
+        sources: storedGraphs.map((record) => ({
+          graphId: record.id,
+          resultHash: record.resultHash,
+          terminalEvidenceId: record.terminalEvidenceId,
+          graph: record.report.graph,
+        })),
+      });
+      const snapshot = timeline.metadata.snapshot;
+      const derived = await addDerivedAnalysisEvidence(
+        runtime,
+        snapshot,
+        timeline.metadata.evidenceIds,
+        `zerotrace:${ENTITY_INVESTIGATION_GRAPH_TIMELINE_MODEL_VERSION}`,
+        `entity-investigation-graph-timeline:${timeline.request.ledger}:${timeline.request.chainId}:${timeline.request.fromPosition}-${timeline.request.toPosition}:${timeline.request.graphSetHash}`,
+        { timeline },
+        'Cross-Snapshot investigation graph timeline with explicit continuity, request-scope deltas, and no automatic membership or relationship termination.',
+      );
+      const evidence = [
+        ...graphTerminalNodes.map((node) => node?.evidence as Evidence),
+        derived,
+      ].sort((left, right) => left.id.localeCompare(right.id));
+      const report = EntityInvestigationGraphTimelineReportSchema.parse({
+        schemaVersion: 'entity-investigation-graph-timeline-report-v1',
+        sourceOfTruth: 'DURABLE_ENTITY_INVESTIGATION_GRAPHS',
+        automaticOwnershipMergeAllowed: false,
+        automaticEntityMembershipMutationAllowed: false,
+        relationshipTerminationInferenceAllowed: false,
+        timeline,
+        terminalEvidenceId: derived.id,
+        evidence,
+      });
+      const stored = await runtime.entityInvestigationGraphTimelines.put(report);
+      return { replayed: false, record: stored };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/investigation-graph-timelines/latest',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityInvestigationGraphTimelineQuerySchema.parse(request.query);
+      const repository = runtime.entityInvestigationGraphTimelines;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_TIMELINE_UNAVAILABLE',
+              'Durable Entity investigation graph timeline storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest({
+        ledger: input.ledger,
+        chainId: input.chainId,
+        ...(input.subjectId === undefined ? {} : { subjectId: input.subjectId }),
+      });
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_TIMELINE_NOT_FOUND',
+              'No durable Entity investigation graph timeline exists for this identity.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/entities/investigation-graph-timelines/:timelineId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = EntityInvestigationGraphTimelineQuerySchema.parse(request.query);
+      const params = EntityInvestigationGraphTimelineParamsSchema.parse(request.params);
+      const repository = runtime.entityInvestigationGraphTimelines;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_TIMELINE_UNAVAILABLE',
+              'Durable Entity investigation graph timeline storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.timelineId);
+      if (
+        record === undefined ||
+        record.ledger !== input.ledger ||
+        record.chainId !== input.chainId ||
+        (input.subjectId !== undefined && !record.subjectIds.includes(input.subjectId))
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'ENTITY_INVESTIGATION_GRAPH_TIMELINE_NOT_FOUND',
+              'The durable Entity investigation graph timeline was not found for this identity.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
     },
   );
 

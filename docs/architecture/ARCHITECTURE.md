@@ -233,8 +233,9 @@ A `LABELED_REAL_WORLD` corpus requires every prediction to retain a ledger Snaps
 Brier `<= 0.15`, and ECE `<= 0.05`; missing denominators produce `INSUFFICIENT_DATA`. The checked-in
 `STRUCTURAL_GOLDEN` corpus is test-only and can prove regression and suppression behavior, but its
 calibration values are `DIAGNOSTIC_ONLY` and cannot establish a calibrated production entity model.
-Durable pairwise timelines and a bounded exact-Snapshot investigation projection are implemented.
-Cross-Snapshot graph maintenance and a real labeled corpus remain open.
+Durable pairwise timelines, a bounded exact-Snapshot investigation projection, and immutable
+cross-Snapshot graph-report timelines are implemented. Continuous extraction/rebuild, temporal
+traversal and a real labeled corpus remain open.
 
 #### Investigation graph projection
 
@@ -257,6 +258,24 @@ identity. Its immutable registry and replay count checks detect drift. AGE unava
 reported independently and never changes, replaces or deletes the PostgreSQL report. The analyst
 UI uses Cytoscape.js to render only the bounded returned subgraph and opens each edge's Evidence
 derivation ledger. There is no automatic ownership propagation, Entity merge or chain-write path.
+
+#### Investigation graph timeline
+
+`entity-investigation-graph-timeline-v0.1.0` compares two to 100 immutable `eig_...` reports from
+one ledger and chain. Reports are ordered by chain position, capture time and graph ID. Same-position
+captures are revisions; position advances carry an exact continuity Knowledge value when parent
+identity proves it, remain Unknown across gaps or missing parent identity, and become Known false
+on a hash conflict.
+
+Each transition records typed pair-state changes and subject additions/omissions within the two
+requested graph scopes. A missing pair is `Unknown(NOT_QUERIED)`: it never establishes a
+relationship end, an entity exit, a graph split/merge, or any membership mutation. The timeline
+copies no raw transfers and every observation is bound to the exact immutable graph terminal
+Evidence. PostgreSQL migration `021_entity_investigation_graph_timelines` validates the source
+graphs, transitions, Evidence parents, result identity and no-mutation invariants and forbids update
+or delete. Materialize/latest/exact API paths and the responsive UI are provider-free. Continuous
+capture scheduling, protocol-scale rebuilds, authenticated analyst overrides and calibrated
+ownership decisions remain separate work.
 
 For Bitcoin, a transaction-level model may emit common-input and script-type change candidates only
 as derived features. Equal-output CoinJoin-like structure, fanout/batching, incomplete prevout

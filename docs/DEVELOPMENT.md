@@ -389,6 +389,21 @@ PostgreSQL only; optional seed traversal is bounded to depth `0..3` and `1..200`
 renders controller and coordination edges separately and keeps service, independence and Unknown
 decisions in the audit list without inventing an edge.
 
+Migration `021_entity_investigation_graph_timelines` adds immutable `eit_...` timelines over two
+to 100 durable investigation graphs from one ledger and chain:
+
+```text
+POST /api/v1/entities/investigation-graph-timelines/materialize
+GET /api/v1/entities/investigation-graph-timelines/latest?ledger=EVM&chainId=eip155:56&subjectId=<optional-subject>
+GET /api/v1/entities/investigation-graph-timelines/<eit-id>?ledger=EVM&chainId=eip155:56&subjectId=<optional-subject>
+```
+
+The POST body contains `ledger`, `chainId`, and ordered or unordered `graphIds`; the engine applies
+canonical position/capture ordering. It reports same-position revisions, position advances,
+continuity Knowledge, typed pair changes and request-scope subject additions/omissions. Missing
+pairs are `Unknown(NOT_QUERIED)`, never a relationship end or membership mutation. Materialization
+and replay read only PostgreSQL/Evidence storage and never contact a chain provider or AGE.
+
 ## Continuous Flap lifetime heads
 
 The fourth semantic-worker entrypoint maintains one append-only accepted lifetime chain. It requires

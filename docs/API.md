@@ -54,6 +54,17 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/evidence/:id`                                              | Evidence node, source edges, and bound Snapshot                  |
 | GET    | `/api/v1/evidence/:id/drilldown`                                    | restart-safe derived/source Evidence traversal                   |
 | POST   | `/api/v1/entities/resolve`                                          | deterministic evidence-feature baseline                          |
+| GET    | `/api/v1/entities/relationships/reports/latest`                     | latest immutable pairwise hypothesis replay                      |
+| GET    | `/api/v1/entities/relationships/reports/:id`                        | exact content-addressed pairwise hypothesis replay               |
+| POST   | `/api/v1/entities/relationships/timelines/materialize`              | provider-free durable pairwise timeline materialization          |
+| GET    | `/api/v1/entities/relationships/timelines/latest`                   | latest immutable pairwise timeline replay                        |
+| GET    | `/api/v1/entities/relationships/timelines/:id`                      | exact immutable pairwise timeline replay                         |
+| POST   | `/api/v1/entities/investigation-graphs/materialize`                 | exact-Snapshot graph materialization from durable timelines      |
+| GET    | `/api/v1/entities/investigation-graphs/latest`                      | latest bounded investigation graph replay/traversal              |
+| GET    | `/api/v1/entities/investigation-graphs/:id`                         | exact bounded investigation graph replay/traversal               |
+| POST   | `/api/v1/entities/investigation-graph-timelines/materialize`        | cross-Snapshot graph-report timeline materialization             |
+| GET    | `/api/v1/entities/investigation-graph-timelines/latest`             | latest immutable graph timeline replay                           |
+| GET    | `/api/v1/entities/investigation-graph-timelines/:id`                | exact immutable graph timeline replay                            |
 | POST   | `/api/v1/rv/constant-product`                                       | exact-integer pool exit quote                                    |
 | POST   | `/api/v1/scenarios/exit-race`                                       | seeded shared-pool exit ordering                                 |
 
@@ -71,6 +82,26 @@ Current-state subject reads establish a ledger-specific anchor before reading th
 
 Solana's explicit `value: null` is a Known non-existent account. A missing, stale, malformed, or
 provider-failed response remains Unknown/unavailable and is never converted to a zero balance.
+
+### Entity reports, graphs and graph evolution
+
+Featureful relationship resolution persists one immutable `erh_...` hypothesis with exact
+Snapshot and Evidence lineage. Provider-free `ert_...` timelines then order two to 1,000 reports
+for one canonical pair. Exact-Snapshot `eig_...` graphs consume one to 250 durable timelines and
+keep `SAME_CONTROLLER` separate from `COORDINATED_WITH`; suppressed/Unknown observations remain
+visible without inventing an edge.
+
+`POST /api/v1/entities/investigation-graph-timelines/materialize` accepts `ledger`, `chainId`, and
+two to 100 unique `graphIds`. All source graphs must exist under that identity. The returned
+content-addressed `eit_...` report orders them by position/capture time, distinguishes revisions
+from position advances, and exposes typed `snapshotContinuity`. Pair additions and omissions refer
+only to the compared requested graph scopes. A missing pair is `Unknown(NOT_QUERIED)` and cannot
+establish a relationship start/end, graph split/merge, or Entity-membership change.
+
+Latest and exact graph-timeline GET routes accept `ledger`, `chainId`, and an optional `subjectId`
+identity filter. They replay PostgreSQL only. Materialization also reads only durable graphs and
+their terminal Evidence; none of these routes contacts a chain provider, invokes AGE, changes an
+Entity, or performs a transaction.
 
 ### Claim declaration review
 

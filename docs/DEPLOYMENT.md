@@ -184,9 +184,9 @@ Expected invariants:
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
 - missing or unhealthy Flap projection/head or Claim Report migrations `008`/`010`/`011` return
   readiness HTTP 503 when PostgreSQL is configured;
-- missing investigation-graph migration `020` returns readiness HTTP 503 when PostgreSQL is
-  configured; optional AGE status is reported independently under `graphProjection` and does not
-  replace PostgreSQL authority;
+- missing investigation-graph migrations `020` or `021` returns readiness HTTP 503 when PostgreSQL
+  is configured; optional AGE status is reported independently under `graphProjection` and does
+  not replace PostgreSQL authority;
 - `/health` reports `ingestionStorage` independently for Raw Facts, checkpoints, and raw artifacts;
 - `/health` and `/api/v1/data-quality/anchors` distinguish agreement, disagreement, insufficient
   sources, provider unavailability, continuity state, and data-quality storage health;
@@ -298,6 +298,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/019_entity_relationship_timelines.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/020_entity_investigation_graphs.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/021_entity_investigation_graph_timelines.sql
 ```
 
 PowerShell equivalent:
@@ -338,6 +340,8 @@ Get-Content -Raw infra/postgres/init/018_entity_relationship_reports.sql |
 Get-Content -Raw infra/postgres/init/019_entity_relationship_timelines.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/020_entity_investigation_graphs.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/021_entity_investigation_graph_timelines.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 

@@ -127,7 +127,11 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [ ] Forced real reorg and independently operated provider acceptance
 - [x] Bounded exact-Snapshot investigation graph materialization, immutable PostgreSQL replay,
       optional AGE projection/replay validation and depth/node-bounded traversal
-- [ ] Cross-Snapshot temporal graph maintenance, protocol-scale extraction and rebuild validation
+- [x] Bounded immutable cross-Snapshot investigation-graph timelines with revision/position
+      transitions, explicit continuity, typed request-scope deltas, terminal Evidence,
+      provider-free API/UI replay and no relationship-end or membership inference
+- [ ] Continuous temporal graph extraction, protocol-scale rebuild/traversal and authenticated
+      analyst-override validation
 
 ## Intelligence
 
@@ -266,7 +270,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       independent-operator attestations, terminal Evidence and no range overclaim on desktop/mobile
 - [x] Responsive bounded Controller Graph with distinct controller/coordination edges, retained
       no-edge decisions and Evidence drilldown on desktop/mobile
-- [ ] Complete global search, cross-Snapshot graph timeline, comparison, scenario and export workflows
+- [x] Responsive immutable graph-timeline materialization/latest/exact replay with continuity,
+      request-scope pair changes, Evidence drilldown and no inferred relationship end on desktop/mobile
+- [ ] Complete global search, temporal traversal, comparison, scenario and export workflows
 - [ ] Authentication, tenancy, analyst overrides and audit log
 - [ ] Accessibility, localization, load and cross-browser acceptance
 

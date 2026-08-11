@@ -38,6 +38,7 @@ import {
   PostgresEntityRelationshipReportRepository,
   PostgresEntityRelationshipTimelineRepository,
   PostgresEntityInvestigationGraphRepository,
+  PostgresEntityInvestigationGraphTimelineRepository,
   AgeInvestigationGraphProjectionRepository,
   PostgresIngestionCheckpointRepository,
   PostgresPensionCandidateReportRepository,
@@ -75,6 +76,7 @@ export interface AppRuntime {
   entityRelationshipReports?: PostgresEntityRelationshipReportRepository;
   entityRelationshipTimelines?: PostgresEntityRelationshipTimelineRepository;
   entityInvestigationGraphs?: PostgresEntityInvestigationGraphRepository;
+  entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
   ageInvestigationGraphProjection?: AgeInvestigationGraphProjectionRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
@@ -564,6 +566,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const entityInvestigationGraphTimelines =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresEntityInvestigationGraphTimelineRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const ageInvestigationGraphProjection =
     config.ageUrl === undefined
       ? undefined
@@ -604,6 +615,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       entityRelationshipReports?.close(),
       entityRelationshipTimelines?.close(),
       entityInvestigationGraphs?.close(),
+      entityInvestigationGraphTimelines?.close(),
       ageInvestigationGraphProjection?.close(),
       rawFacts?.close(),
     ]);
@@ -640,6 +652,9 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(entityRelationshipReports === undefined ? {} : { entityRelationshipReports }),
     ...(entityRelationshipTimelines === undefined ? {} : { entityRelationshipTimelines }),
     ...(entityInvestigationGraphs === undefined ? {} : { entityInvestigationGraphs }),
+    ...(entityInvestigationGraphTimelines === undefined
+      ? {}
+      : { entityInvestigationGraphTimelines }),
     ...(ageInvestigationGraphProjection === undefined ? {} : { ageInvestigationGraphProjection }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
