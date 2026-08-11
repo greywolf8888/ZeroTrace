@@ -1651,8 +1651,9 @@ only because the restored fail-closed SSRF default rejected the host's private-r
 interception. The web root returned HTTP 200. Local host-port conflicts were handled
 non-destructively with `POSTGRES_PORT=15432` and `VALKEY_PORT=16379`.
 
-Exact-SHA remote CI for this report batch remains pending until its reviewed commit is pushed to
-Draft PR #5. The latest completed remote baseline is official-instruction/core-flow commit
-`a111288`:
-[CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31457863349) and
-[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31457863307).
+Exact-SHA GitHub Actions and CodeQL passed for immutable durable-report commit `1ea3780` on Draft
+PR #5. CI independently repeated formatting, lint, typecheck, disposable PostgreSQL/ClickHouse/
+MinIO coverage, production build, licenses, audit, SBOM, both Chromium viewports and all six
+production container targets:
+[CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31460030258) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31460030151).

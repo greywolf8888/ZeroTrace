@@ -19,7 +19,7 @@ completed feature.
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                    |
 | Integration tests                | **69 environment-free plus 25 real-storage passing; 94 with PostgreSQL, ClickHouse and object store enabled** |
 | Real-browser E2E                 | **32 passing: Chromium desktop and Pixel 7**                                                                  |
-| Remote CI                        | **Latest recorded exact-SHA pass: `a111288`; Draft PR #5 remains the pre-merge gate**                         |
+| Remote CI                        | **Latest recorded exact-SHA pass: `1ea3780`; Draft PR #5 remains the pre-merge gate**                         |
 | Coverage                         | **Current local: 83.30% statements / 77.82% branches / 93.38% functions / 84.48% lines**                      |
 | Real-chain validation            | Four-chain raw/anchors, FFT EVM control, Solana v0/core-flow/three controls, and scoped Bitcoin reads passed  |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Claim, control, and Solana transaction reports wired                   |
@@ -178,6 +178,10 @@ The only allowed status vocabulary in this ledger is:
   [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31457863307) passed on immutable
   Solana official-instruction/core-flow commit `a111288`, including all repository quality,
   browser, production-container and security-analysis gates.
+- [GitHub Actions CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31460030258) and
+  [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31460030151) passed on immutable
+  durable Solana transaction-report commit `1ea3780`, including all repository quality, durable
+  storage, browser, production-container and security-analysis gates.
 
 ### Read-only chain foundation
 
@@ -926,7 +930,7 @@ correctness. Exact local smoke observations and limitations are in
 | Database bootstrap             | Pass                                          | fresh bootstrap passed; current persistent Compose volume upgraded non-destructively through migration 015               |
 | Runtime/browser smoke          | Pass                                          | rebuilt read-only API/Web healthy; durable Solana replay visible and broadcast remains forbidden                         |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope     | four anchors/pipelines, scoped Alchemy/BNB market, Solana v0 semantics and three Solana controls passed; archive pending |
-| Remote CI                      | Latest recorded exact-SHA pass `a111288`      | CI/CodeQL green; this uncommitted batch still requires its own exact-SHA run before merge                                |
+| Remote CI                      | Exact-SHA pass `1ea3780`                      | CI/CodeQL green for the durable Solana transaction-report batch; Draft PR #5 remains open                                |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
