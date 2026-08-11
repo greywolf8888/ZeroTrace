@@ -126,6 +126,12 @@ denominators remain excluded or `INSUFFICIENT_DATA`; they do not become zero or 
   unrecorded metadata or a one-sided token balance. Overall data coverage cannot exceed either
   account-resolution coverage or the six-dimension response-recording coverage; the token dimension
   is the exact pre/post identity-pair ratio.
+- durable Solana transaction reports are content-addressed and bind signature, subject, facts,
+  semantics, Snapshot, terminal Evidence, the complete derivation-edge set, sorted Evidence/source
+  sets and model version. Identical writes are idempotent; conflicts, corruption, update and delete
+  fail closed. Exact/latest replay performs no provider call, and automatic provider-failure replay
+  must expose `replayed=true` plus a typed Unavailable live-refresh reason without changing the
+  stored Snapshot.
 - no-evidence entity input remains Unknown.
 - common services and CoinJoin suppress controller confidence.
 - sell-disabled RV is unavailable rather than zero.

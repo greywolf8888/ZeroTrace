@@ -8,6 +8,9 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- immutable content-addressed Solana transaction semantic reports with PostgreSQL-enforced
+  signature/Snapshot/Evidence lineage, idempotent writes, exact/latest provider-free replay,
+  explicit provider-failure fallback provenance, responsive UI and real mainnet restart replay;
 - official Codama-generated System/SPL Token/Token-2022 instruction identification plus strict core
   SOL transfer and token transfer/mint/burn asset-flow decoding, recorded owner mapping,
   failed-transaction application state, per-flow Evidence, zero-tolerance classic token

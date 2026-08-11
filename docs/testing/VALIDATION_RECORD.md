@@ -1615,3 +1615,44 @@ commit is pushed to Draft PR #5. The latest recorded exact-SHA remote pass befor
 commit `506bece`:
 [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31455436239) and
 [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31455436215).
+
+## Durable Solana transaction-report replay validation (2026-08-11)
+
+The same read-only finalized mainnet transaction used for v1.1 semantic/core-flow validation,
+`5TVTwAzh85bCJ5tMxLprQPC6yBw2pKTuQTp6qaJapA2m21X9pgUK1QYDKJLKPt3JXVTZQiauxsNEGKFr76iDjqAN`,
+was captured through the production API path at slot `438523420`. PostgreSQL Evidence plus migration
+`015_solana_transaction_reports.sql` persisted immutable report
+`str_2401beff4b82308e93ccd9d6` with result hash
+`a4cdc8b4501fea3f51bcf0d950d37bcc1bc398c6635ffa72611101901b21feec`. The report retained 43
+Evidence nodes, nine asset flows and `PARTIAL` token reconciliation. Its live response exposed
+`replayed=false` and a Known successful live-refresh state.
+
+The API container was then recreated after explicitly restoring
+`ALLOW_PRIVATE_PROVIDER_URLS=false`, which made the host's private-range DNS interception fail the
+default SSRF policy. Querying the generic transaction route returned the same report ID, result
+hash, slot and Evidence graph with `replayed=true` and `liveRefresh=Unavailable(PROVIDER_DOWN)`.
+Provider-free latest and exact-ID routes returned byte-equivalent parsed report JSON with identical
+IDs/hashes. This proves that provider degradation remains distinct from chain facts and that the
+historical Snapshot is not rewritten as a current observation. The default was restored before the
+check ended; no key, signing, broadcast, swap or fund movement was used.
+
+The completed local gate passed 463 unit tests across 68 files, 69 environment-free integration
+tests, all 94 integration tests with PostgreSQL/ClickHouse/MinIO enabled, one Entity structural
+evaluation, and 32 Chromium desktop/mobile flows. The durable coverage run passed all 557 tests and
+reached 83.30% statements, 77.82% branches, 93.38% functions, and 84.48% lines. The PostgreSQL test
+also proved idempotent writes, repository close/reopen, exact/latest equality, health, and database
+rejection of update/delete.
+
+Formatting, lint, typecheck, production build, development/production dependency audits, license
+allowlist, CycloneDX SBOM and Compose validation passed. All six production Docker targets built,
+and recreated API/Web/PostgreSQL/ClickHouse plus the existing MinIO/Valkey services were healthy;
+NATS was running. The API reported `readOnly=true`, durable storage `UP`, and `DEGRADED` readiness
+only because the restored fail-closed SSRF default rejected the host's private-range provider DNS
+interception. The web root returned HTTP 200. Local host-port conflicts were handled
+non-destructively with `POSTGRES_PORT=15432` and `VALKEY_PORT=16379`.
+
+Exact-SHA remote CI for this report batch remains pending until its reviewed commit is pushed to
+Draft PR #5. The latest completed remote baseline is official-instruction/core-flow commit
+`a111288`:
+[CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31457863349) and
+[CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31457863307).

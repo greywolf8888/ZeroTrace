@@ -332,6 +332,18 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
             summary: 'Solana transaction bound to its committed slot Snapshot.',
           },
         ],
+        durableReport: {
+          id: 'str_111111111111111111111111',
+          resultHash: 'f'.repeat(64),
+          createdAt: '2026-08-10T00:00:02.000Z',
+          capturedAt: '2026-08-10T00:00:00.000Z',
+          replayed: true,
+          liveRefresh: {
+            state: 'unavailable',
+            reason: 'PROVIDER_DOWN',
+            detail: 'The immutable report was replayed after a provider failure.',
+          },
+        },
       }),
     });
   });
@@ -352,6 +364,10 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
   await expect(semantics.getByText('Lookup Writable', { exact: true })).toBeVisible();
   await expect(semantics.getByText('outer:0/inner:0', { exact: true })).toBeVisible();
   await expect(semantics.getByText('-30', { exact: true })).toBeVisible();
+  const reportProvenance = page.getByTestId('solana-report-provenance');
+  await expect(reportProvenance.getByText('str_111111111111111111111111')).toBeVisible();
+  await expect(reportProvenance.getByText('Replayed', { exact: true })).toBeVisible();
+  await expect(reportProvenance.getByText('Provider Down', { exact: true })).toBeVisible();
   const assetFlowAudit = page.getByTestId('solana-asset-flow-audit');
   await expect(
     assetFlowAudit.getByRole('heading', { name: 'Core asset-flow audit' }),

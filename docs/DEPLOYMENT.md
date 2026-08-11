@@ -272,6 +272,10 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/012_evm_control_surface_reports.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/013_evm_control_source_provenance.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/014_solana_control_surface_reports.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/015_solana_transaction_reports.sql
 ```
 
 PowerShell equivalent:
@@ -299,10 +303,14 @@ Get-Content -Raw infra/postgres/init/012_evm_control_surface_reports.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/013_evm_control_source_provenance.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/014_solana_control_surface_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/015_solana_transaction_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 
-Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`; a missing Claim
-Report migration surfaces as `storage.errorCode=CLAIM_REPORT_NOT_INITIALIZED`. Never delete a
+Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`; missing report
+migrations surface explicit repository-specific `*_NOT_INITIALIZED` errors. Never delete a
 persistent volume as a migration strategy.
 
 Early development ClickHouse volumes may contain a pre-Evidence `raw_chain_facts` table using

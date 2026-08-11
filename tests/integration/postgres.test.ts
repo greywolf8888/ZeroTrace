@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 
 import {
   EvmLedgerAdapter,
+  SolanaLedgerAdapter,
   type JsonRpcTransport,
   type TransportObservation,
   type TransportReadOptions,
@@ -13,6 +14,7 @@ import { createEvidence } from '@zerotrace/evidence';
 import {
   EvmControlCoverageDomainSchema,
   SolanaControlCoverageDomainSchema,
+  SolanaTransactionIntelligenceReportSchema,
   FlapEventHistorySchema,
   unknownValue,
   type EvmControlSurfaceReport,
@@ -30,11 +32,17 @@ import {
   PostgresDataQualityRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
+  PostgresSolanaTransactionReportRepository,
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
   PostgresIngestionCheckpointRepository,
   PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
+
+import { querySolanaTransaction } from '../../apps/api/src/ledger-query.js';
+
+const solanaReportSignature =
+  '4ReKprwf3WdLHRrzp4ctPWNBsQDPL3VZz3zMmoZfcGJMJCHh5Vq937mPdyxhCbw54wNnA6hZ7KfNpQdpt13yY7A9';
 
 const connectionString = process.env.TEST_POSTGRES_URL;
 const postgresDescribe = connectionString === undefined ? describe.skip : describe;
@@ -53,6 +61,59 @@ class IntegrationNoNetworkTransport implements JsonRpcTransport {
     _options: TransportReadOptions = {},
   ): Promise<TransportObservation<T>> {
     throw new Error('PostgreSQL projection integration reached the sourced network.');
+  }
+}
+
+class SolanaTransactionFixtureTransport implements JsonRpcTransport {
+  readonly endpointId = 'solana-rpc@integration';
+
+  async request<T>(method: string): Promise<T> {
+    return (await this.requestSourced<T>(method)).value;
+  }
+
+  async requestSourced<T>(method: string): Promise<TransportObservation<T>> {
+    const signature = solanaReportSignature;
+    const response =
+      method === 'getTransaction'
+        ? {
+            slot: 300_000_002,
+            blockTime: 1_700_000_100,
+            version: 'legacy',
+            transaction: {
+              signatures: [signature],
+              message: {
+                accountKeys: ['11111111111111111111111111111111'],
+                header: {
+                  numRequiredSignatures: 1,
+                  numReadonlySignedAccounts: 0,
+                  numReadonlyUnsignedAccounts: 0,
+                },
+                instructions: [],
+                recentBlockhash: '11111111111111111111111111111111',
+              },
+            },
+            meta: {
+              err: null,
+              fee: 5000,
+              preBalances: [10_000],
+              postBalances: [5_000],
+              innerInstructions: [],
+              preTokenBalances: [],
+              postTokenBalances: [],
+              logMessages: [],
+              computeUnitsConsumed: 0,
+            },
+          }
+        : method === 'getBlock'
+          ? {
+              blockhash: '3ySAYPQqMfpyZL6QhH4RzgT68HWpV72G2JAa2XWrpHEi',
+              previousBlockhash: '4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi',
+              parentSlot: 300_000_001,
+              blockTime: 1_700_000_100,
+            }
+          : undefined;
+    if (response === undefined) throw new Error(`Unexpected Solana fixture method ${method}.`);
+    return { value: response as T, endpointId: this.endpointId };
   }
 }
 
@@ -1488,6 +1549,80 @@ postgresDescribe('PostgreSQL durable Solana control surface integration', () => 
       ).rejects.toThrow(/immutable/);
       await expect(
         pool.query('DELETE FROM solana_control_surface_reports WHERE id = $1', [stored.id]),
+      ).rejects.toThrow(/immutable/);
+    } finally {
+      await pool.end();
+    }
+  });
+});
+
+postgresDescribe('PostgreSQL durable Solana transaction intelligence integration', () => {
+  let evidence: PostgresEvidenceRepository;
+  let reports: PostgresSolanaTransactionReportRepository;
+  const signature = solanaReportSignature;
+
+  beforeAll(() => {
+    evidence = PostgresEvidenceRepository.fromConnectionString({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    reports = new PostgresSolanaTransactionReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+  });
+
+  afterAll(async () => {
+    await Promise.all([evidence.close(), reports.close()]);
+  });
+
+  it('persists a production-query report, replays after repository restart, and rejects mutation', async () => {
+    const adapter = new SolanaLedgerAdapter(
+      { id: 'solana-rpc@integration', commitment: 'finalized' },
+      new SolanaTransactionFixtureTransport(),
+    );
+    const queried = await querySolanaTransaction(
+      adapter,
+      {
+        ledger: 'SOLANA',
+        chainId: 'solana-mainnet',
+        type: 'TRANSACTION',
+        id: signature,
+        normalizedId: signature,
+        validation: 'STRUCTURALLY_VALID',
+        confidence: 1,
+      },
+      async (item, sourceEvidenceIds = [], itemSnapshot) =>
+        (await evidence.put(item, sourceEvidenceIds, itemSnapshot)).evidence,
+    );
+    const report = SolanaTransactionIntelligenceReportSchema.parse(queried);
+    expect(report.evidence).toHaveLength(2);
+    expect(report.facts.coreAssetFlowCount).toEqual({ state: 'known', value: 0 });
+    expect(report.facts.tokenFlowReconciliation).toMatchObject({
+      state: 'known',
+      value: { status: 'NOT_APPLICABLE', recommendedMaxRelativeError: 0 },
+    });
+
+    const stored = await reports.put(report);
+    await expect(reports.put(report)).resolves.toEqual(stored);
+    await reports.close();
+    reports = new PostgresSolanaTransactionReportRepository({
+      connectionString: connectionString as string,
+      maxConnections: 2,
+    });
+    await expect(reports.get(stored.id)).resolves.toEqual(stored);
+    await expect(reports.latest(signature)).resolves.toEqual(stored);
+    await expect(reports.health()).resolves.toMatchObject({ status: 'UP', durable: true });
+
+    const pool = new Pool({ connectionString: connectionString as string });
+    try {
+      await expect(
+        pool.query('UPDATE solana_transaction_reports SET report = report WHERE id = $1', [
+          stored.id,
+        ]),
+      ).rejects.toThrow(/immutable/);
+      await expect(
+        pool.query('DELETE FROM solana_transaction_reports WHERE id = $1', [stored.id]),
       ).rejects.toThrow(/immutable/);
     } finally {
       await pool.end();

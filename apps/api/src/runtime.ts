@@ -28,6 +28,7 @@ import {
   PostgresClaimReportRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
+  PostgresSolanaTransactionReportRepository,
   DataQualityStorageError,
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
@@ -62,6 +63,7 @@ export interface AppRuntime {
   claimReports?: PostgresClaimReportRepository;
   controlSurfaces?: PostgresEvmControlSurfaceRepository;
   solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
+  solanaTransactionReports?: PostgresSolanaTransactionReportRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
   ingestionStorage: {
@@ -496,6 +498,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const solanaTransactionReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresSolanaTransactionReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const artifacts =
     config.objectStoreEndpoint === undefined ||
     config.objectStoreAccessKey === undefined ||
@@ -521,6 +532,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       claimReports?.close(),
       controlSurfaces?.close(),
       solanaControlSurfaces?.close(),
+      solanaTransactionReports?.close(),
       rawFacts?.close(),
     ]);
   };
@@ -550,6 +562,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(claimReports === undefined ? {} : { claimReports }),
     ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
     ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
+    ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

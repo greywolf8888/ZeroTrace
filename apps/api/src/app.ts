@@ -52,16 +52,19 @@ import {
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   SemanticCheckpointError,
+  SolanaTransactionReportStorageError,
   StorageError,
   type ObjectStoreHealth,
   type RawFactStorageHealth,
   type StorageHealth,
+  type StoredSolanaTransactionReport,
 } from '@zerotrace/storage';
 import {
   AnalysisMetadataSchema,
   DiscrepancyCheckInputSchema,
   FlapEventHistoryProjectionSchema,
   FlapLifetimeMaterializationSchema,
+  SolanaTransactionIntelligenceReportSchema,
   knownValue,
   unavailableValue,
   unknownValue,
@@ -104,6 +107,17 @@ const LedgerRecordParamsSchema = z.object({
 
 const LedgerRecordQuerySchema = z.object({
   chainId: z.string().trim().min(1).max(128).optional(),
+});
+
+const SolanaTransactionReportParamsSchema = z.object({
+  signature: z
+    .string()
+    .trim()
+    .regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/),
+});
+
+const SolanaTransactionReportByIdParamsSchema = SolanaTransactionReportParamsSchema.extend({
+  reportId: z.string().regex(/^str_[0-9a-f]{24}$/),
 });
 
 const LaunchInspectionParamsSchema = z.object({
@@ -594,6 +608,25 @@ function emptyMetadata(modelVersion: string, confidence = 0): AnalysisMetadata {
   };
 }
 
+function solanaTransactionReportResponse(
+  record: StoredSolanaTransactionReport,
+  replayed: boolean,
+  liveRefresh:
+    ReturnType<typeof unavailableValue> | ReturnType<typeof knownValue<boolean>> = knownValue(true),
+) {
+  return {
+    ...record.report,
+    durableReport: {
+      id: record.id,
+      resultHash: record.resultHash,
+      createdAt: record.createdAt,
+      capturedAt: record.capturedAt,
+      replayed,
+      liveRefresh,
+    },
+  };
+}
+
 async function getEvidenceNode(runtime: AppRuntime, id: string) {
   return runtime.evidenceLedger.get(id) ?? runtime.evidenceRepository?.get(id);
 }
@@ -847,6 +880,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['claimReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -875,6 +909,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         claimReports,
         controlSurfaces,
         solanaControlSurfaces,
+        solanaTransactionReports,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -883,6 +918,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.claimReports?.health(),
         runtime.controlSurfaces?.health(),
         runtime.solanaControlSurfaces?.health(),
+        runtime.solanaTransactionReports?.health(),
       ]);
       value =
         evidence.status === 'DOWN'
@@ -899,7 +935,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
                     ? controlSurfaces
                     : solanaControlSurfaces?.status === 'DOWN'
                       ? solanaControlSurfaces
-                      : evidence;
+                      : solanaTransactionReports?.status === 'DOWN'
+                        ? solanaTransactionReports
+                        : evidence;
     }
     storageCache = { expiresAt: Date.now() + options.config.healthCacheTtlMs, value };
     return value;
@@ -1110,6 +1148,12 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof ControlSurfaceReportStorageError) {
       const status = error.code === 'CONTROL_SURFACE_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof SolanaTransactionReportStorageError) {
+      const status = error.code === 'SOLANA_TRANSACTION_REPORT_INVALID' ? 400 : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1386,6 +1430,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'One finalized-slot account set is decoded with official SPL Token and Token-2022 codecs, including base authorities, classic multisig thresholds, extension authorities, and loader-v3 ProgramData upgrade authority. Reports replay without providers. Squads configuration, Anchor IDL, verifiable builds, authority history, and recursive controllers remain explicit Unknown.',
       },
       {
+        id: 'solana-transaction-semantic-replay',
+        status:
+          runtime.solanaTransactionReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : runtime.solanaAdapter === undefined
+              ? 'IMPLEMENTED_PROVIDER_FREE_REPLAY_ONLY'
+              : 'IMPLEMENTED_DURABLE_LIVE_AND_REPLAY',
+        detail:
+          'Finalized Solana transaction semantics, official core asset flows, exact token reconciliation and their complete Evidence set are stored as immutable content-addressed reports. Latest/exact replay remains available without a provider and is explicitly marked as replayed.',
+      },
+      {
         id: 'finalized-historical-ingestion',
         status:
           runtime.ingestionStorage.rawFacts !== undefined &&
@@ -1659,6 +1714,76 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   );
 
   app.get(
+    '/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = SolanaTransactionReportParamsSchema.parse(request.params);
+      const repository = runtime.solanaTransactionReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_TRANSACTION_REPORT_UNAVAILABLE',
+              'Durable Solana transaction report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(params.signature);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_TRANSACTION_REPORT_NOT_FOUND',
+              'No durable Solana transaction report exists for this signature.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
+    '/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = SolanaTransactionReportByIdParamsSchema.parse(request.params);
+      const repository = runtime.solanaTransactionReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_TRANSACTION_REPORT_UNAVAILABLE',
+              'Durable Solana transaction report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined || record.signature !== params.signature) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_TRANSACTION_REPORT_NOT_FOUND',
+              'The durable Solana transaction report was not found for this signature.',
+              false,
+            ),
+          );
+      }
+      return { record };
+    },
+  );
+
+  app.get(
     '/api/v1/ledger/:ledger/:type/:id',
     { schema: { tags: ['intelligence'] } },
     async (request, reply) => {
@@ -1768,16 +1893,62 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       }
 
       const adapter = runtime.solanaAdapter;
+      if (params.type === 'BLOCK') {
+        if (adapter === undefined) {
+          return reply.code(503).send({
+            subject,
+            facts: unavailableValue('PROVIDER_UNCONFIGURED'),
+            metadata: emptyMetadata('solana-block-query-v0.1.0'),
+          });
+        }
+        return querySolanaBlock(adapter, subject, writeEvidence);
+      }
+
+      const repository = runtime.solanaTransactionReports;
       if (adapter === undefined) {
+        const record = await repository?.latest(subject.normalizedId);
+        if (record !== undefined) {
+          return solanaTransactionReportResponse(
+            record,
+            true,
+            unavailableValue(
+              'PROVIDER_UNCONFIGURED',
+              'The immutable report was replayed because no live Solana provider is configured.',
+            ),
+          );
+        }
         return reply.code(503).send({
           subject,
           facts: unavailableValue('PROVIDER_UNCONFIGURED'),
-          metadata: emptyMetadata(`solana-${params.type.toLowerCase()}-query-v0.1.0`),
+          metadata: emptyMetadata('solana-transaction-query-v1.1.0'),
         });
       }
-      return params.type === 'BLOCK'
-        ? querySolanaBlock(adapter, subject, writeEvidence)
-        : querySolanaTransaction(adapter, subject, writeEvidence);
+
+      try {
+        const result = await querySolanaTransaction(adapter, subject, writeEvidence);
+        const parsed = SolanaTransactionIntelligenceReportSchema.safeParse(result);
+        if (
+          !parsed.success ||
+          repository === undefined ||
+          runtime.evidenceRepository === undefined
+        ) {
+          return result;
+        }
+        const record = await repository.put(parsed.data);
+        return solanaTransactionReportResponse(record, false);
+      } catch (error) {
+        if (!(error instanceof ProviderError) || repository === undefined) throw error;
+        const record = await repository.latest(subject.normalizedId);
+        if (record === undefined) throw error;
+        return solanaTransactionReportResponse(
+          record,
+          true,
+          unavailableValue(
+            error.code === 'RATE_LIMITED' ? 'RATE_LIMITED' : 'PROVIDER_DOWN',
+            `Live refresh failed with ${error.code}; the immutable report was replayed without changing its Snapshot.`,
+          ),
+        );
+      }
     },
   );
 

@@ -430,6 +430,16 @@ unmodeled extension, close/sync, confidential, hook, or missing-CPI effects keep
 Partial rather than passing by omission. Program-specific Jupiter, launchpad and AMM semantics remain
 separate adapter work.
 
+Each successful finalized Solana transaction analysis is also a content-addressed immutable report
+when PostgreSQL Evidence/report storage is configured. The report binds the canonical signature,
+subject, facts, semantic result, Snapshot, complete sorted Evidence/source sets, terminal derived
+Evidence, model version, and capture time. Database constraints require the terminal Evidence to
+derive from every other report Evidence node and reject report mutation or deletion. Latest and
+exact-ID routes replay these reports without RPC. The generic live route may fall back to the latest
+report when the provider is absent or fails, but the response must expose replay state and a typed
+Unavailable live-refresh reason while retaining the historical Snapshot. This is durable query
+projection, not continuous history materialization or platform-event decoding.
+
 ## Finalized ingestion commit sequence
 
 ```mermaid
@@ -495,14 +505,14 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                                           | Current state                                                                                                                                    |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Flap history and EVM Claim Reports wired; other repositories pending |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                         |
-| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                              |
-| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                                                 |
-| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                             |
-| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                                    |
+| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Flap history, EVM Claim Reports, and Solana control/transaction reports wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                                                              |
+| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                   |
+| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE service only                                                                                                                                                      |
+| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                  |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Compose/profile services only                                                                                                                                                         |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, ingestion-run,
 and semantic-scan-run tables include append-only or monotonic guards. Semantic checkpoints bind an
@@ -513,6 +523,12 @@ Deferred database constraints reject inferred Evidence without a source edge and
 without Evidence. Repositories verify canonical IDs, Snapshot identity, idempotent conflicts, and
 transactional writes. ClickHouse Raw Facts bind Evidence and artifact references and use explicit
 logical deduplication; metric tables enforce a knowledge-state/value consistency constraint.
+
+Solana transaction reports are append-only, content-addressed projections. PostgreSQL validates
+report/signature/Snapshot identity, canonical Evidence/source arrays, terminal Evidence lineage and
+the complete derivation-edge set. Repository reads re-parse the canonical report and verify its
+result hash; conflicting idempotent writes, updates, deletes, or incomplete Evidence graphs fail
+closed.
 
 Flap history projection segments are append-only bounded results keyed to one semantic scan UUID.
 An insert must begin at that running scan's exact cursor and cover precisely one configured chunk.

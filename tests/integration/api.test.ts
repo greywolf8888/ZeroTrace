@@ -8,6 +8,7 @@ import bs58 from 'bs58';
 import {
   BitcoinUtxoLedgerAdapter,
   EvmLedgerAdapter,
+  ProviderError,
   ProviderRegistry,
   SolanaLedgerAdapter,
   type JsonRpcTransport,
@@ -1865,6 +1866,113 @@ describe('ZeroTrace API contract', () => {
     expect(runtime.evidenceLedger.get(solanaEvidence[2].id)?.sourceEvidenceIds).toEqual(
       [solanaEvidence[0].id, solanaEvidence[1].id].sort(),
     );
+  });
+
+  it('persists and replays immutable Solana transaction intelligence without a provider', async () => {
+    const runtime = runtimeWithAllLedgers();
+    runtime.evidenceRepository = repository();
+    let storedRecord: Record<string, unknown> | undefined;
+    const put = vi.fn(async (report: Record<string, unknown>) => {
+      storedRecord = {
+        id: `str_${'3'.repeat(24)}`,
+        chainId: 'solana-mainnet' as const,
+        signature: fixtureSolanaSignature,
+        snapshotSlot: '300000000',
+        snapshotHash: '11111111111111111111111111111111',
+        resultHash: 'f'.repeat(64),
+        report,
+        terminalEvidenceId: report.terminalEvidenceId,
+        evidenceIds: (report.metadata as { evidenceIds: string[] }).evidenceIds.slice().sort(),
+        sourceSet: (report.metadata as { sourceSet: string[] }).sourceSet,
+        modelVersion: 'solana-transaction-query-v1.1.0' as const,
+        capturedAt: '2026-08-11T00:00:00.000Z',
+        createdAt: '2026-08-11T00:00:02.000Z',
+      };
+      return storedRecord;
+    });
+    const latest = vi.fn(async (input: string) =>
+      input === fixtureSolanaSignature ? storedRecord : undefined,
+    );
+    const get = vi.fn(async (input: string) =>
+      input === `str_${'3'.repeat(24)}` ? storedRecord : undefined,
+    );
+    runtime.solanaTransactionReports = { put, latest, get } as unknown as NonNullable<
+      AppRuntime['solanaTransactionReports']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const live = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/SOLANA/TRANSACTION/${fixtureSolanaSignature}`,
+    });
+    expect(live.statusCode, live.body).toBe(200);
+    expect(live.json()).toMatchObject({
+      ledger: 'SOLANA',
+      signature: fixtureSolanaSignature,
+      terminalEvidenceId: expect.stringMatching(/^ev_/),
+      durableReport: {
+        id: `str_${'3'.repeat(24)}`,
+        resultHash: 'f'.repeat(64),
+        replayed: false,
+        liveRefresh: { state: 'known', value: true },
+      },
+    });
+    expect(put).toHaveBeenCalledTimes(1);
+
+    vi.spyOn(
+      runtime.solanaAdapter as SolanaLedgerAdapter,
+      'getTransactionObservation',
+    ).mockRejectedValueOnce(
+      new ProviderError('RATE_LIMITED', 'Fixture provider quota exhausted.', {
+        retryable: true,
+      }),
+    );
+    const degradedReplay = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/SOLANA/TRANSACTION/${fixtureSolanaSignature}`,
+    });
+    expect(degradedReplay.statusCode, degradedReplay.body).toBe(200);
+    expect(degradedReplay.json()).toMatchObject({
+      durableReport: {
+        id: `str_${'3'.repeat(24)}`,
+        replayed: true,
+        liveRefresh: { state: 'unavailable', reason: 'RATE_LIMITED' },
+      },
+    });
+
+    runtime.solanaAdapter = undefined;
+    const replay = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/SOLANA/TRANSACTION/${fixtureSolanaSignature}`,
+    });
+    expect(replay.statusCode, replay.body).toBe(200);
+    expect(replay.json()).toMatchObject({
+      signature: fixtureSolanaSignature,
+      durableReport: {
+        id: `str_${'3'.repeat(24)}`,
+        replayed: true,
+        liveRefresh: { state: 'unavailable', reason: 'PROVIDER_UNCONFIGURED' },
+      },
+    });
+
+    const latestReplay = await app.inject({
+      method: 'GET',
+      url: `/api/v1/ledger/SOLANA/TRANSACTION/${fixtureSolanaSignature}/reports/latest`,
+    });
+    expect(latestReplay.statusCode, latestReplay.body).toBe(200);
+    expect(latestReplay.json()).toEqual({ record: storedRecord });
+
+    const exactReplay = await app.inject({
+      method: 'GET',
+      url:
+        `/api/v1/ledger/SOLANA/TRANSACTION/${fixtureSolanaSignature}/reports/` +
+        `str_${'3'.repeat(24)}`,
+    });
+    expect(exactReplay.statusCode, exactReplay.body).toBe(200);
+    expect(exactReplay.json()).toEqual({ record: storedRecord });
+    expect(latest).toHaveBeenCalledTimes(3);
+    expect(get).toHaveBeenCalledWith(`str_${'3'.repeat(24)}`);
   });
 
   it('normalizes Solana v0 loaded accounts, CPI and token effects without hiding coverage', async () => {

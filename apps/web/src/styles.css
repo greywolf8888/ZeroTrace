@@ -1156,6 +1156,34 @@ tbody tr:hover {
   border-radius: 10px;
 }
 
+.solana-report-provenance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(91, 215, 255, 0.22);
+  border-radius: 0.9rem;
+  background: linear-gradient(120deg, rgba(21, 113, 255, 0.09), rgba(81, 43, 173, 0.07));
+}
+
+.solana-report-provenance.pending {
+  border-color: rgba(255, 186, 73, 0.24);
+  background: rgba(255, 186, 73, 0.06);
+}
+
+.solana-report-provenance > div,
+.solana-report-status {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.solana-report-status {
+  justify-items: end;
+  text-align: right;
+}
+
 .solana-flow-audit .compact-header {
   padding: 13px 14px 8px;
   border-bottom: 0;
@@ -1874,9 +1902,15 @@ footer a {
   }
 
   .claim-draft-heading,
-  .claim-draft-footer {
+  .claim-draft-footer,
+  .solana-report-provenance {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .solana-report-status {
+    justify-items: start;
+    text-align: left;
   }
 
   .history-range-form {

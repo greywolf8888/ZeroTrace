@@ -1315,6 +1315,111 @@ export const SolanaTransactionSemanticsSchema = z.object({
 });
 export type SolanaTransactionSemantics = z.infer<typeof SolanaTransactionSemanticsSchema>;
 
+export const SolanaTransactionFactsSchema = z.object({
+  status: knowledgeValueSchema(z.literal('CONFIRMED')),
+  slot: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  blockTime: knowledgeValueSchema(IsoDateTimeSchema),
+  version: knowledgeValueSchema(z.union([z.literal('legacy'), UnsignedQuantityStringSchema])),
+  feeLamports: knowledgeValueSchema(UnsignedQuantityStringSchema),
+  execution: knowledgeValueSchema(z.enum(['SUCCESS', 'FAILED'])),
+  transactionSemantics: knowledgeValueSchema(SolanaTransactionSemanticsSchema),
+  feePayer: knowledgeValueSchema(SolanaPublicKeySchema),
+  signerCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  outerInstructionCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  cpiCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  accountResolutionComplete: knowledgeValueSchema(z.boolean()),
+  tokenBalanceChangeCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  coreAssetFlowCount: knowledgeValueSchema(z.number().int().nonnegative()),
+  tokenFlowReconciliation: knowledgeValueSchema(SolanaTokenFlowReconciliationSchema),
+});
+export type SolanaTransactionFacts = z.infer<typeof SolanaTransactionFactsSchema>;
+
+export const SolanaTransactionIntelligenceReportSchema = z
+  .object({
+    ledger: z.literal('SOLANA'),
+    chainId: z.literal('solana-mainnet'),
+    signature: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/),
+    subject: SubjectReferenceSchema,
+    facts: SolanaTransactionFactsSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine(
+      (metadata) =>
+        metadata.snapshot?.ledger === 'SOLANA' &&
+        metadata.snapshot.chainId === 'solana-mainnet' &&
+        metadata.snapshot.commitment === 'finalized' &&
+        metadata.modelVersion === 'solana-transaction-query-v1.1.0',
+      { message: 'Solana transaction reports require one finalized v1.1 Solana Snapshot.' },
+    ),
+    evidence: z.array(EvidenceSchema).min(2),
+  })
+  .superRefine((value, context) => {
+    const snapshot = value.metadata.snapshot;
+    const solanaSnapshot = snapshot?.ledger === 'SOLANA' ? snapshot : undefined;
+    const semantics =
+      value.facts.transactionSemantics.state === 'known'
+        ? value.facts.transactionSemantics.value
+        : undefined;
+    const slot = value.facts.slot.state === 'known' ? value.facts.slot.value : undefined;
+    const status = value.facts.status.state === 'known' ? value.facts.status.value : undefined;
+    if (
+      solanaSnapshot === undefined ||
+      value.subject.ledger !== 'SOLANA' ||
+      value.subject.chainId !== value.chainId ||
+      value.subject.type !== 'TRANSACTION' ||
+      value.subject.id !== value.signature ||
+      value.subject.normalizedId !== value.signature ||
+      semantics?.signature !== value.signature ||
+      slot !== solanaSnapshot.slot ||
+      status !== 'CONFIRMED'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['signature'],
+        message: 'Solana transaction report identity, facts, semantics, and Snapshot must agree.',
+      });
+    }
+
+    const evidenceIds = value.evidence.map((item) => item.id).sort();
+    const metadataEvidenceIds = [...value.metadata.evidenceIds].sort();
+    const terminalEvidence = value.evidence.find((item) => item.id === value.terminalEvidenceId);
+    if (
+      evidenceIds.length !== new Set(evidenceIds).size ||
+      metadataEvidenceIds.length !== new Set(metadataEvidenceIds).size ||
+      evidenceIds.length !== metadataEvidenceIds.length ||
+      evidenceIds.some((id, index) => id !== metadataEvidenceIds[index]) ||
+      terminalEvidence?.ledger !== 'SOLANA' ||
+      terminalEvidence.chainId !== value.chainId ||
+      terminalEvidence.kind !== 'DERIVED_FEATURE' ||
+      terminalEvidence.source !== `zerotrace:${semantics?.modelVersion ?? ''}` ||
+      terminalEvidence.locator !==
+        `transaction-semantics:${value.signature}@${solanaSnapshot?.slot ?? ''}` ||
+      terminalEvidence.blockOrSlot !== solanaSnapshot?.slot ||
+      terminalEvidence.finality !== 'finalized'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['terminalEvidenceId'],
+        message: 'Solana transaction report Evidence provenance is incomplete or inconsistent.',
+      });
+    }
+
+    const sourceSet = value.metadata.sourceSet;
+    if (
+      sourceSet.length === 0 ||
+      sourceSet.length !== new Set(sourceSet).size ||
+      sourceSet.some((source, index) => source !== [...sourceSet].sort()[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'sourceSet'],
+        message: 'Solana transaction report sourceSet must be non-empty, sorted, and unique.',
+      });
+    }
+  });
+export type SolanaTransactionIntelligenceReport = z.infer<
+  typeof SolanaTransactionIntelligenceReportSchema
+>;
+
 export const SolanaControlRightTypeSchema = z.enum([
   'MINT_AUTHORITY',
   'FREEZE_AUTHORITY',

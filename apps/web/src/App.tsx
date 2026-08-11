@@ -613,6 +613,36 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
         </div>
         <StatusPill status={semantics.execution} />
       </div>
+      {response.durableReport === undefined ? (
+        <div className="solana-report-provenance pending" data-testid="solana-report-provenance">
+          <div>
+            <strong>Ephemeral response</strong>
+            <span>Durable PostgreSQL report storage was not available for this query.</span>
+          </div>
+          <StatusPill status="NOT_PERSISTED" />
+        </div>
+      ) : (
+        <div className="solana-report-provenance" data-testid="solana-report-provenance">
+          <div>
+            <span className="eyebrow">Immutable transaction report</span>
+            <strong>
+              <code>{response.durableReport.id}</code>
+            </strong>
+            <span>
+              Snapshot captured {formatTime(response.durableReport.capturedAt)} · result{' '}
+              <code title={response.durableReport.resultHash}>
+                {shortId(response.durableReport.resultHash, 10)}
+              </code>
+            </span>
+          </div>
+          <div className="solana-report-status">
+            <StatusPill status={response.durableReport.replayed ? 'REPLAYED' : 'PERSISTED'} />
+            <span>
+              Live refresh <KnowledgeDisplay data={response.durableReport.liveRefresh} />
+            </span>
+          </div>
+        </div>
+      )}
       <div className="bitcoin-summary-grid solana-transaction-summary">
         <div>
           <span>Version</span>

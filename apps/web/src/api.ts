@@ -193,6 +193,15 @@ export interface SubjectResponse {
   metadata: AnalysisMetadata;
   evidence?: EvidenceRecord[];
   consistency?: string;
+  terminalEvidenceId?: string;
+  durableReport?: {
+    id: string;
+    resultHash: string;
+    createdAt: string;
+    capturedAt: string;
+    replayed: boolean;
+    liveRefresh: KnowledgeValue<boolean>;
+  };
 }
 
 export type IntelligenceResponse = SubjectResponse;

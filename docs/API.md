@@ -26,6 +26,8 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/search?q=...`                                        | local identifier classification; optional `ledger` and `chainId` |
 | GET    | `/api/v1/subjects/:ledger/:id`                                | snapshot-pinned current state; Bitcoin includes bracketed UTXOs  |
 | GET    | `/api/v1/ledger/:ledger/:type/:id`                            | typed block/transaction or Bitcoin script-aware outpoint query   |
+| GET    | `/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/latest` | latest provider-free immutable Solana semantic report replay     |
+| GET    | `/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/:id`    | exact content-addressed Solana semantic report replay            |
 | GET    | `/api/v1/launches/EVM/:token`                                 | version-pinned Flap BSC current Portal-state inspection          |
 | GET    | `/api/v1/launches/EVM/:token/events/:transactionHash`         | exact-receipt Flap creation/configuration/migration decoding     |
 | GET    | `/api/v1/launches/EVM/:token/history`                         | bounded Flap Portal log discovery with exact receipt replay      |
@@ -228,6 +230,16 @@ commitment delay cannot be conflated.
 
 The response contains `subject`, typed `facts`, `metadata`, and `evidence`. `metadata` always carries
 the Snapshot, coverage, freshness, source set, model version, confidence, and Evidence IDs.
+
+When durable Evidence and Solana transaction-report storage are configured, every successful
+finalized live Solana transaction analysis is stored as one immutable `str_...` report. The generic
+transaction route returns `durableReport` with the report ID, result hash, capture time, replay flag,
+and a typed `liveRefresh` value. If the Solana provider is unconfigured or a live refresh fails, the
+generic route may return the latest stored report, but it sets `replayed=true`, makes `liveRefresh`
+explicitly Unavailable with the provider reason, and preserves the report's original Snapshot. The
+latest and exact-ID routes are provider-free and never refresh chain state. A missing report is
+`404`; unavailable or uninitialized durable storage is `503`; corrupt or conflicting storage fails
+closed.
 
 Solana transaction results additionally expose `transactionSemantics`. The versioned model resolves
 the canonical account order as static, loaded writable, then loaded readonly; derives fee payer,

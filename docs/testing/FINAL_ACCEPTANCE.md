@@ -109,7 +109,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Finalized EVM trace/state-diff and Solana log/balance/token-balance/reward raw records
 - [x] Official System/SPL Token/Token-2022 instruction identification, strict core asset-flow
       decoding, owner/account separation, per-flow Evidence, and zero-tolerance token reconciliation
-- [ ] Durable Solana semantic projection plus platform/program-specific instruction and event decoding
+- [x] Content-addressed Solana transaction semantic reports with exact/latest provider-free replay,
+      append-only database guards and explicit provider-failure fallback provenance
+- [ ] Continuous Solana semantic history projection plus platform/program-specific instruction and event decoding
 - [ ] Finality-aware historical ingestion on all three ledgers
 - [x] Deterministic common-position disagreement, source-failure, continuity, and reorg-detection tests
 - [x] Deterministic Flap accepted-lineage rollback/replay with append-only invalidation and no
@@ -257,6 +259,9 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 - [x] Scoped public-mainnet Solana core-flow replay with 20/20 official instructions identified,
       9/9 supported flow candidates decoded, 43-node Evidence graph, and conservative Partial token
       reconciliation where Token-2022 extension and close-account effects remained unmodeled
+- [x] The same finalized Solana transaction persisted as immutable report
+      `str_2401beff4b82308e93ccd9d6` and replayed with identical report/result/Snapshot after API
+      restart and deliberate provider unavailability; explicit latest and exact-ID reads matched
 - [x] Scoped public Esplora Bitcoin address/UTXO and P2WPKH/P2TR outpoint validation through the
       production API path with Snapshot and Evidence; Core policy/archive reconciliation remains open
 - [ ] Ethereum archive/current-state fixture suite

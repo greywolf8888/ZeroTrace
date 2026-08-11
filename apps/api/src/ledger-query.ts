@@ -16,6 +16,7 @@ import {
 import {
   BitcoinAddressUtxoSetSchema,
   BitcoinSnapshotSchema,
+  SolanaTransactionIntelligenceReportSchema,
   knownValue,
   unknownValue,
   type AnalysisMetadata,
@@ -1143,60 +1144,66 @@ export async function querySolanaTransaction(
     semantics.recordingCoverage,
     semantics.assetFlowCoverage.state === 'known' ? semantics.assetFlowCoverage.value : 1,
   );
-  return {
-    subject,
-    facts: {
-      status: knownValue('CONFIRMED'),
-      slot: knownValue(transaction.slot),
-      blockTime:
-        transaction.blockTime === undefined
-          ? unknownValue('INSUFFICIENT_DATA')
-          : knownValue(transaction.blockTime),
-      version: knownValue(transaction.version),
-      feeLamports:
-        transaction.feeLamports === undefined
-          ? unknownValue('INSUFFICIENT_DATA', 'Transaction metadata is unavailable.')
-          : knownValue(transaction.feeLamports),
-      execution:
-        transaction.success === undefined
-          ? unknownValue('INSUFFICIENT_DATA', 'Transaction metadata is unavailable.')
-          : knownValue(transaction.success ? 'SUCCESS' : 'FAILED'),
-      transactionSemantics: knownValue(semantics),
-      feePayer: semantics.feePayer,
-      signerCount: knownValue(semantics.signers.length),
-      outerInstructionCount: knownValue(semantics.outerInstructions.length),
-      cpiCount: semantics.cpiCount,
-      accountResolutionComplete: semantics.accountResolutionComplete,
-      tokenBalanceChangeCount:
-        semantics.tokenBalanceRecording.state === 'known'
-          ? knownValue(semantics.tokenBalanceChanges.length)
-          : unknownValue(
-              'INSUFFICIENT_DATA',
-              'Token-balance change count is Unknown without pre/post recording.',
-            ),
-      coreAssetFlowCount:
-        semantics.accountResolutionComplete.state === 'known' &&
-        semantics.innerInstructionRecording.state === 'known' &&
-        (semantics.assetFlowDecodeCoverage.state !== 'known' ||
-          semantics.assetFlowDecodeCoverage.value === 1)
-          ? knownValue(semantics.assetFlows.length)
-          : unknownValue(
-              'INSUFFICIENT_DATA',
-              'Core asset-flow count requires resolved accounts, inner-instruction recording and successful official decoding.',
-            ),
-      tokenFlowReconciliation: knownValue(semantics.tokenFlowReconciliation),
-    },
-    metadata: metadata(
-      snapshot,
-      [observation.endpointId],
-      'solana-transaction-query-v1.1.0',
-      evidence.map((item) => item.id),
-      {
-        dataCoverage: semanticDataCoverage,
-        historyCoverage: 1,
-        confidence: Math.round(semanticDataCoverage * 0.95 * 1_000_000) / 1_000_000,
-      },
-    ),
-    evidence,
+  const facts = {
+    status: knownValue('CONFIRMED' as const),
+    slot: knownValue(transaction.slot),
+    blockTime:
+      transaction.blockTime === undefined
+        ? unknownValue('INSUFFICIENT_DATA' as const)
+        : knownValue(transaction.blockTime),
+    version: knownValue(transaction.version),
+    feeLamports:
+      transaction.feeLamports === undefined
+        ? unknownValue('INSUFFICIENT_DATA' as const, 'Transaction metadata is unavailable.')
+        : knownValue(transaction.feeLamports),
+    execution:
+      transaction.success === undefined
+        ? unknownValue('INSUFFICIENT_DATA' as const, 'Transaction metadata is unavailable.')
+        : knownValue(transaction.success ? ('SUCCESS' as const) : ('FAILED' as const)),
+    transactionSemantics: knownValue(semantics),
+    feePayer: semantics.feePayer,
+    signerCount: knownValue(semantics.signers.length),
+    outerInstructionCount: knownValue(semantics.outerInstructions.length),
+    cpiCount: semantics.cpiCount,
+    accountResolutionComplete: semantics.accountResolutionComplete,
+    tokenBalanceChangeCount:
+      semantics.tokenBalanceRecording.state === 'known'
+        ? knownValue(semantics.tokenBalanceChanges.length)
+        : unknownValue(
+            'INSUFFICIENT_DATA' as const,
+            'Token-balance change count is Unknown without pre/post recording.',
+          ),
+    coreAssetFlowCount:
+      semantics.accountResolutionComplete.state === 'known' &&
+      semantics.innerInstructionRecording.state === 'known' &&
+      (semantics.assetFlowDecodeCoverage.state !== 'known' ||
+        semantics.assetFlowDecodeCoverage.value === 1)
+        ? knownValue(semantics.assetFlows.length)
+        : unknownValue(
+            'INSUFFICIENT_DATA' as const,
+            'Core asset-flow count requires resolved accounts, inner-instruction recording and successful official decoding.',
+          ),
+    tokenFlowReconciliation: knownValue(semantics.tokenFlowReconciliation),
   };
+  const analysisMetadata = metadata(
+    snapshot,
+    [observation.endpointId],
+    'solana-transaction-query-v1.1.0',
+    evidence.map((item) => item.id),
+    {
+      dataCoverage: semanticDataCoverage,
+      historyCoverage: 1,
+      confidence: Math.round(semanticDataCoverage * 0.95 * 1_000_000) / 1_000_000,
+    },
+  );
+  return SolanaTransactionIntelligenceReportSchema.parse({
+    ledger: 'SOLANA',
+    chainId: 'solana-mainnet',
+    signature: transaction.signature,
+    subject,
+    facts,
+    terminalEvidenceId: semanticEvidence.id,
+    metadata: analysisMetadata,
+    evidence,
+  });
 }
