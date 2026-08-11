@@ -2164,3 +2164,14 @@ unreachable, aggregate storage correctly returned `DOWN/STORAGE_UNAVAILABLE` and
 failed closed with HTTP 503. Local container-target/runtime status is therefore inconclusive, not
 failed or passed, and the isolated GitHub Buildx checks remain the acceptance authority for this
 batch.
+
+PR #16 supplied that independent authority for immutable code commit `c4047a5`. [CI run
+31542652738](https://github.com/greywolf8888/ZeroTrace/actions/runs/31542652738) passed Compose
+validation, formatting, lint, typecheck, 654/654 tests against disposable PostgreSQL, AGE,
+ClickHouse and MinIO, production builds, license policy, zero-vulnerability audit, SBOM, 36
+Chromium desktop/mobile flows, and all six production container targets. Final remote coverage was
+82.58% statements, 76.79% branches, 93.34% functions and 83.68% lines. [CodeQL run
+31542652768](https://github.com/greywolf8888/ZeroTrace/actions/runs/31542652768) independently passed
+JavaScript/TypeScript analysis. The local ClickHouse and Docker observations above remain recorded
+as host-environment limitations; the clean remote results show that neither is a product-code
+failure.
