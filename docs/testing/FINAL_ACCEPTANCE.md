@@ -98,6 +98,10 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31543286847) pass on immutable
       protected-main Action Semantics squash commit `e7f1383`, including 654 disposable-store tests,
       36 Chromium flows and all six production container targets
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547375160) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547375237) pass on immutable PR
+      #18 code commit `9d608f5`, including 676 disposable-store tests, all 36 browser flows and all
+      six production container targets; protected-main promotion remains pending
 
 ## Evidence and data
 
