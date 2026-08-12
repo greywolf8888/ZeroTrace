@@ -53,6 +53,7 @@ import {
   type EntityInvestigationGraphTimelineReport,
   type LabelIntelligenceReport,
   type LabelObservation,
+  type ClaimDeclarationParseResult,
 } from '@zerotrace/schemas';
 import {
   StorageError,
@@ -64,6 +65,7 @@ import {
   type StoredEntityInvestigationGraphTimeline,
   type StoredLabelIntelligenceReport,
   type StoredActionSemanticsReport,
+  type StoredClaimDeclarationReport,
 } from '@zerotrace/storage';
 import { encodeAbiParameters, toEventSelector } from 'viem';
 
@@ -5467,8 +5469,29 @@ describe('ZeroTrace API contract', () => {
       source: 'api:user-submitted-claim-declaration',
       chainId: 'eip155:56',
     });
+    expect(body).toMatchObject({
+      schemaVersion: 'claim-declaration-report-v1',
+      sourceSnapshot: {
+        schemaVersion: 'claim-source-document-snapshot-v1',
+        documentHash: body.documentHash,
+        content: expect.stringContaining('税费接收总钱包'),
+      },
+      coverage: {
+        documentCapture: 1,
+        chainVerification: { state: 'unknown', reason: 'NOT_QUERIED' },
+      },
+      durableReport: { state: 'unknown', reason: 'STORAGE_UNCONFIGURED' },
+    });
+    expect(body.terminalEvidence).toMatchObject({
+      id: body.terminalEvidenceId,
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:claim-declaration-parser-v2.0.0',
+    });
+    expect(body.evidenceIds).toEqual([body.evidence.id, body.terminalEvidence.id].sort());
     expect(body.drafts).toHaveLength(2);
-    expect(body.drafts[1]).toMatchObject({
+    expect(
+      body.drafts.find((draft: { role: string }) => draft.role === 'COMMUNITY_FUND'),
+    ).toMatchObject({
       role: 'COMMUNITY_FUND',
       sourceAddress: {
         state: 'known',
@@ -5492,6 +5515,23 @@ describe('ZeroTrace API contract', () => {
       evidence: { id: body.evidence.id, kind: 'ANALYST_OBSERVATION' },
       sourceEvidenceIds: [],
     });
+
+    const terminalEvidence = await app.inject({
+      method: 'GET',
+      url: `/api/v1/evidence/${body.terminalEvidence.id}`,
+    });
+    expect(terminalEvidence.statusCode, terminalEvidence.body).toBe(200);
+    expect(terminalEvidence.json()).toMatchObject({
+      evidence: { id: body.terminalEvidence.id, kind: 'DERIVED_FEATURE' },
+      sourceEvidenceIds: [body.evidence.id],
+    });
+
+    const unavailableReplay = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/declarations/reports/${body.id}`,
+    });
+    expect(unavailableReplay.statusCode).toBe(503);
+    expect(unavailableReplay.json().error.code).toBe('CLAIM_DECLARATION_REPORT_UNAVAILABLE');
 
     const wrongChain = await app.inject({
       method: 'POST',
@@ -5529,6 +5569,110 @@ describe('ZeroTrace API contract', () => {
     });
     expect(invalidAsset.statusCode).toBe(400);
     expect(invalidAsset.json().error.code).toBe('INVALID_REQUEST');
+  });
+
+  it('persists and replays exact/latest Claim declaration reports without provider reads', async () => {
+    const runtime = runtimeWithEvm();
+    let stored: StoredClaimDeclarationReport | undefined;
+    const repository = {
+      async put(report: ClaimDeclarationParseResult) {
+        stored = {
+          id: report.id,
+          sourceSnapshotId: report.sourceSnapshot.id,
+          documentHash: report.documentHash,
+          contentHash: report.sourceSnapshot.contentHash,
+          ledger: report.evidence.ledger,
+          chainId: report.evidence.chainId,
+          assetId: report.assetId,
+          resultHash: report.resultHash,
+          report,
+          sourceEvidenceId: report.evidence.id,
+          terminalEvidenceId: report.terminalEvidenceId,
+          evidenceIds: report.evidenceIds,
+          sourceSet: report.sourceSet,
+          modelVersion: report.modelVersion,
+          freshness: report.freshness,
+          fieldExtractionCoverage:
+            report.coverage.fieldExtraction.state === 'known'
+              ? report.coverage.fieldExtraction.value
+              : null,
+          extractionConfidence:
+            report.extractionConfidence.state === 'known'
+              ? report.extractionConfidence.value
+              : null,
+          createdAt: '2026-08-12T00:00:00.000Z',
+        };
+        return stored;
+      },
+      async get(id: string) {
+        return stored?.id === id ? stored : undefined;
+      },
+      async latestByAsset(assetId: string) {
+        return stored?.assetId === assetId ? stored : undefined;
+      },
+      async latestByDocument(documentHash: string, assetId: string) {
+        return stored?.documentHash === documentHash && stored.assetId === assetId
+          ? stored
+          : undefined;
+      },
+      async health() {
+        return {
+          status: 'UP' as const,
+          backend: 'POSTGRES' as const,
+          durable: true as const,
+          checkedAt: '2026-08-12T00:00:00.000Z',
+        };
+      },
+      async close() {},
+    };
+    runtime.claimDeclarationReports =
+      repository as unknown as AppRuntime['claimDeclarationReports'];
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const assetId = 'eip155:56:erc20:0x1111111111111111111111111111111111111111';
+    const parsed = await app.inject({
+      method: 'POST',
+      url: '/api/v1/claims/declarations/parse',
+      payload: {
+        chainId: 'eip155:56',
+        assetId,
+        text: '回购销毁钱包（40%）\n0x2222222222222222222222222222222222222222',
+      },
+    });
+    expect(parsed.statusCode, parsed.body).toBe(200);
+    const report = parsed.json();
+    expect(report.durableReport).toEqual({
+      state: 'known',
+      value: {
+        id: report.id,
+        resultHash: report.resultHash,
+        createdAt: '2026-08-12T00:00:00.000Z',
+      },
+    });
+
+    const exact = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/declarations/reports/${report.id}`,
+    });
+    expect(exact.statusCode, exact.body).toBe(200);
+    expect(exact.json()).toMatchObject({
+      replayed: true,
+      record: { id: report.id, resultHash: report.resultHash, report: { id: report.id } },
+    });
+
+    const latest = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/declarations/reports/latest?assetId=${encodeURIComponent(assetId)}&documentHash=${report.documentHash}`,
+    });
+    expect(latest.statusCode, latest.body).toBe(200);
+    expect(latest.json().record.id).toBe(report.id);
+
+    const missing = await app.inject({
+      method: 'GET',
+      url: '/api/v1/claims/declarations/reports/cdr_aaaaaaaaaaaaaaaaaaaaaaaa',
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json().error.code).toBe('CLAIM_DECLARATION_REPORT_NOT_FOUND');
   });
 
   it('derives a persisted burn action only from exact block supply/event conservation', async () => {

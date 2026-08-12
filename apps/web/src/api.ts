@@ -1401,14 +1401,50 @@ export interface ClaimDeclarationDraft {
   claimEvidenceIds: string[];
 }
 
+export interface ClaimSourceDocumentSnapshot {
+  schemaVersion: 'claim-source-document-snapshot-v1';
+  id: string;
+  documentHash: string;
+  contentHash: string;
+  content: string;
+  source: string;
+  sourceUri?: string;
+  capturedAt: string;
+  offsetEncoding: 'UTF16_CODE_UNITS';
+}
+
+export interface ClaimDeclarationCoverage {
+  documentCapture: number;
+  fieldExtraction: KnowledgeValue<number>;
+  sourceIndependence: KnowledgeValue<number>;
+  chainVerification: KnowledgeValue<number>;
+}
+
 export interface ClaimDeclarationParseResponse {
+  schemaVersion: 'claim-declaration-report-v1';
+  id: string;
+  resultHash: string;
   parserVersion: string;
   documentHash: string;
+  sourceSnapshot: ClaimSourceDocumentSnapshot;
   assetId: string;
   evidence: EvidenceRecord;
+  terminalEvidence: EvidenceRecord;
+  terminalEvidenceId: string;
+  evidenceIds: string[];
   drafts: ClaimDeclarationDraft[];
   unmatchedAddresses: string[];
   warnings: string[];
+  coverage: ClaimDeclarationCoverage;
+  freshness: string;
+  sourceSet: string[];
+  modelVersion: string;
+  extractionConfidence: KnowledgeValue<number>;
+  durableReport: KnowledgeValue<{
+    id: string;
+    resultHash: string;
+    createdAt: string;
+  }>;
 }
 
 export interface EvmClaimBurnConservationResponse {

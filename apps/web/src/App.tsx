@@ -1515,15 +1515,75 @@ function ClaimDeclarationPanel({ token }: { token?: string | undefined }) {
         <>
           <div className="snapshot-strip">
             <span>
-              <b>Parser</b> {result.parserVersion}
+              <b>Report</b> <code>{result.id}</code>
             </span>
             <span>
               <b>Drafts</b> {result.drafts.length}
             </span>
             <span>
-              <b>Analyst Evidence</b> <code>{result.evidence.id}</code>
+              <b>Captured</b> {formatTime(result.freshness)}
             </span>
           </div>
+          <div className="fact-grid claim-declaration-audit-grid">
+            <div className="fact-row">
+              <span>Source document Snapshot</span>
+              <code>{result.sourceSnapshot.id}</code>
+            </div>
+            <div className="fact-row">
+              <span>Document capture</span>
+              <strong>{(result.coverage.documentCapture * 100).toFixed(0)}%</strong>
+            </div>
+            <div className="fact-row">
+              <span>Field extraction coverage</span>
+              <KnowledgeDisplay data={result.coverage.fieldExtraction} />
+            </div>
+            <div className="fact-row">
+              <span>Independent-source coverage</span>
+              <KnowledgeDisplay data={result.coverage.sourceIndependence} />
+            </div>
+            <div className="fact-row">
+              <span>Chain verification coverage</span>
+              <KnowledgeDisplay data={result.coverage.chainVerification} />
+            </div>
+            <div className="fact-row">
+              <span>Extraction confidence</span>
+              <KnowledgeDisplay data={result.extractionConfidence} />
+            </div>
+            <div className="fact-row">
+              <span>Durable report</span>
+              <KnowledgeDisplay data={result.durableReport} />
+            </div>
+            <div className="fact-row">
+              <span>Terminal Evidence</span>
+              <code>{result.terminalEvidenceId}</code>
+            </div>
+          </div>
+          <p className="panel-copy">
+            Extraction confidence measures deterministic parser coverage only. It does not measure
+            whether the announcement is authentic or whether the declared actions occurred.
+          </p>
+          <details className="raw-details">
+            <summary>Replay exact captured source document</summary>
+            <dl className="evidence-meta-list">
+              <div>
+                <dt>Content hash</dt>
+                <dd>
+                  <code>{result.sourceSnapshot.contentHash}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>Parser</dt>
+                <dd>{result.parserVersion}</dd>
+              </div>
+              <div>
+                <dt>Source Evidence</dt>
+                <dd>
+                  <code>{result.evidence.id}</code>
+                </dd>
+              </div>
+            </dl>
+            <pre>{result.sourceSnapshot.content}</pre>
+          </details>
           {result.warnings.length === 0 ? null : (
             <div className="claim-warning-list" role="status">
               {result.warnings.map((warning) => (

@@ -65,6 +65,7 @@ import {
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
   ActionSemanticsReportStorageError,
+  ClaimDeclarationReportStorageError,
   ClaimReportStorageError,
   ControlSurfaceReportStorageError,
   EntityRelationshipReportStorageError,
@@ -198,6 +199,23 @@ const ActionSemanticsReportLookupQuerySchema = z
 const ActionSemanticsReportParamsSchema = z.object({
   reportId: z.string().regex(/^asr_[0-9a-f]{24}$/),
 });
+
+const ClaimDeclarationReportParamsSchema = z.object({
+  reportId: z.string().regex(/^cdr_[0-9a-f]{24}$/),
+});
+
+const ClaimDeclarationReportLookupQuerySchema = z
+  .object({
+    assetId: z
+      .string()
+      .trim()
+      .regex(/^eip155:[1-9]\d*:erc20:0x[0-9a-fA-F]{40}$/),
+    documentHash: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .optional(),
+  })
+  .strict();
 
 const LaunchInspectionParamsSchema = z.object({
   ledger: z
@@ -1133,6 +1151,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['flapHistoryProjection']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['flapLifetimeHeads']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['claimReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['claimDeclarationReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
@@ -1172,6 +1191,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         flapHistoryProjection,
         flapLifetimeHeads,
         claimReports,
+        claimDeclarationReports,
         controlSurfaces,
         solanaControlSurfaces,
         solanaTransactionReports,
@@ -1191,6 +1211,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.flapHistoryProjection?.health(),
         runtime.flapLifetimeHeads?.health(),
         runtime.claimReports?.health(),
+        runtime.claimDeclarationReports?.health(),
         runtime.controlSurfaces?.health(),
         runtime.solanaControlSurfaces?.health(),
         runtime.solanaTransactionReports?.health(),
@@ -1212,6 +1233,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           flapHistoryProjection,
           flapLifetimeHeads,
           claimReports,
+          claimDeclarationReports,
           controlSurfaces,
           solanaControlSurfaces,
           solanaTransactionReports,
@@ -1441,6 +1463,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof ClaimReportStorageError) {
       const status = error.code === 'CLAIM_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ClaimDeclarationReportStorageError) {
+      const status =
+        error.code === 'CLAIM_DECLARATION_REPORT_INVALID'
+          ? 400
+          : error.code === 'CLAIM_DECLARATION_REPORT_CONFLICT'
+            ? 409
+            : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1852,6 +1885,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             : 'IMPLEMENTED_DURABLE_PROVIDER_FREE_REPLAY',
         detail:
           'Chain-neutral EVM, Bitcoin and Solana action primitives persist as immutable content-addressed reports with canonical transaction identities, exact Snapshot-bound Evidence closure and non-derived source provenance. Latest/exact reads never contact a provider; trusted production ledger adapters, scheduler handler binding and historical backfill remain pending. There is no public report-write endpoint.',
+      },
+      {
+        id: 'claim-declaration-replay',
+        status:
+          runtime.claimDeclarationReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_SOURCE_DOCUMENT_REPLAY',
+        detail:
+          'Submitted EVM declarations retain the exact source document as a content-addressed Snapshot, deterministic extraction coverage, direct source and terminal Evidence, and an immutable report. Exact/latest reads do not contact a provider. Source authenticity, independent corroboration, chain verification and non-EVM declaration normalization remain explicit Unknown or pending.',
       },
       {
         id: 'finalized-historical-ingestion',
@@ -4689,7 +4731,96 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         ...(input.auditWindow === undefined ? {} : { auditWindow: input.auditWindow }),
       });
       const evidence = await addEvidence(runtime, result.evidence);
-      return { ...result, evidence };
+      const terminalEvidence = await addEvidence(runtime, result.terminalEvidence, [evidence.id]);
+      const report = { ...result, evidence, terminalEvidence };
+      const stored = await runtime.claimDeclarationReports?.put(report);
+      return {
+        ...report,
+        durableReport:
+          stored === undefined
+            ? unknownValue(
+                'STORAGE_UNCONFIGURED',
+                'The declaration report and Evidence are available only for this process because durable PostgreSQL storage is not configured.',
+              )
+            : knownValue({
+                id: stored.id,
+                resultHash: stored.resultHash,
+                createdAt: stored.createdAt,
+              }),
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/declarations/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const query = ClaimDeclarationReportLookupQuerySchema.parse(request.query);
+      const repository = runtime.claimDeclarationReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_DECLARATION_REPORT_UNAVAILABLE',
+              'Durable Claim declaration report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record =
+        query.documentHash === undefined
+          ? await repository.latestByAsset(query.assetId)
+          : await repository.latestByDocument(query.documentHash, query.assetId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_DECLARATION_REPORT_NOT_FOUND',
+              'No durable Claim declaration report exists for this asset and source document.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/declarations/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimDeclarationReportParamsSchema.parse(request.params);
+      const repository = runtime.claimDeclarationReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_DECLARATION_REPORT_UNAVAILABLE',
+              'Durable Claim declaration report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_DECLARATION_REPORT_NOT_FOUND',
+              'The durable Claim declaration report was not found.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
     },
   );
 

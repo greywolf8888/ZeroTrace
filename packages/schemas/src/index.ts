@@ -4627,15 +4627,84 @@ export const ClaimDeclarationDraftSchema = z.object({
 });
 export type ClaimDeclarationDraft = z.infer<typeof ClaimDeclarationDraftSchema>;
 
-export const ClaimDeclarationParseResultSchema = z.object({
-  parserVersion: z.string().min(1),
-  documentHash: Hash256Schema,
-  assetId: z.string().min(1),
-  evidence: EvidenceSchema,
-  drafts: z.array(ClaimDeclarationDraftSchema),
-  unmatchedAddresses: z.array(z.string().min(1)),
-  warnings: z.array(z.string().min(1)),
-});
+export const ClaimSourceDocumentSnapshotSchema = z
+  .object({
+    schemaVersion: z.literal('claim-source-document-snapshot-v1'),
+    id: z.string().regex(/^csd_[0-9a-f]{24}$/),
+    documentHash: Hash256Schema,
+    contentHash: Hash256Schema,
+    content: z.string().min(1).max(100_000),
+    source: z.string().trim().min(1).max(512),
+    sourceUri: z.url().max(2_048).optional(),
+    capturedAt: IsoDateTimeSchema,
+    offsetEncoding: z.literal('UTF16_CODE_UNITS'),
+  })
+  .strict();
+export type ClaimSourceDocumentSnapshot = z.infer<typeof ClaimSourceDocumentSnapshotSchema>;
+
+export const ClaimDeclarationCoverageSchema = z
+  .object({
+    documentCapture: CoverageRatioSchema,
+    fieldExtraction: knowledgeValueSchema(CoverageRatioSchema),
+    sourceIndependence: knowledgeValueSchema(CoverageRatioSchema),
+    chainVerification: knowledgeValueSchema(CoverageRatioSchema),
+  })
+  .strict();
+export type ClaimDeclarationCoverage = z.infer<typeof ClaimDeclarationCoverageSchema>;
+
+export const ClaimDeclarationParseResultSchema = z
+  .object({
+    schemaVersion: z.literal('claim-declaration-report-v1'),
+    id: z.string().regex(/^cdr_[0-9a-f]{24}$/),
+    resultHash: Hash256Schema,
+    parserVersion: z.string().min(1),
+    documentHash: Hash256Schema,
+    sourceSnapshot: ClaimSourceDocumentSnapshotSchema,
+    assetId: z.string().min(1),
+    evidence: EvidenceSchema,
+    terminalEvidence: EvidenceSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(2),
+    drafts: z.array(ClaimDeclarationDraftSchema),
+    unmatchedAddresses: z.array(z.string().min(1)),
+    warnings: z.array(z.string().min(1)),
+    coverage: ClaimDeclarationCoverageSchema,
+    freshness: IsoDateTimeSchema,
+    sourceSet: z.array(z.string().trim().min(1)).min(1),
+    modelVersion: z.string().trim().min(1),
+    extractionConfidence: knowledgeValueSchema(ConfidenceSchema),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const evidenceIds = [...new Set(value.evidenceIds)].sort();
+    const sourceSet = [...new Set(value.sourceSet)].sort();
+    const invalid =
+      value.documentHash !== value.sourceSnapshot.documentHash ||
+      value.evidence.source !== value.sourceSnapshot.source ||
+      value.evidence.locator !== `claim-declaration:${value.documentHash}` ||
+      value.evidence.observedAt !== value.sourceSnapshot.capturedAt ||
+      value.terminalEvidence.id !== value.terminalEvidenceId ||
+      value.freshness !== value.sourceSnapshot.capturedAt ||
+      value.modelVersion !== value.parserVersion ||
+      evidenceIds.length !== value.evidenceIds.length ||
+      evidenceIds.some((id, index) => id !== value.evidenceIds[index]) ||
+      !evidenceIds.includes(value.evidence.id) ||
+      !evidenceIds.includes(value.terminalEvidenceId) ||
+      sourceSet.length !== value.sourceSet.length ||
+      sourceSet.some((source, index) => source !== value.sourceSet[index]) ||
+      sourceSet.length !== 1 ||
+      sourceSet[0] !== value.evidence.source ||
+      value.coverage.documentCapture !== 1 ||
+      value.coverage.chainVerification.state === 'known';
+    if (invalid) {
+      context.addIssue({
+        code: 'custom',
+        path: ['resultHash'],
+        message:
+          'Claim declaration reports require one exact source-document Snapshot, canonical Evidence/source metadata, and Unknown chain verification.',
+      });
+    }
+  });
 export type ClaimDeclarationParseResult = z.infer<typeof ClaimDeclarationParseResultSchema>;
 
 export const ClaimTransferObservationSchema = z.object({
