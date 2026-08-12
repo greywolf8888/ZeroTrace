@@ -2234,3 +2234,13 @@ Continuous discovery/backfill, Temporal/NATS distribution, additional capture ki
 independent-source action reconciliation and real-chain cross-ledger calibration remain open. FFT
 was not queried by this batch and remains a later whole-product acceptance fixture, not a special
 production path.
+
+The corrected PR head `3e0e60a` passed [CI run
+31548307460](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548307460), including all
+676/676 disposable-store tests, 36 Chromium flows and six production container targets, and
+[CodeQL run 31548307443](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548307443). PR #18
+was then squash-merged to protected `main` as `6f209a5`. That exact merge commit independently
+passed [CI run 31548486491](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548486491) and
+[CodeQL run 31548486484](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548486484).
+Main-commit coverage was 82.38% statements, 76.60% branches, 93.24% functions and 83.49% lines.
+The implementation branch was deleted, and no tag or release was created.
