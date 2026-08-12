@@ -275,9 +275,10 @@ function scaledInteger(value: string, multiplier: bigint): string | null {
 }
 
 function pensionShareUnit(text: string): KnowledgeValue<string> {
+  const prose = text.replace(EVM_ADDRESS, ' ');
   const match =
     /(\d+(?:\.\d+)?)\s*(万|[wW])?\s*(?:枚|个|币|tokens?)?[^\n。；;]{0,24}(?:为|=|作为)?\s*1\s*股/i.exec(
-      text,
+      prose,
     );
   if (match === null) {
     return unknownValue('INSUFFICIENT_DATA', 'No explicit pension share-unit quantity was found.');

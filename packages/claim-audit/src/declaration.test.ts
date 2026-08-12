@@ -185,6 +185,20 @@ describe('claim declaration parser', () => {
     expect(result.drafts[0]?.expectedShareBps).not.toEqual({ state: 'known', value: '0' });
   });
 
+  it('never parses hexadecimal wallet digits as a pension share-unit quantity', () => {
+    const pensionAddress = `0x${'5'.repeat(40)}`;
+    const result = parseEvmClaimDeclaration({
+      ...options,
+      text: `养老钱包\n${pensionAddress}\n打入1000000币为1股进行加入不可退出。`,
+    });
+
+    expect(result.drafts[0]).toMatchObject({
+      destinationAddress: { state: 'known', value: pensionAddress },
+      shareUnitTokens: { state: 'known', value: '1000000' },
+      noExit: { state: 'known', value: true },
+    });
+  });
+
   it('rejects empty documents and cross-chain asset identities', () => {
     expect(() => parseEvmClaimDeclaration({ ...options, text: ' ' })).toThrow(
       'between 1 and 100000',

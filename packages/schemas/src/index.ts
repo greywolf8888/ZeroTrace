@@ -4707,6 +4707,129 @@ export const ClaimDeclarationParseResultSchema = z
   });
 export type ClaimDeclarationParseResult = z.infer<typeof ClaimDeclarationParseResultSchema>;
 
+export const ClaimRuleFieldOriginSchema = z.enum(['DECLARATION_CONFIRMED', 'ANALYST_OVERRIDE']);
+export type ClaimRuleFieldOrigin = z.infer<typeof ClaimRuleFieldOriginSchema>;
+
+export const ClaimRuleFieldOriginsSchema = z
+  .object({
+    assetId: z.literal('DECLARATION_CONFIRMED'),
+    sourceAddress: ClaimRuleFieldOriginSchema,
+    destinationAddress: ClaimRuleFieldOriginSchema,
+    role: ClaimRuleFieldOriginSchema,
+    expectedAction: ClaimRuleFieldOriginSchema,
+    expectedShareBps: ClaimRuleFieldOriginSchema.nullable(),
+    window: ClaimRuleFieldOriginSchema,
+    shareUnit: ClaimRuleFieldOriginSchema.nullable(),
+    noExit: ClaimRuleFieldOriginSchema.nullable(),
+    cadenceSeconds: ClaimRuleFieldOriginSchema.nullable(),
+  })
+  .strict();
+export type ClaimRuleFieldOrigins = z.infer<typeof ClaimRuleFieldOriginsSchema>;
+
+export const ClaimRuleReviewCoverageSchema = z
+  .object({
+    sourceDocument: z.literal(1),
+    humanReview: z.literal(1),
+    fieldCompleteness: z.literal(1),
+    chainVerification: knowledgeValueSchema(CoverageRatioSchema),
+  })
+  .strict();
+export type ClaimRuleReviewCoverage = z.infer<typeof ClaimRuleReviewCoverageSchema>;
+
+export const ClaimRuleReviewReportSchema = z
+  .object({
+    schemaVersion: z.literal('claim-rule-review-report-v1'),
+    id: z.string().regex(/^crr_[0-9a-f]{24}$/),
+    resultHash: Hash256Schema,
+    declarationReportId: z.string().regex(/^cdr_[0-9a-f]{24}$/),
+    declarationResultHash: Hash256Schema,
+    documentHash: Hash256Schema,
+    draftId: z.string().regex(/^cld_[0-9a-f]{24}$/),
+    assetId: z.string().min(1),
+    declarationDraft: ClaimDeclarationDraftSchema,
+    reviewerLabel: z.string().trim().min(1).max(256),
+    reviewedAt: IsoDateTimeSchema,
+    rule: ClaimRuleSchema.extend({
+      id: z.string().regex(/^clr_[0-9a-f]{24}$/),
+      claimEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(3),
+    }),
+    fieldOrigins: ClaimRuleFieldOriginsSchema,
+    tokenDecimals: knowledgeValueSchema(z.number().int().min(0).max(255)),
+    tokenDecimalsEvidenceId: z
+      .string()
+      .regex(/^ev_[0-9a-f]{24}$/)
+      .optional(),
+    reviewEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    declarationEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).length(2),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(4),
+    evidence: z.array(EvidenceSchema).min(4),
+    coverage: ClaimRuleReviewCoverageSchema,
+    claimTruth: knowledgeValueSchema(z.boolean()),
+    reviewerAuthority: knowledgeValueSchema(z.boolean()),
+    freshness: IsoDateTimeSchema,
+    sourceSet: z.array(z.string().trim().min(1)).min(2),
+    modelVersion: z.literal('claim-rule-review-v1.0.0'),
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    requiresChainVerification: z.literal(true),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const canonical = (items: readonly string[]) => [...new Set(items)].sort();
+    const evidenceIds = canonical(value.evidenceIds);
+    const embeddedEvidenceIds = canonical(value.evidence.map((item) => item.id));
+    const declarationEvidenceIds = canonical(value.declarationEvidenceIds);
+    const ruleEvidenceIds = canonical(value.rule.claimEvidenceIds);
+    const sourceSet = canonical(value.sourceSet);
+    const evidenceSourceSet = canonical(
+      value.evidence
+        .filter((item) => !['DERIVED_FEATURE', 'NEGATIVE_EVIDENCE'].includes(item.kind))
+        .map((item) => item.source),
+    );
+    const decimalsEvidenceValid =
+      value.tokenDecimals.state === 'known'
+        ? value.tokenDecimalsEvidenceId !== undefined &&
+          evidenceIds.includes(value.tokenDecimalsEvidenceId)
+        : value.tokenDecimalsEvidenceId === undefined;
+    const invalid =
+      value.assetId !== value.rule.assetId ||
+      value.assetId !== value.declarationDraft.assetId ||
+      value.draftId !== value.declarationDraft.id ||
+      value.freshness !== value.reviewedAt ||
+      value.claimTruth.state === 'known' ||
+      value.reviewerAuthority.state === 'known' ||
+      value.confidence.state === 'known' ||
+      value.coverage.chainVerification.state === 'known' ||
+      !decimalsEvidenceValid ||
+      evidenceIds.length !== value.evidenceIds.length ||
+      evidenceIds.some((id, index) => id !== value.evidenceIds[index]) ||
+      embeddedEvidenceIds.length !== evidenceIds.length ||
+      embeddedEvidenceIds.some((id, index) => id !== evidenceIds[index]) ||
+      declarationEvidenceIds.length !== value.declarationEvidenceIds.length ||
+      declarationEvidenceIds.some((id, index) => id !== value.declarationEvidenceIds[index]) ||
+      ruleEvidenceIds.length !== value.rule.claimEvidenceIds.length ||
+      ruleEvidenceIds.some((id, index) => id !== value.rule.claimEvidenceIds[index]) ||
+      !evidenceIds.includes(value.reviewEvidenceId) ||
+      !evidenceIds.includes(value.terminalEvidenceId) ||
+      !declarationEvidenceIds.every((id) => ruleEvidenceIds.includes(id)) ||
+      !value.declarationDraft.claimEvidenceIds.every((id) => declarationEvidenceIds.includes(id)) ||
+      !ruleEvidenceIds.includes(value.reviewEvidenceId) ||
+      ruleEvidenceIds.includes(value.terminalEvidenceId) ||
+      sourceSet.length !== value.sourceSet.length ||
+      sourceSet.some((source, index) => source !== value.sourceSet[index]) ||
+      sourceSet.length !== evidenceSourceSet.length ||
+      sourceSet.some((source, index) => source !== evidenceSourceSet[index]);
+    if (invalid) {
+      context.addIssue({
+        code: 'custom',
+        path: ['resultHash'],
+        message:
+          'Claim rule reviews require canonical declaration/review Evidence, complete reviewed fields, and Unknown truth/authority/chain confidence.',
+      });
+    }
+  });
+export type ClaimRuleReviewReport = z.infer<typeof ClaimRuleReviewReportSchema>;
+
 export const ClaimTransferObservationSchema = z.object({
   id: z.string().min(1),
   from: z.string().min(1),
