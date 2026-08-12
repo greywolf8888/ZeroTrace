@@ -5898,6 +5898,54 @@ export type ActionSemanticsTransactionCaptureParameters = z.infer<
   typeof ActionSemanticsTransactionCaptureParametersSchema
 >;
 
+export const EvmClaimActionsCaptureParametersSchema = z
+  .object({
+    schemaVersion: z.literal('evm-claim-actions-capture-v1'),
+    reviewReportId: z.string().regex(/^crr_[0-9a-f]{24}$/),
+    reviewResultHash: Hash256Schema,
+    ruleId: z.string().regex(/^clr_[0-9a-f]{24}$/),
+    assetId: z
+      .string()
+      .regex(/^eip155:(?:0|[1-9]\d*):erc20:0x[0-9a-f]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    observerVersion: z.literal('evm-claim-address-observation-v1.0.0'),
+    limits: z
+      .object({
+        maxBlocksPerRequest: z.number().int().min(1).max(1_000_000),
+        maxRequests: z.number().int().min(1).max(10_000),
+        maxTransfers: z.number().int().min(1).max(1_000_000),
+        topCounterpartyLimit: z.number().int().min(1).max(100),
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (BigInt(value.toBlock) < BigInt(value.fromBlock)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Claim Actions capture range must not end before it begins.',
+      });
+    }
+    const requiredRequests =
+      ((BigInt(value.toBlock) - BigInt(value.fromBlock)) /
+        BigInt(value.limits.maxBlocksPerRequest) +
+        1n) *
+      2n;
+    if (requiredRequests > BigInt(value.limits.maxRequests)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['limits', 'maxRequests'],
+        message:
+          'Claim Actions request budget must cover both indexed address directions across the range.',
+      });
+    }
+  });
+export type EvmClaimActionsCaptureParameters = z.infer<
+  typeof EvmClaimActionsCaptureParametersSchema
+>;
+
 export const CaptureTriggerSchema = z.discriminatedUnion('type', [
   z
     .object({
