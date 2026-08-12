@@ -101,7 +101,11 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547375160) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31547375237) pass on immutable PR
       #18 code commit `9d608f5`, including 676 disposable-store tests, all 36 browser flows and all
-      six production container targets; protected-main promotion remains pending
+      six production container targets before the later queue-isolation correction
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548486491) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548486484) pass on exact
+      protected-main multi-chain Action capture squash commit `6f209a5`, including the worker-kind
+      lease isolation fix, 676 disposable-store tests, 36 browser flows and six container targets
 
 ## Evidence and data
 
