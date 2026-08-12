@@ -16,8 +16,7 @@ import {
   type KnowledgeValue,
 } from '@zerotrace/schemas';
 
-export const CLAIM_VERIFICATION_OBSERVATION_MODEL_VERSION =
-  'claim-verification-observation-v0.1.0';
+export const CLAIM_VERIFICATION_OBSERVATION_MODEL_VERSION = 'claim-verification-observation-v0.1.0';
 
 export interface ClaimVerificationActionReportReference {
   id: string;
@@ -76,6 +75,13 @@ export function calculateClaimVerificationObservationResultHash(
   report: ClaimVerificationObservationReport,
 ): string {
   return hashPayload(reportCore(ClaimVerificationObservationReportSchema.parse(report)));
+}
+
+export function claimVerificationObservationReportId(resultHash: string): string {
+  if (!/^[0-9a-f]{64}$/.test(resultHash)) {
+    throw new Error('Claim verification result hash must be canonical lowercase SHA-256.');
+  }
+  return `cvr_${hashPayload({ schema: 'zerotrace-claim-verification-observation-report-v1', resultHash }).slice(0, 24)}`;
 }
 
 export function expectedClaimVerificationObservationTerminalEvidence(
@@ -139,9 +145,11 @@ function exactObservationPair(
   return [source, destination];
 }
 
-export function buildClaimVerificationObservation(
-  input: BuildClaimVerificationObservationInput,
-): { report: ClaimVerificationObservationReport; terminalEvidence: Evidence; parentEvidenceIds: string[] } {
+export function buildClaimVerificationObservation(input: BuildClaimVerificationObservationInput): {
+  report: ClaimVerificationObservationReport;
+  terminalEvidence: Evidence;
+  parentEvidenceIds: string[];
+} {
   const review = ClaimRuleReviewReportSchema.parse(input.reviewReport);
   const [source, destination] = exactObservationPair(
     input.sourceObservation,
@@ -162,8 +170,10 @@ export function buildClaimVerificationObservation(
   const actionReports = [...(input.actionReports ?? [])].sort((left, right) =>
     left.id.localeCompare(right.id),
   );
-  if (new Set(actionReports.map((item) => item.id)).size !== actionReports.length) {
-    throw new Error('Claim verification Action Semantics report references must be unique.');
+  if (input.actions.length !== 0 || actionReports.length !== 0) {
+    throw new Error(
+      'Claim verification observation v0.1 cannot accept Action Semantics until window discovery and action-to-claim reconciliation are complete.',
+    );
   }
   const evidenceBeforeTerminal = canonical([
     ...review.evidenceIds,
@@ -178,11 +188,17 @@ export function buildClaimVerificationObservation(
     ...destination.metadata.sourceSet,
     ...actionReports.flatMap((item) => item.sourceSet),
   ]);
-  const actionCoverage = input.actionSemanticsCoverage ??
+  const actionCoverage =
+    input.actionSemanticsCoverage ??
     unknownValue(
       'NOT_QUERIED',
       'No window-complete Action Semantics discovery has been executed for this reviewed rule.',
     );
+  if (actionCoverage.state === 'known') {
+    throw new Error(
+      'Claim verification observation v0.1 may not claim Known Action Semantics coverage.',
+    );
+  }
   const metadata = AnalysisMetadataSchema.parse({
     snapshot,
     dataCoverage: Math.min(source.metadata.dataCoverage, destination.metadata.dataCoverage),
@@ -244,7 +260,7 @@ export function buildClaimVerificationObservation(
     metadata,
   };
   const resultHash = hashPayload(partial);
-  const id = `cvr_${hashPayload({ schema: 'zerotrace-claim-verification-observation-report-v1', resultHash }).slice(0, 24)}`;
+  const id = claimVerificationObservationReportId(resultHash);
   const parentEvidenceIds = canonical([
     review.terminalEvidenceId,
     source.terminalEvidenceId,

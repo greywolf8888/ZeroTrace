@@ -5987,6 +5987,10 @@ export const ClaimVerificationObservationReportSchema = z
       actionTerminalIds.length !== actionReportIds.length ||
       actionIds.length !== value.actions.length ||
       actionIds.some((id, index) => id !== value.actions[index]?.id) ||
+      value.actions.length !== 0 ||
+      value.actionSemanticsReportIds.length !== 0 ||
+      value.actionSemanticsTerminalEvidenceIds.length !== 0 ||
+      value.coverage.actionSemantics.state === 'known' ||
       value.metadata.freshness !== snapshot.capturedAt;
     if (invalid) {
       context.addIssue({
@@ -6045,9 +6049,7 @@ export const EvmClaimActionsCaptureParametersSchema = z
     reviewReportId: z.string().regex(/^crr_[0-9a-f]{24}$/),
     reviewResultHash: Hash256Schema,
     ruleId: z.string().regex(/^clr_[0-9a-f]{24}$/),
-    assetId: z
-      .string()
-      .regex(/^eip155:(?:0|[1-9]\d*):erc20:0x[0-9a-f]{40}$/),
+    assetId: z.string().regex(/^eip155:(?:0|[1-9]\d*):erc20:0x[0-9a-f]{40}$/),
     fromBlock: UnsignedQuantityStringSchema,
     toBlock: UnsignedQuantityStringSchema,
     observerVersion: z.literal('evm-claim-address-observation-v1.0.0'),
