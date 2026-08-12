@@ -109,6 +109,11 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548486484) pass on exact
       protected-main multi-chain Action capture squash commit `6f209a5`, including the worker-kind
       lease isolation fix, 676 disposable-store tests, 36 browser flows and six container targets
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31555237066) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31555237043) pass on immutable
+      reviewed-ClaimRule report commit `78e6d01`, including 696 disposable-store tests, finalized
+      ERC-20 decimals Evidence, migrations through `028`, all 36 browser flows and six container
+      targets
 
 ## Evidence and data
 
