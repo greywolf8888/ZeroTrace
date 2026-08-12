@@ -124,16 +124,16 @@ BEGIN
     RAISE EXCEPTION 'Claim declaration provenance arrays are not canonical';
   END IF;
 
-  IF NEW.field_extraction_coverage IS DISTINCT FROM CASE
-      WHEN NEW.report #>> '{coverage,fieldExtraction,state}' = 'known'
+  IF NEW.field_extraction_coverage IS DISTINCT FROM (CASE
+      WHEN (NEW.report #>> '{coverage,fieldExtraction,state}') = 'known'
       THEN (NEW.report #>> '{coverage,fieldExtraction,value}')::double precision
       ELSE NULL
-    END
-    OR NEW.extraction_confidence IS DISTINCT FROM CASE
-      WHEN NEW.report #>> '{extractionConfidence,state}' = 'known'
+    END)
+    OR NEW.extraction_confidence IS DISTINCT FROM (CASE
+      WHEN (NEW.report #>> '{extractionConfidence,state}') = 'known'
       THEN (NEW.report #>> '{extractionConfidence,value}')::double precision
       ELSE NULL
-    END
+    END)
   THEN
     RAISE EXCEPTION 'Claim declaration coverage metadata conflicts';
   END IF;
