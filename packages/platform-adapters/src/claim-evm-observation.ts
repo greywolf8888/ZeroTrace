@@ -13,6 +13,7 @@ import {
   type AnalysisSnapshot,
   type Evidence,
   type EvmClaimAddressObservation,
+  type EvmClaimTransferObservation,
 } from '@zerotrace/schemas';
 import type { z } from 'zod';
 
@@ -35,6 +36,7 @@ export type EvmClaimEvidenceWriter = (
 
 export interface EvmClaimAddressObservationRun {
   report: EvmClaimAddressObservation;
+  transfers: EvmClaimTransferObservation[];
   evidence: Evidence[];
 }
 
@@ -271,11 +273,13 @@ export async function observeEvmClaimAddress(
     custody: custodyInspection.custody,
     custodyMetadata: custodyInspection.metadata,
     flow,
+    transfers: collection.transfers,
     terminalEvidenceId: persistedTerminal.id,
     metadata,
   });
   return {
     report,
+    transfers: collection.transfers,
     evidence: [...persistedCustody, ...persistedTransfers, persistedTerminal],
   };
 }

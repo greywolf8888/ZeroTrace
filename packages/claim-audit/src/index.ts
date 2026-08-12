@@ -833,3 +833,4 @@ export * from './declaration.js';
 export * from './review.js';
 export * from './burn.js';
 export * from './pension-candidate.js';
+export * from './verification.js';
