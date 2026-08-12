@@ -21,56 +21,58 @@ The initial API has no authentication and is suitable only for local/staging use
 
 ## Implemented intelligence endpoints
 
-| Method | Path                                                                | Notes                                                           |
-| ------ | ------------------------------------------------------------------- | --------------------------------------------------------------- |
-| GET    | `/api/v1/search?q=...`                                              | local classification plus durable exact report/label projection |
-| GET    | `/api/v1/subjects/:ledger/:id`                                      | snapshot-pinned current state; Bitcoin includes bracketed UTXOs |
-| GET    | `/api/v1/ledger/:ledger/:type/:id`                                  | typed block/transaction or Bitcoin script-aware outpoint query  |
-| GET    | `/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/latest`       | latest provider-free immutable Solana semantic report replay    |
-| GET    | `/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/:id`          | exact content-addressed Solana semantic report replay           |
-| GET    | `/api/v1/actions/semantics/reports/latest`                          | latest generic action report by ledger/chain/transaction        |
-| GET    | `/api/v1/actions/semantics/reports/:id`                             | exact content-addressed generic action report replay            |
-| GET    | `/api/v1/launches/EVM/:token`                                       | version-pinned Flap BSC current Portal-state inspection         |
-| GET    | `/api/v1/launches/EVM/:token/events/:transactionHash`               | exact-receipt Flap creation/configuration/migration decoding    |
-| GET    | `/api/v1/launches/EVM/:token/history`                               | bounded Flap Portal log discovery with exact receipt replay     |
-| GET    | `/api/v1/launches/EVM/:token/history/projections/:id`               | provider-free paginated replay of immutable stored segments     |
-| GET    | `/api/v1/launches/EVM/:token/origin`                                | bounded Flap creation-trace and exact receipt origin proof      |
-| GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest`       | latest immutable EVM Claim Report; provider-free replay         |
-| GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`          | exact content-addressed EVM Claim Report replay                 |
-| POST   | `/api/v1/claims/declarations/parse`                                 | compile public wording into Evidence-bound human-review drafts  |
-| GET    | `/api/v1/claims/declarations/reports/latest`                        | latest immutable declaration report by asset/source document    |
-| GET    | `/api/v1/claims/declarations/reports/:id`                           | exact provider-free declaration report replay                   |
-| POST   | `/api/v1/claims/EVM/:token/pension-candidates`                      | finalized BSC share-unit/depositor behavior discovery           |
-| GET    | `/api/v1/claims/EVM/:token/pension-candidates/reports/latest`       | latest provider-free immutable behavior report replay           |
-| GET    | `/api/v1/claims/EVM/:token/pension-candidates/reports/:id`          | exact content-addressed behavior report replay                  |
-| POST   | `/api/v1/claims/EVM/:token/burn-candidates`                         | finalized BSC zero-address Transfer candidate-range discovery   |
-| POST   | `/api/v1/claims/EVM/:token/burn-conservation`                       | exact-block ERC-20 supply/mint/burn conservation certificate    |
-| GET    | `/api/v1/claims/EVM/:token/burn-promotions/:id`                     | provider-free durable candidate-promotion replay                |
-| GET    | `/api/v1/claims/EVM/:token/supply-continuity/:id`                   | provider-free all-block supply-continuity replay                |
-| POST   | `/api/v1/rv/flap-sell`                                              | fixed-block read-only Flap Portal `previewSell` quote           |
-| POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                          | migrated Flap Pancake V2 spot and multi-size buy model          |
-| POST   | `/api/v1/rv/flap-pancake-v2-pension-entry-scenarios`                | durable candidate-bound pension entry/share economics           |
-| GET    | `/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest` | latest provider-free immutable Scenario Report replay           |
-| GET    | `/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/:id`    | exact content-addressed Scenario Report replay                  |
-| POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                         | migrated Flap Pancake V2 nominal/gross/tax exit-size model      |
-| POST   | `/api/v1/rv/flap-pancake-v2-reconciliation`                         | common-block multi-source market and RV discrepancy certificate |
-| POST   | `/api/v1/data-quality/discrepancies`                                | typed error-budget and discrepancy audit                        |
-| GET    | `/api/v1/evidence/:id`                                              | Evidence node, source edges, and bound Snapshot                 |
-| GET    | `/api/v1/evidence/:id/drilldown`                                    | restart-safe derived/source Evidence traversal                  |
-| POST   | `/api/v1/entities/resolve`                                          | deterministic evidence-feature baseline                         |
-| GET    | `/api/v1/entities/relationships/reports/latest`                     | latest immutable pairwise hypothesis replay                     |
-| GET    | `/api/v1/entities/relationships/reports/:id`                        | exact content-addressed pairwise hypothesis replay              |
-| POST   | `/api/v1/entities/relationships/timelines/materialize`              | provider-free durable pairwise timeline materialization         |
-| GET    | `/api/v1/entities/relationships/timelines/latest`                   | latest immutable pairwise timeline replay                       |
-| GET    | `/api/v1/entities/relationships/timelines/:id`                      | exact immutable pairwise timeline replay                        |
-| POST   | `/api/v1/entities/investigation-graphs/materialize`                 | exact-Snapshot graph materialization from durable timelines     |
-| GET    | `/api/v1/entities/investigation-graphs/latest`                      | latest bounded investigation graph replay/traversal             |
-| GET    | `/api/v1/entities/investigation-graphs/:id`                         | exact bounded investigation graph replay/traversal              |
-| POST   | `/api/v1/entities/investigation-graph-timelines/materialize`        | cross-Snapshot graph-report timeline materialization            |
-| GET    | `/api/v1/entities/investigation-graph-timelines/latest`             | latest immutable graph timeline replay                          |
-| GET    | `/api/v1/entities/investigation-graph-timelines/:id`                | exact immutable graph timeline replay                           |
-| POST   | `/api/v1/rv/constant-product`                                       | exact-integer pool exit quote                                   |
-| POST   | `/api/v1/scenarios/exit-race`                                       | seeded shared-pool exit ordering                                |
+| Method | Path                                                                | Notes                                                             |
+| ------ | ------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| GET    | `/api/v1/search?q=...`                                              | local classification plus durable exact report/label projection   |
+| GET    | `/api/v1/subjects/:ledger/:id`                                      | snapshot-pinned current state; Bitcoin includes bracketed UTXOs   |
+| GET    | `/api/v1/ledger/:ledger/:type/:id`                                  | typed block/transaction or Bitcoin script-aware outpoint query    |
+| GET    | `/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/latest`       | latest provider-free immutable Solana semantic report replay      |
+| GET    | `/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/:id`          | exact content-addressed Solana semantic report replay             |
+| GET    | `/api/v1/actions/semantics/reports/latest`                          | latest generic action report by ledger/chain/transaction          |
+| GET    | `/api/v1/actions/semantics/reports/:id`                             | exact content-addressed generic action report replay              |
+| GET    | `/api/v1/launches/EVM/:token`                                       | version-pinned Flap BSC current Portal-state inspection           |
+| GET    | `/api/v1/launches/EVM/:token/events/:transactionHash`               | exact-receipt Flap creation/configuration/migration decoding      |
+| GET    | `/api/v1/launches/EVM/:token/history`                               | bounded Flap Portal log discovery with exact receipt replay       |
+| GET    | `/api/v1/launches/EVM/:token/history/projections/:id`               | provider-free paginated replay of immutable stored segments       |
+| GET    | `/api/v1/launches/EVM/:token/origin`                                | bounded Flap creation-trace and exact receipt origin proof        |
+| GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest`       | latest immutable EVM Claim Report; provider-free replay           |
+| GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`          | exact content-addressed EVM Claim Report replay                   |
+| POST   | `/api/v1/claims/declarations/parse`                                 | compile public wording into Evidence-bound human-review drafts    |
+| GET    | `/api/v1/claims/declarations/reports/latest`                        | latest immutable declaration report by asset/source document      |
+| GET    | `/api/v1/claims/declarations/reports/:id`                           | exact provider-free declaration report replay                     |
+| GET    | `/api/v1/claims/verification/reports/latest`                        | latest durable reviewed-rule verification (`ruleId` or `assetId`) |
+| GET    | `/api/v1/claims/verification/reports/:id`                           | exact content-addressed Claim verification replay                 |
+| POST   | `/api/v1/claims/EVM/:token/pension-candidates`                      | finalized BSC share-unit/depositor behavior discovery             |
+| GET    | `/api/v1/claims/EVM/:token/pension-candidates/reports/latest`       | latest provider-free immutable behavior report replay             |
+| GET    | `/api/v1/claims/EVM/:token/pension-candidates/reports/:id`          | exact content-addressed behavior report replay                    |
+| POST   | `/api/v1/claims/EVM/:token/burn-candidates`                         | finalized BSC zero-address Transfer candidate-range discovery     |
+| POST   | `/api/v1/claims/EVM/:token/burn-conservation`                       | exact-block ERC-20 supply/mint/burn conservation certificate      |
+| GET    | `/api/v1/claims/EVM/:token/burn-promotions/:id`                     | provider-free durable candidate-promotion replay                  |
+| GET    | `/api/v1/claims/EVM/:token/supply-continuity/:id`                   | provider-free all-block supply-continuity replay                  |
+| POST   | `/api/v1/rv/flap-sell`                                              | fixed-block read-only Flap Portal `previewSell` quote             |
+| POST   | `/api/v1/rv/flap-pancake-v2-buy-scenarios`                          | migrated Flap Pancake V2 spot and multi-size buy model            |
+| POST   | `/api/v1/rv/flap-pancake-v2-pension-entry-scenarios`                | durable candidate-bound pension entry/share economics             |
+| GET    | `/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest` | latest provider-free immutable Scenario Report replay             |
+| GET    | `/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/:id`    | exact content-addressed Scenario Report replay                    |
+| POST   | `/api/v1/rv/flap-pancake-v2-sell-scenarios`                         | migrated Flap Pancake V2 nominal/gross/tax exit-size model        |
+| POST   | `/api/v1/rv/flap-pancake-v2-reconciliation`                         | common-block multi-source market and RV discrepancy certificate   |
+| POST   | `/api/v1/data-quality/discrepancies`                                | typed error-budget and discrepancy audit                          |
+| GET    | `/api/v1/evidence/:id`                                              | Evidence node, source edges, and bound Snapshot                   |
+| GET    | `/api/v1/evidence/:id/drilldown`                                    | restart-safe derived/source Evidence traversal                    |
+| POST   | `/api/v1/entities/resolve`                                          | deterministic evidence-feature baseline                           |
+| GET    | `/api/v1/entities/relationships/reports/latest`                     | latest immutable pairwise hypothesis replay                       |
+| GET    | `/api/v1/entities/relationships/reports/:id`                        | exact content-addressed pairwise hypothesis replay                |
+| POST   | `/api/v1/entities/relationships/timelines/materialize`              | provider-free durable pairwise timeline materialization           |
+| GET    | `/api/v1/entities/relationships/timelines/latest`                   | latest immutable pairwise timeline replay                         |
+| GET    | `/api/v1/entities/relationships/timelines/:id`                      | exact immutable pairwise timeline replay                          |
+| POST   | `/api/v1/entities/investigation-graphs/materialize`                 | exact-Snapshot graph materialization from durable timelines       |
+| GET    | `/api/v1/entities/investigation-graphs/latest`                      | latest bounded investigation graph replay/traversal               |
+| GET    | `/api/v1/entities/investigation-graphs/:id`                         | exact bounded investigation graph replay/traversal                |
+| POST   | `/api/v1/entities/investigation-graph-timelines/materialize`        | cross-Snapshot graph-report timeline materialization              |
+| GET    | `/api/v1/entities/investigation-graph-timelines/latest`             | latest immutable graph timeline replay                            |
+| GET    | `/api/v1/entities/investigation-graph-timelines/:id`                | exact immutable graph timeline replay                             |
+| POST   | `/api/v1/rv/constant-product`                                       | exact-integer pool exit quote                                     |
+| POST   | `/api/v1/scenarios/exit-race`                                       | seeded shared-pool exit ordering                                  |
 
 Current-state subject reads establish a ledger-specific anchor before reading the subject:
 

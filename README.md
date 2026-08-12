@@ -329,6 +329,27 @@ Solana instructions/logs/native balances/token balances/rewards as applicable. E
 The worker accepts bounded finalized ranges only, claims no protocol decoding, and has no signing or
 broadcast interface.
 
+For a reviewed EVM Claim rule, run the dedicated BSC capture worker after creating a durable rule
+review. It leases only `CLAIM_ACTIONS` schedules, reads finalized BSC state through RPC and finalized
+ERC-20 logs through SQD, and writes a terminal verification report. Action semantics, claim
+authenticity, custody history and source independence stay Unknown when those proofs were not
+captured; no missing action is converted to zero:
+
+```bash
+npm run claims:actions:schedule -- \
+  --review-report crr_<id> --from <first-block> --to <terminal-block>
+npm run claims:actions:capture -- --once
+```
+
+Compose users can run the same worker with `docker compose --profile semantic run --rm
+claim-actions-capture-worker`; it shares the initialized PostgreSQL and provider allow-list with the
+other read-only semantic workers.
+
+Verification replay is provider-free through `GET /api/v1/claims/verification/reports/latest?ruleId=...`
+or `GET /api/v1/claims/verification/reports/<cvr-id>`. Configure `POSTGRES_URL`, a finalized BSC
+RPC URL (`EVM_BSC_RPC_URLS`), and `SQD_PORTAL_URL`; the worker never accepts a private key or sends a
+transaction.
+
 After ingesting a `ledger-records` range, schedule one exact transaction and run the durable generic
 Action Semantics worker. Replace the dataset, transaction and position with values from the ingested
 range:

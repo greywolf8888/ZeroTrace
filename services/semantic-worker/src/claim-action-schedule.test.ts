@@ -19,8 +19,7 @@ function review() {
     auditWindow: { from: '2026-08-01T00:00:00.000Z', to: capturedAt },
   });
   const draft = declaration.drafts.find(
-    (item) =>
-      item.sourceAddress.state === 'known' && item.destinationAddress.state === 'known',
+    (item) => item.sourceAddress.state === 'known' && item.destinationAddress.state === 'known',
   );
   if (draft === undefined) throw new Error('Expected a schedulable declaration draft.');
   return reviewClaimDeclarationDraft({
@@ -56,7 +55,7 @@ describe('Claim Actions schedules', () => {
         operation: 'READ_ONLY_CAPTURE',
         target: {
           ledger: 'EVM',
-          chainId: '56',
+          chainId: 'eip155:56',
           subjectType: 'TOKEN',
           normalizedIdentifier: assetId,
         },

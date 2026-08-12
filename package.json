@@ -30,6 +30,8 @@
     "claims:supply:scan": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:supply:scan -w @zerotrace/semantic-worker --",
     "actions:capture": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:actions:capture -w @zerotrace/semantic-worker --",
     "actions:schedule": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:actions:schedule -w @zerotrace/semantic-worker --",
+    "claims:actions:capture": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:claims:actions:capture -w @zerotrace/semantic-worker --",
+    "claims:actions:schedule": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:claims:actions:schedule -w @zerotrace/semantic-worker --",
     "eval:entity": "tsx evals/entity-resolution/run.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

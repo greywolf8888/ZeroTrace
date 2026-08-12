@@ -37,9 +37,14 @@ function canonicalTime(value: string, field: string): string {
 function evmAsset(assetId: string): { chainId: string; tokenAddress: string } {
   const match = /^eip155:((?:0|[1-9]\d*)):erc20:(0x[0-9a-f]{40})$/.exec(assetId);
   if (match === null) {
-    throw new Error('Reviewed Claim rule scheduling currently requires a canonical EVM ERC-20 asset.');
+    throw new Error(
+      'Reviewed Claim rule scheduling currently requires a canonical EVM ERC-20 asset.',
+    );
   }
-  return { chainId: match[1] ?? '', tokenAddress: match[2] ?? '' };
+  // Capture targets use the same CAIP-2 identity carried by EVM Snapshots and Evidence.
+  // Keeping the numeric chain id only inside the adapter parameters avoids a scheduler run
+  // that appears to target a different chain from its terminal Evidence.
+  return { chainId: `eip155:${match[1] ?? ''}`, tokenAddress: match[2] ?? '' };
 }
 
 export function buildClaimActionsSchedule(input: BuildClaimActionsScheduleInput) {

@@ -91,11 +91,9 @@ function observation(
     transfers,
     metadata: flowMetadata,
   });
-  const evidenceIds = [...new Set([
-    custodyEvidenceId,
-    ...flow.metadata.evidenceIds,
-    terminalEvidenceId,
-  ])].sort();
+  const evidenceIds = [
+    ...new Set([custodyEvidenceId, ...flow.metadata.evidenceIds, terminalEvidenceId]),
+  ].sort();
   return {
     tokenAddress: token,
     address,

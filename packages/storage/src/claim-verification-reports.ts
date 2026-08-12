@@ -375,6 +375,27 @@ export class PostgresClaimVerificationReportRepository {
     }
   }
 
+  async latestByAsset(assetId: string): Promise<StoredClaimVerificationReport | undefined> {
+    if (!/^eip155:[1-9]\d*:erc20:0x[0-9a-f]{40}$/.test(assetId)) {
+      throw failure('CLAIM_VERIFICATION_REPORT_INVALID', 'Claim verification asset id is invalid.');
+    }
+    try {
+      const result = await this.#pool.query(
+        `${SELECT_REPORT} WHERE asset_id = $1
+         ORDER BY to_block DESC, captured_at DESC, created_at DESC, id DESC LIMIT 1`,
+        [assetId],
+      );
+      return result.rows[0] === undefined ? undefined : fromRow(result.rows[0]);
+    } catch (error) {
+      if (error instanceof ClaimVerificationReportStorageError) throw error;
+      throw failure(
+        'CLAIM_VERIFICATION_REPORT_UNAVAILABLE',
+        'Latest verification asset read failed.',
+        error,
+      );
+    }
+  }
+
   async health() {
     const checkedAt = new Date().toISOString();
     try {

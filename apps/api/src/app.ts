@@ -69,6 +69,7 @@ import {
   ClaimDeclarationReportStorageError,
   ClaimRuleReviewReportStorageError,
   ClaimReportStorageError,
+  ClaimVerificationReportStorageError,
   ControlSurfaceReportStorageError,
   EntityRelationshipReportStorageError,
   EntityRelationshipTimelineStorageError,
@@ -249,6 +250,27 @@ const ClaimRuleReviewReportLookupQuerySchema = z
         message: 'declarationReportId and draftId must be supplied together.',
       });
     }
+  });
+
+const ClaimVerificationReportParamsSchema = z.object({
+  reportId: z.string().regex(/^cvr_[0-9a-f]{24}$/),
+});
+
+const ClaimVerificationReportLookupQuerySchema = z
+  .object({
+    ruleId: z
+      .string()
+      .regex(/^clr_[0-9a-f]{24}$/)
+      .optional(),
+    assetId: z
+      .string()
+      .trim()
+      .regex(/^eip155:[1-9]\d*:erc20:0x[0-9a-fA-F]{40}$/)
+      .optional(),
+  })
+  .strict()
+  .refine((value) => value.ruleId !== undefined || value.assetId !== undefined, {
+    message: 'ruleId or assetId is required.',
   });
 
 const LaunchInspectionParamsSchema = z.object({
@@ -1252,6 +1274,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['claimReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['claimDeclarationReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['claimRuleReviewReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['claimVerificationReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
@@ -1293,6 +1316,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         claimReports,
         claimDeclarationReports,
         claimRuleReviewReports,
+        claimVerificationReports,
         controlSurfaces,
         solanaControlSurfaces,
         solanaTransactionReports,
@@ -1314,6 +1338,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.claimReports?.health(),
         runtime.claimDeclarationReports?.health(),
         runtime.claimRuleReviewReports?.health(),
+        runtime.claimVerificationReports?.health(),
         runtime.controlSurfaces?.health(),
         runtime.solanaControlSurfaces?.health(),
         runtime.solanaTransactionReports?.health(),
@@ -1337,6 +1362,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           claimReports,
           claimDeclarationReports,
           claimRuleReviewReports,
+          claimVerificationReports,
           controlSurfaces,
           solanaControlSurfaces,
           solanaTransactionReports,
@@ -1586,6 +1612,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         error.code === 'CLAIM_RULE_REVIEW_REPORT_INVALID'
           ? 400
           : error.code === 'CLAIM_RULE_REVIEW_REPORT_CONFLICT'
+            ? 409
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ClaimVerificationReportStorageError) {
+      const status =
+        error.code === 'CLAIM_VERIFICATION_REPORT_INVALID'
+          ? 400
+          : error.code === 'CLAIM_VERIFICATION_REPORT_CONFLICT'
             ? 409
             : 503;
       return reply
@@ -2020,6 +2057,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           'Human-confirmed or overridden declaration fields materialize immutable Expected Claim rules with exact source/review Evidence and provider-free replay. Claim truth, reviewer authority, chain verification and confidence remain explicitly Unknown until separate deterministic observation and audit stages complete.',
       },
       {
+        id: 'claim-verification-observation',
+        status:
+          runtime.claimVerificationReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_BSC_CAPTURE_AND_REPLAY',
+        detail:
+          'The generic CLAIM_ACTIONS capture handler binds one reviewed EVM rule revision to a bounded finalized BSC range, captures source/destination custody and ERC-20 transfer Evidence under one terminal Snapshot, and persists an immutable verification report. Action Semantics, complete custody history, source independence and claim authenticity remain explicit Unknown until their dedicated adapters and coverage are available.',
+      },
+      {
         id: 'finalized-historical-ingestion',
         status:
           runtime.ingestionStorage.rawFacts !== undefined &&
@@ -2037,9 +2083,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         status:
           runtime.captureSchedules === undefined
             ? 'DURABLE_STORAGE_REQUIRED'
-            : 'IMPLEMENTED_DURABLE_STATE_HANDLER_BINDING_PENDING',
+            : 'IMPLEMENTED_DURABLE_CLAIM_ACTIONS_HANDLER',
         detail:
-          'Generic EVM/Bitcoin/Solana read-only schedules use deterministic occurrence IDs, exclusive expiring leases, bounded retries and immutable attempts. Successful runs require a durable terminal Evidence node bound to the exact Snapshot plus coverage, freshness, source set, model version and confidence. Temporal/NATS adapters and production capture handlers remain pending.',
+          'Generic EVM/Bitcoin/Solana read-only schedules use deterministic occurrence IDs, exclusive expiring leases, bounded retries and immutable attempts. CLAIM_ACTIONS now has a production BSC handler and durable terminal verification report; transaction Action Semantics remains separately registered. Temporal/NATS adapters, non-EVM claim handlers and continuous backfill remain pending.',
       },
       {
         id: 'entity-evidence-fusion',
@@ -5188,6 +5234,82 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               request,
               'CLAIM_RULE_REVIEW_REPORT_NOT_FOUND',
               'The durable Claim rule review report was not found.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/verification/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const query = ClaimVerificationReportLookupQuerySchema.parse(request.query);
+      const repository = runtime.claimVerificationReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_VERIFICATION_REPORT_UNAVAILABLE',
+              'Durable Claim verification report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record =
+        query.ruleId === undefined
+          ? await repository.latestByAsset(query.assetId as string)
+          : await repository.latestByRule(query.ruleId);
+      if (
+        record === undefined ||
+        (query.assetId !== undefined && record.assetId !== query.assetId)
+      ) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_VERIFICATION_REPORT_NOT_FOUND',
+              'No durable Claim verification report exists for this reviewed rule.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/verification/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimVerificationReportParamsSchema.parse(request.params);
+      const repository = runtime.claimVerificationReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_VERIFICATION_REPORT_UNAVAILABLE',
+              'Durable Claim verification report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_VERIFICATION_REPORT_NOT_FOUND',
+              'The durable Claim verification report was not found.',
               false,
             ),
           );

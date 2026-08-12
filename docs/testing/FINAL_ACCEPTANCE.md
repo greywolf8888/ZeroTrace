@@ -4,6 +4,21 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 Named assets are reference cases for the shared architecture. They never define a standalone
 roadmap phase, shared runtime defaults, protocol constants or token-specific inference behavior.
 
+## Current local gate (2026-08-12)
+
+- [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
+      production license allowlist and `npm audit --audit-level=high` (0 vulnerabilities)
+- [x] `npm run test:unit`: 587/587 tests across 99 files
+- [x] `npm run test:integration`: 80 pass; 38 explicitly skipped because optional stores/providers
+      were not enabled in this host run (these are not counted as failures)
+- [x] `npm run test:e2e`: 36/36 Chromium desktop and Pixel 7 flows
+- [x] `docker compose config --quiet`, healthy default services and PostgreSQL readiness probe
+- [ ] Post-push protected-branch CI/CodeQL for the current claim-capture head
+
+This local gate does not promote ZeroTrace to production acceptance. Full-history ingestion,
+independent-provider reconciliation, effective authorization/history, intent attribution and other
+unchecked terminal-scope items below remain open.
+
 ## Foundation
 
 - [x] Repository installs reproducibly from lockfile

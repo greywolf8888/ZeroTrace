@@ -501,6 +501,31 @@ non-EVM declaration normalization, independent source capture and Expected-versu
 verification remain separate work. Named assets such as FFT belong in acceptance fixtures, not
 parser defaults.
 
+## Reviewed Claim Actions capture
+
+`buildClaimActionsSchedule()` binds a durable one-shot `CLAIM_ACTIONS` schedule to the exact reviewed
+rule ID, result hash, canonical EVM asset and block range. The production BSC worker is started with:
+
+```powershell
+npm run claims:actions:schedule -- --review-report crr_... --from 100000000 --to 100010000
+npm run claims:actions:capture -- --once
+```
+
+It requires `POSTGRES_URL`, one or more `EVM_BSC_RPC_URLS`, and the configured SQD portal. The handler
+requires finalized timestamped anchors at both range boundaries, captures source and destination
+address flows against one terminal Snapshot, persists the two address reports, and writes the
+terminal `claim-verification-observation-report-v1`. The current v0.1 report intentionally keeps
+Action Semantics, complete custody history, source independence, claim authenticity and the true
+allocation denominator Unknown; empty action arrays are not a claim that no action occurred.
+
+Provider-free reads:
+
+```text
+GET /api/v1/claims/verification/reports/latest?ruleId=clr_...
+GET /api/v1/claims/verification/reports/latest?assetId=eip155:56:erc20:0x...
+GET /api/v1/claims/verification/reports/cvr_...
+```
+
 ## Generic Action Semantics
 
 `@zerotrace/action-semantics` is the chain-neutral boundary between raw ledger observations and
