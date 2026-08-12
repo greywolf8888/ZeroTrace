@@ -211,6 +211,10 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       chronological actor/path integrity gates
 - [x] Deterministic public claim-declaration compiler with Analyst Evidence, exact basis points,
       pension share-unit/no-exit/cadence extraction, explicit Unknown fields and mandatory human review
+- [x] Exact source-document Snapshot, direct terminal Evidence, immutable `cdr_...` declaration
+      reports, provider-free exact/latest API replay and visible Unknown source/chain coverage
+- [ ] Independent declaration-source capture, source authenticity review, non-EVM normalization and
+      deterministic Expected-versus-Actual promotion from reviewed drafts
 - [x] Finalized range-bounded EVM ERC-20 Transfer Evidence and EOA/Safe/generic-contract custody
       observation, including one named FFT single-source window
 - [x] Deterministic Snapshot-time-bounded address-flow aggregation with observed lower bounds,

@@ -38,6 +38,8 @@ The initial API has no authentication and is suitable only for local/staging use
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/latest`       | latest immutable EVM Claim Report; provider-free replay         |
 | GET    | `/api/v1/claims/EVM/:token/addresses/:address/reports/:id`          | exact content-addressed EVM Claim Report replay                 |
 | POST   | `/api/v1/claims/declarations/parse`                                 | compile public wording into Evidence-bound human-review drafts  |
+| GET    | `/api/v1/claims/declarations/reports/latest`                        | latest immutable declaration report by asset/source document    |
+| GET    | `/api/v1/claims/declarations/reports/:id`                           | exact provider-free declaration report replay                   |
 | POST   | `/api/v1/claims/EVM/:token/pension-candidates`                      | finalized BSC share-unit/depositor behavior discovery           |
 | GET    | `/api/v1/claims/EVM/:token/pension-candidates/reports/latest`       | latest provider-free immutable behavior report replay           |
 | GET    | `/api/v1/claims/EVM/:token/pension-candidates/reports/:id`          | exact content-addressed behavior report replay                  |
@@ -109,8 +111,12 @@ Entity, or performs a transaction.
 
 `POST /api/v1/claims/declarations/parse` accepts an EVM `chainId`, chain-bound ERC-20 `assetId`, the
 original public statement, an optional source URI, and an optional exact ISO 8601 audit window with
-timezone. The server records the text as `ANALYST_OBSERVATION` Evidence and returns deterministic
-drafts for supported tax, treasury, burn, liquidity, pension and dividend roles.
+timezone. The server retains the exact submitted text in a content-addressed
+`claim-source-document-snapshot-v1`, records it as `ANALYST_OBSERVATION` Evidence, derives one
+terminal Evidence node, and returns deterministic drafts for supported tax, treasury, burn,
+liquidity, pension and dividend roles. The response includes document/field/source/chain coverage,
+freshness, source set, parser model and extraction confidence. Extraction confidence describes
+deterministic parsing mechanics only; it is not claim-truth confidence.
 
 Percentages are represented as exact basis points. Pension wording such as `100w` or `100万` is a
 human token count and is not converted to atomic units until verified token decimals are available.
@@ -118,6 +124,14 @@ Missing wallet addresses, exact dates or allocation values remain typed Unknown;
 a year and timezone produces a warning. Every draft has `requiresHumanReview: true`. This endpoint
 does not assert that a declaration is true, perform chain verification, promote a draft to an audit
 rule, or initiate any transaction.
+
+With PostgreSQL configured, the report is stored under immutable content address `cdr_...` by
+migration `027_claim_declaration_reports`. The exact route accepts that report ID. The latest route
+requires `assetId` and optionally accepts `documentHash`; both replay PostgreSQL without contacting
+a chain provider. Without durable storage, parsing still returns the report for the current process
+but `durableReport` is `Unknown(STORAGE_UNCONFIGURED)` and replay routes return 503. Source
+independence and chain-verification coverage remain `Unknown(NOT_QUERIED)` until separate Evidence
+is captured; they are never coerced to zero.
 
 ### ERC-20 burn candidate discovery
 

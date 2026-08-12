@@ -468,6 +468,33 @@ state and handler-neutral dispatch. Temporal Schedule/Workflow wiring, JetStream
 concrete continuous multi-chain handlers remain open; FFT is not embedded in any schedule or
 default parameter.
 
+## Durable public declaration capture
+
+The generic declaration compiler preserves the exact submitted text as a content-addressed source
+document, creates direct source and terminal Evidence, and optionally persists immutable
+`claim-declaration-report-v1` records through migration `027_claim_declaration_reports`.
+
+```powershell
+npx vitest run packages/claim-audit/src/declaration.test.ts
+npx vitest run packages/storage/src/claim-declaration-reports.test.ts
+npx vitest run tests/integration/claim-declaration-reports-postgres.test.ts
+```
+
+The PostgreSQL test is opt-in through `TEST_POSTGRES_URL`. It verifies that Evidence must exist
+first, closes and reopens the repository, compares exact/latest replay, and proves database
+update/delete rejection. Public API reads are provider-free:
+
+```text
+POST /api/v1/claims/declarations/parse
+GET /api/v1/claims/declarations/reports/latest?assetId=eip155:56:erc20:0x...&documentHash=...
+GET /api/v1/claims/declarations/reports/cdr_...
+```
+
+The parser currently normalizes EVM ERC-20 declaration subjects. General agent/NLP adapters,
+non-EVM declaration normalization, independent source capture and Expected-versus-Actual chain
+verification remain separate work. Named assets such as FFT belong in acceptance fixtures, not
+parser defaults.
+
 ## Generic Action Semantics
 
 `@zerotrace/action-semantics` is the chain-neutral boundary between raw ledger observations and

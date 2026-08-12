@@ -397,12 +397,21 @@ Evidence nodes so the decision can be replayed and updated without rewriting cha
 ### Claim verification
 
 Public statements enter through a separate declaration compiler before they can become audit rules.
-The compiler stores the submitted text as `ANALYST_OBSERVATION` Evidence and emits deterministic,
-versioned human-review drafts for tax receiver, community fund, buyback/burn, buyback/liquidity,
-pension-vault and dividend roles. A percentage becomes exact basis points; `100w`/`100万` is retained
-as 1,000,000 human token units rather than guessed atomic units. Missing addresses and exact
-timezone-qualified windows remain typed Unknown. Every draft requires human review, and neither a
-draft nor its promotional wording is a chain fact or terminal-action observation.
+The compiler stores the exact submitted text as a content-addressed source-document Snapshot plus
+`ANALYST_OBSERVATION` Evidence and emits deterministic, versioned human-review drafts for tax
+receiver, community fund, buyback/burn, buyback/liquidity, pension-vault and dividend roles. A
+percentage becomes exact basis points; `100w`/`100万` is retained as 1,000,000 human token units
+rather than guessed atomic units. Missing addresses and exact timezone-qualified windows remain
+typed Unknown. Every draft requires human review, and neither a draft nor its promotional wording
+is a chain fact or terminal-action observation.
+
+`claim-declaration-report-v1` closes each compilation with direct terminal Evidence and exact
+document/field/source/chain coverage, freshness, source set, model version and extraction
+confidence. Migration `027_claim_declaration_reports` stores immutable content-addressed `cdr_...`
+records, checks their direct source-to-terminal Evidence edge and rejects update/delete. Exact and
+latest reads are provider-free. Document capture can be complete while source independence and
+chain verification remain `Unknown(NOT_QUERIED)`; parser confidence never substitutes for claim
+truth, source authenticity or actual-action confidence.
 
 Declaration compilation, durable capture scheduling and action semantics are reusable Claim and
 ingestion capabilities. They are not an asset-specific product stage. Named cases such as FFT are
@@ -698,14 +707,14 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Entity hypotheses/timelines/investigation graphs, Flap history, EVM Claim/pension-entry Scenario Reports, and Solana control/transaction reports wired; other repositories pending |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                                                                                                                                       |
-| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                                                                            |
-| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE derivative projection wired for bounded exact-Snapshot Entity investigation graphs; PostgreSQL remains authoritative                                                                                                                       |
-| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                                                                           |
-| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Generic PostgreSQL-backed schedule/run/lease truth and a handler-neutral cycle coordinator are wired; Temporal schedule/workflow and NATS JetStream adapters remain pending                                                                                    |
+| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                              |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Entity hypotheses/timelines/investigation graphs, Flap history, EVM Claim/declaration/pension-entry Scenario Reports, and Solana control/transaction reports wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                                                                                                                                                   |
+| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                                                                                        |
+| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE derivative projection wired for bounded exact-Snapshot Entity investigation graphs; PostgreSQL remains authoritative                                                                                                                                   |
+| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                                                                                       |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Generic PostgreSQL-backed schedule/run/lease truth and a handler-neutral cycle coordinator are wired; Temporal schedule/workflow and NATS JetStream adapters remain pending                                                                                                |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, ingestion-run,
 and semantic-scan-run tables include append-only or monotonic guards. Semantic checkpoints bind an

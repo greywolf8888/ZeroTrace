@@ -205,6 +205,8 @@ Expected invariants:
 - configured PostgreSQL failure returns readiness HTTP 503 and never silently changes to memory;
 - missing or unhealthy Flap projection/head or Claim Report migrations `008`/`010`/`011` return
   readiness HTTP 503 when PostgreSQL is configured;
+- missing declaration-report migration `027` returns readiness HTTP 503 when PostgreSQL is
+  configured, and the parsing response cannot claim durable replay;
 - missing investigation-graph migrations `020` or `021` returns readiness HTTP 503 when PostgreSQL
   is configured; optional AGE status is reported independently under `graphProjection` and does
   not replace PostgreSQL authority;
@@ -331,6 +333,8 @@ docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/025_action_semantics_reports.sql
 docker compose exec -T postgres psql -U zerotrace -d zerotrace \
   < infra/postgres/init/026_action_semantics_v2.sql
+docker compose exec -T postgres psql -U zerotrace -d zerotrace \
+  < infra/postgres/init/027_claim_declaration_reports.sql
 ```
 
 PowerShell equivalent:
@@ -384,11 +388,14 @@ Get-Content -Raw infra/postgres/init/025_action_semantics_reports.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
 Get-Content -Raw infra/postgres/init/026_action_semantics_v2.sql |
   docker compose exec -T postgres psql -U zerotrace -d zerotrace
+Get-Content -Raw infra/postgres/init/027_claim_declaration_reports.sql |
+  docker compose exec -T postgres psql -U zerotrace -d zerotrace
 ```
 
 Then confirm `dataQuality.storage.status` and top-level `storage.status` are `UP`, and that
 `label-intelligence` reports `IMPLEMENTED_DURABLE_OBSERVATION_SNAPSHOT` and `action-semantics`
-reports `IMPLEMENTED_DURABLE_PROVIDER_FREE_REPLAY` in `/api/v1/capabilities`;
+reports `IMPLEMENTED_DURABLE_PROVIDER_FREE_REPLAY`, while `claim-declaration-replay` reports
+`IMPLEMENTED_DURABLE_SOURCE_DOCUMENT_REPLAY`, in `/api/v1/capabilities`;
 missing report migrations surface explicit repository-specific `*_NOT_INITIALIZED` errors. Never
 delete a persistent volume as a migration strategy.
 

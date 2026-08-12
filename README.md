@@ -154,8 +154,9 @@ The current foundation includes:
 - immutable, content-addressed EVM Claim Reports with strict same-Snapshot and Evidence-graph
   validation, plus provider-free latest/exact API and desktop/mobile UI replay;
 - a deterministic public-statement compiler that turns tax, treasury, burn, liquidity, pension and
-  dividend language into human-review drafts backed by Analyst Evidence; missing wallets, dates and
-  action proof remain Unknown and declarations never become chain facts;
+  dividend language into human-review drafts backed by an exact content-addressed source-document
+  Snapshot plus source/terminal Evidence; immutable `cdr_...` reports support provider-free
+  exact/latest replay, while source independence and chain verification remain Unknown until run;
 - a chain-neutral Action Semantics engine plus immutable PostgreSQL report authority that classifies
   proved transfers, swaps, mint/burn, liquidity, LP custody, distribution and contract-call
   primitives, replays them by canonical EVM/Bitcoin/Solana transaction ID or content address, and
