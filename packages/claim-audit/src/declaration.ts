@@ -1,6 +1,7 @@
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import {
   ClaimDeclarationParseResultSchema,
+  ClaimSourceDocumentSnapshotSchema,
   ClaimWindowSchema,
   knownValue,
   unknownValue,
@@ -12,7 +13,10 @@ import {
   type KnowledgeValue,
 } from '@zerotrace/schemas';
 
-export const CLAIM_DECLARATION_PARSER_VERSION = 'claim-declaration-parser-v1.0.0';
+export const CLAIM_DECLARATION_PARSER_VERSION = 'claim-declaration-parser-v2.0.0';
+const CLAIM_DECLARATION_REPORT_ID_SCHEMA = 'zerotrace-claim-declaration-report-v1';
+const CLAIM_SOURCE_CONTENT_HASH_SCHEMA = 'zerotrace-claim-source-content-v1';
+const CLAIM_SOURCE_DOCUMENT_HASH_SCHEMA = 'zerotrace-claim-source-document-snapshot-v1';
 
 const EVM_ADDRESS = /0x[0-9a-fA-F]{40}/g;
 
@@ -77,6 +81,147 @@ function unique(values: readonly string[]): string[] {
   return [...new Set(values)];
 }
 
+function canonical(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
+}
+
+export function claimDeclarationReportId(resultHash: string): string {
+  if (!/^[0-9a-f]{64}$/.test(resultHash)) {
+    throw new RangeError('Claim declaration result hash must be canonical SHA-256 hexadecimal.');
+  }
+  return `cdr_${hashPayload({ schema: CLAIM_DECLARATION_REPORT_ID_SCHEMA, resultHash }).slice(0, 24)}`;
+}
+
+function sourceDocumentSnapshot(options: {
+  content: string;
+  source: string;
+  sourceUri?: string | undefined;
+  capturedAt: string;
+}) {
+  const contentHash = hashPayload({
+    schema: CLAIM_SOURCE_CONTENT_HASH_SCHEMA,
+    encoding: 'UTF-8',
+    content: options.content,
+  });
+  const identity = {
+    schema: CLAIM_SOURCE_DOCUMENT_HASH_SCHEMA,
+    contentHash,
+    source: options.source,
+    sourceUri: options.sourceUri ?? null,
+    capturedAt: options.capturedAt,
+  };
+  const documentHash = hashPayload(identity);
+  return ClaimSourceDocumentSnapshotSchema.parse({
+    schemaVersion: 'claim-source-document-snapshot-v1',
+    id: `csd_${documentHash.slice(0, 24)}`,
+    documentHash,
+    contentHash,
+    content: options.content,
+    source: options.source,
+    ...(options.sourceUri === undefined ? {} : { sourceUri: options.sourceUri }),
+    capturedAt: options.capturedAt,
+    offsetEncoding: 'UTF16_CODE_UNITS',
+  });
+}
+
+function knownDraftFieldCounts(drafts: readonly ClaimDeclarationDraft[]): {
+  known: number;
+  total: number;
+} {
+  let known = 0;
+  let total = 0;
+  const count = (value: { state: string }) => {
+    total += 1;
+    if (value.state === 'known') known += 1;
+  };
+  for (const draft of drafts) {
+    known += 3; // asset, role and expected action are exact deterministic fields.
+    total += 3;
+    count(draft.sourceAddress);
+    count(draft.destinationAddress);
+    count(draft.window);
+    if (
+      ['TAX_RECEIVER', 'COMMUNITY_FUND', 'BUYBACK_BURN', 'BUYBACK_LIQUIDITY'].includes(draft.role)
+    ) {
+      count(draft.expectedShareBps);
+    }
+    if (draft.role === 'PENSION_VAULT') {
+      count(draft.shareUnitTokens);
+      count(draft.noExit);
+    }
+    if (draft.role === 'DIVIDEND_DISTRIBUTOR') count(draft.cadenceSeconds);
+  }
+  return { known, total };
+}
+
+function reportCore(report: ClaimDeclarationParseResult) {
+  return {
+    schemaVersion: report.schemaVersion,
+    parserVersion: report.parserVersion,
+    documentHash: report.documentHash,
+    sourceSnapshot: report.sourceSnapshot,
+    assetId: report.assetId,
+    drafts: report.drafts,
+    unmatchedAddresses: report.unmatchedAddresses,
+    warnings: report.warnings,
+    coverage: report.coverage,
+    freshness: report.freshness,
+    sourceSet: report.sourceSet,
+    modelVersion: report.modelVersion,
+    extractionConfidence: report.extractionConfidence,
+  };
+}
+
+export function calculateClaimDeclarationResultHash(report: ClaimDeclarationParseResult): string {
+  return hashPayload(reportCore(ClaimDeclarationParseResultSchema.parse(report)));
+}
+
+export function expectedClaimDeclarationTerminalEvidence(reportInput: ClaimDeclarationParseResult) {
+  const report = ClaimDeclarationParseResultSchema.parse(reportInput);
+  return createEvidence({
+    ledger: report.evidence.ledger,
+    chainId: report.evidence.chainId,
+    kind: 'DERIVED_FEATURE',
+    source: `zerotrace:${report.modelVersion}`,
+    locator: `claim-declaration-report:${report.id}:${report.resultHash}`,
+    payload: {
+      reportId: report.id,
+      resultHash: report.resultHash,
+      documentHash: report.documentHash,
+      draftIds: report.drafts.map((draft) => draft.id),
+      chainVerification: 'NOT_QUERIED',
+    },
+    observedAt: report.freshness,
+    summary:
+      'Public wording compiled into human-review drafts; no declaration was promoted to a chain fact.',
+    sourceEvidenceIds: [report.evidence.id],
+  });
+}
+
+export function validateClaimDeclarationReport(
+  reportInput: ClaimDeclarationParseResult,
+): ClaimDeclarationParseResult {
+  const report = ClaimDeclarationParseResultSchema.parse(reportInput);
+  const expectedSnapshot = sourceDocumentSnapshot({
+    content: report.sourceSnapshot.content,
+    source: report.sourceSnapshot.source,
+    ...(report.sourceSnapshot.sourceUri === undefined
+      ? {}
+      : { sourceUri: report.sourceSnapshot.sourceUri }),
+    capturedAt: report.sourceSnapshot.capturedAt,
+  });
+  const expectedTerminal = expectedClaimDeclarationTerminalEvidence(report);
+  if (
+    hashPayload(expectedSnapshot) !== hashPayload(report.sourceSnapshot) ||
+    claimDeclarationReportId(report.resultHash) !== report.id ||
+    calculateClaimDeclarationResultHash(report) !== report.resultHash ||
+    hashPayload(expectedTerminal) !== hashPayload(report.terminalEvidence)
+  ) {
+    throw new Error('Claim declaration report identity or terminal Evidence is not canonical.');
+  }
+  return report;
+}
+
 function normalizeAddress(value: string): string {
   return value.toLowerCase();
 }
@@ -130,9 +275,10 @@ function scaledInteger(value: string, multiplier: bigint): string | null {
 }
 
 function pensionShareUnit(text: string): KnowledgeValue<string> {
+  const prose = text.replace(EVM_ADDRESS, ' ');
   const match =
     /(\d+(?:\.\d+)?)\s*(万|[wW])?\s*(?:枚|个|币|tokens?)?[^\n。；;]{0,24}(?:为|=|作为)?\s*1\s*股/i.exec(
-      text,
+      prose,
     );
   if (match === null) {
     return unknownValue('INSUFFICIENT_DATA', 'No explicit pension share-unit quantity was found.');
@@ -221,17 +367,25 @@ export function parseEvmClaimDeclaration(
     );
   }
   if (options.source.trim().length === 0) throw new Error('Claim declaration source is required.');
+  const observedAt = new Date(options.observedAt).toISOString();
+  const source = options.source.trim();
   const window = auditWindow(options.auditWindow);
-  const documentHash = hashPayload({ text, chainId: options.chainId, assetId: options.assetId });
+  const snapshot = sourceDocumentSnapshot({
+    content: text,
+    source,
+    ...(options.sourceUri === undefined ? {} : { sourceUri: options.sourceUri }),
+    capturedAt: observedAt,
+  });
+  const documentHash = snapshot.documentHash;
   const evidence = createEvidence({
     ledger: 'EVM',
     chainId: options.chainId,
     kind: 'ANALYST_OBSERVATION',
-    source: options.source,
+    source,
     locator: `claim-declaration:${documentHash}`,
     ...(options.sourceUri === undefined ? {} : { sourceUri: options.sourceUri }),
     payload: { text, assetId: options.assetId },
-    observedAt: options.observedAt,
+    observedAt,
     summary:
       'Off-chain claim declaration captured for deterministic parsing; it is not a chain fact.',
   });
@@ -389,14 +543,72 @@ export function parseEvmClaimDeclaration(
       warnings.push(`${seed.definition.role} contains multiple percentage candidates.`);
     }
   }
-  const result = {
+  const canonicalDrafts = [...drafts].sort((left, right) => left.id.localeCompare(right.id));
+  const fieldCounts = knownDraftFieldCounts(canonicalDrafts);
+  const coverage = {
+    documentCapture: 1,
+    fieldExtraction:
+      fieldCounts.total === 0
+        ? unknownValue('NOT_APPLICABLE', 'No supported declaration field was extracted.')
+        : knownValue(fieldCounts.known / fieldCounts.total),
+    sourceIndependence: unknownValue(
+      'NOT_QUERIED',
+      'The submitted public wording has not been reconciled with an independent publication.',
+    ),
+    chainVerification: unknownValue(
+      'NOT_QUERIED',
+      'Declaration extraction does not query or verify chain behavior.',
+    ),
+  };
+  const core = {
+    schemaVersion: 'claim-declaration-report-v1' as const,
     parserVersion: CLAIM_DECLARATION_PARSER_VERSION,
     documentHash,
+    sourceSnapshot: snapshot,
     assetId: options.assetId,
-    evidence,
-    drafts,
-    unmatchedAddresses: allAddresses.filter((address) => !assignedAddresses.has(address)),
-    warnings: unique(warnings),
+    drafts: canonicalDrafts,
+    unmatchedAddresses: canonical(
+      allAddresses.filter((address) => !assignedAddresses.has(address)),
+    ),
+    warnings: canonical(warnings),
+    coverage,
+    freshness: snapshot.capturedAt,
+    sourceSet: [source],
+    modelVersion: CLAIM_DECLARATION_PARSER_VERSION,
+    extractionConfidence:
+      canonicalDrafts.length === 0
+        ? unknownValue('INSUFFICIENT_DATA', 'No supported declaration was extracted.')
+        : knownValue(1),
   };
-  return ClaimDeclarationParseResultSchema.parse(result);
+  const resultHash = hashPayload(core);
+  const id = claimDeclarationReportId(resultHash);
+  const terminalEvidence = createEvidence({
+    ledger: 'EVM',
+    chainId: options.chainId,
+    kind: 'DERIVED_FEATURE',
+    source: `zerotrace:${CLAIM_DECLARATION_PARSER_VERSION}`,
+    locator: `claim-declaration-report:${id}:${resultHash}`,
+    payload: {
+      reportId: id,
+      resultHash,
+      documentHash,
+      draftIds: canonicalDrafts.map((draft) => draft.id),
+      chainVerification: 'NOT_QUERIED',
+    },
+    observedAt: snapshot.capturedAt,
+    summary:
+      'Public wording compiled into human-review drafts; no declaration was promoted to a chain fact.',
+    sourceEvidenceIds: [evidence.id],
+  });
+  return validateClaimDeclarationReport(
+    ClaimDeclarationParseResultSchema.parse({
+      ...core,
+      id,
+      resultHash,
+      evidence,
+      terminalEvidence,
+      terminalEvidenceId: terminalEvidence.id,
+      evidenceIds: canonical([evidence.id, terminalEvidence.id]),
+    }),
+  );
 }

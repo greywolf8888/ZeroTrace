@@ -145,6 +145,36 @@ services:
         condition: service_healthy
     networks: [zerotrace]
 
+  claim-actions-capture-worker:
+    profiles: [semantic]
+    build:
+      context: .
+      target: semantic-worker
+    restart: unless-stopped
+    environment:
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
+      SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
+      SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
+      SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
+      REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
+      PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
+      PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
+      PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
+      CLAIM_CAPTURE_WORKER_OWNER: ${CLAIM_CAPTURE_WORKER_OWNER:-compose-claim-actions-capture}
+      CLAIM_CAPTURE_WORKER_POLL_INTERVAL_MS: ${CLAIM_CAPTURE_WORKER_POLL_INTERVAL_MS:-5000}
+      CLAIM_CAPTURE_WORKER_LEASE_SECONDS: ${CLAIM_CAPTURE_WORKER_LEASE_SECONDS:-300}
+      CLAIM_CAPTURE_WORKER_BATCH_SIZE: ${CLAIM_CAPTURE_WORKER_BATCH_SIZE:-10}
+      CLAIM_CAPTURE_WORKER_ONCE: ${CLAIM_CAPTURE_WORKER_ONCE:-false}
+    entrypoint: ['node', 'services/semantic-worker/dist/src/claim-action-capture-cli.js']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [zerotrace]
+
   flap-origin-worker:
     profiles: [semantic]
     build:

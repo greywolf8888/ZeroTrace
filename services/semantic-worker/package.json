@@ -14,6 +14,8 @@
     "dev:supply:scan": "tsx --tsconfig ../../tsconfig.base.json src/supply-continuity-cli.ts",
     "dev:actions:capture": "tsx --tsconfig ../../tsconfig.base.json src/action-capture-cli.ts",
     "dev:actions:schedule": "tsx --tsconfig ../../tsconfig.base.json src/action-schedule-cli.ts",
+    "dev:claims:actions:capture": "tsx --tsconfig ../../tsconfig.base.json src/claim-action-capture-cli.ts",
+    "dev:claims:actions:schedule": "tsx --tsconfig ../../tsconfig.base.json src/claim-action-schedule-cli.ts",
     "start": "node dist/src/cli.js",
     "start:history": "node dist/src/history-cli.js",
     "start:lifetime": "node dist/src/lifetime-cli.js",
@@ -21,12 +23,15 @@
     "start:burn:promote": "node dist/src/burn-promotion-cli.js",
     "start:supply:scan": "node dist/src/supply-continuity-cli.js",
     "start:actions:capture": "node dist/src/action-capture-cli.js",
-    "start:actions:schedule": "node dist/src/action-schedule-cli.js"
+    "start:actions:schedule": "node dist/src/action-schedule-cli.js",
+    "start:claims:actions:capture": "node dist/src/claim-action-capture-cli.js",
+    "start:claims:actions:schedule": "node dist/src/claim-action-schedule-cli.js"
   },
   "dependencies": {
     "@zerotrace/action-semantics": "*",
     "@zerotrace/capture-scheduler": "*",
     "@zerotrace/chain-adapters": "*",
+    "@zerotrace/claim-audit": "*",
     "@zerotrace/data-quality": "*",
     "@zerotrace/evidence": "*",
     "@zerotrace/platform-adapters": "*",

@@ -3431,8 +3431,23 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
-        parserVersion: 'claim-declaration-parser-v1.0.0',
+        schemaVersion: 'claim-declaration-report-v1',
+        id: 'cdr_999999999999999999999999',
+        resultHash: '8'.repeat(64),
+        parserVersion: 'claim-declaration-parser-v2.0.0',
         documentHash: '9'.repeat(64),
+        sourceSnapshot: {
+          schemaVersion: 'claim-source-document-snapshot-v1',
+          id: 'csd_999999999999999999999999',
+          documentHash: '9'.repeat(64),
+          contentHash: '7'.repeat(64),
+          content:
+            '税费接收总钱包（100%）\n0x8231Bb4E2891e85E79f28f0816EDE7AeAab06af1\n' +
+            '社区建设基金（20%）\n0x412DFD5Ac528C05ab78cd005385bC51759e29e46',
+          source: 'api:user-submitted-claim-declaration',
+          capturedAt: '2026-08-10T15:00:00.000Z',
+          offsetEncoding: 'UTF16_CODE_UNITS',
+        },
         assetId: `eip155:56:erc20:${bscTokenAddress}`,
         evidence: {
           id: 'ev_9876543210abcdef98765432',
@@ -3445,6 +3460,19 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
           observedAt: '2026-08-10T15:00:00.000Z',
           summary: 'Off-chain claim declaration; it is not a chain fact.',
         },
+        terminalEvidence: {
+          id: 'ev_111122223333444455556666',
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          kind: 'DERIVED_FEATURE',
+          source: 'zerotrace:claim-declaration-parser-v2.0.0',
+          locator: `claim-declaration-report:cdr_999999999999999999999999:${'8'.repeat(64)}`,
+          payloadHash: '6'.repeat(64),
+          observedAt: '2026-08-10T15:00:00.000Z',
+          summary: 'Declaration compilation terminal Evidence.',
+        },
+        terminalEvidenceId: 'ev_111122223333444455556666',
+        evidenceIds: ['ev_111122223333444455556666', 'ev_9876543210abcdef98765432'],
         drafts: [
           {
             id: 'cld_1234567890abcdef12345678',
@@ -3479,6 +3507,103 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
         ],
         unmatchedAddresses: [],
         warnings: [],
+        coverage: {
+          documentCapture: 1,
+          fieldExtraction: { state: 'known', value: 1 },
+          sourceIndependence: { state: 'unknown', reason: 'NOT_QUERIED' },
+          chainVerification: { state: 'unknown', reason: 'NOT_QUERIED' },
+        },
+        freshness: '2026-08-10T15:00:00.000Z',
+        sourceSet: ['api:user-submitted-claim-declaration'],
+        modelVersion: 'claim-declaration-parser-v2.0.0',
+        extractionConfidence: { state: 'known', value: 1 },
+        durableReport: {
+          state: 'known',
+          value: {
+            id: 'cdr_999999999999999999999999',
+            resultHash: '8'.repeat(64),
+            createdAt: '2026-08-10T15:00:01.000Z',
+          },
+        },
+      }),
+    });
+  });
+
+  await page.route('**/api/v1/claims/rules/review', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        schemaVersion: 'claim-rule-review-report-v1',
+        id: 'crr_1234567890abcdef12345678',
+        resultHash: '1'.repeat(64),
+        declarationReportId: 'cdr_999999999999999999999999',
+        declarationResultHash: '8'.repeat(64),
+        documentHash: '9'.repeat(64),
+        draftId: 'cld_1234567890abcdef12345678',
+        assetId: `eip155:56:erc20:${bscTokenAddress}`,
+        reviewerLabel: 'local analyst session',
+        reviewedAt: '2026-08-10T15:01:00.000Z',
+        rule: {
+          id: 'clr_1234567890abcdef12345678',
+          assetId: `eip155:56:erc20:${bscTokenAddress}`,
+          sourceAddress: '0x8231bb4e2891e85e79f28f0816ede7aeaab06af1',
+          destinationAddress: '0x412dfd5ac528c05ab78cd005385bc51759e29e46',
+          role: 'COMMUNITY_FUND',
+          expectedAction: 'DISTRIBUTE',
+          expectedShareBps: '2000',
+          window: {
+            from: '2026-08-02T00:00:00.000Z',
+            to: '2026-08-10T00:00:00.000Z',
+          },
+          claimEvidenceIds: [
+            'ev_111122223333444455556666',
+            'ev_777788889999000011112222',
+            'ev_9876543210abcdef98765432',
+          ],
+        },
+        fieldOrigins: {
+          assetId: 'DECLARATION_CONFIRMED',
+          sourceAddress: 'DECLARATION_CONFIRMED',
+          destinationAddress: 'DECLARATION_CONFIRMED',
+          role: 'DECLARATION_CONFIRMED',
+          expectedAction: 'DECLARATION_CONFIRMED',
+          expectedShareBps: 'DECLARATION_CONFIRMED',
+          window: 'DECLARATION_CONFIRMED',
+          shareUnit: null,
+          noExit: null,
+          cadenceSeconds: null,
+        },
+        tokenDecimals: { state: 'unknown', reason: 'NOT_QUERIED' },
+        reviewEvidenceId: 'ev_777788889999000011112222',
+        terminalEvidenceId: 'ev_333344445555666677778888',
+        evidenceIds: [
+          'ev_111122223333444455556666',
+          'ev_333344445555666677778888',
+          'ev_777788889999000011112222',
+          'ev_9876543210abcdef98765432',
+        ],
+        evidence: [],
+        coverage: {
+          sourceDocument: 1,
+          humanReview: 1,
+          fieldCompleteness: 1,
+          chainVerification: { state: 'unknown', reason: 'NOT_QUERIED' },
+        },
+        claimTruth: { state: 'unknown', reason: 'NOT_QUERIED' },
+        reviewerAuthority: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+        freshness: '2026-08-10T15:01:00.000Z',
+        sourceSet: ['api:user-submitted-claim-declaration', 'api:user-submitted-claim-review'],
+        modelVersion: 'claim-rule-review-v1.0.0',
+        confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+        requiresChainVerification: true,
+        durableReport: {
+          state: 'known',
+          value: {
+            id: 'crr_1234567890abcdef12345678',
+            resultHash: '1'.repeat(64),
+            createdAt: '2026-08-10T15:01:01.000Z',
+          },
+        },
       }),
     });
   });
@@ -3513,6 +3638,15 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
   await expect(declarationPanel).toContainText('Ready For Review');
   await expect(declarationPanel).toContainText('Human review required');
   await expect(declarationPanel).toContainText('ev_9876543210abcdef98765432');
+  await expect(declarationPanel).toContainText('csd_999999999999999999999999');
+  await expect(declarationPanel).toContainText('Not Queried');
+  await expect(declarationPanel).toContainText('cdr_999999999999999999999999');
+  await declarationPanel.getByRole('button', { name: 'Save reviewed Expected rule' }).click();
+  await expect(declarationPanel).toContainText('Immutable Expected rule');
+  await expect(declarationPanel).toContainText('clr_1234567890abcdef12345678');
+  await expect(declarationPanel).toContainText('Review saved');
+  await expect(declarationPanel).toContainText('ev_777788889999000011112222');
+  await expect(declarationPanel).toContainText('ev_333344445555666677778888');
   const reconciliationPanel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: 'Independent market and RV reconciliation' }),
   });
@@ -3585,8 +3719,21 @@ test('compiles a public pension statement as a human-review draft without invent
     await route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
-        parserVersion: 'claim-declaration-parser-v1.0.0',
+        schemaVersion: 'claim-declaration-report-v1',
+        id: 'cdr_bbbbbbbbbbbbbbbbbbbbbbbb',
+        resultHash: 'd'.repeat(64),
+        parserVersion: 'claim-declaration-parser-v2.0.0',
         documentHash: 'b'.repeat(64),
+        sourceSnapshot: {
+          schemaVersion: 'claim-source-document-snapshot-v1',
+          id: 'csd_bbbbbbbbbbbbbbbbbbbbbbbb',
+          documentHash: 'b'.repeat(64),
+          contentHash: 'e'.repeat(64),
+          content: '养老钱包打入100w币为1股，不可退出，每周分红，8月2号开始。',
+          source: 'api:user-submitted-claim-declaration',
+          capturedAt: '2026-08-10T15:00:00.000Z',
+          offsetEncoding: 'UTF16_CODE_UNITS',
+        },
         assetId: `eip155:56:erc20:${bscTokenAddress}`,
         evidence: {
           id: 'ev_abcdefabcdefabcdefabcdef',
@@ -3599,6 +3746,19 @@ test('compiles a public pension statement as a human-review draft without invent
           observedAt: '2026-08-10T15:00:00.000Z',
           summary: 'Off-chain claim declaration; it is not a chain fact.',
         },
+        terminalEvidence: {
+          id: 'ev_bbbbbbbbbbbbbbbbbbbbbbbb',
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          kind: 'DERIVED_FEATURE',
+          source: 'zerotrace:claim-declaration-parser-v2.0.0',
+          locator: `claim-declaration-report:cdr_bbbbbbbbbbbbbbbbbbbbbbbb:${'d'.repeat(64)}`,
+          payloadHash: 'f'.repeat(64),
+          observedAt: '2026-08-10T15:00:00.000Z',
+          summary: 'Declaration compilation terminal Evidence.',
+        },
+        terminalEvidenceId: 'ev_bbbbbbbbbbbbbbbbbbbbbbbb',
+        evidenceIds: ['ev_abcdefabcdefabcdefabcdef', 'ev_bbbbbbbbbbbbbbbbbbbbbbbb'],
         drafts: [
           {
             id: 'cld_abcdefabcdefabcdefabcdef',
@@ -3623,6 +3783,17 @@ test('compiles a public pension statement as a human-review draft without invent
         warnings: [
           'A month/day fragment was not converted into an audit boundary without an explicit year and timezone.',
         ],
+        coverage: {
+          documentCapture: 1,
+          fieldExtraction: { state: 'known', value: 0.6 },
+          sourceIndependence: { state: 'unknown', reason: 'NOT_QUERIED' },
+          chainVerification: { state: 'unknown', reason: 'NOT_QUERIED' },
+        },
+        freshness: '2026-08-10T15:00:00.000Z',
+        sourceSet: ['api:user-submitted-claim-declaration'],
+        modelVersion: 'claim-declaration-parser-v2.0.0',
+        extractionConfidence: { state: 'known', value: 1 },
+        durableReport: { state: 'unknown', reason: 'STORAGE_UNCONFIGURED' },
       }),
     });
   });
@@ -3644,6 +3815,9 @@ test('compiles a public pension statement as a human-review draft without invent
   await expect(page.getByText('1000000', { exact: true })).toBeVisible();
   await expect(page.getByText('Incomplete', { exact: true })).toBeVisible();
   await expect(page.getByText('Insufficient Data').first()).toBeVisible();
+  await expect(declarationPanel.getByText('Not Queried').first()).toBeVisible();
+  await expect(declarationPanel.getByText('Storage Unconfigured')).toBeVisible();
+  await expect(declarationPanel).toContainText('ev_bbbbbbbbbbbbbbbbbbbbbbbb');
   await expect(page.getByText('Human review required', { exact: true })).toBeVisible();
   await expect(
     page.getByText(/month\/day fragment was not converted into an audit boundary/i),

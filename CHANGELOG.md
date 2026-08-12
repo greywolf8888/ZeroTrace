@@ -8,6 +8,13 @@ All notable changes to ZeroTrace will be documented here. The project follows
 
 ### Added
 
+- Added durable analyst review promotion from declaration drafts to immutable Expected Claim rules,
+  including field-origin tracking, finalized ERC-20 decimals Evidence, migration `028`, exact/latest
+  API replay and an editable UI that keeps claim truth and chain confidence Unknown.
+
+- exact content-addressed source-document capture for generic EVM public declarations, direct
+  source/terminal Evidence, Unknown-safe extraction/source/chain coverage, immutable PostgreSQL
+  migration `027`, provider-free exact/latest API replay and visible UI durability semantics;
 - production `raw-ledger-action-adapter-v0.1.0` compilation of exact finalized EVM transaction
   logs/traces/state diffs, Bitcoin inputs/outputs and Solana instruction/balance records into
   chain-neutral Action Semantics, with strict one-artifact Evidence/Snapshot correlation;

@@ -15,6 +15,7 @@
     "@clickhouse/client": "1.23.1",
     "@zerotrace/action-semantics": "*",
     "@zerotrace/capture-scheduler": "*",
+    "@zerotrace/claim-audit": "*",
     "@zerotrace/data-quality": "*",
     "@zerotrace/evidence": "*",
     "@zerotrace/schemas": "*",

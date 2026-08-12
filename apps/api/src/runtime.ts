@@ -27,7 +27,10 @@ import {
   ClickHouseRawFactRepository,
   PostgresActionSemanticsReportRepository,
   PostgresCaptureScheduleRepository,
+  PostgresClaimDeclarationReportRepository,
+  PostgresClaimRuleReviewReportRepository,
   PostgresClaimReportRepository,
+  PostgresClaimVerificationReportRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaTransactionReportRepository,
@@ -72,6 +75,9 @@ export interface AppRuntime {
   flapHistoryProjection?: PostgresFlapHistoryProjectionRepository;
   flapLifetimeHeads?: PostgresFlapLifetimeHeadRepository;
   claimReports?: PostgresClaimReportRepository;
+  claimDeclarationReports?: PostgresClaimDeclarationReportRepository;
+  claimRuleReviewReports?: PostgresClaimRuleReviewReportRepository;
+  claimVerificationReports?: PostgresClaimVerificationReportRepository;
   controlSurfaces?: PostgresEvmControlSurfaceRepository;
   solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
   solanaTransactionReports?: PostgresSolanaTransactionReportRepository;
@@ -502,6 +508,33 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const claimDeclarationReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresClaimDeclarationReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const claimRuleReviewReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresClaimRuleReviewReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const claimVerificationReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresClaimVerificationReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const controlSurfaces =
     config.postgresUrl === undefined
       ? undefined
@@ -651,6 +684,9 @@ export function createRuntime(config: AppConfig): AppRuntime {
       flapHistoryProjection?.close(),
       flapLifetimeHeads?.close(),
       claimReports?.close(),
+      claimDeclarationReports?.close(),
+      claimRuleReviewReports?.close(),
+      claimVerificationReports?.close(),
       controlSurfaces?.close(),
       solanaControlSurfaces?.close(),
       solanaTransactionReports?.close(),
@@ -692,6 +728,9 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(flapHistoryProjection === undefined ? {} : { flapHistoryProjection }),
     ...(flapLifetimeHeads === undefined ? {} : { flapLifetimeHeads }),
     ...(claimReports === undefined ? {} : { claimReports }),
+    ...(claimDeclarationReports === undefined ? {} : { claimDeclarationReports }),
+    ...(claimRuleReviewReports === undefined ? {} : { claimRuleReviewReports }),
+    ...(claimVerificationReports === undefined ? {} : { claimVerificationReports }),
     ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
     ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
     ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),

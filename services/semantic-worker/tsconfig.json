@@ -14,6 +14,7 @@
     { "path": "../../packages/action-semantics" },
     { "path": "../../packages/capture-scheduler" },
     { "path": "../../packages/chain-adapters" },
+    { "path": "../../packages/claim-audit" },
     { "path": "../../packages/platform-adapters" }
   ]
 }

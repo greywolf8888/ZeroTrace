@@ -2244,3 +2244,48 @@ passed [CI run 31548486491](https://github.com/greywolf8888/ZeroTrace/actions/ru
 [CodeQL run 31548486484](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548486484).
 Main-commit coverage was 82.38% statements, 76.60% branches, 93.24% functions and 83.49% lines.
 The implementation branch was deleted, and no tag or release was created.
+
+PR #19 recorded that correction and acceptance without changing runtime scope, then squash-merged
+to protected `main` as `055daf9`. The exact merge commit passed [CI run
+31548976151](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548976151) and [CodeQL run
+31548976164](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548976164). No tag or release
+was created.
+
+## Replayable public declaration reports: 2026-08-12
+
+The existing generic statement compiler was extended rather than duplicated. It now retains the
+exact submitted text in `claim-source-document-snapshot-v1`, creates one direct source
+`ANALYST_OBSERVATION` and one terminal `DERIVED_FEATURE` Evidence node, and returns document/field/
+source/chain coverage, freshness, source set, parser version and extraction confidence. Chain
+verification and source independence remain `Unknown(NOT_QUERIED)`; parser confidence is explicitly
+not claim-truth confidence. Named FFT values remain outside the compiler.
+
+Migration `027_claim_declaration_reports` and its repository persist immutable content-addressed
+`cdr_...` records only after both Evidence nodes and their exact direct edge exist. Reads re-parse
+and re-hash embedded source documents, report identity and terminal Evidence. Exact and latest API
+routes read PostgreSQL without providers, while an unconfigured parse response reports
+`Unknown(STORAGE_UNCONFIGURED)`. The Claim Audit UI displays source Snapshot, exact captured text,
+coverage, terminal Evidence and durability.
+
+The first PR #20 Quality run correctly failed 1 of 682 tests while E2E, CodeQL and all production
+container targets passed. The new repository health was `DOWN`: the PL/pgSQL parser rejected an
+unparenthesized `IS DISTINCT FROM CASE` expression in migration `027`; `restart: unless-stopped`
+then restarted the partially initialized database, making older suites pass without the new table.
+The expression was made unambiguous and reproduced against a fresh PostgreSQL 17.10 volume.
+
+After the fix, automatic empty-volume initialization applied migrations `001-027`. The dedicated
+real-PostgreSQL test passed Evidence-first insertion, idempotency, close/reopen, byte-equivalent
+exact/latest replay and update/delete rejection. The complete PostgreSQL integration suite passed
+109 tests with only three disabled ClickHouse/MinIO cases; a second clean three-store run passed all
+682/682 coverage tests at 82.44% statements, 76.66% branches, 93.29% functions and 83.55% lines.
+The isolated `zt-claim-decl-debug` and `zt-claim-decl-full` containers, networks and volumes were
+removed after validation.
+
+Corrected PR #20 head `b4035be` then passed [CI run
+31551315141](https://github.com/greywolf8888/ZeroTrace/actions/runs/31551315141): migrations
+`001-027`, all 682/682 tests, 82.44% statements, 76.66% branches, 93.29% functions, 83.55% lines,
+all 36 Chromium desktop/mobile flows, dependency/license/SBOM gates and all six production
+container targets. [CodeQL run
+31551315173](https://github.com/greywolf8888/ZeroTrace/actions/runs/31551315173) independently passed
+JavaScript/TypeScript analysis. This accepts the declaration-report slice; it does not complete
+independent-source capture, chain verification, non-EVM declarations or terminal Claim scope.

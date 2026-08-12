@@ -154,8 +154,13 @@ The current foundation includes:
 - immutable, content-addressed EVM Claim Reports with strict same-Snapshot and Evidence-graph
   validation, plus provider-free latest/exact API and desktop/mobile UI replay;
 - a deterministic public-statement compiler that turns tax, treasury, burn, liquidity, pension and
-  dividend language into human-review drafts backed by Analyst Evidence; missing wallets, dates and
-  action proof remain Unknown and declarations never become chain facts;
+  dividend language into human-review drafts backed by an exact content-addressed source-document
+  Snapshot plus source/terminal Evidence; immutable `cdr_...` reports support provider-free
+  exact/latest replay, while source independence and chain verification remain Unknown until run;
+- an editable, immutable declaration-review layer that records every confirmed field and analyst
+  override, observes ERC-20 decimals from finalized contract state when atomic-unit conversion is
+  required, and emits reusable Expected Claim rules plus `crr_...` provider-free replay without
+  turning human review into claim truth, reviewer authority, chain confidence, or a transaction;
 - a chain-neutral Action Semantics engine plus immutable PostgreSQL report authority that classifies
   proved transfers, swaps, mint/burn, liquidity, LP custody, distribution and contract-call
   primitives, replays them by canonical EVM/Bitcoin/Solana transaction ID or content address, and
@@ -323,6 +328,27 @@ Solana instructions/logs/native balances/token balances/rewards as applicable. E
 `MATERIALIZED`, `NOT_QUERIED`, or `NOT_APPLICABLE`; only materialized tables receive numeric counts.
 The worker accepts bounded finalized ranges only, claims no protocol decoding, and has no signing or
 broadcast interface.
+
+For a reviewed EVM Claim rule, run the dedicated BSC capture worker after creating a durable rule
+review. It leases only `CLAIM_ACTIONS` schedules, reads finalized BSC state through RPC and finalized
+ERC-20 logs through SQD, and writes a terminal verification report. Action semantics, claim
+authenticity, custody history and source independence stay Unknown when those proofs were not
+captured; no missing action is converted to zero:
+
+```bash
+npm run claims:actions:schedule -- \
+  --review-report crr_<id> --from <first-block> --to <terminal-block>
+npm run claims:actions:capture -- --once
+```
+
+Compose users can run the same worker with `docker compose --profile semantic run --rm
+claim-actions-capture-worker`; it shares the initialized PostgreSQL and provider allow-list with the
+other read-only semantic workers.
+
+Verification replay is provider-free through `GET /api/v1/claims/verification/reports/latest?ruleId=...`
+or `GET /api/v1/claims/verification/reports/<cvr-id>`. Configure `POSTGRES_URL`, a finalized BSC
+RPC URL (`EVM_BSC_RPC_URLS`), and `SQD_PORTAL_URL`; the worker never accepts a private key or sends a
+transaction.
 
 After ingesting a `ledger-records` range, schedule one exact transaction and run the durable generic
 Action Semantics worker. Replace the dataset, transaction and position with values from the ingested

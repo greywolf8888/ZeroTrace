@@ -1401,14 +1401,115 @@ export interface ClaimDeclarationDraft {
   claimEvidenceIds: string[];
 }
 
+export interface ClaimSourceDocumentSnapshot {
+  schemaVersion: 'claim-source-document-snapshot-v1';
+  id: string;
+  documentHash: string;
+  contentHash: string;
+  content: string;
+  source: string;
+  sourceUri?: string;
+  capturedAt: string;
+  offsetEncoding: 'UTF16_CODE_UNITS';
+}
+
+export interface ClaimDeclarationCoverage {
+  documentCapture: number;
+  fieldExtraction: KnowledgeValue<number>;
+  sourceIndependence: KnowledgeValue<number>;
+  chainVerification: KnowledgeValue<number>;
+}
+
 export interface ClaimDeclarationParseResponse {
+  schemaVersion: 'claim-declaration-report-v1';
+  id: string;
+  resultHash: string;
   parserVersion: string;
   documentHash: string;
+  sourceSnapshot: ClaimSourceDocumentSnapshot;
   assetId: string;
   evidence: EvidenceRecord;
+  terminalEvidence: EvidenceRecord;
+  terminalEvidenceId: string;
+  evidenceIds: string[];
   drafts: ClaimDeclarationDraft[];
   unmatchedAddresses: string[];
   warnings: string[];
+  coverage: ClaimDeclarationCoverage;
+  freshness: string;
+  sourceSet: string[];
+  modelVersion: string;
+  extractionConfidence: KnowledgeValue<number>;
+  durableReport: KnowledgeValue<{
+    id: string;
+    resultHash: string;
+    createdAt: string;
+  }>;
+}
+
+export interface ReviewedClaimRuleValues {
+  sourceAddress: string;
+  destinationAddress: string;
+  role: string;
+  expectedAction: string;
+  expectedShareBps?: string;
+  window: { from: string; to: string };
+  shareUnit?: string;
+  noExit?: boolean;
+  cadenceSeconds?: string;
+}
+
+export interface ClaimRuleReviewResponse {
+  schemaVersion: 'claim-rule-review-report-v1';
+  id: string;
+  resultHash: string;
+  declarationReportId: string;
+  declarationResultHash: string;
+  documentHash: string;
+  draftId: string;
+  assetId: string;
+  reviewerLabel: string;
+  reviewedAt: string;
+  rule: ReviewedClaimRuleValues & { id: string; assetId: string; claimEvidenceIds: string[] };
+  fieldOrigins: Record<string, 'DECLARATION_CONFIRMED' | 'ANALYST_OVERRIDE' | null>;
+  tokenDecimals: KnowledgeValue<number>;
+  reviewEvidenceId: string;
+  terminalEvidenceId: string;
+  evidenceIds: string[];
+  evidence: EvidenceRecord[];
+  coverage: {
+    sourceDocument: 1;
+    humanReview: 1;
+    fieldCompleteness: 1;
+    chainVerification: KnowledgeValue<number>;
+  };
+  claimTruth: KnowledgeValue<boolean>;
+  reviewerAuthority: KnowledgeValue<boolean>;
+  freshness: string;
+  sourceSet: string[];
+  modelVersion: string;
+  confidence: KnowledgeValue<number>;
+  requiresChainVerification: true;
+  durableReport: KnowledgeValue<{ id: string; resultHash: string; createdAt: string }>;
+}
+
+export interface Erc20DecimalsObservationResponse {
+  assetId: string;
+  decimals: KnowledgeValue<number>;
+  snapshot: {
+    ledger: 'EVM';
+    chainId: string;
+    blockNumber: string;
+    blockHash: string;
+    finality: 'latest' | 'safe' | 'finalized';
+    capturedAt: string;
+  };
+  evidence: EvidenceRecord;
+  coverage: { metadataField: 1; sourceIndependence: KnowledgeValue<number> };
+  freshness: string;
+  sourceSet: string[];
+  modelVersion: string;
+  confidence: KnowledgeValue<number>;
 }
 
 export interface EvmClaimBurnConservationResponse {
@@ -2161,6 +2262,30 @@ export const api = {
         ...(auditWindow === undefined ? {} : { auditWindow }),
       }),
     }),
+  reviewClaimRule: (
+    declarationReportId: string,
+    draftId: string,
+    reviewerLabel: string,
+    rule: ReviewedClaimRuleValues,
+    tokenDecimals?: number,
+    tokenDecimalsEvidenceId?: string,
+  ) =>
+    requestJson<ClaimRuleReviewResponse>('/api/v1/claims/rules/review', {
+      method: 'POST',
+      body: JSON.stringify({
+        declarationReportId,
+        draftId,
+        reviewerLabel,
+        rule,
+        ...(tokenDecimals === undefined ? {} : { tokenDecimals }),
+        ...(tokenDecimalsEvidenceId === undefined ? {} : { tokenDecimalsEvidenceId }),
+      }),
+    }),
+  observeErc20Decimals: (token: string, chainId = 'eip155:56') =>
+    requestJson<Erc20DecimalsObservationResponse>(
+      `/api/v1/claims/EVM/${encodeURIComponent(token)}/metadata/decimals`,
+      { method: 'POST', body: JSON.stringify({ chainId }) },
+    ),
   inspectClaimBurnConservation: (token: string, blockNumber: string, chainId = 'eip155:56') =>
     requestJson<EvmClaimBurnConservationResponse>(
       `/api/v1/claims/EVM/${encodeURIComponent(token)}/burn-conservation`,

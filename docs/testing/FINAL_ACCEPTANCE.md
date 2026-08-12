@@ -4,6 +4,23 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 Named assets are reference cases for the shared architecture. They never define a standalone
 roadmap phase, shared runtime defaults, protocol constants or token-specific inference behavior.
 
+## Current local gate (2026-08-12)
+
+- [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
+      production license allowlist and `npm audit --audit-level=high` (0 vulnerabilities)
+- [x] `npm run test:unit`: 587/587 tests across 99 files
+- [x] `npm run test:integration`: 80 pass; 38 explicitly skipped because optional stores/providers
+      were not enabled in this host run (these are not counted as failures)
+- [x] `npm run test:e2e`: 36/36 Chromium desktop and Pixel 7 flows
+- [x] `docker compose config --quiet`, healthy default services and PostgreSQL readiness probe
+- [x] Post-push protected-branch CI/CodeQL for the current claim-capture head:
+      [CI run 31588959481](https://github.com/greywolf8888/ZeroTrace/actions/runs/31588959481)
+      and [CodeQL run 31588959519](https://github.com/greywolf8888/ZeroTrace/actions/runs/31588959519)
+
+This local gate does not promote ZeroTrace to production acceptance. Full-history ingestion,
+independent-provider reconciliation, effective authorization/history, intent attribution and other
+unchecked terminal-scope items below remain open.
+
 ## Foundation
 
 - [x] Repository installs reproducibly from lockfile
@@ -24,6 +41,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       outer/CPI paths and SOL/SPL balance effects while preserving missing recording as Unknown
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
 - [x] API, UI, infrastructure schema, health, and test foundation exist
+- [x] Declaration drafts can be edited into immutable Expected Claim rules with per-field origins,
+      finalized token-decimals Evidence, durable exact/latest replay, and explicit Unknown claim
+      truth/reviewer authority/chain confidence
 - [x] Clean Docker build, database initialization, and runtime smoke check recorded
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814357) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814380) pass on immutable main
@@ -106,6 +126,11 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31548486484) pass on exact
       protected-main multi-chain Action capture squash commit `6f209a5`, including the worker-kind
       lease isolation fix, 676 disposable-store tests, 36 browser flows and six container targets
+- [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31555237066) and
+      [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31555237043) pass on immutable
+      reviewed-ClaimRule report commit `78e6d01`, including 696 disposable-store tests, finalized
+      ERC-20 decimals Evidence, migrations through `028`, all 36 browser flows and six container
+      targets
 
 ## Evidence and data
 
@@ -211,6 +236,10 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       chronological actor/path integrity gates
 - [x] Deterministic public claim-declaration compiler with Analyst Evidence, exact basis points,
       pension share-unit/no-exit/cadence extraction, explicit Unknown fields and mandatory human review
+- [x] Exact source-document Snapshot, direct terminal Evidence, immutable `cdr_...` declaration
+      reports, provider-free exact/latest API replay and visible Unknown source/chain coverage
+- [ ] Independent declaration-source capture, source authenticity review, non-EVM normalization and
+      deterministic Expected-versus-Actual promotion from reviewed drafts
 - [x] Finalized range-bounded EVM ERC-20 Transfer Evidence and EOA/Safe/generic-contract custody
       observation, including one named FFT single-source window
 - [x] Deterministic Snapshot-time-bounded address-flow aggregation with observed lower bounds,

@@ -468,6 +468,64 @@ state and handler-neutral dispatch. Temporal Schedule/Workflow wiring, JetStream
 concrete continuous multi-chain handlers remain open; FFT is not embedded in any schedule or
 default parameter.
 
+## Durable public declaration capture
+
+The generic declaration compiler preserves the exact submitted text as a content-addressed source
+document, creates direct source and terminal Evidence, and optionally persists immutable
+`claim-declaration-report-v1` records through migration `027_claim_declaration_reports`.
+Reviewed drafts are stored separately as immutable `claim-rule-review-report-v1` records through
+migration `028_claim_rule_review_reports`; review does not mutate the source declaration and does
+not establish claim truth.
+
+```powershell
+npx vitest run packages/claim-audit/src/declaration.test.ts
+npx vitest run packages/storage/src/claim-declaration-reports.test.ts
+npx vitest run tests/integration/claim-declaration-reports-postgres.test.ts
+npx vitest run packages/claim-audit/src/review.test.ts
+npx vitest run packages/storage/src/claim-rule-review-reports.test.ts
+npx vitest run tests/integration/claim-rule-review-reports-postgres.test.ts
+```
+
+The PostgreSQL test is opt-in through `TEST_POSTGRES_URL`. It verifies that Evidence must exist
+first, closes and reopens the repository, compares exact/latest replay, and proves database
+update/delete rejection. Public API reads are provider-free:
+
+```text
+POST /api/v1/claims/declarations/parse
+GET /api/v1/claims/declarations/reports/latest?assetId=eip155:56:erc20:0x...&documentHash=...
+GET /api/v1/claims/declarations/reports/cdr_...
+```
+
+The parser currently normalizes EVM ERC-20 declaration subjects. General agent/NLP adapters,
+non-EVM declaration normalization, independent source capture and Expected-versus-Actual chain
+verification remain separate work. Named assets such as FFT belong in acceptance fixtures, not
+parser defaults.
+
+## Reviewed Claim Actions capture
+
+`buildClaimActionsSchedule()` binds a durable one-shot `CLAIM_ACTIONS` schedule to the exact reviewed
+rule ID, result hash, canonical EVM asset and block range. The production BSC worker is started with:
+
+```powershell
+npm run claims:actions:schedule -- --review-report crr_... --from 100000000 --to 100010000
+npm run claims:actions:capture -- --once
+```
+
+It requires `POSTGRES_URL`, one or more `EVM_BSC_RPC_URLS`, and the configured SQD portal. The handler
+requires finalized timestamped anchors at both range boundaries, captures source and destination
+address flows against one terminal Snapshot, persists the two address reports, and writes the
+terminal `claim-verification-observation-report-v1`. The current v0.1 report intentionally keeps
+Action Semantics, complete custody history, source independence, claim authenticity and the true
+allocation denominator Unknown; empty action arrays are not a claim that no action occurred.
+
+Provider-free reads:
+
+```text
+GET /api/v1/claims/verification/reports/latest?ruleId=clr_...
+GET /api/v1/claims/verification/reports/latest?assetId=eip155:56:erc20:0x...
+GET /api/v1/claims/verification/reports/cvr_...
+```
+
 ## Generic Action Semantics
 
 `@zerotrace/action-semantics` is the chain-neutral boundary between raw ledger observations and

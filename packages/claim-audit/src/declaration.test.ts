@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseEvmClaimDeclaration } from './declaration.js';
+import {
+  calculateClaimDeclarationResultHash,
+  expectedClaimDeclarationTerminalEvidence,
+  parseEvmClaimDeclaration,
+  validateClaimDeclarationReport,
+} from './declaration.js';
 
 const announcement = `
 FFT 社区税费分配公示（第1期）
@@ -47,6 +52,28 @@ describe('claim declaration parser', () => {
       source: 'user-supplied-announcement',
       chainId: 'eip155:56',
     });
+    expect(result).toMatchObject({
+      schemaVersion: 'claim-declaration-report-v1',
+      sourceSnapshot: {
+        schemaVersion: 'claim-source-document-snapshot-v1',
+        content: announcement.trim(),
+        source: 'user-supplied-announcement',
+        capturedAt: '2026-08-10T00:00:00.000Z',
+        offsetEncoding: 'UTF16_CODE_UNITS',
+      },
+      coverage: {
+        documentCapture: 1,
+        sourceIndependence: { state: 'unknown', reason: 'NOT_QUERIED' },
+        chainVerification: { state: 'unknown', reason: 'NOT_QUERIED' },
+      },
+      freshness: '2026-08-10T00:00:00.000Z',
+      sourceSet: ['user-supplied-announcement'],
+      extractionConfidence: { state: 'known', value: 1 },
+    });
+    expect(result.evidenceIds).toEqual([result.evidence.id, result.terminalEvidenceId].sort());
+    expect(result.terminalEvidence).toEqual(expectedClaimDeclarationTerminalEvidence(result));
+    expect(calculateClaimDeclarationResultHash(result)).toBe(result.resultHash);
+    expect(validateClaimDeclarationReport(result)).toEqual(result);
     expect(result.drafts).toHaveLength(6);
     expect(result.warnings).toEqual([]);
     expect(result.unmatchedAddresses).toEqual([]);
@@ -158,6 +185,20 @@ describe('claim declaration parser', () => {
     expect(result.drafts[0]?.expectedShareBps).not.toEqual({ state: 'known', value: '0' });
   });
 
+  it('never parses hexadecimal wallet digits as a pension share-unit quantity', () => {
+    const pensionAddress = `0x${'5'.repeat(40)}`;
+    const result = parseEvmClaimDeclaration({
+      ...options,
+      text: `养老钱包\n${pensionAddress}\n打入1000000币为1股进行加入不可退出。`,
+    });
+
+    expect(result.drafts[0]).toMatchObject({
+      destinationAddress: { state: 'known', value: pensionAddress },
+      shareUnitTokens: { state: 'known', value: '1000000' },
+      noExit: { state: 'known', value: true },
+    });
+  });
+
   it('rejects empty documents and cross-chain asset identities', () => {
     expect(() => parseEvmClaimDeclaration({ ...options, text: ' ' })).toThrow(
       'between 1 and 100000',
@@ -165,5 +206,38 @@ describe('claim declaration parser', () => {
     expect(() => parseEvmClaimDeclaration({ ...options, assetId: 'eip155:1:erc20:token' })).toThrow(
       'canonical ERC-20 asset',
     );
+  });
+
+  it('rejects mutated source Snapshots, result hashes, and terminal derivations', () => {
+    const report = parseEvmClaimDeclaration(options);
+    expect(() =>
+      validateClaimDeclarationReport({
+        ...report,
+        sourceSnapshot: { ...report.sourceSnapshot, content: `${report.sourceSnapshot.content}!` },
+      }),
+    ).toThrow(/identity|canonical/i);
+    expect(() => validateClaimDeclarationReport({ ...report, resultHash: '0'.repeat(64) })).toThrow(
+      /identity|canonical/i,
+    );
+    expect(() =>
+      validateClaimDeclarationReport({
+        ...report,
+        terminalEvidence: { ...report.terminalEvidence, summary: 'Mutated terminal.' },
+      }),
+    ).toThrow(/identity|canonical/i);
+  });
+
+  it('keeps identical captures deterministic and distinct capture times immutable', () => {
+    const first = parseEvmClaimDeclaration(options);
+    const replay = parseEvmClaimDeclaration(options);
+    const laterCapture = parseEvmClaimDeclaration({
+      ...options,
+      observedAt: '2026-08-10T00:00:01.000Z',
+    });
+
+    expect(replay).toEqual(first);
+    expect(laterCapture.sourceSnapshot.contentHash).toBe(first.sourceSnapshot.contentHash);
+    expect(laterCapture.documentHash).not.toBe(first.documentHash);
+    expect(laterCapture.id).not.toBe(first.id);
   });
 });

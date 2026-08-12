@@ -4627,16 +4627,211 @@ export const ClaimDeclarationDraftSchema = z.object({
 });
 export type ClaimDeclarationDraft = z.infer<typeof ClaimDeclarationDraftSchema>;
 
-export const ClaimDeclarationParseResultSchema = z.object({
-  parserVersion: z.string().min(1),
-  documentHash: Hash256Schema,
-  assetId: z.string().min(1),
-  evidence: EvidenceSchema,
-  drafts: z.array(ClaimDeclarationDraftSchema),
-  unmatchedAddresses: z.array(z.string().min(1)),
-  warnings: z.array(z.string().min(1)),
-});
+export const ClaimSourceDocumentSnapshotSchema = z
+  .object({
+    schemaVersion: z.literal('claim-source-document-snapshot-v1'),
+    id: z.string().regex(/^csd_[0-9a-f]{24}$/),
+    documentHash: Hash256Schema,
+    contentHash: Hash256Schema,
+    content: z.string().min(1).max(100_000),
+    source: z.string().trim().min(1).max(512),
+    sourceUri: z.url().max(2_048).optional(),
+    capturedAt: IsoDateTimeSchema,
+    offsetEncoding: z.literal('UTF16_CODE_UNITS'),
+  })
+  .strict();
+export type ClaimSourceDocumentSnapshot = z.infer<typeof ClaimSourceDocumentSnapshotSchema>;
+
+export const ClaimDeclarationCoverageSchema = z
+  .object({
+    documentCapture: CoverageRatioSchema,
+    fieldExtraction: knowledgeValueSchema(CoverageRatioSchema),
+    sourceIndependence: knowledgeValueSchema(CoverageRatioSchema),
+    chainVerification: knowledgeValueSchema(CoverageRatioSchema),
+  })
+  .strict();
+export type ClaimDeclarationCoverage = z.infer<typeof ClaimDeclarationCoverageSchema>;
+
+export const ClaimDeclarationParseResultSchema = z
+  .object({
+    schemaVersion: z.literal('claim-declaration-report-v1'),
+    id: z.string().regex(/^cdr_[0-9a-f]{24}$/),
+    resultHash: Hash256Schema,
+    parserVersion: z.string().min(1),
+    documentHash: Hash256Schema,
+    sourceSnapshot: ClaimSourceDocumentSnapshotSchema,
+    assetId: z.string().min(1),
+    evidence: EvidenceSchema,
+    terminalEvidence: EvidenceSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(2),
+    drafts: z.array(ClaimDeclarationDraftSchema),
+    unmatchedAddresses: z.array(z.string().min(1)),
+    warnings: z.array(z.string().min(1)),
+    coverage: ClaimDeclarationCoverageSchema,
+    freshness: IsoDateTimeSchema,
+    sourceSet: z.array(z.string().trim().min(1)).min(1),
+    modelVersion: z.string().trim().min(1),
+    extractionConfidence: knowledgeValueSchema(ConfidenceSchema),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const evidenceIds = [...new Set(value.evidenceIds)].sort();
+    const sourceSet = [...new Set(value.sourceSet)].sort();
+    const invalid =
+      value.documentHash !== value.sourceSnapshot.documentHash ||
+      value.evidence.source !== value.sourceSnapshot.source ||
+      value.evidence.locator !== `claim-declaration:${value.documentHash}` ||
+      value.evidence.observedAt !== value.sourceSnapshot.capturedAt ||
+      value.terminalEvidence.id !== value.terminalEvidenceId ||
+      value.freshness !== value.sourceSnapshot.capturedAt ||
+      value.modelVersion !== value.parserVersion ||
+      evidenceIds.length !== value.evidenceIds.length ||
+      evidenceIds.some((id, index) => id !== value.evidenceIds[index]) ||
+      !evidenceIds.includes(value.evidence.id) ||
+      !evidenceIds.includes(value.terminalEvidenceId) ||
+      sourceSet.length !== value.sourceSet.length ||
+      sourceSet.some((source, index) => source !== value.sourceSet[index]) ||
+      sourceSet.length !== 1 ||
+      sourceSet[0] !== value.evidence.source ||
+      value.coverage.documentCapture !== 1 ||
+      value.coverage.chainVerification.state === 'known';
+    if (invalid) {
+      context.addIssue({
+        code: 'custom',
+        path: ['resultHash'],
+        message:
+          'Claim declaration reports require one exact source-document Snapshot, canonical Evidence/source metadata, and Unknown chain verification.',
+      });
+    }
+  });
 export type ClaimDeclarationParseResult = z.infer<typeof ClaimDeclarationParseResultSchema>;
+
+export const ClaimRuleFieldOriginSchema = z.enum(['DECLARATION_CONFIRMED', 'ANALYST_OVERRIDE']);
+export type ClaimRuleFieldOrigin = z.infer<typeof ClaimRuleFieldOriginSchema>;
+
+export const ClaimRuleFieldOriginsSchema = z
+  .object({
+    assetId: z.literal('DECLARATION_CONFIRMED'),
+    sourceAddress: ClaimRuleFieldOriginSchema,
+    destinationAddress: ClaimRuleFieldOriginSchema,
+    role: ClaimRuleFieldOriginSchema,
+    expectedAction: ClaimRuleFieldOriginSchema,
+    expectedShareBps: ClaimRuleFieldOriginSchema.nullable(),
+    window: ClaimRuleFieldOriginSchema,
+    shareUnit: ClaimRuleFieldOriginSchema.nullable(),
+    noExit: ClaimRuleFieldOriginSchema.nullable(),
+    cadenceSeconds: ClaimRuleFieldOriginSchema.nullable(),
+  })
+  .strict();
+export type ClaimRuleFieldOrigins = z.infer<typeof ClaimRuleFieldOriginsSchema>;
+
+export const ClaimRuleReviewCoverageSchema = z
+  .object({
+    sourceDocument: z.literal(1),
+    humanReview: z.literal(1),
+    fieldCompleteness: z.literal(1),
+    chainVerification: knowledgeValueSchema(CoverageRatioSchema),
+  })
+  .strict();
+export type ClaimRuleReviewCoverage = z.infer<typeof ClaimRuleReviewCoverageSchema>;
+
+export const ClaimRuleReviewReportSchema = z
+  .object({
+    schemaVersion: z.literal('claim-rule-review-report-v1'),
+    id: z.string().regex(/^crr_[0-9a-f]{24}$/),
+    resultHash: Hash256Schema,
+    declarationReportId: z.string().regex(/^cdr_[0-9a-f]{24}$/),
+    declarationResultHash: Hash256Schema,
+    documentHash: Hash256Schema,
+    draftId: z.string().regex(/^cld_[0-9a-f]{24}$/),
+    assetId: z.string().min(1),
+    declarationDraft: ClaimDeclarationDraftSchema,
+    reviewerLabel: z.string().trim().min(1).max(256),
+    reviewedAt: IsoDateTimeSchema,
+    rule: ClaimRuleSchema.extend({
+      id: z.string().regex(/^clr_[0-9a-f]{24}$/),
+      claimEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(3),
+    }),
+    fieldOrigins: ClaimRuleFieldOriginsSchema,
+    tokenDecimals: knowledgeValueSchema(z.number().int().min(0).max(255)),
+    tokenDecimalsEvidenceId: z
+      .string()
+      .regex(/^ev_[0-9a-f]{24}$/)
+      .optional(),
+    reviewEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    declarationEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).length(2),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(4),
+    evidence: z.array(EvidenceSchema).min(4),
+    coverage: ClaimRuleReviewCoverageSchema,
+    claimTruth: knowledgeValueSchema(z.boolean()),
+    reviewerAuthority: knowledgeValueSchema(z.boolean()),
+    freshness: IsoDateTimeSchema,
+    sourceSet: z.array(z.string().trim().min(1)).min(2),
+    modelVersion: z.literal('claim-rule-review-v1.0.0'),
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    requiresChainVerification: z.literal(true),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const canonical = (items: readonly string[]) => [...new Set(items)].sort();
+    const evidenceIds = canonical(value.evidenceIds);
+    const embeddedEvidenceIds = canonical(value.evidence.map((item) => item.id));
+    const declarationEvidenceIds = canonical(value.declarationEvidenceIds);
+    const ruleEvidenceIds = canonical(value.rule.claimEvidenceIds);
+    const nonTerminalEvidenceIds = evidenceIds.filter((id) => id !== value.terminalEvidenceId);
+    const sourceSet = canonical(value.sourceSet);
+    const evidenceSourceSet = canonical(
+      value.evidence
+        .filter((item) => !['DERIVED_FEATURE', 'NEGATIVE_EVIDENCE'].includes(item.kind))
+        .map((item) => item.source),
+    );
+    const decimalsEvidenceValid =
+      value.tokenDecimals.state === 'known'
+        ? value.tokenDecimalsEvidenceId !== undefined &&
+          evidenceIds.includes(value.tokenDecimalsEvidenceId)
+        : value.tokenDecimalsEvidenceId === undefined;
+    const invalid =
+      value.assetId !== value.rule.assetId ||
+      value.assetId !== value.declarationDraft.assetId ||
+      value.draftId !== value.declarationDraft.id ||
+      value.freshness !== value.reviewedAt ||
+      value.claimTruth.state === 'known' ||
+      value.reviewerAuthority.state === 'known' ||
+      value.confidence.state === 'known' ||
+      value.coverage.chainVerification.state === 'known' ||
+      !decimalsEvidenceValid ||
+      evidenceIds.length !== value.evidenceIds.length ||
+      evidenceIds.some((id, index) => id !== value.evidenceIds[index]) ||
+      embeddedEvidenceIds.length !== evidenceIds.length ||
+      embeddedEvidenceIds.some((id, index) => id !== evidenceIds[index]) ||
+      declarationEvidenceIds.length !== value.declarationEvidenceIds.length ||
+      declarationEvidenceIds.some((id, index) => id !== value.declarationEvidenceIds[index]) ||
+      ruleEvidenceIds.length !== value.rule.claimEvidenceIds.length ||
+      ruleEvidenceIds.some((id, index) => id !== value.rule.claimEvidenceIds[index]) ||
+      !evidenceIds.includes(value.reviewEvidenceId) ||
+      !evidenceIds.includes(value.terminalEvidenceId) ||
+      !declarationEvidenceIds.every((id) => ruleEvidenceIds.includes(id)) ||
+      !value.declarationDraft.claimEvidenceIds.every((id) => declarationEvidenceIds.includes(id)) ||
+      !ruleEvidenceIds.includes(value.reviewEvidenceId) ||
+      ruleEvidenceIds.includes(value.terminalEvidenceId) ||
+      ruleEvidenceIds.length !== nonTerminalEvidenceIds.length ||
+      ruleEvidenceIds.some((id, index) => id !== nonTerminalEvidenceIds[index]) ||
+      sourceSet.length !== value.sourceSet.length ||
+      sourceSet.some((source, index) => source !== value.sourceSet[index]) ||
+      sourceSet.length !== evidenceSourceSet.length ||
+      sourceSet.some((source, index) => source !== evidenceSourceSet[index]);
+    if (invalid) {
+      context.addIssue({
+        code: 'custom',
+        path: ['resultHash'],
+        message:
+          'Claim rule reviews require canonical declaration/review Evidence, complete reviewed fields, and Unknown truth/authority/chain confidence.',
+      });
+    }
+  });
+export type ClaimRuleReviewReport = z.infer<typeof ClaimRuleReviewReportSchema>;
 
 export const ClaimTransferObservationSchema = z.object({
   id: z.string().min(1),
@@ -5612,22 +5807,49 @@ export const ClaimAddressFlowSummarySchema = z.object({
 });
 export type ClaimAddressFlowSummary = z.infer<typeof ClaimAddressFlowSummarySchema>;
 
-export const EvmClaimAddressObservationSchema = z.object({
-  tokenAddress: z.string().min(1),
-  address: z.string().min(1),
-  fromBlock: UnsignedQuantityStringSchema,
-  toBlock: UnsignedQuantityStringSchema,
-  window: ClaimWindowSchema,
-  custody: ClaimCustodyObservationSchema,
-  custodyMetadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
-    message: 'Claim custody observation requires a replayable chain Snapshot.',
-  }),
-  flow: ClaimAddressFlowSummarySchema,
-  terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
-  metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
-    message: 'EVM claim address observation requires a replayable chain Snapshot.',
-  }),
-});
+export const EvmClaimAddressObservationSchema = z
+  .object({
+    tokenAddress: z.string().min(1),
+    address: z.string().min(1),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    window: ClaimWindowSchema,
+    custody: ClaimCustodyObservationSchema,
+    custodyMetadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+      message: 'Claim custody observation requires a replayable chain Snapshot.',
+    }),
+    flow: ClaimAddressFlowSummarySchema,
+    // Older persisted v1.0 reports predate transfer replay. New production captures always include it.
+    transfers: z.array(EvmClaimTransferObservationSchema).optional(),
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    metadata: AnalysisMetadataSchema.refine((metadata) => metadata.snapshot !== null, {
+      message: 'EVM claim address observation requires a replayable chain Snapshot.',
+    }),
+  })
+  .superRefine((value, context) => {
+    if (value.transfers === undefined) return;
+    const address = value.address.toLowerCase();
+    const fromBlock = BigInt(value.fromBlock);
+    const toBlock = BigInt(value.toBlock);
+    const ids = value.transfers.map((transfer) => transfer.id);
+    const invalidTransfer = value.transfers.some((transfer) => {
+      const block = BigInt(transfer.blockNumber);
+      return (
+        block < fromBlock ||
+        block > toBlock ||
+        (transfer.from.toLowerCase() !== address && transfer.to.toLowerCase() !== address) ||
+        transfer.evidenceIds.some((id) => !value.metadata.evidenceIds.includes(id))
+      );
+    });
+    if (new Set(ids).size !== ids.length || invalidTransfer) {
+      context.addIssue({
+        code: 'custom',
+        path: ['transfers'],
+        message:
+          'Replayable Claim address transfers must be unique, address-scoped, range-bounded, and Evidence-linked.',
+      });
+    }
+  });
 export type EvmClaimAddressObservation = z.infer<typeof EvmClaimAddressObservationSchema>;
 
 export const ClaimCadenceAssessmentSchema = z.object({
@@ -5665,6 +5887,124 @@ export const ClaimAuditReportSchema = z.object({
 });
 export type ClaimAuditReport = z.infer<typeof ClaimAuditReportSchema>;
 
+export const ClaimVerificationObservationCoverageSchema = z
+  .object({
+    reviewedRule: z.literal(1),
+    addressFlow: z.literal(1),
+    custodyAtSnapshot: z.literal(1),
+    custodyHistory: knowledgeValueSchema(CoverageRatioSchema),
+    actionSemantics: knowledgeValueSchema(CoverageRatioSchema),
+    sourceIndependence: knowledgeValueSchema(CoverageRatioSchema),
+  })
+  .strict();
+
+export const ClaimVerificationObservationReportSchema = z
+  .object({
+    schemaVersion: z.literal('claim-verification-observation-report-v1'),
+    id: z.string().regex(/^cvr_[0-9a-f]{24}$/),
+    resultHash: Hash256Schema,
+    reviewReportId: z.string().regex(/^crr_[0-9a-f]{24}$/),
+    reviewResultHash: Hash256Schema,
+    reviewTerminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    ruleId: z.string().regex(/^clr_[0-9a-f]{24}$/),
+    assetId: z.string().min(1),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    sourceObservationReportId: z.string().regex(/^ecr_[0-9a-f]{24}$/),
+    destinationObservationReportId: z.string().regex(/^ecr_[0-9a-f]{24}$/),
+    sourceObservation: EvmClaimAddressObservationSchema,
+    destinationObservation: EvmClaimAddressObservationSchema,
+    observedBaseAmountLowerBound: UnsignedQuantityStringSchema,
+    baseAmount: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    actions: z.array(ClaimActionObservationSchema),
+    actionSemanticsReportIds: z.array(z.string().regex(/^asr_[0-9a-f]{24}$/)),
+    actionSemanticsTerminalEvidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+    audit: ClaimAuditReportSchema,
+    status: ClaimStatusSchema,
+    claimTruth: knowledgeValueSchema(z.boolean()),
+    coverage: ClaimVerificationObservationCoverageSchema,
+    terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    metadata: AnalysisMetadataSchema.extend({
+      modelVersion: z.literal('claim-verification-observation-v0.1.0'),
+    }).refine((metadata) => metadata.snapshot !== null, {
+      message: 'Claim verification observation requires a replayable chain Snapshot.',
+    }),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const source = value.sourceObservation;
+    const destination = value.destinationObservation;
+    const snapshot = value.metadata.snapshot;
+    const sourceSnapshot = source.metadata.snapshot;
+    const destinationSnapshot = destination.metadata.snapshot;
+    const auditSnapshot = value.audit.metadata.snapshot;
+    const evidenceIds = [...new Set(value.evidenceIds)].sort();
+    const actionReportIds = [...new Set(value.actionSemanticsReportIds)].sort();
+    const actionTerminalIds = [...new Set(value.actionSemanticsTerminalEvidenceIds)].sort();
+    const actionIds = [...new Set(value.actions.map((action) => action.id))].sort();
+    if (
+      snapshot === null ||
+      snapshot.ledger !== 'EVM' ||
+      sourceSnapshot === null ||
+      sourceSnapshot.ledger !== 'EVM' ||
+      destinationSnapshot === null ||
+      destinationSnapshot.ledger !== 'EVM' ||
+      auditSnapshot === null ||
+      auditSnapshot.ledger !== 'EVM'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata', 'snapshot'],
+        message: 'Claim verification observation v1 requires one EVM Snapshot.',
+      });
+      return;
+    }
+    const invalid =
+      value.status !== value.audit.status ||
+      value.claimTruth.state === 'known' ||
+      value.fromBlock !== source.fromBlock ||
+      value.fromBlock !== destination.fromBlock ||
+      value.toBlock !== source.toBlock ||
+      value.toBlock !== destination.toBlock ||
+      sourceSnapshot.blockHash.toLowerCase() !== snapshot.blockHash.toLowerCase() ||
+      destinationSnapshot.blockHash.toLowerCase() !== snapshot.blockHash.toLowerCase() ||
+      sourceSnapshot.blockNumber !== snapshot.blockNumber ||
+      destinationSnapshot.blockNumber !== snapshot.blockNumber ||
+      auditSnapshot.blockHash.toLowerCase() !== snapshot.blockHash.toLowerCase() ||
+      auditSnapshot.blockNumber !== snapshot.blockNumber ||
+      source.transfers === undefined ||
+      destination.transfers === undefined ||
+      evidenceIds.length !== value.evidenceIds.length ||
+      evidenceIds.some((id, index) => id !== value.evidenceIds[index]) ||
+      !evidenceIds.includes(value.terminalEvidenceId) ||
+      actionReportIds.length !== value.actionSemanticsReportIds.length ||
+      actionReportIds.some((id, index) => id !== value.actionSemanticsReportIds[index]) ||
+      actionTerminalIds.length !== value.actionSemanticsTerminalEvidenceIds.length ||
+      actionTerminalIds.some(
+        (id, index) => id !== value.actionSemanticsTerminalEvidenceIds[index],
+      ) ||
+      actionTerminalIds.length !== actionReportIds.length ||
+      actionIds.length !== value.actions.length ||
+      actionIds.some((id, index) => id !== value.actions[index]?.id) ||
+      value.actions.length !== 0 ||
+      value.actionSemanticsReportIds.length !== 0 ||
+      value.actionSemanticsTerminalEvidenceIds.length !== 0 ||
+      value.coverage.actionSemantics.state === 'known' ||
+      value.metadata.freshness !== snapshot.capturedAt;
+    if (invalid) {
+      context.addIssue({
+        code: 'custom',
+        path: ['metadata'],
+        message:
+          'Claim verification observations require canonical replay inputs, one chain Snapshot, Unknown authenticity, and complete Evidence identity.',
+      });
+    }
+  });
+export type ClaimVerificationObservationReport = z.infer<
+  typeof ClaimVerificationObservationReportSchema
+>;
+
 export const CaptureKindSchema = z.enum([
   'CHAIN_HEAD',
   'TRANSACTION',
@@ -5701,6 +6041,52 @@ export const ActionSemanticsTransactionCaptureParametersSchema = z
   .strict();
 export type ActionSemanticsTransactionCaptureParameters = z.infer<
   typeof ActionSemanticsTransactionCaptureParametersSchema
+>;
+
+export const EvmClaimActionsCaptureParametersSchema = z
+  .object({
+    schemaVersion: z.literal('evm-claim-actions-capture-v1'),
+    reviewReportId: z.string().regex(/^crr_[0-9a-f]{24}$/),
+    reviewResultHash: Hash256Schema,
+    ruleId: z.string().regex(/^clr_[0-9a-f]{24}$/),
+    assetId: z.string().regex(/^eip155:(?:0|[1-9]\d*):erc20:0x[0-9a-f]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    observerVersion: z.literal('evm-claim-address-observation-v1.0.0'),
+    limits: z
+      .object({
+        maxBlocksPerRequest: z.number().int().min(1).max(1_000_000),
+        maxRequests: z.number().int().min(1).max(10_000),
+        maxTransfers: z.number().int().min(1).max(1_000_000),
+        topCounterpartyLimit: z.number().int().min(1).max(100),
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (BigInt(value.toBlock) < BigInt(value.fromBlock)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Claim Actions capture range must not end before it begins.',
+      });
+    }
+    const requiredRequests =
+      ((BigInt(value.toBlock) - BigInt(value.fromBlock)) /
+        BigInt(value.limits.maxBlocksPerRequest) +
+        1n) *
+      2n;
+    if (requiredRequests > BigInt(value.limits.maxRequests)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['limits', 'maxRequests'],
+        message:
+          'Claim Actions request budget must cover both indexed address directions across the range.',
+      });
+    }
+  });
+export type EvmClaimActionsCaptureParameters = z.infer<
+  typeof EvmClaimActionsCaptureParametersSchema
 >;
 
 export const CaptureTriggerSchema = z.discriminatedUnion('type', [
