@@ -251,6 +251,102 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
     ).rejects.toMatchObject({ code: 'CAPTURE_SCHEDULER_LEASE_LOST' });
   });
 
+  it('accepts an exact earlier-block Evidence ancestor for a terminal range Snapshot', async () => {
+    const nonce = randomBytes(8).toString('hex');
+    await schedules.putSchedule(
+      defineCaptureSchedule({
+        captureKind: 'CLAIM_ACTIONS',
+        target: target(nonce),
+        parameters: { range: { from: '90', to: '100' } },
+        trigger: { type: 'ONCE', at: '2026-08-12T00:30:00.000Z' },
+        retryPolicy: {
+          maxAttempts: 1,
+          initialDelaySeconds: 5,
+          maximumDelaySeconds: 5,
+          backoffMultiplierBps: 10_000,
+        },
+        createdAt: '2026-08-12T00:30:00.000Z',
+      }),
+    );
+    const [run] = await schedules.claimDue({
+      owner: 'range-integration-worker',
+      captureKinds: ['CLAIM_ACTIONS'],
+      now: '2026-08-12T00:30:00.000Z',
+      leaseSeconds: 30,
+      limit: 1,
+    });
+    if (run === undefined || run.lease.state !== 'known') throw new Error('Expected range lease.');
+    const earlierSnapshot = {
+      ledger: 'EVM' as const,
+      chainId: 'eip155:56',
+      blockNumber: '90',
+      blockHash: `0x${nonce.padEnd(64, '1').slice(0, 64)}`,
+      parentBlockHash: `0x${nonce.padEnd(64, '2').slice(0, 64)}`,
+      finality: 'finalized' as const,
+      capturedAt: '2026-08-12T00:30:01.000Z',
+      providerVersions: { 'bsc-rpc': '1' },
+      adapterVersions: { claim: '1' },
+      configHash: nonce.padEnd(64, '3').slice(0, 64),
+      entityModelVersion: 'entity-v1',
+      labelSnapshot: 'labels-v1',
+    };
+    const terminalSnapshot = {
+      ...earlierSnapshot,
+      blockNumber: '100',
+      blockHash: `0x${nonce.padEnd(64, '4').slice(0, 64)}`,
+      parentBlockHash: `0x${nonce.padEnd(64, '5').slice(0, 64)}`,
+      capturedAt: '2026-08-12T00:30:02.000Z',
+      configHash: nonce.padEnd(64, '6').slice(0, 64),
+    };
+    const earlier = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'LOG',
+      source: 'sqd:bsc@integration',
+      locator: `capture-range:${nonce}:90`,
+      payload: { nonce, position: '90' },
+      observedAt: earlierSnapshot.capturedAt,
+      blockOrSlot: earlierSnapshot.blockNumber,
+      finality: 'finalized',
+      summary: 'Earlier finalized range source.',
+    });
+    const terminal = createEvidence({
+      ledger: 'EVM',
+      chainId: 'eip155:56',
+      kind: 'DERIVED_FEATURE',
+      source: 'zerotrace:capture-range-integration-v1',
+      locator: `capture-range:${nonce}:terminal`,
+      payload: { nonce, range: ['90', '100'] },
+      observedAt: terminalSnapshot.capturedAt,
+      blockOrSlot: terminalSnapshot.blockNumber,
+      finality: 'finalized',
+      summary: 'Terminal range result.',
+      sourceEvidenceIds: [earlier.id],
+    });
+    await evidence.put(earlier, [], earlierSnapshot);
+    await evidence.put(terminal, [earlier.id], terminalSnapshot);
+    const result: CaptureRunSuccess = {
+      resultRef: `range:${nonce}`,
+      snapshot: terminalSnapshot,
+      terminalEvidenceId: terminal.id,
+      evidenceIds: [earlier.id, terminal.id].sort(),
+      sourceSet: ['sqd:bsc@integration'],
+      modelVersion: 'capture-range-integration-v1',
+      coverage: 1,
+      freshness: terminalSnapshot.capturedAt,
+      confidence: 1,
+    };
+
+    await expect(
+      schedules.complete({
+        runId: run.id,
+        leaseToken: run.lease.value.token,
+        result,
+        completedAt: '2026-08-12T00:30:03.000Z',
+      }),
+    ).resolves.toMatchObject({ status: 'SUCCEEDED' });
+  });
+
   it('recovers an expired lease and terminates an exhausted one-shot without inventing a result', async () => {
     const nonce = randomBytes(8).toString('hex');
     const schedule = await schedules.putSchedule(
