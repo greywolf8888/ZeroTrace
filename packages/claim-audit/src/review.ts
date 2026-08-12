@@ -139,6 +139,8 @@ function validateDecimalsEvidence(
     evidence.ledger !== 'EVM' ||
     evidence.chainId !== chainId ||
     !['CONTRACT_STATE', 'RAW_RPC_RESPONSE'].includes(evidence.kind) ||
+    evidence.blockOrSlot === undefined ||
+    evidence.finality !== 'finalized' ||
     Date.parse(evidence.observedAt) > Date.parse(reviewedAt) ||
     evidence.locator !== `token-decimals:${assetId}` ||
     evidence.payloadHash !== hashPayload(decimalsEvidencePayload(assetId, tokenDecimals.value))

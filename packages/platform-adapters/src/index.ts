@@ -17,6 +17,7 @@ export * from './claim-evm-burn-promotion.js';
 export * from './claim-evm-supply-continuity.js';
 export * from './claim-evm-observation.js';
 export * from './claim-evm-pension-discovery.js';
+export * from './erc20-metadata.js';
 export * from './evm-control-rights.js';
 export * from './bitcoin-control-rights.js';
 export * from './bitcoin-transaction-entity.js';

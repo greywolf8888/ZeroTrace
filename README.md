@@ -157,6 +157,10 @@ The current foundation includes:
   dividend language into human-review drafts backed by an exact content-addressed source-document
   Snapshot plus source/terminal Evidence; immutable `cdr_...` reports support provider-free
   exact/latest replay, while source independence and chain verification remain Unknown until run;
+- an editable, immutable declaration-review layer that records every confirmed field and analyst
+  override, observes ERC-20 decimals from finalized contract state when atomic-unit conversion is
+  required, and emits reusable Expected Claim rules plus `crr_...` provider-free replay without
+  turning human review into claim truth, reviewer authority, chain confidence, or a transaction;
 - a chain-neutral Action Semantics engine plus immutable PostgreSQL report authority that classifies
   proved transfers, swaps, mint/burn, liquidity, LP custody, distribution and contract-call
   primitives, replays them by canonical EVM/Bitcoin/Solana transaction ID or content address, and

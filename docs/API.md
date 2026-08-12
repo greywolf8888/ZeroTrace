@@ -133,6 +133,24 @@ but `durableReport` is `Unknown(STORAGE_UNCONFIGURED)` and replay routes return 
 independence and chain-verification coverage remain `Unknown(NOT_QUERIED)` until separate Evidence
 is captured; they are never coerced to zero.
 
+`POST /api/v1/claims/rules/review` accepts the durable declaration report ID, one draft ID, a
+non-authoritative reviewer label, and the complete editable Expected-rule fields. A field exactly
+matching the declaration is recorded as `DECLARATION_CONFIRMED`; a filled or changed field is
+`ANALYST_OVERRIDE`. Known declaration fields cannot be silently dropped. The result is an immutable,
+content-addressed `claim-rule-review-report-v1` whose ClaimRule can feed the generic deterministic
+Expected-vs-Actual audit engine. `claimTruth`, `reviewerAuthority`, `coverage.chainVerification`, and
+`confidence` remain typed Unknown. Human review is not chain proof.
+
+Pension human-token share units require atomic conversion. Call
+`POST /api/v1/claims/EVM/:token/metadata/decimals` with `chainId` to observe `decimals()` at one
+finalized block hash and persist its Snapshot-bound `CONTRACT_STATE` Evidence. The review request
+then supplies both the returned integer and Evidence ID; the server verifies asset, chain, locator,
+payload hash, observation time and Evidence kind. The exact `GET /api/v1/claims/rules/reports/:id`
+and latest `GET /api/v1/claims/rules/reports/latest?assetId=...` routes replay PostgreSQL without a
+provider. Latest may be narrowed by the paired `declarationReportId` and `draftId` query values.
+Migration `028_claim_rule_review_reports` enforces the source-declaration foreign key, complete
+Evidence closure and append-only rows.
+
 ### ERC-20 burn candidate discovery
 
 `POST /api/v1/claims/EVM/:token/burn-candidates` accepts BSC `chainId=eip155:56`, ordered

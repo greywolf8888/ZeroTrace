@@ -4780,6 +4780,7 @@ export const ClaimRuleReviewReportSchema = z
     const embeddedEvidenceIds = canonical(value.evidence.map((item) => item.id));
     const declarationEvidenceIds = canonical(value.declarationEvidenceIds);
     const ruleEvidenceIds = canonical(value.rule.claimEvidenceIds);
+    const nonTerminalEvidenceIds = evidenceIds.filter((id) => id !== value.terminalEvidenceId);
     const sourceSet = canonical(value.sourceSet);
     const evidenceSourceSet = canonical(
       value.evidence
@@ -4815,6 +4816,8 @@ export const ClaimRuleReviewReportSchema = z
       !value.declarationDraft.claimEvidenceIds.every((id) => declarationEvidenceIds.includes(id)) ||
       !ruleEvidenceIds.includes(value.reviewEvidenceId) ||
       ruleEvidenceIds.includes(value.terminalEvidenceId) ||
+      ruleEvidenceIds.length !== nonTerminalEvidenceIds.length ||
+      ruleEvidenceIds.some((id, index) => id !== nonTerminalEvidenceIds[index]) ||
       sourceSet.length !== value.sourceSet.length ||
       sourceSet.some((source, index) => source !== value.sourceSet[index]) ||
       sourceSet.length !== evidenceSourceSet.length ||

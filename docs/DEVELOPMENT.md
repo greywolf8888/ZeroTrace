@@ -473,11 +473,17 @@ default parameter.
 The generic declaration compiler preserves the exact submitted text as a content-addressed source
 document, creates direct source and terminal Evidence, and optionally persists immutable
 `claim-declaration-report-v1` records through migration `027_claim_declaration_reports`.
+Reviewed drafts are stored separately as immutable `claim-rule-review-report-v1` records through
+migration `028_claim_rule_review_reports`; review does not mutate the source declaration and does
+not establish claim truth.
 
 ```powershell
 npx vitest run packages/claim-audit/src/declaration.test.ts
 npx vitest run packages/storage/src/claim-declaration-reports.test.ts
 npx vitest run tests/integration/claim-declaration-reports-postgres.test.ts
+npx vitest run packages/claim-audit/src/review.test.ts
+npx vitest run packages/storage/src/claim-rule-review-reports.test.ts
+npx vitest run tests/integration/claim-rule-review-reports-postgres.test.ts
 ```
 
 The PostgreSQL test is opt-in through `TEST_POSTGRES_URL`. It verifies that Evidence must exist

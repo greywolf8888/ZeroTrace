@@ -29,6 +29,7 @@ export * from './intelligence-search.js';
 export * from './label-intelligence-reports.js';
 export * from './capture-schedules.js';
 export * from './claim-declaration-reports.js';
+export * from './claim-rule-review-reports.js';
 export * from './action-semantics-reports.js';
 export * from './age-investigation-graph.js';
 

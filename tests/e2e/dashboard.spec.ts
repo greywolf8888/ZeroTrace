@@ -3529,6 +3529,85 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
     });
   });
 
+  await page.route('**/api/v1/claims/rules/review', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        schemaVersion: 'claim-rule-review-report-v1',
+        id: 'crr_1234567890abcdef12345678',
+        resultHash: '1'.repeat(64),
+        declarationReportId: 'cdr_999999999999999999999999',
+        declarationResultHash: '8'.repeat(64),
+        documentHash: '9'.repeat(64),
+        draftId: 'cld_1234567890abcdef12345678',
+        assetId: `eip155:56:erc20:${bscTokenAddress}`,
+        reviewerLabel: 'local analyst session',
+        reviewedAt: '2026-08-10T15:01:00.000Z',
+        rule: {
+          id: 'clr_1234567890abcdef12345678',
+          assetId: `eip155:56:erc20:${bscTokenAddress}`,
+          sourceAddress: '0x8231bb4e2891e85e79f28f0816ede7aeaab06af1',
+          destinationAddress: '0x412dfd5ac528c05ab78cd005385bc51759e29e46',
+          role: 'COMMUNITY_FUND',
+          expectedAction: 'DISTRIBUTE',
+          expectedShareBps: '2000',
+          window: {
+            from: '2026-08-02T00:00:00.000Z',
+            to: '2026-08-10T00:00:00.000Z',
+          },
+          claimEvidenceIds: [
+            'ev_111122223333444455556666',
+            'ev_777788889999000011112222',
+            'ev_9876543210abcdef98765432',
+          ],
+        },
+        fieldOrigins: {
+          assetId: 'DECLARATION_CONFIRMED',
+          sourceAddress: 'DECLARATION_CONFIRMED',
+          destinationAddress: 'DECLARATION_CONFIRMED',
+          role: 'DECLARATION_CONFIRMED',
+          expectedAction: 'DECLARATION_CONFIRMED',
+          expectedShareBps: 'DECLARATION_CONFIRMED',
+          window: 'DECLARATION_CONFIRMED',
+          shareUnit: null,
+          noExit: null,
+          cadenceSeconds: null,
+        },
+        tokenDecimals: { state: 'unknown', reason: 'NOT_QUERIED' },
+        reviewEvidenceId: 'ev_777788889999000011112222',
+        terminalEvidenceId: 'ev_333344445555666677778888',
+        evidenceIds: [
+          'ev_111122223333444455556666',
+          'ev_333344445555666677778888',
+          'ev_777788889999000011112222',
+          'ev_9876543210abcdef98765432',
+        ],
+        evidence: [],
+        coverage: {
+          sourceDocument: 1,
+          humanReview: 1,
+          fieldCompleteness: 1,
+          chainVerification: { state: 'unknown', reason: 'NOT_QUERIED' },
+        },
+        claimTruth: { state: 'unknown', reason: 'NOT_QUERIED' },
+        reviewerAuthority: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+        freshness: '2026-08-10T15:01:00.000Z',
+        sourceSet: ['api:user-submitted-claim-declaration', 'api:user-submitted-claim-review'],
+        modelVersion: 'claim-rule-review-v1.0.0',
+        confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+        requiresChainVerification: true,
+        durableReport: {
+          state: 'known',
+          value: {
+            id: 'crr_1234567890abcdef12345678',
+            resultHash: '1'.repeat(64),
+            createdAt: '2026-08-10T15:01:01.000Z',
+          },
+        },
+      }),
+    });
+  });
+
   await page.goto('/');
   await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
   await page.getByLabel('Network').selectOption('bsc');
@@ -3562,6 +3641,12 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
   await expect(declarationPanel).toContainText('csd_999999999999999999999999');
   await expect(declarationPanel).toContainText('Not Queried');
   await expect(declarationPanel).toContainText('cdr_999999999999999999999999');
+  await declarationPanel.getByRole('button', { name: 'Save reviewed Expected rule' }).click();
+  await expect(declarationPanel).toContainText('Immutable Expected rule');
+  await expect(declarationPanel).toContainText('clr_1234567890abcdef12345678');
+  await expect(declarationPanel).toContainText('Review saved');
+  await expect(declarationPanel).toContainText('ev_777788889999000011112222');
+  await expect(declarationPanel).toContainText('ev_333344445555666677778888');
   const reconciliationPanel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: 'Independent market and RV reconciliation' }),
   });

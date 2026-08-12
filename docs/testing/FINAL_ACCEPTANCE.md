@@ -24,6 +24,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       outer/CPI paths and SOL/SPL balance effects while preserving missing recording as Unknown
 - [x] Signing, broadcast, swap, and private-key paths are forbidden
 - [x] API, UI, infrastructure schema, health, and test foundation exist
+- [x] Declaration drafts can be edited into immutable Expected Claim rules with per-field origins,
+      finalized token-decimals Evidence, durable exact/latest replay, and explicit Unknown claim
+      truth/reviewer authority/chain confidence
 - [x] Clean Docker build, database initialization, and runtime smoke check recorded
 - [x] [CI](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814357) and
       [CodeQL](https://github.com/greywolf8888/ZeroTrace/actions/runs/31311814380) pass on immutable main

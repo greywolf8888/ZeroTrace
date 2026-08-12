@@ -192,6 +192,8 @@ describe('Claim declaration draft review', () => {
       locator: `token-decimals:${assetId}`,
       payload: { schema: 'zerotrace-token-decimals-v1', assetId, decimals: 18 },
       observedAt: '2026-08-10T00:00:30.000Z',
+      blockOrSlot: '100',
+      finality: 'finalized',
       summary: 'ERC-20 decimals observed from finalized contract state.',
     });
     expect(tokenDecimalsEvidence.payloadHash).toBe(

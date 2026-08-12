@@ -1673,6 +1673,51 @@ tbody tr:hover {
   padding: 14px 16px;
 }
 
+.claim-review-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.claim-review-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.claim-review-form input,
+.claim-review-form select {
+  min-width: 0;
+  height: 42px;
+  padding: 0 12px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+}
+
+.claim-review-form button,
+.claim-review-boundary {
+  grid-column: 1 / -1;
+}
+
+.claim-review-boundary {
+  padding: 10px 12px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, var(--border));
+  border-radius: 8px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.claim-review-result {
+  border-top: 1px solid var(--border);
+}
+
 .claim-draft-heading h4 {
   margin: 3px 0 0;
   font-size: 0.9rem;
@@ -2394,6 +2439,10 @@ footer a {
   .solana-report-provenance {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .claim-review-form {
+    grid-template-columns: 1fr;
   }
 
   .solana-report-status {

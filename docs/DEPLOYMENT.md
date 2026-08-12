@@ -207,6 +207,8 @@ Expected invariants:
   readiness HTTP 503 when PostgreSQL is configured;
 - missing declaration-report migration `027` returns readiness HTTP 503 when PostgreSQL is
   configured, and the parsing response cannot claim durable replay;
+- missing reviewed-rule migration `028` returns readiness HTTP 503 when PostgreSQL is configured,
+  and a human review cannot claim durable replay;
 - missing investigation-graph migrations `020` or `021` returns readiness HTTP 503 when PostgreSQL
   is configured; optional AGE status is reported independently under `graphProjection` and does
   not replace PostgreSQL authority;

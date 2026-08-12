@@ -28,6 +28,7 @@ import {
   PostgresActionSemanticsReportRepository,
   PostgresCaptureScheduleRepository,
   PostgresClaimDeclarationReportRepository,
+  PostgresClaimRuleReviewReportRepository,
   PostgresClaimReportRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
@@ -74,6 +75,7 @@ export interface AppRuntime {
   flapLifetimeHeads?: PostgresFlapLifetimeHeadRepository;
   claimReports?: PostgresClaimReportRepository;
   claimDeclarationReports?: PostgresClaimDeclarationReportRepository;
+  claimRuleReviewReports?: PostgresClaimRuleReviewReportRepository;
   controlSurfaces?: PostgresEvmControlSurfaceRepository;
   solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
   solanaTransactionReports?: PostgresSolanaTransactionReportRepository;
@@ -513,6 +515,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const claimRuleReviewReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresClaimRuleReviewReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const controlSurfaces =
     config.postgresUrl === undefined
       ? undefined
@@ -663,6 +674,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       flapLifetimeHeads?.close(),
       claimReports?.close(),
       claimDeclarationReports?.close(),
+      claimRuleReviewReports?.close(),
       controlSurfaces?.close(),
       solanaControlSurfaces?.close(),
       solanaTransactionReports?.close(),
@@ -705,6 +717,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(flapLifetimeHeads === undefined ? {} : { flapLifetimeHeads }),
     ...(claimReports === undefined ? {} : { claimReports }),
     ...(claimDeclarationReports === undefined ? {} : { claimDeclarationReports }),
+    ...(claimRuleReviewReports === undefined ? {} : { claimRuleReviewReports }),
     ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
     ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
     ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),

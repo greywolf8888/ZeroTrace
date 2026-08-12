@@ -583,6 +583,15 @@ The only allowed status vocabulary in this ledger is:
 - `POST /api/v1/claims/declarations/parse` and the responsive Claim Audit workspace expose the
   source document, durability, coverage, source/destination, allocation, pension/no-exit/cadence,
   warnings, readiness and both Evidence IDs without adding sample data to the production path;
+- reviewed drafts become immutable generic Expected Claim rules only after all required fields are
+  explicit; `DECLARATION_CONFIRMED` and `ANALYST_OVERRIDE` origins are retained per field, while
+  claim truth, reviewer authority, chain-verification coverage and confidence remain Unknown;
+- finalized ERC-20 `decimals()` observation produces Snapshot-bound `CONTRACT_STATE` Evidence before
+  human-token pension units may be converted to atomic units; malformed or ungrounded decimals fail
+  closed rather than becoming an implicit 18;
+- migration `028_claim_rule_review_reports` enforces the source-declaration foreign key, canonical
+  review/terminal Evidence closure and append-only `crr_...` reports. Exact/latest API replay and
+  the existing Claim Audit UI are wired without adding an asset-specific production path;
 - deterministic policy-shaped percentage allocation audits compare declared Expected amounts with
   observed and coverage-complete Actual amounts using integer arithmetic;
 - a versioned default policy treats up to `50` bps amount deviation as verified and up to `500` bps
@@ -1213,10 +1222,10 @@ correctness. Exact local smoke observations and limitations are in
 | CycloneDX SBOM                 | Pass                                             | npm dependency graph                                                                                                                                                                                                                                |
 | Compose model                  | Pass                                             | rendered default topology                                                                                                                                                                                                                           |
 | Docker image build/start       | Pass                                             | PR #20 built all production targets remotely; local PostgreSQL/ClickHouse/MinIO images and isolated services also started                                                                                                                           |
-| Database bootstrap             | Pass                                             | isolated empty PostgreSQL applied migrations 001-027 in order; declaration report health/restart/immutability and the complete PostgreSQL suite passed                                                                                              |
+| Database bootstrap             | Pass                                             | isolated empty PostgreSQL applied migrations 001-028 in order; declaration/review report health, restart replay and immutability passed                                                                                                             |
 | Runtime/browser smoke          | Host and isolated CI gates pass                  | production build, migrated PostgreSQL tests, all 36 desktop/mobile Chromium flows and every production container target pass                                                                                                                        |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope        | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                                                                                      |
-| Remote CI                      | PR #20 head `b4035be` passed                     | [CI run 31551315141](https://github.com/greywolf8888/ZeroTrace/actions/runs/31551315141) and [CodeQL run 31551315173](https://github.com/greywolf8888/ZeroTrace/actions/runs/31551315173) passed; protected main `055daf9` remains separately green |
+| Remote CI                      | PR #20 head `879dff1` passed                     | [CI run 31552879010](https://github.com/greywolf8888/ZeroTrace/actions/runs/31552879010) and [CodeQL run 31552879042](https://github.com/greywolf8888/ZeroTrace/actions/runs/31552879042) passed; protected main `055daf9` remains separately green |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

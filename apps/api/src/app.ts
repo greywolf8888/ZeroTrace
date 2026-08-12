@@ -6,7 +6,7 @@ import { Counter, Registry, collectDefaultMetrics } from 'prom-client';
 import { z, ZodError } from 'zod';
 
 import { ProviderError } from '@zerotrace/chain-adapters';
-import { parseEvmClaimDeclaration } from '@zerotrace/claim-audit';
+import { parseEvmClaimDeclaration, reviewClaimDeclarationDraft } from '@zerotrace/claim-audit';
 import {
   auditDiscrepancies,
   DISCREPANCY_MODEL_VERSION,
@@ -48,6 +48,7 @@ import {
   discoverFlapEventHistory,
   inspectFlapEventTransaction,
   observeEvmClaimBurnBlock,
+  observeErc20Decimals,
   inspectFlapTokenOrigin,
   inspectFlapTokenOriginRestartSafe,
   inspectFlapToken,
@@ -66,6 +67,7 @@ import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import {
   ActionSemanticsReportStorageError,
   ClaimDeclarationReportStorageError,
+  ClaimRuleReviewReportStorageError,
   ClaimReportStorageError,
   ControlSurfaceReportStorageError,
   EntityRelationshipReportStorageError,
@@ -109,6 +111,8 @@ import {
   type Evidence,
   type KnowledgeValue,
   type Ledger,
+  ClaimExpectedActionSchema,
+  ClaimWalletRoleSchema,
 } from '@zerotrace/schemas';
 
 import type { AppConfig } from './config.js';
@@ -216,6 +220,36 @@ const ClaimDeclarationReportLookupQuerySchema = z
       .optional(),
   })
   .strict();
+
+const ClaimRuleReviewReportParamsSchema = z.object({
+  reportId: z.string().regex(/^crr_[0-9a-f]{24}$/),
+});
+
+const ClaimRuleReviewReportLookupQuerySchema = z
+  .object({
+    assetId: z
+      .string()
+      .trim()
+      .regex(/^eip155:[1-9]\d*:erc20:0x[0-9a-fA-F]{40}$/),
+    declarationReportId: z
+      .string()
+      .regex(/^cdr_[0-9a-f]{24}$/)
+      .optional(),
+    draftId: z
+      .string()
+      .regex(/^cld_[0-9a-f]{24}$/)
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.declarationReportId === undefined) !== (value.draftId === undefined)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['draftId'],
+        message: 'declarationReportId and draftId must be supplied together.',
+      });
+    }
+  });
 
 const LaunchInspectionParamsSchema = z.object({
   ledger: z
@@ -550,6 +584,71 @@ const ClaimDeclarationParseRequestSchema = z
       });
     }
   });
+
+const ReviewedClaimRuleValuesRequestSchema = z
+  .object({
+    sourceAddress: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    destinationAddress: z
+      .string()
+      .trim()
+      .regex(/^0x[0-9a-fA-F]{40}$/),
+    role: ClaimWalletRoleSchema,
+    expectedAction: ClaimExpectedActionSchema,
+    expectedShareBps: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+    window: z
+      .object({
+        from: z.iso.datetime({ offset: true }),
+        to: z.iso.datetime({ offset: true }),
+      })
+      .refine((window) => Date.parse(window.from) <= Date.parse(window.to), {
+        message: 'Review window must not end before it begins.',
+      }),
+    shareUnit: z
+      .string()
+      .regex(/^[1-9]\d*$/)
+      .optional(),
+    noExit: z.boolean().optional(),
+    cadenceSeconds: z
+      .string()
+      .regex(/^[1-9]\d*$/)
+      .optional(),
+  })
+  .strict();
+
+const ClaimRuleReviewRequestSchema = z
+  .object({
+    declarationReportId: z.string().regex(/^cdr_[0-9a-f]{24}$/),
+    draftId: z.string().regex(/^cld_[0-9a-f]{24}$/),
+    reviewerLabel: z.string().trim().min(1).max(256),
+    rule: ReviewedClaimRuleValuesRequestSchema,
+    tokenDecimals: z.number().int().min(0).max(255).optional(),
+    tokenDecimalsEvidenceId: z
+      .string()
+      .regex(/^ev_[0-9a-f]{24}$/)
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.tokenDecimals === undefined) !== (value.tokenDecimalsEvidenceId === undefined)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['tokenDecimalsEvidenceId'],
+        message: 'Known token decimals and their Evidence ID must be supplied together.',
+      });
+    }
+  });
+
+const Erc20DecimalsObservationRequestSchema = z
+  .object({
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  })
+  .strict();
 
 const FlapPancakeV2BuyScenarioRequestSchema = z
   .object({
@@ -1152,6 +1251,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['flapLifetimeHeads']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['claimReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['claimDeclarationReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['claimRuleReviewReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
@@ -1192,6 +1292,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         flapLifetimeHeads,
         claimReports,
         claimDeclarationReports,
+        claimRuleReviewReports,
         controlSurfaces,
         solanaControlSurfaces,
         solanaTransactionReports,
@@ -1212,6 +1313,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.flapLifetimeHeads?.health(),
         runtime.claimReports?.health(),
         runtime.claimDeclarationReports?.health(),
+        runtime.claimRuleReviewReports?.health(),
         runtime.controlSurfaces?.health(),
         runtime.solanaControlSurfaces?.health(),
         runtime.solanaTransactionReports?.health(),
@@ -1234,6 +1336,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           flapLifetimeHeads,
           claimReports,
           claimDeclarationReports,
+          claimRuleReviewReports,
           controlSurfaces,
           solanaControlSurfaces,
           solanaTransactionReports,
@@ -1472,6 +1575,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         error.code === 'CLAIM_DECLARATION_REPORT_INVALID'
           ? 400
           : error.code === 'CLAIM_DECLARATION_REPORT_CONFLICT'
+            ? 409
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ClaimRuleReviewReportStorageError) {
+      const status =
+        error.code === 'CLAIM_RULE_REVIEW_REPORT_INVALID'
+          ? 400
+          : error.code === 'CLAIM_RULE_REVIEW_REPORT_CONFLICT'
             ? 409
             : 503;
       return reply
@@ -1894,6 +2008,16 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             : 'IMPLEMENTED_DURABLE_SOURCE_DOCUMENT_REPLAY',
         detail:
           'Submitted EVM declarations retain the exact source document as a content-addressed Snapshot, deterministic extraction coverage, direct source and terminal Evidence, and an immutable report. Exact/latest reads do not contact a provider. Source authenticity, independent corroboration, chain verification and non-EVM declaration normalization remain explicit Unknown or pending.',
+      },
+      {
+        id: 'claim-rule-review-replay',
+        status:
+          runtime.claimRuleReviewReports === undefined ||
+          runtime.claimDeclarationReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_EXPECTED_RULE_REVIEW',
+        detail:
+          'Human-confirmed or overridden declaration fields materialize immutable Expected Claim rules with exact source/review Evidence and provider-free replay. Claim truth, reviewer authority, chain verification and confidence remain explicitly Unknown until separate deterministic observation and audit stages complete.',
       },
       {
         id: 'finalized-historical-ingestion',
@@ -4816,6 +4940,254 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               request,
               'CLAIM_DECLARATION_REPORT_NOT_FOUND',
               'The durable Claim declaration report was not found.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/rules/review',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const input = ClaimRuleReviewRequestSchema.parse(request.body);
+      const declarationRepository = runtime.claimDeclarationReports;
+      const reviewRepository = runtime.claimRuleReviewReports;
+      if (declarationRepository === undefined || reviewRepository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_RULE_REVIEW_REPORT_UNAVAILABLE',
+              'Durable Claim declaration and rule-review storage must both be configured.',
+              false,
+            ),
+          );
+      }
+      const declarationRecord = await declarationRepository.get(input.declarationReportId);
+      if (declarationRecord === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_DECLARATION_REPORT_NOT_FOUND',
+              'The source Claim declaration report was not found.',
+              false,
+            ),
+          );
+      }
+      const tokenDecimalsNode =
+        input.tokenDecimalsEvidenceId === undefined
+          ? undefined
+          : await getEvidenceNode(runtime, input.tokenDecimalsEvidenceId);
+      if (input.tokenDecimalsEvidenceId !== undefined && tokenDecimalsNode === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_RULE_REVIEW_EVIDENCE_NOT_FOUND',
+              'The token-decimals Evidence was not found.',
+              false,
+            ),
+          );
+      }
+      if (
+        tokenDecimalsNode !== undefined &&
+        (tokenDecimalsNode.snapshot?.ledger !== 'EVM' ||
+          tokenDecimalsNode.snapshot.chainId !== declarationRecord.chainId ||
+          tokenDecimalsNode.snapshot.finality !== 'finalized' ||
+          tokenDecimalsNode.evidence.blockOrSlot !== tokenDecimalsNode.snapshot.blockNumber ||
+          tokenDecimalsNode.evidence.observedAt !== tokenDecimalsNode.snapshot.capturedAt)
+      ) {
+        return reply
+          .code(409)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_RULE_REVIEW_EVIDENCE_CONFLICT',
+              'Token-decimals Evidence must be bound to a matching finalized EVM Snapshot.',
+              false,
+            ),
+          );
+      }
+      const result = reviewClaimDeclarationDraft({
+        declarationReport: declarationRecord.report,
+        draftId: input.draftId,
+        reviewerLabel: input.reviewerLabel,
+        reviewedAt: new Date().toISOString(),
+        rule: input.rule,
+        ...(input.tokenDecimals === undefined
+          ? {}
+          : { tokenDecimals: knownValue(input.tokenDecimals) }),
+        ...(tokenDecimalsNode === undefined
+          ? {}
+          : { tokenDecimalsEvidence: tokenDecimalsNode.evidence }),
+      });
+      const reviewEvidence = result.evidence.find((item) => item.id === result.reviewEvidenceId);
+      const terminalEvidence = result.evidence.find(
+        (item) => item.id === result.terminalEvidenceId,
+      );
+      if (reviewEvidence === undefined || terminalEvidence === undefined) {
+        throw new ClaimRuleReviewReportStorageError(
+          'CLAIM_RULE_REVIEW_REPORT_INVALID',
+          'Claim rule review Evidence closure is incomplete.',
+        );
+      }
+      const storedReviewEvidence = await addEvidence(runtime, reviewEvidence);
+      const terminalSourceIds = [
+        declarationRecord.terminalEvidenceId,
+        storedReviewEvidence.id,
+        ...(tokenDecimalsNode === undefined ? [] : [tokenDecimalsNode.evidence.id]),
+      ].sort();
+      const storedTerminalEvidence = await addEvidence(
+        runtime,
+        terminalEvidence,
+        terminalSourceIds,
+      );
+      const report = {
+        ...result,
+        evidence: result.evidence
+          .map((item) =>
+            item.id === storedReviewEvidence.id
+              ? storedReviewEvidence
+              : item.id === storedTerminalEvidence.id
+                ? storedTerminalEvidence
+                : item,
+          )
+          .sort((left, right) => left.id.localeCompare(right.id)),
+      };
+      const stored = await reviewRepository.put(report);
+      return {
+        ...report,
+        durableReport: knownValue({
+          id: stored.id,
+          resultHash: stored.resultHash,
+          createdAt: stored.createdAt,
+        }),
+      };
+    },
+  );
+
+  app.post(
+    '/api/v1/claims/:ledger/:token/metadata/decimals',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimBurnParamsSchema.parse(request.params);
+      const input = Erc20DecimalsObservationRequestSchema.parse(request.body);
+      const numericChainId = Number(input.chainId.slice('eip155:'.length));
+      const adapter = Number.isSafeInteger(numericChainId)
+        ? runtime.evmAdapters.get(numericChainId)
+        : undefined;
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'PROVIDER_UNCONFIGURED',
+              'A configured EVM provider is required for token metadata observation.',
+              true,
+            ),
+          );
+      }
+      const observation = await observeErc20Decimals(adapter, params.token);
+      if (observation.assetId !== `${input.chainId}:erc20:${params.token.toLowerCase()}`) {
+        throw new ProviderError('INVALID_RESPONSE', 'Token metadata Snapshot chain mismatched.');
+      }
+      const evidence = await addEvidence(runtime, observation.evidence, [], observation.snapshot);
+      return {
+        assetId: observation.assetId,
+        decimals: knownValue(observation.decimals),
+        snapshot: observation.snapshot,
+        evidence,
+        coverage: {
+          metadataField: 1,
+          sourceIndependence: unknownValue(
+            'NOT_QUERIED',
+            'One provider observation does not establish independent-source agreement.',
+          ),
+        },
+        freshness: observation.snapshot.capturedAt,
+        sourceSet: [evidence.source],
+        modelVersion: 'erc20-metadata-observation-v1.0.0',
+        confidence: unknownValue(
+          'NOT_QUERIED',
+          'Provider-independent confidence was not computed for this exact contract value.',
+        ),
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/rules/reports/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const query = ClaimRuleReviewReportLookupQuerySchema.parse(request.query);
+      const repository = runtime.claimRuleReviewReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_RULE_REVIEW_REPORT_UNAVAILABLE',
+              'Durable Claim rule review report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record =
+        query.declarationReportId === undefined || query.draftId === undefined
+          ? await repository.latestByAsset(query.assetId)
+          : await repository.latestByDraft(query.declarationReportId, query.draftId);
+      if (record === undefined || record.assetId !== query.assetId) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_RULE_REVIEW_REPORT_NOT_FOUND',
+              'No durable Claim rule review report exists for this asset and draft.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/claims/rules/reports/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = ClaimRuleReviewReportParamsSchema.parse(request.params);
+      const repository = runtime.claimRuleReviewReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_RULE_REVIEW_REPORT_UNAVAILABLE',
+              'Durable Claim rule review report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CLAIM_RULE_REVIEW_REPORT_NOT_FOUND',
+              'The durable Claim rule review report was not found.',
               false,
             ),
           );

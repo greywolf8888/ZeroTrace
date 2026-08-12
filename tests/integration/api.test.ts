@@ -54,6 +54,7 @@ import {
   type LabelIntelligenceReport,
   type LabelObservation,
   type ClaimDeclarationParseResult,
+  type ClaimRuleReviewReport,
 } from '@zerotrace/schemas';
 import {
   StorageError,
@@ -66,6 +67,7 @@ import {
   type StoredLabelIntelligenceReport,
   type StoredActionSemanticsReport,
   type StoredClaimDeclarationReport,
+  type StoredClaimRuleReviewReport,
 } from '@zerotrace/storage';
 import { encodeAbiParameters, toEventSelector } from 'viem';
 
@@ -5673,6 +5675,248 @@ describe('ZeroTrace API contract', () => {
     });
     expect(missing.statusCode).toBe(404);
     expect(missing.json().error.code).toBe('CLAIM_DECLARATION_REPORT_NOT_FOUND');
+  });
+
+  it('persists and replays an analyst-reviewed Expected Claim rule without asserting truth', async () => {
+    const runtime = runtimeWithEvm();
+    let declarationStored: StoredClaimDeclarationReport | undefined;
+    let reviewStored: StoredClaimRuleReviewReport | undefined;
+    runtime.claimDeclarationReports = {
+      async put(report: ClaimDeclarationParseResult) {
+        declarationStored = {
+          id: report.id,
+          sourceSnapshotId: report.sourceSnapshot.id,
+          documentHash: report.documentHash,
+          contentHash: report.sourceSnapshot.contentHash,
+          ledger: report.evidence.ledger,
+          chainId: report.evidence.chainId,
+          assetId: report.assetId,
+          resultHash: report.resultHash,
+          report,
+          sourceEvidenceId: report.evidence.id,
+          terminalEvidenceId: report.terminalEvidenceId,
+          evidenceIds: report.evidenceIds,
+          sourceSet: report.sourceSet,
+          modelVersion: report.modelVersion,
+          freshness: report.freshness,
+          fieldExtractionCoverage:
+            report.coverage.fieldExtraction.state === 'known'
+              ? report.coverage.fieldExtraction.value
+              : null,
+          extractionConfidence:
+            report.extractionConfidence.state === 'known'
+              ? report.extractionConfidence.value
+              : null,
+          createdAt: '2026-08-12T00:00:00.000Z',
+        };
+        return declarationStored;
+      },
+      async get(id: string) {
+        return declarationStored?.id === id ? declarationStored : undefined;
+      },
+      async latestByAsset() {
+        return declarationStored;
+      },
+      async latestByDocument() {
+        return declarationStored;
+      },
+      async health() {
+        return {
+          status: 'UP' as const,
+          backend: 'POSTGRES' as const,
+          durable: true as const,
+          checkedAt: '2026-08-12T00:00:00.000Z',
+        };
+      },
+      async close() {},
+    } as unknown as AppRuntime['claimDeclarationReports'];
+    runtime.claimRuleReviewReports = {
+      async put(report: ClaimRuleReviewReport) {
+        const reviewEvidence = report.evidence.find((item) => item.id === report.reviewEvidenceId)!;
+        reviewStored = {
+          id: report.id,
+          declarationReportId: report.declarationReportId,
+          declarationResultHash: report.declarationResultHash,
+          documentHash: report.documentHash,
+          draftId: report.draftId,
+          ruleId: report.rule.id,
+          ledger: reviewEvidence.ledger,
+          chainId: reviewEvidence.chainId,
+          assetId: report.assetId,
+          resultHash: report.resultHash,
+          report,
+          reviewEvidenceId: report.reviewEvidenceId,
+          terminalEvidenceId: report.terminalEvidenceId,
+          tokenDecimalsEvidenceId: report.tokenDecimalsEvidenceId ?? null,
+          evidenceIds: report.evidenceIds,
+          sourceSet: report.sourceSet,
+          modelVersion: report.modelVersion,
+          reviewedAt: report.reviewedAt,
+          createdAt: '2026-08-12T00:02:00.000Z',
+        };
+        return reviewStored;
+      },
+      async get(id: string) {
+        return reviewStored?.id === id ? reviewStored : undefined;
+      },
+      async latestByAsset(assetId: string) {
+        return reviewStored?.assetId === assetId ? reviewStored : undefined;
+      },
+      async latestByDraft(declarationReportId: string, draftId: string) {
+        return reviewStored?.declarationReportId === declarationReportId &&
+          reviewStored.draftId === draftId
+          ? reviewStored
+          : undefined;
+      },
+      async health() {
+        return {
+          status: 'UP' as const,
+          backend: 'POSTGRES' as const,
+          durable: true as const,
+          checkedAt: '2026-08-12T00:00:00.000Z',
+        };
+      },
+      async close() {},
+    } as unknown as AppRuntime['claimRuleReviewReports'];
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const assetId = 'eip155:56:erc20:0x1111111111111111111111111111111111111111';
+    const parsed = await app.inject({
+      method: 'POST',
+      url: '/api/v1/claims/declarations/parse',
+      payload: {
+        chainId: 'eip155:56',
+        assetId,
+        text: `税费接收总钱包（100%）\n0x${'2'.repeat(40)}\n社区建设基金（20%）\n0x${'3'.repeat(40)}`,
+        auditWindow: {
+          from: '2026-08-01T00:00:00.000Z',
+          to: '2026-08-12T00:00:00.000Z',
+        },
+      },
+    });
+    expect(parsed.statusCode, parsed.body).toBe(200);
+    const declaration = parsed.json();
+    const draft = declaration.drafts.find(
+      (item: ClaimDeclarationParseResult['drafts'][number]) => item.role === 'COMMUNITY_FUND',
+    );
+    const reviewed = await app.inject({
+      method: 'POST',
+      url: '/api/v1/claims/rules/review',
+      payload: {
+        declarationReportId: declaration.id,
+        draftId: draft.id,
+        reviewerLabel: 'integration analyst',
+        rule: {
+          sourceAddress: `0x${'2'.repeat(40)}`,
+          destinationAddress: `0x${'3'.repeat(40)}`,
+          role: 'COMMUNITY_FUND',
+          expectedAction: 'DISTRIBUTE',
+          expectedShareBps: '2000',
+          window: {
+            from: '2026-08-01T00:00:00.000Z',
+            to: '2026-08-12T00:00:00.000Z',
+          },
+        },
+      },
+    });
+    expect(reviewed.statusCode, reviewed.body).toBe(200);
+    const report = reviewed.json();
+    expect(report).toMatchObject({
+      claimTruth: { state: 'unknown', reason: 'NOT_QUERIED' },
+      confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+      coverage: { chainVerification: { state: 'unknown', reason: 'NOT_QUERIED' } },
+      fieldOrigins: {
+        sourceAddress: 'DECLARATION_CONFIRMED',
+        destinationAddress: 'DECLARATION_CONFIRMED',
+        expectedShareBps: 'DECLARATION_CONFIRMED',
+      },
+      durableReport: {
+        state: 'known',
+        value: { id: report.id, createdAt: '2026-08-12T00:02:00.000Z' },
+      },
+    });
+
+    const exact = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/rules/reports/${report.id}`,
+    });
+    expect(exact.statusCode, exact.body).toBe(200);
+    expect(exact.json()).toMatchObject({ replayed: true, record: { id: report.id } });
+    const latest = await app.inject({
+      method: 'GET',
+      url: `/api/v1/claims/rules/reports/latest?assetId=${encodeURIComponent(assetId)}&declarationReportId=${declaration.id}&draftId=${draft.id}`,
+    });
+    expect(latest.statusCode, latest.body).toBe(200);
+    expect(latest.json().record.id).toBe(report.id);
+
+    const invalidDecimals = await app.inject({
+      method: 'POST',
+      url: '/api/v1/claims/rules/review',
+      payload: {
+        declarationReportId: declaration.id,
+        draftId: draft.id,
+        reviewerLabel: 'integration analyst',
+        rule: report.rule,
+        tokenDecimals: 18,
+      },
+    });
+    expect(invalidDecimals.statusCode).toBe(400);
+    expect(invalidDecimals.json().error.code).toBe('INVALID_REQUEST');
+  });
+
+  it('observes ERC-20 decimals at a finalized Snapshot and persists its Evidence', async () => {
+    const runtime = runtimeWithEvm();
+    const token = `0x${'a'.repeat(40)}`;
+    const bsc = new EvmLedgerAdapter(
+      {
+        id: 'bsc-rpc',
+        chainId: 56,
+        chainName: 'BNB Smart Chain',
+        snapshotBlockTag: 'finalized',
+      },
+      new FakeTransport(
+        {
+          eth_getBlockByNumber: {
+            number: '0x10',
+            hash: `0x${'1'.repeat(64)}`,
+            parentHash: `0x${'2'.repeat(64)}`,
+            timestamp: '0x65',
+          },
+          eth_call: fixtureDecimalsResult(18),
+        },
+        { eth_getBlockByNumber: 'rpc:bsc-finalized', eth_call: 'rpc:bsc-finalized' },
+      ),
+    );
+    runtime.evmAdapters.set(56, bsc);
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/claims/EVM/${token}/metadata/decimals`,
+      payload: { chainId: 'eip155:56' },
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const body = response.json();
+    expect(body).toMatchObject({
+      assetId: `eip155:56:erc20:${token}`,
+      decimals: { state: 'known', value: 18 },
+      snapshot: { chainId: 'eip155:56', blockNumber: '16', finality: 'finalized' },
+      evidence: {
+        kind: 'CONTRACT_STATE',
+        source: 'rpc:bsc-finalized',
+        locator: `token-decimals:eip155:56:erc20:${token}`,
+        blockOrSlot: '16',
+      },
+      coverage: { metadataField: 1, sourceIndependence: { state: 'unknown' } },
+      confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+    });
+    const replay = await app.inject({ method: 'GET', url: `/api/v1/evidence/${body.evidence.id}` });
+    expect(replay.statusCode, replay.body).toBe(200);
+    expect(replay.json()).toMatchObject({
+      evidence: { id: body.evidence.id },
+      snapshot: body.snapshot,
+    });
   });
 
   it('derives a persisted burn action only from exact block supply/event conservation', async () => {
