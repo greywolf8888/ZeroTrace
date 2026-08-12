@@ -19,7 +19,7 @@ completed feature.
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                               |
 | Integration tests                | **80 pass; 38 environment-gated skips in the current host run; disposable-store acceptance remains recorded separately** |
 | Real-browser E2E                 | **36 passing: Chromium desktop and Pixel 7**                                                                             |
-| Remote CI                        | **Draft PR #20 previously passed CI and CodeQL; this working-tree head still awaits its post-push run**                  |
+| Remote CI                        | **PR #20 current head green: CI run 31588959481 and CodeQL run 31588959519**                                             |
 | Coverage                         | **Remote: 82.49% statements / 76.67% branches / 93.43% functions / 83.59% lines**                                        |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                 |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/declaration/Scenario/action/control/Solana reports                   |

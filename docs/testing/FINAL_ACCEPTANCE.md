@@ -13,7 +13,9 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       were not enabled in this host run (these are not counted as failures)
 - [x] `npm run test:e2e`: 36/36 Chromium desktop and Pixel 7 flows
 - [x] `docker compose config --quiet`, healthy default services and PostgreSQL readiness probe
-- [ ] Post-push protected-branch CI/CodeQL for the current claim-capture head
+- [x] Post-push protected-branch CI/CodeQL for the current claim-capture head:
+      [CI run 31588959481](https://github.com/greywolf8888/ZeroTrace/actions/runs/31588959481)
+      and [CodeQL run 31588959519](https://github.com/greywolf8888/ZeroTrace/actions/runs/31588959519)
 
 This local gate does not promote ZeroTrace to production acceptance. Full-history ingestion,
 independent-provider reconciliation, effective authorization/history, intent attribution and other
