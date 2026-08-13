@@ -80,6 +80,7 @@ import {
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   FlapPensionEntryReportStorageError,
+  FundingSettlementReportStorageError,
   IntelligenceSearchStorageError,
   LabelIntelligenceStorageError,
   PensionCandidateReportStorageError,
@@ -333,6 +334,10 @@ const ControlCampaignTokenParamsSchema = z.object({
 
 const ControlCampaignParamsSchema = z.object({
   campaignId: z.string().regex(/^cc_[0-9a-f]{24}$/),
+});
+
+const FundingSettlementReportParamsSchema = z.object({
+  reportId: z.string().regex(/^fsr_[0-9a-f]{24}$/),
 });
 
 const ControlCampaignEvidenceItemParamsSchema = z.object({
@@ -1329,6 +1334,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphs']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphTimelines']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['controlCampaignReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['fundingSettlementReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['intelligenceSearch']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['labelIntelligenceReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['captureSchedules']>['health']>>
@@ -1372,6 +1378,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         entityInvestigationGraphs,
         entityInvestigationGraphTimelines,
         controlCampaignReports,
+        fundingSettlementReports,
         intelligenceSearch,
         labelIntelligenceReports,
         captureSchedules,
@@ -1395,6 +1402,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.entityInvestigationGraphs?.health(),
         runtime.entityInvestigationGraphTimelines?.health(),
         runtime.controlCampaignReports?.health(),
+        runtime.fundingSettlementReports?.health(),
         runtime.intelligenceSearch?.health(),
         runtime.labelIntelligenceReports?.health(),
         runtime.captureSchedules?.health(),
@@ -1420,6 +1428,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           entityInvestigationGraphs,
           entityInvestigationGraphTimelines,
           controlCampaignReports,
+          fundingSettlementReports,
           intelligenceSearch,
           labelIntelligenceReports,
           captureSchedules,
@@ -1735,6 +1744,17 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         error.code === 'CONTROL_CAMPAIGN_REPORT_INVALID'
           ? 400
           : error.code === 'CONTROL_CAMPAIGN_REPORT_CONFLICT'
+            ? 409
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof FundingSettlementReportStorageError) {
+      const status =
+        error.code === 'FUNDING_SETTLEMENT_REPORT_INVALID'
+          ? 400
+          : error.code === 'FUNDING_SETTLEMENT_REPORT_CONFLICT'
             ? 409
             : 503;
       return reply
@@ -6139,6 +6159,68 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         false,
       ).error,
     });
+
+  const fundingSettlementUnavailable = (request: FastifyRequest, reply: FastifyReply) =>
+    reply.code(503).send({
+      status: unknownValue(
+        'STORAGE_UNCONFIGURED',
+        'PostgreSQL Funding and Settlement report storage is not configured.',
+      ),
+      metadata: emptyMetadata('funding-settlement-v1.0.0'),
+      error: errorResponse(
+        request,
+        'FUNDING_SETTLEMENT_REPORT_UNAVAILABLE',
+        'Durable Funding and Settlement report storage is not configured.',
+        false,
+      ).error,
+    });
+
+  app.get(
+    '/api/v1/funding-settlement/tokens/:chainId/:token',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      const repository = runtime.fundingSettlementReports;
+      if (repository === undefined) return fundingSettlementUnavailable(request, reply);
+      const report = await repository.latest(params.chainId, params.token.toLowerCase());
+      if (report === undefined) {
+        return {
+          report: unknownValue(
+            'NOT_QUERIED',
+            'No durable Funding and Settlement report has been materialized for this token.',
+          ),
+          snapshot: unknownValue('NOT_QUERIED'),
+          metadata: emptyMetadata('funding-settlement-v1.0.0'),
+          replayed: true,
+        };
+      }
+      return { report, replayed: true };
+    },
+  );
+
+  app.get(
+    '/api/v1/funding-settlement/reports/:reportId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = FundingSettlementReportParamsSchema.parse(request.params);
+      const repository = runtime.fundingSettlementReports;
+      if (repository === undefined) return fundingSettlementUnavailable(request, reply);
+      const report = await repository.get(params.reportId);
+      if (report === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FUNDING_SETTLEMENT_REPORT_NOT_FOUND',
+              'The requested durable Funding and Settlement report was not found.',
+              false,
+            ),
+          );
+      }
+      return { report, replayed: true };
+    },
+  );
 
   app.get(
     '/api/v1/control/tokens/:chainId/:token/overview',

@@ -41,6 +41,7 @@ import {
   PostgresFlapHistoryProjectionRepository,
   PostgresFlapLifetimeHeadRepository,
   PostgresFlapPensionEntryReportRepository,
+  PostgresFundingSettlementReportRepository,
   PostgresEntityRelationshipReportRepository,
   PostgresEntityRelationshipTimelineRepository,
   PostgresEntityInvestigationGraphRepository,
@@ -90,6 +91,7 @@ export interface AppRuntime {
   entityInvestigationGraphs?: PostgresEntityInvestigationGraphRepository;
   entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
   controlCampaignReports?: PostgresControlCampaignReportRepository;
+  fundingSettlementReports?: PostgresFundingSettlementReportRepository;
   intelligenceSearch?: PostgresIntelligenceSearchRepository;
   labelIntelligenceReports?: PostgresLabelIntelligenceReportRepository;
   captureSchedules?: PostgresCaptureScheduleRepository;
@@ -636,6 +638,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const fundingSettlementReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresFundingSettlementReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const intelligenceSearch =
     config.postgresUrl === undefined
       ? undefined
@@ -709,6 +720,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       entityInvestigationGraphs?.close(),
       entityInvestigationGraphTimelines?.close(),
       controlCampaignReports?.close(),
+      fundingSettlementReports?.close(),
       intelligenceSearch?.close(),
       labelIntelligenceReports?.close(),
       captureSchedules?.close(),
@@ -756,6 +768,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       ? {}
       : { entityInvestigationGraphTimelines }),
     ...(controlCampaignReports === undefined ? {} : { controlCampaignReports }),
+    ...(fundingSettlementReports === undefined ? {} : { fundingSettlementReports }),
     ...(intelligenceSearch === undefined ? {} : { intelligenceSearch }),
     ...(labelIntelligenceReports === undefined ? {} : { labelIntelligenceReports }),
     ...(captureSchedules === undefined ? {} : { captureSchedules }),

@@ -9,20 +9,20 @@ completed feature.
 
 ## Executive status
 
-| Measure                          | Current state                                                                                                                                                            |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Terminal architecture completion | **22% estimated**                                                                                                                                                        |
-| Runnable foundation              | **Yes; host, fresh PostgreSQL, browser and remote disposable-store/container gates pass**                                                                                |
-| Production acceptance            | **No**                                                                                                                                                                   |
-| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                           |
-| Unit tests                       | **610 passing across 109 files**                                                                                                                                         |
-| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                               |
-| Integration tests                | **81 pass in serial replay after one parallel API-contract timeout; 38 environment-gated skips; disposable-store acceptance remains recorded separately**                |
-| Real-browser E2E                 | **Latest serial host run: 38/38 across Chromium desktop and Pixel 7; Flap mobile long-value layout regression 2/2**                                                      |
-| Remote CI                        | **Not run for the current uncommitted Phase 1 changes; prior PR #20 runs remain historical evidence only**                                                               |
-| Coverage                         | **Remote: 82.49% statements / 76.67% branches / 93.43% functions / 83.59% lines**                                                                                        |
-| Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                                                 |
-| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/declaration/Scenario/action/control/Solana reports, immutable Control Campaign bundles, and Phase 1 report contracts |
+| Measure                          | Current state                                                                                                                                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminal architecture completion | **22% estimated**                                                                                                                                                                                             |
+| Runnable foundation              | **Yes; host, fresh PostgreSQL, browser and remote disposable-store/container gates pass**                                                                                                                     |
+| Production acceptance            | **No**                                                                                                                                                                                                        |
+| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                                                                |
+| Unit tests                       | **620 passing across 111 files**                                                                                                                                                                              |
+| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                                                                    |
+| Integration tests                | **83 pass in serial replay; 38 environment-gated skips; disposable-store acceptance remains recorded separately**                                                                                             |
+| Real-browser E2E                 | **Latest serial host run: 38/38 across Chromium desktop and Pixel 7; Flap mobile long-value layout regression 2/2**                                                                                           |
+| Remote CI                        | **Not run for the current uncommitted Phase 1 changes; prior PR #20 runs remain historical evidence only**                                                                                                    |
+| Coverage                         | **Remote: 82.49% statements / 76.67% branches / 93.43% functions / 83.59% lines**                                                                                                                             |
+| Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                                                                                      |
+| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/declaration/Scenario/action/control/Solana reports, immutable Control Campaign bundles, Funding/Settlement report contracts, and Phase 1 report contracts |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
@@ -83,6 +83,53 @@ wedged Docker Desktop Linux. Fresh multi-store migration/replay, archive-scale h
 source reconciliation, range backfill, live monitoring, alerts, export, calibration, and remote
 CI/CodeQL remain pending. Public endpoint probes establish reachability only, not semantic
 correctness or production qualification.
+
+## 2026-08-14 Funding and Settlement Phase 2
+
+Phase 2 adds a bounded, read-only Funding and Settlement evidence layer over exact finalized EVM
+transaction/receipt observations. `evm-asset-transfer-observation-v1` decodes native value and
+canonical ERC-20 `Transfer` logs only after transaction/receipt identity, placement, sender,
+destination, index, and Snapshot checks agree. `funding-settlement-v1.0.0` emits deterministic
+funding/settlement edges, bounded sequential paths, sweep/convergence/radial patterns, raw
+transaction drilldown, explicit service/CEX/router/bridge suppressions, coverage scope, Snapshot,
+Evidence, freshness, source set, model/policy versions, and an uncalibrated confidence value.
+Failed or unknown receipts remain provisional and cannot enter inferred edges; a report with only
+such observations is `UNKNOWN`, not an empty successful result.
+
+The layer is durably wired through PostgreSQL migration `033_funding_settlement_reports`, an
+immutable result-hash-checked repository, runtime health/close handling, and provider-free API
+reads:
+
+- `GET /api/v1/funding-settlement/tokens/:chainId/:token`
+- `GET /api/v1/funding-settlement/reports/:reportId`
+
+The Control Campaign workspace now displays the report as transaction evidence rather than an
+ownership conclusion. Missing durable reports are rendered as `NOT_QUERIED`; `TRANSACTION_LOCAL`
+and `BOUNDED_RANGE` are shown as incomplete coverage, and suppressed paths remain visible as
+attribution boundaries.
+
+Real bounded smoke evidence was collected with the requested FFT token
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over BSC blocks `113485950–113495949`. The
+Funding/Settlement report was `fsr_d53d644a6be1844432e03b65`, result hash
+`dc4c244a395b634fc07bde3f00f8b8bc726f8e3fde83d06fe84c805c84795e1c`, `PARTIAL`, with
+`TRANSACTION_LOCAL` scope and coverage `data/source/history = 1/1/0`. It replayed with the same
+hash, derived two funding edges and one sell-proceeds settlement edge from exact receipts, and
+used four exact transaction senders as a focus fallback because historical BSC `eth_getCode`
+lookups returned `missing trie node`. The implementation did not substitute current code state;
+the missing historical contract classification remains explicit.
+
+A one-block Ethereum WETH smoke through public finalized SQD plus exact public RPC also completed:
+report `fsr_1c1a7d6564b8d2a3e71b8887`, result hash
+`c09432ddafcf97969d252c2939a585f188d8ba8a297577cd99941d2522b8d4ea`, `PARTIAL`,
+`TRANSACTION_LOCAL`, coverage `1/1/0`, and same-hash replay. Ethereum origin/code expansion was
+left `NOT_QUERIED` because the public historical state path was not archive-qualified; exact
+transaction and receipt binding still succeeded. These are bounded semantic smokes, not durable
+PostgreSQL/ClickHouse/MinIO production acceptance, historical completeness, entity resolution,
+service attribution, calibrated control probability, or live monitoring.
+
+Focused Phase 2 checks passed: Funding/Settlement engine `7/7`, storage repository `3/3`, API
+integration `83/83`, and the Campaign plus Funding/Settlement UI route `2/2` on Chromium desktop
+and Pixel 7. Full repository gates and the external durable-store/provider gates remain required.
 
 ## Terminal-scope status matrix
 

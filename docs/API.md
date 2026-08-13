@@ -340,6 +340,29 @@ storage-unavailable error. Historical backfill, live monitor, alert stream and e
 present as contract boundaries and return `501 NOT_IMPLEMENTED`; they never return fixtures or
 synthetic empty facts. Replay reads the immutable bundle and does not contact chain providers.
 
+### Funding and Settlement evidence reports
+
+Funding and Settlement reports are a bounded, read-only EVM evidence projection. The decoder accepts
+only exact mined transaction/receipt pairs and finalized Snapshots, then materializes native-value
+and canonical ERC-20 Transfer observations. Identity, placement, sender, destination, transaction
+index, and Snapshot block checks fail closed on disagreement. Failed or unknown receipts remain
+provisional and cannot create funding or settlement edges.
+
+The report model carries deterministic bounded edges and patterns, raw transaction drilldown,
+coverage scope (`TRANSACTION_LOCAL`, `BOUNDED_RANGE`, or `RANGE_COMPLETE`), exact Snapshot, Evidence
+IDs, freshness, source set, model/policy versions, and an explicitly uncalibrated confidence value.
+Service hubs, CEX endpoints, DEX routers, and bridge endpoints are hard path boundaries; their
+suppression records are retained and no entity or ownership merge follows through them.
+
+- `GET /api/v1/funding-settlement/tokens/:chainId/:token`
+- `GET /api/v1/funding-settlement/reports/:reportId`
+
+Both routes replay PostgreSQL only. An unconfigured repository returns `503`; an absent latest
+report returns a typed `NOT_QUERIED` response; an absent exact report returns `404`. Neither route
+refreshes providers, starts a backfill/monitor, or broadcasts a transaction. PostgreSQL migration
+`033_funding_settlement_reports` enforces immutable rows, report identity, coverage scope, counts,
+provenance arrays, model/policy versions, and insert-time JSON identity checks.
+
 ### Typed ledger records
 
 `type` accepts `BLOCK` and `TRANSACTION` on EVM, Bitcoin, and Solana, plus `OUTPOINT` on Bitcoin.

@@ -1557,6 +1557,68 @@ tbody tr:hover {
   align-items: start;
 }
 
+.funding-settlement-panel {
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.funding-settlement-copy {
+  max-width: 920px;
+  margin: 0;
+  padding: 14px 18px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.funding-settlement-metrics {
+  padding: 0 18px 14px;
+}
+
+.funding-settlement-facts {
+  border-top: 1px solid var(--border);
+}
+
+.funding-settlement-section {
+  border-top: 1px solid var(--border);
+}
+
+.funding-settlement-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+}
+
+.funding-settlement-subheader h4 {
+  margin: 3px 0 0;
+  font-size: 0.82rem;
+}
+
+.funding-settlement-table {
+  min-width: 760px;
+}
+
+.funding-settlement-table td {
+  vertical-align: top;
+}
+
+.funding-settlement-table td code {
+  overflow-wrap: anywhere;
+}
+
+.funding-settlement-subline {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 0.63rem;
+}
+
+.funding-settlement-suppressions {
+  background: color-mix(in srgb, var(--warning) 2%, transparent);
+}
+
 .campaign-detail-stack {
   display: grid;
   gap: 14px;

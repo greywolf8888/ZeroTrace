@@ -7102,4 +7102,58 @@ describe('ZeroTrace API contract', () => {
     expect(monitor.statusCode).toBe(501);
     expect(monitor.json().capability).toBe('control-campaign-monitor');
   });
+
+  it('exposes Funding and Settlement reports as provider-free durable replays', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const token = `0x${'f'.repeat(40)}`;
+    const reportId = `fsr_${'1'.repeat(24)}`;
+    const report = { id: reportId, chainId: 'eip155:56', token };
+    const latest = vi.fn(async (chainId: string, lookupToken: string) =>
+      chainId === 'eip155:56' && lookupToken === token ? report : undefined,
+    );
+    const get = vi.fn(async (id: string) => (id === reportId ? report : undefined));
+    runtime.fundingSettlementReports = { latest, get } as unknown as NonNullable<
+      AppRuntime['fundingSettlementReports']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const latestResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/tokens/eip155:56/0x${'F'.repeat(40)}`,
+    });
+    expect(latestResponse.statusCode, latestResponse.body).toBe(200);
+    expect(latestResponse.json()).toEqual({ report, replayed: true });
+
+    const exactResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/reports/${reportId}`,
+    });
+    expect(exactResponse.statusCode, exactResponse.body).toBe(200);
+    expect(exactResponse.json()).toEqual({ report, replayed: true });
+
+    const missingResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/reports/fsr_${'2'.repeat(24)}`,
+    });
+    expect(missingResponse.statusCode).toBe(404);
+    expect(missingResponse.json().error.code).toBe('FUNDING_SETTLEMENT_REPORT_NOT_FOUND');
+
+    expect(latest).toHaveBeenCalledWith('eip155:56', token);
+    expect(get).toHaveBeenCalledWith(reportId);
+  });
+
+  it('keeps Funding and Settlement storage absence explicit', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const token = `0x${'f'.repeat(40)}`;
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/tokens/eip155:56/${token}`,
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe('FUNDING_SETTLEMENT_REPORT_UNAVAILABLE');
+  });
 });

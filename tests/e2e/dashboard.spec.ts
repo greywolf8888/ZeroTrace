@@ -4944,6 +4944,62 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
       }),
     });
   });
+  await page.route('**/api/v1/funding-settlement/tokens/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        report: {
+          schemaVersion: 'funding-settlement-report-v1',
+          id: `fsr_${'6'.repeat(24)}`,
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          token: `0x${'b'.repeat(40)}`,
+          fromBlock: '95',
+          toBlock: '100',
+          status: 'PARTIAL',
+          fundingEdges: [
+            {
+              id: `fue_${'7'.repeat(24)}`,
+              relation: 'FIRST_FUNDER',
+              source: `0x${'e'.repeat(40)}`,
+              destination: `0x${'c'.repeat(40)}`,
+              asset: `0x${'a'.repeat(40)}`,
+              amountAtomic: '1000000',
+              blockNumber: '98',
+              transactionHash: `0x${'1'.repeat(64)}`,
+              path: [`0x${'e'.repeat(40)}`, `0x${'c'.repeat(40)}`],
+              hopDepth: 1,
+              evidenceIds: [evidenceId],
+              rawArtifactRefs: ['s3://fixture/raw#sha256=' + 'a'.repeat(64)],
+              confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+            },
+          ],
+          settlementEdges: [],
+          patterns: [],
+          suppressedPaths: [],
+          drilldown: [
+            {
+              transactionHash: `0x${'1'.repeat(64)}`,
+              evidenceIds: [evidenceId],
+              rawArtifactRefs: ['s3://fixture/raw#sha256=' + 'a'.repeat(64)],
+            },
+          ],
+          snapshot: { ...snapshot, blockNumber: '100' },
+          dataCoverage: 0.5,
+          sourceCoverage: 0.5,
+          historyCoverage: 0,
+          coverageScope: 'TRANSACTION_LOCAL',
+          freshness: snapshot.capturedAt,
+          sourceSet: ['fixture-funding-source'],
+          confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+          evidenceIds: [evidenceId],
+          resultHash: 'e'.repeat(64),
+        },
+        replayed: true,
+      }),
+    });
+  });
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Control Campaigns' }).click();
@@ -4961,4 +5017,9 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
   await expect(
     page.getByTestId('control-campaign-results').getByText('Uncalibrated Evidence score'),
   ).toBeVisible();
+  await expect(page.getByTestId('funding-settlement-report')).toContainText(
+    'Transaction evidence, not ownership proof',
+  );
+  await expect(page.getByTestId('funding-settlement-report')).toContainText('Transaction Local');
+  await expect(page.getByTestId('funding-settlement-report')).toContainText('First Funder');
 });

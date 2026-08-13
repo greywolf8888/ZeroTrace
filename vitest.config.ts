@@ -17,6 +17,7 @@ const workspacePackages = [
   'schemas',
   'storage',
   'token-flow-engine',
+  'funding-settlement-engine',
   'cluster-position-engine',
   'candidate-discovery',
   'behavior-engine',

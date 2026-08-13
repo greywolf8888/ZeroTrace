@@ -18,6 +18,7 @@
     "@zerotrace/claim-audit": "*",
     "@zerotrace/data-quality": "*",
     "@zerotrace/evidence": "*",
+    "@zerotrace/funding-settlement-engine": "*",
     "@zerotrace/schemas": "*",
     "minio": "8.0.7",
     "pg": "8.23.0"

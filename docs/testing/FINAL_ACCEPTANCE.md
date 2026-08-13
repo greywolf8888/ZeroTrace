@@ -26,22 +26,53 @@ This Phase 1 checkpoint remains `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`. A p
 health response is not a semantic history result, and an unset Ethereum runtime credential is not
 treated as a numeric zero or as a successful exact-RPC path.
 
+## Funding and Settlement Phase 2 local gate — 2026-08-14
+
+- [x] Exact finalized EVM transaction/receipt decoder, native/ERC-20 observations, bounded graph
+      engine, result hashes, replay, coverage scope, raw drilldown, and service boundary
+      suppressions compile and pass deterministic tests (`7/7` focused tests)
+- [x] Immutable PostgreSQL migration `033_funding_settlement_reports`, repository validation,
+      latest/exact provider-free API reads, runtime health/close wiring, and storage tests (`3/3`)
+- [x] API integration coverage for durable replay/unconfigured storage and full existing API file
+      replay (`83/83`)
+- [x] Control Campaign UI Funding/Settlement panel shows `NOT_QUERIED`, partial coverage, exact
+      paths, hashes, drilldown and suppression boundaries; desktop/mobile targeted E2E `2/2`
+- [x] Real BSC FFT bounded smoke produced a `PARTIAL` transaction-local report and same-hash replay;
+      historical `eth_getCode` `missing trie node` stayed explicit and did not fall back to current
+      code
+- [x] Real Ethereum WETH one-block bounded smoke produced a `PARTIAL` transaction-local report and
+      same-hash replay; exact transaction/receipt placement succeeded while origin expansion stayed
+      `NOT_QUERIED`
+- [ ] Fresh PostgreSQL/ClickHouse/MinIO capture and durable replay of these reports
+- [ ] Range-complete historical funding/settlement coverage, official service registry attribution,
+      multi-provider reconciliation, calibration, backfill, monitoring, alerts, export, remote CI,
+      and production approval
+
+This phase remains `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`. A transaction-local edge is not a
+control or ownership conclusion, and `historyCoverage=0` is a declared measured scope boundary,
+not an assertion that no historical funding or settlement exists.
+
 ## Current local gate (2026-08-14)
 
 - [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
-      production license allowlist and `npm audit --audit-level=high` (0 vulnerabilities)
-- [x] `npm run test:unit`: 610/610 tests across 109 files
-- [x] `npm run test:integration`: 81 pass; 38 explicitly skipped because optional stores/providers
+      production license allowlist, `npm audit --audit-level=high` (0 vulnerabilities), and SBOM
+      generation
+- [x] `npm run test:unit`: 620/620 tests across 111 files
+- [x] `npm run test:integration`: 83 pass; 38 explicitly skipped because optional stores/providers
       were not enabled in this host run (these are not counted as failures)
 - [x] `npm run test:evals`: 1/1 structural Entity evaluation
 - [x] Serial Playwright E2E: 38/38 across Chromium desktop and Pixel 7; Flap long-value mobile
       layout regression passed in both projects (`2/2`)
 - [x] Targeted Control Campaign Timeline/Evidence Line E2E: 2/2 (Chromium desktop and Pixel 7)
 - [x] `docker compose config --quiet`
-- [ ] Isolated empty PostgreSQL/ClickHouse migration bootstrap for `031_control_campaign_reports`
-      and `002_control_campaign_flow`: unavailable because the local Docker Desktop Linux engine
-      is not running (`dockerDesktopLinuxEngine` named pipe was absent)
-- [ ] Remote protected-branch CI/CodeQL for the current uncommitted P0 changes; earlier PR #20
+- [ ] `npm run test:coverage`: all 703 enabled tests completed, but the configured global
+      thresholds were not met locally (Statements 77.27%, Branches 70.78%, Lines 78.56%); the
+      report includes existing untested worker/storage boundaries and is not relabeled as pass
+- [ ] Isolated empty PostgreSQL/ClickHouse migration bootstrap for `031_control_campaign_reports`,
+      `033_funding_settlement_reports`, and `002_control_campaign_flow`: unavailable because the
+      local Docker Desktop Linux engine is not running (`dockerDesktopLinuxEngine` named pipe was
+      absent)
+- [ ] Remote protected-branch CI/CodeQL for the current uncommitted Phase 2 changes; earlier PR #20
       runs are historical evidence for their recorded heads only
 
 This local gate does not promote ZeroTrace to production acceptance. Full-history ingestion,

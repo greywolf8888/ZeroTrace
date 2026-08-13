@@ -8,6 +8,102 @@ export interface KnowledgeValue<T> {
   detail?: string;
 }
 
+export interface FundingSettlementSnapshot {
+  ledger: 'EVM';
+  chainId: string;
+  blockNumber: string;
+  blockHash: string;
+  finality: 'finalized';
+  capturedAt: string;
+  providerVersions: Record<string, string>;
+  adapterVersions: Record<string, string>;
+}
+
+export interface FundingSettlementEdge {
+  id: string;
+  relation: string;
+  source: string;
+  destination: string;
+  asset: 'NATIVE' | string;
+  amountAtomic: string;
+  blockNumber: string;
+  transactionHash: string;
+  path: string[];
+  hopDepth: number;
+  evidenceIds: string[];
+  rawArtifactRefs: string[];
+  confidence: KnowledgeValue<number>;
+}
+
+export interface FundingSettlementPattern {
+  id: string;
+  kind: string;
+  asset: 'NATIVE' | string;
+  source?: string;
+  destinations: string[];
+  edgeIds: string[];
+  transactionHashes: string[];
+  confidence: KnowledgeValue<number>;
+}
+
+export interface FundingSettlementSuppression {
+  id: string;
+  reason: string;
+  source: string;
+  destination: string;
+  asset: 'NATIVE' | string;
+  amountAtomic: string;
+  transactionHash: string;
+  path: string[];
+  evidenceIds: string[];
+}
+
+export interface FundingSettlementReport {
+  schemaVersion: 'funding-settlement-report-v1';
+  id: string;
+  ledger: 'EVM';
+  chainId: string;
+  token: string;
+  fromBlock: string;
+  toBlock: string;
+  status: 'COMPLETE' | 'PARTIAL' | 'UNKNOWN';
+  fundingEdges: FundingSettlementEdge[];
+  settlementEdges: FundingSettlementEdge[];
+  patterns: FundingSettlementPattern[];
+  suppressedPaths: FundingSettlementSuppression[];
+  drilldown: Array<{
+    transactionHash: string;
+    evidenceIds: string[];
+    rawArtifactRefs: string[];
+  }>;
+  snapshot: FundingSettlementSnapshot;
+  dataCoverage: number;
+  sourceCoverage: number;
+  historyCoverage: number;
+  coverageScope: 'TRANSACTION_LOCAL' | 'BOUNDED_RANGE' | 'RANGE_COMPLETE';
+  freshness: string;
+  sourceSet: string[];
+  confidence: KnowledgeValue<number>;
+  evidenceIds: string[];
+  resultHash: string;
+}
+
+export interface FundingSettlementReportResponse {
+  report: FundingSettlementReport | KnowledgeValue<null>;
+  snapshot?: KnowledgeValue<null>;
+  metadata?: {
+    dataCoverage: number;
+    sourceCoverage: number;
+    historyCoverage: number;
+    freshness: string | null;
+    sourceSet: string[];
+    modelVersion: string;
+    confidence: number;
+    evidenceIds: string[];
+  };
+  replayed: boolean;
+}
+
 export interface ControlCampaignSnapshot {
   ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
   chainId: string;
@@ -2534,6 +2630,14 @@ export const api = {
       `/api/v1/control/tokens/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}/campaigns?${parameters.toString()}`,
     );
   },
+  latestFundingSettlement: (chainId: string, token: string) =>
+    requestJson<FundingSettlementReportResponse>(
+      `/api/v1/funding-settlement/tokens/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}`,
+    ),
+  fundingSettlementReport: (reportId: string) =>
+    requestJson<FundingSettlementReportResponse>(
+      `/api/v1/funding-settlement/reports/${encodeURIComponent(reportId)}`,
+    ),
   controlCampaign: (campaignId: string) =>
     requestJson<ControlCampaignRecord>(
       `/api/v1/control/campaigns/${encodeURIComponent(campaignId)}`,

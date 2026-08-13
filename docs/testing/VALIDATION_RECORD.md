@@ -48,6 +48,38 @@ This checkpoint covers the implemented read-only Phase 1 path. It is not product
   and atomic values now wrap inside `.fact-row`; the regression ran on Chromium desktop and Pixel
   7 (`2/2`). The full serial browser suite passed `38/38`.
 
+## Funding and Settlement Phase 2 validation — 2026-08-14
+
+This checkpoint records the bounded evidence layer and real public-chain smokes. It is not durable
+production acceptance.
+
+- The engine passed `7/7` focused tests, including transaction/receipt identity rejection,
+  failed/provisional `UNKNOWN` status, service-boundary suppression, bounded hop limits, and
+  endpoint-convergence suppression. Storage passed `3/3`; API integration passed `83/83`; the
+  Campaign plus Funding/Settlement UI route passed Chromium desktop and Pixel 7 `2/2`.
+- BSC FFT `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, blocks `113485950–113495949`, produced
+  report `fsr_d53d644a6be1844432e03b65`, result hash
+  `dc4c244a395b634fc07bde3f00f8b8bc726f8e3fde83d06fe84c805c84795e1c`, status `PARTIAL`, scope
+  `TRANSACTION_LOCAL`, coverage `1/1/0`, two funding edges, one sell-proceeds settlement edge,
+  and provider-free same-hash replay. Historical BSC code probes returned `missing trie node`;
+  four exact transaction senders were used as the explicitly labeled focus fallback. Current code
+  was not substituted.
+- Ethereum WETH `0xc02aa39b223fe8d0a0e5c4f27ead9083c756cc2`, block `25748600`, produced report
+  `fsr_1c1a7d6564b8d2a3e71b8887`, result hash
+  `c09432ddafcf97969d252c2939a585f188d8ba8a297577cd99941d2522b8d4ea`, status `PARTIAL`, scope
+  `TRANSACTION_LOCAL`, coverage `1/1/0`, one funding edge, one sell-proceeds settlement edge,
+  and provider-free same-hash replay. Exact transaction/receipt binding succeeded; historical
+  origin/code expansion was explicitly `NOT_QUERIED`.
+- Both reports were generated from bounded in-memory smoke composition with S3-shaped raw artifact
+  references. They were not written through a fresh PostgreSQL/ClickHouse/MinIO production run.
+  No report is promoted to range-complete history, entity ownership, calibrated probability,
+  service attribution, or live monitoring acceptance.
+- The full coverage command completed all `703` enabled tests and `38` skips, but the configured
+  global threshold was not met locally: Statements `77.27%`, Branches `70.78%`, Lines `78.56%`.
+  Existing low-covered worker/storage boundary files account for most of the gap; this result is
+  recorded as a failed gate rather than weakened or relabeled. SBOM generation passed. Docker
+  daemon validation remained unavailable because `dockerDesktopLinuxEngine` was not running.
+
 ## Control Campaign P0 checkpoint validation — 2026-08-13
 
 This checkpoint records the first read-only Control Campaign implementation before continuing to

@@ -358,6 +358,23 @@ replay retains coverage, freshness, source set, model/policy versions, checkpoin
 Archive-scale backfill, independent provider reconciliation, continuous monitoring, alert/export
 delivery, calibration, and fresh durable multi-store acceptance remain open gates.
 
+The next bounded layer is `funding-settlement-v1.0.0`. It consumes exact finalized EVM transaction
+and receipt observations rather than replacing the Token Flow authority. Native value and canonical
+ERC-20 Transfer logs become `evm-asset-transfer-observation-v1` records only after placement and
+identity agreement. Deterministic direct and finite-hop funding/settlement edges retain the
+underlying transaction, Evidence, raw artifact references, exact block, coverage scope, freshness,
+source set, model/policy versions, and uncalibrated confidence. Failed or unknown execution stays
+provisional; it is never coerced into a zero-valued or successful edge. `SERVICE_HUB`, CEX, DEX
+router, and bridge boundaries emit explicit suppression records and stop propagation.
+
+PostgreSQL migration `033_funding_settlement_reports` stores immutable report envelopes and the API
+offers provider-free latest/exact replay. The Control Campaign UI displays edge counts, paths,
+coverage scope, Snapshot, drilldown and suppressed boundaries, while explicitly stating that the
+graph is transaction evidence and not ownership proof. BSC and Ethereum public bounded smokes are
+recorded as `PARTIAL`/`TRANSACTION_LOCAL`; durable multi-store capture, range-complete history,
+historical code classification, service registry attribution, calibration and monitoring remain
+open production gates.
+
 ### Global intelligence search
 
 `global-intelligence-search-v0.1.0` is a provider-free read projection over authoritative durable

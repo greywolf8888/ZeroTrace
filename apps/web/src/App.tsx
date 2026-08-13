@@ -14,6 +14,8 @@ import {
   type StoredPensionCandidateReport,
   type EvmSupplyContinuityReplayResponse,
   type EvmControlSurfaceResponse,
+  type FundingSettlementReport,
+  type FundingSettlementReportResponse,
   type EntityRelationshipReportReplayResponse,
   type EntityRelationshipTimelineReplayResponse,
   type EvidenceRecord,
@@ -3541,12 +3543,250 @@ function EntityIntelligenceWorkspace() {
   );
 }
 
+function isFundingSettlementReport(
+  value: FundingSettlementReportResponse['report'] | undefined,
+): value is FundingSettlementReport {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'schemaVersion' in value &&
+    value.schemaVersion === 'funding-settlement-report-v1'
+  );
+}
+
+function FundingSettlementPanel({
+  response,
+  error,
+}: {
+  response: FundingSettlementReportResponse | undefined;
+  error: string | undefined;
+}) {
+  if (error !== undefined) {
+    return (
+      <section className="panel funding-settlement-panel" data-testid="funding-settlement-report">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Funding &amp; Settlement Graph</span>
+            <h3>Durable report unavailable</h3>
+          </div>
+          <StatusPill status="UNAVAILABLE" />
+        </div>
+        <p className="panel-copy funding-settlement-copy">{error}</p>
+      </section>
+    );
+  }
+
+  const report = isFundingSettlementReport(response?.report) ? response.report : undefined;
+  if (report === undefined) {
+    return (
+      <section className="panel funding-settlement-panel" data-testid="funding-settlement-report">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Funding &amp; Settlement Graph</span>
+            <h3>No durable report was found</h3>
+          </div>
+          <StatusPill status="NOT_QUERIED" />
+        </div>
+        <p className="panel-copy funding-settlement-copy">
+          Funding and settlement inference has not been materialized for this token. No numeric
+          coverage or ownership conclusion is inferred from the absence of a report.
+        </p>
+      </section>
+    );
+  }
+
+  const edges = [
+    ...report.fundingEdges.map((edge) => ({ lane: 'Funding', edge })),
+    ...report.settlementEdges.map((edge) => ({ lane: 'Settlement', edge })),
+  ];
+
+  return (
+    <section className="panel funding-settlement-panel" data-testid="funding-settlement-report">
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Funding &amp; Settlement Graph · replayable Snapshot</span>
+          <h3>Transaction evidence, not ownership proof</h3>
+        </div>
+        <StatusPill status={report.status} />
+      </div>
+      <p className="panel-copy funding-settlement-copy">
+        This bounded graph records observed asset paths and explicit service boundaries. It does not
+        merge entities, establish common control, or treat an uncalibrated confidence value as a
+        probability.
+      </p>
+      <div className="metric-grid compact-grid funding-settlement-metrics">
+        <MetricTile
+          label="Funding edges"
+          value={String(report.fundingEdges.length)}
+          detail="Observed relations"
+          state="known"
+        />
+        <MetricTile
+          label="Settlement edges"
+          value={String(report.settlementEdges.length)}
+          detail="Observed exits or proceeds"
+          state="known"
+        />
+        <MetricTile
+          label="Patterns"
+          value={String(report.patterns.length)}
+          detail="Deterministic bounded patterns"
+          state={report.patterns.length === 0 ? 'unknown' : 'known'}
+        />
+        <MetricTile
+          label="History coverage"
+          value={`${Math.round(report.historyCoverage * 100)}%`}
+          detail={titleCase(report.coverageScope)}
+          state={report.coverageScope === 'RANGE_COMPLETE' ? 'known' : 'unknown'}
+        />
+      </div>
+      <div className="fact-grid funding-settlement-facts">
+        <div className="fact-row">
+          <span>Report ID</span>
+          <code>{report.id}</code>
+        </div>
+        <div className="fact-row">
+          <span>Block range</span>
+          <code>
+            {report.fromBlock} → {report.toBlock}
+          </code>
+        </div>
+        <div className="fact-row">
+          <span>Coverage scope</span>
+          <StatusPill status={report.coverageScope} />
+        </div>
+        <div className="fact-row">
+          <span>Snapshot</span>
+          <code>{report.snapshot.blockNumber}</code>
+        </div>
+        <div className="fact-row">
+          <span>Confidence</span>
+          <KnowledgeDisplay data={report.confidence} />
+        </div>
+        <div className="fact-row">
+          <span>Evidence / drilldown</span>
+          <span>
+            {report.evidenceIds.length} / {report.drilldown.length} transactions
+          </span>
+        </div>
+        <div className="fact-row">
+          <span>Freshness</span>
+          <span>{formatTime(report.freshness)}</span>
+        </div>
+        <div className="fact-row">
+          <span>Result hash</span>
+          <code>{shortId(report.resultHash, 18)}</code>
+        </div>
+      </div>
+      <div className="funding-settlement-section">
+        <div className="panel-header funding-settlement-subheader">
+          <div>
+            <span className="eyebrow">Exact transaction paths</span>
+            <h4>Observed relations</h4>
+          </div>
+          <span className="panel-note">{edges.length} edge(s)</span>
+        </div>
+        <div className="table-scroll">
+          <table className="funding-settlement-table">
+            <thead>
+              <tr>
+                <th>Lane</th>
+                <th>Relation</th>
+                <th>Path</th>
+                <th>Asset / amount</th>
+                <th>Block / hops</th>
+              </tr>
+            </thead>
+            <tbody>
+              {edges.length === 0 ? (
+                <tr>
+                  <td className="empty-cell" colSpan={5}>
+                    No relation was derived within the declared coverage scope.
+                  </td>
+                </tr>
+              ) : (
+                edges.map(({ lane, edge }) => (
+                  <tr key={lane + ':' + edge.id}>
+                    <td>
+                      <StatusPill status={lane} />
+                    </td>
+                    <td>{titleCase(edge.relation)}</td>
+                    <td>
+                      <code title={edge.path.join(' → ')}>
+                        {shortId(edge.source, 6)} → {shortId(edge.destination, 6)}
+                      </code>
+                      <small className="funding-settlement-subline">
+                        tx {shortId(edge.transactionHash, 7)}
+                      </small>
+                    </td>
+                    <td>
+                      <code>{edge.asset === 'NATIVE' ? 'Native' : shortId(edge.asset, 7)}</code>
+                      <small className="funding-settlement-subline">{edge.amountAtomic}</small>
+                    </td>
+                    <td>
+                      {edge.blockNumber}
+                      <small className="funding-settlement-subline">{edge.hopDepth} hop(s)</small>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {report.suppressedPaths.length === 0 ? null : (
+        <div className="funding-settlement-section funding-settlement-suppressions">
+          <div className="panel-header funding-settlement-subheader">
+            <div>
+              <span className="eyebrow">Attribution boundaries</span>
+              <h4>Suppressed paths</h4>
+            </div>
+            <span className="panel-note">{report.suppressedPaths.length} path(s)</span>
+          </div>
+          <div className="table-scroll">
+            <table className="funding-settlement-table">
+              <thead>
+                <tr>
+                  <th>Reason</th>
+                  <th>Path</th>
+                  <th>Transaction</th>
+                  <th>Evidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.suppressedPaths.map((path) => (
+                  <tr key={path.id}>
+                    <td>
+                      <StatusPill status={path.reason} />
+                    </td>
+                    <td>
+                      <code>
+                        {shortId(path.source, 6)} → {shortId(path.destination, 6)}
+                      </code>
+                    </td>
+                    <td>
+                      <code>{shortId(path.transactionHash, 8)}</code>
+                    </td>
+                    <td>{path.evidenceIds.length}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ControlCampaignWorkspace() {
   const [chainId, setChainId] = useState('eip155:56');
   const [token, setToken] = useState('');
   const [records, setRecords] = useState<ControlCampaignRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
   const [error, setError] = useState<string>();
+  const [fundingSettlement, setFundingSettlement] = useState<FundingSettlementReportResponse>();
+  const [fundingSettlementError, setFundingSettlementError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -3557,19 +3797,35 @@ function ControlCampaignWorkspace() {
     if (chainId.trim().length === 0 || normalizedToken.length === 0) return;
     setBusy(true);
     setError(undefined);
-    try {
-      const response = await api.controlCampaigns(chainId.trim(), normalizedToken);
-      setRecords(response.records);
-      setSelectedId(response.records[0]?.campaign.id);
-      setLoaded(true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Control Campaign request failed.');
+    setFundingSettlementError(undefined);
+    const [campaignResult, fundingResult] = await Promise.allSettled([
+      api.controlCampaigns(chainId.trim(), normalizedToken),
+      api.latestFundingSettlement(chainId.trim(), normalizedToken),
+    ]);
+    if (campaignResult.status === 'fulfilled') {
+      setRecords(campaignResult.value.records);
+      setSelectedId(campaignResult.value.records[0]?.campaign.id);
+    } else {
+      setError(
+        campaignResult.reason instanceof Error
+          ? campaignResult.reason.message
+          : 'Control Campaign request failed.',
+      );
       setRecords([]);
       setSelectedId(undefined);
-      setLoaded(true);
-    } finally {
-      setBusy(false);
     }
+    if (fundingResult.status === 'fulfilled') {
+      setFundingSettlement(fundingResult.value);
+    } else {
+      setFundingSettlement(undefined);
+      setFundingSettlementError(
+        fundingResult.reason instanceof Error
+          ? fundingResult.reason.message
+          : 'Funding and Settlement request failed.',
+      );
+    }
+    setLoaded(true);
+    setBusy(false);
   }
 
   async function replay() {
@@ -3666,6 +3922,10 @@ function ControlCampaignWorkspace() {
         </p>
         {error === undefined ? null : <p className="inline-error">{error}</p>}
       </section>
+
+      {loaded ? (
+        <FundingSettlementPanel response={fundingSettlement} error={fundingSettlementError} />
+      ) : null}
 
       {loaded && records.length === 0 && error === undefined ? (
         <section className="panel empty-state" data-testid="control-campaign-empty">
