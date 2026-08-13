@@ -34,7 +34,13 @@
       "@zerotrace/capture-scheduler": ["./packages/capture-scheduler/src/index.ts"],
       "@zerotrace/entity-engine": ["./packages/entity-engine/src/index.ts"],
       "@zerotrace/claim-audit": ["./packages/claim-audit/src/index.ts"],
-      "@zerotrace/rv": ["./packages/rv/src/index.ts"]
+      "@zerotrace/rv": ["./packages/rv/src/index.ts"],
+      "@zerotrace/token-flow-engine": ["./packages/token-flow-engine/src/index.ts"],
+      "@zerotrace/cluster-position-engine": ["./packages/cluster-position-engine/src/index.ts"],
+      "@zerotrace/candidate-discovery": ["./packages/candidate-discovery/src/index.ts"],
+      "@zerotrace/behavior-engine": ["./packages/behavior-engine/src/index.ts"],
+      "@zerotrace/campaign-engine": ["./packages/campaign-engine/src/index.ts"],
+      "@zerotrace/forensic-evidence": ["./packages/forensic-evidence/src/index.ts"]
     }
   }
 }

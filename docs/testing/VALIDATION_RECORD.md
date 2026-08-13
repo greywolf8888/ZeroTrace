@@ -3,6 +3,28 @@
 This record captures the latest local acceptance run. It is evidence for the runnable foundation,
 not a terminal-product or production-deployment approval.
 
+## Control Campaign P0 checkpoint validation — 2026-08-13
+
+This checkpoint records the first read-only Control Campaign implementation before continuing to
+provider-backed Token History Discovery. It is a local implementation gate, not production
+qualification.
+
+- P0 contracts and engines passed the repository test suite: `599/599` unit tests across `106`
+  files, `81` integration tests with `38` explicit optional-store/provider skips, and `1/1` model
+  evaluation;
+- formatting, ESLint, TypeScript, production build, production license allowlist and
+  `npm audit --audit-level=high` passed with `0` high-severity vulnerabilities;
+- the new Campaign Timeline/Evidence Line UI passed Chromium desktop and Pixel 7 targeted E2E
+  `2/2`; the latest fully-parallel host run was `33/38` because five pre-existing views timed out
+  under load, and serial replay of those eight views passed `8/8`;
+- `git diff --check` passed and no credential-shaped secret was found in the P0 diff; phrases such
+  as `private-key custody` are architectural prohibitions, not credentials;
+- `docker compose config --quiet` passed, but empty-database bootstrap for PostgreSQL migration
+  `031_control_campaign_reports.sql` and ClickHouse migration `002_control_campaign_flow.sql`
+  remained unavailable because the local Docker Desktop Linux engine named pipe was absent;
+- provider-backed historical discovery, real finalized-chain campaign capture, calibration and
+  remote CI/CodeQL for this uncommitted checkpoint remain open gates.
+
 ## Environment
 
 | Component      | Version / context                                  |

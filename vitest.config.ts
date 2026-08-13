@@ -16,6 +16,12 @@ const workspacePackages = [
   'rv',
   'schemas',
   'storage',
+  'token-flow-engine',
+  'cluster-position-engine',
+  'candidate-discovery',
+  'behavior-engine',
+  'campaign-engine',
+  'forensic-evidence',
 ];
 
 export default defineConfig({

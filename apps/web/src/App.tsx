@@ -7,6 +7,7 @@ import {
   type Erc20DecimalsObservationResponse,
   type Capability,
   type ClaimReportResponse,
+  type ControlCampaignRecord,
   type EvmClaimBurnCandidateDiscoveryResponse,
   type EvmClaimBurnConservationResponse,
   type EvmClaimBurnPromotionReplayResponse,
@@ -43,7 +44,8 @@ import {
 } from './api.js';
 import { InvestigationGraphWorkspace } from './InvestigationGraph.js';
 
-type View = 'overview' | 'search' | 'entities' | 'control' | 'claims' | 'scenario' | 'health';
+type View =
+  'overview' | 'search' | 'entities' | 'control' | 'campaigns' | 'claims' | 'scenario' | 'health';
 type Theme = 'dark' | 'light';
 
 const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
@@ -51,12 +53,13 @@ const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
   { id: 'search', label: 'Intelligence Search', marker: 'IS' },
   { id: 'entities', label: 'Entity Intelligence', marker: 'EI' },
   { id: 'control', label: 'Control Rights', marker: 'CR' },
+  { id: 'campaigns', label: 'Control Campaigns', marker: 'CC' },
   { id: 'claims', label: 'Claim Audit', marker: 'CA' },
   { id: 'scenario', label: 'Scenario Lab', marker: 'SL' },
   { id: 'health', label: 'Data Health', marker: 'DH' },
 ];
 
-const FUTURE_DOMAINS = ['Evidence Ledger', 'Control Timeline', 'Analyst Workbench'];
+const FUTURE_DOMAINS = ['Evidence Ledger', 'Analyst Workbench'];
 
 function shortId(value: string, length = 12): string {
   if (value.length <= length * 2 + 1) return value;
@@ -3534,6 +3537,371 @@ function EntityIntelligenceWorkspace() {
         {...(timelineRecord === undefined ? {} : { suggestedTimelineId: timelineRecord.id })}
         {...(subjectA.trim().length === 0 ? {} : { suggestedSeedSubjectId: subjectA.trim() })}
       />
+    </>
+  );
+}
+
+function ControlCampaignWorkspace() {
+  const [chainId, setChainId] = useState('eip155:56');
+  const [token, setToken] = useState('');
+  const [records, setRecords] = useState<ControlCampaignRecord[]>([]);
+  const [selectedId, setSelectedId] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const selected = records.find((record) => record.campaign.id === selectedId) ?? records[0];
+
+  async function load() {
+    const normalizedToken = token.trim();
+    if (chainId.trim().length === 0 || normalizedToken.length === 0) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const response = await api.controlCampaigns(chainId.trim(), normalizedToken);
+      setRecords(response.records);
+      setSelectedId(response.records[0]?.campaign.id);
+      setLoaded(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Control Campaign request failed.');
+      setRecords([]);
+      setSelectedId(undefined);
+      setLoaded(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function replay() {
+    if (selected === undefined) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const replayed = await api.replayControlCampaign(selected.campaign.id);
+      setRecords((current) => [
+        replayed,
+        ...current.filter((record) => record.campaign.id !== replayed.campaign.id),
+      ]);
+      setSelectedId(replayed.campaign.id);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Provider-free replay failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const campaign = selected?.campaign;
+  const evidenceLine = selected?.evidenceLine;
+  const snapshotPosition =
+    campaign?.snapshotEnd.blockNumber ??
+    campaign?.snapshotEnd.height ??
+    campaign?.snapshotEnd.slot ??
+    'Unknown';
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">Control Campaign · Evidence Line · replayable Snapshot</span>
+          <h1>Control Campaigns</h1>
+          <p>
+            Follow token flow, cluster positions, behavior events, and forensic Evidence without
+            silently turning labels into ownership or attribution into certainty.
+          </p>
+        </div>
+        <StatusPill status="READ_ONLY" />
+      </div>
+      <section className="panel subject-panel quote-panel" data-testid="control-campaign-query">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Durable Postgres reports only</span>
+            <h3>Load a token campaign history</h3>
+          </div>
+          <span className="snapshot-badge">No backfill or live monitor in this release</span>
+        </div>
+        <form
+          className="quote-form control-campaign-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void load();
+          }}
+        >
+          <label htmlFor="campaign-chain">Chain ID</label>
+          <input
+            id="campaign-chain"
+            value={chainId}
+            onChange={(event) => setChainId(event.target.value)}
+            placeholder="eip155:56"
+            spellCheck={false}
+          />
+          <label htmlFor="campaign-token">Token</label>
+          <input
+            id="campaign-token"
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            placeholder="0x…"
+            spellCheck={false}
+          />
+          <div className="control-actions">
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={busy || token.trim().length === 0}
+            >
+              {busy ? 'Loading…' : 'Load campaigns'}
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={busy || selected === undefined}
+              onClick={() => void replay()}
+            >
+              Replay stored Snapshot
+            </button>
+          </div>
+        </form>
+        <p className="quote-note">
+          Unknown, unavailable, stale, and provider-down remain distinct. An uncalibrated Evidence
+          score is displayed as a score, never as a probability or ownership conclusion.
+        </p>
+        {error === undefined ? null : <p className="inline-error">{error}</p>}
+      </section>
+
+      {loaded && records.length === 0 && error === undefined ? (
+        <section className="panel empty-state" data-testid="control-campaign-empty">
+          <strong>No durable Control Campaign report was found.</strong>
+          <span>The token may not have been materialized, or storage is not configured.</span>
+        </section>
+      ) : null}
+
+      {records.length > 0 ? (
+        <section
+          className="two-column control-campaign-layout"
+          data-testid="control-campaign-results"
+        >
+          <div className="panel">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Immutable campaign reports</span>
+                <h3>Campaign index</h3>
+              </div>
+              <span className="panel-note">{records.length} report(s)</span>
+            </div>
+            <div className="campaign-index-list">
+              {records.map((record) => (
+                <button
+                  className={
+                    'campaign-index-item ' + (record === selected ? 'campaign-index-active' : '')
+                  }
+                  key={record.campaign.id}
+                  type="button"
+                  onClick={() => setSelectedId(record.campaign.id)}
+                >
+                  <span>
+                    <strong>{titleCase(record.campaign.currentStage)}</strong>
+                    <small>{shortId(record.campaign.id, 9)}</small>
+                  </span>
+                  <span>
+                    <StatusPill status={record.campaign.status} />
+                    <small>block {record.campaign.startBlock}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selected === undefined || campaign === undefined || evidenceLine === undefined ? null : (
+            <div className="campaign-detail-stack">
+              <section className="panel">
+                <div className="panel-header">
+                  <div>
+                    <span className="eyebrow">
+                      {shortId(campaign.id, 13)} · {campaign.token}
+                    </span>
+                    <h3>Campaign posture</h3>
+                  </div>
+                  <StatusPill status={campaign.currentStage} />
+                </div>
+                <div className="metric-grid compact-grid">
+                  <MetricTile
+                    label="Campaign score"
+                    value={campaign.evidenceScore.toFixed(3)}
+                    detail="Uncalibrated Evidence score"
+                    state="known"
+                  />
+                  <MetricTile
+                    label="Controlled supply"
+                    value={
+                      campaign.controlledSupply.state === 'known'
+                        ? (campaign.controlledSupply.value ?? 'Unknown')
+                        : 'Unknown'
+                    }
+                    detail="Cluster position aggregate"
+                    state={campaign.controlledSupply.state === 'known' ? 'known' : 'unknown'}
+                  />
+                  <MetricTile
+                    label="Data coverage"
+                    value={`${Math.round(campaign.evidenceCoverage * 100)}%`}
+                    detail="Observed campaign Evidence"
+                    state={campaign.evidenceCoverage === 1 ? 'known' : 'unknown'}
+                  />
+                  <MetricTile
+                    label="Wallets"
+                    value={String(
+                      campaign.coreWalletIds.length + campaign.satelliteWalletIds.length,
+                    )}
+                    detail="Core + satellite candidates"
+                    state="known"
+                  />
+                </div>
+                <div className="fact-grid">
+                  <div className="fact-row">
+                    <span>Campaign ID</span>
+                    <code>{campaign.id}</code>
+                  </div>
+                  <div className="fact-row">
+                    <span>Block range</span>
+                    <span>
+                      {campaign.startBlock} → <KnowledgeDisplay data={campaign.endBlock} />
+                    </span>
+                  </div>
+                  <div className="fact-row">
+                    <span>Snapshot position</span>
+                    <code>{snapshotPosition}</code>
+                  </div>
+                  <div className="fact-row">
+                    <span>Calibration</span>
+                    <StatusPill status={campaign.calibrationStatus} />
+                  </div>
+                  <div className="fact-row">
+                    <span>Campaign confidence</span>
+                    <KnowledgeDisplay data={campaign.campaignConfidence} />
+                  </div>
+                  <div className="fact-row">
+                    <span>Entity mutation</span>
+                    <strong className="knowledge-unknown">Blocked</strong>
+                  </div>
+                  <div className="fact-row">
+                    <span>Sources</span>
+                    <span>{campaign.metadata.sourceSet.join(' · ')}</span>
+                  </div>
+                  <div className="fact-row">
+                    <span>Result hash</span>
+                    <code>{shortId(selected.resultHash, 18)}</code>
+                  </div>
+                </div>
+              </section>
+
+              <section className="panel" data-testid="control-campaign-timeline">
+                <div className="panel-header">
+                  <div>
+                    <span className="eyebrow">Behavior Events · ordered by observed range</span>
+                    <h3>Campaign Timeline</h3>
+                  </div>
+                  <span className="panel-note">{selected.behaviorEvents.length} event(s)</span>
+                </div>
+                {selected.behaviorEvents.length === 0 ? (
+                  <p className="empty-cell">No behavior event was materialized.</p>
+                ) : (
+                  <div className="timeline-list">
+                    {selected.behaviorEvents.map((event) => (
+                      <article className="timeline-event" key={event.id}>
+                        <div className="timeline-marker" />
+                        <div>
+                          <div className="timeline-event-heading">
+                            <strong>{titleCase(event.type)}</strong>
+                            <StatusPill status={event.status} />
+                          </div>
+                          <span className="timeline-range">
+                            {event.startBlock} → {event.endBlock} · {formatTime(event.startTime)}
+                          </span>
+                          <p>{event.explanation}</p>
+                          <small>
+                            {event.supportingEvidenceIds.length} supporting Evidence · confidence{' '}
+                            <KnowledgeDisplay data={event.confidence} />
+                          </small>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="panel" data-testid="control-campaign-evidence-line">
+                <div className="panel-header">
+                  <div>
+                    <span className="eyebrow">Forensic Evidence Line · no direct entity merge</span>
+                    <h3>Evidence Line</h3>
+                  </div>
+                  <StatusPill status={evidenceLine.terminalBoundary} />
+                </div>
+                <div className="evidence-line-phases">
+                  {evidenceLine.phases.map((phase) => (
+                    <div className="evidence-line-phase" key={phase.phase}>
+                      <div>
+                        <strong>{titleCase(phase.phase)}</strong>
+                        <span>{phase.itemIds.length} item(s)</span>
+                      </div>
+                      <div className="coverage-bar">
+                        <span style={{ width: `${Math.round(phase.coverage * 100)}%` }} />
+                      </div>
+                      {phase.attributionStopped ? (
+                        <small className="knowledge-unknown">Attribution stopped at boundary</small>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Evidence</th>
+                        <th>Phase</th>
+                        <th>Block</th>
+                        <th>Subjects</th>
+                        <th>Review</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selected.evidenceItems.length === 0 ? (
+                        <tr>
+                          <td className="empty-cell" colSpan={5}>
+                            No campaign Evidence item was materialized.
+                          </td>
+                        </tr>
+                      ) : (
+                        selected.evidenceItems.map((item) => (
+                          <tr key={item.id}>
+                            <td>
+                              <code title={item.id}>{shortId(item.evidenceId, 9)}</code>
+                              <br />
+                              <small>{item.polarity}</small>
+                            </td>
+                            <td>
+                              {titleCase(item.phase)}
+                              <br />
+                              <small>{titleCase(item.role)}</small>
+                            </td>
+                            <td>{item.blockNumber}</td>
+                            <td>
+                              {item.subjectA === undefined && item.subjectB === undefined
+                                ? 'Not specified'
+                                : `${shortId(item.subjectA ?? 'Unknown', 7)} → ${shortId(item.subjectB ?? 'Unknown', 7)}`}
+                            </td>
+                            <td>
+                              <StatusPill status={item.reviewState} />
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          )}
+        </section>
+      ) : null}
     </>
   );
 }
@@ -7516,6 +7884,7 @@ export function App() {
     }
     if (view === 'entities') return <EntityIntelligenceWorkspace />;
     if (view === 'control') return <ControlRightsWorkspace />;
+    if (view === 'campaigns') return <ControlCampaignWorkspace />;
     if (view === 'scenario') return <ScenarioLab />;
     if (view === 'claims') return <ClaimAuditWorkspace />;
     if (view === 'health') {

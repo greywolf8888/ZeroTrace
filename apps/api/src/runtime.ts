@@ -31,6 +31,7 @@ import {
   PostgresClaimRuleReviewReportRepository,
   PostgresClaimReportRepository,
   PostgresClaimVerificationReportRepository,
+  PostgresControlCampaignReportRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaTransactionReportRepository,
@@ -88,6 +89,7 @@ export interface AppRuntime {
   entityRelationshipTimelines?: PostgresEntityRelationshipTimelineRepository;
   entityInvestigationGraphs?: PostgresEntityInvestigationGraphRepository;
   entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
+  controlCampaignReports?: PostgresControlCampaignReportRepository;
   intelligenceSearch?: PostgresIntelligenceSearchRepository;
   labelIntelligenceReports?: PostgresLabelIntelligenceReportRepository;
   captureSchedules?: PostgresCaptureScheduleRepository;
@@ -625,6 +627,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const controlCampaignReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresControlCampaignReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const intelligenceSearch =
     config.postgresUrl === undefined
       ? undefined
@@ -697,6 +708,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       entityRelationshipTimelines?.close(),
       entityInvestigationGraphs?.close(),
       entityInvestigationGraphTimelines?.close(),
+      controlCampaignReports?.close(),
       intelligenceSearch?.close(),
       labelIntelligenceReports?.close(),
       captureSchedules?.close(),
@@ -743,6 +755,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(entityInvestigationGraphTimelines === undefined
       ? {}
       : { entityInvestigationGraphTimelines }),
+    ...(controlCampaignReports === undefined ? {} : { controlCampaignReports }),
     ...(intelligenceSearch === undefined ? {} : { intelligenceSearch }),
     ...(labelIntelligenceReports === undefined ? {} : { labelIntelligenceReports }),
     ...(captureSchedules === undefined ? {} : { captureSchedules }),

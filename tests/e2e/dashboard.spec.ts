@@ -4760,3 +4760,174 @@ test('renders finalized Solana Token-2022 authority and explicit pending domains
   }));
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
+
+test('renders a Control Campaign Timeline and Evidence Line without merging entities', async ({
+  page,
+}) => {
+  const campaignId = `cc_${'1'.repeat(24)}`;
+  const clusterVersionId = `clv_${'2'.repeat(24)}`;
+  const eventId = `be_${'3'.repeat(24)}`;
+  const evidenceItemId = `cei_${'4'.repeat(24)}`;
+  const evidenceId = `ev_${'5'.repeat(24)}`;
+  const blockHash = `0x${'a'.repeat(64)}`;
+  const snapshot = {
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    blockNumber: '100',
+    blockHash,
+    finality: 'finalized',
+    capturedAt: '2026-08-13T00:00:00.000Z',
+  };
+  await page.route('**/api/v1/control/tokens/**/campaigns*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        records: [
+          {
+            schemaVersion: 'control-campaign-bundle-v1',
+            campaign: {
+              id: campaignId,
+              ledger: 'EVM',
+              chainId: 'eip155:56',
+              token: `0x${'b'.repeat(40)}`,
+              originBlock: '90',
+              startBlock: '95',
+              endBlock: { state: 'unknown', reason: 'NOT_QUERIED' },
+              status: 'ACTIVE',
+              currentStage: 'ACCUMULATION',
+              coreWalletIds: [`0x${'c'.repeat(40)}`],
+              satelliteWalletIds: [`0x${'d'.repeat(40)}`],
+              controlledSupply: { state: 'known', value: '0.42' },
+              controlConfidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+              coordinationConfidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+              campaignConfidence: {
+                state: 'unknown',
+                reason: 'NOT_QUERIED',
+                detail: 'Uncalibrated score.',
+              },
+              evidenceScore: 0.73,
+              evidenceCoverage: 0.85,
+              sourceCoverage: 0.5,
+              historyCoverage: 0.4,
+              snapshotStart: snapshot,
+              snapshotEnd: snapshot,
+              metadata: {
+                snapshot,
+                dataCoverage: 0.85,
+                sourceCoverage: 0.5,
+                historyCoverage: 0.4,
+                freshness: snapshot.capturedAt,
+                sourceSet: ['fixture-campaign-source'],
+                modelVersion: 'campaign-v1.0.0',
+                confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+                evidenceIds: [evidenceId],
+                calibrationStatus: 'UNCALIBRATED',
+              },
+              calibrationStatus: 'UNCALIBRATED',
+              automaticOwnershipMergeAllowed: false,
+              automaticEntityMembershipMutationAllowed: false,
+              resultHash: 'f'.repeat(64),
+            },
+            clusterVersion: {
+              id: clusterVersionId,
+              memberWalletIds: [`0x${'c'.repeat(40)}`, `0x${'d'.repeat(40)}`],
+              coreWalletIds: [`0x${'c'.repeat(40)}`],
+              satelliteWalletIds: [`0x${'d'.repeat(40)}`],
+              fundingRootIds: [],
+              settlementRootIds: [],
+            },
+            memberships: [],
+            positions: [],
+            behaviorEvents: [
+              {
+                id: eventId,
+                type: 'ACCUMULATION',
+                status: 'FINAL',
+                startBlock: '95',
+                endBlock: '100',
+                startTime: snapshot.capturedAt,
+                endTime: snapshot.capturedAt,
+                actors: [`0x${'c'.repeat(40)}`],
+                counterparties: [],
+                evidenceScore: 0.73,
+                confidence: { state: 'known', value: 0.58 },
+                supportingEvidenceIds: [evidenceItemId],
+                contradictingEvidenceIds: [],
+                suppressionReasons: [],
+                attributionStopped: false,
+                explanation: 'Observed Evidence-backed token accumulation.',
+                snapshot,
+              },
+            ],
+            evidenceItems: [
+              {
+                id: evidenceItemId,
+                evidenceId,
+                phase: 'FUNDING',
+                role: 'DIRECT',
+                polarity: 'SUPPORT',
+                blockNumber: '98',
+                blockHash,
+                subjectA: `0x${'e'.repeat(40)}`,
+                subjectB: `0x${'c'.repeat(40)}`,
+                explanation: 'Funding Evidence.',
+                reviewState: 'UNREVIEWED',
+                snapshotHash: blockHash,
+                resultHash: 'e'.repeat(64),
+              },
+            ],
+            evidenceLine: {
+              terminalBoundary: 'NONE_OBSERVED',
+              phases: [
+                {
+                  phase: 'FUNDING',
+                  itemIds: [evidenceItemId],
+                  evidenceIds: [evidenceId],
+                  coverage: 1,
+                  attributionStopped: false,
+                },
+              ],
+              itemIds: [evidenceItemId],
+              evidenceIds: [evidenceId],
+              dataCoverage: 0.85,
+              freshness: snapshot.capturedAt,
+              sourceSet: ['fixture-campaign-source'],
+              modelVersion: 'forensic-evidence-v1.0.0',
+              confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+              sourceCoverage: 0.5,
+              historyCoverage: 0.4,
+              resultHash: 'd'.repeat(64),
+            },
+            resultHash: 'f'.repeat(64),
+            durableReport: {
+              id: campaignId,
+              resultHash: 'f'.repeat(64),
+              capturedAt: snapshot.capturedAt,
+              createdAt: snapshot.capturedAt,
+              replayed: false,
+              liveRefresh: { state: 'unknown', reason: 'NOT_QUERIED' },
+            },
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Control Campaigns' }).click();
+  await expect(page.getByRole('heading', { name: 'Control Campaigns' })).toBeVisible();
+  await page.getByLabel('Token').fill(`0x${'b'.repeat(40)}`);
+  await page.getByRole('button', { name: 'Load campaigns' }).click();
+
+  await expect(page.getByTestId('control-campaign-timeline')).toContainText('Campaign Timeline');
+  await expect(page.getByTestId('control-campaign-timeline')).toContainText('Accumulation');
+  await expect(page.getByTestId('control-campaign-evidence-line')).toContainText('Evidence Line');
+  await expect(page.getByTestId('control-campaign-evidence-line')).toContainText(
+    evidenceId.slice(0, 9),
+  );
+  await expect(page.getByText('Blocked')).toBeVisible();
+  await expect(
+    page.getByTestId('control-campaign-results').getByText('Uncalibrated Evidence score'),
+  ).toBeVisible();
+});

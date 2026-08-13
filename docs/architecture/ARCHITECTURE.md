@@ -311,6 +311,43 @@ and the API contract fixes `automaticOwnershipMergeAllowed=false`. This bounded 
 complete CoinJoin classifier, address cluster, change history, peeling-chain analysis, external
 attribution, or calibrated Entity Resolution result.
 
+### Control Campaign and forensic Evidence line
+
+`control-campaign-v1` is a derived, read-only investigation layer over canonical chain Evidence and
+ledger Snapshots. It preserves the domain boundaries required by the Master Prompt as separate
+content-addressed records:
+
+1. `token-flow-v1` stores lossless atomic flow edges with execution/finality, quote context,
+   Evidence ID, raw artifact reference and exact block identity. Failed observations are retained
+   but never enter materialized balances; internal transfers are explainable gross movement and do
+   not change net cluster position.
+2. `candidate-discovery-v1` produces token-scoped wallet candidates with reasons, coverage and
+   service exclusions. It never mutates Entity membership.
+3. `cluster-position-v1` applies the conservation identity
+   `initial + externalIn - externalOut + mint - burn = actual` using raw integer strings and
+   fails closed on a mismatch. Supply ratio, sell-ready quantity and realizable quote value remain
+   typed Unknown when the required observation is absent.
+4. `behavior-event-v1` records Evidence-backed feature observations, family caps, coverage shrink,
+   an uncalibrated score and hard suppression reasons. Service Hub, CEX, bridge, router/common
+   infrastructure and dust boundaries stop attribution; suppression is not represented as a
+   numeric zero confidence.
+5. `control-campaign-v1` segments cluster/funding/settlement observations into deterministic
+   Campaign IDs while keeping control, coordination and campaign confidence independent. Campaign
+   scores become confidence values only after an explicit calibrated status.
+6. `forensic-evidence-line-v1` groups direct/derived/attribution Evidence by phase and terminal
+   boundary. Derived Evidence must reference source Evidence and the same Snapshot. It is a
+   navigation ledger, not a second raw-fact authority and not a conclusion about a person.
+
+Migration `031_control_campaign_reports` stores immutable, result-hash-verified bundles for
+provider-free latest/exact/Event/Evidence replay. ClickHouse migration `002_control_campaign_flow`
+defines append-only-ready raw flow, trade, feature and position projections while PostgreSQL
+remains authoritative for the forensic bundle. The API and UI expose Campaign Timeline, positions,
+wallet candidates, layer-filtered graph navigation and the Evidence Line. Token history discovery,
+historical backfill, live monitoring, alerts, export and calibration remain explicit external gates;
+their contract routes return `501 NOT_IMPLEMENTED` until real provider/workflow adapters are
+accepted. No signing, broadcasting, automatic fund movement, Entity merge or membership mutation
+is permitted.
+
 ### Global intelligence search
 
 `global-intelligence-search-v0.1.0` is a provider-free read projection over authoritative durable
@@ -707,14 +744,14 @@ security boundaries and have regression tests.
 
 ## Storage ownership
 
-| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                              |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Entity hypotheses/timelines/investigation graphs, Flap history, EVM Claim/declaration/pension-entry Scenario Reports, and Solana control/transaction reports wired; other repositories pending |
-| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; semantic facts/series pending                                                                                                                                                   |
-| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                                                                                        |
-| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE derivative projection wired for bounded exact-Snapshot Entity investigation graphs; PostgreSQL remains authoritative                                                                                                                                   |
-| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                                                                                       |
-| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Generic PostgreSQL-backed schedule/run/lease truth and a handler-neutral cycle coordinator are wired; Temporal schedule/workflow and NATS JetStream adapters remain pending                                                                                                |
+| Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL       | subjects, snapshots, evidence metadata/edges, chain anchors/alerts, entities, rights, launches, scenarios, analyst overrides | Evidence/Snapshot, anchor/alert, ingestion, semantic checkpoints, immutable Entity hypotheses/timelines/investigation graphs, Flap history, EVM Claim/declaration/pension-entry Scenario Reports, Solana control/transaction reports, and immutable Control Campaign bundles wired; other repositories pending |
+| ClickHouse       | raw normalized facts, platform events, time-series metrics                                                                   | finalized EVM execution/state, Bitcoin UTXO, and Solana execution/balance Raw Facts wired; Control Campaign flow/trade/feature/position projection DDL added, while ingestion and semantic facts/series remain pending                                                                                         |
+| Object storage   | raw provider payloads and large artifacts by content hash                                                                    | versioned content-addressed artifacts wired for finalized ingestion                                                                                                                                                                                                                                            |
+| Graph projection | temporal entity/control traversal                                                                                            | Optional Apache AGE derivative projection wired for bounded exact-Snapshot Entity investigation graphs; PostgreSQL remains authoritative                                                                                                                                                                       |
+| Valkey           | bounded cache, locks, rate coordination                                                                                      | Compose service only                                                                                                                                                                                                                                                                                           |
+| NATS / Temporal  | ingestion events and durable workflows                                                                                       | Generic PostgreSQL-backed schedule/run/lease truth and a handler-neutral cycle coordinator are wired; Temporal schedule/workflow and NATS JetStream adapters remain pending                                                                                                                                    |
 
 PostgreSQL Evidence, derivation-edge, Snapshot, chain-anchor, Data Quality Alert/edge, ingestion-run,
 and semantic-scan-run tables include append-only or monotonic guards. Semantic checkpoints bind an

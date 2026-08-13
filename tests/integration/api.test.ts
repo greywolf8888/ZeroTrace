@@ -7074,4 +7074,32 @@ describe('ZeroTrace API contract', () => {
     expect(replay.statusCode).toBe(503);
     expect(replay.json().error.code).toBe('CONTROL_SURFACE_UNAVAILABLE');
   });
+
+  it('keeps Control Campaign storage, monitor, and backfill boundaries explicit', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const token = `0x${'e'.repeat(40)}`;
+
+    const unavailable = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control/tokens/eip155:56/${token}/campaigns`,
+    });
+    expect(unavailable.statusCode).toBe(503);
+    expect(unavailable.json().error.code).toBe('CONTROL_CAMPAIGN_STORAGE_UNAVAILABLE');
+
+    const backfill = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control/tokens/eip155:56/${token}/backfill`,
+    });
+    expect(backfill.statusCode).toBe(501);
+    expect(backfill.json().capability).toBe('control-campaign-backfill');
+
+    const monitor = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control/tokens/eip155:56/${token}/monitor`,
+    });
+    expect(monitor.statusCode).toBe(501);
+    expect(monitor.json().capability).toBe('control-campaign-monitor');
+  });
 });

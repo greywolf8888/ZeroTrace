@@ -33,6 +33,7 @@ export * from './claim-rule-review-reports.js';
 export * from './claim-verification-reports.js';
 export * from './action-semantics-reports.js';
 export * from './age-investigation-graph.js';
+export * from './control-campaign-reports.js';
 
 type DatabaseRow = Record<string, unknown>;
 

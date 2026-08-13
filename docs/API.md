@@ -314,6 +314,32 @@ IDL/verifiable-build provenance, history and independent-source agreement as Unk
 inspection stores an immutable `scs_...` report with nested Evidence and exact derivation edges.
 Latest, exact-ID and list routes replay PostgreSQL without contacting Solana RPC.
 
+### Control Campaigns and Forensic Evidence Lines
+
+The P0 Control Campaign surface is a read-only, provider-free replay layer over durable campaign
+bundles. It does not discover token history, start a live monitor, assign Entity membership, or
+broadcast transactions. Every bundle carries canonical Campaign/cluster/position/event/Evidence
+identity, an exact Snapshot, coverage, freshness, source set, model versions and a result hash. An
+uncalibrated `evidenceScore` is a bounded score, not a probability; hard Service Hub, CEX, bridge,
+router and dust boundaries preserve explicit attribution suppression.
+
+- `GET /api/v1/control/tokens/:chainId/:token/overview`
+- `GET /api/v1/control/tokens/:chainId/:token/campaigns?limit=50`
+- `GET /api/v1/control/campaigns/:campaignId`
+- `POST /api/v1/control/campaigns/:campaignId/replay`
+- `GET /api/v1/control/campaigns/:campaignId/timeline`
+- `GET /api/v1/control/campaigns/:campaignId/positions`
+- `GET /api/v1/control/campaigns/:campaignId/wallets`
+- `GET /api/v1/control/campaigns/:campaignId/graph?layer=control|funding|token|settlement`
+- `GET /api/v1/control/campaigns/:campaignId/evidence-line`
+- `GET /api/v1/control/events/:eventId`
+- `GET /api/v1/control/evidence/:itemId`
+
+When PostgreSQL Control Campaign storage is not configured, reads return `503` with an explicit
+storage-unavailable error. Historical backfill, live monitor, alert stream and export routes are
+present as contract boundaries and return `501 NOT_IMPLEMENTED`; they never return fixtures or
+synthetic empty facts. Replay reads the immutable bundle and does not contact chain providers.
+
 ### Typed ledger records
 
 `type` accepts `BLOCK` and `TRANSACTION` on EVM, Bitcoin, and Solana, plus `OUTPOINT` on Bitcoin.

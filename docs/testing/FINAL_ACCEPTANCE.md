@@ -4,22 +4,45 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 Named assets are reference cases for the shared architecture. They never define a standalone
 roadmap phase, shared runtime defaults, protocol constants or token-specific inference behavior.
 
-## Current local gate (2026-08-12)
+## Current local gate (2026-08-13)
 
 - [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
       production license allowlist and `npm audit --audit-level=high` (0 vulnerabilities)
-- [x] `npm run test:unit`: 587/587 tests across 99 files
-- [x] `npm run test:integration`: 80 pass; 38 explicitly skipped because optional stores/providers
+- [x] `npm run test:unit`: 599/599 tests across 106 files
+- [x] `npm run test:integration`: 81 pass; 38 explicitly skipped because optional stores/providers
       were not enabled in this host run (these are not counted as failures)
-- [x] `npm run test:e2e`: 36/36 Chromium desktop and Pixel 7 flows
-- [x] `docker compose config --quiet`, healthy default services and PostgreSQL readiness probe
-- [x] Post-push protected-branch CI/CodeQL for the current claim-capture head:
-      [CI run 31588959481](https://github.com/greywolf8888/ZeroTrace/actions/runs/31588959481)
-      and [CodeQL run 31588959519](https://github.com/greywolf8888/ZeroTrace/actions/runs/31588959519)
+- [x] `npm run test:evals`: 1/1 structural Entity evaluation
+- [ ] `npm run test:e2e`: latest fully-parallel host run was 33/38; five pre-existing views timed
+      out under load. Serial replay of those eight views passed 8/8.
+- [x] Targeted Control Campaign Timeline/Evidence Line E2E: 2/2 (Chromium desktop and Pixel 7)
+- [x] `docker compose config --quiet`
+- [ ] Isolated empty PostgreSQL/ClickHouse migration bootstrap for `031_control_campaign_reports`
+      and `002_control_campaign_flow`: unavailable because the local Docker Desktop Linux engine
+      is not running (`dockerDesktopLinuxEngine` named pipe was absent)
+- [ ] Remote protected-branch CI/CodeQL for the current uncommitted P0 changes; earlier PR #20
+      runs are historical evidence for their recorded heads only
 
 This local gate does not promote ZeroTrace to production acceptance. Full-history ingestion,
 independent-provider reconciliation, effective authorization/history, intent attribution and other
 unchecked terminal-scope items below remain open.
+
+## Control Campaign P0 local gate (2026-08-13)
+
+- [x] Token Flow, candidate discovery, cluster-position conservation, Behavior Event, Campaign and
+      Forensic Evidence Line contracts compile and pass deterministic tests
+- [x] Immutable PostgreSQL Control Campaign repository rejects invalid identity/provenance and
+      reports storage-down explicitly; ClickHouse flow/position DDL is present
+- [x] Provider-free Campaign overview/list/replay, timeline, positions, wallets, graph and
+      Evidence Line API routes plus Campaign Timeline/Evidence Line UI are wired
+- [x] Unconfigured storage returns `503`; backfill, monitor, alerts, stream and export retain
+      explicit `501 NOT_IMPLEMENTED` boundaries
+- [ ] Real finalized multi-provider token-history discovery, bounded backfill, live monitoring,
+      alert delivery, export, calibration corpus, and production migration acceptance
+
+This P0 gate is `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`. It does not claim a production
+collector, real-chain campaign detection, calibrated probability, or independent provider
+qualification. Entity membership mutation, signing, broadcasting and private-key custody remain
+forbidden.
 
 ## Foundation
 

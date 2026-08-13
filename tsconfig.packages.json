@@ -14,6 +14,12 @@
     { "path": "./packages/label-engine" },
     { "path": "./packages/entity-engine" },
     { "path": "./packages/claim-audit" },
-    { "path": "./packages/rv" }
+    { "path": "./packages/rv" },
+    { "path": "./packages/token-flow-engine" },
+    { "path": "./packages/cluster-position-engine" },
+    { "path": "./packages/candidate-discovery" },
+    { "path": "./packages/behavior-engine" },
+    { "path": "./packages/campaign-engine" },
+    { "path": "./packages/forensic-evidence" }
   ]
 }

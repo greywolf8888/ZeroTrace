@@ -8,6 +8,166 @@ export interface KnowledgeValue<T> {
   detail?: string;
 }
 
+export interface ControlCampaignSnapshot {
+  ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+  chainId: string;
+  capturedAt: string;
+  blockNumber?: string;
+  height?: string;
+  slot?: string;
+  blockHash?: string;
+  blockhash?: string;
+}
+
+export interface ControlCampaignMetadata {
+  snapshot: ControlCampaignSnapshot;
+  dataCoverage: number;
+  sourceCoverage: number;
+  historyCoverage: number;
+  freshness: string;
+  sourceSet: string[];
+  modelVersion: string;
+  confidence: KnowledgeValue<number>;
+  evidenceIds: string[];
+  calibrationStatus: 'UNCALIBRATED' | 'CALIBRATED';
+}
+
+export interface ControlBehaviorEvent {
+  id: string;
+  type: string;
+  status: string;
+  startBlock: string;
+  endBlock: string;
+  startTime: string;
+  endTime: string;
+  actors: string[];
+  counterparties: string[];
+  evidenceScore: number;
+  confidence: KnowledgeValue<number>;
+  supportingEvidenceIds: string[];
+  contradictingEvidenceIds: string[];
+  suppressionReasons: string[];
+  attributionStopped: boolean;
+  explanation: string;
+  snapshot: ControlCampaignSnapshot;
+}
+
+export interface ControlCampaignEvidenceItem {
+  id: string;
+  evidenceId: string;
+  behaviorEventId?: string;
+  phase: string;
+  role: string;
+  polarity: string;
+  blockNumber: string;
+  blockHash: string;
+  txHash?: string;
+  subjectA?: string;
+  subjectB?: string;
+  featureKind?: string;
+  strength?: number;
+  reliability?: number;
+  scoreContribution?: number;
+  explanation: string;
+  reviewState: string;
+  snapshotHash: string;
+  resultHash: string;
+}
+
+export interface ControlForensicEvidenceLinePhase {
+  phase: string;
+  itemIds: string[];
+  evidenceIds: string[];
+  coverage: number;
+  attributionStopped: boolean;
+}
+
+export interface ControlForensicEvidenceLine {
+  terminalBoundary: 'NONE_OBSERVED' | 'CEX_BOUNDARY' | 'UNKNOWN';
+  phases: ControlForensicEvidenceLinePhase[];
+  itemIds: string[];
+  evidenceIds: string[];
+  dataCoverage: number;
+  freshness: string;
+  sourceSet: string[];
+  modelVersion: string;
+  confidence: KnowledgeValue<number>;
+  sourceCoverage: number;
+  historyCoverage: number;
+  resultHash: string;
+}
+
+export interface ControlCampaignRecord {
+  schemaVersion: 'control-campaign-bundle-v1';
+  campaign: {
+    id: string;
+    ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
+    chainId: string;
+    token: string;
+    originBlock: string;
+    startBlock: string;
+    endBlock: KnowledgeValue<string>;
+    status: string;
+    currentStage: string;
+    coreWalletIds: string[];
+    satelliteWalletIds: string[];
+    controlledSupply: KnowledgeValue<string>;
+    controlConfidence: KnowledgeValue<number>;
+    coordinationConfidence: KnowledgeValue<number>;
+    campaignConfidence: KnowledgeValue<number>;
+    evidenceScore: number;
+    evidenceCoverage: number;
+    sourceCoverage: number;
+    historyCoverage: number;
+    snapshotStart: ControlCampaignSnapshot;
+    snapshotEnd: ControlCampaignSnapshot;
+    metadata: ControlCampaignMetadata;
+    calibrationStatus: 'UNCALIBRATED' | 'CALIBRATED';
+    automaticOwnershipMergeAllowed: false;
+    automaticEntityMembershipMutationAllowed: false;
+    resultHash: string;
+  };
+  clusterVersion: {
+    id: string;
+    memberWalletIds: string[];
+    coreWalletIds: string[];
+    satelliteWalletIds: string[];
+    fundingRootIds: string[];
+    settlementRootIds: string[];
+  };
+  memberships: Array<{ walletId: string; role: string; evidenceIds: string[] }>;
+  positions: Array<{
+    id: string;
+    atBlock: string;
+    tokenBalanceRaw: string;
+    controlledSupplyRatio: KnowledgeValue<string>;
+    externalTokenInflowRaw: string;
+    externalTokenOutflowRaw: string;
+    internalTransferRaw: string;
+    dexBuyRaw: string;
+    dexSellRaw: string;
+    sellReadyTokenRaw: KnowledgeValue<string>;
+    realizableQuoteValue: KnowledgeValue<string>;
+    walletCount: number;
+  }>;
+  behaviorEvents: ControlBehaviorEvent[];
+  evidenceItems: ControlCampaignEvidenceItem[];
+  evidenceLine: ControlForensicEvidenceLine;
+  resultHash: string;
+  durableReport: {
+    id: string;
+    resultHash: string;
+    capturedAt: string;
+    createdAt: string;
+    replayed: boolean;
+    liveRefresh: KnowledgeValue<boolean>;
+  };
+}
+
+export interface ControlCampaignCollectionResponse {
+  records: ControlCampaignRecord[];
+}
+
 export interface ProviderHealth {
   id: string;
   ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
@@ -2368,6 +2528,21 @@ export const api = {
       `/api/v1/control-rights/SOLANA/${encodeURIComponent(subject)}/reports/latest?${parameters.toString()}`,
     );
   },
+  controlCampaigns: (chainId: string, token: string, limit = 25) => {
+    const parameters = new URLSearchParams({ limit: String(limit) });
+    return requestJson<ControlCampaignCollectionResponse>(
+      `/api/v1/control/tokens/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}/campaigns?${parameters.toString()}`,
+    );
+  },
+  controlCampaign: (campaignId: string) =>
+    requestJson<ControlCampaignRecord>(
+      `/api/v1/control/campaigns/${encodeURIComponent(campaignId)}`,
+    ),
+  replayControlCampaign: (campaignId: string) =>
+    requestJson<ControlCampaignRecord>(
+      `/api/v1/control/campaigns/${encodeURIComponent(campaignId)}/replay`,
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
   latestEntityRelationshipReport: (
     ledger: 'EVM' | 'BITCOIN' | 'SOLANA',
     chainId: string,
