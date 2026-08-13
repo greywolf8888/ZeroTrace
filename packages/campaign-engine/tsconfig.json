@@ -10,6 +10,10 @@
     { "path": "../schemas" },
     { "path": "../evidence" },
     { "path": "../behavior-engine" },
-    { "path": "../cluster-position-engine" }
+    { "path": "../cluster-position-engine" },
+    { "path": "../candidate-discovery" },
+    { "path": "../forensic-evidence" },
+    { "path": "../funding-settlement-engine" },
+    { "path": "../token-flow-engine" }
   ]
 }

@@ -52,6 +52,28 @@ This phase remains `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`. A transaction-lo
 control or ownership conclusion, and `historyCoverage=0` is a declared measured scope boundary,
 not an assertion that no historical funding or settlement exists.
 
+## Provider-backed Control Campaign Phase 3 — 2026-08-14
+
+- [x] Shared provider composition connects Token History observations to Token Flow, candidate,
+      conserved Cluster Position, Behavior Event, Campaign, derived Evidence, and Forensic Evidence
+      Line output; opening-balance gaps remain explicit and do not become zero balances
+- [x] Shared exact-receipt Funding/Settlement provider helper is used by the live smoke and the
+      finalized ingest worker; worker wiring persists Funding/Settlement and immutable Campaign
+      reports when durable dependencies are available
+- [x] Real BSC FFT smoke produced Token History `thd_5ef5001212f0b4c8409bfc7c`, Funding/Settlement
+      `fsr_cf411850dea7b10b8027a6a3`, and Campaign `cc_3a996a5749b995fdb8a198b1`; Campaign and
+      Funding/Settlement replay hashes matched their original runs
+- [x] Legacy EVM source chain identity (`56`) is normalized to canonical `eip155:56` for derived
+      Campaign snapshots without changing source Evidence IDs; targeted reconstruction test `1/1`
+      covers this boundary
+- [x] Campaign UI now shows source/history coverage and conserved position snapshots with explicit
+      Unknown treatment for incomplete coverage
+- [ ] Fresh PostgreSQL/ClickHouse/MinIO worker capture and provider-free durable replay of the
+      FFT Campaign and Funding/Settlement reports
+- [ ] Range-complete historical funding/settlement, independent provider reconciliation, service
+      registry qualification, calibration, live monitoring, alert delivery, export, and production
+      approval
+
 ## Current local gate (2026-08-14)
 
 - [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
@@ -63,16 +85,20 @@ not an assertion that no historical funding or settlement exists.
 - [x] `npm run test:evals`: 1/1 structural Entity evaluation
 - [x] Serial Playwright E2E: 38/38 across Chromium desktop and Pixel 7; Flap long-value mobile
       layout regression passed in both projects (`2/2`)
+- [x] Windows wrapper E2E (`npm run test:e2e:windows`): 38/38 across Chromium desktop and Pixel 7
 - [x] Targeted Control Campaign Timeline/Evidence Line E2E: 2/2 (Chromium desktop and Pixel 7)
+- [x] Phase 3 targeted provider tests: Campaign reconstruction `1/1` and Funding/Settlement
+      composition `3/3`; campaign, funding/worker package builds, and web production build passed
 - [x] `docker compose config --quiet`
-- [ ] `npm run test:coverage`: all 703 enabled tests completed, but the configured global
-      thresholds were not met locally (Statements 77.27%, Branches 70.78%, Lines 78.56%); the
-      report includes existing untested worker/storage boundaries and is not relabeled as pass
+- [ ] `npm run test:coverage`: all 707 enabled tests completed with 38 explicit skips, but the
+      configured global thresholds were not met locally (Statements 77.32%, Branches 70.88%,
+      Functions 87.76%, Lines 78.62%); the report includes existing untested worker/storage
+      boundaries and is not relabeled as pass
 - [ ] Isolated empty PostgreSQL/ClickHouse migration bootstrap for `031_control_campaign_reports`,
       `033_funding_settlement_reports`, and `002_control_campaign_flow`: unavailable because the
       local Docker Desktop Linux engine is not running (`dockerDesktopLinuxEngine` named pipe was
       absent)
-- [ ] Remote protected-branch CI/CodeQL for the current uncommitted Phase 2 changes; earlier PR #20
+- [ ] Remote protected-branch CI/CodeQL for the current uncommitted Phase 3 changes; earlier PR #20
       runs are historical evidence for their recorded heads only
 
 This local gate does not promote ZeroTrace to production acceptance. Full-history ingestion,

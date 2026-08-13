@@ -15,11 +15,11 @@ completed feature.
 | Runnable foundation              | **Yes; host, fresh PostgreSQL, browser and remote disposable-store/container gates pass**                                                                                                                     |
 | Production acceptance            | **No**                                                                                                                                                                                                        |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                                                                |
-| Unit tests                       | **620 passing across 111 files**                                                                                                                                                                              |
+| Unit tests                       | **624 passing across 113 files; Phase 3 targeted provider tests 4/4**                                                                                                                                         |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                                                                    |
 | Integration tests                | **83 pass in serial replay; 38 environment-gated skips; disposable-store acceptance remains recorded separately**                                                                                             |
 | Real-browser E2E                 | **Latest serial host run: 38/38 across Chromium desktop and Pixel 7; Flap mobile long-value layout regression 2/2**                                                                                           |
-| Remote CI                        | **Not run for the current uncommitted Phase 1 changes; prior PR #20 runs remain historical evidence only**                                                                                                    |
+| Remote CI                        | **Not run for the current uncommitted Phase 3 changes; prior PR #20 runs remain historical evidence only**                                                                                                    |
 | Coverage                         | **Remote: 82.49% statements / 76.67% branches / 93.43% functions / 83.59% lines**                                                                                                                             |
 | Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                                                                                      |
 | Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/declaration/Scenario/action/control/Solana reports, immutable Control Campaign bundles, Funding/Settlement report contracts, and Phase 1 report contracts |
@@ -131,6 +131,44 @@ Focused Phase 2 checks passed: Funding/Settlement engine `7/7`, storage reposito
 integration `83/83`, and the Campaign plus Funding/Settlement UI route `2/2` on Chromium desktop
 and Pixel 7. Full repository gates and the external durable-store/provider gates remain required.
 
+## 2026-08-14 Provider-backed Control Campaign Phase 3
+
+Phase 3 now connects the real provider-backed Token History report to the existing P0 engines:
+canonical Token Flow edges, candidate screening, opening-balance uncertainty, conserved Cluster
+Positions, Behavior Events, deterministic Campaign IDs, derived Evidence, and the Forensic Evidence
+Line. A legacy exact-RPC `56` chain identity is normalized to the report's canonical `eip155:56`
+boundary for derived Campaign output while the original Evidence IDs remain unchanged. Missing
+opening balances remove a wallet from the conserved member set and are returned explicitly as
+`openingBalanceUnknownWalletIds`; they are not treated as zero.
+
+The receipt-to-Funding/Settlement composition is now shared by the live smoke and the finalized
+ingest worker. When exact RPC and durable stores are configured, the worker reads the report's
+bounded Raw Facts, persists the Funding/Settlement report, hydrates its Evidence graph, persists
+newly derived Campaign Evidence, and stores the immutable Campaign bundle. If exact history,
+Evidence, or durable dependencies are missing, the worker emits a typed `UNKNOWN` outcome and does
+not write a synthetic report.
+
+Latest real BSC FFT smoke through SQD plus the public BSC RPC used token
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over blocks `113485950–113495949`. It produced report
+`thd_5ef5001212f0b4c8409bfc7c`, latest run hash
+`04cec0d7d3a57573e18ae7b9ddd462dd8d954be7a415ad31c30307af230e44b8`, 12 finalized observations,
+five exact Action Semantics bindings, `1/1/1` Token History coverage, and a same-hash replay.
+Funding/Settlement was `fsr_cf411850dea7b10b8027a6a3`, hash
+`02713d7714d7e8b45b702af8ad9d5edcbb33c46378824c252edd3c90128de47b`, `PARTIAL`,
+`TRANSACTION_LOCAL`, coverage `1/1/0`, with two funding edges and one sell-proceeds edge. The
+derived Campaign was `cc_3a996a5749b995fdb8a198b1`, bundle hash
+`7320fd3e388d37c34ebf5ff8ac7620c4a84d65ecc34576d69f2604c9ed9b198b`, replayed with the same hash,
+and remained `UNCALIBRATED`. Historical BSC `eth_getCode` returned `missing trie node`; the
+transaction-sender fallback remained explicitly labeled and current code was not substituted.
+
+The Phase 3 targeted provider tests passed `4/4` (Campaign reconstruction `1/1`; Funding/Settlement
+composition `3/3`), the campaign/funding/worker TypeScript builds passed, and the web production
+build passed after adding coverage and conserved-position display. The smoke
+uses in-memory Evidence/report stores and therefore is not durable production acceptance. Fresh
+PostgreSQL/ClickHouse/MinIO worker capture, archive-scale history, independent provider
+reconciliation, live monitor, alerts, export, calibration, migration bootstrap, remote CI/CodeQL,
+and full production acceptance remain open.
+
 ## Terminal-scope status matrix
 
 The only allowed status vocabulary in this ledger is:
@@ -151,7 +189,7 @@ The only allowed status vocabulary in this ledger is:
 | Label Intelligence                   | `PARTIALLY_IMPLEMENTED`                     | immutable ledger-scoped observation-set reports, temporal states, preserved conflicts, source review priority, Service Hub suppression, terminal Evidence and UI work; generic scheduling exists, but external source adapters/handlers, complete registry/history coverage and real-world conflict validation remain                                                                                             |
 | Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | canonical pair inference, immutable Snapshot/Evidence-bound hypotheses/timelines, bounded investigation graphs, durable cross-Snapshot graph timelines, PostgreSQL/optional AGE projection, provider-free replay, exact structural gates and Bitcoin suppression features work; analyst overrides and real-world calibration remain absent                                                                        |
 | Control Rights                       | `PARTIALLY_IMPLEMENTED`                     | EVM standards/source, Solana SPL/loader and observable Bitcoin script conditions work; effective entities, custom roles, history, recursion and Core policy remain                                                                                                                                                                                                                                                |
-| Control Campaign / Forensic Evidence | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | P0 deterministic Token Flow, candidate, cluster-position, Behavior Event, Campaign, Evidence Line, durable report, read API and UI contracts work; real-chain discovery/backfill/monitoring, calibration and multi-provider qualification remain                                                                                                                                                                  |
+| Control Campaign / Forensic Evidence | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | P0 contracts plus provider-backed Token History→Funding/Settlement→Campaign/Evidence Line composition, worker persistence wiring, canonical identity normalization, real FFT bounded smoke and UI position/coverage display work; durable clean-store capture, backfill/monitoring, calibration and multi-provider qualification remain                                                                           |
 | Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; forced-reorg validation and other platforms remain                                                                                                                                                                                                                          |
 | Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios, immutable candidate-bound pension-entry reports and two-operator reconciliation work; fork execution, routes, gas and capacity remain                                                                                                                                                                                                     |
 | Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race plus immutable pension-entry Scenario Reports and provider-free replay; general portfolio/market scenarios remain                                                                                                                                                                                                                                                             |

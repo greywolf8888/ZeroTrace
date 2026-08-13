@@ -10,7 +10,9 @@
     "start": "node dist/src/cli.js"
   },
   "dependencies": {
+    "@zerotrace/campaign-engine": "*",
     "@zerotrace/chain-adapters": "*",
+    "@zerotrace/funding-settlement-engine": "*",
     "@zerotrace/ingestion": "*",
     "@zerotrace/storage": "*",
     "dotenv": "17.4.2"

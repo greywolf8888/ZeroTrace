@@ -4006,6 +4006,18 @@ function ControlCampaignWorkspace() {
                     state={campaign.evidenceCoverage === 1 ? 'known' : 'unknown'}
                   />
                   <MetricTile
+                    label="Source coverage"
+                    value={`${Math.round(campaign.sourceCoverage * 100)}%`}
+                    detail="Provider/source completeness"
+                    state={campaign.sourceCoverage === 1 ? 'known' : 'unknown'}
+                  />
+                  <MetricTile
+                    label="History coverage"
+                    value={`${Math.round(campaign.historyCoverage * 100)}%`}
+                    detail="Range completeness"
+                    state={campaign.historyCoverage === 1 ? 'known' : 'unknown'}
+                  />
+                  <MetricTile
                     label="Wallets"
                     value={String(
                       campaign.coreWalletIds.length + campaign.satelliteWalletIds.length,
@@ -4050,6 +4062,52 @@ function ControlCampaignWorkspace() {
                     <code>{shortId(selected.resultHash, 18)}</code>
                   </div>
                 </div>
+              </section>
+
+              <section className="panel" data-testid="control-campaign-positions">
+                <div className="panel-header">
+                  <div>
+                    <span className="eyebrow">Conserved Cluster Position snapshots</span>
+                    <h3>Position Timeline</h3>
+                  </div>
+                  <span className="panel-note">{selected.positions.length} snapshot(s)</span>
+                </div>
+                {selected.positions.length === 0 ? (
+                  <p className="empty-cell">No conserved position snapshot was materialized.</p>
+                ) : (
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Block</th>
+                          <th>Token balance</th>
+                          <th>External in / out</th>
+                          <th>Wallets</th>
+                          <th>Sell-ready</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selected.positions.map((position) => (
+                          <tr key={position.id}>
+                            <td>{position.atBlock}</td>
+                            <td>
+                              <code>{position.tokenBalanceRaw}</code>
+                            </td>
+                            <td>
+                              <code>{position.externalTokenInflowRaw}</code>
+                              <br />
+                              <small>−{position.externalTokenOutflowRaw}</small>
+                            </td>
+                            <td>{position.walletCount}</td>
+                            <td>
+                              <KnowledgeDisplay data={position.sellReadyTokenRaw} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
 
               <section className="panel" data-testid="control-campaign-timeline">

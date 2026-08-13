@@ -80,6 +80,43 @@ production acceptance.
   recorded as a failed gate rather than weakened or relabeled. SBOM generation passed. Docker
   daemon validation remained unavailable because `dockerDesktopLinuxEngine` was not running.
 
+## Provider-backed Control Campaign Phase 3 validation — 2026-08-14
+
+This checkpoint records the current provider composition and UI regression. It is not durable
+production acceptance.
+
+- `npm run test:unit` passed `624/624` tests across `113` files. The Phase 3 targeted provider
+  tests passed `4/4`: Campaign reconstruction `1/1` and shared Funding/Settlement composition
+  `3/3`.
+- Full TypeScript typecheck, production build, formatting, ESLint, license allowlist, audit with
+  zero vulnerabilities, SBOM generation, and `git diff --check` passed. The production E2E run
+  rebuilt the app and passed `38/38` across Chromium desktop and Pixel 7, including the Control
+  Campaign Timeline/Evidence Line flow. The Windows wrapper (`npm run test:e2e:windows`) repeated
+  the same `38/38` result.
+- A fresh real BSC FFT smoke over blocks `113485950–113495949` produced Token History
+  `thd_5ef5001212f0b4c8409bfc7c` with latest run hash
+  `04cec0d7d3a57573e18ae7b9ddd462dd8d954be7a415ad31c30307af230e44b8`, Funding/Settlement
+  `fsr_cf411850dea7b10b8027a6a3` with hash
+  `02713d7714d7e8b45b702af8ad9d5edcbb33c46378824c252edd3c90128de47b`, and Campaign
+  `cc_3a996a5749b995fdb8a198b1` with bundle hash
+  `7320fd3e388d37c34ebf5ff8ac7620c4a84d65ecc34576d69f2604c9ed9b198b`. Funding/Settlement and
+  Campaign provider-free replay hashes matched their original runs.
+- The real smoke remained bounded and in-memory: Token History coverage was `1/1/1`; the
+  Funding/Settlement report was `PARTIAL`, `TRANSACTION_LOCAL`, coverage `1/1/0`, with two
+  funding edges and one sell-proceeds settlement edge; the Campaign remained `UNCALIBRATED`,
+  selected five wallets, and reported five opening-balance-unknown wallets. Historical BSC code
+  probes returned `missing trie node`; transaction-sender fallback stayed explicitly labeled and
+  current code was not substituted.
+- `npm run test:coverage` completed all `707` enabled tests with `38` explicit skips, but failed
+  the configured global thresholds at Statements `77.32%`, Branches `70.88%`, Functions `87.76%`,
+  and Lines `78.62%`. Low-covered worker/storage boundaries remain the primary gap; this is
+  recorded as a failed gate, not relabeled as acceptance.
+- Fresh PostgreSQL/ClickHouse/MinIO worker capture and durable replay remain `NOT_MEASURED`;
+  clean migration bootstrap is unavailable because the local Docker Desktop Linux engine named
+  pipe is absent. Archive-scale history, independent provider reconciliation, service-registry
+  qualification, calibration, live monitoring, alerts, export, remote CI/CodeQL, and production
+  approval remain open.
+
 ## Control Campaign P0 checkpoint validation — 2026-08-13
 
 This checkpoint records the first read-only Control Campaign implementation before continuing to

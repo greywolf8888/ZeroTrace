@@ -5,10 +5,11 @@ import {
   SqdPortalClient,
 } from '@zerotrace/chain-adapters';
 import { EvidenceLedger, hashPayload } from '@zerotrace/evidence';
+import { buildFundingSettlementFromTokenHistory } from '@zerotrace/funding-settlement-engine';
 import {
-  decodeEvmAssetTransfers,
-  deriveFundingSettlementReport,
-} from '@zerotrace/funding-settlement-engine';
+  buildProviderBackedControlCampaign,
+  ProviderCampaignReconstructionError,
+} from '@zerotrace/campaign-engine';
 import {
   TokenHistoryDiscovery,
   type EvidenceWriter,
@@ -136,167 +137,15 @@ function createArtifactWriter(): RawArtifactWriter {
   };
 }
 
-async function buildBoundedFundingSettlement(input: {
-  report: TokenHistoryDiscoveryReport;
-  facts: readonly RawChainFact[];
-  exactReader: EvmLedgerAdapter;
-  token: string;
-  fromBlock: number;
-  toBlock: number;
-  probeHistoricalCode: boolean;
-}): Promise<
-  | {
-      status: 'UNKNOWN';
-      reason: string;
-      focusWalletIds: readonly string[];
-      focusSelection: {
-        codeConfirmed: readonly string[];
-        transactionSenderFallback: readonly string[];
-      };
-      codeProbeFailures: readonly string[];
+function rawEvidenceLedger(source: EvidenceLedger): EvidenceLedger {
+  const copy = new EvidenceLedger();
+  for (const node of source.values()) {
+    if (node.evidence.kind === 'DERIVED_FEATURE' || node.evidence.kind === 'NEGATIVE_EVIDENCE') {
+      continue;
     }
-  | {
-      status: 'DERIVED';
-      report: ReturnType<typeof deriveFundingSettlementReport>;
-      replayResultHash: string;
-      focusWalletIds: readonly string[];
-      focusSelection: {
-        codeConfirmed: readonly string[];
-        transactionSenderFallback: readonly string[];
-      };
-      codeProbeFailures: readonly string[];
-    }
-> {
-  const observationByTransaction = new Map(
-    input.report.observations.map((observation) => [observation.transactionHash, observation]),
-  );
-  const candidates = [
-    ...new Set(
-      input.report.observations.flatMap((observation) => [observation.from, observation.to]),
-    ),
-  ].filter((address) => address !== input.token.toLowerCase());
-  const codeConfirmed: string[] = [];
-  const codeStatus = new Map<string, string>();
-  const codeProbeFailures: string[] = [];
-  for (const address of candidates.sort()) {
-    if (!input.probeHistoricalCode) continue;
-    const observation = input.report.observations.find(
-      (item) => item.from === address || item.to === address,
-    );
-    if (observation === undefined) continue;
-    try {
-      const code = await input.exactReader.getCodeObservationAtBlockHash(
-        address,
-        observation.snapshot.blockHash,
-      );
-      codeStatus.set(address, code.value);
-      if (code.value === '0x') codeConfirmed.push(address);
-    } catch (error) {
-      codeProbeFailures.push(`${address}:${error instanceof Error ? error.message : 'ERROR'}`);
-    }
+    copy.add(node.evidence, node.sourceEvidenceIds, node.snapshot);
   }
-  const captures: Array<{
-    transaction: NonNullable<Awaited<ReturnType<EvmLedgerAdapter['getTransaction']>>>;
-    receipt: NonNullable<Awaited<ReturnType<EvmLedgerAdapter['getTransactionReceipt']>>>;
-    snapshot: Extract<TokenHistoryDiscoveryReport['snapshot'], { ledger: 'EVM' }>;
-    transactionEvidenceIds: readonly string[];
-    rawArtifactRef?: string;
-  }> = [];
-  for (const transactionHash of input.report.relevantTransactionHashes) {
-    const observation = observationByTransaction.get(transactionHash);
-    if (observation === undefined) continue;
-    const [transactionObservation, receiptObservation] = await Promise.all([
-      input.exactReader.getTransactionObservation(transactionHash),
-      input.exactReader.getTransactionReceiptObservation(transactionHash),
-    ]);
-    if (transactionObservation.value === null || receiptObservation.value === null) continue;
-    const transactionFact = input.facts.find(
-      (fact) => fact.factType === 'TRANSACTION' && fact.subject.toLowerCase() === transactionHash,
-    );
-    const evidenceIds =
-      transactionFact?.evidenceId === undefined
-        ? observation.evidenceIds
-        : [transactionFact.evidenceId];
-    captures.push({
-      transaction: transactionObservation.value,
-      receipt: receiptObservation.value,
-      snapshot: observation.snapshot,
-      transactionEvidenceIds: evidenceIds,
-      ...(transactionFact?.rawArtifactRef === undefined
-        ? {}
-        : { rawArtifactRef: transactionFact.rawArtifactRef }),
-    });
-  }
-  const transactionSenderFallback = [
-    ...new Set(
-      captures
-        .map((capture) => capture.transaction.from.toLowerCase())
-        .filter((address) => candidates.includes(address) && codeStatus.get(address) !== '0x'),
-    ),
-  ].sort();
-  const focusWalletIds = [...new Set([...codeConfirmed, ...transactionSenderFallback])].sort();
-  if (focusWalletIds.length === 0) {
-    return {
-      status: 'UNKNOWN',
-      reason: 'NO_EOA_FOCUS_WALLET_AFTER_EXACT_CODE_CHECK_AND_TX_SENDER_FALLBACK',
-      focusWalletIds,
-      focusSelection: { codeConfirmed, transactionSenderFallback },
-      codeProbeFailures,
-    };
-  }
-  const transfers = captures.flatMap((capture) => decodeEvmAssetTransfers(capture));
-  if (transfers.length === 0) {
-    return {
-      status: 'UNKNOWN',
-      reason: 'NO_EXACT_ASSET_TRANSFERS_IN_RELEVANT_RECEIPTS',
-      focusWalletIds,
-      focusSelection: { codeConfirmed, transactionSenderFallback },
-      codeProbeFailures,
-    };
-  }
-  const sourceSet = [...new Set([...input.report.sourceSet, input.exactReader.sourceId])].sort();
-  const report = deriveFundingSettlementReport({
-    token: input.token,
-    fromBlock: String(input.fromBlock),
-    toBlock: String(input.toBlock),
-    snapshot: input.report.snapshot as Extract<
-      TokenHistoryDiscoveryReport['snapshot'],
-      { ledger: 'EVM' }
-    >,
-    transfers,
-    focusWalletIds,
-    dataCoverage: input.report.dataCoverage,
-    sourceCoverage: input.report.sourceCoverage,
-    historyCoverage: 0,
-    coverageScope: 'TRANSACTION_LOCAL',
-    sourceSet,
-    maxHops: 2,
-  });
-  const replay = deriveFundingSettlementReport({
-    token: input.token,
-    fromBlock: String(input.fromBlock),
-    toBlock: String(input.toBlock),
-    snapshot: input.report.snapshot as Extract<
-      TokenHistoryDiscoveryReport['snapshot'],
-      { ledger: 'EVM' }
-    >,
-    transfers: [...transfers].reverse(),
-    focusWalletIds,
-    dataCoverage: input.report.dataCoverage,
-    sourceCoverage: input.report.sourceCoverage,
-    historyCoverage: 0,
-    coverageScope: 'TRANSACTION_LOCAL',
-    sourceSet,
-    maxHops: 2,
-  });
-  return {
-    status: 'DERIVED',
-    report,
-    replayResultHash: replay.resultHash,
-    focusWalletIds,
-    focusSelection: { codeConfirmed, transactionSenderFallback },
-    codeProbeFailures,
-  };
+  return copy;
 }
 
 async function main(): Promise<void> {
@@ -417,7 +266,7 @@ async function main(): Promise<void> {
   };
   const first = await new TokenHistoryDiscovery(options).run();
   const replay = await new TokenHistoryDiscovery(options).run();
-  const fundingSettlement = await buildBoundedFundingSettlement({
+  const fundingSettlement = await buildFundingSettlementFromTokenHistory({
     report: first.report,
     facts,
     exactReader,
@@ -426,6 +275,43 @@ async function main(): Promise<void> {
     toBlock,
     probeHistoricalCode: !isEthereum,
   });
+  const providerCampaign = (() => {
+    if (fundingSettlement.status === 'UNKNOWN') {
+      return {
+        status: 'UNKNOWN' as const,
+        reason: `FUNDING_SETTLEMENT:${fundingSettlement.reason}`,
+      };
+    }
+    try {
+      const result = buildProviderBackedControlCampaign({
+        history: first.report,
+        fundingSettlement: fundingSettlement.report,
+        evidenceLedger: ledger,
+        maxStageSnapshots: 8,
+      });
+      const replay = buildProviderBackedControlCampaign({
+        history: first.report,
+        fundingSettlement: fundingSettlement.report,
+        evidenceLedger: rawEvidenceLedger(ledger),
+        maxStageSnapshots: 8,
+      });
+      return {
+        status: 'DERIVED' as const,
+        result,
+        replaySameHash: replay.bundle.resultHash === result.bundle.resultHash,
+      };
+    } catch (error) {
+      return {
+        status: 'UNKNOWN' as const,
+        reason:
+          error instanceof ProviderCampaignReconstructionError
+            ? `${error.code}:${error.message}`
+            : error instanceof Error
+              ? error.message
+              : 'PROVIDER_CAMPAIGN_RECONSTRUCTION_FAILED',
+      };
+    }
+  })();
   console.log(
     JSON.stringify({
       event: 'token_history_live_smoke_complete',
@@ -511,6 +397,52 @@ async function main(): Promise<void> {
                 evidenceIds: path.evidenceIds,
               })),
               drilldown: fundingSettlement.report.drilldown,
+            },
+      providerCampaign:
+        providerCampaign.status === 'UNKNOWN'
+          ? providerCampaign
+          : {
+              status: providerCampaign.status,
+              reportId: providerCampaign.result.bundle.campaign.id,
+              resultHash: providerCampaign.result.bundle.resultHash,
+              replaySameHash: providerCampaign.replaySameHash,
+              calibrationStatus: providerCampaign.result.bundle.campaign.calibrationStatus,
+              selectedWalletIds: providerCampaign.result.selectedWalletIds,
+              openingBalanceUnknownWalletIds:
+                providerCampaign.result.openingBalanceUnknownWalletIds,
+              candidateWallets: providerCampaign.result.candidateDiscovery.candidates.map(
+                (candidate) => ({
+                  walletId: candidate.walletId,
+                  reasons: candidate.reasons,
+                  transactionCount: candidate.transactionCount,
+                  evidenceIds: candidate.evidenceIds,
+                }),
+              ),
+              stageBlocks: providerCampaign.result.stageBlocks,
+              positions: providerCampaign.result.bundle.positions.map((position) => ({
+                atBlock: position.atBlock,
+                tokenBalanceRaw: position.tokenBalanceRaw,
+                externalTokenInflowRaw: position.externalTokenInflowRaw,
+                externalTokenOutflowRaw: position.externalTokenOutflowRaw,
+                dexBuyRaw: position.dexBuyRaw,
+                dexSellRaw: position.dexSellRaw,
+              })),
+              behaviorEvents: providerCampaign.result.bundle.behaviorEvents.map((event) => ({
+                id: event.id,
+                type: event.type,
+                startBlock: event.startBlock,
+                endBlock: event.endBlock,
+                confidence: event.confidence,
+                suppressionReasons: event.suppressionReasons,
+                supportingEvidenceIds: event.supportingEvidenceIds,
+                contradictingEvidenceIds: event.contradictingEvidenceIds,
+              })),
+              evidenceLine: {
+                terminalBoundary: providerCampaign.result.bundle.evidenceLine.terminalBoundary,
+                phases: providerCampaign.result.bundle.evidenceLine.phases,
+                itemIds: providerCampaign.result.bundle.evidenceLine.itemIds,
+                evidenceIds: providerCampaign.result.bundle.evidenceLine.evidenceIds,
+              },
             },
     }),
   );

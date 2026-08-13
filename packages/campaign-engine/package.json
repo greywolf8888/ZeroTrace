@@ -13,8 +13,12 @@
   },
   "dependencies": {
     "@zerotrace/behavior-engine": "*",
+    "@zerotrace/candidate-discovery": "*",
     "@zerotrace/evidence": "*",
+    "@zerotrace/forensic-evidence": "*",
+    "@zerotrace/funding-settlement-engine": "*",
     "@zerotrace/schemas": "*",
-    "@zerotrace/cluster-position-engine": "*"
+    "@zerotrace/cluster-position-engine": "*",
+    "@zerotrace/token-flow-engine": "*"
   }
 }

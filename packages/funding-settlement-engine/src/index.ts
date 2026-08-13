@@ -1029,3 +1029,5 @@ export function deriveFundingSettlementReport(
     resultHash: hashPayload({ schema: 'funding-settlement-report-v1', report: reportCore }),
   });
 }
+
+export * from './token-history-provider.js';

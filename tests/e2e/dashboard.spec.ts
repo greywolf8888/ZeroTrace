@@ -4869,7 +4869,45 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
               settlementRootIds: [],
             },
             memberships: [],
-            positions: [],
+            positions: [
+              {
+                schemaVersion: 'cluster-position-v1',
+                id: `cpos_${'8'.repeat(24)}`,
+                campaignId,
+                ledger: 'EVM',
+                chainId: 'eip155:56',
+                token: `0x${'b'.repeat(40)}`,
+                clusterVersionId,
+                atBlock: '100',
+                blockHash,
+                tokenBalanceRaw: '420',
+                controlledSupplyRatio: { state: 'unknown', reason: 'NOT_QUERIED' },
+                externalTokenInflowRaw: '420',
+                externalTokenOutflowRaw: '0',
+                mintRaw: '0',
+                burnRaw: '0',
+                internalTransferRaw: '0',
+                dexBuyRaw: '420',
+                dexSellRaw: '0',
+                quoteAssets: {},
+                sellReadyTokenRaw: { state: 'known', value: '420' },
+                realizableQuoteValue: { state: 'unknown', reason: 'NOT_QUERIED' },
+                top1Concentration: { state: 'unknown', reason: 'NOT_QUERIED' },
+                top3Concentration: { state: 'unknown', reason: 'NOT_QUERIED' },
+                walletCount: 2,
+                positionEvidenceIds: [evidenceItemId],
+                membershipEvidenceIds: [evidenceItemId],
+                snapshot,
+                dataCoverage: 0.85,
+                sourceCoverage: 0.5,
+                historyCoverage: 0.4,
+                freshness: snapshot.capturedAt,
+                sourceSet: ['fixture-campaign-source'],
+                modelVersion: 'cluster-position-v1.0.0',
+                confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+                resultHash: 'a'.repeat(64),
+              },
+            ],
             behaviorEvents: [
               {
                 id: eventId,
@@ -5009,6 +5047,8 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
 
   await expect(page.getByTestId('control-campaign-timeline')).toContainText('Campaign Timeline');
   await expect(page.getByTestId('control-campaign-timeline')).toContainText('Accumulation');
+  await expect(page.getByTestId('control-campaign-positions')).toContainText('Position Timeline');
+  await expect(page.getByTestId('control-campaign-positions')).toContainText('420');
   await expect(page.getByTestId('control-campaign-evidence-line')).toContainText('Evidence Line');
   await expect(page.getByTestId('control-campaign-evidence-line')).toContainText(
     evidenceId.slice(0, 9),

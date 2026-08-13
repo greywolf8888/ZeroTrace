@@ -447,3 +447,5 @@ export function campaignWalletRoleFor(input: {
   if (input.coordinatedOnlyWalletIds?.includes(input.walletId)) return 'COORDINATED_ONLY';
   return 'UNKNOWN';
 }
+
+export * from './provider-reconstruction.js';

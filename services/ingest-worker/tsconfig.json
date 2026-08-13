@@ -7,6 +7,8 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
+    { "path": "../../packages/campaign-engine" },
+    { "path": "../../packages/funding-settlement-engine" },
     { "path": "../../packages/schemas" },
     { "path": "../../packages/evidence" },
     { "path": "../../packages/storage" },

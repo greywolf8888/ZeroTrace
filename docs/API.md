@@ -363,6 +363,16 @@ refreshes providers, starts a backfill/monitor, or broadcasts a transaction. Pos
 `033_funding_settlement_reports` enforces immutable rows, report identity, coverage scope, counts,
 provenance arrays, model/policy versions, and insert-time JSON identity checks.
 
+### Provider-backed Campaign materialization
+
+The finalized ingest worker's `token-history` profile now composes the stored Token History report,
+exact receipt-derived Funding/Settlement observations, and the Campaign engine. It hydrates source
+Evidence and persists newly derived Campaign Evidence before writing an immutable Campaign bundle,
+so the API reads the same provider-backed result through the Campaign endpoints above. Missing exact
+RPC, source Evidence, or durable report storage yields an explicit `UNKNOWN`/storage error; no
+fixture or synthetic empty Campaign is materialized. This worker path remains a bounded capture and
+does not implement backfill, live monitoring, alert delivery, export, or calibrated attribution.
+
 ### Typed ledger records
 
 `type` accepts `BLOCK` and `TRANSACTION` on EVM, Bitcoin, and Solana, plus `OUTPOINT` on Bitcoin.
