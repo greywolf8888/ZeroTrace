@@ -2384,6 +2384,26 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
     page.getByText('Flap launch mechanism normalized from versioned Portal state.'),
   ).toBeVisible();
 
+  const originalViewport = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const factLayout = await page.locator('.fact-row').evaluateAll((rows) =>
+    rows.map((row) => {
+      const rect = row.getBoundingClientRect();
+      return {
+        right: rect.right,
+        viewport: document.documentElement.clientWidth,
+        clientWidth: row.clientWidth,
+        scrollWidth: row.scrollWidth,
+      };
+    }),
+  );
+  expect(
+    factLayout.every(
+      (row) => row.right <= row.viewport + 1 && row.scrollWidth <= row.clientWidth + 1,
+    ),
+  ).toBe(true);
+  if (originalViewport !== null) await page.setViewportSize(originalViewport);
+
   await expect(page.getByRole('heading', { name: 'Claim Report' })).toBeVisible();
   await page.getByLabel('Claim wallet address').fill(claimAddress);
   await page.getByRole('button', { name: 'Load latest report' }).click();
@@ -4392,7 +4412,18 @@ test('keeps scenario execution gated and exposes provider availability', async (
     'Endpoint operator independence remains Unknown until explicitly configured and verified.',
   );
   await expect(anchorPanel.locator('.anchor-quality-card')).toHaveCount(4);
-  await expect(anchorPanel.getByText('0/0 observed · 2 required')).toHaveCount(4);
+  const sourceCoverage = await anchorPanel.locator('.anchor-quality-card').evaluateAll((cards) =>
+    cards.map((card) => {
+      const sourceTerm = [...card.querySelectorAll('dt')].find(
+        (term) => term.textContent?.trim() === 'Sources',
+      );
+      return sourceTerm?.parentElement?.querySelector('dd')?.textContent?.trim();
+    }),
+  );
+  expect(sourceCoverage).toHaveLength(4);
+  expect(
+    sourceCoverage.every((value) => /^\d+\/\d+ observed · 2 required$/.test(value ?? '')),
+  ).toBe(true);
   await expect(anchorPanel).toContainText('Memory · process-local');
   const evidenceStorageCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: 'Evidence storage' }),

@@ -268,6 +268,27 @@ describe('SqdFinalizedIngestionPipeline', () => {
     });
   });
 
+  it('runs the pre-finish callback before terminal checkpoint advancement', async () => {
+    const events: string[] = [];
+    const checkpoints = new FakeCheckpoints(events);
+    const stores = createStores(events);
+    const pipeline = new SqdFinalizedIngestionPipeline({
+      source: new FakeSource('ethereum-mainnet', 'EVM', '1', evmBlocks),
+      checkpoints,
+      artifacts: stores.artifacts,
+      evidence: stores.evidence,
+      facts: stores.factWriter,
+      onBeforeFinish: async ({ run, sourceSummary }) => {
+        events.push(`before-finish:${run.status}:${sourceSummary.nextBlock}`);
+      },
+    });
+
+    await pipeline.run({ fromBlock: 0, toBlock: 1 });
+
+    expect(events.at(-2)).toBe('before-finish:RUNNING:2');
+    expect(events.at(-1)).toBe('finish:REQUESTED_RANGE_COMPLETE');
+  });
+
   it('keeps unqueried Solana tables distinct from records that do not apply', async () => {
     const events: string[] = [];
     const checkpoints = new FakeCheckpoints(events);

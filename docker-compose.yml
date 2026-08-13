@@ -105,6 +105,11 @@ services:
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
       PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      ALCHEMY_API_KEY: ${ALCHEMY_API_KEY:-}
+      ETH_RPC_URL: ${ETH_RPC_URL:-}
+      EVM_ETHEREUM_RPC_URL: ${EVM_ETHEREUM_RPC_URL:-}
+      BSC_RPC_URL: ${BSC_RPC_URL:-https://bsc-dataseed.bnbchain.org}
+      EVM_BSC_RPC_URL: ${EVM_BSC_RPC_URL:-}
       POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
       CLICKHOUSE_URL: http://clickhouse:8123
       OBJECT_STORE_ENDPOINT: http://minio:9000

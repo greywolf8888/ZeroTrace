@@ -4,16 +4,38 @@ This checklist tracks the terminal-product Definition of Done. It is intentional
 Named assets are reference cases for the shared architecture. They never define a standalone
 roadmap phase, shared runtime defaults, protocol constants or token-specific inference behavior.
 
-## Current local gate (2026-08-13)
+## Token History Discovery Phase 1 — 2026-08-14
+
+- [x] Phase 1 schemas, Evidence/Snapshot provenance, bounded SQD Transfer query, checkpointed
+      ingestion callback, deployment-origin boundary, exact-RPC transaction/receipt boundary,
+      Action Semantics binding, immutable PostgreSQL report, paginated replay, capability registry,
+      worker profile, and public endpoint configuration are implemented and covered by tests
+- [x] Formatting, ESLint, TypeScript, 610 unit tests, serially replayed enabled integration/evaluation tests,
+      package/worker builds, license allowlist, zero high-severity production audit findings, and
+      Compose model validation passed
+- [x] Public SQD, BSC, Solana, and Blockstream Esplora read-only reachability probes passed
+- [x] Bounded public BSC FFT smoke through the actual Token History Discovery composition passed:
+      12 finalized observations, 5 exact-RPC/Action-Semantics bindings, `1/1/1` coverage,
+      terminal requested-range checkpoint, and provider-free same-hash replay in memory-only stores
+- [ ] Fresh PostgreSQL/ClickHouse/MinIO token-history worker run with durable report replay
+- [ ] Ethereum exact-RPC historical binding and archive-scale range acceptance
+- [ ] Independent provider reconciliation, full backfill, live monitoring, alerts, export,
+      calibration, remote CI/CodeQL, and production migration approval
+
+This Phase 1 checkpoint remains `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`. A public endpoint
+health response is not a semantic history result, and an unset Ethereum runtime credential is not
+treated as a numeric zero or as a successful exact-RPC path.
+
+## Current local gate (2026-08-14)
 
 - [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
       production license allowlist and `npm audit --audit-level=high` (0 vulnerabilities)
-- [x] `npm run test:unit`: 599/599 tests across 106 files
+- [x] `npm run test:unit`: 610/610 tests across 109 files
 - [x] `npm run test:integration`: 81 pass; 38 explicitly skipped because optional stores/providers
       were not enabled in this host run (these are not counted as failures)
 - [x] `npm run test:evals`: 1/1 structural Entity evaluation
-- [ ] `npm run test:e2e`: latest fully-parallel host run was 33/38; five pre-existing views timed
-      out under load. Serial replay of those eight views passed 8/8.
+- [x] Serial Playwright E2E: 38/38 across Chromium desktop and Pixel 7; Flap long-value mobile
+      layout regression passed in both projects (`2/2`)
 - [x] Targeted Control Campaign Timeline/Evidence Line E2E: 2/2 (Chromium desktop and Pixel 7)
 - [x] `docker compose config --quiet`
 - [ ] Isolated empty PostgreSQL/ClickHouse migration bootstrap for `031_control_campaign_reports`

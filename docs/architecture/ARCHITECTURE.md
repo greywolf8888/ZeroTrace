@@ -348,6 +348,16 @@ their contract routes return `501 NOT_IMPLEMENTED` until real provider/workflow 
 accepted. No signing, broadcasting, automatic fund movement, Entity merge or membership mutation
 is permitted.
 
+Phase 1 adds the first provider-backed Token History Discovery path without changing those
+boundaries. A finalized SQD ERC-20 Transfer range is captured through the existing artifact,
+Evidence, Raw Fact, and checkpoint commit order; bounded contract-creation traces provide a typed
+origin result when deployment is inside the requested range; and an optional exact read-only EVM
+RPC binds transaction/receipt placement plus Action Semantics at the same finalized Snapshot.
+Missing exact RPC is `Unknown`, provider failure is `Unavailable`, and immutable PostgreSQL report
+replay retains coverage, freshness, source set, model/policy versions, checkpoint, and result hash.
+Archive-scale backfill, independent provider reconciliation, continuous monitoring, alert/export
+delivery, calibration, and fresh durable multi-store acceptance remain open gates.
+
 ### Global intelligence search
 
 `global-intelligence-search-v0.1.0` is a provider-free read projection over authoritative durable

@@ -1282,8 +1282,17 @@ tbody tr:hover {
   font-size: 0.75rem;
 }
 
+.fact-row > span {
+  min-width: 0;
+}
+
 .fact-row > span:first-child {
   color: var(--text-secondary);
+}
+
+.fact-row > span:last-child {
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .knowledge-known {

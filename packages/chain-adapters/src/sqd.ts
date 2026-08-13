@@ -99,6 +99,8 @@ export interface SqdStreamSummary {
   blocks: number;
   requests: number;
   retries: number;
+  rateLimitEvents?: number;
+  rangeAdjustments?: number;
 }
 
 export interface SqdPortalClientOptions {
@@ -310,6 +312,13 @@ function responseError(response: Response, now: number): ProviderError {
       'SQD finalized stream unexpectedly reported a chain reorganization.',
       { statusCode: 409 },
     );
+  }
+  if (response.status === 413) {
+    return new ProviderError('HTTP_ERROR', 'SQD Portal rejected the requested range size.', {
+      retryable: true,
+      statusCode: 413,
+      ...(retryAfter === undefined ? {} : { retryAfterMs: retryAfter }),
+    });
   }
   return new ProviderError('HTTP_ERROR', `SQD Portal returned HTTP ${response.status}.`, {
     retryable: response.status >= 500,
@@ -1049,10 +1058,14 @@ export class SqdPortalClient {
     let cursor = request.fromBlock;
     let requests = 0;
     let retries = 0;
+    let rateLimitEvents = 0;
+    let rangeAdjustments = 0;
+    let windowSize = range;
 
     while (cursor <= request.toBlock) {
+      let windowEnd = Math.min(request.toBlock, cursor + windowSize - 1);
       let completedResponse = false;
-      for (let attempt = 1; attempt <= this.#options.maxAttempts; attempt += 1) {
+      for (let attempt = 1; attempt <= this.#options.maxAttempts;) {
         if (requests >= this.#options.maxRequestsPerRange) {
           throw new ProviderError(
             'HTTP_ERROR',
@@ -1063,9 +1076,9 @@ export class SqdPortalClient {
         const attemptStart = cursor;
         try {
           const outcome = await this.#readResponse(
-            { ...baseQuery, fromBlock: cursor },
+            { ...baseQuery, fromBlock: cursor, toBlock: windowEnd },
             cursor,
-            request.toBlock,
+            windowEnd,
             progress,
             requireContiguous,
             onBlock,
@@ -1083,6 +1096,8 @@ export class SqdPortalClient {
               blocks: progress.blocks,
               requests,
               retries,
+              ...(rateLimitEvents === 0 ? {} : { rateLimitEvents }),
+              ...(rangeAdjustments === 0 ? {} : { rangeAdjustments }),
             };
           }
           if (outcome.emptyRange) {
@@ -1092,7 +1107,7 @@ export class SqdPortalClient {
                 'SQD finalized stream returned unverifiable empty coverage.',
               );
             }
-            if (outcome.finalizedHead < request.toBlock) {
+            if (outcome.finalizedHead < windowEnd) {
               return {
                 dataset: this.dataset,
                 completion: 'SOURCE_HEAD_REACHED',
@@ -1104,9 +1119,11 @@ export class SqdPortalClient {
                 blocks: progress.blocks,
                 requests,
                 retries,
+                ...(rateLimitEvents === 0 ? {} : { rateLimitEvents }),
+                ...(rangeAdjustments === 0 ? {} : { rangeAdjustments }),
               };
             }
-            cursor = request.toBlock + 1;
+            cursor = windowEnd + 1;
             completedResponse = true;
             break;
           }
@@ -1122,6 +1139,7 @@ export class SqdPortalClient {
         } catch (error) {
           if (error instanceof SqdConsumerError) throw error.consumerCause;
           const providerError = toProviderError(error);
+          if (providerError.code === 'RATE_LIMITED') rateLimitEvents += 1;
           if (
             providerError.retryable &&
             progress.lastBlock !== null &&
@@ -1132,11 +1150,25 @@ export class SqdPortalClient {
             completedResponse = true;
             break;
           }
+          if (
+            providerError.retryable &&
+            (progress.lastBlock === null || progress.lastBlock < attemptStart) &&
+            windowSize > 1
+          ) {
+            windowSize = Math.max(1, Math.floor(windowSize / 2));
+            windowEnd = Math.min(request.toBlock, cursor + windowSize - 1);
+            rangeAdjustments += 1;
+            retries += 1;
+            await this.#retryDelay(attempt, providerError.retryAfterMs);
+            attempt = 1;
+            continue;
+          }
           if (!providerError.retryable || attempt === this.#options.maxAttempts) {
             throw providerError;
           }
           retries += 1;
           await this.#retryDelay(attempt, providerError.retryAfterMs);
+          attempt += 1;
         }
       }
       if (!completedResponse) {
@@ -1157,6 +1189,8 @@ export class SqdPortalClient {
       blocks: progress.blocks,
       requests,
       retries,
+      ...(rateLimitEvents === 0 ? {} : { rateLimitEvents }),
+      ...(rangeAdjustments === 0 ? {} : { rangeAdjustments }),
     };
   }
 

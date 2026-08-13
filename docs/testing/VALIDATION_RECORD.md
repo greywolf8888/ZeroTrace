@@ -1,7 +1,52 @@
-# Local Validation Record — 2026-08-09
+# Local Validation Record — 2026-08-14
 
 This record captures the latest local acceptance run. It is evidence for the runnable foundation,
 not a terminal-product or production-deployment approval.
+
+## Token History Discovery Phase 1 validation — 2026-08-14
+
+This checkpoint covers the implemented read-only Phase 1 path. It is not production qualification.
+
+- `npm run format:check`, full ESLint, full TypeScript typecheck, package/worker builds, the
+  production license allowlist, `npm audit --omit=dev --audit-level=high`, and
+  `docker compose config --quiet` passed; the audit reported zero high-severity production
+  vulnerabilities;
+- `npm run test:unit` passed `610/610` tests across `109` files;
+- the parallel `npm run test:integration` invocation had one API-contract setup timeout; a bounded
+  serial Vitest replay passed `81/81` enabled cases, with `38` explicit optional-store/provider skips;
+  `npm run test:evals` passed `1/1` structural Entity evaluation;
+- focused Phase 1 tests passed `65/65` cases across SQD transport, capability declarations, token
+  history, immutable report storage, ClickHouse range pagination, and worker configuration;
+- public read-only endpoint probes returned `SQD=200`, `BSC eth_chainId=0x38`,
+  `Solana getHealth=ok`, and `Blockstream Esplora tip height=962307`. These are reachability and
+  protocol-shape smoke observations, not semantic history acceptance;
+- the current process had no `ALCHEMY_API_KEY`, `ETH_RPC_URL`, `BSC_RPC_URL`, `SQD_PORTAL_URL`,
+  `SOLANA_RPC_URL`, or `BTC_ESPLORA_URL` variables. The key was not written to the repository or
+  printed. Therefore Ethereum exact-RPC token history is `NOT_MEASURED` in this checkpoint;
+- the worker now fails closed unless the token-history discovery report and Action Semantics
+  PostgreSQL migrations are healthy. A fresh durable token-history range, exact-RPC binding on
+  Ethereum, archive-scale backfill, provider reconciliation, live monitoring, alerts, export,
+  calibration, and remote CI/CodeQL remain open acceptance gates.
+- a real BSC worker invocation against the existing PostgreSQL/ClickHouse/MinIO stack reached the
+  durable preflight but failed closed with ClickHouse error `241 MEMORY_LIMIT_EXCEEDED` under the
+  existing roughly `800 MiB` server limit; it emitted no report and no result was promoted. A
+  separate clean-store Compose attempt was stopped after BuildKit wedged the Docker Desktop Linux
+  backend, so clean-store token-history acceptance remains `NOT_MEASURED` rather than `PASS`.
+- a fresh bounded live smoke through the actual Token History Discovery composition used FFT
+  `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over BSC blocks `113485950–113495949`. It produced
+  12 finalized observations, 5 exact-RPC-and-Action-Semantics-bound transactions, a terminal
+  `REQUESTED_RANGE_COMPLETE` checkpoint, `1/1/1` data/source/history coverage, 10,029 Raw Facts,
+  and 10,029 Evidence records. SQD completed in 3 requests with 0 retries; exact BSC RPC was
+  `UP`, `CLOSED`, and 12/12 successful attempts. The report replay returned the same result hash
+  without providers (`thd_5ef5001212f0b4c8409bfc7c`, result hash
+  `d8d35b8a10317c3de5756c524db296a9b609cd535e632706990823f30deaede9`). This smoke used
+  in-memory stores only, so it is not durable production
+  acceptance; deployment origin correctly remained `Unknown/NOT_QUERIED` because the requested
+  range does not prove token lifetime.
+- the real ZeroTrace UI path `Trace → Inspect` against the same FFT address returned a live BSC
+  Snapshot, contract classification, versioned Flap state, and Evidence. At 390px, long addresses
+  and atomic values now wrap inside `.fact-row`; the regression ran on Chromium desktop and Pixel
+  7 (`2/2`). The full serial browser suite passed `38/38`.
 
 ## Control Campaign P0 checkpoint validation — 2026-08-13
 

@@ -10,6 +10,7 @@
     { "path": "../schemas" },
     { "path": "../evidence" },
     { "path": "../storage" },
-    { "path": "../chain-adapters" }
+    { "path": "../chain-adapters" },
+    { "path": "../action-semantics" }
   ]
 }

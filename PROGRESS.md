@@ -1,6 +1,6 @@
 # ZeroTrace Progress Ledger
 
-Last updated: 2026-08-13
+Last updated: 2026-08-14
 
 This file reports engineering truth against the terminal architecture. “Implemented” means code and
 automated tests exist in this repository. “Validated” additionally requires clean-environment and
@@ -9,20 +9,20 @@ completed feature.
 
 ## Executive status
 
-| Measure                          | Current state                                                                                                                                  |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal architecture completion | **22% estimated**                                                                                                                              |
-| Runnable foundation              | **Yes; host, fresh PostgreSQL, browser and remote disposable-store/container gates pass**                                                      |
-| Production acceptance            | **No**                                                                                                                                         |
-| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                 |
-| Unit tests                       | **599 passing across 106 files**                                                                                                               |
-| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                     |
-| Integration tests                | **81 pass; 38 environment-gated skips in the current host run; disposable-store acceptance remains recorded separately**                       |
-| Real-browser E2E                 | **Latest parallel host run: 33/38; five pre-existing views timed out under load, then 8/8 passed in serial replay; Control Campaign UI 2/2**   |
-| Remote CI                        | **Not run for the current uncommitted P0 changes; prior PR #20 runs remain historical evidence only**                                          |
-| Coverage                         | **Remote: 82.49% statements / 76.67% branches / 93.43% functions / 83.59% lines**                                                              |
-| Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                       |
-| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/declaration/Scenario/action/control/Solana reports, and immutable Control Campaign bundles |
+| Measure                          | Current state                                                                                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Terminal architecture completion | **22% estimated**                                                                                                                                                        |
+| Runnable foundation              | **Yes; host, fresh PostgreSQL, browser and remote disposable-store/container gates pass**                                                                                |
+| Production acceptance            | **No**                                                                                                                                                                   |
+| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                           |
+| Unit tests                       | **610 passing across 109 files**                                                                                                                                         |
+| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                               |
+| Integration tests                | **81 pass in serial replay after one parallel API-contract timeout; 38 environment-gated skips; disposable-store acceptance remains recorded separately**                |
+| Real-browser E2E                 | **Latest serial host run: 38/38 across Chromium desktop and Pixel 7; Flap mobile long-value layout regression 2/2**                                                      |
+| Remote CI                        | **Not run for the current uncommitted Phase 1 changes; prior PR #20 runs remain historical evidence only**                                                               |
+| Coverage                         | **Remote: 82.49% statements / 76.67% branches / 93.43% functions / 83.59% lines**                                                                                        |
+| Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                                                 |
+| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/declaration/Scenario/action/control/Solana reports, immutable Control Campaign bundles, and Phase 1 report contracts |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
@@ -47,6 +47,43 @@ and export routes deliberately return explicit `501 NOT_IMPLEMENTED`; unconfigur
 storage returns `503` and never returns a synthetic empty campaign. Campaign/entity membership
 mutation remains forbidden, and uncalibrated Evidence scores are not probabilities.
 
+## 2026-08-14 Token History Discovery Phase 1
+
+Phase 1 now has an implemented read-only provider-backed path, while its external production gates
+remain open. The implementation adds a capability declaration registry, bounded SQD ERC-20 Transfer
+queries, finalized Token Flow observations, bounded deployment-origin discovery, exact-RPC transaction
+and receipt binding, Action Semantics derivation, immutable PostgreSQL discovery reports, paginated
+Raw Fact replay, and the `ingest-worker --profile token-history --token ...` boundary. Every report
+retains Evidence IDs, an exact Snapshot, checkpoint, coverage, freshness, source set, model/policy
+versions, provider telemetry, and a content hash. Missing exact RPC remains `UNKNOWN`; provider
+errors remain `UNAVAILABLE`; no signing, broadcast, private-key custody, or fund movement was added.
+
+The Phase 1 local gate passed formatting, ESLint, TypeScript, 610/610 unit tests (109 files),
+the Entity evaluation, a serial integration replay with 81/81 enabled cases (38 optional-store/provider
+cases skipped),
+package and worker builds, the production license allowlist, `npm audit --omit=dev --audit-level=high`
+with zero vulnerabilities, and Compose model validation. Public read-only probes returned HTTP 200
+for SQD, BSC chain ID `0x38`, Solana `getHealth=ok`, and Blockstream Esplora tip height `962307`.
+
+A fresh bounded public BSC smoke through the actual Token History Discovery composition used FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over blocks `113485950–113495949`. It produced 12
+finalized observations, five exact-RPC-and-Action-Semantics-bound transactions, requested-range
+completion, `data/source/history` coverage `1/1/1`, 10,029 Raw Facts and 10,029 Evidence records,
+and an identical provider-free replay hash on the second read. SQD used 3 requests with 0 retries;
+the exact BSC RPC was `UP` with a closed circuit and 12/12 successful attempts. The report was
+held in in-memory stores for this smoke and is not durable production acceptance; deployment origin
+remained `Unknown/NOT_QUERIED` because the requested range does not prove token lifetime.
+
+The current process did not contain `ALCHEMY_API_KEY` or runtime provider variables, so an Ethereum
+exact-RPC token-history run was not measured. The public BSC endpoint was reachable but no durable
+token-history worker run was promoted to production evidence in this checkpoint: the real worker
+failed closed at the existing ClickHouse preflight with error `241 MEMORY_LIMIT_EXCEEDED` under its
+roughly `800 MiB` server limit. A separate clean-store Compose attempt was stopped after BuildKit
+wedged Docker Desktop Linux. Fresh multi-store migration/replay, archive-scale historical coverage,
+source reconciliation, range backfill, live monitoring, alerts, export, calibration, and remote
+CI/CodeQL remain pending. Public endpoint probes establish reachability only, not semantic
+correctness or production qualification.
+
 ## Terminal-scope status matrix
 
 The only allowed status vocabulary in this ledger is:
@@ -60,7 +97,7 @@ The only allowed status vocabulary in this ledger is:
 | EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                                                                                                                                                                                                                                                                                                              |
 | Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | stable-tip address/UTXO reconciliation plus transaction/outpoint/script reads passed on public Esplora; Core/archive policy pending                                                                                                                                                                                                                                                                               |
 | Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor, minimum-context account and live v0 ALT/CPI/balance semantic reads passed                                                                                                                                                                                                                                                                                                           |
-| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity, semantic checkpoints and generic EVM/BTC/Solana transaction capture work; continuous discovery, Temporal/NATS distribution and general rollback/replay remain                                                                                                                                                                                                                     |
+| Durable ingestion and chain history  | `PARTIALLY_IMPLEMENTED`                     | raw history, anchor continuity, semantic checkpoints, generic EVM/BTC/Solana capture, and the bounded Token History Discovery/report path work; continuous discovery, archive backfill, Temporal/NATS distribution, independent reconciliation, and general rollback/replay remain                                                                                                                                |
 | Evidence graph                       | `PARTIALLY_IMPLEMENTED`                     | durable nodes/Snapshots/anchors/alerts plus immutable exact-Snapshot Entity investigation graphs and cross-Snapshot graph timelines work; general terminal graph coverage is incomplete                                                                                                                                                                                                                           |
 | Data quality and discrepancy audits  | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | typed same-Snapshot budgets and Evidence gates work; scoped Alchemy/BNB market reconciliation passed, while other domains and entity calibration remain                                                                                                                                                                                                                                                           |
 | Global Intelligence Search           | `PARTIALLY_IMPLEMENTED`                     | local classification plus durable exact identifier/registered-label projection over current immutable reports works with terminal Evidence and scoped absence; symbol/ticker, platform/project, checkpoint and complete registry indexes remain                                                                                                                                                                   |
@@ -94,6 +131,9 @@ The only allowed status vocabulary in this ledger is:
 - [x] immutable PostgreSQL Control Campaign report repository, ClickHouse flow/position DDL,
       provider-free replay API, explicit 501 ingestion boundaries, and Campaign Timeline/Evidence
       Line UI;
+- [x] Phase 1 Token History Discovery contracts, bounded SQD Transfer capture, origin/Exact-RPC
+      boundaries, Action Semantics binding, immutable report storage, checkpoint replay pagination,
+      provider capability declarations, worker profile, and endpoint configuration defaults;
 - [ ] real finalized token-history discovery, provider capture, historical backfill, live monitor,
       alerts, export, calibration corpus, and external migration/provider acceptance.
 
@@ -1265,6 +1305,7 @@ The only allowed status vocabulary in this ledger is:
 | Finalized block ingest  | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Raw transaction ingest  | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; generic Solana v0/ALT/CPI/balance semantics, official core System/SPL asset flows and content-addressed query-report replay work. Continuous historical semantic projection and platform/program-specific decoders remain pending                                                                                                                                                                                                                                                      |
 | Raw ledger records      | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Token history discovery | Finalized ERC-20 Transfer observations with origin, exact-RPC, Action Semantics, and durable replay                       | Phase 1 code/tests/build pass; public endpoint reachability passed; Ethereum exact RPC and fresh durable end-to-end range acceptance are `NOT_MEASURED` in this checkpoint                                                                                                                                                                                                                                                                                                                                                            |
 
 Public BSC, Bitcoin, and Solana endpoints in `.env.example` are development fallbacks. Rate-limited responses do not count
 as chain-validation failures, and a successful health probe alone does not validate semantic
@@ -1273,25 +1314,25 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                              | Scope                                                                                                                                                                                                 |
-| ------------------------------ | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reproducible install/build     | Pass                                       | locked npm install in production container; all packages/API/web                                                                                                                                      |
-| Unit tests                     | 599 pass                                   | 106 files, including Control Campaign flow/position/behavior/candidate/forensic contracts, immutable report boundaries, and the pre-existing durable intelligence/report suites                       |
-| Integration tests              | 81 pass; 38 skipped in current host run    | API integration and real local PostgreSQL verification-report replay pass; the skipped cases require optional ClickHouse/MinIO or other explicitly gated stores and do not count as semantic failures |
-| Model evaluation tests         | 1 pass                                     | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                                                                                        |
-| Restart regression             | Pass                                       | same-anchor recapture persists across repository/API restart without Snapshot collision                                                                                                               |
-| Coverage gate                  | Pass                                       | disposable CI: 696/696, 82.49% statements, 76.67% branches, 93.43% functions and 83.59% lines; local 1.9 GiB Docker budget: 693 pass/3 three-store tests skipped, 82.42%/76.53%/93.39%/83.52%         |
-| Chromium E2E                   | 33/38 latest parallel; targeted 10/10 pass | latest fully-parallel host run had five load-sensitive timeouts in pre-existing views; serial replay passed those 8/8, and Control Campaign Timeline/Evidence Line passed desktop/mobile 2/2          |
-| Formatting / ESLint / types    | Pass                                       | full repository                                                                                                                                                                                       |
-| Dependency vulnerability audit | Pass                                       | 0 vulnerabilities across the complete npm dependency graph                                                                                                                                            |
-| Dependency license allowlist   | Pass                                       | production dependency graph                                                                                                                                                                           |
-| CycloneDX SBOM                 | Pass                                       | npm dependency graph                                                                                                                                                                                  |
-| Compose model                  | Pass                                       | rendered default topology                                                                                                                                                                             |
-| Docker image build/start       | Pass                                       | PR #20 built all production targets remotely; local PostgreSQL/ClickHouse/MinIO images and isolated services also started                                                                             |
-| Database bootstrap             | Pass                                       | isolated empty PostgreSQL applied migrations 001-030 in order; declaration/review/verification report health, restart replay and immutability passed                                                  |
-| Runtime/browser smoke          | Host and isolated CI gates pass            | production build, migrated PostgreSQL tests, targeted serial browser replay and Control Campaign UI pass; full parallel browser run remains load-sensitive and every production container target pass |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope  | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                                        |
-| Remote CI                      | Not run for current uncommitted changes    | Earlier PR #20 CI/CodeQL runs remain valid only for their recorded heads; this P0 working tree requires a fresh protected-branch CI/CodeQL run after intentional delivery                             |
+| Check                          | Latest result                              | Scope                                                                                                                                                                                                               |
+| ------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible install/build     | Pass                                       | locked npm install in production container; all packages/API/web                                                                                                                                                    |
+| Unit tests                     | 610 pass                                   | 109 files, including Phase 1 Token History Discovery, capability registry, immutable report boundaries, Control Campaign contracts, and the pre-existing durable intelligence/report suites                         |
+| Integration tests              | 81 pass in serial replay; 38 skipped       | The parallel host invocation had one API-contract timeout; the bounded serial replay passed. Skipped cases require optional ClickHouse/MinIO or other explicitly gated stores and do not count as semantic failures |
+| Model evaluation tests         | 1 pass                                     | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                                                                                                      |
+| Restart regression             | Pass                                       | same-anchor recapture persists across repository/API restart without Snapshot collision                                                                                                                             |
+| Coverage gate                  | Pass                                       | disposable CI: 696/696, 82.49% statements, 76.67% branches, 93.43% functions and 83.59% lines; local 1.9 GiB Docker budget: 693 pass/3 three-store tests skipped, 82.42%/76.53%/93.39%/83.52%                       |
+| Chromium E2E                   | 33/38 latest parallel; targeted 10/10 pass | latest fully-parallel host run had five load-sensitive timeouts in pre-existing views; serial replay passed those 8/8, and Control Campaign Timeline/Evidence Line passed desktop/mobile 2/2                        |
+| Formatting / ESLint / types    | Pass                                       | full repository, including Phase 1 changes                                                                                                                                                                          |
+| Dependency vulnerability audit | Pass                                       | 0 vulnerabilities across the complete npm dependency graph                                                                                                                                                          |
+| Dependency license allowlist   | Pass                                       | production dependency graph                                                                                                                                                                                         |
+| CycloneDX SBOM                 | Pass                                       | npm dependency graph                                                                                                                                                                                                |
+| Compose model                  | Pass                                       | rendered default topology                                                                                                                                                                                           |
+| Docker image build/start       | Pass                                       | PR #20 built all production targets remotely; local PostgreSQL/ClickHouse/MinIO images and isolated services also started                                                                                           |
+| Database bootstrap             | Pass                                       | isolated empty PostgreSQL applied migrations 001-030 in order; declaration/review/verification report health, restart replay and immutability passed                                                                |
+| Runtime/browser smoke          | Host and isolated CI gates pass            | production build, migrated PostgreSQL tests, targeted serial browser replay and Control Campaign UI pass; full parallel browser run remains load-sensitive and every production container target pass               |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope  | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                                                      |
+| Remote CI                      | Not run for current uncommitted changes    | Earlier PR #20 CI/CodeQL runs remain valid only for their recorded heads; this Phase 1 working tree requires a fresh protected-branch CI/CodeQL run after intentional delivery                                      |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

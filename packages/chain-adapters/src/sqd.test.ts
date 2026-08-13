@@ -350,6 +350,47 @@ describe('SqdPortalClient', () => {
     expect(result).toMatchObject({ requests: 2, retries: 1, blocks: 1 });
   });
 
+  it('shrinks a large retryable range and reports the actual adjustment', async () => {
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response('limited', { status: 429, headers: { 'retry-after': '0' } }),
+      )
+      .mockResolvedValueOnce(jsonlResponse([block(10), block(11)]))
+      .mockResolvedValueOnce(jsonlResponse([block(12), block(13)]));
+    const received: number[] = [];
+
+    const result = await client(fetchImplementation).readFinalizedRange(
+      { fromBlock: 10, toBlock: 13 },
+      (item) => {
+        received.push(item.header.number);
+      },
+    );
+
+    expect(received).toEqual([10, 11, 12, 13]);
+    expect(result).toMatchObject({
+      requests: 3,
+      retries: 1,
+      rangeAdjustments: 1,
+      blocks: 4,
+    });
+    const firstBody = JSON.parse(String(fetchImplementation.mock.calls[0]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    const secondBody = JSON.parse(String(fetchImplementation.mock.calls[1]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    const thirdBody = JSON.parse(String(fetchImplementation.mock.calls[2]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    expect(firstBody).toMatchObject({ fromBlock: 10, toBlock: 13 });
+    expect(secondBody).toMatchObject({ fromBlock: 10, toBlock: 11 });
+    expect(thirdBody).toMatchObject({ fromBlock: 12, toBlock: 13 });
+  });
+
   it('accepts provider JSONL served as text/plain while preserving strict parsing', async () => {
     const validFetch = vi
       .fn<typeof fetch>()

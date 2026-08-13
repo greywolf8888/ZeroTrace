@@ -15,6 +15,7 @@ import { ProviderError, toProviderError } from './errors.js';
 import {
   requestJsonRpcSourced,
   type JsonRpcTransport,
+  type TransportDiagnostics,
   type TransportObservation,
   type TransportReadOptions,
 } from './transport.js';
@@ -381,6 +382,14 @@ export class EvmLedgerAdapter {
 
   get sourceId(): string {
     return this.#transport.lastEndpointId ?? this.#transport.endpointId;
+  }
+
+  get capabilities(): readonly ProviderCapability[] {
+    return [...EVM_CAPABILITIES];
+  }
+
+  diagnostics(): TransportDiagnostics | undefined {
+    return this.#transport.diagnostics?.();
   }
 
   async read<T>(

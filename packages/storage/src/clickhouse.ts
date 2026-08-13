@@ -418,6 +418,7 @@ export class ClickHouseRawFactRepository {
     fromBlock: number;
     toBlock: number;
     limit?: number;
+    offset?: number;
   }): Promise<RawChainFact[]> {
     const ledger = LedgerSchema.parse(options.ledger);
     requireInteger(options.fromBlock, 'fromBlock', 0, Number.MAX_SAFE_INTEGER);
@@ -426,6 +427,7 @@ export class ClickHouseRawFactRepository {
       throw new RangeError('toBlock must be greater than or equal to fromBlock.');
     }
     const limit = requireInteger(options.limit ?? 1_000, 'limit', 1, 10_000);
+    const offset = requireInteger(options.offset ?? 0, 'offset', 0, Number.MAX_SAFE_INTEGER);
     try {
       const result = await this.#client.query({
         query: `${SELECT_FACT}
@@ -433,7 +435,7 @@ export class ClickHouseRawFactRepository {
             AND chain_id = {chainId:String}
             AND block_or_slot BETWEEN {fromBlock:UInt64} AND {toBlock:UInt64}
           ORDER BY block_or_slot, fact_type, subject, fact_id
-          LIMIT {limit:UInt32}`,
+          LIMIT {limit:UInt32} OFFSET {offset:UInt64}`,
         format: 'JSONEachRow',
         query_params: {
           ledger,
@@ -441,6 +443,7 @@ export class ClickHouseRawFactRepository {
           fromBlock: String(options.fromBlock),
           toBlock: String(options.toBlock),
           limit,
+          offset: String(offset),
         },
       });
       return (await result.json<RawFactRow>()).map(rowToFact);

@@ -652,10 +652,292 @@ export const TokenFlowKindSchema = z.enum([
   'DEX_SELL',
   'LIQUIDITY_ADD',
   'LIQUIDITY_REMOVE',
+  'DISTRIBUTION',
+  'CONSOLIDATION',
+  'LP_ADD',
+  'LP_REMOVE',
+  'MIGRATION',
+  'BRIDGE_IN',
+  'BRIDGE_OUT',
   'SETTLEMENT',
   'BRIDGE',
+  'UNKNOWN',
 ]);
 export type TokenFlowKind = z.infer<typeof TokenFlowKindSchema>;
+
+export const TokenHistoryDiscoveryIdSchema = z.string().regex(/^thd_[0-9a-f]{24}$/);
+export const TokenFlowObservationIdSchema = z.string().regex(/^tfo_[0-9a-f]{24}$/);
+
+export const TokenFlowObservationSchema = z
+  .object({
+    schemaVersion: z.literal('token-flow-observation-v1'),
+    id: TokenFlowObservationIdSchema,
+    ledger: z.literal('EVM'),
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    token: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    blockNumber: UnsignedQuantityStringSchema,
+    blockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    transactionHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    transactionIndex: UnsignedQuantityStringSchema,
+    logIndex: UnsignedQuantityStringSchema,
+    from: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    to: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    amountRaw: UnsignedQuantityStringSchema,
+    kind: TokenFlowKindSchema,
+    application: z.enum(['SUCCESS', 'FAILED', 'UNKNOWN']),
+    finality: z.literal('FINAL'),
+    observedAt: IsoDateTimeSchema,
+    snapshot: AnalysisSnapshotSchema,
+    actionSemanticsIds: CanonicalStringArraySchema,
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    rawArtifactRef: z.string().min(1).optional(),
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.snapshot.ledger !== value.ledger ||
+      value.snapshot.chainId !== value.chainId ||
+      value.snapshot.blockNumber !== value.blockNumber ||
+      value.snapshot.blockHash.toLowerCase() !== value.blockHash.toLowerCase()
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Token flow observation must use its exact finalized block Snapshot.',
+      });
+    }
+  });
+export type TokenFlowObservation = z.infer<typeof TokenFlowObservationSchema>;
+
+export const TokenOriginSchema = z
+  .object({
+    schemaVersion: z.literal('token-origin-v1'),
+    token: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    creator: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    deploymentTransactionHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    deploymentBlockNumber: UnsignedQuantityStringSchema,
+    deploymentBlockHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    bytecodeHash: Hash256Schema,
+    source: z.string().min(1),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    snapshot: AnalysisSnapshotSchema,
+    resultHash: Hash256Schema,
+  })
+  .strict();
+export type TokenOrigin = z.infer<typeof TokenOriginSchema>;
+
+export const TokenHistoryActionBindingSchema = z
+  .object({
+    transactionHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+    status: z.enum(['BOUND', 'UNAVAILABLE', 'UNKNOWN']),
+    actionSemanticsResultHash: Hash256Schema.optional(),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    reason: z.string().min(1),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.status === 'BOUND' && value.actionSemanticsResultHash === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actionSemanticsResultHash'],
+        message: 'A bound Action Semantics result requires its result hash.',
+      });
+    }
+    if (value.status !== 'BOUND' && value.actionSemanticsResultHash !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['actionSemanticsResultHash'],
+        message: 'Unavailable or unknown Action Semantics cannot carry a result hash.',
+      });
+    }
+  });
+export type TokenHistoryActionBinding = z.infer<typeof TokenHistoryActionBindingSchema>;
+
+export const TokenHistoryCheckpointSchema = z
+  .object({
+    runId: z.string().min(1),
+    nextBlock: UnsignedQuantityStringSchema,
+    status: z.enum(['RUNNING', 'REQUESTED_RANGE_COMPLETE', 'SOURCE_HEAD_REACHED', 'FAILED']),
+    lastBlock: UnsignedQuantityStringSchema.nullable(),
+    finalizedHead: UnsignedQuantityStringSchema.nullable(),
+    queryHash: Hash256Schema,
+  })
+  .strict();
+export type TokenHistoryCheckpoint = z.infer<typeof TokenHistoryCheckpointSchema>;
+
+const TokenHistoryRpcDiagnosticsSchema = z.object({
+  endpointId: z.string().min(1),
+  activeEndpointId: z.string().min(1).optional(),
+  circuitState: z.enum(['CLOSED', 'OPEN', 'HALF_OPEN']),
+  circuitOpenUntil: IsoDateTimeSchema.nullable(),
+  logicalRequests: z.number().int().nonnegative(),
+  attempts: z.number().int().nonnegative(),
+  successes: z.number().int().nonnegative(),
+  failures: z.number().int().nonnegative(),
+  retries: z.number().int().nonnegative(),
+  rateLimitDelays: z.number().int().nonnegative(),
+  cacheHits: z.number().int().nonnegative(),
+  cacheMisses: z.number().int().nonnegative(),
+  cacheBypasses: z.number().int().nonnegative(),
+  failovers: z.number().int().nonnegative(),
+  lastAttemptAt: IsoDateTimeSchema.nullable(),
+  lastSuccessAt: IsoDateTimeSchema.nullable(),
+  lastFailureAt: IsoDateTimeSchema.nullable(),
+});
+
+export const TokenHistoryProviderTelemetrySchema = z
+  .object({
+    requests: z.number().int().nonnegative(),
+    retries: z.number().int().nonnegative(),
+    rateLimitEvents: z.number().int().nonnegative(),
+    rangeAdjustments: z.number().int().nonnegative(),
+    lastProviderError: z.string().min(1).optional(),
+    rpcDiagnostics: TokenHistoryRpcDiagnosticsSchema.optional(),
+  })
+  .strict();
+export type TokenHistoryProviderTelemetry = z.infer<typeof TokenHistoryProviderTelemetrySchema>;
+
+const TokenHistoryProviderCapabilitySchema = z.enum([
+  'CURRENT_STATE',
+  'BALANCE',
+  'BLOCK',
+  'TRANSACTION',
+  'RECEIPT',
+  'LOG',
+  'TRACE',
+  'STATE_DIFF',
+  'ARCHIVE',
+  'MEMPOOL',
+  'CONTRACT_SOURCE',
+  'ABI',
+  'TOKEN_HOLDERS',
+  'SIMULATION',
+  'LABEL',
+  'PRICE',
+  'POOL',
+  'UTXO',
+  'INSTRUCTION',
+]);
+
+export const TokenHistoryProviderCapabilityDeclarationSchema = z
+  .object({
+    id: z.string().min(1),
+    ledger: z.literal('EVM'),
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    capabilities: z.array(TokenHistoryProviderCapabilitySchema).min(1),
+    configured: z.boolean(),
+    version: z.string().min(1),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const canonical = [...new Set(value.capabilities)].sort();
+    if (
+      canonical.length !== value.capabilities.length ||
+      canonical.some((capability, index) => capability !== value.capabilities[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['capabilities'],
+        message: 'Provider capability declarations must be unique and sorted.',
+      });
+    }
+  });
+export type TokenHistoryProviderCapabilityDeclaration = z.infer<
+  typeof TokenHistoryProviderCapabilityDeclarationSchema
+>;
+
+export const TokenHistoryDiscoveryReportSchema = z
+  .object({
+    schemaVersion: z.literal('token-history-discovery-v1'),
+    id: TokenHistoryDiscoveryIdSchema,
+    ledger: z.literal('EVM'),
+    chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+    token: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    status: z.enum(['COMPLETE', 'SOURCE_HEAD_REACHED']),
+    origin: knowledgeValueSchema(TokenOriginSchema),
+    observations: z.array(TokenFlowObservationSchema),
+    relevantTransactionHashes: CanonicalStringArraySchema,
+    actionSemanticsBindings: z.array(TokenHistoryActionBindingSchema),
+    sourceHead: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    checkpoint: TokenHistoryCheckpointSchema,
+    providerTelemetry: TokenHistoryProviderTelemetrySchema,
+    providerCapabilityDeclarations: z
+      .array(TokenHistoryProviderCapabilityDeclarationSchema)
+      .min(1)
+      .superRefine((declarations, context) => {
+        const ids = declarations.map((declaration) => declaration.id);
+        if (new Set(ids).size !== ids.length) {
+          context.addIssue({
+            code: 'custom',
+            path: [],
+            message: 'Provider capability declaration IDs must be unique.',
+          });
+        }
+      }),
+    snapshot: AnalysisSnapshotSchema,
+    rangeEvidenceIds: CanonicalStringArraySchema.min(1),
+    dataCoverage: CoverageRatioSchema,
+    sourceCoverage: CoverageRatioSchema,
+    historyCoverage: CoverageRatioSchema,
+    freshness: IsoDateTimeSchema,
+    sourceSet: CanonicalStringArraySchema.min(1),
+    modelVersion: z.literal('token-history-discovery-v1.0.0'),
+    policyVersion: z.literal('token-history-policy-v1.0.0'),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const expectedSnapshotBlock =
+      value.status === 'COMPLETE' ? value.toBlock : value.checkpoint.lastBlock;
+    if (
+      value.snapshot.ledger !== value.ledger ||
+      value.snapshot.chainId !== value.chainId ||
+      expectedSnapshotBlock === null ||
+      value.snapshot.blockNumber !== expectedSnapshotBlock
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Token history report Snapshot must anchor the covered range end.',
+      });
+    }
+    const expectedHashes = [
+      ...new Set([
+        ...value.observations.flatMap((item) => item.evidenceIds),
+        ...value.actionSemanticsBindings.flatMap((item) => item.evidenceIds),
+        ...(value.origin.state === 'known' ? value.origin.value.evidenceIds : []),
+        ...value.rangeEvidenceIds,
+      ]),
+    ].sort();
+    if (
+      expectedHashes.length !== value.evidenceIds.length ||
+      expectedHashes.some((id, index) => id !== value.evidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceIds'],
+        message: 'Token history report Evidence IDs must be the canonical union of its findings.',
+      });
+    }
+    const expectedTransactions = [
+      ...new Set(value.observations.map((item) => item.transactionHash)),
+    ].sort();
+    if (
+      expectedTransactions.length !== value.relevantTransactionHashes.length ||
+      expectedTransactions.some((id, index) => id !== value.relevantTransactionHashes[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['relevantTransactionHashes'],
+        message: 'Relevant transaction hashes must match observed token-flow transactions.',
+      });
+    }
+  });
+export type TokenHistoryDiscoveryReport = z.infer<typeof TokenHistoryDiscoveryReportSchema>;
 
 export const TokenFlowEdgeSchema = z
   .object({
