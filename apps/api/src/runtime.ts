@@ -32,6 +32,7 @@ import {
   PostgresClaimReportRepository,
   PostgresClaimVerificationReportRepository,
   PostgresControlCampaignReportRepository,
+  PostgresForensicCampaignAlertRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaTransactionReportRepository,
@@ -91,6 +92,7 @@ export interface AppRuntime {
   entityInvestigationGraphs?: PostgresEntityInvestigationGraphRepository;
   entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
   controlCampaignReports?: PostgresControlCampaignReportRepository;
+  forensicCampaignAlerts?: PostgresForensicCampaignAlertRepository;
   fundingSettlementReports?: PostgresFundingSettlementReportRepository;
   intelligenceSearch?: PostgresIntelligenceSearchRepository;
   labelIntelligenceReports?: PostgresLabelIntelligenceReportRepository;
@@ -638,6 +640,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const forensicCampaignAlerts =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresForensicCampaignAlertRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const fundingSettlementReports =
     config.postgresUrl === undefined
       ? undefined
@@ -720,6 +731,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       entityInvestigationGraphs?.close(),
       entityInvestigationGraphTimelines?.close(),
       controlCampaignReports?.close(),
+      forensicCampaignAlerts?.close(),
       fundingSettlementReports?.close(),
       intelligenceSearch?.close(),
       labelIntelligenceReports?.close(),
@@ -768,6 +780,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       ? {}
       : { entityInvestigationGraphTimelines }),
     ...(controlCampaignReports === undefined ? {} : { controlCampaignReports }),
+    ...(forensicCampaignAlerts === undefined ? {} : { forensicCampaignAlerts }),
     ...(fundingSettlementReports === undefined ? {} : { fundingSettlementReports }),
     ...(intelligenceSearch === undefined ? {} : { intelligenceSearch }),
     ...(labelIntelligenceReports === undefined ? {} : { labelIntelligenceReports }),

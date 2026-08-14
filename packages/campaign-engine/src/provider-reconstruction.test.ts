@@ -10,7 +10,7 @@ import {
   type TokenFlowObservation,
   type TokenHistoryDiscoveryReport,
 } from '@zerotrace/schemas';
-import { buildProviderBackedControlCampaign } from './provider-reconstruction.js';
+import { buildForensicCampaignAlerts, buildProviderBackedControlCampaign } from './index.js';
 
 const chainId = 'eip155:56';
 const token = `0x${'1'.repeat(40)}`;
@@ -296,5 +296,27 @@ describe('provider-backed campaign reconstruction', () => {
     );
     expect(result.openingBalanceUnknownWalletIds).toEqual([]);
     expect(result.derivedEvidence.length).toBe(result.bundle.evidenceItems.length);
+
+    const alerts = buildForensicCampaignAlerts(result.bundle);
+    const replayAlerts = buildForensicCampaignAlerts(replay.bundle);
+    expect(alerts.map((alert) => [alert.classification, alert.severity]).sort()).toEqual(
+      [
+        ['ACCUMULATION_OBSERVED', 'WATCH'],
+        ['CAMPAIGN_DORMANCY_OBSERVED', 'INFO'],
+        ['COORDINATED_SELLING_OBSERVED', 'HIGH'],
+      ].sort(),
+    );
+    expect(alerts.map((alert) => alert.resultHash)).toEqual(
+      replayAlerts.map((alert) => alert.resultHash),
+    );
+    expect(
+      alerts.every(
+        (alert) =>
+          alert.evidenceIds.length > 0 &&
+          alert.evidenceIds.every(
+            (evidenceId, index) => evidenceId === [...alert.evidenceIds].sort()[index],
+          ),
+      ),
+    ).toBe(true);
   });
 });

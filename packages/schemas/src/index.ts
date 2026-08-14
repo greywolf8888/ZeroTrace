@@ -1771,6 +1771,43 @@ export const ForensicEvidenceLineSchema = z
   });
 export type ForensicEvidenceLine = z.infer<typeof ForensicEvidenceLineSchema>;
 
+export const ForensicCampaignAlertSeveritySchema = z.enum(['INFO', 'WATCH', 'HIGH', 'CRITICAL']);
+export type ForensicCampaignAlertSeverity = z.infer<typeof ForensicCampaignAlertSeveritySchema>;
+
+export const ForensicCampaignAlertSchema = z
+  .object({
+    schemaVersion: z.literal('forensic-campaign-alert-v1'),
+    id: z.string().regex(/^fca_[0-9a-f]{24}$/),
+    campaignId: ControlCampaignIdSchema,
+    behaviorEventId: BehaviorEventIdSchema,
+    severity: ForensicCampaignAlertSeveritySchema,
+    classification: z.string().trim().min(1).max(160),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    snapshot: AnalysisSnapshotSchema,
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    suppressionApplied: z.array(z.string().trim().min(1).max(160)),
+    details: JsonValueSchema,
+    modelVersion: z.string().trim().min(1).max(160),
+    createdAt: IsoDateTimeSchema,
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const canonicalEvidenceIds = [...new Set(value.evidenceIds)].sort();
+    const canonicalSuppressions = [...new Set(value.suppressionApplied)].sort();
+    if (
+      JSON.stringify(value.evidenceIds) !== JSON.stringify(canonicalEvidenceIds) ||
+      JSON.stringify(value.suppressionApplied) !== JSON.stringify(canonicalSuppressions)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceIds'],
+        message: 'Forensic Campaign Alert Evidence and suppression arrays must be canonical.',
+      });
+    }
+  });
+export type ForensicCampaignAlert = z.infer<typeof ForensicCampaignAlertSchema>;
+
 export const CexBoundarySchema = z
   .object({
     schemaVersion: z.literal('cex-boundary-v1'),
@@ -7428,6 +7465,41 @@ export const CaptureTargetSchema = z
   })
   .strict();
 export type CaptureTarget = z.infer<typeof CaptureTargetSchema>;
+
+export const TokenHistoryBackfillParametersSchema = z
+  .object({
+    schemaVersion: z.literal('token-history-backfill-v1'),
+    dataset: z.enum(['ethereum-mainnet', 'binance-mainnet']),
+    token: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+    fromBlock: UnsignedQuantityStringSchema,
+    toBlock: UnsignedQuantityStringSchema,
+    modelVersion: z.literal('token-history-backfill-v1.0.0'),
+    policyVersion: z.literal('token-history-policy-v1.0.0'),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (BigInt(value.toBlock) < BigInt(value.fromBlock)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Token History backfill range must not end before it begins.',
+      });
+    }
+  });
+export type TokenHistoryBackfillParameters = z.infer<typeof TokenHistoryBackfillParametersSchema>;
+
+export const TokenLiveCaptureParametersSchema = z
+  .object({
+    schemaVersion: z.literal('token-live-capture-v1'),
+    dataset: z.enum(['ethereum-mainnet', 'binance-mainnet']),
+    token: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+    initialFromBlock: UnsignedQuantityStringSchema,
+    windowBlocks: z.number().int().min(1).max(1_000_000),
+    modelVersion: z.literal('token-live-capture-v1.0.0'),
+    policyVersion: z.literal('token-history-policy-v1.0.0'),
+  })
+  .strict();
+export type TokenLiveCaptureParameters = z.infer<typeof TokenLiveCaptureParametersSchema>;
 
 export const ActionSemanticsTransactionCaptureParametersSchema = z
   .object({

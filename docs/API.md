@@ -316,9 +316,10 @@ Latest, exact-ID and list routes replay PostgreSQL without contacting Solana RPC
 
 ### Control Campaigns and Forensic Evidence Lines
 
-The P0 Control Campaign surface is a read-only, provider-free replay layer over durable campaign
-bundles. It does not discover token history, start a live monitor, assign Entity membership, or
-broadcast transactions. Every bundle carries canonical Campaign/cluster/position/event/Evidence
+The Control Campaign surface is a read-only, provider-free replay layer over durable campaign
+bundles, with explicit schedule creation for incremental monitoring. It does not discover history
+inline, assign Entity membership, or broadcast transactions. Every bundle carries canonical
+Campaign/cluster/position/event/Evidence
 identity, an exact Snapshot, coverage, freshness, source set, model versions and a result hash. An
 uncalibrated `evidenceScore` is a bounded score, not a probability; hard Service Hub, CEX, bridge,
 router and dust boundaries preserve explicit attribution suppression.
@@ -332,13 +333,53 @@ router and dust boundaries preserve explicit attribution suppression.
 - `GET /api/v1/control/campaigns/:campaignId/wallets`
 - `GET /api/v1/control/campaigns/:campaignId/graph?layer=control|funding|token|settlement`
 - `GET /api/v1/control/campaigns/:campaignId/evidence-line`
+- `POST /api/v1/control/campaigns/:campaignId/export`
+- `GET /api/v1/control/campaigns/:campaignId/export`
+- `POST /api/v1/control/tokens/:chainId/:token/backfill` with `{ "fromBlock": "...", "toBlock": "..." }`
+- `GET /api/v1/control/tokens/:chainId/:token/backfill?limit=50`
+- `POST /api/v1/control-campaigns/EVM/:chainId/:token/backfills`
+- `GET /api/v1/control-campaigns/EVM/:chainId/:token/backfills?limit=50`
+- `POST /api/v1/control/tokens/:chainId/:token/monitor` with `{ "initialFromBlock": "...", "windowBlocks": 10000, "everySeconds": 60 }`
+- `POST /api/v1/control-campaigns/EVM/:chainId/:token/monitors` (target-package alias)
+- `GET /api/v1/control-campaigns/monitors/:monitorId`
+- `GET /api/v1/control-campaigns/:campaignId/alerts`
+- `GET /api/v1/control-campaigns/:campaignId/stream` (provider-free replay SSE)
+- `POST /api/v1/forensics/cases` with `{ "campaignId": "cc_..." }`
+- `GET /api/v1/forensics/cases/:caseId`
+- `GET /api/v1/forensics/cases/:caseId/export`
 - `GET /api/v1/control/events/:eventId`
 - `GET /api/v1/control/evidence/:itemId`
 
-When PostgreSQL Control Campaign storage is not configured, reads return `503` with an explicit
-storage-unavailable error. Historical backfill, live monitor, alert stream and export routes are
-present as contract boundaries and return `501 NOT_IMPLEMENTED`; they never return fixtures or
-synthetic empty facts. Replay reads the immutable bundle and does not contact chain providers.
+When PostgreSQL Control Campaign storage is not configured, report reads return `503` with an explicit
+storage-unavailable error. Token History backfill is a durable one-shot `TOKEN_HISTORY_BACKFILL`
+capture schedule: the first accepted request returns `202`, repeated requests for the same canonical
+range return the same schedule with `200`, and the list route replays schedules/runs without providers.
+Only Ethereum (`eip155:1`) and BNB Smart Chain (`eip155:56`) are accepted, with a bounded maximum of
+1,000,000 blocks. Missing scheduler storage returns `503`; malformed or unsupported ranges return
+`400`. The semantic worker is started with `npm run dev:token-history:backfill -- --once` (or without
+`--once` for polling) after configuring PostgreSQL, ClickHouse, versioned object storage, SQD, and
+read-only RPC endpoints. The worker persists restart-safe Token History, Funding/Settlement,
+Control Campaign, Evidence-bound alerts, and terminal capture results; provider-down, missing
+historical state, finalized cursor disagreement, and incomplete coverage remain explicit
+failure/unknown states.
+
+The live monitor is an interval `TOKEN_LIVE_CAPTURE` schedule. Its identity excludes the enqueue
+timestamp, so concurrent equivalent requests replay one monitor. Each worker run reads the finalized
+head, checks the prior successful Snapshot/block hash, captures only the next bounded range, and
+uses a typed retryable reorg error when the durable cursor no longer matches. A monitor requires
+durable schedule history and does not fall back to current state when historical reads fail.
+
+Campaign alerts are immutable `forensic-campaign-alert-v1` rows under migration
+`034_control_campaign_alerts`. Every alert is linked to at least one Evidence node and retains its
+Snapshot, confidence knowledge value, suppression list, model version, and result hash. The JSON
+alerts route and SSE stream replay PostgreSQL only; SSE emits `campaign`, `alert`, and `complete`
+events and closes after the current durable set. This is a replay stream, not an unbounded push
+subscription. Forensic export is implemented provider-free: it rebuilds a
+canonical `forensic-case-bundle-v1` from the stored Campaign and the complete Evidence closure,
+includes full Snapshots, raw-artifact references/hashes, source/model/policy registries, a manifest
+hash, and a result hash. Missing closure returns `422` with a typed forensic error; it never returns
+fixtures, synthetic empty facts, or a partial case. Replay and export do not contact chain
+providers.
 
 ### Funding and Settlement evidence reports
 
@@ -365,13 +406,14 @@ provenance arrays, model/policy versions, and insert-time JSON identity checks.
 
 ### Provider-backed Campaign materialization
 
-The finalized ingest worker's `token-history` profile now composes the stored Token History report,
-exact receipt-derived Funding/Settlement observations, and the Campaign engine. It hydrates source
-Evidence and persists newly derived Campaign Evidence before writing an immutable Campaign bundle,
-so the API reads the same provider-backed result through the Campaign endpoints above. Missing exact
-RPC, source Evidence, or durable report storage yields an explicit `UNKNOWN`/storage error; no
-fixture or synthetic empty Campaign is materialized. This worker path remains a bounded capture and
-does not implement backfill, live monitoring, alert delivery, export, or calibrated attribution.
+The Token History backfill handler composes the finalized SQD report, exact receipt-derived
+Funding/Settlement observations, and the Campaign engine. It hydrates source Evidence and persists
+newly derived Campaign Evidence before writing an immutable Campaign bundle, so the API reads the
+same provider-backed result through the Campaign endpoints above. Missing exact RPC, source
+Evidence, or durable report storage yields a typed retryable/terminal capture failure; no fixture or
+synthetic empty Campaign is materialized. The provider-backed capture remains bounded and does not
+claim calibrated attribution; its durable Campaign can be exported through the Forensic Case Bundle
+routes.
 
 ### Typed ledger records
 

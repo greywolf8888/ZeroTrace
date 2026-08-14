@@ -8,6 +8,9 @@ import {
   type Capability,
   type ClaimReportResponse,
   type ControlCampaignRecord,
+  type ControlCampaignMonitorResponse,
+  type ForensicCaseBundleResponse,
+  type ForensicCampaignAlert,
   type EvmClaimBurnCandidateDiscoveryResponse,
   type EvmClaimBurnConservationResponse,
   type EvmClaimBurnPromotionReplayResponse,
@@ -88,6 +91,12 @@ function isValidBoundedBlockRange(fromBlock: string, toBlock: string): boolean {
   const from = BigInt(fromBlock);
   const to = BigInt(toBlock);
   return to >= from && to - from + 1n <= 50_000n;
+}
+
+function nextMonitorStart(block: string): string | undefined {
+  if (!/^(?:0|[1-9]\d*)$/.test(block)) return undefined;
+  const next = BigInt(block) + 1n;
+  return next <= BigInt(Number.MAX_SAFE_INTEGER) ? next.toString() : undefined;
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -3789,8 +3798,46 @@ function ControlCampaignWorkspace() {
   const [fundingSettlementError, setFundingSettlementError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [forensicCase, setForensicCase] = useState<ForensicCaseBundleResponse>();
+  const [forensicCaseError, setForensicCaseError] = useState<string>();
+  const [campaignAlerts, setCampaignAlerts] = useState<ForensicCampaignAlert[]>([]);
+  const [alertsCampaignId, setAlertsCampaignId] = useState<string>();
+  const [alertsLoaded, setAlertsLoaded] = useState(false);
+  const [alertsError, setAlertsError] = useState<string>();
+  const [monitor, setMonitor] = useState<ControlCampaignMonitorResponse>();
+  const [monitorError, setMonitorError] = useState<string>();
 
   const selected = records.find((record) => record.campaign.id === selectedId) ?? records[0];
+  const selectedCampaignId = selected?.campaign.id;
+
+  useEffect(() => {
+    if (selectedCampaignId === undefined) return;
+    let active = true;
+    void api
+      .campaignAlerts(selectedCampaignId)
+      .then((response) => {
+        if (!active) return;
+        setAlertsCampaignId(selectedCampaignId);
+        setCampaignAlerts(response.alerts);
+        setAlertsLoaded(true);
+        setAlertsError(undefined);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setAlertsCampaignId(selectedCampaignId);
+        setCampaignAlerts([]);
+        setAlertsLoaded(true);
+        setAlertsError(cause instanceof Error ? cause.message : 'Campaign alert replay failed.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedCampaignId]);
+
+  const visibleAlerts =
+    alertsCampaignId === selectedCampaignId ? campaignAlerts : ([] as ForensicCampaignAlert[]);
+  const visibleAlertsLoaded = alertsCampaignId === selectedCampaignId && alertsLoaded;
+  const visibleAlertsError = alertsCampaignId === selectedCampaignId ? alertsError : undefined;
 
   async function load() {
     const normalizedToken = token.trim();
@@ -3846,6 +3893,35 @@ function ControlCampaignWorkspace() {
     }
   }
 
+  async function exportCase() {
+    if (selected === undefined) return;
+    setBusy(true);
+    setError(undefined);
+    setForensicCaseError(undefined);
+    try {
+      const response = await api.exportControlCampaign(selected.campaign.id);
+      setForensicCase(response);
+      const blob = new Blob([JSON.stringify(response.case, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${response.case.caseId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch (cause) {
+      setForensicCase(undefined);
+      setForensicCaseError(
+        cause instanceof Error ? cause.message : 'Forensic Case Bundle export failed.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const campaign = selected?.campaign;
   const evidenceLine = selected?.evidenceLine;
   const snapshotPosition =
@@ -3853,6 +3929,26 @@ function ControlCampaignWorkspace() {
     campaign?.snapshotEnd.height ??
     campaign?.snapshotEnd.slot ??
     'Unknown';
+  const monitorStartBlock = nextMonitorStart(snapshotPosition);
+
+  async function startMonitor() {
+    if (selected === undefined || monitorStartBlock === undefined) return;
+    setBusy(true);
+    setMonitorError(undefined);
+    try {
+      setMonitor(
+        await api.createControlCampaignMonitor(
+          chainId.trim(),
+          selected.campaign.token,
+          monitorStartBlock,
+        ),
+      );
+    } catch (cause) {
+      setMonitorError(cause instanceof Error ? cause.message : 'Live monitor request failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <>
@@ -3873,7 +3969,7 @@ function ControlCampaignWorkspace() {
             <span className="eyebrow">Durable Postgres reports only</span>
             <h3>Load a token campaign history</h3>
           </div>
-          <span className="snapshot-badge">No backfill or live monitor in this release</span>
+          <span className="snapshot-badge">Provider-free forensic export available</span>
         </div>
         <form
           className="quote-form control-campaign-form"
@@ -4062,6 +4158,115 @@ function ControlCampaignWorkspace() {
                     <code>{shortId(selected.resultHash, 18)}</code>
                   </div>
                 </div>
+                <div className="case-export-bar" data-testid="control-campaign-export">
+                  <div>
+                    <span className="eyebrow">Forensic Case Bundle</span>
+                    <strong>Evidence closure · manifest hash · offline replay</strong>
+                    {forensicCase === undefined ? null : (
+                      <small>
+                        {forensicCase.case.caseId} · {forensicCase.case.manifest.evidenceCount}{' '}
+                        Evidence · {forensicCase.case.manifest.snapshotCount} Snapshots ·{' '}
+                        {forensicCase.case.manifest.rawArtifactCount} raw artifacts
+                      </small>
+                    )}
+                    {forensicCaseError === undefined ? null : (
+                      <small className="knowledge-unknown">{forensicCaseError}</small>
+                    )}
+                  </div>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void exportCase()}
+                  >
+                    {busy ? 'Exporting…' : 'Export Case Bundle'}
+                  </button>
+                </div>
+                <div className="case-export-bar monitor-bar" data-testid="control-campaign-monitor">
+                  <div>
+                    <span className="eyebrow">Incremental finalized monitor</span>
+                    <strong>Read-only schedule · reorg-aware cursor · no automatic action</strong>
+                    {monitor === undefined ? (
+                      <small>
+                        Starts after Snapshot {snapshotPosition}; the worker captures only newly
+                        finalized blocks.
+                      </small>
+                    ) : (
+                      <small>
+                        {monitor.monitor.monitorId} · {titleCase(monitor.monitor.status)} · next{' '}
+                        <KnowledgeDisplay data={monitor.monitor.nextRunAt} />
+                      </small>
+                    )}
+                    {monitorError === undefined ? null : (
+                      <small className="knowledge-unknown">{monitorError}</small>
+                    )}
+                  </div>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={busy || monitorStartBlock === undefined}
+                    onClick={() => void startMonitor()}
+                    title={
+                      monitorStartBlock === undefined
+                        ? 'A known safe Snapshot block is required to start a monitor.'
+                        : undefined
+                    }
+                  >
+                    {busy
+                      ? 'Starting…'
+                      : monitor === undefined
+                        ? 'Start monitor'
+                        : 'Replay monitor'}
+                  </button>
+                </div>
+              </section>
+
+              <section className="panel" data-testid="control-campaign-alerts">
+                <div className="panel-header">
+                  <div>
+                    <span className="eyebrow">Forensic Alert Stream · Evidence-bound</span>
+                    <h3>Campaign Alerts</h3>
+                  </div>
+                  <span className="panel-note">
+                    {visibleAlertsLoaded ? `${visibleAlerts.length} alert(s)` : 'Loading…'}
+                  </span>
+                </div>
+                {visibleAlertsError !== undefined ? (
+                  <p className="inline-error alert-state-message">{visibleAlertsError}</p>
+                ) : !visibleAlertsLoaded ? (
+                  <p className="empty-cell alert-state-message">Replaying durable alerts…</p>
+                ) : visibleAlerts.length === 0 ? (
+                  <p className="empty-cell alert-state-message">
+                    No durable alert was materialized for this campaign.
+                  </p>
+                ) : (
+                  <div className="alert-list">
+                    {visibleAlerts.map((alert) => (
+                      <article
+                        className={'campaign-alert alert-' + alert.severity.toLowerCase()}
+                        key={alert.id}
+                      >
+                        <div className="campaign-alert-heading">
+                          <div>
+                            <span className="eyebrow">{titleCase(alert.classification)}</span>
+                            <strong>{shortId(alert.id, 10)}</strong>
+                          </div>
+                          <StatusPill status={alert.severity} />
+                        </div>
+                        <p>
+                          {alert.evidenceIds.length} Evidence node(s) · confidence{' '}
+                          <KnowledgeDisplay data={alert.confidence} /> ·{' '}
+                          {formatTime(alert.createdAt)}
+                        </p>
+                        <small>
+                          {alert.suppressionApplied.length === 0
+                            ? 'No suppression applied.'
+                            : `Suppression: ${alert.suppressionApplied.join(' · ')}`}
+                        </small>
+                      </article>
+                    ))}
+                  </div>
+                )}
               </section>
 
               <section className="panel" data-testid="control-campaign-positions">

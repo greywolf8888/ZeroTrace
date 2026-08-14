@@ -2,16 +2,19 @@ import { hashPayload } from '@zerotrace/evidence';
 import {
   ControlCampaignSchema,
   ControlClusterVersionSchema,
+  ForensicCampaignAlertSchema,
   knownValue,
   unknownValue,
   type AnalysisSnapshot,
   type BehaviorEvent,
   type ControlCampaign,
+  type ControlCampaignBundle,
   type ControlCampaignStage,
   type ControlClusterVersion,
   type KnowledgeValue,
   type ClusterPosition,
   type CampaignWalletRole,
+  type ForensicCampaignAlert,
 } from '@zerotrace/schemas';
 
 export const CAMPAIGN_ENGINE_MODEL_VERSION = 'campaign-v1.0.0' as const;
@@ -446,6 +449,88 @@ export function campaignWalletRoleFor(input: {
   if (input.satelliteWalletIds.includes(input.walletId)) return 'SATELLITE';
   if (input.coordinatedOnlyWalletIds?.includes(input.walletId)) return 'COORDINATED_ONLY';
   return 'UNKNOWN';
+}
+
+function alertSeverityFor(event: BehaviorEvent): ForensicCampaignAlert['severity'] {
+  if (event.type === 'LIQUIDITY_EXIT' || event.type === 'SETTLEMENT_CONVERGENCE') {
+    return 'CRITICAL';
+  }
+  if (
+    event.type === 'COORDINATED_SELLING' ||
+    event.type === 'PRE_EXIT_DISPERSION' ||
+    event.type === 'SELL_PRESSURE' ||
+    event.type === 'CEX_PREPOSITIONING'
+  ) {
+    return 'HIGH';
+  }
+  if (
+    event.type === 'ACCUMULATION' ||
+    event.type === 'COORDINATED_BUYING' ||
+    event.type === 'TOKEN_CONSOLIDATION' ||
+    event.type === 'RECONSOLIDATION'
+  ) {
+    return 'WATCH';
+  }
+  return 'INFO';
+}
+
+function sortedAlertIds(values: readonly string[]): string[] {
+  return [...new Set(values.filter((value) => value.length > 0))].sort();
+}
+
+export function createForensicCampaignAlert(input: {
+  event: BehaviorEvent;
+  createdAt?: string;
+}): ForensicCampaignAlert {
+  const event = input.event;
+  const evidenceIds = sortedAlertIds([
+    ...event.supportingEvidenceIds,
+    ...event.contradictingEvidenceIds,
+    ...event.featureVector.flatMap((feature) => feature.evidenceIds),
+  ]);
+  if (evidenceIds.length === 0) {
+    throw new TypeError('Forensic Campaign Alerts require Evidence-bound behavior events.');
+  }
+  const value = {
+    schemaVersion: 'forensic-campaign-alert-v1' as const,
+    campaignId: event.campaignId,
+    behaviorEventId: event.id,
+    severity: alertSeverityFor(event),
+    classification: `${event.type}_OBSERVED`,
+    evidenceIds,
+    snapshot: event.snapshot,
+    confidence: event.confidence,
+    suppressionApplied: [...new Set(event.suppressionReasons)].sort(),
+    details: {
+      behaviorType: event.type,
+      behaviorStatus: event.status,
+      startBlock: event.startBlock,
+      endBlock: event.endBlock,
+      actors: event.actors,
+      counterparties: event.counterparties,
+      explanation: event.explanation,
+      dataCoverage: event.dataCoverage,
+      sourceCoverage: event.sourceCoverage,
+      historyCoverage: event.historyCoverage,
+      attributionStopped: event.attributionStopped,
+    },
+    modelVersion: 'forensic-campaign-alert-v1.0.0',
+    createdAt: input.createdAt ?? event.endTime,
+  };
+  return ForensicCampaignAlertSchema.parse({
+    ...value,
+    id: `fca_${hashPayload({ schema: 'forensic-campaign-alert-v1', value }).slice(0, 24)}`,
+    resultHash: hashPayload(value),
+  });
+}
+
+export function buildForensicCampaignAlerts(
+  bundle: Pick<ControlCampaignBundle, 'campaign' | 'behaviorEvents'>,
+): ForensicCampaignAlert[] {
+  return bundle.behaviorEvents
+    .filter((event) => event.campaignId === bundle.campaign.id && event.status !== 'REVOKED')
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((event) => createForensicCampaignAlert({ event }));
 }
 
 export * from './provider-reconstruction.js';

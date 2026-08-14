@@ -51,6 +51,84 @@ describe('capture scheduling contracts', () => {
     expect(first.nextRunAt).toEqual({ state: 'known', value: '2026-08-12T00:01:00.123Z' });
   });
 
+  it('keeps one-shot Token History backfill identity stable across enqueue time', () => {
+    const input = {
+      captureKind: 'TOKEN_HISTORY_BACKFILL' as const,
+      target: {
+        ledger: 'EVM' as const,
+        chainId: 'eip155:56',
+        subjectType: 'TOKEN' as const,
+        normalizedIdentifier: '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
+      },
+      parameters: {
+        schemaVersion: 'token-history-backfill-v1',
+        dataset: 'binance-mainnet',
+        token: '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
+        fromBlock: '100',
+        toBlock: '200',
+        modelVersion: 'token-history-backfill-v1.0.0',
+        policyVersion: 'token-history-policy-v1.0.0',
+      },
+      retryPolicy,
+    };
+    const first = defineCaptureSchedule({
+      ...input,
+      trigger: { type: 'ONCE' as const, at: '2026-08-14T00:00:00.000Z' },
+      createdAt: '2026-08-14T00:00:00.000Z',
+    });
+    const second = defineCaptureSchedule({
+      ...input,
+      trigger: { type: 'ONCE' as const, at: '2026-08-15T00:00:00.000Z' },
+      createdAt: '2026-08-15T00:00:00.000Z',
+    });
+    expect(first.definition.id).toBe(second.definition.id);
+    expect(first.definition.trigger).not.toEqual(second.definition.trigger);
+  });
+
+  it('keeps live monitor identity stable across interval anchor time', () => {
+    const input = {
+      captureKind: 'TOKEN_LIVE_CAPTURE' as const,
+      target: {
+        ledger: 'EVM' as const,
+        chainId: 'eip155:56',
+        subjectType: 'TOKEN' as const,
+        normalizedIdentifier: '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
+      },
+      parameters: {
+        schemaVersion: 'token-live-capture-v1',
+        dataset: 'binance-mainnet',
+        token: '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
+        initialFromBlock: '100',
+        windowBlocks: 1000,
+        modelVersion: 'token-live-capture-v1.0.0',
+        policyVersion: 'token-history-policy-v1.0.0',
+      },
+      retryPolicy,
+    };
+    const first = defineCaptureSchedule({
+      ...input,
+      trigger: {
+        type: 'INTERVAL' as const,
+        anchorAt: '2026-08-14T00:00:00.000Z',
+        everySeconds: 60,
+        catchupPolicy: 'SKIP_MISSED' as const,
+      },
+      createdAt: '2026-08-14T00:00:00.000Z',
+    });
+    const second = defineCaptureSchedule({
+      ...input,
+      trigger: {
+        type: 'INTERVAL' as const,
+        anchorAt: '2026-08-15T00:00:00.000Z',
+        everySeconds: 60,
+        catchupPolicy: 'SKIP_MISSED' as const,
+      },
+      createdAt: '2026-08-15T00:00:00.000Z',
+    });
+    expect(first.definition.id).toBe(second.definition.id);
+    expect(first.definition.trigger).not.toEqual(second.definition.trigger);
+  });
+
   it('dispatches registered handlers and fails closed for an unregistered kind', async () => {
     const leasedRun = CaptureRunSchema.parse({
       schemaVersion: 'capture-run-v1',

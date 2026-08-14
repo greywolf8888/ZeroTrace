@@ -264,6 +264,75 @@ export interface ControlCampaignCollectionResponse {
   records: ControlCampaignRecord[];
 }
 
+export interface ForensicCaseBundleResponse {
+  case: {
+    caseId: string;
+    campaignId: string;
+    resultHash: string;
+    manifest: {
+      evidenceCount: number;
+      snapshotCount: number;
+      rawArtifactCount: number;
+      manifestHash: string;
+    };
+  };
+  replayed: boolean;
+}
+
+export interface ForensicCampaignAlert {
+  schemaVersion: 'forensic-campaign-alert-v1';
+  id: string;
+  campaignId: string;
+  behaviorEventId: string;
+  severity: 'INFO' | 'WATCH' | 'HIGH' | 'CRITICAL';
+  classification: string;
+  evidenceIds: string[];
+  snapshot: ControlCampaignSnapshot;
+  confidence: KnowledgeValue<number>;
+  suppressionApplied: string[];
+  details: unknown;
+  modelVersion: string;
+  createdAt: string;
+  resultHash: string;
+}
+
+export interface ForensicCampaignAlertsResponse {
+  campaignId: string;
+  alerts: ForensicCampaignAlert[];
+  replayed: boolean;
+}
+
+export interface ControlCampaignMonitorResponse {
+  monitor: {
+    monitorId: string;
+    scheduleId: string;
+    status: string;
+    target: {
+      ledger: 'EVM';
+      chainId: string;
+      subjectType: string;
+      normalizedIdentifier: string;
+    };
+    parameters: {
+      schemaVersion: 'token-live-capture-v1';
+      dataset: 'ethereum-mainnet' | 'binance-mainnet';
+      token: string;
+      initialFromBlock: string;
+      windowBlocks: number;
+      modelVersion: string;
+      policyVersion: string;
+    };
+    trigger: {
+      type: 'INTERVAL';
+      anchorAt: string;
+      everySeconds: number;
+      catchupPolicy: 'SKIP_MISSED';
+    };
+    nextRunAt: KnowledgeValue<string>;
+  };
+  replayed: boolean;
+}
+
 export interface ProviderHealth {
   id: string;
   ledger: 'EVM' | 'BITCOIN' | 'SOLANA';
@@ -2646,6 +2715,29 @@ export const api = {
     requestJson<ControlCampaignRecord>(
       `/api/v1/control/campaigns/${encodeURIComponent(campaignId)}/replay`,
       { method: 'POST', body: JSON.stringify({}) },
+    ),
+  exportControlCampaign: (campaignId: string) =>
+    requestJson<ForensicCaseBundleResponse>(
+      `/api/v1/control/campaigns/${encodeURIComponent(campaignId)}/export`,
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
+  campaignAlerts: (campaignId: string) =>
+    requestJson<ForensicCampaignAlertsResponse>(
+      `/api/v1/control-campaigns/${encodeURIComponent(campaignId)}/alerts`,
+    ),
+  createControlCampaignMonitor: (
+    chainId: string,
+    token: string,
+    initialFromBlock: string,
+    windowBlocks = 10_000,
+    everySeconds = 60,
+  ) =>
+    requestJson<ControlCampaignMonitorResponse>(
+      `/api/v1/control/tokens/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}/monitor`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ initialFromBlock, windowBlocks, everySeconds }),
+      },
     ),
   latestEntityRelationshipReport: (
     ledger: 'EVM' | 'BITCOIN' | 'SOLANA',

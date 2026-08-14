@@ -161,6 +161,23 @@ function normalizeTrigger(trigger: CaptureTrigger): CaptureTrigger {
       };
 }
 
+function triggerIdentity(captureKind: CaptureKind, trigger: CaptureTrigger): JsonValue {
+  // A one-shot Token History backfill is an idempotent request for one immutable range. Its
+  // enqueue time is execution metadata, not a second historical job identity. Other one-shot
+  // captures retain their explicit scheduled time in the identity.
+  if (captureKind === 'TOKEN_HISTORY_BACKFILL' && trigger.type === 'ONCE') {
+    return { type: 'ONCE' };
+  }
+  if (captureKind === 'TOKEN_LIVE_CAPTURE' && trigger.type === 'INTERVAL') {
+    return {
+      type: 'INTERVAL',
+      everySeconds: trigger.everySeconds,
+      catchupPolicy: trigger.catchupPolicy,
+    };
+  }
+  return trigger;
+}
+
 export function nextCaptureOccurrence(
   trigger: CaptureTrigger,
   referenceTime: string,
@@ -187,7 +204,7 @@ export function defineCaptureSchedule(input: DefineCaptureScheduleInput): Captur
   const parameters = JsonValueSchema.parse(input.parameters);
   const trigger = normalizeTrigger(input.trigger);
   const retryPolicy = CaptureRetryPolicySchema.parse(input.retryPolicy);
-  const identity = {
+  const definitionIdentity = {
     schemaVersion: 'capture-schedule-v1' as const,
     captureKind: input.captureKind,
     operation: 'READ_ONLY_CAPTURE' as const,
@@ -196,9 +213,12 @@ export function defineCaptureSchedule(input: DefineCaptureScheduleInput): Captur
     trigger,
     retryPolicy,
   };
-  const identityHash = hashPayload(identity);
+  const identityHash = hashPayload({
+    ...definitionIdentity,
+    trigger: triggerIdentity(input.captureKind, trigger),
+  });
   const definition = CaptureScheduleDefinitionSchema.parse({
-    ...identity,
+    ...definitionIdentity,
     id: `cps_${identityHash.slice(0, 24)}`,
     identityHash,
     createdAt,
@@ -220,7 +240,10 @@ export function defineCaptureSchedule(input: DefineCaptureScheduleInput): Captur
 export function captureScheduleIdFor(
   definition: Omit<CaptureScheduleDefinition, 'id' | 'identityHash' | 'createdAt'>,
 ): string {
-  return `cps_${hashPayload(definition).slice(0, 24)}`;
+  return `cps_${hashPayload({
+    ...definition,
+    trigger: triggerIdentity(definition.captureKind, definition.trigger),
+  }).slice(0, 24)}`;
 }
 
 export function captureRunIdFor(scheduleId: string, scheduledFor: string): string {

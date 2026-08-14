@@ -85,9 +85,9 @@ production acceptance.
 This checkpoint records the current provider composition and UI regression. It is not durable
 production acceptance.
 
-- `npm run test:unit` passed `624/624` tests across `113` files. The Phase 3 targeted provider
+- `npm run test:unit` passed `635/635` tests across `117` files. The Phase 3 targeted provider
   tests passed `4/4`: Campaign reconstruction `1/1` and shared Funding/Settlement composition
-  `3/3`.
+  `3/3`; the focused backfill checks passed `100/100`.
 - Full TypeScript typecheck, production build, formatting, ESLint, license allowlist, audit with
   zero vulnerabilities, SBOM generation, and `git diff --check` passed. The production E2E run
   rebuilt the app and passed `38/38` across Chromium desktop and Pixel 7, including the Control
@@ -95,11 +95,11 @@ production acceptance.
   the same `38/38` result.
 - A fresh real BSC FFT smoke over blocks `113485950–113495949` produced Token History
   `thd_5ef5001212f0b4c8409bfc7c` with latest run hash
-  `04cec0d7d3a57573e18ae7b9ddd462dd8d954be7a415ad31c30307af230e44b8`, Funding/Settlement
-  `fsr_cf411850dea7b10b8027a6a3` with hash
-  `02713d7714d7e8b45b702af8ad9d5edcbb33c46378824c252edd3c90128de47b`, and Campaign
-  `cc_3a996a5749b995fdb8a198b1` with bundle hash
-  `7320fd3e388d37c34ebf5ff8ac7620c4a84d65ecc34576d69f2604c9ed9b198b`. Funding/Settlement and
+  `0fdd7d8b0e32a2bef9cfd35573bfbfc6f1422de2935c210e409821d345a9f72a`, Funding/Settlement
+  `fsr_a3d4fdad3dd130e1bc8077f5` with hash
+  `e8f6bd68b7c584750814f28e610316c053630b3900ec88c7ea5b774958183d22`, and Campaign
+  `cc_89ef265544cf3687b7633444` with bundle hash
+  `2f126ea842f1136fe1e0bcf54fe8ef95f699604de8c4c998a19b656a8b65b271`. Funding/Settlement and
   Campaign provider-free replay hashes matched their original runs.
 - The real smoke remained bounded and in-memory: Token History coverage was `1/1/1`; the
   Funding/Settlement report was `PARTIAL`, `TRANSACTION_LOCAL`, coverage `1/1/0`, with two
@@ -116,6 +116,73 @@ production acceptance.
   pipe is absent. Archive-scale history, independent provider reconciliation, service-registry
   qualification, calibration, live monitoring, alerts, export, remote CI/CodeQL, and production
   approval remain open.
+
+## Forensic Case Bundle export closure — 2026-08-14
+
+- The provider-free Case Bundle builder and verifier passed `3/3` focused tests. It validates the
+  stored Control Campaign, walks every referenced Evidence source, rejects missing closure,
+  conflicting payloads, and cycles, and emits full Snapshot/artifact/source/model/policy registries
+  with manifest and result hashes. Same chain-anchor Snapshots with different capture metadata are
+  preserved separately by full Snapshot hash rather than overwritten.
+- API integration replay passed `85/85` after adding Control Campaign export and
+  `/api/v1/forensics/cases` create/read/export routes. A missing durable Campaign remains `503`;
+  incomplete Evidence closure is `422`; no fixture or synthetic empty case is returned.
+- The Campaign UI downloads the JSON bundle and shows the Case ID, Evidence/Snapshot/raw-artifact
+  counts and closure state. The targeted desktop/Pixel 7 flow passed `2/2`.
+- A fresh real BSC FFT smoke over `113485950–113495949` produced Case
+  `fcb_cc_89ef265544cf3687b7633444`, manifest hash
+  `c2f152fb3bd90120a4340443ce8ac18112780d239c04816ecc7e4ccc3238b06a`, result hash
+  `b85017621c05c9af69854755057f4efd13c648a6ee125a587b3f311d6480e8a5`, with `10041` Evidence,
+  `10011` Snapshots, `10005` raw-artifact references, and offline verification `true`.
+- The smoke is real-provider but in-memory. Durable clean-store export/replay, backfill execution,
+  monitoring, alerts, calibration, and production acceptance remain `NOT_MEASURED`/open; this
+  slice does not unlock clean-store production acceptance.
+
+## Token History backfill scheduling and handler binding — 2026-08-14
+
+- The API now validates bounded Ethereum/BSC ranges and exposes both the legacy-compatible
+  `/api/v1/control/tokens/:chainId/:token/backfill` route and the target-package
+  `/api/v1/control-campaigns/EVM/:chainId/:token/backfills` alias. The first canonical request is
+  `202`, repeated range requests replay the same one-shot schedule with `200`, and GET routes
+  replay schedule/run state without contacting providers.
+- The scheduler identity for one-shot `TOKEN_HISTORY_BACKFILL` excludes enqueue time while retaining
+  the actual trigger in the immutable definition, closing the concurrent-request duplicate window.
+  The storage repository now lists schedules by target/kind and runs by schedule ID.
+- The semantic worker's production handler validates target/parameter identity, requires durable
+  PostgreSQL/ClickHouse/versioned object storage, selects Ethereum/BSC read-only RPC by dataset,
+  executes `TokenHistoryDiscovery`, hydrates/persists Evidence closure, derives Funding/Settlement
+  and Control Campaign reports, and commits a terminal Evidence-bound capture result through the
+  existing lease/retry state machine. Provider failures, missing historical state, Evidence gaps,
+  and fact-budget overflow remain typed failures; no zeros or synthetic reports are used.
+- Focused serial validation passed `100/100` across the API, capture scheduler, storage query,
+  worker configuration, and worker handler tests; `npx tsc -b --pretty false` passed. A real durable
+  worker execution was not promoted because the local Docker Desktop Linux engine is unavailable;
+  the existing real BSC smoke remains an in-memory provider exercise.
+
+## Incremental monitor, alert, and replay-stream validation — 2026-08-14
+
+- Focused serial API/scheduler/alert-storage/live-handler validation passed `101/101`: API monitor
+  enqueue/replay/read, JSON alert replay, finite SSE framing, interval identity stability, alert
+  repository conflict/round-trip checks, and the worker's durable-schedule requirement are covered.
+- The API build and production web build passed. The Campaign UI now calls the provider-free alert
+  route when a report is selected, renders severity/Evidence/suppression state, and exposes a
+  finalized incremental monitor action. The updated Chromium desktop and Pixel 7 flow passed `2/2`.
+- The live monitor's production handler remains read-only and fails closed on missing durable
+  schedule history, unsafe numeric ranges, finalized cursor regression, or block-hash mismatch.
+  It does not use current state as a substitute for unavailable historical state.
+- A fresh real BSC FFT smoke for `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over
+  `113485950–113495949` produced `thd_5ef5001212f0b4c8409bfc7c`, 12 observations, 10,029 Raw
+  Facts, 10,041 Evidence, same-hash replay, four derived Evidence-bound alerts, and offline Case
+  Bundle verification (`fcb_cc_1eaa01396441cbf9e846edfd`). It used in-memory stores and therefore
+  does not establish durable monitor/alert persistence or restart acceptance.
+- The final host gates recorded `639/639` unit tests across 118 files, `87` enabled integration
+  tests with `38` explicit skips, `1/1` eval, full rebuilt Playwright `38/38` and Windows-wrapper
+  `38/38`, plus format/lint/typecheck/build/license/audit/SBOM/Compose checks. Coverage completed
+  `726` enabled tests with `38` skips but remained below thresholds at `76.48%` statements,
+  `70.25%` branches, `86.87%` functions, and `77.86%` lines.
+- Clean PostgreSQL/ClickHouse/MinIO persistence, long-running monitor progression, forced reorg and
+  provider-outage delivery, alert restart/replay, calibration, and migration acceptance are
+  `NOT_MEASURED`; Docker Desktop's Linux engine is unavailable on this host.
 
 ## Control Campaign P0 checkpoint validation — 2026-08-13
 

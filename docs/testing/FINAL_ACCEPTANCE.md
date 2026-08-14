@@ -34,7 +34,7 @@ treated as a numeric zero or as a successful exact-RPC path.
 - [x] Immutable PostgreSQL migration `033_funding_settlement_reports`, repository validation,
       latest/exact provider-free API reads, runtime health/close wiring, and storage tests (`3/3`)
 - [x] API integration coverage for durable replay/unconfigured storage and full existing API file
-      replay (`83/83`)
+      replay (`85/85`)
 - [x] Control Campaign UI Funding/Settlement panel shows `NOT_QUERIED`, partial coverage, exact
       paths, hashes, drilldown and suppression boundaries; desktop/mobile targeted E2E `2/2`
 - [x] Real BSC FFT bounded smoke produced a `PARTIAL` transaction-local report and same-hash replay;
@@ -61,7 +61,7 @@ not an assertion that no historical funding or settlement exists.
       finalized ingest worker; worker wiring persists Funding/Settlement and immutable Campaign
       reports when durable dependencies are available
 - [x] Real BSC FFT smoke produced Token History `thd_5ef5001212f0b4c8409bfc7c`, Funding/Settlement
-      `fsr_cf411850dea7b10b8027a6a3`, and Campaign `cc_3a996a5749b995fdb8a198b1`; Campaign and
+      `fsr_a3d4fdad3dd130e1bc8077f5`, and Campaign `cc_89ef265544cf3687b7633444`; Campaign and
       Funding/Settlement replay hashes matched their original runs
 - [x] Legacy EVM source chain identity (`56`) is normalized to canonical `eip155:56` for derived
       Campaign snapshots without changing source Evidence IDs; targeted reconstruction test `1/1`
@@ -74,31 +74,99 @@ not an assertion that no historical funding or settlement exists.
       registry qualification, calibration, live monitoring, alert delivery, export, and production
       approval
 
+## Forensic Case Bundle export closure — 2026-08-14
+
+- [x] Canonical `forensic-case-bundle-v1` builder and offline verifier preserve Campaign identity,
+      transitive Evidence closure, full Snapshots, raw-artifact references/hashes, source/model/
+      policy registries, manifest hash, result hash, and typed incomplete/conflict errors
+- [x] Provider-free API export/read routes are implemented for Control Campaigns and Forensic Cases;
+      incomplete Evidence closure returns `422`, while unavailable durable Campaign storage remains
+      `503`; no fixture or synthetic empty bundle is returned
+- [x] Campaign UI downloads the JSON Case Bundle and displays case, closure, Snapshot, raw-artifact,
+      and manifest counts; targeted desktop/Pixel 7 browser flow passed `2/2`
+- [x] Core Case Bundle tests passed `3/3`; API integration replay passed `85/85`
+- [x] Fresh real BSC FFT smoke produced Case `fcb_cc_89ef265544cf3687b7633444`, manifest hash
+      `c2f152fb3bd90120a4340443ce8ac18112780d239c04816ecc7e4ccc3238b06a`, result hash
+      `b85017621c05c9af69854755057f4efd13c648a6ee125a587b3f311d6480e8a5`, `10041` Evidence,
+      `10011` Snapshots, `10005` raw-artifact references, and offline verification `true`
+- [ ] Durable clean-store Campaign/Evidence export and restart/replay acceptance; live monitoring,
+      alerts, calibration, and production approval remain open
+
+This slice is implemented and real-provider exercised, but the smoke uses in-memory stores. It is
+not durable production acceptance and does not unlock clean-store replay, live monitor, or alert
+acceptance.
+
+## Token History backfill scheduling closure — 2026-08-14
+
+- [x] `TOKEN_HISTORY_BACKFILL` is now a bounded, idempotent one-shot schedule with durable
+      PostgreSQL schedule/run list and replay routes; first enqueue is `202`, same canonical range
+      replay is `200`, and unsupported chain/range/storage states are typed rather than silently
+      converted to an empty result
+- [x] The semantic worker binds the schedule to finalized SQD plus exact read-only EVM RPC and
+      persists restart-safe checkpoints, Raw Facts, raw artifacts, Evidence, Token History,
+      Funding/Settlement, Control Campaign, derived Evidence, and terminal capture metadata
+- [x] Worker/config/handler, scheduler identity, storage query, and API tests passed in the focused
+      serial run; no private key, signing, broadcast, fixture, or mock entered the production path
+- [ ] Clean PostgreSQL/ClickHouse/MinIO execution, interrupted-run replay, archive-scale range,
+      independent source reconciliation, and production migration approval remain open because
+      Docker Desktop's Linux engine is unavailable in this host
+
+The worker's capture `confidence` is the bounded technical completeness of the capture result. The
+provider-backed Campaign remains `UNCALIBRATED`; no Campaign probability is inferred from this
+field.
+
+## Incremental monitor, alert, and replay-stream Phase 4 slice — 2026-08-14
+
+- [x] `TOKEN_LIVE_CAPTURE` interval schedules are idempotent across enqueue timestamps, exposed by
+      both the legacy token monitor route and the target-package monitor/read routes, and preserve
+      explicit target, range, interval, retry, and next-run state
+- [x] The worker requires durable schedule history, reads finalized EVM heads, advances from the
+      prior successful Snapshot, checks the prior finalized block hash, captures only a bounded new
+      range, and fails closed on cursor/reorg disagreement or unsafe numeric ranges
+- [x] Immutable `forensic-campaign-alert-v1` records, PostgreSQL migration `034_control_campaign_alerts`,
+      append-only guards, deferred Evidence linkage, severity/classification/suppression metadata,
+      and runtime health/close wiring are implemented
+- [x] JSON alert replay and finite provider-free SSE (`campaign` → `alert*` → `complete`) are
+      implemented; the Campaign UI displays alert severity/Evidence and monitor status without
+      suggesting probability, ownership, signing, or broadcast
+- [x] Focused serial API/scheduler/storage/worker validation passed `101/101`; the updated
+      Campaign browser flow passed Chromium desktop and Pixel 7 `2/2`; production build passed
+- [x] The latest real BSC FFT smoke for `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over
+      `113485950–113495949` remained `COMPLETE` with 12 observations, 10,029 Raw Facts, 10,041
+      Evidence, same-hash replay, four derived alerts including one `CRITICAL` alert, and an
+      offline-verified Case Bundle `fcb_cc_1eaa01396441cbf9e846edfd`
+- [ ] Clean PostgreSQL/ClickHouse/MinIO execution, interrupted-run replay, long-running real
+      monitor progression, forced reorg/outage delivery, restart-persistent alerts, calibration,
+      and production migration approval remain `NOT_MEASURED` because Docker Desktop's Linux
+      engine is unavailable
+
 ## Current local gate (2026-08-14)
 
 - [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
       production license allowlist, `npm audit --audit-level=high` (0 vulnerabilities), and SBOM
       generation
-- [x] `npm run test:unit`: 620/620 tests across 111 files
-- [x] `npm run test:integration`: 83 pass; 38 explicitly skipped because optional stores/providers
+- [x] `npm run test:unit`: 639/639 tests across 118 files
+- [x] `npm run test:integration`: 87 pass; 38 explicitly skipped because optional stores/providers
       were not enabled in this host run (these are not counted as failures)
 - [x] `npm run test:evals`: 1/1 structural Entity evaluation
 - [x] Serial Playwright E2E: 38/38 across Chromium desktop and Pixel 7; Flap long-value mobile
       layout regression passed in both projects (`2/2`)
 - [x] Windows wrapper E2E (`npm run test:e2e:windows`): 38/38 across Chromium desktop and Pixel 7
-- [x] Targeted Control Campaign Timeline/Evidence Line E2E: 2/2 (Chromium desktop and Pixel 7)
+- [x] Targeted Control Campaign Timeline/Evidence/Alert/Monitor E2E: 2/2 (Chromium desktop and Pixel 7)
 - [x] Phase 3 targeted provider tests: Campaign reconstruction `1/1` and Funding/Settlement
       composition `3/3`; campaign, funding/worker package builds, and web production build passed
+- [x] Phase 4 monitor/alert focused tests passed `101/101`; real FFT smoke derived four
+      Evidence-bound alerts and the finite SSE/API replay contract passed integration coverage
 - [x] `docker compose config --quiet`
-- [ ] `npm run test:coverage`: all 707 enabled tests completed with 38 explicit skips, but the
-      configured global thresholds were not met locally (Statements 77.32%, Branches 70.88%,
-      Functions 87.76%, Lines 78.62%); the report includes existing untested worker/storage
+- [ ] `npm run test:coverage`: all 726 enabled tests completed with 38 explicit skips, but the
+      configured global thresholds were not met locally (Statements 76.48%, Branches 70.25%,
+      Functions 86.87%, Lines 77.86%); the report includes existing untested worker/storage
       boundaries and is not relabeled as pass
 - [ ] Isolated empty PostgreSQL/ClickHouse migration bootstrap for `031_control_campaign_reports`,
       `033_funding_settlement_reports`, and `002_control_campaign_flow`: unavailable because the
       local Docker Desktop Linux engine is not running (`dockerDesktopLinuxEngine` named pipe was
       absent)
-- [ ] Remote protected-branch CI/CodeQL for the current uncommitted Phase 3 changes; earlier PR #20
+- [ ] Remote protected-branch CI/CodeQL for the current uncommitted Phase 4 changes; earlier PR #20
       runs are historical evidence for their recorded heads only
 
 This local gate does not promote ZeroTrace to production acceptance. Full-history ingestion,
@@ -113,10 +181,12 @@ unchecked terminal-scope items below remain open.
       reports storage-down explicitly; ClickHouse flow/position DDL is present
 - [x] Provider-free Campaign overview/list/replay, timeline, positions, wallets, graph and
       Evidence Line API routes plus Campaign Timeline/Evidence Line UI are wired
-- [x] Unconfigured storage returns `503`; backfill, monitor, alerts, stream and export retain
-      explicit `501 NOT_IMPLEMENTED` boundaries
-- [ ] Real finalized multi-provider token-history discovery, bounded backfill, live monitoring,
-      alert delivery, export, calibration corpus, and production migration acceptance
+- [x] Unconfigured scheduler/report storage returns `503`; bounded backfill enqueue/replay is
+      implemented while monitor, alerts, stream and calibrated attribution retain explicit
+      boundaries
+- [ ] Real finalized multi-provider token-history discovery and bounded backfill execution in a
+      clean store, live monitoring, alert delivery, export acceptance, calibration corpus, and
+      production migration acceptance
 
 This P0 gate is `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`. It does not claim a production
 collector, real-chain campaign detection, calibrated probability, or independent provider

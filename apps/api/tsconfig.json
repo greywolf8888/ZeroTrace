@@ -8,6 +8,7 @@
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "references": [
     { "path": "../../packages/schemas" },
+    { "path": "../../packages/capture-scheduler" },
     { "path": "../../packages/identifiers" },
     { "path": "../../packages/evidence" },
     { "path": "../../packages/data-quality" },
@@ -16,6 +17,7 @@
     { "path": "../../packages/claim-audit" },
     { "path": "../../packages/platform-adapters" },
     { "path": "../../packages/entity-engine" },
+    { "path": "../../packages/forensic-evidence" },
     { "path": "../../packages/rv" }
   ]
 }

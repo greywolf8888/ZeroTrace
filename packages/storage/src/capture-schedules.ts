@@ -19,6 +19,7 @@ import {
   type CaptureRunSuccess,
   type CaptureKind,
   type CaptureScheduleRecord,
+  type CaptureTarget,
 } from '@zerotrace/schemas';
 
 export interface CaptureScheduleRepositoryOptions {
@@ -94,6 +95,12 @@ export interface FailCaptureRunInput {
   detail: string;
   sourceRetryable: boolean;
   failedAt?: string;
+}
+
+export interface ListCaptureSchedulesInput {
+  target: CaptureTarget;
+  captureKind: CaptureKind;
+  limit?: number;
 }
 
 const SELECT_SCHEDULE = `
@@ -438,6 +445,67 @@ export class PostgresCaptureScheduleRepository {
       throw new CaptureScheduleStorageError(
         'CAPTURE_SCHEDULER_UNAVAILABLE',
         'Durable capture run read failed.',
+        { retryable: true, cause: error },
+      );
+    }
+  }
+
+  async listSchedules(input: ListCaptureSchedulesInput): Promise<CaptureScheduleRecord[]> {
+    const target = input.target;
+    const captureKind = CaptureKindSchema.parse(input.captureKind);
+    const limit = boundedInteger(input.limit ?? 50, 'limit', 1, 100);
+    try {
+      const result = await this.#pool.query(
+        `${SELECT_SCHEDULE}
+         WHERE ledger = $1::ledger_kind
+           AND chain_id = $2
+           AND subject_type = $3
+           AND normalized_identifier = $4
+           AND capture_kind = $5
+         ORDER BY created_at DESC, id DESC
+         LIMIT $6`,
+        [
+          target.ledger,
+          target.chainId,
+          target.subjectType,
+          target.normalizedIdentifier,
+          captureKind,
+          limit,
+        ],
+      );
+      return result.rows.map(scheduleFromRow);
+    } catch (error) {
+      if (error instanceof CaptureScheduleStorageError) throw error;
+      throw new CaptureScheduleStorageError(
+        'CAPTURE_SCHEDULER_UNAVAILABLE',
+        'Durable capture schedule list failed.',
+        { retryable: true, cause: error },
+      );
+    }
+  }
+
+  async listRunsForSchedule(scheduleId: string, limit = 20): Promise<CaptureRun[]> {
+    if (!/^cps_[0-9a-f]{24}$/.test(scheduleId)) {
+      throw new CaptureScheduleStorageError(
+        'CAPTURE_SCHEDULER_INVALID',
+        'Capture schedule ID is invalid.',
+      );
+    }
+    const boundedLimit = boundedInteger(limit, 'limit', 1, 100);
+    try {
+      const result = await this.#pool.query(
+        `${SELECT_RUN}
+         WHERE run.schedule_id = $1
+         ORDER BY run.created_at DESC, run.id DESC
+         LIMIT $2`,
+        [scheduleId, boundedLimit],
+      );
+      return result.rows.map(runFromRow);
+    } catch (error) {
+      if (error instanceof CaptureScheduleStorageError) throw error;
+      throw new CaptureScheduleStorageError(
+        'CAPTURE_SCHEDULER_UNAVAILABLE',
+        'Durable capture run list failed.',
         { retryable: true, cause: error },
       );
     }

@@ -5038,6 +5038,90 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
       }),
     });
   });
+  await page.route('**/api/v1/control/campaigns/**/export', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        replayed: true,
+        case: {
+          caseId: `fcb_${campaignId}`,
+          campaignId,
+          resultHash: '1'.repeat(64),
+          manifest: {
+            evidenceCount: 1,
+            snapshotCount: 1,
+            rawArtifactCount: 1,
+            manifestHash: '2'.repeat(64),
+          },
+        },
+      }),
+    });
+  });
+  await page.route(`**/api/v1/control-campaigns/${campaignId}/alerts`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        campaignId,
+        replayed: true,
+        alerts: [
+          {
+            schemaVersion: 'forensic-campaign-alert-v1',
+            id: `fca_${'6'.repeat(24)}`,
+            campaignId,
+            behaviorEventId: eventId,
+            severity: 'HIGH',
+            classification: 'COORDINATED_SELLING',
+            evidenceIds: [evidenceId],
+            snapshot,
+            confidence: { state: 'known', value: 0.72 },
+            suppressionApplied: [],
+            details: { explanation: 'Evidence-bound alert.' },
+            modelVersion: 'campaign-v1.0.0',
+            createdAt: snapshot.capturedAt,
+            resultHash: '6'.repeat(64),
+          },
+        ],
+      }),
+    });
+  });
+  await page.route('**/api/v1/control/tokens/**/monitor', async (route) => {
+    await route.fulfill({
+      status: 202,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        replayed: false,
+        monitor: {
+          monitorId: `cps_${'7'.repeat(24)}`,
+          scheduleId: `cps_${'7'.repeat(24)}`,
+          status: 'ACTIVE',
+          target: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            subjectType: 'TOKEN',
+            normalizedIdentifier: `0x${'b'.repeat(40)}`,
+          },
+          parameters: {
+            schemaVersion: 'token-live-capture-v1',
+            dataset: 'binance-mainnet',
+            token: `0x${'b'.repeat(40)}`,
+            initialFromBlock: '101',
+            windowBlocks: 10000,
+            modelVersion: 'token-live-capture-v1.0.0',
+            policyVersion: 'token-history-policy-v1.0.0',
+          },
+          trigger: {
+            type: 'INTERVAL',
+            anchorAt: snapshot.capturedAt,
+            everySeconds: 60,
+            catchupPolicy: 'SKIP_MISSED',
+          },
+          nextRunAt: { state: 'known', value: '2026-08-13T00:01:00.000Z' },
+        },
+      }),
+    });
+  });
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Control Campaigns' }).click();
@@ -5047,6 +5131,8 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
 
   await expect(page.getByTestId('control-campaign-timeline')).toContainText('Campaign Timeline');
   await expect(page.getByTestId('control-campaign-timeline')).toContainText('Accumulation');
+  await expect(page.getByTestId('control-campaign-alerts')).toContainText('Coordinated Selling');
+  await expect(page.getByTestId('control-campaign-alerts')).toContainText('High');
   await expect(page.getByTestId('control-campaign-positions')).toContainText('Position Timeline');
   await expect(page.getByTestId('control-campaign-positions')).toContainText('420');
   await expect(page.getByTestId('control-campaign-evidence-line')).toContainText('Evidence Line');
@@ -5062,4 +5148,9 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
   );
   await expect(page.getByTestId('funding-settlement-report')).toContainText('Transaction Local');
   await expect(page.getByTestId('funding-settlement-report')).toContainText('First Funder');
+  await page.getByRole('button', { name: 'Export Case Bundle' }).click();
+  await expect(page.getByTestId('control-campaign-export')).toContainText(`fcb_${campaignId}`);
+  await expect(page.getByTestId('control-campaign-export')).toContainText('1 Evidence');
+  await page.getByRole('button', { name: 'Start monitor' }).click();
+  await expect(page.getByTestId('control-campaign-monitor')).toContainText(`cps_${'7'.repeat(24)}`);
 });

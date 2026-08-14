@@ -1,5 +1,6 @@
-import { createEvidence, hashPayload } from '@zerotrace/evidence';
+import { createEvidence, evidenceIdFor, hashPayload, type EvidenceNode } from '@zerotrace/evidence';
 import {
+  AnalysisSnapshotSchema,
   CampaignEvidenceItemSchema,
   ControlCampaignBundleSchema,
   EvidenceSchema,
@@ -278,4 +279,413 @@ export function buildForensicEvidenceLine(
     ...value,
     resultHash: hashPayload(value),
   });
+}
+
+export const FORENSIC_CASE_BUNDLE_SCHEMA_VERSION = 'forensic-case-bundle-v1' as const;
+export const FORENSIC_CASE_MANIFEST_SCHEMA_VERSION = 'forensic-case-manifest-v1' as const;
+
+export type ForensicCaseBundleModelVersion = typeof FORENSIC_EVIDENCE_MODEL_VERSION;
+
+export interface ForensicCaseEvidenceNode {
+  evidence: Evidence;
+  sourceEvidenceIds: readonly string[];
+  snapshot?: AnalysisSnapshot;
+}
+
+export interface ForensicCaseArtifact {
+  ref: string;
+  sha256: string | null;
+}
+
+export interface ForensicCaseManifest {
+  schemaVersion: typeof FORENSIC_CASE_MANIFEST_SCHEMA_VERSION;
+  caseId: string;
+  campaignId: string;
+  evidenceCount: number;
+  snapshotCount: number;
+  rawArtifactCount: number;
+  evidenceIds: readonly string[];
+  snapshotKeys: readonly string[];
+  rawArtifactHashes: readonly string[];
+  sourceSet: readonly string[];
+  modelRegistry: readonly string[];
+  policyRegistry: readonly string[];
+  gitCommit: string | null;
+  manifestHash: string;
+}
+
+export interface ForensicCaseBundle {
+  schemaVersion: typeof FORENSIC_CASE_BUNDLE_SCHEMA_VERSION;
+  caseId: string;
+  campaignId: string;
+  campaign: ControlCampaignBundle;
+  evidenceClosure: readonly ForensicCaseEvidenceNode[];
+  snapshots: readonly AnalysisSnapshot[];
+  rawArtifacts: readonly ForensicCaseArtifact[];
+  sourceRegistry: readonly string[];
+  modelRegistry: readonly string[];
+  policyRegistry: readonly string[];
+  gitCommit: string | null;
+  manifest: ForensicCaseManifest;
+  resultHash: string;
+}
+
+export interface BuildForensicCaseBundleInput {
+  campaign: ControlCampaignBundle;
+  evidenceNodes: readonly (ForensicCaseEvidenceNode | EvidenceNode)[];
+  gitCommit?: string | null;
+}
+
+export type ForensicCaseBundleErrorCode =
+  | 'CASE_CAMPAIGN_INVALID'
+  | 'CASE_EVIDENCE_CLOSURE_INCOMPLETE'
+  | 'CASE_EVIDENCE_CONFLICT'
+  | 'CASE_BUNDLE_INVALID'
+  | 'CASE_BUNDLE_HASH_MISMATCH';
+
+export class ForensicCaseBundleError extends Error {
+  readonly code: ForensicCaseBundleErrorCode;
+
+  constructor(code: ForensicCaseBundleErrorCode, message: string, cause?: unknown) {
+    super(message, { cause });
+    this.name = 'ForensicCaseBundleError';
+    this.code = code;
+  }
+}
+
+export type ForensicCaseBundleVerification =
+  | { valid: true; bundle: ForensicCaseBundle }
+  | { valid: false; code: ForensicCaseBundleErrorCode; errors: readonly string[] };
+
+function sortedCaseValues(values: readonly string[]): string[] {
+  return [...new Set(values.filter((value) => value.length > 0))].sort();
+}
+
+export function caseIdForCampaign(campaignId: string): string {
+  if (!/^cc_[0-9a-f]{24}$/.test(campaignId)) {
+    throw new ForensicCaseBundleError('CASE_CAMPAIGN_INVALID', 'Campaign ID is not canonical.');
+  }
+  return `fcb_${campaignId}`;
+}
+
+function caseSnapshotPosition(snapshot: AnalysisSnapshot): string {
+  switch (snapshot.ledger) {
+    case 'EVM':
+      return snapshot.blockNumber;
+    case 'BITCOIN':
+      return snapshot.height;
+    case 'SOLANA':
+      return snapshot.slot;
+  }
+}
+
+function caseSnapshotHash(snapshot: AnalysisSnapshot): string {
+  return snapshot.ledger === 'SOLANA' ? snapshot.blockhash : snapshot.blockHash;
+}
+
+function snapshotKey(snapshot: AnalysisSnapshot): string {
+  return [
+    snapshot.ledger,
+    snapshot.chainId,
+    caseSnapshotPosition(snapshot),
+    caseSnapshotHash(snapshot).toLowerCase(),
+    hashPayload(snapshot),
+  ].join(':');
+}
+
+function sortSnapshots(snapshots: readonly AnalysisSnapshot[]): AnalysisSnapshot[] {
+  return [...snapshots].sort((left, right) => {
+    const identity = snapshotKey(left).localeCompare(snapshotKey(right));
+    if (identity !== 0) return identity;
+    return left.capturedAt.localeCompare(right.capturedAt);
+  });
+}
+
+function artifactFromRef(ref: string): ForensicCaseArtifact {
+  const match = /#sha256=([0-9a-f]{64})$/i.exec(ref);
+  return { ref, sha256: match?.[1]?.toLowerCase() ?? null };
+}
+
+function normalizeEvidenceNode(
+  node: ForensicCaseEvidenceNode | EvidenceNode,
+): ForensicCaseEvidenceNode {
+  const evidence = EvidenceSchema.parse(node.evidence);
+  const sourceEvidenceIds = sortedCaseValues(node.sourceEvidenceIds);
+  const snapshot =
+    node.snapshot === undefined ? undefined : AnalysisSnapshotSchema.parse(node.snapshot);
+  if (evidence.id !== evidenceIdFor(evidence, sourceEvidenceIds)) {
+    throw new ForensicCaseBundleError(
+      'CASE_EVIDENCE_CONFLICT',
+      `Evidence ${evidence.id} does not match its source closure.`,
+    );
+  }
+  if (
+    snapshot !== undefined &&
+    (snapshot.ledger !== evidence.ledger || snapshot.chainId !== evidence.chainId)
+  ) {
+    throw new ForensicCaseBundleError(
+      'CASE_EVIDENCE_CONFLICT',
+      `Evidence ${evidence.id} is bound to a conflicting Snapshot identity.`,
+    );
+  }
+  return {
+    evidence,
+    sourceEvidenceIds,
+    ...(snapshot === undefined ? {} : { snapshot }),
+  };
+}
+
+function requiredEvidenceIds(campaign: ControlCampaignBundle): string[] {
+  return sortedCaseValues([
+    ...campaign.campaign.metadata.evidenceIds,
+    ...campaign.clusterVersion.membershipEvidenceIds,
+    ...campaign.memberships.flatMap((membership) => membership.evidenceIds),
+    ...campaign.positions.flatMap((position) => [
+      ...position.positionEvidenceIds,
+      ...position.membershipEvidenceIds,
+    ]),
+    ...campaign.behaviorEvents.flatMap((event) => [
+      ...event.supportingEvidenceIds,
+      ...event.contradictingEvidenceIds,
+      ...event.featureVector.flatMap((feature) => feature.evidenceIds),
+    ]),
+    ...campaign.evidenceItems.flatMap((item) => [item.evidenceId, ...item.parentEvidenceIds]),
+    ...campaign.evidenceLine.evidenceIds,
+  ]);
+}
+
+function assertEvidenceClosure(
+  campaign: ControlCampaignBundle,
+  nodes: readonly ForensicCaseEvidenceNode[],
+): void {
+  const byId = new Map<string, ForensicCaseEvidenceNode>();
+  for (const node of nodes) {
+    const existing = byId.get(node.evidence.id);
+    if (existing !== undefined) {
+      if (
+        hashPayload(existing.evidence) !== hashPayload(node.evidence) ||
+        hashPayload(existing.sourceEvidenceIds) !== hashPayload(node.sourceEvidenceIds) ||
+        hashPayload(existing.snapshot ?? null) !== hashPayload(node.snapshot ?? null)
+      ) {
+        throw new ForensicCaseBundleError(
+          'CASE_EVIDENCE_CONFLICT',
+          `Evidence ${node.evidence.id} appears with conflicting payloads.`,
+        );
+      }
+      continue;
+    }
+    byId.set(node.evidence.id, node);
+  }
+  const missing = requiredEvidenceIds(campaign).filter((id) => !byId.has(id));
+  if (missing.length > 0) {
+    throw new ForensicCaseBundleError(
+      'CASE_EVIDENCE_CLOSURE_INCOMPLETE',
+      `Forensic case Evidence closure is missing: ${missing.join(', ')}.`,
+    );
+  }
+  for (const node of byId.values()) {
+    const missingSources = node.sourceEvidenceIds.filter((id) => !byId.has(id));
+    if (missingSources.length > 0) {
+      throw new ForensicCaseBundleError(
+        'CASE_EVIDENCE_CLOSURE_INCOMPLETE',
+        `Evidence ${node.evidence.id} is missing source closure: ${missingSources.join(', ')}.`,
+      );
+    }
+  }
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (id: string): void => {
+    if (visiting.has(id)) {
+      throw new ForensicCaseBundleError(
+        'CASE_EVIDENCE_CONFLICT',
+        `Evidence closure contains a cycle at ${id}.`,
+      );
+    }
+    if (visited.has(id)) return;
+    const node = byId.get(id);
+    if (node === undefined) return;
+    visiting.add(id);
+    for (const sourceId of node.sourceEvidenceIds) visit(sourceId);
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const id of byId.keys()) visit(id);
+}
+
+function registriesFor(
+  campaign: ControlCampaignBundle,
+  evidenceClosure: readonly ForensicCaseEvidenceNode[],
+): { sourceSet: string[]; modelRegistry: string[]; policyRegistry: string[] } {
+  return {
+    sourceSet: sortedCaseValues([
+      ...campaign.campaign.metadata.sourceSet,
+      ...campaign.clusterVersion.sourceSet,
+      ...campaign.positions.flatMap((position) => position.sourceSet),
+      ...campaign.behaviorEvents.flatMap((event) => event.sourceSet),
+      ...evidenceClosure.map((node) => node.evidence.source),
+    ]),
+    modelRegistry: sortedCaseValues([
+      FORENSIC_EVIDENCE_MODEL_VERSION,
+      campaign.campaign.entityModelVersion,
+      campaign.campaign.metadata.modelVersion,
+      campaign.clusterVersion.modelVersion,
+      ...campaign.positions.map((position) => position.modelVersion),
+      ...campaign.behaviorEvents.map((event) => event.modelVersion),
+      ...campaign.evidenceItems.map((item) => item.parserVersion),
+    ]),
+    policyRegistry: sortedCaseValues([
+      campaign.campaign.ruleVersion,
+      ...campaign.behaviorEvents.map((event) => event.ruleVersion),
+      ...campaign.evidenceItems.map((item) => item.ruleVersion),
+      ...campaign.evidenceItems.map((item) => item.sourceLabelVersion),
+    ]),
+  };
+}
+
+function bundleContent(
+  input: Omit<ForensicCaseBundle, 'resultHash'>,
+): Omit<ForensicCaseBundle, 'resultHash'> {
+  return input;
+}
+
+export function buildForensicCaseBundle(input: BuildForensicCaseBundleInput): ForensicCaseBundle {
+  const campaign = ControlCampaignBundleSchema.safeParse(input.campaign);
+  if (!campaign.success) {
+    throw new ForensicCaseBundleError(
+      'CASE_CAMPAIGN_INVALID',
+      'Control Campaign bundle is invalid.',
+      campaign.error,
+    );
+  }
+  const normalizedNodes = input.evidenceNodes.map(normalizeEvidenceNode);
+  assertEvidenceClosure(campaign.data, normalizedNodes);
+  const evidenceClosure = [...normalizedNodes].sort((left, right) =>
+    left.evidence.id.localeCompare(right.evidence.id),
+  );
+  const snapshotMap = new Map<string, AnalysisSnapshot>();
+  const addSnapshot = (snapshot: AnalysisSnapshot): void => {
+    const parsed = AnalysisSnapshotSchema.parse(snapshot);
+    const key = snapshotKey(parsed);
+    const existing = snapshotMap.get(key);
+    if (existing !== undefined && hashPayload(existing) !== hashPayload(parsed)) {
+      throw new ForensicCaseBundleError(
+        'CASE_EVIDENCE_CONFLICT',
+        `Snapshot ${key} appears with conflicting payloads.`,
+      );
+    }
+    snapshotMap.set(key, parsed);
+  };
+  addSnapshot(campaign.data.campaign.snapshotStart);
+  addSnapshot(campaign.data.campaign.snapshotEnd);
+  for (const position of campaign.data.positions) addSnapshot(position.snapshot);
+  for (const event of campaign.data.behaviorEvents) addSnapshot(event.snapshot);
+  for (const node of evidenceClosure) {
+    if (node.snapshot !== undefined) addSnapshot(node.snapshot);
+  }
+  const snapshots = sortSnapshots([...snapshotMap.values()]);
+  const rawArtifacts = [
+    ...new Map(
+      evidenceClosure
+        .flatMap((node) =>
+          node.evidence.rawArtifactRef === undefined ? [] : [node.evidence.rawArtifactRef],
+        )
+        .map((ref) => [ref, artifactFromRef(ref)] as const),
+    ).values(),
+  ].sort((left, right) => left.ref.localeCompare(right.ref));
+  const registries = registriesFor(campaign.data, evidenceClosure);
+  const gitCommit = input.gitCommit ?? null;
+  const caseId = caseIdForCampaign(campaign.data.campaign.id);
+  const manifestCore = {
+    schemaVersion: FORENSIC_CASE_MANIFEST_SCHEMA_VERSION,
+    caseId,
+    campaignId: campaign.data.campaign.id,
+    evidenceCount: evidenceClosure.length,
+    snapshotCount: snapshots.length,
+    rawArtifactCount: rawArtifacts.length,
+    evidenceIds: evidenceClosure.map((node) => node.evidence.id),
+    snapshotKeys: snapshots.map(snapshotKey),
+    rawArtifactHashes: rawArtifacts
+      .map((artifact) => artifact.sha256)
+      .filter((hash): hash is string => hash !== null)
+      .sort(),
+    sourceSet: registries.sourceSet,
+    modelRegistry: registries.modelRegistry,
+    policyRegistry: registries.policyRegistry,
+    gitCommit,
+  };
+  const manifest = {
+    ...manifestCore,
+    manifestHash: hashPayload({
+      schema: FORENSIC_CASE_MANIFEST_SCHEMA_VERSION,
+      value: manifestCore,
+    }),
+  } satisfies ForensicCaseManifest;
+  const content = bundleContent({
+    schemaVersion: FORENSIC_CASE_BUNDLE_SCHEMA_VERSION,
+    caseId,
+    campaignId: campaign.data.campaign.id,
+    campaign: campaign.data,
+    evidenceClosure,
+    snapshots,
+    rawArtifacts,
+    sourceRegistry: registries.sourceSet,
+    modelRegistry: registries.modelRegistry,
+    policyRegistry: registries.policyRegistry,
+    gitCommit,
+    manifest,
+  });
+  return {
+    ...content,
+    resultHash: hashPayload({ schema: FORENSIC_CASE_BUNDLE_SCHEMA_VERSION, value: content }),
+  };
+}
+
+export function verifyForensicCaseBundle(value: unknown): ForensicCaseBundleVerification {
+  try {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      throw new ForensicCaseBundleError(
+        'CASE_BUNDLE_INVALID',
+        'Case bundle must be a JSON object.',
+      );
+    }
+    const input = value as Partial<ForensicCaseBundle>;
+    if (input.schemaVersion !== FORENSIC_CASE_BUNDLE_SCHEMA_VERSION) {
+      throw new ForensicCaseBundleError(
+        'CASE_BUNDLE_INVALID',
+        'Case bundle schemaVersion is unsupported.',
+      );
+    }
+    if (!Array.isArray(input.evidenceClosure)) {
+      throw new ForensicCaseBundleError(
+        'CASE_BUNDLE_INVALID',
+        'Case bundle Evidence closure is not an array.',
+      );
+    }
+    if (typeof input.gitCommit !== 'string' && input.gitCommit !== null) {
+      throw new ForensicCaseBundleError('CASE_BUNDLE_INVALID', 'Case bundle gitCommit is invalid.');
+    }
+    if (input.campaign === undefined) {
+      throw new ForensicCaseBundleError('CASE_BUNDLE_INVALID', 'Case bundle campaign is missing.');
+    }
+    const rebuilt = buildForensicCaseBundle({
+      campaign: input.campaign,
+      evidenceNodes: input.evidenceClosure,
+      gitCommit: input.gitCommit,
+    });
+    if (hashPayload(rebuilt) !== hashPayload(value)) {
+      throw new ForensicCaseBundleError(
+        'CASE_BUNDLE_HASH_MISMATCH',
+        'Case bundle content, manifest, or result hash does not match its canonical rebuild.',
+      );
+    }
+    return { valid: true, bundle: rebuilt };
+  } catch (error) {
+    const code =
+      error instanceof ForensicCaseBundleError ? error.code : ('CASE_BUNDLE_INVALID' as const);
+    return {
+      valid: false,
+      code,
+      errors: [error instanceof Error ? error.message : 'Case bundle verification failed.'],
+    };
+  }
 }

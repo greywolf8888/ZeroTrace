@@ -5,8 +5,10 @@ import {
   SqdPortalClient,
 } from '@zerotrace/chain-adapters';
 import { EvidenceLedger, hashPayload } from '@zerotrace/evidence';
+import { buildForensicCaseBundle, verifyForensicCaseBundle } from '@zerotrace/forensic-evidence';
 import { buildFundingSettlementFromTokenHistory } from '@zerotrace/funding-settlement-engine';
 import {
+  buildForensicCampaignAlerts,
   buildProviderBackedControlCampaign,
   ProviderCampaignReconstructionError,
 } from '@zerotrace/campaign-engine';
@@ -312,6 +314,49 @@ async function main(): Promise<void> {
       };
     }
   })();
+  const providerForensicCase = (() => {
+    if (providerCampaign.status === 'UNKNOWN') {
+      return {
+        status: 'UNKNOWN' as const,
+        reason: 'PROVIDER_CAMPAIGN_UNAVAILABLE',
+      };
+    }
+    const bundle = buildForensicCaseBundle({
+      campaign: providerCampaign.result.bundle,
+      evidenceNodes: ledger.values(),
+      gitCommit: process.env.GIT_COMMIT ?? null,
+    });
+    const verification = verifyForensicCaseBundle(bundle);
+    if (!verification.valid) {
+      throw new Error(
+        `Forensic case offline verification failed: ${verification.errors.join('; ')}`,
+      );
+    }
+    return {
+      status: 'DERIVED' as const,
+      caseId: bundle.caseId,
+      manifestHash: bundle.manifest.manifestHash,
+      resultHash: bundle.resultHash,
+      evidenceCount: bundle.manifest.evidenceCount,
+      snapshotCount: bundle.manifest.snapshotCount,
+      rawArtifactCount: bundle.manifest.rawArtifactCount,
+      offlineVerify: verification.valid,
+    };
+  })();
+  const providerAlerts =
+    providerCampaign.status === 'UNKNOWN'
+      ? providerCampaign
+      : {
+          status: 'DERIVED' as const,
+          alerts: buildForensicCampaignAlerts(providerCampaign.result.bundle).map((alert) => ({
+            id: alert.id,
+            behaviorEventId: alert.behaviorEventId,
+            severity: alert.severity,
+            classification: alert.classification,
+            evidenceIds: alert.evidenceIds,
+            resultHash: alert.resultHash,
+          })),
+        };
   console.log(
     JSON.stringify({
       event: 'token_history_live_smoke_complete',
@@ -444,6 +489,8 @@ async function main(): Promise<void> {
                 evidenceIds: providerCampaign.result.bundle.evidenceLine.evidenceIds,
               },
             },
+      providerForensicCase,
+      providerAlerts,
     }),
   );
 }
