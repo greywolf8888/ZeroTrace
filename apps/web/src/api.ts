@@ -264,6 +264,157 @@ export interface ControlCampaignCollectionResponse {
   records: ControlCampaignRecord[];
 }
 
+export interface SolanaDealerCampaignReport {
+  schemaVersion: 'solana-dealer-campaign-report-v1';
+  id: string;
+  ledger: 'SOLANA';
+  chainId: 'solana-mainnet';
+  mint: string;
+  fromSlot: string;
+  toSlot: string;
+  status: 'COMPLETE' | 'PARTIAL' | 'UNKNOWN';
+  origin: KnowledgeValue<{
+    mint: string;
+    tokenProgram: 'SPL_TOKEN' | 'TOKEN_2022';
+    firstObservedSlot: string;
+    firstObservedSignature: string;
+    mintInstructionObserved: boolean;
+    evidenceIds: string[];
+  }>;
+  holders: Array<{
+    owner: string;
+    tokenAccounts: string[];
+    observedBalanceRaw: string;
+    netDeltaRaw: string;
+    openingBalance: KnowledgeValue<string>;
+    evidenceIds: string[];
+  }>;
+  tokenFlowEdges: Array<{ from: string; to: string; amountRaw: string; kind: string }>;
+  solTransfers: Array<{ source: string; destination: string; amountRaw: string }>;
+  fundingEdges: Array<{ source: string; destination: string; amountLamports: string }>;
+  settlementEdges: Array<{ source: string; destination: string; tokenAmountRaw: string }>;
+  openingBalanceUnknownWalletIds: string[];
+  pdaSuppressedOwnerIds: string[];
+  campaign: { campaign: { id: string } } | null;
+  alerts: ForensicCampaignAlert[];
+  evidence: Array<{ id: string; kind: string; summary: string }>;
+  snapshot: ControlCampaignSnapshot;
+  dataCoverage: number;
+  sourceCoverage: number;
+  historyCoverage: number;
+  freshness: string;
+  sourceSet: string[];
+  modelVersion: string;
+  policyVersion: string;
+  evidenceIds: string[];
+  resultHash: string;
+}
+
+export interface SolanaDealerCampaignResponse {
+  replayed: boolean;
+  durable?: boolean;
+  record?: {
+    id: string;
+    mint: string;
+    snapshotSlot: string;
+    snapshotHash: string;
+    resultHash: string;
+    report: SolanaDealerCampaignReport;
+  } | null;
+  report?: SolanaDealerCampaignReport;
+  sourceSummary?: { completion: string; blocks: number; lastBlock: number | null };
+  candidateCount?: number;
+  truncated?: boolean;
+}
+
+export interface BitcoinForensicGraphReport {
+  schemaVersion: 'bitcoin-forensic-graph-v1';
+  id: string;
+  ledger: 'BITCOIN';
+  chainId: 'bitcoin-mainnet';
+  rootTxids: string[];
+  transactionIds: string[];
+  nodes: Array<{
+    id: string;
+    kind: string;
+    reference: string;
+    label: KnowledgeValue<string>;
+    valueSats: KnowledgeValue<string>;
+    evidenceIds: string[];
+  }>;
+  edges: Array<{
+    id: string;
+    from: string;
+    to: string;
+    kind: string;
+    classification: string;
+    amountSats: KnowledgeValue<string>;
+    confidence: KnowledgeValue<number>;
+    evidenceIds: string[];
+    reason: string;
+    automaticOwnershipMergeAllowed: false;
+  }>;
+  transactionAnalyses: Array<{
+    txid: string;
+    structuralPattern: string;
+    suppressionReasons: string[];
+    inputAddressCoverage: number;
+    automaticOwnershipMergeAllowed: false;
+  }>;
+  suppressionReasons: string[];
+  case: {
+    id: string;
+    evidenceLine: {
+      terminalBoundary: string;
+      phases: Array<{
+        phase: string;
+        edgeIds: string[];
+        evidenceIds: string[];
+        coverage: number;
+        attributionStopped: boolean;
+      }>;
+      evidenceIds: string[];
+      dataCoverage: number;
+      sourceCoverage: number;
+      historyCoverage: number;
+    };
+  };
+  snapshotStart: ControlCampaignSnapshot;
+  snapshotEnd: ControlCampaignSnapshot;
+  dataCoverage: number;
+  sourceCoverage: number;
+  historyCoverage: number;
+  freshness: string;
+  sourceSet: string[];
+  modelVersion: string;
+  policyVersion: string;
+  confidence: KnowledgeValue<number>;
+  automaticOwnershipMergeAllowed: false;
+  evidenceIds: string[];
+  resultHash: string;
+}
+
+export interface BitcoinForensicGraphResponse {
+  replayed: boolean;
+  durable?: boolean;
+  record?: {
+    id: string;
+    snapshotHeight: string;
+    snapshotHash: string;
+    resultHash: string;
+    report: BitcoinForensicGraphReport;
+  } | null;
+  report?: BitcoinForensicGraphReport;
+  sourceSummary?: {
+    sourceSet: string[];
+    snapshotStart: ControlCampaignSnapshot;
+    snapshotEnd: ControlCampaignSnapshot;
+    transactionCount: number;
+    confirmed: true;
+  };
+  capturedEvidence?: string[];
+}
+
 export interface ForensicCaseBundleResponse {
   case: {
     caseId: string;
@@ -2282,6 +2433,28 @@ export interface PlatformDescriptor {
   integrationBoundary: string;
 }
 
+export interface LaunchpadRegistryEntry {
+  platform: string;
+  name: string;
+  ledgers: string[];
+  provenanceStatus: string;
+  decoderStatus: string;
+  officialSourceUris: string[];
+  versions: Array<{
+    deploymentId: string;
+    chain: string;
+    validFrom: KnowledgeValue<string>;
+    validTo: KnowledgeValue<string>;
+    programOrContract: string;
+    factories: string[];
+    abiOrIdlHash: string;
+    sourceCommit?: string;
+    officialSourceUris: string[];
+    evidenceIds: string[];
+  }>;
+  integrationBoundary: string;
+}
+
 export interface Capability {
   id: string;
   status: string;
@@ -2319,10 +2492,11 @@ export const api = {
       signal === undefined ? {} : { signal },
     ),
   platforms: (signal?: AbortSignal) =>
-    requestJson<{ platforms: PlatformDescriptor[]; gmgnConfigured: boolean }>(
-      '/api/v1/platforms',
-      signal === undefined ? {} : { signal },
-    ),
+    requestJson<{
+      platforms: PlatformDescriptor[];
+      launchpadRegistry: LaunchpadRegistryEntry[];
+      gmgnConfigured: boolean;
+    }>('/api/v1/platforms', signal === undefined ? {} : { signal }),
   search: (query: string, ledger?: string, chainId?: string) => {
     const parameters = new URLSearchParams({ q: query });
     if (ledger !== undefined) parameters.set('ledger', ledger);
@@ -2699,6 +2873,29 @@ export const api = {
       `/api/v1/control/tokens/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}/campaigns?${parameters.toString()}`,
     );
   },
+  captureSolanaDealerCampaign: (input: {
+    mint: string;
+    fromSlot: string;
+    toSlot: string;
+    maxTransactions?: number;
+  }) =>
+    requestJson<SolanaDealerCampaignResponse>('/api/v1/solana/dealer-campaigns', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  latestSolanaDealerCampaign: (mint: string) =>
+    requestJson<SolanaDealerCampaignResponse>(
+      `/api/v1/solana/mints/${encodeURIComponent(mint)}/dealer-campaigns/latest`,
+    ),
+  captureBitcoinForensicGraph: (transactionIds: readonly string[]) =>
+    requestJson<BitcoinForensicGraphResponse>('/api/v1/bitcoin/forensic-graphs', {
+      method: 'POST',
+      body: JSON.stringify({ transactionIds }),
+    }),
+  latestBitcoinForensicGraph: (transactionId: string) =>
+    requestJson<BitcoinForensicGraphResponse>(
+      `/api/v1/bitcoin/transactions/${encodeURIComponent(transactionId)}/forensic-graphs/latest`,
+    ),
   latestFundingSettlement: (chainId: string, token: string) =>
     requestJson<FundingSettlementReportResponse>(
       `/api/v1/funding-settlement/tokens/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}`,

@@ -534,3 +534,4 @@ export function buildForensicCampaignAlerts(
 }
 
 export * from './provider-reconstruction.js';
+export * from './solana-provider-reconstruction.js';

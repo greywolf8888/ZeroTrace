@@ -68,4 +68,76 @@ describe('candidate discovery', () => {
       true,
     );
   });
+
+  it('does not treat Solana mint and burn sentinels as wallet candidates', () => {
+    const solanaMint = 'So11111111111111111111111111111111111111112';
+    const owner = '11111111111111111111111111111111';
+    const synthetic = `solana:mint:${solanaMint}`;
+    const snapshot = {
+      ledger: 'SOLANA' as const,
+      chainId: 'solana-mainnet' as const,
+      slot: '20',
+      blockhash: '3ySAYPQqMfpyZL6QhH4RzgT68HWpV72G2JAa2XWrpHEi',
+      parentSlot: '19',
+      previousBlockhash: '4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi',
+      commitment: 'finalized' as const,
+      capturedAt: '2026-08-13T00:00:00.000Z',
+      providerVersions: { rpc: 'test' },
+      adapterVersions: { solana: 'test' },
+      configHash: 'ef'.repeat(32),
+      entityModelVersion: 'entity-v0.1.0',
+      labelSnapshot: 'labels-test-v1',
+    };
+    const result = discoverCandidateWallets({
+      ledger: 'SOLANA',
+      chainId: 'solana-mainnet',
+      token: solanaMint,
+      fromBlock: '1',
+      toBlock: '20',
+      edges: [
+        createTokenFlowEdge({
+          ledger: 'SOLANA',
+          chainId: 'solana-mainnet',
+          token: solanaMint,
+          blockNumber: '10',
+          blockHash: snapshot.blockhash,
+          transactionHash: '1'.repeat(64),
+          transactionIndex: '0',
+          logIndex: '0',
+          from: synthetic,
+          to: owner,
+          amountRaw: '10',
+          kind: 'MINT',
+          execution: 'SUCCESS',
+          finality: 'FINAL',
+          evidenceId: `ev_${'1'.repeat(24)}`,
+          observedAt: snapshot.capturedAt,
+        }),
+        createTokenFlowEdge({
+          ledger: 'SOLANA',
+          chainId: 'solana-mainnet',
+          token: solanaMint,
+          blockNumber: '11',
+          blockHash: snapshot.blockhash,
+          transactionHash: '2'.repeat(64),
+          transactionIndex: '0',
+          logIndex: '0',
+          from: owner,
+          to: synthetic,
+          amountRaw: '2',
+          kind: 'BURN',
+          execution: 'SUCCESS',
+          finality: 'FINAL',
+          evidenceId: `ev_${'2'.repeat(24)}`,
+          observedAt: snapshot.capturedAt,
+        }),
+      ],
+      snapshot,
+      dataCoverage: 1,
+      sourceCoverage: 1,
+      historyCoverage: 0,
+      sourceSet: ['test-rpc'],
+    });
+    expect(result.candidates.map((item) => item.walletId)).toEqual([owner]);
+  });
 });

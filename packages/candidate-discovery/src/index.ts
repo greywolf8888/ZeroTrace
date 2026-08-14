@@ -57,6 +57,13 @@ function canonicalTime(value: string | undefined, fallback: string): string {
   return date.toISOString();
 }
 
+function isSyntheticMintEndpoint(edge: TokenFlowEdge, endpoint: 'from' | 'to'): boolean {
+  if (endpoint === 'from' && edge.kind === 'MINT') return true;
+  if (endpoint === 'to' && edge.kind === 'BURN') return true;
+  const value = edge[endpoint];
+  return /^0x0{40}$/.test(value) || value.startsWith('solana:mint:');
+}
+
 function candidateIdFor(value: Omit<CandidateWallet, 'id' | 'resultHash'>): string {
   return `cw_${hashPayload({ schema: 'candidate-wallet-v1', value }).slice(0, 24)}`;
 }
@@ -111,7 +118,7 @@ export function discoverCandidateWallets(
     const firstBlock = BigInt(edge.blockNumber);
     const fromService = serviceWalletIds.has(edge.from);
     const toService = serviceWalletIds.has(edge.to);
-    if (!fromService && !/^0x0{40}$/.test(edge.from)) {
+    if (!fromService && !isSyntheticMintEndpoint(edge, 'from')) {
       const accumulator = add(accumulators, edge.from, { firstObservedBlock: firstBlock });
       accumulator.firstObservedBlock =
         accumulator.firstObservedBlock < firstBlock ? accumulator.firstObservedBlock : firstBlock;
@@ -123,7 +130,7 @@ export function discoverCandidateWallets(
       if (firstBlock - fromBlock <= earlyWindow) accumulator.reasons.add('EARLY_TOKEN_ACTIVITY');
       if (edge.kind === 'SETTLEMENT') accumulator.reasons.add('SETTLEMENT_COUNTERPARTY');
     }
-    if (!toService && !/^0x0{40}$/.test(edge.to)) {
+    if (!toService && !isSyntheticMintEndpoint(edge, 'to')) {
       const accumulator = add(accumulators, edge.to, { firstObservedBlock: firstBlock });
       accumulator.firstObservedBlock =
         accumulator.firstObservedBlock < firstBlock ? accumulator.firstObservedBlock : firstBlock;

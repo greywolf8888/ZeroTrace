@@ -35,7 +35,9 @@ import {
   PostgresForensicCampaignAlertRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
+  PostgresSolanaDealerCampaignReportRepository,
   PostgresSolanaTransactionReportRepository,
+  PostgresBitcoinForensicGraphReportRepository,
   DataQualityStorageError,
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
@@ -70,6 +72,7 @@ export interface AppRuntime {
   evmSourceVerification?: EvmSourceVerificationAdapter;
   sqdBscLogReader?: EvmLogReader;
   sqdBscCreationReader?: EvmContractCreationReader;
+  sqdSolanaSource?: SqdPortalClient;
   bitcoinAdapter?: BitcoinUtxoLedgerAdapter;
   solanaAdapter?: SolanaLedgerAdapter;
   evidenceLedger: EvidenceLedger;
@@ -84,6 +87,8 @@ export interface AppRuntime {
   controlSurfaces?: PostgresEvmControlSurfaceRepository;
   solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
   solanaTransactionReports?: PostgresSolanaTransactionReportRepository;
+  solanaDealerReports?: PostgresSolanaDealerCampaignReportRepository;
+  bitcoinForensicGraphReports?: PostgresBitcoinForensicGraphReportRepository;
   actionSemanticsReports?: PostgresActionSemanticsReportRepository;
   pensionCandidateReports?: PostgresPensionCandidateReportRepository;
   pensionEntryReports?: PostgresFlapPensionEntryReportRepository;
@@ -313,6 +318,20 @@ export function createRuntime(config: AppConfig): AppRuntime {
           source: sqdBscSource,
           maxRangeBlocks: 1_000_000,
           maxResults: 16,
+        });
+  const sqdSolanaSource =
+    config.sqdPortalUrl === undefined
+      ? undefined
+      : new SqdPortalClient({
+          portalUrl: config.sqdPortalUrl,
+          dataset: 'solana-mainnet',
+          policy: policyFor(config.sqdPortalUrl, config),
+          timeoutMs: Math.max(config.requestTimeoutMs, 30_000),
+          maxRangeBlocks: 50_000,
+          maxAttempts: config.providerResilience.maxAttempts,
+          retryBaseDelayMs: config.providerResilience.retryBaseDelayMs,
+          retryMaxDelayMs: config.providerResilience.retryMaxDelayMs,
+          requestsPerSecond: 2,
         });
 
   let bitcoinAdapter: BitcoinUtxoLedgerAdapter | undefined;
@@ -649,6 +668,24 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const solanaDealerReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresSolanaDealerCampaignReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const bitcoinForensicGraphReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresBitcoinForensicGraphReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const fundingSettlementReports =
     config.postgresUrl === undefined
       ? undefined
@@ -723,6 +760,8 @@ export function createRuntime(config: AppConfig): AppRuntime {
       controlSurfaces?.close(),
       solanaControlSurfaces?.close(),
       solanaTransactionReports?.close(),
+      solanaDealerReports?.close(),
+      bitcoinForensicGraphReports?.close(),
       actionSemanticsReports?.close(),
       pensionCandidateReports?.close(),
       pensionEntryReports?.close(),
@@ -751,6 +790,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(evmSourceVerification === undefined ? {} : { evmSourceVerification }),
     ...(sqdBscLogReader === undefined ? {} : { sqdBscLogReader }),
     ...(sqdBscCreationReader === undefined ? {} : { sqdBscCreationReader }),
+    ...(sqdSolanaSource === undefined ? {} : { sqdSolanaSource }),
     evidenceLedger,
     dataQuality,
     ingestionStorage: {
@@ -770,6 +810,8 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
     ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
     ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),
+    ...(solanaDealerReports === undefined ? {} : { solanaDealerReports }),
+    ...(bitcoinForensicGraphReports === undefined ? {} : { bitcoinForensicGraphReports }),
     ...(actionSemanticsReports === undefined ? {} : { actionSemanticsReports }),
     ...(pensionCandidateReports === undefined ? {} : { pensionCandidateReports }),
     ...(pensionEntryReports === undefined ? {} : { pensionEntryReports }),

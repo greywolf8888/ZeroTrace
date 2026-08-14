@@ -1,4 +1,4 @@
-import { unknownValue, type Ledger } from '@zerotrace/schemas';
+import type { Ledger } from '@zerotrace/schemas';
 
 export * from './flap.js';
 export * from './flap-market.js';
@@ -21,6 +21,8 @@ export * from './erc20-metadata.js';
 export * from './evm-control-rights.js';
 export * from './bitcoin-control-rights.js';
 export * from './bitcoin-transaction-entity.js';
+export * from './bitcoin-forensic-graph.js';
+export * from './launchpad-registry.js';
 export * from './solana-control-rights.js';
 export * from './solana-asset-flow.js';
 export * from './solana-transaction-semantics.js';
@@ -32,7 +34,8 @@ export type AdapterImplementationStatus =
   | 'PARTIALLY_IMPLEMENTED'
   | 'IMPLEMENTED'
   | 'EXTERNAL_VALIDATION_REQUIRED'
-  | 'LICENSE_ISOLATION_REQUIRED';
+  | 'LICENSE_ISOLATION_REQUIRED'
+  | 'REGISTRY_ONLY';
 
 export interface PlatformDescriptor {
   id: string;
@@ -93,19 +96,23 @@ export const PLATFORM_REGISTRY: readonly PlatformDescriptor[] = Object.freeze([
     name: 'Moonshot',
     roles: ['LAUNCH_MECHANISM'],
     ledgers: ['SOLANA', 'EVM'],
-    implementationStatus: 'INTERFACE_READY',
-    officialSources: [],
-    integrationBoundary: 'Deployment and launch timestamp must select the mechanism version.',
+    implementationStatus: 'REGISTRY_ONLY',
+    officialSources: ['https://docs.moonshot.cc/', 'https://api.moonshot.cc'],
+    integrationBoundary:
+      'Deployment and launch timestamp must select a versioned mechanism; current API data is cross-check evidence only.',
   },
   {
     id: 'four-meme',
     name: 'Four.meme',
     roles: ['LAUNCH_MECHANISM'],
     ledgers: ['EVM'],
-    implementationStatus: 'INTERFACE_READY',
-    officialSources: [],
+    implementationStatus: 'REGISTRY_ONLY',
+    officialSources: [
+      'https://www.four.meme/',
+      'https://github.com/four-meme-community/four-meme-ai',
+    ],
     integrationBoundary:
-      'Discover current factory, curve, graduation, and Pancake migration state at runtime.',
+      'Discover versioned TokenManager/template, curve, graduation, and Pancake migration state at runtime; never connect write or private-key flows.',
   },
   {
     id: 'fomowell',
@@ -130,74 +137,3 @@ export const PLATFORM_REGISTRY: readonly PlatformDescriptor[] = Object.freeze([
       'Optional authenticated quote cross-check only; observations never merge entities.',
   },
 ]);
-
-export interface GenericLaunchObservation {
-  ledger: Ledger;
-  chainId: string;
-  factoryOrProgram?: string;
-  quoteReserve?: string;
-  virtualReserve?: string;
-  buySellEvents: number;
-  migrationEvents: number;
-  liquidityEvents: number;
-  feeTransferEvents: number;
-  evidenceIds: string[];
-}
-
-export interface GenericLaunchDetection {
-  platform: 'UNKNOWN_LAUNCHPAD';
-  mechanismConfidence: number;
-  mechanism: ReturnType<typeof unknownValue> | { state: 'known'; value: 'BONDING_CURVE_LIKE' };
-  evidenceIds: string[];
-  reasons: string[];
-}
-
-export function inferGenericLaunchMechanism(
-  observation: GenericLaunchObservation,
-): GenericLaunchDetection {
-  if (observation.evidenceIds.length === 0) {
-    return {
-      platform: 'UNKNOWN_LAUNCHPAD',
-      mechanismConfidence: 0,
-      mechanism: unknownValue('INSUFFICIENT_DATA', 'Detection requires raw on-chain evidence.'),
-      evidenceIds: [],
-      reasons: ['No grounded evidence was supplied.'],
-    };
-  }
-  const reasons: string[] = [];
-  let score = 0;
-  if (observation.factoryOrProgram !== undefined) {
-    score += 0.2;
-    reasons.push('A factory or program origin is present.');
-  }
-  if (observation.quoteReserve !== undefined || observation.virtualReserve !== undefined) {
-    score += 0.3;
-    reasons.push('Reserve state is observable.');
-  }
-  if (observation.buySellEvents >= 2) {
-    score += 0.25;
-    reasons.push('Repeated primary-market buy/sell events are present.');
-  }
-  if (observation.migrationEvents > 0 && observation.liquidityEvents > 0) {
-    score += 0.2;
-    reasons.push('Migration and liquidity creation are linked.');
-  }
-  if (observation.feeTransferEvents > 0) {
-    score += 0.05;
-    reasons.push('Protocol fee transfers are observable.');
-  }
-  const confidence = Math.min(1, Number(score.toFixed(4)));
-  return {
-    platform: 'UNKNOWN_LAUNCHPAD',
-    mechanismConfidence: confidence,
-    mechanism:
-      confidence >= 0.65
-        ? { state: 'known', value: 'BONDING_CURVE_LIKE' }
-        : unknownValue(
-            'INSUFFICIENT_DATA',
-            'Observed features do not identify a mechanism reliably.',
-          ),
-    evidenceIds: [...new Set(observation.evidenceIds)],
-    reasons,
-  };
-}

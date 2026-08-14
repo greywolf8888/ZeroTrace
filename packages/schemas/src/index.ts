@@ -83,6 +83,80 @@ export type KnowledgeValue<T> =
   | { state: 'unknown'; reason: KnowledgeReason; detail?: string }
   | { state: 'unavailable'; reason: KnowledgeReason; detail?: string };
 
+/**
+ * A protocol deployment is only decoder-addressable after its provenance has
+ * been pinned to an official source and a replayable Evidence set.  Keeping
+ * this contract in the shared schemas package prevents adapters from
+ * silently inventing deployment addresses or treating a current deployment
+ * as the historical truth for every version.
+ */
+export const ProtocolDeploymentVersionSchema = z.object({
+  platform: z.string().min(1),
+  ledger: LedgerSchema,
+  chain: z.string().min(1),
+  deploymentId: z.string().min(1),
+  validFrom: knowledgeValueSchema(z.string().min(1)),
+  validTo: knowledgeValueSchema(z.string().min(1)),
+  programOrContract: z.string().min(1),
+  factories: z.array(z.string().min(1)),
+  abiOrIdlHash: Hash256Schema,
+  sourceCommit: z.string().min(1).optional(),
+  officialSourceUris: z.array(z.url()).min(1),
+  evidenceIds: z.array(z.string().min(1)),
+});
+export type ProtocolDeploymentVersion = z.infer<typeof ProtocolDeploymentVersionSchema>;
+
+export const LaunchpadProvenanceStatusSchema = z.enum([
+  'PINNED',
+  'PROVENANCE_PENDING',
+  'LICENSE_REVIEW_REQUIRED',
+  'NOT_APPLICABLE',
+]);
+export type LaunchpadProvenanceStatus = z.infer<typeof LaunchpadProvenanceStatusSchema>;
+
+export const LaunchpadDecoderStatusSchema = z.enum([
+  'READY_READ_ONLY',
+  'PARTIAL_READ_ONLY',
+  'NOT_AVAILABLE',
+  'HEURISTIC_ONLY',
+]);
+export type LaunchpadDecoderStatus = z.infer<typeof LaunchpadDecoderStatusSchema>;
+
+export const LaunchpadRegistryEntrySchema = z.object({
+  platform: z.string().min(1),
+  name: z.string().min(1),
+  ledgers: z.array(LedgerSchema).min(1),
+  provenanceStatus: LaunchpadProvenanceStatusSchema,
+  decoderStatus: LaunchpadDecoderStatusSchema,
+  officialSourceUris: z.array(z.url()),
+  versions: z.array(ProtocolDeploymentVersionSchema),
+  integrationBoundary: z.string().min(1),
+});
+export type LaunchpadRegistryEntry = z.infer<typeof LaunchpadRegistryEntrySchema>;
+
+export const GenericLaunchObservationSchema = z.object({
+  ledger: LedgerSchema,
+  chainId: z.string().min(1),
+  factoryOrProgram: z.string().min(1).optional(),
+  quoteReserve: z.string().min(1).optional(),
+  virtualReserve: z.string().min(1).optional(),
+  buySellEvents: z.number().int().nonnegative(),
+  migrationEvents: z.number().int().nonnegative(),
+  liquidityEvents: z.number().int().nonnegative(),
+  feeTransferEvents: z.number().int().nonnegative(),
+  evidenceIds: z.array(z.string().min(1)),
+});
+export type GenericLaunchObservation = z.infer<typeof GenericLaunchObservationSchema>;
+
+export const GenericLaunchDetectionSchema = z.object({
+  platform: z.literal('UNKNOWN_LAUNCHPAD'),
+  mechanismConfidence: ConfidenceSchema,
+  mechanism: knowledgeValueSchema(z.literal('BONDING_CURVE_LIKE')),
+  evidenceIds: z.array(z.string().min(1)),
+  reasons: z.array(z.string().min(1)),
+});
+export type GenericLaunchDetection = z.infer<typeof GenericLaunchDetectionSchema>;
+
 export const EvidenceKindSchema = z.enum([
   'RAW_RPC_RESPONSE',
   'BLOCK',
@@ -4159,6 +4233,206 @@ export type BitcoinTransactionEntityAnalysis = z.infer<
   typeof BitcoinTransactionEntityAnalysisSchema
 >;
 
+export const BitcoinForensicGraphNodeKindSchema = z.enum([
+  'ADDRESS',
+  'OUTPOINT',
+  'TRANSACTION',
+  'SERVICE',
+  'UNKNOWN',
+]);
+export type BitcoinForensicGraphNodeKind = z.infer<typeof BitcoinForensicGraphNodeKindSchema>;
+
+export const BitcoinForensicGraphNodeSchema = z
+  .object({
+    id: z.string().min(1).max(256),
+    kind: BitcoinForensicGraphNodeKindSchema,
+    reference: z.string().min(1).max(256),
+    label: knowledgeValueSchema(z.string().min(1).max(160)),
+    valueSats: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+  })
+  .strict();
+export type BitcoinForensicGraphNode = z.infer<typeof BitcoinForensicGraphNodeSchema>;
+
+export const BitcoinForensicGraphEdgeKindSchema = z.enum([
+  'UTXO_FUNDING',
+  'UTXO_SPEND',
+  'COMMON_INPUT_CANDIDATE',
+  'CHANGE_CANDIDATE',
+  'PEELING_PATTERN',
+  'FANOUT_PATTERN',
+  'CONSOLIDATION_PATTERN',
+  'FUNDING_PATH',
+  'SETTLEMENT_PATH',
+  'SERVICE_SUPPRESSED',
+  'COINJOIN_SUPPRESSED',
+  'PAYJOIN_UNKNOWN',
+]);
+export type BitcoinForensicGraphEdgeKind = z.infer<typeof BitcoinForensicGraphEdgeKindSchema>;
+
+export const BitcoinForensicGraphEdgeClassificationSchema = z.enum([
+  'OBSERVED',
+  'HEURISTIC_CANDIDATE',
+  'SUPPRESSED',
+  'UNKNOWN',
+]);
+export type BitcoinForensicGraphEdgeClassification = z.infer<
+  typeof BitcoinForensicGraphEdgeClassificationSchema
+>;
+
+export const BitcoinForensicGraphEdgeSchema = z
+  .object({
+    id: z.string().regex(/^bge_[0-9a-f]{24}$/),
+    from: z.string().min(1).max(256),
+    to: z.string().min(1).max(256),
+    kind: BitcoinForensicGraphEdgeKindSchema,
+    classification: BitcoinForensicGraphEdgeClassificationSchema,
+    amountSats: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    reason: z.string().min(1).max(320),
+    automaticOwnershipMergeAllowed: z.literal(false),
+  })
+  .strict();
+export type BitcoinForensicGraphEdge = z.infer<typeof BitcoinForensicGraphEdgeSchema>;
+
+export const BitcoinForensicEvidenceLinePhaseSchema = z
+  .object({
+    phase: z.enum(['FUNDING', 'FLOW', 'SETTLEMENT', 'NEGATIVE']),
+    edgeIds: z.array(z.string().regex(/^bge_[0-9a-f]{24}$/)),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+    coverage: CoverageRatioSchema,
+    attributionStopped: z.boolean(),
+  })
+  .strict();
+export type BitcoinForensicEvidenceLinePhase = z.infer<
+  typeof BitcoinForensicEvidenceLinePhaseSchema
+>;
+
+export const BitcoinForensicEvidenceLineSchema = z
+  .object({
+    schemaVersion: z.literal('bitcoin-forensic-evidence-line-v1'),
+    graphId: z.string().regex(/^bfg_[0-9a-f]{24}$/),
+    phases: z.array(BitcoinForensicEvidenceLinePhaseSchema),
+    terminalBoundary: z.enum(['NONE_OBSERVED', 'SERVICE_BOUNDARY', 'UNKNOWN']),
+    edgeIds: z.array(z.string().regex(/^bge_[0-9a-f]{24}$/)),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)),
+    snapshotStart: BitcoinSnapshotSchema,
+    snapshotEnd: BitcoinSnapshotSchema,
+    dataCoverage: CoverageRatioSchema,
+    freshness: IsoDateTimeSchema,
+    sourceSet: CanonicalStringArraySchema.min(1),
+    modelVersion: z.literal('bitcoin-forensic-graph-v1.0.0'),
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    sourceCoverage: CoverageRatioSchema,
+    historyCoverage: CoverageRatioSchema,
+    resultHash: Hash256Schema,
+  })
+  .strict();
+export type BitcoinForensicEvidenceLine = z.infer<typeof BitcoinForensicEvidenceLineSchema>;
+
+export const BitcoinForensicCaseBundleSchema = z
+  .object({
+    schemaVersion: z.literal('bitcoin-forensic-case-v1'),
+    id: z.string().regex(/^bfc_[0-9a-f]{24}$/),
+    graphId: z.string().regex(/^bfg_[0-9a-f]{24}$/),
+    ledger: z.literal('BITCOIN'),
+    chainId: z.literal('bitcoin-mainnet'),
+    evidenceLine: BitcoinForensicEvidenceLineSchema,
+    automaticOwnershipMergeAllowed: z.literal(false),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    snapshot: BitcoinSnapshotSchema,
+    modelVersion: z.literal('bitcoin-forensic-graph-v1.0.0'),
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.evidenceLine.graphId !== value.graphId ||
+      value.evidenceLine.snapshotEnd.blockHash !== value.snapshot.blockHash ||
+      JSON.stringify(value.evidenceIds) !==
+        JSON.stringify([...value.evidenceLine.evidenceIds].sort())
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceLine'],
+        message: 'Bitcoin forensic case references must be canonical and identity-consistent.',
+      });
+    }
+  });
+export type BitcoinForensicCaseBundle = z.infer<typeof BitcoinForensicCaseBundleSchema>;
+
+export const BitcoinForensicGraphReportSchema = z
+  .object({
+    schemaVersion: z.literal('bitcoin-forensic-graph-v1'),
+    id: z.string().regex(/^bfg_[0-9a-f]{24}$/),
+    ledger: z.literal('BITCOIN'),
+    chainId: z.literal('bitcoin-mainnet'),
+    rootTxids: z.array(BitcoinHashSchema).min(1).max(100),
+    transactionIds: z.array(BitcoinHashSchema).min(1).max(100),
+    nodes: z.array(BitcoinForensicGraphNodeSchema).max(2_000),
+    edges: z.array(BitcoinForensicGraphEdgeSchema).max(10_000),
+    transactionAnalyses: z.array(BitcoinTransactionEntityAnalysisSchema).max(100),
+    suppressionReasons: z.array(BitcoinClusteringSuppressionReasonSchema),
+    case: BitcoinForensicCaseBundleSchema,
+    snapshotStart: BitcoinSnapshotSchema,
+    snapshotEnd: BitcoinSnapshotSchema,
+    dataCoverage: CoverageRatioSchema,
+    sourceCoverage: CoverageRatioSchema,
+    historyCoverage: CoverageRatioSchema,
+    freshness: IsoDateTimeSchema,
+    sourceSet: CanonicalStringArraySchema.min(1),
+    modelVersion: z.literal('bitcoin-forensic-graph-v1.0.0'),
+    policyVersion: z.literal('bitcoin-forensic-policy-v1.0.0'),
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    automaticOwnershipMergeAllowed: z.literal(false),
+    evidenceIds: z.array(z.string().regex(/^ev_[0-9a-f]{24}$/)).min(1),
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const nodeIds = new Set(value.nodes.map((node) => node.id));
+    const edgeIds = new Set<string>();
+    for (const edge of value.edges) {
+      if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['edges'],
+          message: 'Bitcoin forensic graph edges must reference graph nodes.',
+        });
+      }
+      if (edgeIds.has(edge.id)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['edges'],
+          message: 'Bitcoin forensic graph edge IDs must be unique.',
+        });
+      }
+      edgeIds.add(edge.id);
+    }
+    if (
+      value.snapshotStart.blockHash === value.snapshotEnd.blockHash &&
+      value.snapshotStart.height !== value.snapshotEnd.height
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshotEnd'],
+        message: 'Bitcoin Snapshot heights cannot differ while sharing a block hash.',
+      });
+    }
+    if (
+      value.case.graphId !== value.id ||
+      value.case.snapshot.blockHash !== value.snapshotEnd.blockHash
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['case'],
+        message: 'Bitcoin forensic case must reference the enclosing graph and final Snapshot.',
+      });
+    }
+  });
+export type BitcoinForensicGraphReport = z.infer<typeof BitcoinForensicGraphReportSchema>;
+
 export const EvmControlRightTypeSchema = z.enum([
   'OWNER',
   'PROXY_ADMIN',
@@ -4675,6 +4949,328 @@ export const SolanaTransactionIntelligenceReportSchema = z
 export type SolanaTransactionIntelligenceReport = z.infer<
   typeof SolanaTransactionIntelligenceReportSchema
 >;
+
+export const SolanaDealerCampaignReportIdSchema = z.string().regex(/^sdc_[0-9a-f]{24}$/);
+export const SolanaDealerAssetObservationIdSchema = z.string().regex(/^sdao_[0-9a-f]{24}$/);
+export const SolanaDealerFundingEdgeIdSchema = z.string().regex(/^sdf_[0-9a-f]{24}$/);
+export const SolanaDealerSettlementEdgeIdSchema = z.string().regex(/^sds_[0-9a-f]{24}$/);
+
+const SolanaDealerSignatureSchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/);
+const SolanaDealerAssetKindSchema = z.enum(['NATIVE_SOL', 'SPL_TOKEN', 'TOKEN_2022']);
+
+export const SolanaDealerAssetObservationSchema = z
+  .object({
+    schemaVersion: z.literal('solana-dealer-asset-observation-v1'),
+    id: SolanaDealerAssetObservationIdSchema,
+    assetKind: SolanaDealerAssetKindSchema,
+    asset: z.union([z.literal('SOL'), SolanaPublicKeySchema]),
+    source: SolanaPublicKeySchema,
+    destination: SolanaPublicKeySchema,
+    amountRaw: UnsignedQuantityStringSchema,
+    decimals: z.number().int().min(0).max(255),
+    signature: SolanaDealerSignatureSchema,
+    slot: UnsignedQuantityStringSchema,
+    blockhash: SolanaPublicKeySchema,
+    transactionIndex: UnsignedQuantityStringSchema,
+    instructionPath: z.string().regex(/^outer:\d+(?:\/inner:\d+)?$/),
+    execution: z.enum(['SUCCESS', 'FAILED', 'UNKNOWN']),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    snapshot: AnalysisSnapshotSchema,
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.snapshot.ledger !== 'SOLANA' ||
+      value.snapshot.chainId !== 'solana-mainnet' ||
+      value.snapshot.slot !== value.slot ||
+      value.snapshot.blockhash !== value.blockhash
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Solana dealer asset observations require an exact finalized slot Snapshot.',
+      });
+    }
+    if (value.assetKind === 'NATIVE_SOL' && value.asset !== 'SOL') {
+      context.addIssue({
+        code: 'custom',
+        path: ['asset'],
+        message: 'Native SOL observations must use the SOL asset marker.',
+      });
+    }
+    if (value.assetKind !== 'NATIVE_SOL' && value.asset === 'SOL') {
+      context.addIssue({
+        code: 'custom',
+        path: ['asset'],
+        message: 'Token observations must carry their mint address.',
+      });
+    }
+  });
+export type SolanaDealerAssetObservation = z.infer<typeof SolanaDealerAssetObservationSchema>;
+
+export const SolanaDealerFundingEdgeSchema = z
+  .object({
+    schemaVersion: z.literal('solana-dealer-funding-edge-v1'),
+    id: SolanaDealerFundingEdgeIdSchema,
+    source: SolanaPublicKeySchema,
+    destination: SolanaPublicKeySchema,
+    amountLamports: UnsignedQuantityStringSchema,
+    signature: SolanaDealerSignatureSchema,
+    slot: UnsignedQuantityStringSchema,
+    blockhash: SolanaPublicKeySchema,
+    relation: z.enum(['DIRECT_SOL_FUNDING', 'SAME_TRANSACTION_FUNDING', 'UNKNOWN']),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    snapshot: AnalysisSnapshotSchema,
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    detail: z.string().min(1),
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.snapshot.ledger !== 'SOLANA' ||
+      value.snapshot.chainId !== 'solana-mainnet' ||
+      value.snapshot.slot !== value.slot ||
+      value.snapshot.blockhash !== value.blockhash
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Solana funding edges require an exact finalized slot Snapshot.',
+      });
+    }
+    if (value.source === value.destination) {
+      context.addIssue({
+        code: 'custom',
+        path: ['destination'],
+        message: 'Solana funding edges require distinct source and destination accounts.',
+      });
+    }
+  });
+export type SolanaDealerFundingEdge = z.infer<typeof SolanaDealerFundingEdgeSchema>;
+
+export const SolanaDealerSettlementEdgeSchema = z
+  .object({
+    schemaVersion: z.literal('solana-dealer-settlement-edge-v1'),
+    id: SolanaDealerSettlementEdgeIdSchema,
+    source: SolanaPublicKeySchema,
+    destination: SolanaPublicKeySchema,
+    tokenAmountRaw: UnsignedQuantityStringSchema,
+    solAmountLamports: UnsignedQuantityStringSchema,
+    signature: SolanaDealerSignatureSchema,
+    slot: UnsignedQuantityStringSchema,
+    blockhash: SolanaPublicKeySchema,
+    status: z.enum(['POSSIBLE', 'NOT_OBSERVED', 'UNKNOWN']),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    snapshot: AnalysisSnapshotSchema,
+    confidence: knowledgeValueSchema(ConfidenceSchema),
+    detail: z.string().min(1),
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.snapshot.ledger !== 'SOLANA' ||
+      value.snapshot.chainId !== 'solana-mainnet' ||
+      value.snapshot.slot !== value.slot ||
+      value.snapshot.blockhash !== value.blockhash
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Solana settlement edges require an exact finalized slot Snapshot.',
+      });
+    }
+    if (value.source === value.destination) {
+      context.addIssue({
+        code: 'custom',
+        path: ['destination'],
+        message: 'Solana settlement edges require distinct source and destination accounts.',
+      });
+    }
+  });
+export type SolanaDealerSettlementEdge = z.infer<typeof SolanaDealerSettlementEdgeSchema>;
+
+export const SolanaDealerOriginSchema = z
+  .object({
+    mint: SolanaPublicKeySchema,
+    tokenProgram: z.enum(['SPL_TOKEN', 'TOKEN_2022']),
+    firstObservedSlot: UnsignedQuantityStringSchema,
+    firstObservedSignature: SolanaDealerSignatureSchema,
+    mintInstructionObserved: z.boolean(),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+  })
+  .strict();
+export type SolanaDealerOrigin = z.infer<typeof SolanaDealerOriginSchema>;
+
+export const SolanaDealerHolderSchema = z
+  .object({
+    owner: SolanaPublicKeySchema,
+    tokenAccounts: z.array(SolanaPublicKeySchema).min(1),
+    observedBalanceRaw: UnsignedQuantityStringSchema,
+    netDeltaRaw: QuantityStringSchema,
+    firstObservedSlot: UnsignedQuantityStringSchema,
+    lastObservedSlot: UnsignedQuantityStringSchema,
+    openingBalance: knowledgeValueSchema(UnsignedQuantityStringSchema),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+  })
+  .strict();
+export type SolanaDealerHolder = z.infer<typeof SolanaDealerHolderSchema>;
+
+export const SolanaDealerCampaignReportSchema = z
+  .object({
+    schemaVersion: z.literal('solana-dealer-campaign-report-v1'),
+    id: SolanaDealerCampaignReportIdSchema,
+    ledger: z.literal('SOLANA'),
+    chainId: z.literal('solana-mainnet'),
+    mint: SolanaPublicKeySchema,
+    fromSlot: UnsignedQuantityStringSchema,
+    toSlot: UnsignedQuantityStringSchema,
+    status: z.enum(['COMPLETE', 'PARTIAL', 'UNKNOWN']),
+    origin: knowledgeValueSchema(SolanaDealerOriginSchema),
+    holders: z.array(SolanaDealerHolderSchema),
+    tokenFlowEdges: z.array(TokenFlowEdgeSchema),
+    solTransfers: z.array(SolanaDealerAssetObservationSchema),
+    fundingEdges: z.array(SolanaDealerFundingEdgeSchema),
+    settlementEdges: z.array(SolanaDealerSettlementEdgeSchema),
+    openingBalanceUnknownWalletIds: CanonicalStringArraySchema,
+    pdaSuppressedOwnerIds: CanonicalStringArraySchema,
+    campaign: ControlCampaignBundleSchema.nullable(),
+    alerts: z.array(ForensicCampaignAlertSchema),
+    evidence: z.array(EvidenceSchema).min(1),
+    snapshot: AnalysisSnapshotSchema,
+    dataCoverage: CoverageRatioSchema,
+    sourceCoverage: CoverageRatioSchema,
+    historyCoverage: CoverageRatioSchema,
+    freshness: IsoDateTimeSchema,
+    sourceSet: CanonicalStringArraySchema.min(1),
+    modelVersion: z.literal('solana-dealer-campaign-v1.0.0'),
+    policyVersion: z.literal('solana-dealer-policy-v1.0.0'),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.snapshot.ledger !== 'SOLANA' ||
+      value.snapshot.chainId !== 'solana-mainnet' ||
+      value.snapshot.slot !== value.toSlot ||
+      BigInt(value.toSlot) < BigInt(value.fromSlot)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Solana dealer reports require one finalized Snapshot at the range end.',
+      });
+    }
+    const nestedEvidenceIds = [
+      ...(value.origin.state === 'known' ? value.origin.value.evidenceIds : []),
+      ...value.holders.flatMap((holder) => holder.evidenceIds),
+      ...value.tokenFlowEdges.flatMap((edge) => [edge.evidenceId]),
+      ...value.solTransfers.flatMap((edge) => edge.evidenceIds),
+      ...value.fundingEdges.flatMap((edge) => edge.evidenceIds),
+      ...value.settlementEdges.flatMap((edge) => edge.evidenceIds),
+      ...(value.campaign === null
+        ? []
+        : [
+            ...value.campaign.campaign.metadata.evidenceIds,
+            ...value.campaign.clusterVersion.membershipEvidenceIds,
+            ...value.campaign.positions.flatMap((position) => position.positionEvidenceIds),
+            ...value.campaign.behaviorEvents.flatMap((event) => [
+              ...event.supportingEvidenceIds,
+              ...event.contradictingEvidenceIds,
+            ]),
+            ...value.campaign.evidenceLine.evidenceIds,
+          ]),
+      ...value.alerts.flatMap((alert) => alert.evidenceIds),
+    ];
+    const evidenceIds = [...new Set(value.evidence.map((item) => item.id))].sort();
+    const declared = [...value.evidenceIds].sort();
+    const expected = [...new Set(nestedEvidenceIds)].sort();
+    if (
+      evidenceIds.length !== value.evidence.length ||
+      JSON.stringify(evidenceIds) !== JSON.stringify(declared) ||
+      expected.some((id) => !declared.includes(id))
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceIds'],
+        message: 'Solana dealer report Evidence must contain every nested observation reference.',
+      });
+    }
+    if (
+      value.tokenFlowEdges.some(
+        (edge) =>
+          edge.ledger !== 'SOLANA' ||
+          edge.chainId !== 'solana-mainnet' ||
+          edge.token !== value.mint ||
+          BigInt(edge.blockNumber) < BigInt(value.fromSlot) ||
+          BigInt(edge.blockNumber) > BigInt(value.toSlot),
+      )
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['tokenFlowEdges'],
+        message: 'Solana dealer token-flow edges must match the report mint and range.',
+      });
+    }
+    if (
+      value.campaign !== null &&
+      (value.campaign.campaign.token !== value.mint ||
+        value.campaign.campaign.chainId !== 'solana-mainnet')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['campaign'],
+        message: 'Solana dealer campaign identity must match the report mint and chain.',
+      });
+    }
+    if (value.status === 'COMPLETE' && value.campaign === null) {
+      context.addIssue({
+        code: 'custom',
+        path: ['campaign'],
+        message: 'A complete Solana dealer report requires a materialized Campaign bundle.',
+      });
+    }
+  });
+export type SolanaDealerCampaignReport = z.infer<typeof SolanaDealerCampaignReportSchema>;
+
+export const SolanaDealerCampaignRequestSchema = z
+  .object({
+    mint: SolanaPublicKeySchema,
+    fromSlot: UnsignedQuantityStringSchema,
+    toSlot: UnsignedQuantityStringSchema,
+    maxTransactions: z.number().int().min(1).max(500).default(500),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const from = BigInt(value.fromSlot);
+    const to = BigInt(value.toSlot);
+    const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+    if (to < from) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toSlot'],
+        message: 'toSlot must be greater than or equal to fromSlot.',
+      });
+    }
+    if (to >= from && to - from + 1n > 50_000n) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toSlot'],
+        message: 'Solana dealer ranges may contain at most 50,000 slots.',
+      });
+    }
+    if (from > maxSafe || to > maxSafe) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toSlot'],
+        message: 'Solana slots must fit the JSON-RPC safe integer range.',
+      });
+    }
+  });
+export type SolanaDealerCampaignRequest = z.infer<typeof SolanaDealerCampaignRequestSchema>;
 
 export const SolanaControlRightTypeSchema = z.enum([
   'MINT_AUTHORITY',

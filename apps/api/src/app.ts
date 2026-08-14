@@ -6,6 +6,11 @@ import { Counter, Registry, collectDefaultMetrics } from 'prom-client';
 import { z, ZodError } from 'zod';
 
 import { ProviderError } from '@zerotrace/chain-adapters';
+import {
+  BitcoinForensicGraphCaptureError,
+  captureBitcoinForensicGraph,
+} from './bitcoin-forensic-graph.js';
+import { SolanaDealerCaptureError, captureSolanaDealerCampaign } from './solana-dealer.js';
 import { defineCaptureSchedule } from '@zerotrace/capture-scheduler';
 import { parseEvmClaimDeclaration, reviewClaimDeclarationDraft } from '@zerotrace/claim-audit';
 import {
@@ -49,6 +54,7 @@ import {
   FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
   FLAP_TOKEN_ORIGIN_MAX_CHUNKS,
   FLAP_TOKEN_ORIGIN_MODEL_VERSION,
+  LAUNCHPAD_PROTOCOL_REGISTRY,
   PLATFORM_REGISTRY,
   discoverErc20BurnCandidates,
   discoverEvmPensionCandidates,
@@ -95,6 +101,8 @@ import {
   PensionCandidateReportStorageError,
   SemanticCheckpointError,
   SolanaTransactionReportStorageError,
+  SolanaDealerCampaignReportStorageError,
+  BitcoinForensicGraphReportStorageError,
   StorageError,
   type ObjectStoreHealth,
   type RawFactStorageHealth,
@@ -116,6 +124,7 @@ import {
   LabelIntelligenceReportSchema,
   LabelIntelligenceRequestSchema,
   SolanaTransactionIntelligenceReportSchema,
+  SolanaDealerCampaignRequestSchema,
   knownValue,
   unavailableValue,
   unknownValue,
@@ -205,6 +214,52 @@ const SolanaTransactionReportParamsSchema = z.object({
 const SolanaTransactionReportByIdParamsSchema = SolanaTransactionReportParamsSchema.extend({
   reportId: z.string().regex(/^str_[0-9a-f]{24}$/),
 });
+
+const SolanaDealerCampaignReportParamsSchema = z.object({
+  reportId: z.string().regex(/^sdc_[0-9a-f]{24}$/),
+});
+
+const SolanaDealerCampaignMintParamsSchema = z.object({
+  mint: z
+    .string()
+    .trim()
+    .regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
+});
+
+const BitcoinForensicGraphReportParamsSchema = z.object({
+  reportId: z.string().regex(/^bfg_[0-9a-f]{24}$/),
+});
+
+const BitcoinForensicGraphRootParamsSchema = z.object({
+  txid: z
+    .string()
+    .trim()
+    .regex(/^[0-9a-fA-F]{64}$/),
+});
+
+const BitcoinForensicGraphRequestSchema = z
+  .object({
+    transactionIds: z
+      .array(
+        z
+          .string()
+          .trim()
+          .regex(/^[0-9a-fA-F]{64}$/),
+      )
+      .min(1)
+      .max(100),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const normalized = value.transactionIds.map((txid) => txid.toLowerCase());
+    if (new Set(normalized).size !== normalized.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['transactionIds'],
+        message: 'Bitcoin forensic graph transaction IDs must be unique.',
+      });
+    }
+  });
 
 const ActionSemanticsReportLookupQuerySchema = z
   .object({
@@ -1451,6 +1506,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['solanaDealerReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['bitcoinForensicGraphReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['actionSemanticsReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionCandidateReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionEntryReports']>['health']>>
@@ -1496,6 +1553,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         controlSurfaces,
         solanaControlSurfaces,
         solanaTransactionReports,
+        solanaDealerReports,
+        bitcoinForensicGraphReports,
         actionSemanticsReports,
         pensionCandidateReports,
         pensionEntryReports,
@@ -1521,6 +1580,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.controlSurfaces?.health(),
         runtime.solanaControlSurfaces?.health(),
         runtime.solanaTransactionReports?.health(),
+        runtime.solanaDealerReports?.health(),
+        runtime.bitcoinForensicGraphReports?.health(),
         runtime.actionSemanticsReports?.health(),
         runtime.pensionCandidateReports?.health(),
         runtime.pensionEntryReports?.health(),
@@ -1548,6 +1609,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           controlSurfaces,
           solanaControlSurfaces,
           solanaTransactionReports,
+          solanaDealerReports,
+          bitcoinForensicGraphReports,
           actionSemanticsReports,
           pensionCandidateReports,
           pensionEntryReports,
@@ -1758,6 +1821,26 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof SolanaDealerCaptureError) {
+      const status =
+        error.code === 'SOLANA_DEALER_CAPTURE_INVALID'
+          ? 400
+          : error.code === 'SOLANA_DEALER_CAPTURE_NO_SOURCE'
+            ? 503
+            : 502;
+      return reply.code(status).send(errorResponse(request, error.code, error.message, false));
+    }
+    if (error instanceof BitcoinForensicGraphCaptureError) {
+      const status =
+        error.code === 'BITCOIN_FORENSIC_GRAPH_INVALID_REQUEST'
+          ? 400
+          : error.code === 'BITCOIN_FORENSIC_GRAPH_UNCONFIRMED'
+            ? 409
+            : 502;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     if (error instanceof StorageError) {
       return reply
         .code(503)
@@ -1839,6 +1922,28 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof SolanaTransactionReportStorageError) {
       const status = error.code === 'SOLANA_TRANSACTION_REPORT_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof SolanaDealerCampaignReportStorageError) {
+      const status =
+        error.code === 'SOLANA_DEALER_REPORT_INVALID'
+          ? 400
+          : error.code === 'SOLANA_DEALER_REPORT_CONFLICT'
+            ? 409
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof BitcoinForensicGraphReportStorageError) {
+      const status =
+        error.code === 'BITCOIN_FORENSIC_GRAPH_INVALID'
+          ? 400
+          : error.code === 'BITCOIN_FORENSIC_GRAPH_CONFLICT'
+            ? 409
+            : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -2376,6 +2481,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
 
   app.get('/api/v1/platforms', { schema: { tags: ['system'] } }, async () => ({
     platforms: PLATFORM_REGISTRY,
+    launchpadRegistry: LAUNCHPAD_PROTOCOL_REGISTRY,
     gmgnConfigured: options.config.gmgnConfigured,
   }));
 
@@ -2932,6 +3038,227 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           );
       }
       return { record };
+    },
+  );
+
+  app.post(
+    '/api/v1/solana/dealer-campaigns',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const body = SolanaDealerCampaignRequestSchema.parse(request.body);
+      const source = runtime.sqdSolanaSource;
+      const adapter = runtime.solanaAdapter;
+      if (source === undefined || adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_CAPTURE_NO_SOURCE',
+              'A finalized Solana RPC adapter and SQD solana-mainnet source are required for dealer capture.',
+              false,
+            ),
+          );
+      }
+      const result = await captureSolanaDealerCampaign({
+        ...body,
+        source,
+        adapter,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      });
+      const durableReport = await runtime.solanaDealerReports?.put(result.report);
+      if (result.report.campaign !== null) {
+        await runtime.controlCampaignReports?.put(result.report.campaign);
+        for (const alert of result.report.alerts) {
+          await runtime.forensicCampaignAlerts?.put(alert);
+        }
+      }
+      return {
+        replayed: false,
+        durable: durableReport !== undefined,
+        record: durableReport ?? null,
+        report: result.report,
+        sourceSummary: result.sourceSummary,
+        candidateCount: result.candidateCount,
+        truncated: result.truncated,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/solana/dealer-campaigns/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = SolanaDealerCampaignReportParamsSchema.parse(request.params);
+      const repository = runtime.solanaDealerReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_REPORT_UNAVAILABLE',
+              'Durable Solana dealer campaign report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_REPORT_NOT_FOUND',
+              'The durable Solana dealer campaign report was not found.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/solana/mints/:mint/dealer-campaigns/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = SolanaDealerCampaignMintParamsSchema.parse(request.params);
+      const repository = runtime.solanaDealerReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_REPORT_UNAVAILABLE',
+              'Durable Solana dealer campaign report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(params.mint);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_REPORT_NOT_FOUND',
+              'No durable Solana dealer campaign report exists for this mint.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.post(
+    '/api/v1/bitcoin/forensic-graphs',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const body = BitcoinForensicGraphRequestSchema.parse(request.body);
+      const adapter = runtime.bitcoinAdapter;
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_PROVIDER_UNCONFIGURED',
+              'A Bitcoin Esplora adapter is required for forensic graph capture.',
+              false,
+            ),
+          );
+      }
+      const result = await captureBitcoinForensicGraph({
+        adapter,
+        request: body,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      });
+      const durableReport = await runtime.bitcoinForensicGraphReports?.put(result.report);
+      return {
+        replayed: false,
+        durable: durableReport !== undefined,
+        record: durableReport ?? null,
+        report: result.report,
+        sourceSummary: result.sourceSummary,
+        capturedEvidence: result.evidence.map((item) => item.id),
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/bitcoin/forensic-graphs/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = BitcoinForensicGraphReportParamsSchema.parse(request.params);
+      const repository = runtime.bitcoinForensicGraphReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_UNAVAILABLE',
+              'Durable Bitcoin forensic graph storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_NOT_FOUND',
+              'The durable Bitcoin forensic graph was not found.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/bitcoin/transactions/:txid/forensic-graphs/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = BitcoinForensicGraphRootParamsSchema.parse(request.params);
+      const repository = runtime.bitcoinForensicGraphReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_UNAVAILABLE',
+              'Durable Bitcoin forensic graph storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = (await repository.list({ rootTxid: params.txid, limit: 1 }))[0];
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_NOT_FOUND',
+              'No durable Bitcoin forensic graph exists for this transaction.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
     },
   );
 

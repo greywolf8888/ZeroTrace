@@ -145,7 +145,7 @@ field.
 - [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
       production license allowlist, `npm audit --audit-level=high` (0 vulnerabilities), and SBOM
       generation
-- [x] `npm run test:unit`: 639/639 tests across 118 files
+- [x] `npm run test:unit`: 655/655 tests across 124 files
 - [x] `npm run test:integration`: 87 pass; 38 explicitly skipped because optional stores/providers
       were not enabled in this host run (these are not counted as failures)
 - [x] `npm run test:evals`: 1/1 structural Entity evaluation
@@ -172,6 +172,28 @@ field.
 This local gate does not promote ZeroTrace to production acceptance. Full-history ingestion,
 independent-provider reconciliation, effective authorization/history, intent attribution and other
 unchecked terminal-scope items below remain open.
+
+## Solana dealer, Bitcoin forensic graph, and launchpad registry slice — 2026-08-14
+
+- [x] Provider-backed Solana dealer reconstruction carries exact Snapshot/Evidence/coverage
+      metadata and exposes off-curve PDA owner suppression as `pdaSuppressedOwnerIds`; focused
+      reconstruction tests passed `2/2`
+- [x] Bounded Bitcoin forensic graph builder, immutable PostgreSQL migration `036`, repository,
+      API routes, CoinJoin/PayJoin/service/incomplete-context suppression ledger, and no automatic
+      ownership merge; focused graph/storage/API tests passed `6/6`
+- [x] Versioned read-only launchpad provenance registry and decoder activation policy cover Flap,
+      Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot/Moonit, Four.meme and FomoWell;
+      official source links and license boundaries are visible in the API/UI, while unpinned
+      versions remain blocked; registry/index focused tests passed `32/32`
+- [x] A fresh provider-backed BSC FFT replay over `113485950–113495949` produced 12 finalized
+      observations, 5 exact bindings, `1/1/1` Token History coverage, same-hash Campaign and
+      offline-verified Case Bundle replay; Funding/Settlement retained `PARTIAL` `1/1/0` history
+      coverage because historical `eth_getCode` returned `missing trie node`
+- [ ] Real Solana dealer archive validation, real Bitcoin forensic Esplora capture, official
+      launchpad version pinning, named launch/migration fixtures, and durable clean-store replay
+
+This slice is implemented and tested locally, but it does not satisfy the external archive,
+license, historical-fixture, calibration, or durable-store gates required for production approval.
 
 ## Control Campaign P0 local gate (2026-08-13)
 
@@ -364,6 +386,8 @@ forbidden.
         ABI declarations separated from effective rights and legacy report replay retained
   - [x] Finalized one-slot Solana SPL Token/Token-2022/multisig/upgradeable-loader control surface,
         immutable Evidence-bound reports, API/UI, deterministic tests and scoped mainnet validation
+  - [x] Bounded Bitcoin forensic UTXO graph, suppression ledger and no-ownership-merge boundary;
+        real Esplora graph capture and Core/archive reconciliation remain open
   - [ ] Effective custom EVM authorization/history and controller recursion, Bitcoin custody semantics,
         Solana PDA/Squads/history/build provenance and cross-ledger temporal validity
 - [ ] Versioned launchpad and market lifecycle adapters
@@ -394,6 +418,8 @@ forbidden.
   - [x] Deterministic all-source finalized-reorg rollback to the newest verified ancestor, immutable
         suffix invalidation and immediate safe replay
   - [x] Named FFT migrated Pancake V2 point-in-time buy/exit-size market fixtures
+  - [x] Versioned read-only launchpad provenance registry, official source ledger, license-boundary
+        policy, generic unknown-mechanism detection, API/UI display, and decoder activation gate
   - [ ] Complete FFT migration fixture, forced reorg drill, lifecycle and sell/execution RV linkage
   - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
@@ -490,6 +516,11 @@ forbidden.
 - [x] Responsive Entity Intelligence latest/exact replay with Snapshot/result identity, canonical
       features, complete Evidence, Service Hub suppression and no automatic ownership merge on
       desktop/mobile
+- [x] Responsive Bitcoin forensic graph and Solana dealer evidence panels show coverage, Snapshot,
+      suppression boundaries, PDA exclusions, graph edges, Evidence and result hashes without
+      presenting ownership conclusions
+- [x] Responsive launchpad platform cards expose official-source provenance and pinned-version
+      state; unpinned named platforms remain visibly blocked rather than appearing supported
 - [x] Responsive Label Intelligence capture/latest replay with temporal counts, preserved conflicts,
       coverage Knowledge, Service Hub suppression, source/license provenance and Evidence on
       desktop/mobile

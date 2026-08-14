@@ -15,7 +15,7 @@ completed feature.
 | Runnable foundation              | **Yes; host, fresh PostgreSQL, browser and remote disposable-store/container gates pass**                                                                                                                     |
 | Production acceptance            | **No**                                                                                                                                                                                                        |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                                                                |
-| Unit tests                       | **639 passing across 118 files; focused monitor/backfill checks 101/101**                                                                                                                                     |
+| Unit tests                       | **655 passing across 124 files; focused monitor/backfill checks 101/101**                                                                                                                                     |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                                                                    |
 | Integration tests                | **87 pass in serial replay; 38 environment-gated skips; disposable-store acceptance remains recorded separately**                                                                                             |
 | Real-browser E2E                 | **38/38 across Chromium desktop and Pixel 7; Control Campaign alert/monitor display 2/2 in both projects**                                                                                                    |
@@ -252,6 +252,48 @@ replay, real long-running monitor progression, forced reorg/outage delivery, ale
 after restart, calibration, and production approval remain `NOT_MEASURED` because Docker Desktop's
 Linux engine is unavailable.
 
+## 2026-08-14 Solana dealer reconstruction and Bitcoin forensic graph
+
+The Solana dealer path now reconstructs provider-backed Token/Token-2022 transfer and settlement
+observations into an immutable report boundary with exact Solana Snapshots, Evidence lineage,
+coverage, freshness, source/model/policy metadata, and no automatic entity membership. Off-curve
+owner accounts are recorded as `pdaSuppressedOwnerIds` and are excluded from campaign membership or
+settlement ownership propagation; the suppression is visible rather than silently treated as a
+wallet. Focused provider reconstruction tests passed `2/2`. Real archive/provider acceptance,
+PDA/Squads recursion, and durable clean-store replay remain open.
+
+Bitcoin now has a bounded forensic UTXO graph report/API/storage path. It materializes observed
+transaction/outpoint/funding/spend paths, peeling/fanout/consolidation candidates, and explicit
+CoinJoin, PayJoin, service-hub, and incomplete-context suppressions. It never merges ownership.
+Graph and repository/API unit checks passed `6/6`; a real Esplora graph capture and Core/archive
+reconciliation have not yet been measured.
+
+## 2026-08-14 Launchpad registry and fresh FFT replay
+
+The launchpad registry is now a versioned, read-only provenance boundary. Pump/PumpSwap, Raydium
+LaunchLab, Meteora DBC, Moonshot/Moonit, Four.meme, FomoWell, and the existing Flap adapter are
+visible through `LAUNCHPAD_PROTOCOL_REGISTRY` and `GET /api/v1/platforms`. No guessed deployment
+address is activated: the current named entries have empty `versions` until official source
+commit, ABI/IDL hash, chain identity, Evidence, and a real historical fixture are pinned. Raydium
+and Meteora retain an explicit license-review boundary. Generic mechanism detection remains
+`UNKNOWN_LAUNCHPAD` and cannot infer a named platform. Registry/index focused tests passed `32/32`.
+
+A fresh provider-backed BSC replay was executed on 2026-08-14 with FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over blocks `113485950–113495949` using SQD and the
+public BNB Chain RPC. Token History was `COMPLETE` with 12 finalized observations, 5 exact
+RPC/Action-Semantics bindings, `data/source/history = 1/1/1`, 10,029 Raw Facts and 10,041
+Evidence. Deterministic report `thd_5ef5001212f0b4c8409bfc7c` produced replay hash
+`8260ce701acbcc2721576465a057353eb7d2d709b419bb87a389061dcf31139a`; provider-free replay was
+identical. Funding/Settlement was `fsr_0cf85ec7932a01bf45cc0dbf`, result hash
+`74ff10a720e4f21a163386d8c32e5d9f1ee22699d051fc99cd2da1ae0638feaf`, `PARTIAL`,
+`TRANSACTION_LOCAL`, coverage `1/1/0`, with two funding edges and one sell-proceeds edge. The
+Campaign was `cc_aa605276f6caa24284daa66c`, replay hash
+`140fadbb18f3263e480b107fbdd013fa74b5305911dc27d94fb6208024741cda`, and remained
+`UNCALIBRATED`; the Case Bundle `fcb_cc_aa605276f6caa24284daa66c` passed offline verification.
+Historical `eth_getCode` returned `missing trie node` for code probes, so transaction-sender
+fallback remained explicit and current state was not substituted. This was an in-memory,
+provider-backed semantic smoke, not durable PostgreSQL/ClickHouse/MinIO production acceptance.
+
 ## Terminal-scope status matrix
 
 The only allowed status vocabulary in this ledger is:
@@ -273,11 +315,11 @@ The only allowed status vocabulary in this ledger is:
 | Entity Resolution                    | `PARTIALLY_IMPLEMENTED`                     | canonical pair inference, immutable Snapshot/Evidence-bound hypotheses/timelines, bounded investigation graphs, durable cross-Snapshot graph timelines, PostgreSQL/optional AGE projection, provider-free replay, exact structural gates and Bitcoin suppression features work; analyst overrides and real-world calibration remain absent                                                                                           |
 | Control Rights                       | `PARTIALLY_IMPLEMENTED`                     | EVM standards/source, Solana SPL/loader and observable Bitcoin script conditions work; effective entities, custom roles, history, recursion and Core policy remain                                                                                                                                                                                                                                                                   |
 | Control Campaign / Forensic Evidence | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | P0 contracts plus provider-backed Token History→Funding/Settlement→Campaign/Evidence Line composition, canonical Forensic Case Bundle closure/manifest/offline verification, idempotent backfill and interval monitor scheduling, finalized cursor/reorg checks, immutable Evidence-bound alerts, replay SSE, real FFT bounded smoke and UI display work; clean-store execution, calibration and multi-provider qualification remain |
-| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback and migrated Pancake V2 market inspection work; forced-reorg validation and other platforms remain                                                                                                                                                                                                                                             |
+| Launchpad Intelligence               | `PARTIALLY_IMPLEMENTED`                     | Flap state, exact transaction decode, durable origin/history, lifetime heads/rollback, migrated Pancake V2 market inspection, versioned provenance registry, and platform-agnostic unknown-mechanism boundary work; pinned versions/fixtures, forced-reorg validation, and other platform decoders remain                                                                                                                            |
 | Realizable Value                     | `PARTIALLY_IMPLEMENTED`                     | constant-product/exit-race kernels, Portal preview, buy/exit scenarios, immutable candidate-bound pension-entry reports and two-operator reconciliation work; fork execution, routes, gas and capacity remain                                                                                                                                                                                                                        |
 | Scenario Engine                      | `PARTIALLY_IMPLEMENTED`                     | deterministic shared-pool exit race plus immutable pension-entry Scenario Reports and provider-free replay; general portfolio/market scenarios remain                                                                                                                                                                                                                                                                                |
 | Claim Verification                   | `PARTIALLY_IMPLEMENTED`                     | Exact source-document declaration capture/replay, allocation, flow/custody, immutable reports, behavioral pension candidates, supply continuity, proof-gated Action Semantics, durable raw-transaction capture and reviewed-rule-bound BSC `CLAIM_ACTIONS` capture/replay work; source authenticity, non-EVM declarations, protocol intent/attribution, continuous backfill and independent reconciliation remain                    |
-| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger/Evidence, durable exact search, EVM/Solana controls, Bitcoin UTXO/script boundaries, pension/claim/burn, candidate-bound entry, market/RV and Entity investigation panels work; broader terminal workflows remain incomplete                                                                                                                                                                                            |
+| Analyst UI                           | `PARTIALLY_IMPLEMENTED`                     | typed ledger/Evidence, durable exact search, EVM/Solana controls, Bitcoin UTXO/script/forensic graph boundaries, Solana dealer suppression, launchpad provenance, pension/claim/burn, candidate-bound entry, market/RV and Entity investigation panels work; broader terminal workflows remain incomplete                                                                                                                            |
 | Production security/operations       | `PARTIALLY_IMPLEMENTED`                     | read-only/SSRF gates work; auth, tenancy, DR, load and chaos gates are absent                                                                                                                                                                                                                                                                                                                                                        |
 
 ## Completed

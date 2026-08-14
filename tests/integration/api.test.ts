@@ -2147,6 +2147,19 @@ describe('ZeroTrace API contract', () => {
     const platforms = await app.inject({ method: 'GET', url: '/api/v1/platforms' });
     expect(platforms.json()).toMatchObject({ gmgnConfigured: false });
     expect(platforms.json().platforms.length).toBeGreaterThan(5);
+    expect(platforms.json().launchpadRegistry).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          platform: 'pump',
+          provenanceStatus: 'PROVENANCE_PENDING',
+          versions: [],
+        }),
+        expect.objectContaining({
+          platform: 'raydium-launchlab',
+          provenanceStatus: 'LICENSE_REVIEW_REQUIRED',
+        }),
+      ]),
+    );
 
     const metrics = await app.inject({ method: 'GET', url: '/metrics' });
     expect(metrics.statusCode).toBe(200);

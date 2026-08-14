@@ -19,6 +19,8 @@ export * from './claim-reports.js';
 export * from './control-surface-reports.js';
 export * from './solana-control-surface-reports.js';
 export * from './solana-transaction-reports.js';
+export * from './solana-dealer-campaign-reports.js';
+export * from './bitcoin-forensic-graph-reports.js';
 export * from './pension-candidate-reports.js';
 export * from './flap-pension-entry-reports.js';
 export * from './entity-relationship-reports.js';
