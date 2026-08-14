@@ -185,12 +185,27 @@ unchecked terminal-scope items below remain open.
       Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot/Moonit, Four.meme and FomoWell;
       official source links and license boundaries are visible in the API/UI, while unpinned
       versions remain blocked; registry/index focused tests passed `32/32`
+- [x] Pump/PumpSwap clean-room decoder pins the official source commit and IDL hashes, matches
+      only official program IDs/discriminators, preserves incomplete layouts as warnings, emits
+      Evidence/Snapshot-bound `launchpadObservations`, and renders the result in the Solana UI
+- [x] Public finalized Solana live smoke captured Pump `buy` signature
+      `3QTGbxYPzDg4WDS57MCivWpEJMsyRZmkMR6EsfTm9PjRFt3KpMrXuDfsarc2Z38uSPJH73DHRCDnxXrU9nNjrEec`
+      at slot `439138804`; account/argument coverage was `1/1`, decoder replay was same-hash,
+      and executable program identity was observed at a minimum-context-safe RPC response
+- [x] Public Blockstream Esplora live smoke captured confirmed transaction
+      `5a05b95e120e23efba087251dc612b053129d808f7f3f82e50b696f0cb139d10` at best-chain height
+      `962362`, producing report `bfg_0b91cbdc32b7844e82bb36ca` with 9 nodes, 10 edges, 3 Evidence
+      nodes, provider `UP`, and a frozen Snapshot replay with `sameHash=true`
 - [x] A fresh provider-backed BSC FFT replay over `113485950–113495949` produced 12 finalized
       observations, 5 exact bindings, `1/1/1` Token History coverage, same-hash Campaign and
-      offline-verified Case Bundle replay; Funding/Settlement retained `PARTIAL` `1/1/0` history
-      coverage because historical `eth_getCode` returned `missing trie node`
-- [ ] Real Solana dealer archive validation, real Bitcoin forensic Esplora capture, official
-      launchpad version pinning, named launch/migration fixtures, and durable clean-store replay
+      offline-verified Case Bundle replay. The latest run kept report
+      `thd_5ef5001212f0b4c8409bfc7c` with result hash
+      `36d389e3fc2b4635ac8303d26f9253097133b6cf7b527edf3f8a1e6ef1a07768`; Funding/Settlement
+      remained `PARTIAL` `1/1/0` history coverage because historical `eth_getCode` returned
+      `missing trie node`
+- [ ] Real Solana dealer archive validation, Bitcoin Core/archive reconciliation, durable launchpad
+      protocol version activation/fixture persistence, named migration fixtures, and durable
+      clean-store replay
 
 This slice is implemented and tested locally, but it does not satisfy the external archive,
 license, historical-fixture, calibration, or durable-store gates required for production approval.
@@ -386,8 +401,8 @@ forbidden.
         ABI declarations separated from effective rights and legacy report replay retained
   - [x] Finalized one-slot Solana SPL Token/Token-2022/multisig/upgradeable-loader control surface,
         immutable Evidence-bound reports, API/UI, deterministic tests and scoped mainnet validation
-  - [x] Bounded Bitcoin forensic UTXO graph, suppression ledger and no-ownership-merge boundary;
-        real Esplora graph capture and Core/archive reconciliation remain open
+  - [x] Bounded Bitcoin forensic UTXO graph, suppression ledger, no-ownership-merge boundary, and
+        public Esplora live capture/replay; Bitcoin Core/archive reconciliation remains open
   - [ ] Effective custom EVM authorization/history and controller recursion, Bitcoin custody semantics,
         Solana PDA/Squads/history/build provenance and cross-ledger temporal validity
 - [ ] Versioned launchpad and market lifecycle adapters

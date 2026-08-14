@@ -6,6 +6,7 @@ import type {
   BitcoinTransactionRecord,
   BitcoinUtxoLedgerAdapter,
 } from '@zerotrace/chain-adapters';
+import { EvidenceLedger } from '@zerotrace/evidence';
 import { BitcoinSnapshotSchema, type Evidence } from '@zerotrace/schemas';
 
 import { captureBitcoinForensicGraph } from '../../src/bitcoin-forensic-graph.js';
@@ -100,12 +101,13 @@ describe('Bitcoin forensic graph capture', () => {
       },
     } as unknown as BitcoinUtxoLedgerAdapter;
     const captured: Evidence[] = [];
+    const evidenceLedger = new EvidenceLedger();
     const result = await captureBitcoinForensicGraph({
       adapter,
       request: { transactionIds: [txid] },
-      writeEvidence: async (item) => {
+      writeEvidence: async (item, sourceEvidenceIds = [], evidenceSnapshot) => {
         captured.push(item);
-        return item;
+        return evidenceLedger.add(item, sourceEvidenceIds, evidenceSnapshot).evidence;
       },
     });
     expect(result.report.rootTxids).toEqual([txid]);
@@ -118,6 +120,35 @@ describe('Bitcoin forensic graph capture', () => {
         captured.filter((item) => item.kind === 'DERIVED_FEATURE').map((item) => item.id),
       ),
     );
+  });
+
+  it('replays the same captured observations to the same result hash', async () => {
+    const txid = '3'.repeat(64);
+    const head = anchor('101', 'b'.repeat(64));
+    const block = anchor('100', 'a'.repeat(64));
+    const adapter = {
+      async readHeadAnchor() {
+        return head;
+      },
+      async getTransactionObservation() {
+        return { value: record(txid), endpointId: 'esplora-test' };
+      },
+      async readAnchorAt() {
+        return block;
+      },
+    } as unknown as BitcoinUtxoLedgerAdapter;
+    const capture = () =>
+      captureBitcoinForensicGraph({
+        adapter,
+        request: { transactionIds: [txid] },
+        writeEvidence: async (item) => item,
+      });
+
+    const first = await capture();
+    const second = await capture();
+    expect(second.report.resultHash).toBe(first.report.resultHash);
+    expect(second.report.evidenceIds).toEqual(first.report.evidenceIds);
+    expect(second.evidence.map((item) => item.id)).toEqual(first.evidence.map((item) => item.id));
   });
 
   it('keeps unconfirmed transactions distinct from provider failure', async () => {

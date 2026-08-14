@@ -202,6 +202,7 @@ export async function captureBitcoinForensicGraph(input: {
         source: item.endpointId,
         locator: `transaction:${item.transaction.txid}@${snapshot.height}`,
         payload: item.transaction.raw,
+        observedAt: snapshot.capturedAt,
         blockOrSlot: snapshot.height,
         finality: snapshot.finality,
         summary: 'Confirmed Bitcoin transaction captured at its best-chain block Snapshot.',
@@ -220,6 +221,7 @@ export async function captureBitcoinForensicGraph(input: {
           source: item.anchor.anchor.source,
           locator: `block:${snapshot.height}:${snapshot.blockHash}`,
           payload: item.anchor.payload,
+          observedAt: snapshot.capturedAt,
           blockOrSlot: snapshot.height,
           finality: snapshot.finality,
           summary: 'Best-chain Bitcoin block anchor used to bind the forensic graph.',
@@ -251,6 +253,7 @@ export async function captureBitcoinForensicGraph(input: {
     );
     if (item === undefined) continue;
     const snapshot = bitcoinSnapshot(item.anchor.snapshot, `analysis ${analysis.txid}`);
+    const sourceEvidenceIds = transactionEvidenceIds.get(analysis.txid) ?? [];
     const derived = await input.writeEvidence(
       createEvidence({
         ledger: 'BITCOIN',
@@ -259,14 +262,16 @@ export async function captureBitcoinForensicGraph(input: {
         source: 'zerotrace:bitcoin-transaction-entity-v1.0.0',
         locator: `transaction-entity:${analysis.txid}@${snapshot.height}`,
         payload: analysis,
+        observedAt: snapshot.capturedAt,
         blockOrSlot: snapshot.height,
         finality: snapshot.finality,
         summary:
           analysis.structuralPattern === 'EQUAL_OUTPUT_COINJOIN_LIKE'
             ? 'CoinJoin-like output structure suppresses ownership clustering.'
             : 'Bitcoin transaction heuristics remain candidate Evidence and do not merge entities.',
+        sourceEvidenceIds,
       }),
-      transactionEvidenceIds.get(analysis.txid),
+      sourceEvidenceIds,
       snapshot,
     );
     evidence.push(derived);

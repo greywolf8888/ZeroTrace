@@ -32,6 +32,8 @@
     "actions:schedule": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:actions:schedule -w @zerotrace/semantic-worker --",
     "claims:actions:capture": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:claims:actions:capture -w @zerotrace/semantic-worker --",
     "claims:actions:schedule": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:claims:actions:schedule -w @zerotrace/semantic-worker --",
+    "launchpad:pump:smoke": "npm run build:packages && tsx scripts/pump-launchpad-live-smoke.ts",
+    "bitcoin:forensic:smoke": "npm run build:packages && tsx scripts/bitcoin-forensic-graph-live-smoke.ts",
     "eval:entity": "tsx evals/entity-resolution/run.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

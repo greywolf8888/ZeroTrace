@@ -27,6 +27,29 @@ becoming production decoder logic.
 | Four.meme         | [official site](https://www.four.meme/), [public repository](https://github.com/four-meme-community/four-meme-ai)                                                                                                                                         | Provenance pending                      | Version TokenManager/template/migration and read-only event/quote semantics. No agent skill, private-key, signing, or transaction path is integrated.             |
 | FomoWell          | [official site](https://btc.fomowell.com/)                                                                                                                                                                                                                | Provenance pending                      | ICP/ckBTC canister reads remain separate from EVM and Solana. Canister IDs require official-material and chain-state discovery.                                   |
 
+## Pump/PumpSwap decoder slice
+
+The current clean-room decoder is pinned to the official public-docs commit
+[`9c82f61cb711b044a17f770ab8ce9f9bdf78f333`](https://github.com/pump-fun/pump-public-docs/tree/9c82f61cb711b044a17f770ab8ce9f9bdf78f333).
+It records the raw IDL hashes and the two official Solana program identities at runtime:
+
+| Program  | Identity                                      | IDL SHA-256                                                        |
+| -------- | --------------------------------------------- | ------------------------------------------------------------------ |
+| Pump     | `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P` | `b90bc471327f671449271d5d1d42354d1fae6f5a06502f5834459a3108138e49` |
+| PumpSwap | `pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA` | `6b5c7ec4e5ef9742fa99dc57b0d75b1031b379bba02a7e1b3c5a4cad68d77e56` |
+
+`npm run launchpad:pump:smoke -- --signature <finalized-signature>` captures a real transaction
+through the public Solana RPC, writes an in-memory Evidence lineage, and replays the decoder.
+The 2026-08-14 fixture observed Pump `buy` at slot `439138804`; it decoded both u64 arguments
+with full argument/account coverage and retained two extra accounts as an explicit legacy-layout
+warning. This is a real provider fixture, not a test mock, but the run is not durable storage
+acceptance.
+
+The API and UI expose these results as `launchpadObservations` with the exact finalized Snapshot,
+Evidence IDs, source commit, IDL hash, instruction version, coverage, and warnings. The registry
+does not yet activate a named `ProtocolDeploymentVersion`: a durable protocol Evidence root and
+fixture record must be persisted before the entry can move from `PROVENANCE_PENDING`.
+
 ## Generic unknown mechanism
 
 `inferGenericLaunchMechanism` can report a bounded

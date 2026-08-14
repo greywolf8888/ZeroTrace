@@ -1248,11 +1248,31 @@ export interface EvidenceDrilldownResponse {
   }>;
 }
 
+export interface SolanaLaunchpadObservationView {
+  id: string;
+  platform: 'PUMP' | 'PUMPSWAP';
+  programId: string;
+  deploymentId: string;
+  instructionPath: string;
+  instructionName: string;
+  instructionVersion: 'LEGACY' | 'V2' | 'CURRENT';
+  category: string;
+  discriminator: string;
+  accountCoverage: number;
+  argumentCoverage: number;
+  decodedArguments: Array<{ name: string; value: string }>;
+  decodeWarnings: string[];
+  execution: 'SUCCESS' | 'FAILED' | 'UNKNOWN';
+  evidenceIds: string[];
+  resultHash: string;
+}
+
 export interface SubjectResponse {
   subject: SubjectCandidate;
   facts: Record<string, KnowledgeValue<unknown>>;
   metadata: AnalysisMetadata;
   evidence?: EvidenceRecord[];
+  launchpadObservations?: SolanaLaunchpadObservationView[];
   consistency?: string;
   terminalEvidenceId?: string;
   durableReport?: {

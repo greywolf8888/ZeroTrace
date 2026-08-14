@@ -4699,6 +4699,92 @@ export type EvmControlSurfaceReport = z.infer<typeof EvmControlSurfaceReportSche
 
 export const SolanaPublicKeySchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
 
+export const SolanaLaunchpadPlatformSchema = z.enum(['PUMP', 'PUMPSWAP']);
+export type SolanaLaunchpadPlatform = z.infer<typeof SolanaLaunchpadPlatformSchema>;
+
+export const SolanaLaunchpadInstructionCategorySchema = z.enum([
+  'CREATE',
+  'TRADE',
+  'MIGRATION',
+  'POOL_CREATE',
+  'LIQUIDITY',
+  'SWAP',
+  'ADMIN_OR_UTILITY',
+]);
+export type SolanaLaunchpadInstructionCategory = z.infer<
+  typeof SolanaLaunchpadInstructionCategorySchema
+>;
+
+export const SolanaLaunchpadExecutionSchema = z.enum(['SUCCESS', 'FAILED', 'UNKNOWN']);
+
+export const SolanaLaunchpadDecodedArgumentSchema = z.object({
+  name: z.string().min(1).max(128),
+  value: z.string().max(2048),
+});
+export type SolanaLaunchpadDecodedArgument = z.infer<typeof SolanaLaunchpadDecodedArgumentSchema>;
+
+export const SolanaLaunchpadAccountSchema = z.object({
+  index: z.number().int().nonnegative(),
+  name: z.string().min(1).max(128),
+  address: SolanaPublicKeySchema.optional(),
+});
+export type SolanaLaunchpadAccount = z.infer<typeof SolanaLaunchpadAccountSchema>;
+
+export const SolanaLaunchpadObservationSchema = z
+  .object({
+    schemaVersion: z.literal('solana-launchpad-observation-v1'),
+    id: z.string().regex(/^slo_[0-9a-f]{24}$/),
+    platform: SolanaLaunchpadPlatformSchema,
+    programId: SolanaPublicKeySchema,
+    deploymentId: z.string().min(1).max(128),
+    sourceCommit: z.string().regex(/^[0-9a-f]{40}$/),
+    abiOrIdlHash: Hash256Schema,
+    officialSourceUris: z.array(z.string().url()).min(1),
+    signature: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/),
+    slot: UnsignedQuantityStringSchema,
+    instructionPath: z.string().regex(/^outer:\d+(?:\/inner:\d+)?$/),
+    instructionName: z.string().min(1).max(128),
+    instructionVersion: z.enum(['LEGACY', 'V2', 'CURRENT']),
+    category: SolanaLaunchpadInstructionCategorySchema,
+    discriminator: z.string().regex(/^[0-9a-f]{16}$/),
+    accountIndexes: z.array(z.number().int().nonnegative()).max(256),
+    accounts: z.array(SolanaLaunchpadAccountSchema).max(256),
+    accountCoverage: CoverageRatioSchema,
+    decodedArguments: z.array(SolanaLaunchpadDecodedArgumentSchema).max(64),
+    argumentCoverage: CoverageRatioSchema,
+    decodeWarnings: z.array(z.string().min(1).max(320)).max(16),
+    execution: SolanaLaunchpadExecutionSchema,
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    snapshot: AnalysisSnapshotSchema,
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.snapshot.ledger !== 'SOLANA' ||
+      value.snapshot.chainId !== 'solana-mainnet' ||
+      value.snapshot.slot !== value.slot
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Solana launchpad observations require an exact finalized slot Snapshot.',
+      });
+    }
+    const evidenceIds = [...value.evidenceIds].sort();
+    if (
+      evidenceIds.length !== new Set(evidenceIds).size ||
+      evidenceIds.some((id, index) => id !== evidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceIds'],
+        message: 'Launchpad observation Evidence IDs must be sorted and unique.',
+      });
+    }
+  });
+export type SolanaLaunchpadObservation = z.infer<typeof SolanaLaunchpadObservationSchema>;
+
 export const SolanaTransactionAccountSourceSchema = z.enum([
   'STATIC',
   'LOOKUP_WRITABLE',
@@ -4871,6 +4957,7 @@ export const SolanaTransactionIntelligenceReportSchema = z
     signature: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{64,90}$/),
     subject: SubjectReferenceSchema,
     facts: SolanaTransactionFactsSchema,
+    launchpadObservations: z.array(SolanaLaunchpadObservationSchema).optional(),
     terminalEvidenceId: z.string().regex(/^ev_[0-9a-f]{24}$/),
     metadata: AnalysisMetadataSchema.refine(
       (metadata) =>
@@ -4891,6 +4978,7 @@ export const SolanaTransactionIntelligenceReportSchema = z
         : undefined;
     const slot = value.facts.slot.state === 'known' ? value.facts.slot.value : undefined;
     const status = value.facts.status.state === 'known' ? value.facts.status.value : undefined;
+    const launchpadObservations = value.launchpadObservations ?? [];
     if (
       solanaSnapshot === undefined ||
       value.subject.ledger !== 'SOLANA' ||
@@ -4944,6 +5032,28 @@ export const SolanaTransactionIntelligenceReportSchema = z
         path: ['metadata', 'sourceSet'],
         message: 'Solana transaction report sourceSet must be non-empty, sorted, and unique.',
       });
+    }
+    const reportEvidenceIds = new Set(value.evidence.map((item) => item.id));
+    const solanaBlockhash = (
+      solanaSnapshot as Extract<AnalysisSnapshot, { ledger: 'SOLANA' }> | undefined
+    )?.blockhash;
+    for (const observation of launchpadObservations) {
+      const observationBlockhash = (
+        observation.snapshot as Extract<AnalysisSnapshot, { ledger: 'SOLANA' }>
+      ).blockhash;
+      if (
+        observation.signature !== value.signature ||
+        observation.slot !== solanaSnapshot?.slot ||
+        observationBlockhash !== solanaBlockhash ||
+        observation.evidenceIds.some((evidenceId) => !reportEvidenceIds.has(evidenceId))
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['launchpadObservations'],
+          message:
+            'Solana launchpad observations must reference this transaction, exact Snapshot, and report Evidence.',
+        });
+      }
     }
   });
 export type SolanaTransactionIntelligenceReport = z.infer<

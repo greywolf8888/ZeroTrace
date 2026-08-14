@@ -1459,6 +1459,39 @@ tbody tr:hover {
   line-height: 1.55;
 }
 
+.solana-launchpad-panel {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.solana-launchpad-panel > p {
+  margin: 0;
+  padding: 0 14px 13px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.solana-launchpad-panel .empty-cell {
+  padding-top: 4px;
+}
+
+.solana-launchpad-table td strong,
+.solana-launchpad-table td small {
+  display: block;
+}
+
+.solana-launchpad-table td small {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.61rem;
+  line-height: 1.35;
+}
+
+.solana-launchpad-boundary {
+  padding-top: 10px !important;
+}
+
 .solana-flow-summary {
   padding: 8px 14px 12px;
 }

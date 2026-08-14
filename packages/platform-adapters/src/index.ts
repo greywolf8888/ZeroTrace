@@ -26,6 +26,7 @@ export * from './launchpad-registry.js';
 export * from './solana-control-rights.js';
 export * from './solana-asset-flow.js';
 export * from './solana-transaction-semantics.js';
+export * from './solana-launchpad.js';
 export * from './sourcify.js';
 
 export type PlatformRole = 'LAUNCH_MECHANISM' | 'EXECUTION_PLATFORM' | 'LABEL_PROVIDER';

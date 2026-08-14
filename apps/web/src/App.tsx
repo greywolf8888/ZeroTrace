@@ -624,6 +624,7 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
   if (semantics === undefined) return null;
   const instructions = [...semantics.outerInstructions, ...semantics.innerInstructions];
   const reconciliation = semantics.tokenFlowReconciliation;
+  const launchpadObservations = response.launchpadObservations ?? [];
   const resolutionComplete =
     semantics.accountResolutionComplete.state === 'known' &&
     semantics.accountResolutionComplete.value;
@@ -828,6 +829,87 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
             )}
           </tbody>
         </table>
+      </div>
+      <div className="solana-launchpad-panel" data-testid="solana-launchpad-decoder">
+        <div className="panel-header compact-header">
+          <div>
+            <span className="eyebrow">
+              Pinned official program IDs · raw discriminator evidence
+            </span>
+            <h4>Pump launchpad decoder</h4>
+          </div>
+          <StatusPill status={launchpadObservations.length > 0 ? 'OBSERVED' : 'NOT_OBSERVED'} />
+        </div>
+        {launchpadObservations.length === 0 ? (
+          <p className="empty-cell">
+            No registered Pump/PumpSwap instruction was observed. The decoder does not infer a
+            launch mechanism from an unknown program or from a web page.
+          </p>
+        ) : (
+          <div className="table-scroll solana-launchpad-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Platform</th>
+                  <th>Instruction</th>
+                  <th>Execution</th>
+                  <th>Arguments</th>
+                  <th>Coverage</th>
+                  <th>Warnings</th>
+                </tr>
+              </thead>
+              <tbody>
+                {launchpadObservations.map((observation) => (
+                  <tr key={observation.id}>
+                    <td>
+                      <strong>{observation.platform}</strong>
+                      <small title={observation.programId}>
+                        {shortId(observation.programId, 10)}
+                      </small>
+                    </td>
+                    <td>
+                      <strong>{observation.instructionName}</strong>
+                      <small>
+                        {observation.instructionPath} · {observation.instructionVersion}
+                      </small>
+                    </td>
+                    <td>
+                      <StatusPill status={observation.execution} />
+                    </td>
+                    <td>
+                      {observation.decodedArguments.length === 0 ? (
+                        <span>None decoded</span>
+                      ) : (
+                        observation.decodedArguments.map((argument) => (
+                          <small key={argument.name}>
+                            {argument.name}={argument.value}
+                          </small>
+                        ))
+                      )}
+                    </td>
+                    <td>
+                      <span>accounts {Math.round(observation.accountCoverage * 100)}%</span>
+                      <small>args {Math.round(observation.argumentCoverage * 100)}%</small>
+                    </td>
+                    <td>
+                      {observation.decodeWarnings.length === 0 ? (
+                        <span>None</span>
+                      ) : (
+                        observation.decodeWarnings.map((warning) => (
+                          <small key={warning}>{warning}</small>
+                        ))
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="solana-launchpad-boundary">
+          Decoder version and Evidence remain visible in the report; no signing, broadcast, quote,
+          swap, or ownership merge is enabled.
+        </p>
       </div>
       <div className="solana-flow-audit" data-testid="solana-asset-flow-audit">
         <div className="panel-header compact-header">

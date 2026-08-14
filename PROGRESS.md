@@ -265,8 +265,14 @@ PDA/Squads recursion, and durable clean-store replay remain open.
 Bitcoin now has a bounded forensic UTXO graph report/API/storage path. It materializes observed
 transaction/outpoint/funding/spend paths, peeling/fanout/consolidation candidates, and explicit
 CoinJoin, PayJoin, service-hub, and incomplete-context suppressions. It never merges ownership.
-Graph and repository/API unit checks passed `6/6`; a real Esplora graph capture and Core/archive
-reconciliation have not yet been measured.
+Graph and repository/API unit checks passed `6/6`. The read-only live smoke
+`npm run bitcoin:forensic:smoke` captured transaction
+`5a05b95e120e23efba087251dc612b053129d808f7f3f82e50b696f0cb139d10` from Blockstream Esplora at
+best-chain height `962362`, with report `bfg_0b91cbdc32b7844e82bb36ca`, 9 nodes, 10 edges, and
+3 Evidence nodes. The provider was `UP` with zero transport failures. A frozen re-capture of the
+same transaction and Snapshot replayed to `sameHash=true` after binding Evidence timestamps and
+derivation sources to the captured Snapshot. This proves the public single-source read-only path;
+Bitcoin Core/archive policy reconciliation and calibrated graph acceptance remain open.
 
 ## 2026-08-14 Launchpad registry and fresh FFT replay
 
@@ -282,17 +288,46 @@ A fresh provider-backed BSC replay was executed on 2026-08-14 with FFT
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over blocks `113485950–113495949` using SQD and the
 public BNB Chain RPC. Token History was `COMPLETE` with 12 finalized observations, 5 exact
 RPC/Action-Semantics bindings, `data/source/history = 1/1/1`, 10,029 Raw Facts and 10,041
-Evidence. Deterministic report `thd_5ef5001212f0b4c8409bfc7c` produced replay hash
-`8260ce701acbcc2721576465a057353eb7d2d709b419bb87a389061dcf31139a`; provider-free replay was
-identical. Funding/Settlement was `fsr_0cf85ec7932a01bf45cc0dbf`, result hash
-`74ff10a720e4f21a163386d8c32e5d9f1ee22699d051fc99cd2da1ae0638feaf`, `PARTIAL`,
+Evidence. The latest run kept report `thd_5ef5001212f0b4c8409bfc7c`, produced result hash
+`36d389e3fc2b4635ac8303d26f9253097133b6cf7b527edf3f8a1e6ef1a07768`, and replayed with
+`replaySameHash=true`. Funding/Settlement was `fsr_9b243d13f115c1029d9d22df`, result hash
+`1334c8a2bf98ce3fccb18de714fc34afa920ab8e8e747cd6eb1c078debcc4ca9`, `PARTIAL`,
 `TRANSACTION_LOCAL`, coverage `1/1/0`, with two funding edges and one sell-proceeds edge. The
-Campaign was `cc_aa605276f6caa24284daa66c`, replay hash
-`140fadbb18f3263e480b107fbdd013fa74b5305911dc27d94fb6208024741cda`, and remained
-`UNCALIBRATED`; the Case Bundle `fcb_cc_aa605276f6caa24284daa66c` passed offline verification.
+Campaign was `cc_0b2552cf11f79ee8bd44af8e`, replay hash
+`fef2929417a58474f0b73effb9f6dd121a687cec67a05995fbb96f7428649294`, and remained
+`UNCALIBRATED`; Case Bundle `fcb_cc_0b2552cf11f79ee8bd44af8e` had manifest hash
+`33badc8e69a38de48a5ab8a7562c16cef5fbe402d4cfadbd77905e7637d4a59a`, result hash
+`20c8387b87d3ce667447e922edbc675e64b1c845a5523e08805916198c52eeb0`, and offline verification
+`true`.
 Historical `eth_getCode` returned `missing trie node` for code probes, so transaction-sender
 fallback remained explicit and current state was not substituted. This was an in-memory,
 provider-backed semantic smoke, not durable PostgreSQL/ClickHouse/MinIO production acceptance.
+
+## 2026-08-14 Pump/PumpSwap clean-room decoder and real Solana fixture
+
+The first named Solana launchpad slice is now implemented as a read-only, version-aware
+clean-room decoder in `packages/platform-adapters/src/solana-launchpad.ts`. It pins the official
+Pump source commit `9c82f61cb711b044a17f770ab8ce9f9bdf78f333`, the Pump IDL SHA-256
+`b90bc471327f671449271d5d1d42354d1fae6f5a06502f5834459a3108138e49`, the PumpSwap IDL SHA-256
+`6b5c7ec4e5ef9742fa99dc57b0d75b1031b379bba02a7e1b3c5a4cad68d77e56`, and the official program
+identities `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P` and
+`pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA`. The decoder only matches those program IDs and
+known discriminators; unknown programs, unknown bytes, and incomplete account/argument layouts
+remain unclassified or carry explicit warnings. It decodes create/trade/migrate and PumpSwap
+pool/swap/liquidity instruction families without importing an SDK or adding any write method.
+
+The live smoke `npm run launchpad:pump:smoke -- --signature
+3QTGbxYPzDg4WDS57MCivWpEJMsyRZmkMR6EsfTm9PjRFt3KpMrXuDfsarc2Z38uSPJH73DHRCDnxXrU9nNjrEec`
+used the public finalized Solana RPC and captured slot `439138804`. It observed a successful
+Pump `buy` at `outer:1/inner:3`, decoded `amount=155125755469` and `max_sol_cost=9093555`, with
+`accountCoverage=1`, `argumentCoverage=1`, `replaySameHash=true`, and executable program-account
+identity observed at context slot `439139927`. Two trailing accounts outside the pinned legacy
+layout remain an explicit warning. The in-memory run produced 20 Evidence nodes; the decoder
+observation result hash was `dbf8d71bd8039769764a77bda9d22d7615c2cd2af19754c72ac85233c519eed6`.
+Solana transaction API reports now carry optional `launchpadObservations`, and the UI displays
+platform, instruction version, coverage, decoded arguments, warnings, and the no-match boundary.
+The registry still keeps named `versions` empty: durable protocol Evidence, a durable fixture
+record, and production version activation remain open gates.
 
 ## Terminal-scope status matrix
 

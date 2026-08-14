@@ -1252,6 +1252,31 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
             },
           },
         },
+        launchpadObservations: [
+          {
+            id: 'slo_' + '1'.repeat(24),
+            platform: 'PUMP',
+            programId: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
+            deploymentId: 'pump-solana-mainnet-9c82f61cb711',
+            instructionPath: 'outer:0/inner:0',
+            instructionName: 'buy_v2',
+            instructionVersion: 'V2',
+            category: 'TRADE',
+            discriminator: 'b817ee6167c5d33d',
+            accountCoverage: 1,
+            argumentCoverage: 1,
+            decodedArguments: [
+              { name: 'amount', value: '123' },
+              { name: 'max_sol_cost', value: '456' },
+            ],
+            decodeWarnings: [
+              'Instruction carries 2 trailing account(s) outside the pinned layout.',
+            ],
+            execution: 'SUCCESS',
+            evidenceIds: ['ev_' + '2'.repeat(24)],
+            resultHash: '3'.repeat(64),
+          },
+        ],
         metadata: {
           snapshot: {
             ledger: 'SOLANA',
@@ -1317,6 +1342,16 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
   await expect(semantics.getByText('Lookup Writable', { exact: true })).toBeVisible();
   await expect(semantics.getByText('outer:0/inner:0', { exact: true })).toBeVisible();
   await expect(semantics.getByText('-30', { exact: true })).toBeVisible();
+  const launchpadDecoder = page.getByTestId('solana-launchpad-decoder');
+  await expect(launchpadDecoder).toBeVisible();
+  await expect(launchpadDecoder.getByText('Observed', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('PUMP', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('buy_v2', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('amount=123', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('accounts 100%', { exact: true })).toBeVisible();
+  await expect(
+    launchpadDecoder.getByText(/2 trailing account\(s\) outside the pinned layout/),
+  ).toBeVisible();
   const reportProvenance = page.getByTestId('solana-report-provenance');
   await expect(reportProvenance.getByText('str_111111111111111111111111')).toBeVisible();
   await expect(reportProvenance.getByText('Replayed', { exact: true })).toBeVisible();
