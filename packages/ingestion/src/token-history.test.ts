@@ -158,6 +158,10 @@ class FakeReportStore {
 
 function stores() {
   const ledger = new EvidenceLedger();
+  const evidenceWrites: Array<{
+    evidence: Parameters<typeof ledger.add>[0];
+    sources: readonly string[];
+  }> = [];
   const facts: RawChainFact[] = [];
   const artifacts: RawArtifactWriter = {
     async put(input) {
@@ -179,6 +183,7 @@ function stores() {
       sources: readonly string[] = [],
       snapshot?: Parameters<typeof ledger.add>[2],
     ) {
+      evidenceWrites.push({ evidence: item, sources });
       return ledger.add(item, sources, snapshot);
     },
   };
@@ -188,7 +193,7 @@ function stores() {
       return fact;
     },
   };
-  return { artifacts, evidence, factWriter, facts };
+  return { artifacts, evidence, evidenceWrites, factWriter, facts };
 }
 
 describe('TokenHistoryDiscovery', () => {
@@ -341,6 +346,13 @@ describe('TokenHistoryDiscovery', () => {
     });
     expect(result.report.actionSemanticsBindings[0]).toMatchObject({ status: 'BOUND' });
     expect(actionReports).toHaveLength(1);
+    const actionReport = actionReports[0] as { terminalEvidenceId: string };
+    expect(
+      storage.evidenceWrites.some(
+        (write) =>
+          write.evidence.id === actionReport.terminalEvidenceId && write.sources.length > 0,
+      ),
+    ).toBe(true);
     expect(result.report.sourceSet).toContain('bsc-rpc@test');
   });
 

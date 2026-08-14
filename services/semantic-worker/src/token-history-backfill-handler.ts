@@ -145,6 +145,15 @@ function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
+function latestEvidenceObservedAt(ledger: EvidenceLedger, fallback: string): string {
+  const timestamps = ledger
+    .values()
+    .map((node) => Date.parse(node.evidence.observedAt))
+    .filter((value) => Number.isFinite(value));
+  const latest = Math.max(Date.parse(fallback), ...timestamps);
+  return new Date(latest).toISOString();
+}
+
 async function loadFacts(
   resources: TokenHistoryBackfillHandlerResources,
   chainId: string,
@@ -218,6 +227,7 @@ function terminalEvidence(
   report: Awaited<ReturnType<TokenHistoryDiscovery['run']>>['report'],
   campaignId: string,
   campaignResultHash: string,
+  sourceEvidenceIds: readonly string[],
 ): Evidence {
   const snapshot = report.snapshot;
   if (snapshot.ledger !== 'EVM') {
@@ -247,7 +257,7 @@ function terminalEvidence(
     finality: snapshot.finality,
     observedAt: snapshot.capturedAt,
     summary: 'Token History backfill and provider-backed Control Campaign completed.',
-    sourceEvidenceIds: report.rangeEvidenceIds,
+    sourceEvidenceIds,
   });
 }
 
@@ -388,18 +398,34 @@ export function createTokenHistoryBackfillHandler(
       for (const alert of buildForensicCampaignAlerts(campaign.bundle)) {
         await resources.alerts.put(alert);
       }
-      const terminal = terminalEvidence(report, campaign.id, campaign.resultHash);
-      ledger.add(terminal, report.rangeEvidenceIds, report.snapshot);
-      await resources.evidence.put(terminal, report.rangeEvidenceIds, report.snapshot);
+      const captureSourceEvidenceIds = ledger
+        .values()
+        .map((node) => node.evidence.id)
+        .sort();
+      const terminal = terminalEvidence(
+        report,
+        campaign.id,
+        campaign.resultHash,
+        captureSourceEvidenceIds,
+      );
+      ledger.add(terminal, captureSourceEvidenceIds, report.snapshot);
+      await resources.evidence.put(terminal, captureSourceEvidenceIds, report.snapshot);
       const evidenceIds = ledger
         .values()
         .map((node) => node.evidence.id)
         .sort();
       const sourceSet = sortedUnique([
-        ...report.sourceSet,
-        ...campaign.sourceSet,
-        ...(fundingReport?.sourceSet ?? []),
+        ...ledger
+          .values()
+          .filter(
+            (node) =>
+              !['DERIVED_FEATURE', 'NEGATIVE_EVIDENCE', 'ANALYST_OBSERVATION'].includes(
+                node.evidence.kind,
+              ),
+          )
+          .map((node) => node.evidence.source),
       ]);
+      const freshness = latestEvidenceObservedAt(ledger, report.snapshot.capturedAt);
       const coverage = Math.min(
         report.dataCoverage,
         report.sourceCoverage,
@@ -416,7 +442,7 @@ export function createTokenHistoryBackfillHandler(
         sourceSet,
         modelVersion: 'token-history-backfill-capture-v1.0.0',
         coverage,
-        freshness: report.snapshot.capturedAt,
+        freshness,
         // This is capture completeness, not a calibrated probability for the inferred campaign.
         confidence: coverage,
       });

@@ -6,26 +6,29 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
 
 ## Latest local acceptance hardening — 2026-08-14
 
-- [x] Solana dealer, Bitcoin forensic graph, launchpad semantics, Control Campaign, Solana dealer
-      report, Funding/Settlement, Token History, forensic alert, and Apache AGE repository boundary
-      tests cover immutable replay, malformed payloads, unavailable providers/stores, identity
-      conflicts, coverage boundaries, reorg races, and exact projection counts
 - [x] `npm run format:check`, ESLint, `npm run typecheck`, production build, production license
-      allowlist, `npm audit --audit-level=high` with 0 vulnerabilities, and CycloneDX SBOM passed
-- [x] `npm run test:unit`: 700/700 tests across 130 files; `npm run test:evals`: 1/1
-- [x] `npm run test:integration`: 125/125 against isolated PostgreSQL, ClickHouse, MinIO, and
-      Apache AGE acceptance services after migrations through PostgreSQL `036`
-- [x] `npm run test:coverage`: 825/825 tests; Statements 81.87%, Branches 75.00%, Functions
-      91.71%, Lines 83.40%; configured global thresholds passed
+      allowlist, `npm audit --audit-level=high` with 0 vulnerabilities, CycloneDX SBOM, and
+      `git diff --check` passed
+- [x] `npm run test:unit`: 703/703 tests across 130 files; `npm run test:integration`: 125/125;
+      `npm run test:evals`: 1/1
+- [x] `npm run test:coverage`: 828/828 tests; Statements 81.85%, Branches 75.03%, Functions
+      91.62%, Lines 83.39%; configured global thresholds passed
 - [x] Playwright Chromium desktop/mobile E2E 38/38 and Windows-wrapper E2E 38/38
-- [ ] A real durable FFT Token History worker run was not promoted: the isolated run reached the
-      ClickHouse ingestion/query path but ended `FAILED_TERMINAL` after `MEMORY_LIMIT_EXCEEDED` /
-      OvercommitTracker retries. Durable completion, restart replay, and production migration
-      acceptance remain open.
+- [x] Fresh PostgreSQL/ClickHouse/MinIO durable Token History run for BSC FFT
+      `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, blocks `113485950–113495949`, completed as
+      `SUCCEEDED`; it stored 10,029 Raw Facts, 10,047 Evidence nodes, Action Semantics 5, Token
+      History 1, Funding/Settlement 1, Control Campaign 1, and 4 alerts
+- [x] Durable result retained terminal Evidence `ev_313145f71268bbc8df65cfc5`, `49/49` Evidence
+      closure, canonical `eip155:56` facts, two-provider source set, and a provider-free replay
+      invocation claimed 0 additional runs
+- [ ] Archive-scale history, interrupted-run replay, independent-provider reconciliation,
+      long-running monitor/reorg/outage delivery, calibration, remote CI/CodeQL, operational
+      controls, and production migration approval remain open
 
-This checkpoint is `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION`, not production acceptance. The
-in-memory real-provider FFT smoke and provider-free same-hash replay remain valid bounded evidence;
-the failed durable run is recorded as a failure and is not converted into a successful report.
+This checkpoint is a successful bounded durable validation, not terminal-product or production
+acceptance. Capture-level `coverage=0` and `confidence=0` are retained as measured scope values for
+the partial historical funding/settlement boundary; they are not numeric-zero substitutions for
+unknown data and do not qualify the Campaign as calibrated.
 
 ## Token History Discovery Phase 1 — 2026-08-14
 
@@ -40,7 +43,8 @@ the failed durable run is recorded as a failure and is not converted into a succ
 - [x] Bounded public BSC FFT smoke through the actual Token History Discovery composition passed:
       12 finalized observations, 5 exact-RPC/Action-Semantics bindings, `1/1/1` coverage,
       terminal requested-range checkpoint, and provider-free same-hash replay in memory-only stores
-- [ ] Fresh PostgreSQL/ClickHouse/MinIO token-history worker run with durable report replay
+- [x] Fresh PostgreSQL/ClickHouse/MinIO token-history worker run with durable report replay for
+      the bounded BSC FFT range; the second scheduler invocation claimed 0 runs
 - [ ] Ethereum exact-RPC historical binding and archive-scale range acceptance
 - [ ] Independent provider reconciliation, full backfill, live monitoring, alerts, export,
       calibration, remote CI/CodeQL, and production migration approval
@@ -91,8 +95,8 @@ not an assertion that no historical funding or settlement exists.
       covers this boundary
 - [x] Campaign UI now shows source/history coverage and conserved position snapshots with explicit
       Unknown treatment for incomplete coverage
-- [ ] Fresh PostgreSQL/ClickHouse/MinIO worker capture and provider-free durable replay of the
-      FFT Campaign and Funding/Settlement reports
+- [x] Fresh PostgreSQL/ClickHouse/MinIO worker capture and provider-free durable replay of the
+      bounded FFT Campaign and Funding/Settlement reports
 - [ ] Range-complete historical funding/settlement, independent provider reconciliation, service
       registry qualification, calibration, live monitoring, alert delivery, export, and production
       approval
@@ -130,9 +134,11 @@ acceptance.
       Funding/Settlement, Control Campaign, derived Evidence, and terminal capture metadata
 - [x] Worker/config/handler, scheduler identity, storage query, and API tests passed in the focused
       serial run; no private key, signing, broadcast, fixture, or mock entered the production path
-- [ ] Clean PostgreSQL/ClickHouse/MinIO execution, interrupted-run replay, archive-scale range,
-      independent source reconciliation, and production migration approval remain open; the
-      isolated durable attempt failed closed at the ClickHouse memory limit
+- [x] Clean PostgreSQL/ClickHouse/MinIO execution and provider-free replay completed for the
+      bounded range; the first memory-limited attempt is retained as a historical failure and was
+      followed by a successful batched run
+- [ ] Interrupted-run replay, archive-scale range, independent source reconciliation, and
+      production migration approval remain open
 
 The worker's capture `confidence` is the bounded technical completeness of the capture result. The
 provider-backed Campaign remains `UNCALIBRATED`; no Campaign probability is inferred from this
@@ -158,17 +164,17 @@ field.
       `113485950–113495949` remained `COMPLETE` with 12 observations, 10,029 Raw Facts, 10,041
       Evidence, same-hash replay, four derived alerts including one `CRITICAL` alert, and an
       offline-verified Case Bundle `fcb_cc_0d408b71b4990acd0ddb97cd`
-- [ ] Clean PostgreSQL/ClickHouse/MinIO execution, interrupted-run replay, long-running real
-      monitor progression, forced reorg/outage delivery, restart-persistent alerts, calibration,
-      and production migration approval remain open; the isolated durable capture attempt failed
-      closed at the ClickHouse memory limit
+- [x] Clean PostgreSQL/ClickHouse/MinIO bounded capture and provider-free replay completed for the
+      named FFT range; durable alert rows and terminal Evidence were persisted
+- [ ] Interrupted-run replay, long-running real monitor progression, forced reorg/outage delivery,
+      restart-persistent alerts, calibration, and production migration approval remain open
 
 ## Current local gate (2026-08-14)
 
 - [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
       production license allowlist, `npm audit --audit-level=high` (0 vulnerabilities), and SBOM
       generation
-- [x] `npm run test:unit`: 700/700 tests across 130 files
+- [x] `npm run test:unit`: 703/703 tests across 130 files
 - [x] `npm run test:integration`: 125/125 against isolated PostgreSQL/ClickHouse/MinIO/AGE
       acceptance services with no optional-store skips
 - [x] `npm run test:evals`: 1/1 structural Entity evaluation
@@ -181,12 +187,14 @@ field.
 - [x] Phase 4 monitor/alert focused tests passed `101/101`; real FFT smoke derived four
       Evidence-bound alerts and the finite SSE/API replay contract passed integration coverage
 - [x] `docker compose config --quiet`
-- [x] `npm run test:coverage`: 825/825 tests completed with configured thresholds passing
-      (Statements 81.87%, Branches 75.00%, Functions 91.71%, Lines 83.40%)
+- [x] `npm run test:coverage`: 828/828 tests completed with configured thresholds passing
+      (Statements 81.85%, Branches 75.03%, Functions 91.62%, Lines 83.39%)
 - [x] Isolated acceptance PostgreSQL/ClickHouse/MinIO/AGE bootstrap and migrations through
       PostgreSQL `036`, ClickHouse raw/control-flow DDL, and AGE graph projection initialization
-- [ ] Real durable FFT worker completion and restart replay: the run failed closed at the
-      acceptance ClickHouse memory limit and remains `FAILED_TERMINAL`, not production evidence
+- [x] Real durable FFT worker completion for the bounded range: run
+      `cpr_1ceade71d6c5cfd3b9943e98` is `SUCCEEDED`, with terminal Evidence and `49/49` closure;
+      a second worker invocation claimed 0 runs
+- [ ] Archive-scale/interrupted-run replay and production migration approval remain open
 - [ ] Remote protected-branch CI/CodeQL for the current uncommitted Phase 4 changes; earlier PR #20
       runs are historical evidence for their recorded heads only
 

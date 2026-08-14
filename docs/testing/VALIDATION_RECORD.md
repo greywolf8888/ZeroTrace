@@ -3,27 +3,34 @@
 This record captures the latest local acceptance run. It is evidence for the runnable foundation,
 not a terminal-product or production-deployment approval.
 
-## Local acceptance hardening and durable worker attempt — 2026-08-14
+## Local acceptance hardening and durable worker continuation — 2026-08-14
 
 - The final local gate passed formatting, ESLint, TypeScript typecheck, package/API/web/worker
   builds, production license allowlist, `npm audit --audit-level=high` with zero vulnerabilities,
   SBOM generation, and `git diff --check`.
-- `npm run test:unit` passed `700/700` tests across `130` files; `npm run test:integration` passed
-  `125/125` against isolated PostgreSQL, ClickHouse, MinIO, and Apache AGE acceptance services
-  after migrations through PostgreSQL `036`; `npm run test:evals` passed `1/1`.
-- `npm run test:coverage` passed `825/825` tests with Statements `81.87%`, Branches `75.00%`,
-  Functions `91.71%`, and Lines `83.40%`, meeting the configured global thresholds.
+- `npm run test:unit` passed `703/703` tests across `130` files; `npm run test:integration` passed
+  `125/125` against fresh isolated PostgreSQL, ClickHouse, MinIO, and Apache AGE-compatible test
+  services; `npm run test:evals` passed `1/1`.
+- `npm run test:coverage` passed `828/828` tests with Statements `81.85%`, Branches `75.03%`,
+  Functions `91.62%`, and Lines `83.39%`, meeting configured global thresholds.
 - Rebuilt Playwright Chromium desktop/mobile E2E passed `38/38`; the Windows wrapper repeated
-  `38/38`. The generated build artifacts stayed under their configured output directories.
-- A fresh isolated acceptance Compose project initialized PostgreSQL/ClickHouse/MinIO/AGE and the
-  full integration suite replayed successfully. A real public-provider FFT durable Token History
-  schedule/run then reached ClickHouse ingestion/query but failed closed after retry at
-  `MEMORY_LIMIT_EXCEEDED` / OvercommitTracker. The run is `FAILED_TERMINAL`; no durable report was
-  promoted or relabeled as success. The in-memory real-provider smoke and provider-free same-hash
-  replay remain bounded evidence only.
-- The failed durable run is an infrastructure-capacity gate, not evidence of a semantic zero or a
-  successful production capture. Durable completion, restart replay, archive-scale history,
-  multi-provider reconciliation, calibration, alerts/export, and production approval remain open.
+  `38/38`. The read-only health check returned `live=UP`, `ready=DEGRADED`, `readOnly=true` with
+  four provider declarations; degraded readiness was expected because the temporary host API had
+  no durable store credentials.
+- A fresh PostgreSQL/ClickHouse/MinIO run for BSC FFT
+  `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, blocks `113485950–113495949`, completed as
+  `SUCCEEDED` in capture run `cpr_1ceade71d6c5cfd3b9943e98`. It persisted 10,029 Raw Facts,
+  10,047 Evidence nodes, Action Semantics `5`, Token History `1`, Funding/Settlement `1`, Control
+  Campaign `1`, and `4` alerts. Terminal Evidence `ev_313145f71268bbc8df65cfc5` had a `49/49`
+  result Evidence closure, all raw facts/Evidence used canonical `eip155:56`, and the second worker
+  invocation claimed `0` runs.
+- The first memory-limited durable attempt remains recorded as a failed historical attempt. The
+  successful continuation followed cross-block ClickHouse batching, terminal-Evidence persistence,
+  exact Snapshot identity, freshness/source-set, and EVM chain-identity fixes. The bounded durable
+  result is not production approval: capture `coverage=0`/`confidence=0` remain measured values for
+  partial historical funding/settlement scope, while archive-scale history, interrupted-run replay,
+  independent reconciliation, calibration, long-running monitoring, alerts/export operations, and
+  production migration approval remain open.
 
 ## Token History Discovery Phase 1 validation — 2026-08-14
 

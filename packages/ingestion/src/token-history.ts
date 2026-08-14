@@ -206,6 +206,18 @@ interface EnrichmentResult {
   sourceId?: string;
 }
 
+async function persistFacts(
+  writer: TokenHistoryDiscoveryOptions['facts'],
+  facts: readonly RawChainFact[],
+): Promise<void> {
+  if (facts.length === 0) return;
+  if (writer.putMany !== undefined) {
+    await writer.putMany(facts);
+    return;
+  }
+  for (const fact of facts) await writer.put(fact);
+}
+
 function canonicalAddress(value: string, field: string): string {
   if (!EVM_ADDRESS.test(value)) {
     throw new TokenHistoryDiscoveryError('TOKEN_HISTORY_INVALID_INPUT', `${field} is invalid.`);
@@ -329,6 +341,14 @@ function exactSnapshot(snapshot: AnalysisSnapshot, sourceId: string): AnalysisSn
       ...snapshot.adapterVersions,
       [TOKEN_HISTORY_EXACT_RPC_ADAPTER_VERSION]: '1.0.0',
     },
+    // SQD and exact-RPC observations at the same block are two immutable Snapshot views. They
+    // must not share the SQD query identity after exact-provider metadata is added, otherwise
+    // PostgreSQL correctly rejects the second payload as a Snapshot conflict.
+    configHash: hashPayload({
+      schema: 'token-history-exact-snapshot-config-v1',
+      baseConfigHash: snapshot.configHash,
+      exactSource: sourceId,
+    }),
   });
 }
 
@@ -577,8 +597,6 @@ async function enrichTransaction(input: {
     rawArtifactRef: artifact.ref,
     observedAt: input.snapshot.capturedAt,
   });
-  await input.options.facts.put(transactionFact);
-
   const rpcLogFacts: RawChainFact[] = [];
   const rpcLogEvidence: Evidence[] = [];
   for (const fact of input.group.facts) {
@@ -619,7 +637,7 @@ async function enrichTransaction(input: {
       }),
     );
   }
-  for (const fact of rpcLogFacts) await input.options.facts.put(fact);
+  await persistFacts(input.options.facts, [transactionFact, ...rpcLogFacts]);
 
   const report = buildActionSemanticsFromRawFacts({
     snapshot: exactSnapshot(input.snapshot, sourceId),
@@ -629,6 +647,22 @@ async function enrichTransaction(input: {
     sourceCoverage: 1,
     historyCoverage: 1,
   });
+  const terminalEvidence = report.evidence.find((item) => item.id === report.terminalEvidenceId);
+  if (terminalEvidence === undefined) {
+    throw new TokenHistoryDiscoveryError(
+      'TOKEN_HISTORY_REPLAY_UNAVAILABLE',
+      'Action Semantics report is missing its terminal Evidence.',
+    );
+  }
+  const terminalSourceEvidenceIds = [
+    ...new Set(report.actions.flatMap((action) => action.evidenceIds)),
+  ].sort();
+  const terminalNode = await input.options.evidence.put(
+    terminalEvidence,
+    terminalSourceEvidenceIds,
+    report.snapshot,
+  );
+  input.evidenceById.set(terminalNode.evidence.id, terminalNode.evidence);
   if (input.options.actionSemantics !== undefined) {
     await input.options.actionSemantics.put(report);
   }
@@ -855,7 +889,7 @@ async function buildTokenHistoryReport(input: {
     for (;;) {
       const page = await options.factReader.listRange({
         ledger: 'EVM',
-        chainId: options.source.chainId,
+        chainId: `eip155:${options.source.chainId.replace(/^eip155:/, '')}`,
         fromBlock: options.fromBlock,
         toBlock: options.toBlock,
         limit: pageSize,

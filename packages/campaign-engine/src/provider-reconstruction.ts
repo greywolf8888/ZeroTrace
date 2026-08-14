@@ -512,6 +512,12 @@ export function buildProviderBackedControlCampaign(
       'Provider-backed campaign reconstruction requires at least one exact token observation.',
     );
   }
+  if (!tokenFlowEdges.some((edge) => edge.execution === 'SUCCESS')) {
+    throw new ProviderCampaignReconstructionError(
+      'NO_CANDIDATE_WALLETS',
+      'Provider-backed campaign reconstruction has no successfully executed token observation; unresolved application state remains Unknown.',
+    );
+  }
   const suppressedWallets = suppressionWallets(input);
   const minimumCandidateTransactions = input.minimumCandidateTransactions ?? 1;
   if (

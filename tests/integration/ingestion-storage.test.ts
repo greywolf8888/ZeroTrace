@@ -282,7 +282,7 @@ storageDescribe('historical ingestion storage integration', () => {
     });
     const storedFacts = await facts.listRange({
       ledger: 'EVM',
-      chainId: '1',
+      chainId: 'eip155:1',
       fromBlock: pipelineBlockNumber,
       toBlock: pipelineBlockNumber,
     });
@@ -330,7 +330,7 @@ storageDescribe('historical ingestion storage integration', () => {
       captureKind: 'TRANSACTION',
       target: {
         ledger: 'EVM',
-        chainId: '1',
+        chainId: 'eip155:1',
         subjectType: 'TRANSACTION',
         normalizedIdentifier: pipelineTransactionId,
       },

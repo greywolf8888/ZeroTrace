@@ -319,4 +319,41 @@ describe('provider-backed campaign reconstruction', () => {
       ),
     ).toBe(true);
   });
+
+  it('keeps unresolved application state distinct from successful candidate input', () => {
+    const input = makeInput();
+    const reportCore = {
+      ...input.history,
+      observations: input.history.observations.map((observation) => ({
+        ...observation,
+        application: 'UNKNOWN' as const,
+        actionSemanticsIds: [],
+      })),
+      actionSemanticsBindings: input.history.actionSemanticsBindings.map((binding) => ({
+        ...binding,
+        status: 'UNKNOWN' as const,
+      })),
+    };
+    const withoutHash = Object.fromEntries(
+      Object.entries(reportCore).filter(([key]) => key !== 'resultHash'),
+    );
+    const history = TokenHistoryDiscoveryReportSchema.parse({
+      ...withoutHash,
+      resultHash: hashPayload({
+        schema: 'token-history-discovery-result-v1',
+        reportCore: withoutHash,
+      }),
+    });
+
+    expect(() =>
+      buildProviderBackedControlCampaign({
+        history,
+        evidenceLedger: input.evidenceLedger,
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: 'NO_CANDIDATE_WALLETS',
+      }),
+    );
+  });
 });

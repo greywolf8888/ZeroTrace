@@ -259,13 +259,51 @@ describe('SqdFinalizedIngestionPipeline', () => {
       run: { status: 'REQUESTED_RANGE_COMPLETE', nextBlock: 2 },
     });
     expect(stores.facts).toHaveLength(2);
+    expect(stores.facts.every((fact) => fact.chainId === 'eip155:1')).toBe(true);
     expect(stores.ledger.values()).toHaveLength(2);
+    expect(stores.ledger.values().every((node) => node.evidence.chainId === 'eip155:1')).toBe(true);
     expect(stores.ledger.values()[0]?.snapshot).toMatchObject({
       ledger: 'EVM',
       blockNumber: '0',
       finality: 'finalized',
       blockTimestamp: '1970-01-01T00:00:00.000Z',
     });
+  });
+
+  it('flushes an optional Raw Fact batch before advancing the block checkpoint', async () => {
+    const events: string[] = [];
+    const checkpoints = new FakeCheckpoints(events);
+    const stores = createStores(events);
+    const batchedFacts: RawFactWriter = {
+      put: async () => {
+        throw new Error('The pipeline should use putMany when it is available.');
+      },
+      putMany: async (facts) => {
+        events.push(`facts-batch:${facts.length}`);
+        stores.facts.push(...facts);
+        return facts;
+      },
+    };
+    const pipeline = new SqdFinalizedIngestionPipeline({
+      source: new FakeSource('ethereum-mainnet', 'EVM', '1', evmBlocks),
+      checkpoints,
+      artifacts: stores.artifacts,
+      evidence: stores.evidence,
+      facts: batchedFacts,
+    });
+
+    await pipeline.run({ fromBlock: 0, toBlock: 1 });
+
+    expect(events).toEqual([
+      'artifact:0',
+      'evidence:0',
+      'artifact:1',
+      'evidence:1',
+      'facts-batch:2',
+      'checkpoint:0',
+      'checkpoint:1',
+      'finish:REQUESTED_RANGE_COMPLETE',
+    ]);
   });
 
   it('runs the pre-finish callback before terminal checkpoint advancement', async () => {

@@ -117,18 +117,43 @@ describe('ClickHouseRawFactRepository', () => {
     expect(differentEvidence.id).not.toBe(first.id);
   });
 
-  it('writes, verifies, retrieves, and replays canonical Raw Facts', async () => {
+  it('writes, retrieves, and replays canonical Raw Facts without FINAL read-after-write queries', async () => {
     const fixture = createFakeClient();
     const fact = createRawChainFact(input);
 
     await expect(fixture.repository.put(fact)).resolves.toEqual(fact);
     await expect(fixture.repository.put(fact)).resolves.toEqual(fact);
+    expect(fixture.client.query).not.toHaveBeenCalled();
     await expect(fixture.repository.get(fact.id)).resolves.toEqual(fact);
     await expect(
       fixture.repository.listRange({ ledger: 'EVM', chainId: '1', fromBlock: 42, toBlock: 42 }),
     ).resolves.toEqual([fact]);
+    const rangeQuery = fixture.client.query.mock.calls.at(-1)?.[0]?.query;
+    expect(rangeQuery).toContain('LIMIT 1 BY fact_id');
+    expect(rangeQuery).not.toContain('FINAL');
     expect(fixture.client.insert).toHaveBeenCalledTimes(2);
     expect(fixture.rows.size).toBe(1);
+  });
+
+  it('inserts validated facts in bounded batches and rejects the whole batch before network access', async () => {
+    const fixture = createFakeClient();
+    const first = createRawChainFact(input);
+    const second = createRawChainFact({
+      ...input,
+      blockOrSlot: '43',
+      blockHash: `0x${'d'.repeat(64)}`,
+      subject: `0x${'d'.repeat(64)}`,
+      payload: { header: { hash: `0x${'d'.repeat(64)}`, number: 43 } },
+    });
+
+    await expect(fixture.repository.putMany([first, second])).resolves.toEqual([first, second]);
+    expect(fixture.client.insert).toHaveBeenCalledOnce();
+    expect(fixture.client.insert.mock.calls[0]?.[0]?.values).toHaveLength(2);
+
+    await expect(
+      fixture.repository.putMany([first, { ...second, payload: { header: { number: 44 } } }]),
+    ).rejects.toMatchObject({ code: 'RAW_FACT_INVALID' });
+    expect(fixture.client.insert).toHaveBeenCalledOnce();
   });
 
   it('rejects mutated identity before network access', async () => {

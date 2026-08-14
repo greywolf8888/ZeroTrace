@@ -37,6 +37,11 @@ function position(snapshot: AnalysisSnapshot): string {
       : snapshot.slot;
 }
 
+function canonicalChainId(ledger: CaptureRun['target']['ledger'], chainId: string): string {
+  if (ledger !== 'EVM') return chainId;
+  return chainId.startsWith('eip155:') ? chainId : `eip155:${chainId}`;
+}
+
 function object(value: unknown): Readonly<Record<string, unknown>> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Readonly<Record<string, unknown>>)
@@ -150,7 +155,11 @@ export function createActionSemanticsTransactionCaptureHandler(
         );
       }
       const dataset = SQD_DATASETS[parameters.dataset];
-      if (dataset.ledger !== run.target.ledger || dataset.chainId !== run.target.chainId) {
+      if (
+        dataset.ledger !== run.target.ledger ||
+        canonicalChainId(dataset.ledger, dataset.chainId) !==
+          canonicalChainId(run.target.ledger, run.target.chainId)
+      ) {
         throw new CaptureExecutionError(
           'ACTION_CAPTURE_DATASET_MISMATCH',
           'Action capture dataset does not match the scheduled ledger target.',
