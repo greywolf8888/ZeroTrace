@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { hashPayload } from '@zerotrace/evidence';
 import {
@@ -133,5 +133,101 @@ describe('PostgresTokenHistoryDiscoveryReportRepository', () => {
       code: 'TOKEN_HISTORY_REPORT_INVALID',
     });
     expect(pool.row).toBeUndefined();
+  });
+
+  it('keeps replay conflicts, malformed rows, health states, and invalid identities explicit', async () => {
+    const expected = report();
+    const jsonRepository = PostgresTokenHistoryDiscoveryReportRepository.fromPool({
+      query: vi.fn(async (text: string) =>
+        text.includes('to_regclass')
+          ? {
+              rows: [{ table_name: 'token_history_discovery_reports', migration_applied: false }],
+              rowCount: 1,
+            }
+          : {
+              rows: [
+                {
+                  id: expected.id,
+                  report: JSON.stringify(expected),
+                  created_at: expected.freshness,
+                },
+              ],
+              rowCount: 1,
+            },
+      ),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(jsonRepository.get(expected.id)).resolves.toEqual(expected);
+    await expect(jsonRepository.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'TOKEN_HISTORY_REPORT_NOT_INITIALIZED',
+    });
+
+    const mismatch = PostgresTokenHistoryDiscoveryReportRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [{ id: `thd_${'f'.repeat(24)}`, report: expected, created_at: expected.freshness }],
+        rowCount: 1,
+      })),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(mismatch.get(expected.id)).rejects.toMatchObject({
+      code: 'TOKEN_HISTORY_REPORT_CONFLICT',
+    });
+
+    const malformed = PostgresTokenHistoryDiscoveryReportRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [{ id: expected.id, report: '{not-json', created_at: expected.freshness }],
+        rowCount: 1,
+      })),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(malformed.get(expected.id)).rejects.toMatchObject({
+      code: 'TOKEN_HISTORY_REPORT_CONFLICT',
+    });
+
+    await expect(jsonRepository.get('invalid')).rejects.toMatchObject({
+      code: 'TOKEN_HISTORY_REPORT_INVALID',
+    });
+    const unavailable = PostgresTokenHistoryDiscoveryReportRepository.fromPool({
+      query: vi.fn().mockRejectedValue(new Error('offline')),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(unavailable.get(expected.id)).rejects.toMatchObject({
+      code: 'TOKEN_HISTORY_REPORT_UNAVAILABLE',
+      retryable: true,
+    });
+    await expect(unavailable.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'TOKEN_HISTORY_REPORT_UNAVAILABLE',
+    });
+  });
+
+  it('maps PostgreSQL integrity failures to immutable conflicts and other failures to retryable outage', async () => {
+    const expected = report();
+    const integrity = PostgresTokenHistoryDiscoveryReportRepository.fromPool({
+      query: vi.fn(async (text: string) => {
+        if (text.includes('INSERT INTO')) {
+          throw Object.assign(new Error('constraint'), { code: 'P0001' });
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(integrity.put(expected)).rejects.toMatchObject({
+      code: 'TOKEN_HISTORY_REPORT_CONFLICT',
+      retryable: false,
+    });
+
+    const unavailable = PostgresTokenHistoryDiscoveryReportRepository.fromPool({
+      query: vi.fn(async (text: string) => {
+        if (text.includes('INSERT INTO')) throw new Error('database offline');
+        return { rows: [], rowCount: 0 };
+      }),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(unavailable.put(expected)).rejects.toMatchObject({
+      code: 'TOKEN_HISTORY_REPORT_UNAVAILABLE',
+      retryable: true,
+    });
   });
 });

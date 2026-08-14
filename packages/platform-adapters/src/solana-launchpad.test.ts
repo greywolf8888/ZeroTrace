@@ -1,13 +1,20 @@
 import bs58 from 'bs58';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { SolanaSnapshot, SolanaTransactionRecord } from '@zerotrace/chain-adapters';
 import { hashPayload } from '@zerotrace/evidence';
-import { knownValue, unknownValue, type SolanaInstructionObservation } from '@zerotrace/schemas';
+import {
+  knownValue,
+  unknownValue,
+  type SolanaInstructionObservation,
+  type SolanaTransactionSemantics,
+} from '@zerotrace/schemas';
 
 import {
   decodePumpLaunchpadInstruction,
+  decodePumpLaunchpadInstructions,
   PUMP_PROGRAM_ID,
+  PUMPSWAP_PROGRAM_ID,
   pumpLaunchpadProgramIds,
   SOLANA_PUMP_LAUNCHPAD_MODEL_VERSION,
 } from './solana-launchpad.js';
@@ -79,6 +86,31 @@ function buyV2Data(amount: bigint, maxCost: bigint): string {
   return bs58.encode(data);
 }
 
+function encodedInstruction(discriminator: readonly number[], payload: Uint8Array): string {
+  const data = new Uint8Array(discriminator.length + payload.length);
+  data.set(discriminator, 0);
+  data.set(payload, discriminator.length);
+  return bs58.encode(data);
+}
+
+function u64(value: bigint): Uint8Array {
+  const data = new Uint8Array(8);
+  new DataView(data.buffer).setBigUint64(0, value, true);
+  return data;
+}
+
+function writeU32(data: Uint8Array, offset: number, value: number): void {
+  new DataView(data.buffer).setUint32(offset, value, true);
+}
+
+function writeBytes(data: Uint8Array, offset: number, value: Uint8Array): void {
+  data.set(value, offset);
+}
+
+function stringBytes(value: string): Uint8Array {
+  return new TextEncoder().encode(value);
+}
+
 describe('Solana Pump launchpad decoder', () => {
   it('decodes the pinned official buy_v2 discriminator and preserves decimal arguments', () => {
     const decoded = decodePumpLaunchpadInstruction({
@@ -129,5 +161,153 @@ describe('Solana Pump launchpad decoder', () => {
       '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
       'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',
     ]);
+  });
+
+  it('decodes Pump create and PumpSwap pool-create arguments from pinned layouts', () => {
+    const name = stringBytes('Zero');
+    const symbol = stringBytes('ZRO');
+    const uri = stringBytes('https://example.invalid/zro.json');
+    const createPayload = new Uint8Array(4 + name.length + 4 + symbol.length + 4 + uri.length + 32);
+    let offset = 0;
+    for (const value of [name, symbol, uri]) {
+      writeU32(createPayload, offset, value.length);
+      offset += 4;
+      writeBytes(createPayload, offset, value);
+      offset += value.length;
+    }
+    writeBytes(createPayload, offset, new Uint8Array(32).fill(7));
+    const create = decodePumpLaunchpadInstruction({
+      instruction: instruction(encodedInstruction([24, 30, 200, 40, 5, 28, 7, 119], createPayload)),
+      transaction: transaction(),
+      snapshot: snapshot(),
+      evidenceIds: [`ev_${'c'.repeat(24)}`],
+    });
+    expect(create).toMatchObject({
+      platform: 'PUMP',
+      instructionName: 'create',
+      category: 'CREATE',
+      argumentCoverage: 1,
+      decodedArguments: expect.arrayContaining([
+        { name: 'name', value: 'Zero' },
+        { name: 'symbol', value: 'ZRO' },
+        { name: 'uri', value: 'https://example.invalid/zro.json' },
+      ]),
+    });
+
+    const poolPayload = new Uint8Array(52);
+    new DataView(poolPayload.buffer).setUint16(0, 9, true);
+    writeBytes(poolPayload, 2, u64(100n));
+    writeBytes(poolPayload, 10, u64(200n));
+    writeBytes(poolPayload, 18, new Uint8Array(32).fill(8));
+    poolPayload[50] = 1;
+    poolPayload[51] = 0;
+    const pool = decodePumpLaunchpadInstruction({
+      instruction: instruction(
+        encodedInstruction([233, 146, 209, 142, 207, 104, 64, 188], poolPayload),
+        PUMPSWAP_PROGRAM_ID,
+      ),
+      transaction: transaction(),
+      snapshot: snapshot(),
+      evidenceIds: [`ev_${'d'.repeat(24)}`],
+    });
+    expect(pool).toMatchObject({
+      platform: 'PUMPSWAP',
+      instructionName: 'create_pool',
+      category: 'POOL_CREATE',
+      decodedArguments: expect.arrayContaining([
+        { name: 'index', value: '9' },
+        { name: 'base_amount_in', value: '100' },
+        { name: 'quote_amount_in', value: '200' },
+        { name: 'is_mayhem_mode', value: 'true' },
+        { name: 'is_cashback_coin', value: 'false' },
+      ]),
+    });
+  });
+
+  it('keeps malformed payloads and unresolved accounts explicit', () => {
+    const short = decodePumpLaunchpadInstruction({
+      instruction: {
+        ...instruction(encodedInstruction([102, 6, 61, 18, 1, 218, 235, 234], new Uint8Array())),
+        accountIndexes: [],
+        accounts: unknownValue('INSUFFICIENT_DATA', 'Accounts were not resolved.'),
+      },
+      transaction: { ...transaction(), success: false },
+      snapshot: snapshot(),
+      evidenceIds: [`ev_${'e'.repeat(24)}`],
+    });
+    expect(short).toMatchObject({
+      instructionName: 'buy',
+      execution: 'FAILED',
+      accountCoverage: 0,
+      argumentCoverage: 0,
+    });
+    expect(short?.decodeWarnings).toEqual(
+      expect.arrayContaining([
+        'Instruction account addresses are unresolved.',
+        expect.stringContaining('account(s)'),
+        'Missing amount u64 argument.',
+        'Missing max_sol_cost u64 argument.',
+      ]),
+    );
+
+    expect(
+      decodePumpLaunchpadInstruction({
+        instruction: instruction('!!!'),
+        transaction: transaction(),
+        snapshot: snapshot(),
+        evidenceIds: [`ev_${'f'.repeat(24)}`],
+      }),
+    ).toBeUndefined();
+    expect(
+      decodePumpLaunchpadInstruction({
+        instruction: instruction(bs58.encode(new Uint8Array([1, 2, 3]))),
+        transaction: transaction(),
+        snapshot: snapshot(),
+        evidenceIds: [`ev_${'f'.repeat(24)}`],
+      }),
+    ).toBeUndefined();
+    expect(
+      decodePumpLaunchpadInstruction({
+        instruction: {
+          ...instruction(buyV2Data(1n, 2n)),
+          programId: unknownValue('NOT_QUERIED', 'Program identity is unavailable.'),
+        },
+        transaction: transaction(),
+        snapshot: snapshot(),
+        evidenceIds: [`ev_${'f'.repeat(24)}`],
+      }),
+    ).toBeUndefined();
+  });
+
+  it('decodes optional volume flags and sorts outer plus inner instruction paths', () => {
+    const withVolume = new Uint8Array(17);
+    writeBytes(withVolume, 0, u64(12n));
+    writeBytes(withVolume, 8, u64(34n));
+    withVolume[16] = 1;
+    const outer = instruction(encodedInstruction([102, 6, 61, 18, 1, 218, 235, 234], withVolume));
+    const inner = {
+      ...instruction(buyV2Data(56n, 78n)),
+      path: 'outer:1/inner:0',
+    };
+    const evidenceFor = vi.fn((path: string) => [
+      `ev_${path === 'outer:0' ? '1'.repeat(24) : '2'.repeat(24)}`,
+    ]);
+    const decoded = decodePumpLaunchpadInstructions({
+      transaction: transaction(),
+      semantics: {
+        outerInstructions: [outer],
+        innerInstructions: [inner],
+      } as SolanaTransactionSemantics,
+      snapshot: snapshot(),
+      evidenceIdsForInstruction: evidenceFor,
+    });
+    expect(decoded.map((item) => item.instructionPath)).toEqual(['outer:0', 'outer:1/inner:0']);
+    expect(decoded[0]?.decodedArguments).toEqual([
+      { name: 'amount', value: '12' },
+      { name: 'max_sol_cost', value: '34' },
+      { name: 'track_volume', value: 'true' },
+    ]);
+    expect(evidenceFor).toHaveBeenCalledWith('outer:0');
+    expect(evidenceFor).toHaveBeenCalledWith('outer:1/inner:0');
   });
 });

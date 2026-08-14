@@ -3,6 +3,28 @@
 This record captures the latest local acceptance run. It is evidence for the runnable foundation,
 not a terminal-product or production-deployment approval.
 
+## Local acceptance hardening and durable worker attempt — 2026-08-14
+
+- The final local gate passed formatting, ESLint, TypeScript typecheck, package/API/web/worker
+  builds, production license allowlist, `npm audit --audit-level=high` with zero vulnerabilities,
+  SBOM generation, and `git diff --check`.
+- `npm run test:unit` passed `700/700` tests across `130` files; `npm run test:integration` passed
+  `125/125` against isolated PostgreSQL, ClickHouse, MinIO, and Apache AGE acceptance services
+  after migrations through PostgreSQL `036`; `npm run test:evals` passed `1/1`.
+- `npm run test:coverage` passed `825/825` tests with Statements `81.87%`, Branches `75.00%`,
+  Functions `91.71%`, and Lines `83.40%`, meeting the configured global thresholds.
+- Rebuilt Playwright Chromium desktop/mobile E2E passed `38/38`; the Windows wrapper repeated
+  `38/38`. The generated build artifacts stayed under their configured output directories.
+- A fresh isolated acceptance Compose project initialized PostgreSQL/ClickHouse/MinIO/AGE and the
+  full integration suite replayed successfully. A real public-provider FFT durable Token History
+  schedule/run then reached ClickHouse ingestion/query but failed closed after retry at
+  `MEMORY_LIMIT_EXCEEDED` / OvercommitTracker. The run is `FAILED_TERMINAL`; no durable report was
+  promoted or relabeled as success. The in-memory real-provider smoke and provider-free same-hash
+  replay remain bounded evidence only.
+- The failed durable run is an infrastructure-capacity gate, not evidence of a semantic zero or a
+  successful production capture. Durable completion, restart replay, archive-scale history,
+  multi-provider reconciliation, calibration, alerts/export, and production approval remain open.
+
 ## Token History Discovery Phase 1 validation — 2026-08-14
 
 This checkpoint covers the implemented read-only Phase 1 path. It is not production qualification.

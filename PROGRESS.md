@@ -9,23 +9,55 @@ completed feature.
 
 ## Executive status
 
-| Measure                          | Current state                                                                                                                                                                                                 |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal architecture completion | **22% estimated**                                                                                                                                                                                             |
-| Runnable foundation              | **Yes; host build, browser and Windows wrapper pass; fresh PostgreSQL/disposable-store/container gates are not measured locally**                                                                             |
-| Production acceptance            | **No**                                                                                                                                                                                                        |
-| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                                                                |
-| Unit tests                       | **660 passing across 125 files; focused monitor/backfill checks 101/101**                                                                                                                                     |
-| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                                                                    |
-| Integration tests                | **87 pass in serial replay; 38 environment-gated skips; disposable-store acceptance remains recorded separately**                                                                                             |
-| Real-browser E2E                 | **38/38 across Chromium desktop and Pixel 7; Control Campaign alert/monitor display 2/2 in both projects**                                                                                                    |
-| Remote CI                        | **Not run for the current local changes; prior PR #20 runs remain historical evidence only**                                                                                                                  |
-| Coverage                         | **Remote: 82.49% statements / 76.67% branches / 93.43% functions / 83.59% lines**                                                                                                                             |
-| Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                                                                                      |
-| Durable evidence/history         | Raw state, checkpoints, Flap lifetime, Entity/Claim/declaration/Scenario/action/control/Solana reports, immutable Control Campaign bundles, Funding/Settlement report contracts, and Phase 1 report contracts |
+| Measure                          | Current state                                                                                                                                                               |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminal architecture completion | **22% estimated**                                                                                                                                                           |
+| Runnable foundation              | **Yes; host build, browser and Windows wrapper pass; isolated PostgreSQL/ClickHouse/MinIO/AGE acceptance services were migrated and exercised locally**                     |
+| Production acceptance            | **No**                                                                                                                                                                      |
+| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                              |
+| Unit tests                       | **700 passing across 130 files; full repository run 825/825 across 138 files**                                                                                              |
+| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                                  |
+| Integration tests                | **125/125 pass against isolated PostgreSQL/ClickHouse/MinIO/AGE acceptance services; no optional-store skips in that run**                                                  |
+| Real-browser E2E                 | **38/38 across Chromium desktop and Pixel 7; Windows wrapper E2E also 38/38**                                                                                               |
+| Remote CI                        | **Not run for the current local changes; prior PR #20 runs remain historical evidence only**                                                                                |
+| Coverage                         | **81.87% statements / 75.00% branches / 91.71% functions / 83.40% lines; configured global threshold passes**                                                               |
+| Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                                                    |
+| Durable evidence/history         | **Repositories and migrations are implemented; the fresh FFT durable worker attempt failed closed on ClickHouse memory limits and was not promoted as production evidence** |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
+
+## 2026-08-14 Local acceptance hardening and durable FFT attempt
+
+This continuation closes the next local robustness and display-adjacent test gaps without widening
+the read-only boundary. Solana dealer capture now has explicit same-slot ordering, unrelated/orphan
+token-balance handling, sparse-provider coverage, unsafe-range, source-head, and bounded-expansion
+tests. Bitcoin forensic graph capture now covers invalid identity, provider-down, missing confirmed
+placement, placement mismatch, and moving-tip reorg races. Storage tests now exercise immutable
+replay, malformed JSON, identity conflicts, unavailable health/read/write states, and Apache AGE
+projection count conflicts across Control Campaign, Solana dealer, Funding/Settlement, Token History,
+forensic alerts, Bitcoin graph, and investigation graph repositories. Launchpad semantics tests cover
+Pump/PumpSwap payload boundaries, failed transactions, account resolution, outer/inner instruction
+ordering, and optional volume flags. The semantic worker tests cover config rejection, resource
+lifecycle, idle/pre-aborted cycles, and preflight failure behavior.
+
+The resulting local gates passed: `npm run format:check`, ESLint, `npm run typecheck`, production
+build, license allowlist, `npm audit --audit-level=high` with zero vulnerabilities, CycloneDX SBOM,
+700 unit tests across 130 files, 125/125 isolated-store integration tests, 1/1 evaluation test,
+825/825 full coverage tests with 81.87% statements, 75.00% branches, 91.71% functions, and 83.40%
+lines, plus Chromium desktop/mobile and Windows-wrapper E2E at 38/38 each. The storage package's
+test-only TypeScript project references were made explicit so composite builds typecheck the new
+fixtures without importing API source into the storage package.
+
+An isolated acceptance Compose project was started with fresh PostgreSQL, ClickHouse, MinIO, and
+Apache AGE services; migrations through PostgreSQL `036`, ClickHouse raw/control-flow DDL, and AGE
+projection initialization were applied, and the full integration suite passed against those stores.
+The real BSC FFT schedule/run was then submitted to the durable Token History worker using public
+read-only BSC and SQD providers. The worker captured partial data but failed closed after retry at
+the ClickHouse memory limit (`MEMORY_LIMIT_EXCEEDED` / OvercommitTracker) before durable report
+completion; the run is `FAILED_TERMINAL` and was not relabeled as success. The in-memory provider
+smoke and same-hash replay remain valid evidence, while durable capture, restart replay, and
+production migration acceptance remain open.
 
 ## 2026-08-13 Control Campaign P0 delivery
 
@@ -1564,7 +1596,7 @@ The only allowed status vocabulary in this ledger is:
 | Finalized block ingest  | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Raw transaction ingest  | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; generic Solana v0/ALT/CPI/balance semantics, official core System/SPL asset flows and content-addressed query-report replay work. Continuous historical semantic projection and platform/program-specific decoders remain pending                                                                                                                                                                                                                                                      |
 | Raw ledger records      | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Token history discovery | Finalized ERC-20 Transfer observations with origin, exact-RPC, Action Semantics, and durable replay                       | Phase 1 code/tests/build pass; public endpoint reachability passed; Ethereum exact RPC and fresh durable end-to-end range acceptance are `NOT_MEASURED` in this checkpoint                                                                                                                                                                                                                                                                                                                                                            |
+| Token history discovery | Finalized ERC-20 Transfer observations with origin, exact-RPC, Action Semantics, and durable replay                       | Phase 1 code/tests/build pass; public BSC bounded smoke and isolated-store integration pass; Ethereum exact RPC remains `NOT_MEASURED`, and the fresh durable FFT worker run failed closed on ClickHouse memory limits                                                                                                                                                                                                                                                                                                                |
 
 Public BSC, Bitcoin, and Solana endpoints in `.env.example` are development fallbacks. Rate-limited responses do not count
 as chain-validation failures, and a successful health probe alone does not validate semantic
@@ -1576,11 +1608,11 @@ correctness. Exact local smoke observations and limitations are in
 | Check                          | Latest result                             | Scope                                                                                                                                                                          |
 | ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Reproducible install/build     | Pass                                      | locked npm install in production container; all packages/API/web                                                                                                               |
-| Unit tests                     | 639 pass                                  | 118 files, including incremental monitor/alert contracts, forensic export, Token History scheduling, and the pre-existing durable intelligence/report suites                   |
-| Integration tests              | 87 pass in serial replay; 38 skipped      | Optional ClickHouse/MinIO/provider cases remain explicitly skipped and do not count as semantic failures                                                                       |
+| Unit tests                     | 700 pass                                  | 130 files, including Solana dealer/Bitcoin graph/launchpad/storage/worker robustness boundaries and the pre-existing durable intelligence/report suites                        |
+| Integration tests              | 125/125 pass                              | Isolated PostgreSQL/ClickHouse/MinIO/AGE acceptance services; no optional-store skips in the latest run                                                                        |
 | Model evaluation tests         | 1 pass                                    | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                                                                 |
 | Restart regression             | Pass                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                                                                        |
-| Coverage gate                  | Failed locally                            | 726 enabled tests and 38 explicit skips completed; Statements 76.48%, Branches 70.25%, Functions 86.87%, Lines 77.86%, below configured thresholds                             |
+| Coverage gate                  | Pass                                      | 825/825 tests; Statements 81.87%, Branches 75.00%, Functions 91.71%, Lines 83.40%, meeting configured thresholds                                                               |
 | Chromium E2E                   | 38/38 pass                                | Full rebuilt Playwright run passed desktop and Pixel 7; Control Campaign Timeline/Evidence/Alert/Monitor flow passed 2/2                                                       |
 | Formatting / ESLint / types    | Pass                                      | full repository, including Phase 1 changes                                                                                                                                     |
 | Dependency vulnerability audit | Pass                                      | 0 vulnerabilities across the complete npm dependency graph                                                                                                                     |
@@ -1588,7 +1620,7 @@ correctness. Exact local smoke observations and limitations are in
 | CycloneDX SBOM                 | Pass                                      | npm dependency graph                                                                                                                                                           |
 | Compose model                  | Pass                                      | rendered default topology                                                                                                                                                      |
 | Docker image build/start       | Not measured locally                      | Docker Desktop Linux engine is unavailable; prior remote/container results are historical evidence only                                                                        |
-| Database bootstrap             | Not measured locally                      | Empty-store PostgreSQL/ClickHouse/MinIO bootstrap, migration 034 and restart replay await an available Docker engine                                                           |
+| Database bootstrap             | Partial                                   | Isolated PostgreSQL/ClickHouse/MinIO/AGE migrations through PostgreSQL 036 passed; durable FFT worker completion/restart replay hit ClickHouse memory limits                   |
 | Runtime/browser smoke          | Host gates pass                           | production build, rebuilt browser replay, Windows wrapper E2E, real BSC FFT alert derivation and provider-free UI path passed; durable store smoke remains open                |
 | Public chain smoke             | Pass for bounded current/raw-ledger scope | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                 |
 | Remote CI                      | Not run for current uncommitted changes   | Earlier PR #20 CI/CodeQL runs remain valid only for their recorded heads; this Phase 4 working tree requires a fresh protected-branch CI/CodeQL run after intentional delivery |

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   createEvmAssetTransferObservation,
@@ -140,5 +140,105 @@ describe('PostgresFundingSettlementReportRepository', () => {
       code: 'FUNDING_SETTLEMENT_REPORT_INVALID',
     });
     expect(pool.row).toBeUndefined();
+  });
+
+  it('keeps malformed replay rows and unavailable durable reads explicit', async () => {
+    const expected = report();
+    const jsonRepository = PostgresFundingSettlementReportRepository.fromPool({
+      query: vi.fn(async (text: string) =>
+        text.includes('to_regclass')
+          ? {
+              rows: [{ table_name: 'funding_settlement_reports', migration_applied: false }],
+              rowCount: 1,
+            }
+          : {
+              rows: [
+                {
+                  id: expected.id,
+                  report: JSON.stringify(expected),
+                  created_at: expected.freshness,
+                },
+              ],
+              rowCount: 1,
+            },
+      ),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(jsonRepository.get(expected.id)).resolves.toEqual(expected);
+    await expect(jsonRepository.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'FUNDING_SETTLEMENT_REPORT_NOT_INITIALIZED',
+    });
+    await expect(jsonRepository.latest('invalid', expected.token)).rejects.toMatchObject({
+      code: 'FUNDING_SETTLEMENT_REPORT_INVALID',
+    });
+
+    const mismatch = PostgresFundingSettlementReportRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [{ id: `fsr_${'f'.repeat(24)}`, report: expected, created_at: expected.freshness }],
+        rowCount: 1,
+      })),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(mismatch.get(expected.id)).rejects.toMatchObject({
+      code: 'FUNDING_SETTLEMENT_REPORT_CONFLICT',
+    });
+
+    const malformed = PostgresFundingSettlementReportRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [{ id: expected.id, report: '{not-json', created_at: expected.freshness }],
+        rowCount: 1,
+      })),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(malformed.get(expected.id)).rejects.toMatchObject({
+      code: 'FUNDING_SETTLEMENT_REPORT_CONFLICT',
+    });
+
+    const unavailable = PostgresFundingSettlementReportRepository.fromPool({
+      query: vi.fn().mockRejectedValue(new Error('offline')),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(unavailable.get(expected.id)).rejects.toMatchObject({
+      code: 'FUNDING_SETTLEMENT_REPORT_UNAVAILABLE',
+      retryable: true,
+    });
+    await expect(unavailable.latest(expected.chainId, expected.token)).rejects.toMatchObject({
+      code: 'FUNDING_SETTLEMENT_REPORT_UNAVAILABLE',
+      retryable: true,
+    });
+    await expect(unavailable.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'FUNDING_SETTLEMENT_REPORT_UNAVAILABLE',
+    });
+  });
+
+  it('maps PostgreSQL integrity failures to conflicts and other writes to retryable outages', async () => {
+    const expected = report();
+    const integrity = PostgresFundingSettlementReportRepository.fromPool({
+      query: vi.fn(async (text: string) => {
+        if (text.includes('INSERT INTO')) {
+          throw Object.assign(new Error('constraint'), { code: '23505' });
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(integrity.put(expected)).rejects.toMatchObject({
+      code: 'FUNDING_SETTLEMENT_REPORT_CONFLICT',
+      retryable: false,
+    });
+
+    const unavailable = PostgresFundingSettlementReportRepository.fromPool({
+      query: vi.fn(async (text: string) => {
+        if (text.includes('INSERT INTO')) throw new Error('database offline');
+        return { rows: [], rowCount: 0 };
+      }),
+      end: vi.fn(async () => undefined),
+    });
+    await expect(unavailable.put(expected)).rejects.toMatchObject({
+      code: 'FUNDING_SETTLEMENT_REPORT_UNAVAILABLE',
+      retryable: true,
+    });
   });
 });

@@ -69,4 +69,122 @@ describe('PostgreSQL Forensic Campaign Alert repository', () => {
     });
     expect(query).not.toHaveBeenCalled();
   });
+
+  it('replays object and JSON payloads, lists alerts, and exposes durable health states', async () => {
+    const row = { payload: alert, evidence_ids: [...alert.evidenceIds] };
+    const repository = PostgresForensicCampaignAlertRepository.fromPool({
+      query: vi.fn(async (text: string) => {
+        if (text.includes('to_regclass')) {
+          return {
+            rows: [
+              {
+                alert_table: 'control_campaign_alerts',
+                evidence_table: 'control_campaign_alert_evidence',
+                migration_applied: true,
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [row], rowCount: 1 };
+      }),
+      connect: vi.fn(),
+      end: vi.fn(),
+    });
+
+    await expect(repository.get(alert.id)).resolves.toEqual(alert);
+    await expect(repository.listByCampaign(alert.campaignId, 1)).resolves.toEqual([alert]);
+    await expect(repository.health()).resolves.toMatchObject({
+      status: 'UP',
+      backend: 'POSTGRES',
+      durable: true,
+    });
+
+    const jsonRepository = PostgresForensicCampaignAlertRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [{ payload: JSON.stringify(alert), evidence_ids: [...alert.evidenceIds] }],
+        rowCount: 1,
+      })),
+      connect: vi.fn(),
+      end: vi.fn(),
+    });
+    await expect(jsonRepository.get(alert.id)).resolves.toEqual(alert);
+
+    await expect(repository.listByCampaign(alert.campaignId, 0)).rejects.toMatchObject({
+      code: 'FORENSIC_ALERT_STORAGE_CONFLICT',
+    });
+
+    const notInitialized = PostgresForensicCampaignAlertRepository.fromPool({
+      query: vi.fn(async (text: string) =>
+        text.includes('to_regclass')
+          ? {
+              rows: [
+                {
+                  alert_table: 'control_campaign_alerts',
+                  evidence_table: 'wrong_table',
+                  migration_applied: false,
+                },
+              ],
+              rowCount: 1,
+            }
+          : { rows: [], rowCount: 0 },
+      ),
+      connect: vi.fn(),
+      end: vi.fn(),
+    });
+    await expect(notInitialized.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'FORENSIC_ALERT_STORAGE_NOT_INITIALIZED',
+    });
+
+    const unavailable = PostgresForensicCampaignAlertRepository.fromPool({
+      query: vi.fn().mockRejectedValue(new Error('offline')),
+      connect: vi.fn(),
+      end: vi.fn(),
+    });
+    await expect(unavailable.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'FORENSIC_ALERT_STORAGE_UNAVAILABLE',
+    });
+    await expect(unavailable.get(alert.id)).rejects.toMatchObject({
+      code: 'FORENSIC_ALERT_STORAGE_READ_FAILED',
+      retryable: true,
+    });
+  });
+
+  it('fails closed on invalid Evidence edges and unavailable durable writes', async () => {
+    const mismatch = PostgresForensicCampaignAlertRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [{ payload: alert, evidence_ids: [`ev_${'9'.repeat(24)}`] }],
+        rowCount: 1,
+      })),
+      connect: vi.fn(),
+      end: vi.fn(),
+    });
+    await expect(mismatch.get(alert.id)).rejects.toMatchObject({
+      code: 'FORENSIC_ALERT_STORAGE_CONFLICT',
+    });
+
+    const malformedJson = PostgresForensicCampaignAlertRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [{ payload: '{not-json', evidence_ids: [...alert.evidenceIds] }],
+        rowCount: 1,
+      })),
+      connect: vi.fn(),
+      end: vi.fn(),
+    });
+    await expect(malformedJson.get(alert.id)).rejects.toMatchObject({
+      code: 'FORENSIC_ALERT_STORAGE_CONFLICT',
+    });
+
+    const connectFailure = PostgresForensicCampaignAlertRepository.fromPool({
+      query: vi.fn(),
+      connect: vi.fn().mockRejectedValue(new Error('offline')),
+      end: vi.fn(),
+    });
+    await expect(connectFailure.put(alert)).rejects.toMatchObject({
+      code: 'FORENSIC_ALERT_STORAGE_UNAVAILABLE',
+      retryable: true,
+    });
+  });
 });

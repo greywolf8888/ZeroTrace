@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PostgresBitcoinForensicGraphReportRepository } from './bitcoin-forensic-graph-reports.js';
 
@@ -43,6 +43,58 @@ describe('Bitcoin forensic graph report storage', () => {
       async end() {},
     });
     await expect(repository.list()).rejects.toMatchObject({
+      code: 'BITCOIN_FORENSIC_GRAPH_UNAVAILABLE',
+      retryable: true,
+    });
+  });
+
+  it('keeps initialization and stored-payload conflicts explicit', async () => {
+    const reportId = `bfg_${'1'.repeat(24)}`;
+    const notInitialized = PostgresBitcoinForensicGraphReportRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [{ table_name: null, migration_applied: false }],
+        rowCount: 1,
+      })),
+      end: vi.fn(),
+    });
+    await expect(notInitialized.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'BITCOIN_FORENSIC_GRAPH_NOT_INITIALIZED',
+    });
+
+    const invalidRoot = PostgresBitcoinForensicGraphReportRepository.fromPool({
+      query: vi.fn(),
+      end: vi.fn(),
+    });
+    await expect(invalidRoot.list({ rootTxid: 'invalid' })).rejects.toMatchObject({
+      code: 'BITCOIN_FORENSIC_GRAPH_INVALID',
+    });
+
+    const invalidJson = PostgresBitcoinForensicGraphReportRepository.fromPool({
+      query: vi.fn(async () => ({
+        rows: [
+          {
+            id: reportId,
+            report: '{not-json',
+          },
+        ],
+        rowCount: 1,
+      })),
+      end: vi.fn(),
+    });
+    await expect(invalidJson.get(reportId)).rejects.toMatchObject({
+      code: 'BITCOIN_FORENSIC_GRAPH_CONFLICT',
+    });
+
+    const unavailable = PostgresBitcoinForensicGraphReportRepository.fromPool({
+      query: vi.fn().mockRejectedValue(new Error('offline')),
+      end: vi.fn(),
+    });
+    await expect(unavailable.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'BITCOIN_FORENSIC_GRAPH_UNAVAILABLE',
+    });
+    await expect(unavailable.list()).rejects.toMatchObject({
       code: 'BITCOIN_FORENSIC_GRAPH_UNAVAILABLE',
       retryable: true,
     });
