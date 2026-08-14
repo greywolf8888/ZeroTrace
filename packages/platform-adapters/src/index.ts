@@ -23,6 +23,7 @@ export * from './bitcoin-control-rights.js';
 export * from './bitcoin-transaction-entity.js';
 export * from './bitcoin-forensic-graph.js';
 export * from './launchpad-registry.js';
+export * from './launchpad-provenance.js';
 export * from './solana-control-rights.js';
 export * from './solana-asset-flow.js';
 export * from './solana-transaction-semantics.js';

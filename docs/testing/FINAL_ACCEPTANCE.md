@@ -10,7 +10,7 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       ingestion callback, deployment-origin boundary, exact-RPC transaction/receipt boundary,
       Action Semantics binding, immutable PostgreSQL report, paginated replay, capability registry,
       worker profile, and public endpoint configuration are implemented and covered by tests
-- [x] Formatting, ESLint, TypeScript, 610 unit tests, serially replayed enabled integration/evaluation tests,
+- [x] Formatting, ESLint, TypeScript, 660 unit tests, serially replayed enabled integration/evaluation tests,
       package/worker builds, license allowlist, zero high-severity production audit findings, and
       Compose model validation passed
 - [x] Public SQD, BSC, Solana, and Blockstream Esplora read-only reachability probes passed
@@ -134,7 +134,7 @@ field.
 - [x] The latest real BSC FFT smoke for `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over
       `113485950–113495949` remained `COMPLETE` with 12 observations, 10,029 Raw Facts, 10,041
       Evidence, same-hash replay, four derived alerts including one `CRITICAL` alert, and an
-      offline-verified Case Bundle `fcb_cc_1eaa01396441cbf9e846edfd`
+      offline-verified Case Bundle `fcb_cc_0d408b71b4990acd0ddb97cd`
 - [ ] Clean PostgreSQL/ClickHouse/MinIO execution, interrupted-run replay, long-running real
       monitor progression, forced reorg/outage delivery, restart-persistent alerts, calibration,
       and production migration approval remain `NOT_MEASURED` because Docker Desktop's Linux
@@ -145,7 +145,7 @@ field.
 - [x] `npm run format:check`, full ESLint, TypeScript typecheck, production build,
       production license allowlist, `npm audit --audit-level=high` (0 vulnerabilities), and SBOM
       generation
-- [x] `npm run test:unit`: 655/655 tests across 124 files
+- [x] `npm run test:unit`: 660/660 tests across 125 files
 - [x] `npm run test:integration`: 87 pass; 38 explicitly skipped because optional stores/providers
       were not enabled in this host run (these are not counted as failures)
 - [x] `npm run test:evals`: 1/1 structural Entity evaluation
@@ -183,8 +183,9 @@ unchecked terminal-scope items below remain open.
       ownership merge; focused graph/storage/API tests passed `6/6`
 - [x] Versioned read-only launchpad provenance registry and decoder activation policy cover Flap,
       Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot/Moonit, Four.meme and FomoWell;
-      official source links and license boundaries are visible in the API/UI, while unpinned
-      versions remain blocked; registry/index focused tests passed `32/32`
+      Pump and PumpSwap now have pinned `READY_READ_ONLY` versions with four-node real-provider
+      provenance graphs, while the other unpinned versions remain blocked; registry/index focused
+      tests passed `33/33`
 - [x] Pump/PumpSwap clean-room decoder pins the official source commit and IDL hashes, matches
       only official program IDs/discriminators, preserves incomplete layouts as warnings, emits
       Evidence/Snapshot-bound `launchpadObservations`, and renders the result in the Solana UI
@@ -200,12 +201,11 @@ unchecked terminal-scope items below remain open.
       observations, 5 exact bindings, `1/1/1` Token History coverage, same-hash Campaign and
       offline-verified Case Bundle replay. The latest run kept report
       `thd_5ef5001212f0b4c8409bfc7c` with result hash
-      `36d389e3fc2b4635ac8303d26f9253097133b6cf7b527edf3f8a1e6ef1a07768`; Funding/Settlement
+      `548205baa794840755cd69db017356daf70dbf824eb995fe75289c023573fb67`; Funding/Settlement
       remained `PARTIAL` `1/1/0` history coverage because historical `eth_getCode` returned
       `missing trie node`
-- [ ] Real Solana dealer archive validation, Bitcoin Core/archive reconciliation, durable launchpad
-      protocol version activation/fixture persistence, named migration fixtures, and durable
-      clean-store replay
+- [ ] Real Solana dealer archive validation, Bitcoin Core/archive reconciliation, remaining named
+      launchpad/migration fixtures, and durable clean-store replay
 
 This slice is implemented and tested locally, but it does not satisfy the external archive,
 license, historical-fixture, calibration, or durable-store gates required for production approval.
@@ -436,7 +436,9 @@ forbidden.
   - [x] Versioned read-only launchpad provenance registry, official source ledger, license-boundary
         policy, generic unknown-mechanism detection, API/UI display, and decoder activation gate
   - [ ] Complete FFT migration fixture, forced reorg drill, lifecycle and sell/execution RV linkage
-  - [ ] Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
+  - [x] Pump/PumpSwap official-version read-only decoder, executable program identity, four-node
+        provenance graph, finalized mainnet provider capture, and API/UI observation display
+  - [ ] Raydium LaunchLab, Meteora DBC, Moonshot, Four.meme and FomoWell adapters
 - [x] Constant-product and shared-liquidity scenario kernels
 - [x] Deterministic Flap fixed-block `previewSell` quote and blocked/Unknown/no-fake-zero tests
 - [x] Evidence-grounded same-Snapshot typed discrepancy engine with exact-state, conservation,

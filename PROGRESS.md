@@ -12,10 +12,10 @@ completed feature.
 | Measure                          | Current state                                                                                                                                                                                                 |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Terminal architecture completion | **22% estimated**                                                                                                                                                                                             |
-| Runnable foundation              | **Yes; host, fresh PostgreSQL, browser and remote disposable-store/container gates pass**                                                                                                                     |
+| Runnable foundation              | **Yes; host build, browser and Windows wrapper pass; fresh PostgreSQL/disposable-store/container gates are not measured locally**                                                                             |
 | Production acceptance            | **No**                                                                                                                                                                                                        |
 | Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                                                                |
-| Unit tests                       | **655 passing across 124 files; focused monitor/backfill checks 101/101**                                                                                                                                     |
+| Unit tests                       | **660 passing across 125 files; focused monitor/backfill checks 101/101**                                                                                                                                     |
 | Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                                                                    |
 | Integration tests                | **87 pass in serial replay; 38 environment-gated skips; disposable-store acceptance remains recorded separately**                                                                                             |
 | Real-browser E2E                 | **38/38 across Chromium desktop and Pixel 7; Control Campaign alert/monitor display 2/2 in both projects**                                                                                                    |
@@ -279,31 +279,33 @@ Bitcoin Core/archive policy reconciliation and calibrated graph acceptance remai
 The launchpad registry is now a versioned, read-only provenance boundary. Pump/PumpSwap, Raydium
 LaunchLab, Meteora DBC, Moonshot/Moonit, Four.meme, FomoWell, and the existing Flap adapter are
 visible through `LAUNCHPAD_PROTOCOL_REGISTRY` and `GET /api/v1/platforms`. No guessed deployment
-address is activated: the current named entries have empty `versions` until official source
-commit, ABI/IDL hash, chain identity, Evidence, and a real historical fixture are pinned. Raydium
-and Meteora retain an explicit license-review boundary. Generic mechanism detection remains
-`UNKNOWN_LAUNCHPAD` and cannot infer a named platform. Registry/index focused tests passed `32/32`.
+address is activated: Pump and PumpSwap are the first pinned read-only versions with official
+source commit, IDL hash, chain identity, four-node Evidence provenance, and real finalized
+provider captures. The other
+named entries retain empty `versions` until their own gates pass. Raydium and Meteora retain an
+explicit license-review boundary. Generic mechanism detection remains
+`UNKNOWN_LAUNCHPAD` and cannot infer a named platform. Registry/index focused tests passed `33/33`.
 
 A fresh provider-backed BSC replay was executed on 2026-08-14 with FFT
 `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over blocks `113485950–113495949` using SQD and the
 public BNB Chain RPC. Token History was `COMPLETE` with 12 finalized observations, 5 exact
 RPC/Action-Semantics bindings, `data/source/history = 1/1/1`, 10,029 Raw Facts and 10,041
 Evidence. The latest run kept report `thd_5ef5001212f0b4c8409bfc7c`, produced result hash
-`36d389e3fc2b4635ac8303d26f9253097133b6cf7b527edf3f8a1e6ef1a07768`, and replayed with
-`replaySameHash=true`. Funding/Settlement was `fsr_9b243d13f115c1029d9d22df`, result hash
-`1334c8a2bf98ce3fccb18de714fc34afa920ab8e8e747cd6eb1c078debcc4ca9`, `PARTIAL`,
+`548205baa794840755cd69db017356daf70dbf824eb995fe75289c023573fb67`, and replayed with
+`replaySameHash=true`. Funding/Settlement was `fsr_936039ecea11c815a99205a6`, result hash
+`56bbbb8c4c6a5b1c13b3a446b03729ac85e91eca34f8a0626d444f72fc7a8771`, `PARTIAL`,
 `TRANSACTION_LOCAL`, coverage `1/1/0`, with two funding edges and one sell-proceeds edge. The
-Campaign was `cc_0b2552cf11f79ee8bd44af8e`, replay hash
-`fef2929417a58474f0b73effb9f6dd121a687cec67a05995fbb96f7428649294`, and remained
-`UNCALIBRATED`; Case Bundle `fcb_cc_0b2552cf11f79ee8bd44af8e` had manifest hash
-`33badc8e69a38de48a5ab8a7562c16cef5fbe402d4cfadbd77905e7637d4a59a`, result hash
-`20c8387b87d3ce667447e922edbc675e64b1c845a5523e08805916198c52eeb0`, and offline verification
+Campaign was `cc_0d408b71b4990acd0ddb97cd`, replay hash
+`900f6bb20802eaf2b7cb321eccbbcd277b74a2145931cf966fa3af78d8445d50`, and remained
+`UNCALIBRATED`; Case Bundle `fcb_cc_0d408b71b4990acd0ddb97cd` had manifest hash
+`f7c282a75c748f97fd3320b530e79757106ed76584b639f33b8087a7705c7413`, result hash
+`cb36cc5af8f08a06996f687c7913e00fa80ea7ced11a69e15f29440f03876a6b`, and offline verification
 `true`.
 Historical `eth_getCode` returned `missing trie node` for code probes, so transaction-sender
 fallback remained explicit and current state was not substituted. This was an in-memory,
 provider-backed semantic smoke, not durable PostgreSQL/ClickHouse/MinIO production acceptance.
 
-## 2026-08-14 Pump/PumpSwap clean-room decoder and real Solana fixture
+## 2026-08-14 Pump/PumpSwap clean-room decoder and real Solana capture
 
 The first named Solana launchpad slice is now implemented as a read-only, version-aware
 clean-room decoder in `packages/platform-adapters/src/solana-launchpad.ts`. It pins the official
@@ -321,13 +323,22 @@ The live smoke `npm run launchpad:pump:smoke -- --signature
 used the public finalized Solana RPC and captured slot `439138804`. It observed a successful
 Pump `buy` at `outer:1/inner:3`, decoded `amount=155125755469` and `max_sol_cost=9093555`, with
 `accountCoverage=1`, `argumentCoverage=1`, `replaySameHash=true`, and executable program-account
-identity observed at context slot `439139927`. Two trailing accounts outside the pinned legacy
+identity observed at context slot `439146792`. Two trailing accounts outside the pinned legacy
 layout remain an explicit warning. The in-memory run produced 20 Evidence nodes; the decoder
-observation result hash was `dbf8d71bd8039769764a77bda9d22d7615c2cd2af19754c72ac85233c519eed6`.
+observation result hash was `b8db5f4a28e0e71f9c128c27cf48820cf53d5a79a5d7fc7773ca3af9e7e44e98`.
+The smoke now also accepts `--program-id` and captured a separate PumpSwap `buy` at signature
+`5qKpHw9bHwdZDuez81hRu4gQRVCrdPAFBiBhtP4GHUkEyrKSh3P6R7avTDmvC8WCorqpDnMghn51FVUMGTksNNDU`,
+slot `439146809`, with `base_amount_out=373236`,
+`max_quote_amount_in=18446744073709551615`, `track_volume=true`, account/argument coverage `1/1`,
+and `replaySameHash=true`. Its decoder observation hash was
+`cb73313f85c64b0d577e88cb759ceade98108d7e29b48118dbb7a64738b51662`; the in-memory run
+produced 15 Evidence nodes and executable program identity at context slot `439146811`.
 Solana transaction API reports now carry optional `launchpadObservations`, and the UI displays
 platform, instruction version, coverage, decoded arguments, warnings, and the no-match boundary.
-The registry still keeps named `versions` empty: durable protocol Evidence, a durable fixture
-record, and production version activation remain open gates.
+The Pump registry versions `pump-solana-mainnet-9c82f61cb711` and
+`pumpswap-solana-mainnet-9c82f61cb711` are now `READY_READ_ONLY` from their four-node provenance
+manifests; other named platforms still require their own durable Evidence, historical captures, license
+review, and production activation.
 
 ## Terminal-scope status matrix
 

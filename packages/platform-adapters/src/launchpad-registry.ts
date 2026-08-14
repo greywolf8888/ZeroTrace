@@ -10,6 +10,11 @@ import {
   type ProtocolDeploymentVersion,
 } from '@zerotrace/schemas';
 
+import {
+  PUMP_LAUNCHPAD_PROTOCOL_VERSION,
+  PUMPSWAP_LAUNCHPAD_PROTOCOL_VERSION,
+} from './launchpad-provenance.js';
+
 export {
   GenericLaunchDetectionSchema,
   GenericLaunchObservationSchema,
@@ -40,6 +45,8 @@ const officialReadOnlySources = {
     'https://pump.fun/docs/',
     'https://github.com/pump-fun/pump-public-docs',
     'https://github.com/pump-fun/pump-public-docs/blob/main/idl/pump.json',
+    'https://github.com/pump-fun/pump-public-docs/blob/main/idl/pump_amm.json',
+    'https://github.com/pump-fun/pump-public-docs/blob/main/docs/PUMP_SWAP_README.md',
   ],
   raydium: [
     'https://docs.raydium.io/products/launchlab/bonding-curve',
@@ -56,21 +63,23 @@ function pendingEntry(
   entry: Omit<LaunchpadRegistryEntry, 'provenanceStatus' | 'decoderStatus' | 'versions'> & {
     provenanceStatus?: LaunchpadRegistryEntry['provenanceStatus'];
     decoderStatus?: LaunchpadRegistryEntry['decoderStatus'];
+    versions?: ProtocolDeploymentVersion[];
   },
 ): LaunchpadRegistryEntry {
   return {
     ...entry,
     provenanceStatus: entry.provenanceStatus ?? 'PROVENANCE_PENDING',
     decoderStatus: entry.decoderStatus ?? 'NOT_AVAILABLE',
-    versions: [],
+    versions: entry.versions ?? [],
   };
 }
 
 /**
- * This registry intentionally contains no guessed addresses.  An entry with
- * an empty `versions` array is visible to the UI and API as a research target,
+ * This registry intentionally contains no guessed addresses. An entry with an
+ * empty `versions` array is visible to the UI and API as a research target,
  * but cannot activate a decoder until the official source, chain identity,
- * hash, and historical fixture are all bound to one version record.
+ * hash, and historical provider capture are all bound to one version record. Pump and
+ * PumpSwap are the first entries with complete read-only provenance records.
  */
 export const LAUNCHPAD_PROTOCOL_REGISTRY: readonly LaunchpadRegistryEntry[] = Object.freeze([
   pendingEntry({
@@ -87,8 +96,11 @@ export const LAUNCHPAD_PROTOCOL_REGISTRY: readonly LaunchpadRegistryEntry[] = Ob
     name: 'Pump / PumpSwap',
     ledgers: ['SOLANA'],
     officialSourceUris: [...officialReadOnlySources.pump],
+    provenanceStatus: 'PINNED',
+    decoderStatus: 'READY_READ_ONLY',
+    versions: [PUMP_LAUNCHPAD_PROTOCOL_VERSION, PUMPSWAP_LAUNCHPAD_PROTOCOL_VERSION],
     integrationBoundary:
-      'Use raw Solana instructions, program accounts, bonding-curve accounts, and PumpSwap pools. Web pages are not a core data source; SOL/USDC, fee, and feature changes require separate deployment versions.',
+      'Use raw Solana instructions, program accounts, bonding-curve accounts, and PumpSwap pools. These pinned Pump and PumpSwap versions are read-only and backed by real finalized provider captures; web pages are not a core data source. SOL/USDC, fee, and feature changes require separate deployment versions.',
   }),
   pendingEntry({
     platform: 'raydium-launchlab',

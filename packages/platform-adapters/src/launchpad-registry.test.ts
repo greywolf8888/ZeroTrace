@@ -9,6 +9,15 @@ import {
   inferGenericLaunchMechanism,
   type ProtocolDeploymentVersion,
 } from './launchpad-registry.js';
+import {
+  PUMP_LAUNCHPAD_PROVENANCE_EVIDENCE_NODES,
+  PUMP_LAUNCHPAD_PROVENANCE_RECORD,
+  PUMP_LAUNCHPAD_PROTOCOL_VERSION,
+  PUMPSWAP_LAUNCHPAD_PROVENANCE_EVIDENCE_NODES,
+  PUMPSWAP_LAUNCHPAD_PROVENANCE_RECORD,
+  PUMPSWAP_LAUNCHPAD_PROTOCOL_VERSION,
+} from './launchpad-provenance.js';
+import { EvidenceLedger } from '@zerotrace/evidence';
 
 describe('launchpad protocol registry', () => {
   it('keeps every named launchpad visible while refusing unpinned activation', () => {
@@ -17,23 +26,86 @@ describe('launchpad protocol registry', () => {
 
     for (const entry of LAUNCHPAD_PROTOCOL_REGISTRY) {
       expect(entry.officialSourceUris.length).toBeGreaterThan(0);
-      expect(entry.versions).toHaveLength(0);
+      if (entry.platform === 'pump') {
+        expect(entry.provenanceStatus).toBe('PINNED');
+        expect(entry.decoderStatus).toBe('READY_READ_ONLY');
+        expect(entry.versions).toEqual(
+          expect.arrayContaining([
+            PUMP_LAUNCHPAD_PROTOCOL_VERSION,
+            PUMPSWAP_LAUNCHPAD_PROTOCOL_VERSION,
+          ]),
+        );
+        expect(entry.versions).toHaveLength(2);
+      } else {
+        expect(entry.versions).toHaveLength(0);
+      }
       expect(
         evaluateLaunchpadDecoderActivation({
           platform: entry.platform,
-          deploymentId: 'unresolved-current-deployment',
-          hasRealHistoricalFixture: false,
-          chainIdentityVerified: false,
+          deploymentId:
+            entry.platform === 'pump'
+              ? PUMP_LAUNCHPAD_PROTOCOL_VERSION.deploymentId
+              : 'unresolved-current-deployment',
+          hasRealHistoricalFixture: entry.platform === 'pump',
+          chainIdentityVerified: entry.platform === 'pump',
         }),
-      ).toMatchObject({
-        state: 'BLOCKED',
-        reasons: expect.arrayContaining([
-          'DEPLOYMENT_VERSION_NOT_PINNED',
-          'CHAIN_IDENTITY_NOT_VERIFIED',
-          'REAL_HISTORICAL_FIXTURE_MISSING',
-        ]),
-      });
+      ).toMatchObject(
+        entry.platform === 'pump'
+          ? { state: 'READY', reasons: [], version: PUMP_LAUNCHPAD_PROTOCOL_VERSION }
+          : {
+              state: 'BLOCKED',
+              reasons: expect.arrayContaining([
+                'DEPLOYMENT_VERSION_NOT_PINNED',
+                'CHAIN_IDENTITY_NOT_VERIFIED',
+                'REAL_HISTORICAL_FIXTURE_MISSING',
+              ]),
+            },
+      );
     }
+  });
+
+  it('keeps the Pump activation evidence closed over real finalized captures', () => {
+    const ledger = new EvidenceLedger();
+    for (const node of [
+      ...PUMP_LAUNCHPAD_PROVENANCE_EVIDENCE_NODES,
+      ...PUMPSWAP_LAUNCHPAD_PROVENANCE_EVIDENCE_NODES,
+    ]) {
+      ledger.add(node.evidence, node.sourceEvidenceIds, node.snapshot);
+    }
+    expect(PUMP_LAUNCHPAD_PROVENANCE_RECORD.captureKind).toBe('REAL_FINALIZED_PROVIDER_CAPTURE');
+    expect(PUMP_LAUNCHPAD_PROVENANCE_RECORD.observation.execution).toBe('SUCCESS');
+    expect(PUMP_LAUNCHPAD_PROVENANCE_RECORD.observation.evidenceIds).toEqual(
+      PUMP_LAUNCHPAD_PROVENANCE_RECORD.evidenceIds,
+    );
+    const ledgerEvidenceIds = ledger
+      .values()
+      .map((node) => node.evidence.id)
+      .sort();
+    expect(ledgerEvidenceIds).toEqual(
+      expect.arrayContaining(PUMP_LAUNCHPAD_PROVENANCE_RECORD.evidenceIds),
+    );
+    expect(PUMPSWAP_LAUNCHPAD_PROVENANCE_RECORD.observation.platform).toBe('PUMPSWAP');
+    expect(PUMPSWAP_LAUNCHPAD_PROVENANCE_RECORD.observation.instructionName).toBe('buy');
+    expect(PUMPSWAP_LAUNCHPAD_PROVENANCE_RECORD.observation.decodedArguments).toEqual([
+      { name: 'base_amount_out', value: '558870' },
+      { name: 'max_quote_amount_in', value: '151001' },
+      { name: 'track_volume', value: 'true' },
+    ]);
+    expect(ledger.values().map((node) => node.evidence.id)).toEqual(
+      expect.arrayContaining(PUMPSWAP_LAUNCHPAD_PROVENANCE_RECORD.evidenceIds),
+    );
+    expect(
+      evaluateLaunchpadDecoderActivation({
+        platform: 'pump',
+        deploymentId: PUMPSWAP_LAUNCHPAD_PROTOCOL_VERSION.deploymentId,
+        hasRealHistoricalFixture: true,
+        chainIdentityVerified: true,
+      }),
+    ).toMatchObject({
+      state: 'READY',
+      reasons: [],
+      version: PUMPSWAP_LAUNCHPAD_PROTOCOL_VERSION,
+    });
   });
 
   it('records the license boundary for Raydium and Meteora', () => {

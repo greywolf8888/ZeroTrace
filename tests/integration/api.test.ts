@@ -2147,13 +2147,32 @@ describe('ZeroTrace API contract', () => {
     const platforms = await app.inject({ method: 'GET', url: '/api/v1/platforms' });
     expect(platforms.json()).toMatchObject({ gmgnConfigured: false });
     expect(platforms.json().platforms.length).toBeGreaterThan(5);
-    expect(platforms.json().launchpadRegistry).toEqual(
+    const launchpadRegistry = platforms.json().launchpadRegistry;
+    const pumpEntry = launchpadRegistry.find((entry) => entry.platform === 'pump');
+    expect(pumpEntry).toMatchObject({
+      platform: 'pump',
+      provenanceStatus: 'PINNED',
+      decoderStatus: 'READY_READ_ONLY',
+    });
+    expect(pumpEntry?.versions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          platform: 'pump',
-          provenanceStatus: 'PROVENANCE_PENDING',
-          versions: [],
+          deploymentId: 'pump-solana-mainnet-9c82f61cb711',
+          chain: 'solana-mainnet',
+          programOrContract: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
+          evidenceIds: expect.arrayContaining([expect.stringMatching(/^ev_/)]),
         }),
+        expect.objectContaining({
+          deploymentId: 'pumpswap-solana-mainnet-9c82f61cb711',
+          chain: 'solana-mainnet',
+          programOrContract: 'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',
+          evidenceIds: expect.arrayContaining([expect.stringMatching(/^ev_/)]),
+        }),
+      ]),
+    );
+    expect(pumpEntry?.versions).toHaveLength(2);
+    expect(launchpadRegistry).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           platform: 'raydium-launchlab',
           provenanceStatus: 'LICENSE_REVIEW_REQUIRED',

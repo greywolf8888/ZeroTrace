@@ -39,6 +39,8 @@ test('renders capability truth and unknown values without fake market data', asy
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Platform adapter boundaries' })).toBeVisible();
   await expect(page.getByText('No pinned version').first()).toBeVisible();
+  await expect(page.getByText('2 pinned versions', { exact: true })).toBeVisible();
+  await expect(page.getByText('Pinned', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Provenance Pending').first()).toBeVisible();
   await expect(page.getByText('API unavailable')).toHaveCount(0);
 

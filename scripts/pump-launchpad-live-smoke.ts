@@ -65,13 +65,25 @@ async function chooseSignature(adapter: SolanaLedgerAdapter): Promise<{
     return { signature: requested, transaction };
   }
 
-  const candidates = signatureList(
-    await adapter.read<unknown>(
-      'getSignaturesForAddress',
-      [pumpLaunchpadProgramIds()[0], { limit: 50, commitment: 'finalized' }],
-      { cacheMode: 'bypass' },
+  const requestedProgram = argument('--program-id');
+  const programIds =
+    requestedProgram === undefined
+      ? pumpLaunchpadProgramIds()
+      : pumpLaunchpadProgramIds().includes(requestedProgram)
+        ? [requestedProgram]
+        : (() => {
+            throw new Error('--program-id must be a registered Pump or PumpSwap program.');
+          })();
+  const candidateLists = await Promise.all(
+    programIds.map((programId) =>
+      adapter.read<unknown>(
+        'getSignaturesForAddress',
+        [programId, { limit: 50, commitment: 'finalized' }],
+        { cacheMode: 'bypass' },
+      ),
     ),
   );
+  const candidates = [...new Set(candidateLists.flatMap(signatureList))];
   for (const signature of candidates) {
     const transaction = await adapter.getTransaction(signature);
     if (transaction === null || transaction.success !== true) continue;

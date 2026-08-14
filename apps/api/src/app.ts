@@ -6716,18 +6716,25 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     ).find((schedule) => hashPayload(schedule.definition.parameters) === hashPayload(parameters));
     const schedule =
       existing ??
-      defineCaptureSchedule({
-        captureKind: 'TOKEN_HISTORY_BACKFILL',
-        target,
-        parameters,
-        trigger: { type: 'ONCE', at: new Date().toISOString() },
-        retryPolicy: {
-          maxAttempts: 3,
-          initialDelaySeconds: 30,
-          maximumDelaySeconds: 900,
-          backoffMultiplierBps: 20_000,
-        },
-      });
+      (() => {
+        // Bind creation and one-shot execution to the same millisecond. If these
+        // calls straddle a millisecond boundary, the schedule can be born
+        // COMPLETED instead of QUEUED and a valid backfill is never claimable.
+        const enqueueAt = new Date().toISOString();
+        return defineCaptureSchedule({
+          captureKind: 'TOKEN_HISTORY_BACKFILL',
+          target,
+          parameters,
+          createdAt: enqueueAt,
+          trigger: { type: 'ONCE', at: enqueueAt },
+          retryPolicy: {
+            maxAttempts: 3,
+            initialDelaySeconds: 30,
+            maximumDelaySeconds: 900,
+            backoffMultiplierBps: 20_000,
+          },
+        });
+      })();
     const stored = existing ?? (await schedules.putSchedule(schedule));
     const runs = await schedules.listRunsForSchedule(stored.definition.id, 20);
     const response = {
