@@ -135,6 +135,8 @@ export interface SqdFinalizedIngestionOptions {
   artifacts: RawArtifactWriter;
   evidence: EvidenceWriter;
   facts: RawFactWriter;
+  /** Maximum number of materialized blocks held before the durable checkpoint advances. */
+  checkpointBatchSize?: number;
   entityModelVersion?: string;
   labelSnapshot?: string;
   adapterVersion?: string;
@@ -476,6 +478,7 @@ export class SqdFinalizedIngestionPipeline {
   readonly #artifacts: RawArtifactWriter;
   readonly #evidence: EvidenceWriter;
   readonly #facts: RawFactWriter;
+  readonly #checkpointBatchSize: number;
   readonly #entityModelVersion: string;
   readonly #labelSnapshot: string;
   readonly #adapterVersion: string;
@@ -490,6 +493,15 @@ export class SqdFinalizedIngestionPipeline {
     this.#artifacts = options.artifacts;
     this.#evidence = options.evidence;
     this.#facts = options.facts;
+    const checkpointBatchSize = options.checkpointBatchSize ?? RAW_FACT_BLOCK_BATCH_SIZE;
+    if (
+      !Number.isSafeInteger(checkpointBatchSize) ||
+      checkpointBatchSize < 1 ||
+      checkpointBatchSize > 1_000
+    ) {
+      throw new RangeError('checkpointBatchSize must be an integer from 1 through 1000.');
+    }
+    this.#checkpointBatchSize = checkpointBatchSize;
     this.#entityModelVersion = options.entityModelVersion ?? 'entity-model-unapplied';
     this.#labelSnapshot = options.labelSnapshot ?? 'labels-unapplied';
     this.#adapterVersion = options.adapterVersion ?? '0.1.0';
@@ -889,7 +901,7 @@ export class SqdFinalizedIngestionPipeline {
               evidence: blockEvidence,
               counts,
             });
-            if (pendingBlocks.length >= RAW_FACT_BLOCK_BATCH_SIZE) {
+            if (pendingBlocks.length >= this.#checkpointBatchSize) {
               await flushPendingBlocks();
             }
             return;

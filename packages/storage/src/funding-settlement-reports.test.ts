@@ -118,6 +118,51 @@ describe('PostgresFundingSettlementReportRepository', () => {
     await repository.close();
   });
 
+  it('replays the report that exactly matches a selected campaign range', async () => {
+    const expected = report();
+    const query = vi.fn(async (text: string, values: readonly unknown[] = []) => {
+      if (text.includes('to_regclass')) {
+        return {
+          rows: [{ table_name: 'funding_settlement_reports', migration_applied: true }],
+          rowCount: 1,
+        };
+      }
+      expect(text).toContain('from_block = $3::numeric AND to_block = $4::numeric');
+      expect(values).toEqual([expected.chainId, expected.token, '1', '200']);
+      return {
+        rows: [{ id: expected.id, report: expected, created_at: expected.freshness }],
+        rowCount: 1,
+      };
+    });
+    const repository = PostgresFundingSettlementReportRepository.fromPool({
+      query,
+      end: vi.fn(async () => undefined),
+    });
+
+    await expect(
+      repository.forRange(expected.chainId, expected.token, '1', '200'),
+    ).resolves.toEqual(expected);
+  });
+
+  it('keeps an absent or reversed range explicit', async () => {
+    const expected = report();
+    const query = vi.fn(async () => ({ rows: [], rowCount: 0 }));
+    const repository = PostgresFundingSettlementReportRepository.fromPool({
+      query,
+      end: vi.fn(async () => undefined),
+    });
+
+    await expect(
+      repository.forRange(expected.chainId, expected.token, '201', '200'),
+    ).rejects.toMatchObject({
+      code: 'FUNDING_SETTLEMENT_REPORT_INVALID',
+    });
+    expect(query).not.toHaveBeenCalled();
+    await expect(
+      repository.forRange(expected.chainId, expected.token, '201', '202'),
+    ).resolves.toBeUndefined();
+  });
+
   it('rejects an altered result hash before touching the database', async () => {
     const pool = new FakePool();
     const repository = PostgresFundingSettlementReportRepository.fromPool(pool);

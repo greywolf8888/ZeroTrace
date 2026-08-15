@@ -202,16 +202,22 @@ function originEvidence(anchor: ChainAnchorRead): Evidence[] {
   return [observation, terminal];
 }
 
-function originRun(anchor: ChainAnchorRead, known: boolean): FlapTokenOriginRun {
-  const evidence = originEvidence(anchor);
+function originRun(
+  anchor: ChainAnchorRead,
+  known: boolean,
+  fromBlock = '100',
+  toBlock = anchor.anchor.position,
+  snapshotAnchor = anchor,
+): FlapTokenOriginRun {
+  const evidence = originEvidence(snapshotAnchor);
   const result: FlapTokenOrigin = FlapTokenOriginSchema.parse({
     platform: 'flap',
     token,
     searchedRange: {
-      fromBlock: '100',
-      toBlock: anchor.anchor.position,
+      fromBlock,
+      toBlock,
       chunkSize: 2,
-      chunkCount: 2,
+      chunkCount: Math.ceil((Number(toBlock) - Number(fromBlock) + 1) / 2),
     },
     searchedRangeCoverage: 1,
     origin: known
@@ -242,12 +248,12 @@ function originRun(anchor: ChainAnchorRead, known: boolean): FlapTokenOriginRun 
     ),
     observedCreationCount: known ? 1 : 0,
     metadata: AnalysisMetadataSchema.parse({
-      snapshot: anchor.snapshot,
+      snapshot: snapshotAnchor.snapshot,
       dataCoverage: 1,
       sourceCoverage: 1,
       historyCoverage: 0,
       simulationCoverage: 0,
-      freshness: anchor.snapshot.capturedAt,
+      freshness: snapshotAnchor.snapshot.capturedAt,
       sourceSet: ['sqd:binance-mainnet', 'bsc-lifetime-fixture'],
       modelVersion: FLAP_TOKEN_ORIGIN_MODEL_VERSION,
       confidence: known ? 0.99 : 0.7,
@@ -445,6 +451,41 @@ describe('restart-safe Flap lifetime materialization', () => {
     expect(result.result.historyProjection).toBeNull();
     expect(result.result.metadata.historyCoverage).toBe(0);
     expect(historyCalls).toBe(0);
+  });
+
+  it('records a verified origin hint without promoting it to full lifetime coverage', async () => {
+    const context = fixture();
+    const origins: string[] = [];
+    const histories: string[] = [];
+    const result = await materializeFlapLifetimeRestartSafe({
+      ...context.options,
+      originHintBlock: 100,
+      executeOrigin: async (options) => {
+        origins.push(`${options.fromBlock}-${options.toBlock}`);
+        return originRun(context.anchor, true, '100', '100', targetAnchor('100'));
+      },
+      executeHistory: async (options) => {
+        histories.push(`${options.fromBlock}-${options.toBlock}`);
+        return historyRun(context.anchor);
+      },
+    });
+
+    expect(result.result).toMatchObject({
+      originSearchMode: 'VERIFIED_HINT',
+      originSearchCoverage: 1,
+      origin: { state: 'known' },
+      lifetimeCoverage: {
+        state: 'unknown',
+        reason: 'INSUFFICIENT_DATA',
+      },
+      historyProjection: { requestedRangeCoverage: 1 },
+      metadata: { historyCoverage: 1 },
+    });
+    expect(origins).toEqual(['100-100']);
+    expect(histories).toEqual(['100-103']);
+    expect(context.written.at(-1)?.summary).toContain(
+      'verified at an explicit finalized hint block',
+    );
   });
 
   it('fails closed when child history is not bound to the exact target Snapshot', async () => {

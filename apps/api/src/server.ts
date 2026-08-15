@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { loadWorkspaceEnv } from './workspace-env.js';
+
+loadWorkspaceEnv();
 
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';

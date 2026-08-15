@@ -784,9 +784,20 @@ tbody tr:hover {
 .status-down,
 .status-disagreement,
 .status-fail,
-.status-execution-blocked {
+.status-execution-blocked,
+.status-provider-down,
+.status-unavailable {
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 25%, var(--border));
+}
+
+.status-unknown,
+.status-not-queried,
+.status-not-measured,
+.status-human-review-required,
+.status-calibration-required {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 25%, var(--border));
 }
 
 .status-degraded,
@@ -811,7 +822,10 @@ tbody tr:hover {
 .status-interface-ready,
 .status-ephemeral,
 .status-checking,
-.status-implemented-ephemeral {
+.status-implemented-ephemeral,
+.status-not-observed,
+.status-not-run,
+.status-not-persisted {
   color: var(--text-secondary);
 }
 
@@ -1304,6 +1318,12 @@ tbody tr:hover {
   text-align: right;
 }
 
+.fact-row > code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 .knowledge-known {
   color: var(--accent);
   font-family: 'SFMono-Regular', Consolas, monospace;
@@ -1312,6 +1332,12 @@ tbody tr:hover {
 .knowledge-unknown,
 .knowledge-unavailable {
   color: var(--warning);
+}
+
+.knowledge-stale {
+  color: var(--blue);
+  text-decoration: underline dashed;
+  text-underline-offset: 0.18em;
 }
 
 .bitcoin-intelligence {
@@ -1596,6 +1622,7 @@ tbody tr:hover {
 }
 
 .control-campaign-layout {
+  grid-template-columns: minmax(0, 1.15fr) minmax(380px, 0.85fr);
   align-items: start;
 }
 
@@ -1606,7 +1633,7 @@ tbody tr:hover {
   gap: 16px;
   margin-top: 16px;
   padding: 14px 16px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-bright);
   border-radius: 12px;
   background: var(--surface-raised);
 }
@@ -1628,7 +1655,7 @@ tbody tr:hover {
 
 .monitor-bar {
   margin-top: 10px;
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border-strong));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border-bright));
 }
 
 .alert-state-message {
@@ -1754,6 +1781,46 @@ tbody tr:hover {
   display: grid;
   gap: 14px;
   min-width: 0;
+}
+
+.campaign-graph-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.campaign-graph-tab {
+  flex: 1 1 90px;
+  min-width: 0;
+  padding: 8px 10px;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.campaign-graph-tab:hover,
+.campaign-graph-tab.active {
+  color: var(--text);
+  background: var(--surface-raised);
+  border-color: var(--border-bright);
+}
+
+.campaign-comparison {
+  min-width: 0;
+}
+
+.campaign-comparison .panel-copy {
+  margin: 0 18px 16px;
 }
 
 .campaign-index-list {
@@ -2502,7 +2569,7 @@ tbody tr:hover {
 .inline-empty {
   margin-top: 18px;
   padding: 16px;
-  border: 1px dashed var(--border-strong);
+  border: 1px dashed var(--border-bright);
   border-radius: var(--radius-sm);
   color: var(--text-muted);
 }
@@ -2621,6 +2688,10 @@ footer a {
   .label-summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .control-campaign-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -2651,9 +2722,13 @@ footer a {
 
   .sidebar nav {
     width: 100%;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
     gap: 5px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-color: var(--border-bright) transparent;
+    scrollbar-width: thin;
   }
 
   .sidebar .nav-caption,
@@ -2663,6 +2738,9 @@ footer a {
   }
 
   .sidebar .nav-item {
+    width: 76px;
+    min-width: 76px;
+    flex: 0 0 76px;
     min-height: 51px;
     justify-content: center;
     flex-direction: column;
@@ -2726,7 +2804,11 @@ footer a {
   }
 
   .topbar .api-state {
-    display: none;
+    display: flex;
+    gap: 0;
+    width: 7px;
+    overflow: visible;
+    font-size: 0;
   }
 }
 

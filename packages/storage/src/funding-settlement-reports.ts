@@ -119,6 +119,16 @@ function reportId(value: string): string {
   return value;
 }
 
+function blockQuantity(value: string, field: string): string {
+  if (!/^(?:0|[1-9]\d*)$/.test(value)) {
+    throw new FundingSettlementReportStorageError(
+      'FUNDING_SETTLEMENT_REPORT_INVALID',
+      `${field} must be a canonical unsigned block quantity.`,
+    );
+  }
+  return BigInt(value).toString();
+}
+
 function rowReport(row: Record<string, unknown>): FundingSettlementReport {
   const id = row.id;
   if (typeof id !== 'string') {
@@ -272,6 +282,46 @@ export class PostgresFundingSettlementReportRepository {
       throw new FundingSettlementReportStorageError(
         'FUNDING_SETTLEMENT_REPORT_UNAVAILABLE',
         'Latest Funding Settlement report read failed.',
+        { retryable: true, cause: error },
+      );
+    }
+  }
+
+  async forRange(
+    chainId: string,
+    token: string,
+    fromBlock: string,
+    toBlock: string,
+  ): Promise<FundingSettlementReport | undefined> {
+    if (!/^eip155:[1-9]\d*$/.test(chainId) || !/^0x[0-9a-f]{40}$/.test(token)) {
+      throw new FundingSettlementReportStorageError(
+        'FUNDING_SETTLEMENT_REPORT_INVALID',
+        'Funding Settlement range lookup identity is invalid.',
+      );
+    }
+    const normalizedFrom = blockQuantity(fromBlock, 'fromBlock');
+    const normalizedTo = blockQuantity(toBlock, 'toBlock');
+    if (BigInt(normalizedTo) < BigInt(normalizedFrom)) {
+      throw new FundingSettlementReportStorageError(
+        'FUNDING_SETTLEMENT_REPORT_INVALID',
+        'Funding Settlement range must not end before it begins.',
+      );
+    }
+    try {
+      const result = await this.#pool.query(
+        `${SELECT_REPORT}
+         WHERE chain_id = $1 AND token = $2
+           AND from_block = $3::numeric AND to_block = $4::numeric
+         ORDER BY freshness DESC, created_at DESC, id DESC
+         LIMIT 1`,
+        [chainId, token, normalizedFrom, normalizedTo],
+      );
+      return result.rows[0] === undefined ? undefined : rowReport(result.rows[0]);
+    } catch (error) {
+      if (error instanceof FundingSettlementReportStorageError) throw error;
+      throw new FundingSettlementReportStorageError(
+        'FUNDING_SETTLEMENT_REPORT_UNAVAILABLE',
+        'Funding Settlement range lookup failed.',
         { retryable: true, cause: error },
       );
     }

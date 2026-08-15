@@ -10,6 +10,7 @@ import {
   type RawChainFact,
   type TokenHistoryDiscoveryReport,
 } from '@zerotrace/schemas';
+import { createEvmAssetTransferObservation } from './index.js';
 import { buildFundingSettlementFromTokenHistory } from './token-history-provider.js';
 
 const chainId = 'eip155:56';
@@ -266,5 +267,150 @@ describe('Token History Funding/Settlement provider composition', () => {
     expect(result.focusSelection.codeConfirmed).toEqual([]);
     expect(result.focusSelection.transactionSenderFallback).toEqual([sender]);
     expect(result.codeProbeFailures[0]).toContain('missing trie node');
+  });
+
+  it('adds candidate-scoped archival transfers without relabeling them as transaction-local', async () => {
+    const historicalTransfer = createEvmAssetTransferObservation({
+      chainId,
+      asset: 'NATIVE',
+      source: `0x${'5'.repeat(40)}`,
+      destination: sender,
+      amountAtomic: '100',
+      blockNumber: '100',
+      blockHash,
+      transactionHash: `0x${'6'.repeat(64)}`,
+      transactionIndex: '1',
+      observedAt: timestamp,
+      execution: 'SUCCESS',
+      finality: 'FINAL',
+      evidenceIds: ['ev_dddddddddddddddddddddddd'],
+      rawArtifactRef: 's3://fixture/candidate.json#sha256=' + 'c'.repeat(64),
+    });
+    const result = await buildFundingSettlementFromTokenHistory({
+      report: report(true),
+      facts: [transactionFact()],
+      exactReader: exactReader({ code: '0x1', logs: [] }) as never,
+      token,
+      fromBlock: 100,
+      toBlock: 100,
+      probeHistoricalCode: true,
+      historicalTransfers: [historicalTransfer],
+      historicalHistoryCoverage: 1,
+      historicalCoverageScope: 'BOUNDED_RANGE',
+      historicalSourceSet: ['sqd:fixture'],
+    });
+    expect(result.status).toBe('DERIVED');
+    if (result.status !== 'DERIVED') throw new Error('Expected a derived report.');
+    expect(result.report.coverageScope).toBe('BOUNDED_RANGE');
+    expect(result.report.historyCoverage).toBe(1);
+    expect(result.report.fundingEdges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: `0x${'5'.repeat(40)}`,
+          destination: sender,
+          relation: 'FIRST_FUNDER',
+        }),
+      ]),
+    );
+    expect(result.report.resultHash).toBe(result.replayResultHash);
+  });
+
+  it('preserves coverage returned by a candidate expansion when no legacy override is supplied', async () => {
+    const historicalTransfer = createEvmAssetTransferObservation({
+      chainId,
+      asset: 'NATIVE',
+      source: `0x${'5'.repeat(40)}`,
+      destination: sender,
+      amountAtomic: '100',
+      blockNumber: '100',
+      blockHash,
+      transactionHash: `0x${'6'.repeat(64)}`,
+      transactionIndex: '1',
+      observedAt: timestamp,
+      execution: 'SUCCESS',
+      finality: 'FINAL',
+      evidenceIds: ['ev_eeeeeeeeeeeeeeeeeeeeeeee'],
+      rawArtifactRef: 's3://fixture/candidate-expansion.json#sha256=' + 'd'.repeat(64),
+    });
+    const result = await buildFundingSettlementFromTokenHistory({
+      report: report(true),
+      facts: [transactionFact()],
+      exactReader: exactReader({ code: '0x1', logs: [] }) as never,
+      token,
+      fromBlock: 100,
+      toBlock: 100,
+      probeHistoricalCode: true,
+      historicalExpansion: async () => ({
+        transfers: [historicalTransfer],
+        historyCoverage: 1,
+        coverageScope: 'BOUNDED_RANGE' as const,
+        sourceSet: ['sqd:fixture'],
+      }),
+    });
+    expect(result.status).toBe('DERIVED');
+    if (result.status !== 'DERIVED') throw new Error('Expected a derived report.');
+    expect(result.report.historyCoverage).toBe(1);
+    expect(result.report.coverageScope).toBe('BOUNDED_RANGE');
+  });
+
+  it('deduplicates one chain event when exact and archival Evidence IDs differ', async () => {
+    const duplicateTransfer = createEvmAssetTransferObservation({
+      chainId,
+      asset: token,
+      source: sender,
+      destination,
+      amountAtomic: '5',
+      blockNumber: '100',
+      blockHash,
+      transactionHash,
+      transactionIndex: '0',
+      eventIndex: '0',
+      observedAt: timestamp,
+      execution: 'SUCCESS',
+      finality: 'FINAL',
+      evidenceIds: ['ev_ffffffffffffffffffffffff'],
+      rawArtifactRef: 's3://fixture/archival.json#sha256=' + 'e'.repeat(64),
+    });
+    const baseInput = {
+      report: report(true),
+      facts: [transactionFact()],
+      exactReader: exactReader({
+        code: (address) => (address === destination ? '0x' : '0x1'),
+        logs: [transferLog],
+      }) as never,
+      token,
+      fromBlock: 100,
+      toBlock: 100,
+      probeHistoricalCode: true,
+      historicalTransfers: [duplicateTransfer],
+      historicalHistoryCoverage: 1,
+      historicalCoverageScope: 'BOUNDED_RANGE' as const,
+    };
+    const withoutExpansion = await buildFundingSettlementFromTokenHistory(baseInput);
+    const withExpansion = await buildFundingSettlementFromTokenHistory({
+      ...baseInput,
+      exactReader: exactReader({
+        code: (address) => (address === destination ? '0x' : '0x1'),
+        logs: [transferLog],
+      }) as never,
+      historicalExpansion: async () => ({
+        transfers: [duplicateTransfer],
+        historyCoverage: 1,
+        coverageScope: 'BOUNDED_RANGE' as const,
+        sourceSet: [],
+      }),
+    });
+    expect(withoutExpansion.status).toBe('DERIVED');
+    expect(withExpansion.status).toBe('DERIVED');
+    if (withoutExpansion.status !== 'DERIVED' || withExpansion.status !== 'DERIVED') {
+      throw new Error('Expected derived reports.');
+    }
+    expect(withExpansion.report.resultHash).toBe(withoutExpansion.report.resultHash);
+    expect(withExpansion.report.fundingEdges).toHaveLength(
+      withoutExpansion.report.fundingEdges.length,
+    );
+    expect(withExpansion.report.settlementEdges).toHaveLength(
+      withoutExpansion.report.settlementEdges.length,
+    );
   });
 });

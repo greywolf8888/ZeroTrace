@@ -8,6 +8,7 @@ import {
   type Capability,
   type ClaimReportResponse,
   type ControlCampaignRecord,
+  type ControlCampaignSnapshot,
   type ControlCampaignMonitorResponse,
   type ForensicCaseBundleResponse,
   type ForensicCampaignAlert,
@@ -101,6 +102,30 @@ function nextMonitorStart(block: string): string | undefined {
   if (!/^(?:0|[1-9]\d*)$/.test(block)) return undefined;
   const next = BigInt(block) + 1n;
   return next <= BigInt(Number.MAX_SAFE_INTEGER) ? next.toString() : undefined;
+}
+
+type CampaignGraphLayer = 'combined' | 'token' | 'funding' | 'settlement' | 'behavior';
+
+const CAMPAIGN_GRAPH_LAYERS: ReadonlyArray<{ id: CampaignGraphLayer; label: string }> = [
+  { id: 'combined', label: 'Combined' },
+  { id: 'token', label: 'Token' },
+  { id: 'funding', label: 'Funding' },
+  { id: 'settlement', label: 'Settlement' },
+  { id: 'behavior', label: 'Behavior' },
+];
+
+function campaignSnapshotPosition(snapshot: ControlCampaignSnapshot): string {
+  return snapshot.blockNumber ?? snapshot.height ?? snapshot.slot ?? 'Unknown';
+}
+
+function overlapPercent(left: readonly string[], right: readonly string[]): number | undefined {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  const union = new Set([...leftSet, ...rightSet]);
+  if (union.size === 0) return undefined;
+  let intersection = 0;
+  for (const value of leftSet) if (rightSet.has(value)) intersection += 1;
+  return Math.round((intersection / union.size) * 100);
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -836,14 +861,14 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
             <span className="eyebrow">
               Pinned official program IDs · raw discriminator evidence
             </span>
-            <h4>Pump launchpad decoder</h4>
+            <h4>Solana launchpad decoder</h4>
           </div>
           <StatusPill status={launchpadObservations.length > 0 ? 'OBSERVED' : 'NOT_OBSERVED'} />
         </div>
         {launchpadObservations.length === 0 ? (
           <p className="empty-cell">
-            No registered Pump/PumpSwap instruction was observed. The decoder does not infer a
-            launch mechanism from an unknown program or from a web page.
+            No pinned Pump, PumpSwap, or Raydium LaunchLab instruction was observed. The decoder
+            does not infer a launch mechanism from an unknown program or from a web page.
           </p>
         ) : (
           <div className="table-scroll solana-launchpad-table">
@@ -1118,7 +1143,11 @@ function Header({
           <span className="pulse-dot" />
           Read-only
         </div>
-        <div className="api-state" title={health?.checkedAt}>
+        <div
+          className="api-state"
+          title={health?.checkedAt}
+          aria-label={'API status ' + (health?.status ?? 'checking')}
+        >
           <span
             className={'state-light ' + (health?.status === 'UP' ? 'state-up' : 'state-warn')}
           />
@@ -3667,9 +3696,11 @@ function isFundingSettlementReport(
 function FundingSettlementPanel({
   response,
   error,
+  layer = 'combined',
 }: {
   response: FundingSettlementReportResponse | undefined;
   error: string | undefined;
+  layer?: 'combined' | 'funding' | 'settlement';
 }) {
   if (error !== undefined) {
     return (
@@ -3706,15 +3737,22 @@ function FundingSettlementPanel({
   }
 
   const edges = [
-    ...report.fundingEdges.map((edge) => ({ lane: 'Funding', edge })),
-    ...report.settlementEdges.map((edge) => ({ lane: 'Settlement', edge })),
+    ...(layer === 'settlement'
+      ? []
+      : report.fundingEdges.map((edge) => ({ lane: 'Funding', edge }))),
+    ...(layer === 'funding'
+      ? []
+      : report.settlementEdges.map((edge) => ({ lane: 'Settlement', edge }))),
   ];
 
   return (
     <section className="panel funding-settlement-panel" data-testid="funding-settlement-report">
       <div className="panel-header">
         <div>
-          <span className="eyebrow">Funding &amp; Settlement Graph · replayable Snapshot</span>
+          <span className="eyebrow">
+            {layer === 'combined' ? 'Funding &amp; Settlement Graph' : `${titleCase(layer)} Graph`}{' '}
+            · replayable Snapshot
+          </span>
           <h3>Transaction evidence, not ownership proof</h3>
         </div>
         <StatusPill status={report.status} />
@@ -4011,6 +4049,16 @@ function SolanaDealerPanel() {
               detail="Replayable observations"
               state="known"
             />
+            <MetricTile
+              label="Launchpad signals"
+              value={
+                report.launchpadObservations === undefined
+                  ? 'Unknown'
+                  : String(report.launchpadObservations.length)
+              }
+              detail="Pinned Solana launchpad decodes"
+              state={report.launchpadObservations === undefined ? 'unknown' : 'known'}
+            />
           </div>
           <div className="two-column">
             <div className="detail-card">
@@ -4066,6 +4114,59 @@ function SolanaDealerPanel() {
               </tbody>
             </table>
           </div>
+          {report.launchpadObservations === undefined ? null : (
+            <div className="table-wrap" data-testid="solana-dealer-launchpad-observations">
+              <div className="panel-header funding-settlement-subheader">
+                <div>
+                  <span className="eyebrow">Official read-only decoder</span>
+                  <h4>Launchpad observations</h4>
+                </div>
+                <span className="panel-note">{report.launchpadObservations.length} signal(s)</span>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Platform</th>
+                    <th>Instruction</th>
+                    <th>Path</th>
+                    <th>Coverage</th>
+                    <th>Execution</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.launchpadObservations.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="empty-cell">
+                        No pinned Solana launchpad instruction was decoded in this bounded range.
+                      </td>
+                    </tr>
+                  ) : (
+                    report.launchpadObservations.map((observation) => (
+                      <tr key={observation.id}>
+                        <td>
+                          <StatusPill status={observation.platform} />
+                        </td>
+                        <td>{observation.instructionName}</td>
+                        <td>
+                          <code>{observation.instructionPath}</code>
+                        </td>
+                        <td>
+                          {Math.round(
+                            Math.min(observation.accountCoverage, observation.argumentCoverage) *
+                              100,
+                          )}
+                          %
+                        </td>
+                        <td>
+                          <StatusPill status={observation.execution} />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </section>
@@ -4286,7 +4387,9 @@ function ControlCampaignWorkspace() {
   const [selectedId, setSelectedId] = useState<string>();
   const [error, setError] = useState<string>();
   const [fundingSettlement, setFundingSettlement] = useState<FundingSettlementReportResponse>();
+  const [fundingSettlementKey, setFundingSettlementKey] = useState<string>();
   const [fundingSettlementError, setFundingSettlementError] = useState<string>();
+  const [fundingSettlementErrorKey, setFundingSettlementErrorKey] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [forensicCase, setForensicCase] = useState<ForensicCaseBundleResponse>();
@@ -4297,9 +4400,14 @@ function ControlCampaignWorkspace() {
   const [alertsError, setAlertsError] = useState<string>();
   const [monitor, setMonitor] = useState<ControlCampaignMonitorResponse>();
   const [monitorError, setMonitorError] = useState<string>();
+  const [graphLayer, setGraphLayer] = useState<CampaignGraphLayer>('combined');
 
   const selected = records.find((record) => record.campaign.id === selectedId) ?? records[0];
   const selectedCampaignId = selected?.campaign.id;
+  const comparisonReference =
+    selected === undefined
+      ? undefined
+      : records.find((record) => record.campaign.id !== selected.campaign.id);
 
   useEffect(() => {
     if (selectedCampaignId === undefined) return;
@@ -4325,6 +4433,84 @@ function ControlCampaignWorkspace() {
     };
   }, [selectedCampaignId]);
 
+  const selectedFundingFromBlock =
+    selected?.campaign.ledger === 'EVM' && selected.campaign.endBlock.state === 'known'
+      ? selected.campaign.startBlock
+      : undefined;
+  const selectedFundingToBlock =
+    selected?.campaign.ledger === 'EVM' &&
+    selected.campaign.endBlock.state === 'known' &&
+    typeof selected.campaign.endBlock.value === 'string'
+      ? selected.campaign.endBlock.value
+      : undefined;
+  const selectedFundingChainId =
+    selected?.campaign.ledger === 'EVM' ? selected.campaign.chainId : undefined;
+  const selectedFundingToken =
+    selected?.campaign.ledger === 'EVM' ? selected.campaign.token : undefined;
+  const selectedFundingKey =
+    selectedCampaignId !== undefined &&
+    selectedFundingChainId !== undefined &&
+    selectedFundingToken !== undefined &&
+    selectedFundingFromBlock !== undefined &&
+    selectedFundingToBlock !== undefined
+      ? JSON.stringify([
+          selectedCampaignId,
+          selectedFundingChainId,
+          selectedFundingToken,
+          selectedFundingFromBlock,
+          selectedFundingToBlock,
+        ])
+      : undefined;
+
+  useEffect(() => {
+    if (
+      selectedFundingKey === undefined ||
+      selectedFundingChainId === undefined ||
+      selectedFundingToken === undefined ||
+      selectedFundingFromBlock === undefined ||
+      selectedFundingToBlock === undefined
+    )
+      return;
+    let active = true;
+    void api
+      .fundingSettlementRange(
+        selectedFundingChainId,
+        selectedFundingToken,
+        selectedFundingFromBlock,
+        selectedFundingToBlock,
+      )
+      .then((response) => {
+        if (!active) return;
+        setFundingSettlement(response);
+        setFundingSettlementKey(selectedFundingKey);
+        setFundingSettlementError(undefined);
+        setFundingSettlementErrorKey(undefined);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setFundingSettlement(undefined);
+        setFundingSettlementKey(undefined);
+        setFundingSettlementError(
+          cause instanceof Error ? cause.message : 'Funding and Settlement request failed.',
+        );
+        setFundingSettlementErrorKey(selectedFundingKey);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    selectedFundingChainId,
+    selectedFundingFromBlock,
+    selectedFundingKey,
+    selectedFundingToBlock,
+    selectedFundingToken,
+  ]);
+
+  const visibleFundingSettlement =
+    fundingSettlementKey === selectedFundingKey ? fundingSettlement : undefined;
+  const visibleFundingSettlementError =
+    fundingSettlementErrorKey === selectedFundingKey ? fundingSettlementError : undefined;
+
   const visibleAlerts =
     alertsCampaignId === selectedCampaignId ? campaignAlerts : ([] as ForensicCampaignAlert[]);
   const visibleAlertsLoaded = alertsCampaignId === selectedCampaignId && alertsLoaded;
@@ -4335,14 +4521,13 @@ function ControlCampaignWorkspace() {
     if (chainId.trim().length === 0 || normalizedToken.length === 0) return;
     setBusy(true);
     setError(undefined);
-    setFundingSettlementError(undefined);
-    const [campaignResult, fundingResult] = await Promise.allSettled([
+    const campaignResult = await Promise.allSettled([
       api.controlCampaigns(chainId.trim(), normalizedToken),
-      api.latestFundingSettlement(chainId.trim(), normalizedToken),
-    ]);
+    ]).then(([result]) => result);
     if (campaignResult.status === 'fulfilled') {
       setRecords(campaignResult.value.records);
       setSelectedId(campaignResult.value.records[0]?.campaign.id);
+      setGraphLayer('combined');
     } else {
       setError(
         campaignResult.reason instanceof Error
@@ -4351,16 +4536,6 @@ function ControlCampaignWorkspace() {
       );
       setRecords([]);
       setSelectedId(undefined);
-    }
-    if (fundingResult.status === 'fulfilled') {
-      setFundingSettlement(fundingResult.value);
-    } else {
-      setFundingSettlement(undefined);
-      setFundingSettlementError(
-        fundingResult.reason instanceof Error
-          ? fundingResult.reason.message
-          : 'Funding and Settlement request failed.',
-      );
     }
     setLoaded(true);
     setBusy(false);
@@ -4421,6 +4596,33 @@ function ControlCampaignWorkspace() {
     campaign?.snapshotEnd.slot ??
     'Unknown';
   const monitorStartBlock = nextMonitorStart(snapshotPosition);
+  const showTokenLayer = graphLayer === 'combined' || graphLayer === 'token';
+  const showFundingLayer = graphLayer === 'combined' || graphLayer === 'funding';
+  const showSettlementLayer = graphLayer === 'combined' || graphLayer === 'settlement';
+  const showBehaviorLayer = graphLayer === 'combined' || graphLayer === 'behavior';
+  const visibleFundingLayer =
+    graphLayer === 'funding' || graphLayer === 'settlement' ? graphLayer : 'combined';
+  const comparisonWalletOverlap =
+    selected !== undefined && comparisonReference !== undefined
+      ? overlapPercent(
+          [...selected.campaign.coreWalletIds, ...selected.campaign.satelliteWalletIds],
+          [
+            ...comparisonReference.campaign.coreWalletIds,
+            ...comparisonReference.campaign.satelliteWalletIds,
+          ],
+        )
+      : undefined;
+  const comparisonWalletDelta =
+    selected !== undefined && comparisonReference !== undefined
+      ? selected.campaign.coreWalletIds.length +
+        selected.campaign.satelliteWalletIds.length -
+        (comparisonReference.campaign.coreWalletIds.length +
+          comparisonReference.campaign.satelliteWalletIds.length)
+      : undefined;
+  const comparisonEvidenceDelta =
+    selected !== undefined && comparisonReference !== undefined
+      ? selected.evidenceItems.length - comparisonReference.evidenceItems.length
+      : undefined;
 
   async function startMonitor() {
     if (selected === undefined || monitorStartBlock === undefined) return;
@@ -4514,8 +4716,12 @@ function ControlCampaignWorkspace() {
 
       <SolanaDealerPanel />
 
-      {loaded ? (
-        <FundingSettlementPanel response={fundingSettlement} error={fundingSettlementError} />
+      {loaded && (showFundingLayer || showSettlementLayer) ? (
+        <FundingSettlementPanel
+          response={visibleFundingSettlement}
+          error={visibleFundingSettlementError}
+          layer={visibleFundingLayer}
+        />
       ) : null}
 
       {loaded && records.length === 0 && error === undefined ? (
@@ -4563,6 +4769,24 @@ function ControlCampaignWorkspace() {
 
           {selected === undefined || campaign === undefined || evidenceLine === undefined ? null : (
             <div className="campaign-detail-stack">
+              <div
+                className="campaign-graph-tabs"
+                role="tablist"
+                aria-label="Control Campaign graph layers"
+              >
+                {CAMPAIGN_GRAPH_LAYERS.map((layer) => (
+                  <button
+                    className={'campaign-graph-tab ' + (graphLayer === layer.id ? 'active' : '')}
+                    key={layer.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={graphLayer === layer.id}
+                    onClick={() => setGraphLayer(layer.id)}
+                  >
+                    {layer.label}
+                  </button>
+                ))}
+              </div>
               <section className="panel">
                 <div className="panel-header">
                   <div>
@@ -4716,6 +4940,86 @@ function ControlCampaignWorkspace() {
                 </div>
               </section>
 
+              {comparisonReference === undefined ? null : (
+                <section className="panel campaign-comparison" data-testid="campaign-comparison">
+                  <div className="panel-header">
+                    <div>
+                      <span className="eyebrow">
+                        Immutable report comparison · descriptive only
+                      </span>
+                      <h3>Campaign comparison</h3>
+                    </div>
+                    <StatusPill status="READ_ONLY" />
+                  </div>
+                  <p className="panel-copy">
+                    This compares two stored Snapshot-bound reports. It does not infer ownership,
+                    merge entities, or convert an uncalibrated score into probability.
+                  </p>
+                  <div className="metric-grid compact-grid">
+                    <MetricTile
+                      label="Wallet overlap"
+                      value={
+                        comparisonWalletOverlap === undefined
+                          ? 'Unknown'
+                          : `${comparisonWalletOverlap}%`
+                      }
+                      detail="Jaccard over observed core + satellite IDs"
+                      state={comparisonWalletOverlap === undefined ? 'unknown' : 'known'}
+                    />
+                    <MetricTile
+                      label="Wallet count Δ"
+                      value={
+                        comparisonWalletDelta === undefined
+                          ? 'Unknown'
+                          : String(comparisonWalletDelta)
+                      }
+                      detail="Selected minus reference report"
+                      state={comparisonWalletDelta === undefined ? 'unknown' : 'known'}
+                    />
+                    <MetricTile
+                      label="Evidence item Δ"
+                      value={
+                        comparisonEvidenceDelta === undefined
+                          ? 'Unknown'
+                          : String(comparisonEvidenceDelta)
+                      }
+                      detail="Selected minus reference report"
+                      state={comparisonEvidenceDelta === undefined ? 'unknown' : 'known'}
+                    />
+                    <MetricTile
+                      label="Coverage"
+                      value={`${Math.round(campaign.evidenceCoverage * 100)}% → ${Math.round(comparisonReference.campaign.evidenceCoverage * 100)}%`}
+                      detail="Selected → reference Evidence coverage"
+                      state="known"
+                    />
+                  </div>
+                  <div className="fact-grid">
+                    <div className="fact-row">
+                      <span>Selected report</span>
+                      <code>{selected.campaign.id}</code>
+                    </div>
+                    <div className="fact-row">
+                      <span>Reference report</span>
+                      <code>{comparisonReference.campaign.id}</code>
+                    </div>
+                    <div className="fact-row">
+                      <span>Snapshot positions</span>
+                      <span>
+                        {campaignSnapshotPosition(selected.campaign.snapshotEnd)} →{' '}
+                        {campaignSnapshotPosition(comparisonReference.campaign.snapshotEnd)}
+                      </span>
+                    </div>
+                    <div className="fact-row">
+                      <span>Result hashes</span>
+                      <code title={`${selected.resultHash} → ${comparisonReference.resultHash}`}>
+                        {shortId(selected.resultHash, 8)} →{' '}
+                        {shortId(comparisonReference.resultHash, 8)}
+                      </code>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               <section className="panel" data-testid="control-campaign-alerts">
                 <div className="panel-header">
                   <div>
@@ -4764,86 +5068,90 @@ function ControlCampaignWorkspace() {
                 )}
               </section>
 
-              <section className="panel" data-testid="control-campaign-positions">
-                <div className="panel-header">
-                  <div>
-                    <span className="eyebrow">Conserved Cluster Position snapshots</span>
-                    <h3>Position Timeline</h3>
+              {showTokenLayer ? (
+                <section className="panel" data-testid="control-campaign-positions">
+                  <div className="panel-header">
+                    <div>
+                      <span className="eyebrow">Conserved Cluster Position snapshots</span>
+                      <h3>Position Timeline</h3>
+                    </div>
+                    <span className="panel-note">{selected.positions.length} snapshot(s)</span>
                   </div>
-                  <span className="panel-note">{selected.positions.length} snapshot(s)</span>
-                </div>
-                {selected.positions.length === 0 ? (
-                  <p className="empty-cell">No conserved position snapshot was materialized.</p>
-                ) : (
-                  <div className="table-scroll">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Block</th>
-                          <th>Token balance</th>
-                          <th>External in / out</th>
-                          <th>Wallets</th>
-                          <th>Sell-ready</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selected.positions.map((position) => (
-                          <tr key={position.id}>
-                            <td>{position.atBlock}</td>
-                            <td>
-                              <code>{position.tokenBalanceRaw}</code>
-                            </td>
-                            <td>
-                              <code>{position.externalTokenInflowRaw}</code>
-                              <br />
-                              <small>−{position.externalTokenOutflowRaw}</small>
-                            </td>
-                            <td>{position.walletCount}</td>
-                            <td>
-                              <KnowledgeDisplay data={position.sellReadyTokenRaw} />
-                            </td>
+                  {selected.positions.length === 0 ? (
+                    <p className="empty-cell">No conserved position snapshot was materialized.</p>
+                  ) : (
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Block</th>
+                            <th>Token balance</th>
+                            <th>External in / out</th>
+                            <th>Wallets</th>
+                            <th>Sell-ready</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </section>
+                        </thead>
+                        <tbody>
+                          {selected.positions.map((position) => (
+                            <tr key={position.id}>
+                              <td>{position.atBlock}</td>
+                              <td>
+                                <code>{position.tokenBalanceRaw}</code>
+                              </td>
+                              <td>
+                                <code>{position.externalTokenInflowRaw}</code>
+                                <br />
+                                <small>−{position.externalTokenOutflowRaw}</small>
+                              </td>
+                              <td>{position.walletCount}</td>
+                              <td>
+                                <KnowledgeDisplay data={position.sellReadyTokenRaw} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              ) : null}
 
-              <section className="panel" data-testid="control-campaign-timeline">
-                <div className="panel-header">
-                  <div>
-                    <span className="eyebrow">Behavior Events · ordered by observed range</span>
-                    <h3>Campaign Timeline</h3>
+              {showBehaviorLayer ? (
+                <section className="panel" data-testid="control-campaign-timeline">
+                  <div className="panel-header">
+                    <div>
+                      <span className="eyebrow">Behavior Events · ordered by observed range</span>
+                      <h3>Campaign Timeline</h3>
+                    </div>
+                    <span className="panel-note">{selected.behaviorEvents.length} event(s)</span>
                   </div>
-                  <span className="panel-note">{selected.behaviorEvents.length} event(s)</span>
-                </div>
-                {selected.behaviorEvents.length === 0 ? (
-                  <p className="empty-cell">No behavior event was materialized.</p>
-                ) : (
-                  <div className="timeline-list">
-                    {selected.behaviorEvents.map((event) => (
-                      <article className="timeline-event" key={event.id}>
-                        <div className="timeline-marker" />
-                        <div>
-                          <div className="timeline-event-heading">
-                            <strong>{titleCase(event.type)}</strong>
-                            <StatusPill status={event.status} />
+                  {selected.behaviorEvents.length === 0 ? (
+                    <p className="empty-cell">No behavior event was materialized.</p>
+                  ) : (
+                    <div className="timeline-list">
+                      {selected.behaviorEvents.map((event) => (
+                        <article className="timeline-event" key={event.id}>
+                          <div className="timeline-marker" />
+                          <div>
+                            <div className="timeline-event-heading">
+                              <strong>{titleCase(event.type)}</strong>
+                              <StatusPill status={event.status} />
+                            </div>
+                            <span className="timeline-range">
+                              {event.startBlock} → {event.endBlock} · {formatTime(event.startTime)}
+                            </span>
+                            <p>{event.explanation}</p>
+                            <small>
+                              {event.supportingEvidenceIds.length} supporting Evidence · confidence{' '}
+                              <KnowledgeDisplay data={event.confidence} />
+                            </small>
                           </div>
-                          <span className="timeline-range">
-                            {event.startBlock} → {event.endBlock} · {formatTime(event.startTime)}
-                          </span>
-                          <p>{event.explanation}</p>
-                          <small>
-                            {event.supportingEvidenceIds.length} supporting Evidence · confidence{' '}
-                            <KnowledgeDisplay data={event.confidence} />
-                          </small>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ) : null}
 
               <section className="panel" data-testid="control-campaign-evidence-line">
                 <div className="panel-header">
@@ -6531,6 +6839,16 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
                   <code title={lifetimeResult.scan.terminalResult.originScanId}>
                     {shortId(lifetimeResult.scan.terminalResult.originScanId, 10)}
                   </code>
+                </div>
+                <div className="fact-row">
+                  <span>Origin search</span>
+                  {lifetimeResult.scan.terminalResult.originSearchMode === 'VERIFIED_HINT' ? (
+                    <span className="knowledge-unknown">
+                      Verified hint only · full dataset incomplete
+                    </span>
+                  ) : (
+                    <code>Full dataset</code>
+                  )}
                 </div>
                 <div className="fact-row">
                   <span>History projection</span>

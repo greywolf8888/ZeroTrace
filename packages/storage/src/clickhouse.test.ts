@@ -135,6 +135,79 @@ describe('ClickHouseRawFactRepository', () => {
     expect(fixture.rows.size).toBe(1);
   });
 
+  it('pages lightweight fact keys before payloads and restores deterministic key order', async () => {
+    const first = createRawChainFact(input);
+    const second = createRawChainFact({
+      ...input,
+      blockOrSlot: '43',
+      blockHash: `0x${'d'.repeat(64)}`,
+      subject: `0x${'d'.repeat(64)}`,
+      payload: { header: { hash: `0x${'d'.repeat(64)}`, number: 43 } },
+    });
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({ json: async () => [{ fact_id: second.id }, { fact_id: first.id }] })
+      .mockResolvedValueOnce({ json: async () => [rawRow(first), rawRow(second)] });
+    const repository = ClickHouseRawFactRepository.fromClient({
+      query,
+      insert: vi.fn(),
+      close: vi.fn(),
+    } as unknown as Parameters<typeof ClickHouseRawFactRepository.fromClient>[0]);
+
+    await expect(
+      repository.listRange({ ledger: 'EVM', chainId: '1', fromBlock: 42, toBlock: 43, limit: 2 }),
+    ).resolves.toEqual([second, first]);
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[0]?.[0]?.query).toContain('SELECT fact_id');
+    expect(query.mock.calls[0]?.[0]?.query).not.toContain('payload');
+    expect(query.mock.calls[1]?.[0]?.query).toContain('fact_id IN');
+    expect(query.mock.calls[1]?.[0]?.query).not.toContain('ORDER BY');
+    expect(query.mock.calls[1]?.[0]?.query_params?.factIds).toEqual([second.id, first.id]);
+  });
+
+  it('keeps large range pages below the ClickHouse factIds form-field limit', async () => {
+    const facts = Array.from({ length: 1_001 }, (_, index) => {
+      const hash = `0x${index.toString(16).padStart(64, '0')}`;
+      return createRawChainFact({
+        ...input,
+        blockOrSlot: String(42 + index),
+        blockHash: hash,
+        subject: hash,
+        payload: { header: { hash, number: 42 + index } },
+      });
+    });
+    let keyPage = 0;
+    let payloadPage = 0;
+    const query = vi.fn(
+      async (options: { query: string; query_params?: Record<string, unknown> }) => {
+        if (options.query.includes('SELECT fact_id')) {
+          const page = keyPage++ === 0 ? facts.slice(0, 1_000) : facts.slice(1_000);
+          return { json: async () => page.map((fact) => ({ fact_id: fact.id })) };
+        }
+        const page = payloadPage++ === 0 ? facts.slice(0, 1_000) : facts.slice(1_000);
+        return { json: async () => page.map(rawRow) };
+      },
+    );
+    const repository = ClickHouseRawFactRepository.fromClient({
+      query,
+      insert: vi.fn(),
+      close: vi.fn(),
+    } as unknown as Parameters<typeof ClickHouseRawFactRepository.fromClient>[0]);
+
+    await expect(
+      repository.listRange({
+        ledger: 'EVM',
+        chainId: '1',
+        fromBlock: 42,
+        toBlock: 1_042,
+        limit: 1_001,
+      }),
+    ).resolves.toEqual(facts);
+    expect(query).toHaveBeenCalledTimes(4);
+    expect(query.mock.calls[0]?.[0]?.query).toContain('LIMIT {limit:UInt32}');
+    expect(query.mock.calls[2]?.[0]?.query_params?.limit).toBe(1);
+  });
+
   it('inserts validated facts in bounded batches and rejects the whole batch before network access', async () => {
     const fixture = createFakeClient();
     const first = createRawChainFact(input);
@@ -202,6 +275,9 @@ describe('ClickHouseRawFactRepository', () => {
     const query = vi
       .fn()
       .mockResolvedValueOnce({ json: async () => [rawRow(transaction)] })
+      .mockResolvedValueOnce({
+        json: async () => [{ fact_id: log.id, fact_type: log.factType, subject: log.subject }],
+      })
       .mockResolvedValueOnce({ json: async () => [rawRow(log)] });
     const repository = ClickHouseRawFactRepository.fromClient({
       query,
@@ -218,10 +294,15 @@ describe('ClickHouseRawFactRepository', () => {
         provider: input.provider,
       }),
     ).resolves.toEqual([transaction, log]);
+    expect(query.mock.calls[1]?.[0]?.query).toContain('SELECT fact_id, fact_type, subject');
+    expect(query.mock.calls[1]?.[0]?.query).not.toContain('toUnixTimestamp64Milli');
     expect(query.mock.calls[1]?.[0]?.query_params).toMatchObject({
       transactionId,
       transactionIndex: '3',
+    });
+    expect(query.mock.calls[2]?.[0]?.query_params).toMatchObject({
       rawArtifactRef: transaction.rawArtifactRef,
+      factIds: [log.id],
     });
   });
 

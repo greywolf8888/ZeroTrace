@@ -33,6 +33,7 @@ import {
   type SolanaDealerFundingEdge,
   type SolanaDealerHolder,
   type SolanaDealerSettlementEdge,
+  type SolanaLaunchpadObservation,
   type SolanaTransactionIntelligenceReport,
   type TokenFlowEdge,
 } from '@zerotrace/schemas';
@@ -842,10 +843,12 @@ export function buildSolanaDealerCampaign(input: SolanaDealerBuildInput): Solana
   }
   const tokenObservations: SolanaTokenFlowObservation[] = [];
   const solTransfers: SolanaDealerAssetObservation[] = [];
+  const launchpadObservations: SolanaLaunchpadObservation[] = [];
   const allEvidence = new Map<string, Evidence>();
   for (const evidence of input.rangeEvidence) allEvidence.set(evidence.id, evidence);
   for (const transaction of input.transactions) {
     const semantics = transaction.report.facts.transactionSemantics;
+    launchpadObservations.push(...(transaction.report.launchpadObservations ?? []));
     for (const evidence of transaction.report.evidence) allEvidence.set(evidence.id, evidence);
     if (semantics.state !== 'known') continue;
     const flows = semantics.value.assetFlows;
@@ -1003,6 +1006,13 @@ export function buildSolanaDealerCampaign(input: SolanaDealerBuildInput): Solana
     settlementEdges: settlement,
     openingBalanceUnknownWalletIds: holderData.unknownWalletIds,
     pdaSuppressedOwnerIds: [...pdaSuppressedOwnerIds].sort(),
+    ...(launchpadObservations.length === 0
+      ? {}
+      : {
+          launchpadObservations: [...launchpadObservations].sort((left, right) =>
+            left.id.localeCompare(right.id),
+          ),
+        }),
     campaign,
     alerts: alertValues,
     evidence: evidenceValues.sort((left, right) => left.id.localeCompare(right.id)),

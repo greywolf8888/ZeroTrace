@@ -25,7 +25,13 @@ export interface TokenHistoryBackfillWorkerConfig {
   retryBaseDelayMs: number;
   retryMaxDelayMs: number;
   maxFactRows: number;
+  /** Maximum number of materialized SQD event blocks held before the durable cursor advances. */
+  checkpointBatchSize: number;
   owner: string;
+  /** Optional operator-selected schedule for a one-off durable replay. */
+  scheduleId?: string;
+  /** Require every configured RPC endpoint to agree for exact Token History reads. */
+  requireIndependentRpc?: boolean;
   pollIntervalMs: number;
   leaseSeconds: number;
   batchSize: number;
@@ -57,6 +63,15 @@ function workerOwner(value: string | undefined): string {
   const selected = value?.trim() || `${hostname()}:${process.pid}`;
   if (selected.length > 160 || !/^[A-Za-z0-9._:@/-]+$/.test(selected)) {
     throw new Error('CAPTURE_WORKER_OWNER contains unsupported characters or is too long.');
+  }
+  return selected;
+}
+
+function workerScheduleId(value: string | undefined): string | undefined {
+  const selected = value?.trim();
+  if (selected === undefined || selected === '') return undefined;
+  if (!/^cps_[0-9a-f]{24}$/.test(selected)) {
+    throw new Error('CAPTURE_WORKER_SCHEDULE_ID must be a valid capture schedule ID.');
   }
   return selected;
 }
@@ -134,6 +149,11 @@ export function loadTokenHistoryBackfillWorkerConfig(
   const bscRpcUrls = validatedUrls(bscConfigured, 'BSC RPC URL', allowPrivateProviderUrls);
   const sqdPortalUrl = env.SQD_PORTAL_URL?.trim() || 'https://portal.sqd.dev';
   const sqdUrl = providerUrl(sqdPortalUrl, 'SQD_PORTAL_URL', allowPrivateProviderUrls);
+  const scheduleId = workerScheduleId(env.CAPTURE_WORKER_SCHEDULE_ID);
+  const requireIndependentRpc = booleanValue(
+    env.TOKEN_HISTORY_REQUIRE_INDEPENDENT_RPC,
+    'TOKEN_HISTORY_REQUIRE_INDEPENDENT_RPC',
+  );
   const providerUrlObjects = [...ethereumRpcUrls, ...bscRpcUrls].map((value) => new URL(value));
   const username = env.CLICKHOUSE_USERNAME?.trim();
   const password = env.CLICKHOUSE_PASSWORD?.trim();
@@ -202,7 +222,16 @@ export function loadTokenHistoryBackfillWorkerConfig(
       1,
       1_000_000,
     ),
+    checkpointBatchSize: integer(
+      env.TOKEN_HISTORY_CHECKPOINT_BATCH_SIZE,
+      'TOKEN_HISTORY_CHECKPOINT_BATCH_SIZE',
+      50,
+      1,
+      1_000,
+    ),
     owner: workerOwner(env.CAPTURE_WORKER_OWNER),
+    ...(scheduleId === undefined ? {} : { scheduleId }),
+    ...(requireIndependentRpc ? { requireIndependentRpc: true } : {}),
     pollIntervalMs: integer(
       env.CAPTURE_WORKER_POLL_INTERVAL_MS,
       'CAPTURE_WORKER_POLL_INTERVAL_MS',

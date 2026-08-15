@@ -149,4 +149,29 @@ describe('Bitcoin forensic graph', () => {
       true,
     );
   });
+
+  it('keeps an unavailable prevout amount Unknown in the graph', () => {
+    const txid = '8'.repeat(64);
+    const missingPrevout = input('9'.repeat(64), '0', '10000', 'bc1qsource');
+    delete missingPrevout.previousOutput;
+    const result = buildBitcoinForensicGraph({
+      rootTxids: [txid],
+      transactions: [
+        transaction(txid, [missingPrevout], [output('9000', 'bc1qrecipient')], '101', '1000'),
+      ],
+      snapshotStart: snapshot('101', 'b'.repeat(64)),
+      snapshotEnd: snapshot('101', 'b'.repeat(64)),
+      evidenceIds: evidence,
+      sourceSet: ['esplora-test'],
+    });
+
+    const outpoint = result.report.nodes.find(
+      (node) => node.kind === 'OUTPOINT' && node.reference === `${'9'.repeat(64)}:0`,
+    );
+    expect(outpoint?.valueSats).toMatchObject({
+      state: 'unknown',
+      reason: 'INSUFFICIENT_DATA',
+    });
+    expect(outpoint?.valueSats).not.toEqual({ state: 'known', value: '0' });
+  });
 });

@@ -824,14 +824,15 @@ describe('Flap bounded event-history discovery', () => {
     return {
       transport,
       ledger,
-      discover: (fromBlock = '16', toBlock = '17') =>
+      discover: (fromBlock = '16', toBlock = '17', chunkSize = 1, maxLogs?: number) =>
         discoverFlapEventHistory({
           adapter,
           ...(logReader === undefined ? {} : { logReader }),
           token,
           fromBlock,
           toBlock,
-          chunkSize: 1,
+          chunkSize,
+          ...(maxLogs === undefined ? {} : { maxLogs }),
           deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
           writeEvidence: async (item, sources = [], snapshot) =>
             ledger.add(item, sources, snapshot).evidence,
@@ -913,6 +914,62 @@ describe('Flap bounded event-history discovery', () => {
     await expect(historyFixture(true, logReader).discover('16', '16')).rejects.toThrow(
       'could not be reproduced exactly',
     );
+  });
+
+  it('recursively splits a dense log window without weakening the per-window bound', async () => {
+    const fixture = historyFixture(false, {
+      getLogsObservation: async (query) => {
+        const isWholeRange = query.fromBlock === '16' && query.toBlock === '17';
+        const blockNumber = query.fromBlock === '16' ? '0x10' : '0x11';
+        const queriedBlockHash = query.fromBlock === '16' ? blockHash : `0x${'4'.repeat(64)}`;
+        const logs = Array.from({ length: isWholeRange ? 2 : 1 }, (_, index) => ({
+          address: FLAP_BSC_MAINNET_DEPLOYMENT.portal,
+          blockHash: queriedBlockHash,
+          blockNumber,
+          transactionHash: `0x${'8'.repeat(64)}`,
+          transactionIndex: '0x0',
+          logIndex: `0x${index.toString(16)}`,
+          data: '0x',
+          topics: [unknownTopic],
+          removed: false as const,
+          raw: {
+            address: FLAP_BSC_MAINNET_DEPLOYMENT.portal,
+            blockHash: queriedBlockHash,
+            blockNumber,
+            transactionHash: `0x${'8'.repeat(64)}`,
+            transactionIndex: '0x0',
+            logIndex: `0x${index.toString(16)}`,
+            data: '0x',
+            topics: [unknownTopic],
+            removed: false as const,
+          },
+        }));
+        return {
+          endpointId: 'sqd:binance-mainnet',
+          value: logs,
+        };
+      },
+    } satisfies EvmLogReader);
+
+    const result = await fixture.discover('16', '17', 2, 1);
+
+    expect(result.requestedRange).toEqual({
+      fromBlock: '16',
+      toBlock: '17',
+      chunkSize: 2,
+      chunkCount: 1,
+    });
+    expect(result.requestedRangeCoverage).toBe(1);
+    expect(result.unrecognizedPortalLogCount).toBe(2);
+    expect(result.chronology).toEqual([]);
+    expect(result.metadata.snapshot?.ledger).toBe('EVM');
+    if (result.metadata.snapshot?.ledger === 'EVM') {
+      expect(result.metadata.snapshot.blockNumber).toBe('17');
+    }
+    expect(result.evidence.at(-1)).toMatchObject({
+      locator: `flap-event-history:${token}:16-17`,
+      summary: expect.stringContaining('adaptively bounded subranges'),
+    });
   });
 
   it('rejects invalid or operationally unbounded history requests before network access', async () => {

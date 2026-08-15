@@ -384,6 +384,10 @@ export class EvmLedgerAdapter {
     return this.#transport.lastEndpointId ?? this.#transport.endpointId;
   }
 
+  get sourceIds(): readonly string[] {
+    return this.#transport.sourceIds ?? [];
+  }
+
   get capabilities(): readonly ProviderCapability[] {
     return [...EVM_CAPABILITIES];
   }
@@ -701,6 +705,7 @@ export class EvmLedgerAdapter {
     const parentBlockHash = requireHash(block.parentHash, 'parent block hash');
     const observedAt = new Date().toISOString();
     const numericPosition = BigInt(blockNumber);
+    const sourceIds = [...new Set(observation.sourceIds ?? [observation.endpointId])].sort();
     const snapshot: EvmSnapshot = {
       ledger: 'EVM',
       chainId: `eip155:${this.config.chainId}`,
@@ -710,13 +715,13 @@ export class EvmLedgerAdapter {
       finality,
       blockTimestamp: timestampFromHex(block.timestamp),
       capturedAt: observedAt,
-      providerVersions: { [observation.endpointId]: 'json-rpc' },
+      providerVersions: Object.fromEntries(sourceIds.map((sourceId) => [sourceId, 'json-rpc'])),
       adapterVersions: { evm: this.config.adapterVersion ?? '0.1.0' },
       configHash: hashPayload({
         id: this.config.id,
         chainId: this.config.chainId,
         finality,
-        sourceIds: [observation.endpointId],
+        sourceIds,
       }),
       entityModelVersion: 'entity-v0.1.0',
       labelSnapshot: 'labels-empty-v1',

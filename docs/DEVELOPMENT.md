@@ -38,6 +38,36 @@ npm test
 `npm ci` is the supported dependency installation path. It fails when the lockfile and manifests
 diverge.
 
+### Workspace environment loading
+
+API and worker entrypoints load the nearest workspace `.env` found from their current directory
+through three parent directories. Explicit process environment values always win, so CI and one-shot
+smoke commands can override local settings without editing `.env`. Keep real provider credentials only
+in the local `.env` or process environment; `.env.example` contains blank key fields.
+
+### Local read-only MCP bridge
+
+The repository includes a bounded MCP stdio bridge for analyst/tool integrations. Start it after
+the API is running:
+
+```powershell
+$env:ZEROTRACE_API_URL = 'http://127.0.0.1:8080'
+$env:ZEROTRACE_MCP_ALLOWED_API_HOSTS = '127.0.0.1'
+npm run mcp:readonly
+```
+
+The bridge reads one JSON-RPC message per input line and writes one response per output line. Its
+seven tools are `zerotrace_health`, `zerotrace_capabilities`, `zerotrace_search`,
+`zerotrace_subject`, `zerotrace_evidence_drilldown`, `zerotrace_campaign`, and
+`zerotrace_case_export`. All requests are fixed-path `GET` calls to the configured API origin;
+redirects, oversized responses, unsafe identifiers, unknown arguments, and API errors fail closed.
+The bridge cannot sign, broadcast, publish, mutate durable state, or move funds. Focused protocol
+coverage is run with:
+
+```bash
+npm run test:mcp
+```
+
 ## Start the application
 
 For API and web watch mode:
@@ -102,6 +132,19 @@ To include the real sidecar in storage integration tests, set the disposable tes
 ```text
 TEST_AGE_URL=postgresql://zerotrace:zerotrace@localhost:5455/zerotrace_graph
 ```
+
+For a real current-source projection/replay smoke against initialized disposable stores, set both
+test URLs and run:
+
+```bash
+TEST_POSTGRES_URL=postgresql://zerotrace:zerotrace@localhost:25432/zerotrace \
+TEST_AGE_URL=postgresql://zerotrace:zerotrace@localhost:25455/zerotrace_graph \
+npm run graph:age:smoke -- --ledger EVM --chain-id eip155:1
+```
+
+The command reads an existing durable investigation graph from PostgreSQL, writes only the
+derived AGE projection, and verifies an exact provider-free replay. It does not create Entity
+membership or replace PostgreSQL as the source of truth.
 
 The projection contains only bounded `Subject`, `SAME_CONTROLLER`, and `COORDINATED_WITH`
 investigation records. It never copies the raw transfer graph or propagates Entity membership.
@@ -303,7 +346,10 @@ npm run flap:lifetime -- \
 Omitting `--target` captures the current finalized head. For exact replay after the first run, pass
 the emitted block as `--target <block>`; a pinned target is read only after the worker proves it is
 at or below the current finalized head. Origin chunk, history segment/query and result limits have
-separate bounded flags. The Compose equivalent is:
+separate bounded flags. The inner SQD creation-trace window defaults to 10,000 blocks and can be
+tuned with `--sqd-creation-request-range-size` or `SQD_CREATION_REQUEST_RANGE_BLOCKS`; the worker
+emits rate-limited JSON progress on stderr while preserving the same durable cursor. The Compose
+equivalent is:
 
 ```bash
 docker compose --profile semantic run --rm flap-lifetime-worker \
@@ -620,42 +666,43 @@ local upgrade commands, including migrations `007` through `026`, are in
 
 Important values:
 
-| Variable                              | Meaning                                                                          |
-| ------------------------------------- | -------------------------------------------------------------------------------- |
-| `API_PORT` / `WEB_PORT`               | host ports                                                                       |
-| `CORS_ORIGIN`                         | comma-separated exact browser origins                                            |
-| `PROVIDER_ALLOW_HOSTS`                | comma-separated exact provider hostnames                                         |
-| `ALLOW_PRIVATE_PROVIDER_URLS`         | explicit local proxy/private-RPC exception; defaults to false                    |
-| `PROVIDER_MAX_ATTEMPTS`               | bounded attempts per endpoint, including the first attempt                       |
-| `PROVIDER_RETRY_BASE_MS/MAX_MS`       | exponential retry-delay bounds; provider `Retry-After` is capped by the maximum  |
-| `PROVIDER_CIRCUIT_*`                  | consecutive-failure threshold and half-open reset delay                          |
-| `PROVIDER_CACHE_TTL_MS/MAX_ENTRIES`   | process-local TTL/LRU response cache; zero TTL disables stored responses         |
-| `DATA_QUALITY_MIN_SOURCES`            | minimum matching endpoint observations; integer 2-20, default 2                  |
-| `ALCHEMY_API_KEY` / `ETH_RPC_URL`     | optional Alchemy key and read-only URL/template                                  |
-| `EVM_*_RPC_URLS`                      | ordered, comma-separated EVM provider pools                                      |
-| `EVM_*_SNAPSHOT_TAG`                  | `finalized`, `safe`, or `latest`; defaults to `finalized` per configured network |
-| `EVM_*_REQUESTS_PER_SECOND`           | per-endpoint request pacing; zero disables internal pacing                       |
-| `BITCOIN_ESPLORA_URLS`                | ordered Esplora base paths                                                       |
-| `BITCOIN_ESPLORA_REQUESTS_PER_SECOND` | per-endpoint Esplora pacing                                                      |
-| `SOLANA_RPC_URLS`                     | ordered Solana read-only RPC pool                                                |
-| `SOLANA_REQUESTS_PER_SECOND`          | per-endpoint Solana pacing                                                       |
-| `SOLANA_COMMITMENT`                   | processed, confirmed, or finalized; production analysis should use finalized     |
-| `SQD_PORTAL_URL`                      | clean HTTP origin used by the finalized ingestion worker                         |
-| `SQD_PROVIDER_ALLOW_HOSTS`            | worker-only exact hostname allowlist; defaults to `portal.sqd.dev`               |
-| `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                        |
-| `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                        |
-| `SOURCIFY_V2_URL`                     | optional exact verified-source API base; blank keeps provenance Unknown          |
-| `SOURCIFY_REQUESTS_PER_SECOND`        | bounded Sourcify request pacing                                                  |
-| `FLAP_HISTORY_*`                      | Compose defaults for the bounded event-history projection worker                 |
-| `BURN_PROMOTION_*`                    | Compose defaults for bounded durable ERC-20 candidate promotion                  |
-| `FLAP_LIFETIME_*`                     | Compose defaults for exact point-in-time lifetime materialization                |
-| `FLAP_LIFETIME_HEAD_*`                | continuous worker token, interval and optional bounded cycle count               |
-| `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present   |
-| `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests  |
-| `CLICKHOUSE_URL` / credentials        | Raw Fact HTTP origin and optional separately supplied credentials                |
-| `OBJECT_STORE_*`                      | S3-compatible origin, credentials, and versioned raw-artifact bucket             |
-| `TEST_CLICKHOUSE_URL`                 | disposable initialized ClickHouse used by storage integration tests              |
-| `TEST_OBJECT_STORE_*`                 | disposable object store endpoint and credentials used by integration tests       |
+| Variable                              | Meaning                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `API_PORT` / `WEB_PORT`               | host ports                                                                                        |
+| `CORS_ORIGIN`                         | comma-separated exact browser origins                                                             |
+| `PROVIDER_ALLOW_HOSTS`                | comma-separated exact provider hostnames                                                          |
+| `ALLOW_PRIVATE_PROVIDER_URLS`         | explicit local proxy/private-RPC exception; defaults to false                                     |
+| `PROVIDER_MAX_ATTEMPTS`               | bounded attempts per endpoint, including the first attempt                                        |
+| `PROVIDER_RETRY_BASE_MS/MAX_MS`       | exponential retry-delay bounds; provider `Retry-After` is capped by the maximum                   |
+| `PROVIDER_CIRCUIT_*`                  | consecutive-failure threshold and half-open reset delay                                           |
+| `PROVIDER_CACHE_TTL_MS/MAX_ENTRIES`   | process-local TTL/LRU response cache; zero TTL disables stored responses                          |
+| `DATA_QUALITY_MIN_SOURCES`            | minimum matching endpoint observations; integer 2-20, default 2                                   |
+| `ALCHEMY_API_KEY` / `ETH_RPC_URL`     | optional Alchemy key and read-only URL/template                                                   |
+| `EVM_*_RPC_URLS`                      | ordered, comma-separated EVM provider pools                                                       |
+| `EVM_*_SNAPSHOT_TAG`                  | `finalized`, `safe`, or `latest`; defaults to `finalized` per configured network                  |
+| `EVM_*_REQUESTS_PER_SECOND`           | per-endpoint request pacing; zero disables internal pacing                                        |
+| `BITCOIN_ESPLORA_URLS`                | ordered Esplora base paths                                                                        |
+| `BITCOIN_ESPLORA_REQUESTS_PER_SECOND` | per-endpoint Esplora pacing                                                                       |
+| `SOLANA_RPC_URLS`                     | ordered Solana read-only RPC pool                                                                 |
+| `SOLANA_REQUESTS_PER_SECOND`          | per-endpoint Solana pacing                                                                        |
+| `SOLANA_COMMITMENT`                   | processed, confirmed, or finalized; production analysis should use finalized                      |
+| `SQD_PORTAL_URL`                      | clean HTTP origin used by the finalized ingestion worker                                          |
+| `SQD_PROVIDER_ALLOW_HOSTS`            | worker-only exact hostname allowlist; defaults to `portal.sqd.dev`                                |
+| `SQD_REQUESTS_PER_SECOND`             | worker request pacing, capped at the public Portal policy                                         |
+| `SQD_MAX_RANGE_BLOCKS`                | maximum inclusive range accepted by one worker invocation                                         |
+| `SQD_CREATION_REQUEST_RANGE_BLOCKS`   | bounded inner SQD trace window for durable Flap origin scans; smaller values reduce response risk |
+| `SOURCIFY_V2_URL`                     | optional exact verified-source API base; blank keeps provenance Unknown                           |
+| `SOURCIFY_REQUESTS_PER_SECOND`        | bounded Sourcify request pacing                                                                   |
+| `FLAP_HISTORY_*`                      | Compose defaults for the bounded event-history projection worker                                  |
+| `BURN_PROMOTION_*`                    | Compose defaults for bounded durable ERC-20 candidate promotion                                   |
+| `FLAP_LIFETIME_*`                     | Compose defaults for exact point-in-time lifetime materialization                                 |
+| `FLAP_LIFETIME_HEAD_*`                | continuous worker token, interval and optional bounded cycle count                                |
+| `POSTGRES_URL`                        | optional host-dev URL; configured storage is mandatory at runtime once present                    |
+| `TEST_POSTGRES_URL`                   | disposable initialized PostgreSQL used by the real repository integration tests                   |
+| `CLICKHOUSE_URL` / credentials        | Raw Fact HTTP origin and optional separately supplied credentials                                 |
+| `OBJECT_STORE_*`                      | S3-compatible origin, credentials, and versioned raw-artifact bucket                              |
+| `TEST_CLICKHOUSE_URL`                 | disposable initialized ClickHouse used by storage integration tests                               |
+| `TEST_OBJECT_STORE_*`                 | disposable object store endpoint and credentials used by integration tests                        |
 
 `PROVIDER_ALLOW_HOSTS` does not authorize transaction methods. Method allowlists remain enforced
 inside each adapter.
@@ -689,6 +736,24 @@ so `sourceIndependence` remains Unknown until an audited source-ownership regist
 Never commit `.env` or API keys. ZeroTrace records safe source IDs such as
 `ethereum-rpc@eth-mainnet.g.alchemy.com`; provider URL paths and credentials are not exposed in
 health or Evidence metadata.
+
+For durable Token History interruption testing, `TOKEN_HISTORY_CHECKPOINT_BATCH_SIZE` controls the
+maximum number of materialized SQD event blocks held before the PostgreSQL cursor advances. The
+default is `50`; a smaller value such as `1` is useful for a real process-kill drill and increases
+checkpoint writes. The setting is bounded to `1..1000` and does not change the requested range or
+provider query semantics.
+
+When a shared capture queue contains older due work, set `CAPTURE_WORKER_SCHEDULE_ID` to one
+canonical `cps_...` ID for a one-shot operator replay. The worker then claims only that schedule;
+the default blank value preserves normal queue ordering. Invalid selectors fail before storage
+access, and the selector does not change the read-only or Evidence-bound completion rules.
+
+For an explicit independent-provider Token History run, set
+`TOKEN_HISTORY_REQUIRE_INDEPENDENT_RPC=true` and configure at least two approved EVM RPC URLs in
+`EVM_BSC_RPC_URLS` or `EVM_ETHEREUM_RPC_URLS`. The worker then issues each exact JSON-RPC read to
+every configured endpoint and fails closed on a provider error or canonical response
+disagreement; it does not silently fall back to one provider. Matching exact observations add a
+source-reconciliation Evidence node and retain every contributing source ID in the report.
 
 Keep `ALLOW_PRIVATE_PROVIDER_URLS=false` unless an explicitly trusted local network or interception
 proxy maps approved public provider names to private/reserved addresses (for example, a local

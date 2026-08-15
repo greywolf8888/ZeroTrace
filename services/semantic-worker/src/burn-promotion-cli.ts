@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { loadWorkspaceEnv } from './workspace-env.js';
+
+loadWorkspaceEnv();
 
 import { loadBurnPromotionWorkerConfig } from './burn-promotion-config.js';
 import {

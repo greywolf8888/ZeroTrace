@@ -198,7 +198,7 @@ BEGIN
   IF OLD.status IN ('SUCCEEDED', 'FAILED_TERMINAL') THEN
     RAISE EXCEPTION 'Terminal capture runs are immutable';
   END IF;
-  IF OLD.status = 'LEASED' AND NEW.status NOT IN ('RETRY_WAIT', 'SUCCEEDED', 'FAILED_TERMINAL') THEN
+  IF OLD.status = 'LEASED' AND NEW.status NOT IN ('LEASED', 'RETRY_WAIT', 'SUCCEEDED', 'FAILED_TERMINAL') THEN
     RAISE EXCEPTION 'Leased capture run transition is invalid';
   END IF;
   IF OLD.status = 'RETRY_WAIT' AND NEW.status <> 'LEASED' THEN

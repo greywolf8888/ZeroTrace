@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { loadWorkspaceEnv } from './workspace-env.js';
+
+loadWorkspaceEnv();
 
 import {
   buildProviderBackedControlCampaign,
@@ -66,6 +68,7 @@ async function main(): Promise<void> {
   let tokenHistoryReports: PostgresTokenHistoryDiscoveryReportRepository | undefined;
   let controlCampaignReports: PostgresControlCampaignReportRepository | undefined;
   let fundingSettlementReports: PostgresFundingSettlementReportRepository | undefined;
+  let artifacts: RawArtifactStore | undefined;
   try {
     const config = loadIngestWorkerConfig(process.env, args);
     const source = new SqdPortalClient({
@@ -92,17 +95,18 @@ async function main(): Promise<void> {
       connectionString: config.postgresUrl,
       maxConnections: 4,
     });
-    const artifacts = new RawArtifactStore({
+    const artifactStore = new RawArtifactStore({
       endpoint: config.objectStoreEndpoint,
       accessKey: config.objectStoreAccessKey,
       secretKey: config.objectStoreSecretKey,
       bucket: config.objectStoreBucket,
     });
+    artifacts = artifactStore;
     const health = await Promise.all([
       facts.health(),
       evidence.health(),
       checkpoints.health(),
-      artifacts.health(),
+      artifactStore.health(),
     ]);
     const failed = health.find((item) => item.status !== 'UP');
     if (failed !== undefined) {
@@ -195,7 +199,7 @@ async function main(): Promise<void> {
         fromBlock: config.fromBlock,
         toBlock: config.toBlock,
         checkpoints,
-        artifacts,
+        artifacts: artifactStore,
         evidence: evidenceWriter,
         facts,
         factReader: facts,
@@ -361,7 +365,7 @@ async function main(): Promise<void> {
       const result = await new SqdFinalizedIngestionPipeline({
         source,
         checkpoints,
-        artifacts,
+        artifacts: artifactStore,
         evidence,
         facts,
       }).run(request);
@@ -397,6 +401,7 @@ async function main(): Promise<void> {
       ...(tokenHistoryReports === undefined ? [] : [tokenHistoryReports.close()]),
       ...(controlCampaignReports === undefined ? [] : [controlCampaignReports.close()]),
       ...(fundingSettlementReports === undefined ? [] : [fundingSettlementReports.close()]),
+      ...(artifacts === undefined ? [] : [artifacts.close()]),
     ]);
   }
 }

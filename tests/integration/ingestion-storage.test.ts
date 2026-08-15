@@ -88,6 +88,7 @@ storageDescribe('historical ingestion storage integration', () => {
   afterAll(async () => {
     await Promise.all([
       facts.close(),
+      artifacts.close(),
       evidence.close(),
       checkpoints.close(),
       schedules.close(),

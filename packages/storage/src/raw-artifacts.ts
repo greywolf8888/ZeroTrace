@@ -1,4 +1,6 @@
 import { Client as MinioClient } from 'minio';
+import { Agent as HttpAgent } from 'node:http';
+import { Agent as HttpsAgent } from 'node:https';
 import type { Readable } from 'node:stream';
 
 import { canonicalJson, hashPayload } from '@zerotrace/evidence';
@@ -55,6 +57,7 @@ export interface RawArtifactStoreOptions {
   bucket?: string;
   region?: string;
   maxArtifactBytes?: number;
+  healthTimeoutMs?: number;
 }
 
 interface ObjectStoreClient {
@@ -77,6 +80,7 @@ interface ObjectStoreClient {
     size: number,
     metadata: Record<string, string>,
   ): Promise<{ etag: string; versionId?: string | null }>;
+  close?(): void | Promise<void>;
 }
 
 interface InternalRawArtifactStoreOptions {
@@ -84,14 +88,23 @@ interface InternalRawArtifactStoreOptions {
   bucket: string;
   region: string;
   maxArtifactBytes: number;
+  healthTimeoutMs?: number;
 }
 
 const BUCKET_NAME = /^(?!.*\.\.)(?!\d+\.\d+\.\d+\.\d+$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
 const ARTIFACT_REF = /^s3:\/\/([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])\/(.+)#sha256=([0-9a-f]{64})$/;
+const HEALTH_TIMEOUT_MESSAGE = 'Object-store health check timed out.';
 
 function requireArtifactSize(value: number): number {
   if (!Number.isSafeInteger(value) || value < 1_024 || value > 1_000_000_000) {
     throw new RangeError('maxArtifactBytes must be between 1024 and 1000000000.');
+  }
+  return value;
+}
+
+function requireHealthTimeout(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 100 || value > 60_000) {
+    throw new RangeError('healthTimeoutMs must be between 100 and 60000.');
   }
   return value;
 }
@@ -134,7 +147,11 @@ function createMinioClient(options: RawArtifactStoreOptions): ObjectStoreClient 
     );
   }
   const defaultPort = endpoint.protocol === 'https:' ? 443 : 80;
-  return new MinioClient({
+  const transportAgent =
+    endpoint.protocol === 'https:'
+      ? new HttpsAgent({ keepAlive: true })
+      : new HttpAgent({ keepAlive: true });
+  const client = new MinioClient({
     endPoint: endpoint.hostname,
     port: endpoint.port === '' ? defaultPort : Number(endpoint.port),
     useSSL: endpoint.protocol === 'https:',
@@ -142,7 +159,9 @@ function createMinioClient(options: RawArtifactStoreOptions): ObjectStoreClient 
     secretKey: options.secretKey,
     region: options.region ?? 'us-east-1',
     pathStyle: true,
+    transportAgent,
   });
+  return Object.assign(client, { close: () => transportAgent.destroy() });
 }
 
 function errorCode(error: unknown): string | undefined {
@@ -203,11 +222,34 @@ async function readBounded(stream: Readable, maximum: number): Promise<Buffer> {
   return Buffer.concat(chunks, bytes);
 }
 
+async function withTimeout<T>(task: Promise<T>, timeoutMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      task,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              new ObjectStoreError('OBJECT_STORE_UNAVAILABLE', HEALTH_TIMEOUT_MESSAGE, {
+                retryable: true,
+              }),
+            ),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 export class RawArtifactStore {
   readonly #client: ObjectStoreClient;
   readonly #bucket: string;
   readonly #region: string;
   readonly #maxArtifactBytes: number;
+  readonly #healthTimeoutMs: number;
   #initialization: Promise<void> | undefined;
 
   constructor(options: RawArtifactStoreOptions | InternalRawArtifactStoreOptions) {
@@ -216,11 +258,13 @@ export class RawArtifactStore {
       this.#bucket = validateBucket(options.bucket);
       this.#region = options.region;
       this.#maxArtifactBytes = requireArtifactSize(options.maxArtifactBytes);
+      this.#healthTimeoutMs = requireHealthTimeout(options.healthTimeoutMs ?? 5_000);
     } else {
       this.#client = createMinioClient(options);
       this.#bucket = validateBucket(options.bucket ?? 'zerotrace-raw');
       this.#region = options.region ?? 'us-east-1';
       this.#maxArtifactBytes = requireArtifactSize(options.maxArtifactBytes ?? 16_000_000);
+      this.#healthTimeoutMs = requireHealthTimeout(options.healthTimeoutMs ?? 5_000);
     }
   }
 
@@ -229,11 +273,19 @@ export class RawArtifactStore {
   }
 
   async initialize(): Promise<void> {
-    this.#initialization ??= this.#initialize().catch((error: unknown) => {
-      this.#initialization = undefined;
-      throw error;
-    });
+    if (this.#initialization === undefined) {
+      const initialization = this.#initialize().catch((error: unknown) => {
+        if (this.#initialization === initialization) this.#initialization = undefined;
+        throw error;
+      });
+      this.#initialization = initialization;
+    }
     return this.#initialization;
+  }
+
+  async close(): Promise<void> {
+    await this.#client.close?.();
+    this.#initialization = undefined;
   }
 
   async put(input: Omit<RawArtifactEnvelope, 'schema'>): Promise<RawArtifactWriteResult> {
@@ -339,20 +391,16 @@ export class RawArtifactStore {
   async health(): Promise<ObjectStoreHealth> {
     const checkedAt = new Date().toISOString();
     try {
-      await this.initialize();
-      if (!(await this.#client.bucketExists(this.#bucket))) {
-        return {
-          status: 'DOWN',
-          backend: 'S3_COMPATIBLE',
-          durable: true,
-          checkedAt,
-          bucket: this.#bucket,
-          versioning: true,
-          errorCode: 'OBJECT_STORE_NOT_INITIALIZED',
-        };
-      }
-      const versioning = await this.#client.getBucketVersioning(this.#bucket);
-      if (versioning.Status !== 'Enabled') {
+      const state = await withTimeout(
+        (async () => {
+          await this.initialize();
+          if (!(await this.#client.bucketExists(this.#bucket))) return 'MISSING_BUCKET' as const;
+          const versioning = await this.#client.getBucketVersioning(this.#bucket);
+          return versioning.Status === 'Enabled' ? ('READY' as const) : ('UNVERSIONED' as const);
+        })(),
+        this.#healthTimeoutMs,
+      );
+      if (state !== 'READY') {
         return {
           status: 'DOWN',
           backend: 'S3_COMPATIBLE',
@@ -371,7 +419,12 @@ export class RawArtifactStore {
         bucket: this.#bucket,
         versioning: true,
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof ObjectStoreError && error.message === HEALTH_TIMEOUT_MESSAGE) {
+        // A timed-out initialization may still be holding the cached promise. Clear it so the
+        // next write/read can establish a fresh connection after the backend recovers.
+        this.#initialization = undefined;
+      }
       return {
         status: 'DOWN',
         backend: 'S3_COMPATIBLE',

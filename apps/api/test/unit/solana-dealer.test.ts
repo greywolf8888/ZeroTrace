@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { SqdFinalizedBlock, SqdPortalClient } from '@zerotrace/chain-adapters';
-import type { AnalysisSnapshot, Evidence } from '@zerotrace/schemas';
+import { EvidenceLedger } from '@zerotrace/evidence';
+import type {
+  AnalysisSnapshot,
+  Evidence,
+  SolanaTransactionIntelligenceReport,
+} from '@zerotrace/schemas';
 
 const { querySolanaTransactionMock } = vi.hoisted(() => ({
   querySolanaTransactionMock: vi.fn(),
@@ -13,6 +18,7 @@ vi.mock('../../src/ledger-query.js', () => ({
 
 import {
   captureSolanaDealerCampaign,
+  deriveSolanaDealerHistoryCoverage,
   type SolanaDealerCaptureInput,
 } from '../../src/solana-dealer.js';
 
@@ -66,7 +72,7 @@ function block(slot: number, signature?: string, transactionIndex = 0): SqdFinal
 
 function source(
   blocks: readonly SqdFinalizedBlock[],
-  fromSlot = 100,
+  _fromSlot = 100,
   toSlot = 101,
   dataset: 'solana-mainnet' | 'ethereum-mainnet' = 'solana-mainnet',
   completion: 'REQUESTED_RANGE_COMPLETE' | 'SOURCE_HEAD_REACHED' = 'REQUESTED_RANGE_COMPLETE',
@@ -74,19 +80,25 @@ function source(
   return {
     dataset,
     async readFinalizedRange(
-      _request: Parameters<SqdPortalClient['readFinalizedRange']>[0],
+      request: Parameters<SqdPortalClient['readFinalizedRange']>[0],
       onBlock: Parameters<SqdPortalClient['readFinalizedRange']>[1],
     ) {
-      for (const item of blocks) await onBlock(item);
+      const selected = blocks.filter(
+        (item) => item.header.number >= request.fromBlock && item.header.number <= request.toBlock,
+      );
+      for (const item of selected) await onBlock(item);
       return {
         dataset: 'solana-mainnet',
         completion,
-        requestedFrom: fromSlot,
-        requestedTo: toSlot,
-        lastBlock: toSlot,
-        nextBlock: toSlot + 1,
+        requestedFrom: request.fromBlock,
+        requestedTo: request.toBlock,
+        lastBlock: selected.at(-1)?.header.number ?? null,
+        nextBlock:
+          completion === 'SOURCE_HEAD_REACHED'
+            ? (selected.at(-1)?.header.number ?? request.fromBlock) + 1
+            : request.toBlock + 1,
         finalizedHead: toSlot,
-        blocks: blocks.length,
+        blocks: selected.length,
         requests: 1,
         retries: 0,
       };
@@ -104,6 +116,7 @@ function adapter(commitment: 'finalized' | 'confirmed' = 'finalized') {
 }
 
 function input(overrides: Partial<SolanaDealerCaptureInput> = {}): SolanaDealerCaptureInput {
+  const ledger = new EvidenceLedger();
   return {
     mint,
     fromSlot: '100',
@@ -111,13 +124,65 @@ function input(overrides: Partial<SolanaDealerCaptureInput> = {}): SolanaDealerC
     maxTransactions: 10,
     source: source([block(100), block(101)]),
     adapter: adapter(),
-    writeEvidence: async (evidence: Evidence) => evidence,
+    writeEvidence: async (evidence: Evidence, sourceEvidenceIds = [], snapshotValue) => {
+      const existing = ledger.get(evidence.id);
+      if (existing !== undefined) return existing.evidence;
+      return ledger.add(evidence, sourceEvidenceIds, snapshotValue).evidence;
+    },
     now: () => capturedAt,
     ...overrides,
   };
 }
 
 describe('Solana dealer capture', () => {
+  it('only calls a complete range historical when the range starts at a decoded mint', () => {
+    const report = {
+      metadata: { snapshot: snapshot('100') },
+      facts: {
+        transactionSemantics: {
+          state: 'known',
+          value: {
+            assetFlows: [
+              {
+                flowKind: 'MINT',
+                application: 'APPLIED',
+                mint: { state: 'known', value: mint },
+              },
+            ],
+          },
+        },
+      },
+    } as unknown as SolanaTransactionIntelligenceReport;
+
+    expect(
+      deriveSolanaDealerHistoryCoverage({
+        fromSlot: '100',
+        sourceCompletion: 'REQUESTED_RANGE_COMPLETE',
+        truncated: false,
+        transactionReports: [report],
+        mint,
+      }),
+    ).toBe(1);
+    expect(
+      deriveSolanaDealerHistoryCoverage({
+        fromSlot: '101',
+        sourceCompletion: 'REQUESTED_RANGE_COMPLETE',
+        truncated: false,
+        transactionReports: [report],
+        mint,
+      }),
+    ).toBe(0);
+    expect(
+      deriveSolanaDealerHistoryCoverage({
+        fromSlot: '100',
+        sourceCompletion: 'SOURCE_HEAD_REACHED',
+        truncated: false,
+        transactionReports: [report],
+        mint,
+      }),
+    ).toBe(0);
+  });
+
   it('fails closed for the wrong dataset and non-finalized adapters', async () => {
     await expect(
       captureSolanaDealerCampaign(input({ source: source([], 100, 101, 'ethereum-mainnet') })),
@@ -145,6 +210,27 @@ describe('Solana dealer capture', () => {
     expect(result.report.evidence.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('splits wide finalized ranges into bounded SQD windows', async () => {
+    const blocks = Array.from({ length: 33 }, (_, index) => block(100 + index));
+    const boundedSource = source(blocks, 100, 132);
+    const readFinalizedRange = vi.spyOn(boundedSource, 'readFinalizedRange');
+
+    const result = await captureSolanaDealerCampaign(
+      input({ source: boundedSource, fromSlot: '100', toSlot: '132' }),
+    );
+
+    expect(result.sourceSummary.completion).toBe('REQUESTED_RANGE_COMPLETE');
+    expect(result.sourceSummary.blocks).toBe(33);
+    expect(readFinalizedRange).toHaveBeenCalledTimes(3);
+    expect(
+      readFinalizedRange.mock.calls.map(([request]) => [request.fromBlock, request.toBlock]),
+    ).toEqual([
+      [100, 115],
+      [116, 131],
+      [132, 132],
+    ]);
+  });
+
   it('rejects a candidate whose finalized transaction report is incomplete', async () => {
     const signature = '3'.repeat(64);
     querySolanaTransactionMock.mockResolvedValueOnce({});
@@ -162,6 +248,28 @@ describe('Solana dealer capture', () => {
       expect.anything(),
       expect.objectContaining({ normalizedId: signature }),
       expect.anything(),
+      {},
+    );
+  });
+
+  it('passes the caller signal through exact transaction expansion', async () => {
+    const signature = '4'.repeat(64);
+    const controller = new AbortController();
+    querySolanaTransactionMock.mockReset().mockResolvedValue({});
+
+    await expect(
+      captureSolanaDealerCampaign(
+        input({
+          signal: controller.signal,
+          source: source([block(100, signature), block(101)]),
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'SOLANA_DEALER_CAPTURE_INCOMPLETE' });
+    expect(querySolanaTransactionMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ normalizedId: signature }),
+      expect.anything(),
+      { signal: controller.signal },
     );
   });
 

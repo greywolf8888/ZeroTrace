@@ -86,6 +86,7 @@ export interface SqdFinalizedRangeRequest {
   includeAllBlocks?: boolean;
   fields?: Readonly<Record<string, Readonly<Record<string, boolean>>>>;
   requests?: Readonly<Record<string, readonly Readonly<Record<string, unknown>>[]>>;
+  signal?: AbortSignal;
 }
 
 export interface SqdStreamSummary {
@@ -959,10 +960,16 @@ async function readWithDeadline<T>(
   operation: Promise<T>,
   timeoutMs: number,
   cancel: () => Promise<void>,
+  signal?: AbortSignal,
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let abort: (() => void) | undefined;
+  if (isAborted(signal)) {
+    await cancel().catch(() => undefined);
+    throw new ProviderError('TIMEOUT', 'SQD request was aborted.', { retryable: false });
+  }
   try {
-    return await Promise.race([
+    const racers: Promise<T | never>[] = [
       operation,
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(() => {
@@ -970,10 +977,34 @@ async function readWithDeadline<T>(
           void cancel().catch(() => undefined);
         }, timeoutMs);
       }),
-    ]);
+    ];
+    if (signal !== undefined) {
+      racers.push(
+        new Promise<never>((_resolve, reject) => {
+          abort = () => {
+            reject(
+              new ProviderError('TIMEOUT', 'SQD request was aborted.', {
+                retryable: false,
+                cause: signal.reason,
+              }),
+            );
+            void cancel().catch(() => undefined);
+          };
+          signal.addEventListener('abort', abort, { once: true });
+        }),
+      );
+    }
+    return await Promise.race(racers);
   } finally {
     if (timer !== undefined) clearTimeout(timer);
+    if (signal !== undefined && abort !== undefined) {
+      signal.removeEventListener('abort', abort);
+    }
   }
+}
+
+function isAborted(signal: AbortSignal | undefined): boolean {
+  return signal?.aborted === true;
 }
 
 async function readBoundedText(
@@ -1037,6 +1068,9 @@ export class SqdPortalClient {
     request: SqdFinalizedRangeRequest,
     onBlock: (block: SqdFinalizedBlock) => void | Promise<void>,
   ): Promise<SqdStreamSummary> {
+    if (isAborted(request.signal)) {
+      throw new ProviderError('TIMEOUT', 'SQD request was aborted.', { retryable: false });
+    }
     requireInteger(request.fromBlock, 'fromBlock', 0, Number.MAX_SAFE_INTEGER);
     requireInteger(request.toBlock, 'toBlock', 0, Number.MAX_SAFE_INTEGER);
     if (request.toBlock < request.fromBlock) {
@@ -1063,9 +1097,15 @@ export class SqdPortalClient {
     let windowSize = range;
 
     while (cursor <= request.toBlock) {
+      if (isAborted(request.signal)) {
+        throw new ProviderError('TIMEOUT', 'SQD request was aborted.', { retryable: false });
+      }
       let windowEnd = Math.min(request.toBlock, cursor + windowSize - 1);
       let completedResponse = false;
       for (let attempt = 1; attempt <= this.#options.maxAttempts;) {
+        if (isAborted(request.signal)) {
+          throw new ProviderError('TIMEOUT', 'SQD request was aborted.', { retryable: false });
+        }
         if (requests >= this.#options.maxRequestsPerRange) {
           throw new ProviderError(
             'HTTP_ERROR',
@@ -1082,9 +1122,15 @@ export class SqdPortalClient {
             progress,
             requireContiguous,
             onBlock,
+            request.signal,
           );
           progress.finalizedHead = maxNullable(progress.finalizedHead, outcome.finalizedHead);
           if (outcome.noContent) {
+            if (outcome.finalizedHead !== null && outcome.finalizedHead >= windowEnd) {
+              cursor = windowEnd + 1;
+              completedResponse = true;
+              break;
+            }
             return {
               dataset: this.dataset,
               completion: 'SOURCE_HEAD_REACHED',
@@ -1159,7 +1205,7 @@ export class SqdPortalClient {
             windowEnd = Math.min(request.toBlock, cursor + windowSize - 1);
             rangeAdjustments += 1;
             retries += 1;
-            await this.#retryDelay(attempt, providerError.retryAfterMs);
+            await this.#retryDelay(attempt, providerError.retryAfterMs, request.signal);
             attempt = 1;
             continue;
           }
@@ -1167,7 +1213,7 @@ export class SqdPortalClient {
             throw providerError;
           }
           retries += 1;
-          await this.#retryDelay(attempt, providerError.retryAfterMs);
+          await this.#retryDelay(attempt, providerError.retryAfterMs, request.signal);
           attempt += 1;
         }
       }
@@ -1201,15 +1247,20 @@ export class SqdPortalClient {
     progress: StreamProgress,
     requireContiguous: boolean,
     onBlock: (block: SqdFinalizedBlock) => void | Promise<void>,
+    signal?: AbortSignal,
   ): Promise<{ noContent: boolean; emptyRange: boolean; finalizedHead: number | null }> {
-    const response = await this.#fetch('finalized-stream', {
-      method: 'POST',
-      headers: {
-        accept: 'application/jsonl, application/x-ndjson, application/json, text/plain',
-        'content-type': 'application/json',
+    const response = await this.#fetch(
+      'finalized-stream',
+      {
+        method: 'POST',
+        headers: {
+          accept: 'application/jsonl, application/x-ndjson, application/json, text/plain',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(query),
       },
-      body: JSON.stringify(query),
-    });
+      signal,
+    );
     if (response.status === 204) {
       return { noContent: true, emptyRange: false, finalizedHead: parseHead(response) };
     }
@@ -1239,6 +1290,9 @@ export class SqdPortalClient {
     let previousHash = progress.lastHash;
 
     const consumeLine = async (rawLine: string): Promise<void> => {
+      if (isAborted(signal)) {
+        throw new ProviderError('TIMEOUT', 'SQD request was aborted.', { retryable: false });
+      }
       const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
       if (line.trim() === '') return;
       if (Buffer.byteLength(line) > this.#options.maxLineBytes) {
@@ -1289,9 +1343,14 @@ export class SqdPortalClient {
             retryable: true,
           });
         }
-        const chunk = await readWithDeadline(reader.read(), remaining, async () => {
-          await reader.cancel();
-        });
+        const chunk = await readWithDeadline(
+          reader.read(),
+          remaining,
+          async () => {
+            await reader.cancel();
+          },
+          signal,
+        );
         if (chunk.done) break;
         bytes += chunk.value.byteLength;
         if (bytes > this.#options.maxResponseBytes) {
@@ -1334,36 +1393,67 @@ export class SqdPortalClient {
     return { noContent: false, emptyRange: false, finalizedHead };
   }
 
-  async #fetch(path: 'metadata' | 'finalized-stream', init: RequestInit): Promise<Response> {
-    await this.#reserveRateLimitSlot();
+  async #fetch(
+    path: 'metadata' | 'finalized-stream',
+    init: RequestInit,
+    signal?: AbortSignal,
+  ): Promise<Response> {
+    if (isAborted(signal)) {
+      throw new ProviderError('TIMEOUT', 'SQD request was aborted.', { retryable: false });
+    }
+    await this.#reserveRateLimitSlot(signal);
     const portal = await assertProviderUrlSafe(this.#options.portalUrl, this.#options.policy);
     const url = new URL(`/datasets/${this.dataset}/${path}`, portal);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.#options.timeoutMs);
+    const abort = () => controller.abort(signal?.reason);
+    if (signal !== undefined) signal.addEventListener('abort', abort, { once: true });
     try {
       const response = await this.#options.fetchImplementation(url, {
         ...init,
         redirect: 'manual',
-        signal: AbortSignal.timeout(this.#options.timeoutMs),
+        signal: controller.signal,
       });
       if (response.status >= 300 && response.status < 400) {
         throw responseError(response, this.#options.nowImplementation());
       }
       return response;
     } catch (error) {
+      if (isAborted(signal)) {
+        throw new ProviderError('TIMEOUT', 'SQD request was aborted.', {
+          retryable: false,
+          cause: error,
+        });
+      }
       throw toProviderError(error);
+    } finally {
+      clearTimeout(timeout);
+      if (signal !== undefined) signal.removeEventListener('abort', abort);
     }
   }
 
-  async #reserveRateLimitSlot(): Promise<void> {
+  async #reserveRateLimitSlot(signal?: AbortSignal): Promise<void> {
     if (this.#options.requestsPerSecond === 0) return;
     const interval = 1_000 / this.#options.requestsPerSecond;
     const now = this.#options.nowImplementation();
     const reservedAt = Math.max(now, this.#nextRequestAt);
     this.#nextRequestAt = reservedAt + interval;
     const delay = Math.ceil(reservedAt - now);
-    if (delay > 0) await this.#options.sleepImplementation(delay);
+    if (delay > 0) {
+      await readWithDeadline(
+        this.#options.sleepImplementation(delay),
+        delay + 1,
+        async () => undefined,
+        signal,
+      );
+    }
   }
 
-  async #retryDelay(attempt: number, retryAfter: number | undefined): Promise<void> {
+  async #retryDelay(
+    attempt: number,
+    retryAfter: number | undefined,
+    signal?: AbortSignal,
+  ): Promise<void> {
     const delay =
       retryAfter === undefined
         ? Math.min(
@@ -1371,7 +1461,14 @@ export class SqdPortalClient {
             this.#options.retryBaseDelayMs * 2 ** (attempt - 1),
           )
         : Math.min(this.#options.retryMaxDelayMs, retryAfter);
-    if (delay > 0) await this.#options.sleepImplementation(delay);
+    if (delay > 0) {
+      await readWithDeadline(
+        this.#options.sleepImplementation(delay),
+        delay + 1,
+        async () => undefined,
+        signal,
+      );
+    }
   }
 }
 
@@ -1386,6 +1483,35 @@ export interface SqdEvmContractCreationReaderOptions {
   source: SqdPortalClient;
   maxRangeBlocks?: number;
   maxResults?: number;
+  /**
+   * The Portal can reject a large trace query even when the requested range is
+   * within the reader's overall bound. Keep origin lookups in small, replayable
+   * windows and aggregate the coverage at this boundary.
+   */
+  requestRangeBlocks?: number;
+  onProgress?: (progress: SqdEvmContractCreationProgress) => void | Promise<void>;
+}
+
+export interface SqdEvmContractCreationProgress {
+  fromBlock: string;
+  toBlock: string;
+  nextBlock: string;
+  requestCount: number;
+  responseBlockCount: number;
+  creationCount: number;
+}
+
+const SQD_EVM_CREATION_REQUEST_CONCURRENCY = 4;
+
+interface SqdEvmCreationWindow {
+  fromBlock: number;
+  toBlock: number;
+}
+
+interface SqdEvmCreationWindowResult {
+  window: SqdEvmCreationWindow;
+  blocks: SqdFinalizedBlock[];
+  summary: SqdStreamSummary;
 }
 
 function sqdObject(
@@ -1403,6 +1529,8 @@ export class SqdEvmContractCreationReader implements EvmContractCreationReader {
   readonly #source: SqdPortalClient;
   readonly #maxRangeBlocks: number;
   readonly #maxResults: number;
+  readonly #requestRangeBlocks: number;
+  readonly #onProgress: SqdEvmContractCreationReaderOptions['onProgress'];
   #metadataPromise: Promise<SqdDatasetMetadata> | undefined;
 
   constructor(options: SqdEvmContractCreationReaderOptions) {
@@ -1418,6 +1546,13 @@ export class SqdEvmContractCreationReader implements EvmContractCreationReader {
       1_000_000,
     );
     this.#maxResults = requireInteger(options.maxResults ?? 16, 'maxResults', 1, 10_000);
+    this.#requestRangeBlocks = requireInteger(
+      Math.min(options.requestRangeBlocks ?? 10_000, this.#maxRangeBlocks),
+      'requestRangeBlocks',
+      1,
+      this.#maxRangeBlocks,
+    );
+    this.#onProgress = options.onProgress;
   }
 
   async getContractCreationsObservation(
@@ -1445,10 +1580,108 @@ export class SqdEvmContractCreationReader implements EvmContractCreationReader {
 
     const creations: EvmContractCreationRecord[] = [];
     const seen = new Set<string>();
+    let cursor = fromBlock;
+    let requestCount = 0;
+    let responseBlockCount = 0;
+    let finalizedHead: number | null = null;
+    let previousBlockNumber: number | null = null;
+    let previousBlockHash: string | null = null;
+    while (cursor <= toBlock) {
+      const windows: SqdEvmCreationWindow[] = [];
+      let nextWindowStart = cursor;
+      while (nextWindowStart <= toBlock && windows.length < SQD_EVM_CREATION_REQUEST_CONCURRENCY) {
+        const windowEnd = Math.min(toBlock, nextWindowStart + this.#requestRangeBlocks - 1);
+        windows.push({ fromBlock: nextWindowStart, toBlock: windowEnd });
+        nextWindowStart = windowEnd + 1;
+      }
+
+      const results = await Promise.all(
+        windows.map((window) => this.#readCreationWindow(address, window)),
+      );
+      results.sort((left, right) => left.window.fromBlock - right.window.fromBlock);
+
+      for (const result of results) {
+        const { window, summary, blocks } = result;
+        if (
+          summary.requestedFrom !== window.fromBlock ||
+          summary.requestedTo !== window.toBlock ||
+          summary.completion !== 'REQUESTED_RANGE_COMPLETE' ||
+          summary.nextBlock !== window.toBlock + 1 ||
+          blocks.length !== summary.blocks
+        ) {
+          throw new ProviderError(
+            'HTTP_ERROR',
+            'SQD finalized coverage did not reach the requested EVM creation range end.',
+            { retryable: true },
+          );
+        }
+
+        for (const block of blocks) {
+          if (previousBlockNumber !== null && block.header.number <= previousBlockNumber) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'SQD EVM creation chunks are not strictly ordered.',
+            );
+          }
+          if (
+            previousBlockNumber !== null &&
+            block.header.number === previousBlockNumber + 1 &&
+            previousBlockHash !== null &&
+            block.header.parentHash.toLowerCase() !== previousBlockHash.toLowerCase()
+          ) {
+            throw new ProviderError(
+              'INVALID_RESPONSE',
+              'SQD EVM creation chunks contain a parent-hash discontinuity.',
+            );
+          }
+          previousBlockNumber = block.header.number;
+          previousBlockHash = block.header.hash;
+          this.#appendCreationBlock(block, address, creations, seen);
+        }
+
+        cursor = window.toBlock + 1;
+        requestCount += summary.requests;
+        responseBlockCount += summary.blocks;
+        finalizedHead =
+          finalizedHead === null
+            ? summary.finalizedHead
+            : summary.finalizedHead === null
+              ? finalizedHead
+              : Math.max(finalizedHead, summary.finalizedHead);
+        await this.#onProgress?.({
+          fromBlock: fromBlock.toString(),
+          toBlock: toBlock.toString(),
+          nextBlock: cursor.toString(),
+          requestCount,
+          responseBlockCount,
+          creationCount: creations.length,
+        });
+      }
+    }
+    return {
+      endpointId: this.endpointId,
+      value: creations,
+      coverage: {
+        fromBlock: fromBlock.toString(),
+        toBlock: toBlock.toString(),
+        nextBlock: (toBlock + 1).toString(),
+        finalizedHead: finalizedHead?.toString() ?? null,
+        responseBlockCount,
+        requestCount,
+        completion: 'REQUESTED_RANGE_COMPLETE',
+      },
+    };
+  }
+
+  async #readCreationWindow(
+    address: string,
+    window: SqdEvmCreationWindow,
+  ): Promise<SqdEvmCreationWindowResult> {
+    const blocks: SqdFinalizedBlock[] = [];
     const summary = await this.#source.readFinalizedRange(
       {
-        fromBlock,
-        toBlock,
+        fromBlock: window.fromBlock,
+        toBlock: window.toBlock,
         includeAllBlocks: false,
         fields: {
           transaction: { hash: true, transactionIndex: true },
@@ -1467,112 +1700,99 @@ export class SqdEvmContractCreationReader implements EvmContractCreationReader {
         },
       },
       (block) => {
-        const blockHash = evmBlockHash(block, 'EVM contract creation');
-        const transactionHashes = new Map<number, string>();
-        for (const transaction of sqdTransactionsFromBlock(this.#source.dataset, block)) {
-          const transactionIndex = sourcePosition(
-            transaction.payload.transactionIndex,
-            'EVM creation transaction index',
-          );
-          if (transactionHashes.has(transactionIndex)) {
-            throw new ProviderError(
-              'INVALID_RESPONSE',
-              'SQD EVM creation response contains duplicate transaction indexes.',
-            );
-          }
-          transactionHashes.set(transactionIndex, transaction.identity);
-        }
-
-        for (const trace of sqdEvmTracesFromBlock(this.#source.dataset, block)) {
-          const payload = trace.payload;
-          if (
-            payload.type !== 'create' ||
-            (payload.error !== undefined && payload.error !== null)
-          ) {
-            throw new ProviderError(
-              'INVALID_RESPONSE',
-              'SQD returned a trace outside the requested successful creation filter.',
-            );
-          }
-          const transactionIndex = sourcePosition(
-            payload.transactionIndex,
-            'EVM creation trace transaction index',
-          );
-          const transactionHash = transactionHashes.get(transactionIndex);
-          if (transactionHash === undefined) {
-            throw new ProviderError(
-              'INVALID_RESPONSE',
-              'SQD EVM creation trace is missing its parent transaction.',
-            );
-          }
-          const action = sqdObject(payload.action, 'creation action');
-          const result = sqdObject(payload.result, 'creation result');
-          const creator = sqdLogAddress(String(action.from ?? ''), 'creation creator');
-          const createdAddress = sqdLogAddress(
-            String(result.address ?? ''),
-            'created contract address',
-          );
-          const bytecode = result.code;
-          if (
-            createdAddress !== address ||
-            typeof bytecode !== 'string' ||
-            !EVM_HEX_DATA.test(bytecode) ||
-            bytecode === '0x'
-          ) {
-            throw new ProviderError(
-              'INVALID_RESPONSE',
-              'SQD returned an invalid or mismatched EVM contract creation.',
-            );
-          }
-          const traceAddress = sourcePath(payload.traceAddress, 'EVM creation trace address', true);
-          const identity = `${blockHash}:${transactionHash}:${traceAddress.join('.') || 'root'}`;
-          if (seen.has(identity)) {
-            throw new ProviderError(
-              'INVALID_RESPONSE',
-              'SQD returned a duplicate EVM contract creation.',
-            );
-          }
-          seen.add(identity);
-          creations.push({
-            address: createdAddress,
-            creator,
-            bytecode: bytecode.toLowerCase(),
-            blockHash,
-            blockNumber: `0x${block.header.number.toString(16)}`,
-            transactionHash,
-            transactionIndex: `0x${transactionIndex.toString(16)}`,
-            traceAddress,
-            raw: payload,
-          });
-          if (creations.length > this.#maxResults) {
-            throw new ProviderError(
-              'INVALID_RESPONSE',
-              `SQD EVM creation result exceeds the configured ${this.#maxResults}-record limit.`,
-            );
-          }
-        }
+        blocks.push(block);
       },
     );
-    if (summary.completion !== 'REQUESTED_RANGE_COMPLETE' || summary.nextBlock !== toBlock + 1) {
-      throw new ProviderError(
-        'HTTP_ERROR',
-        'SQD finalized coverage did not reach the requested EVM creation range end.',
-        { retryable: true },
+    return { window, blocks, summary };
+  }
+
+  #appendCreationBlock(
+    block: SqdFinalizedBlock,
+    address: string,
+    creations: EvmContractCreationRecord[],
+    seen: Set<string>,
+  ): void {
+    const blockHash = evmBlockHash(block, 'EVM contract creation');
+    const transactionHashes = new Map<number, string>();
+    for (const transaction of sqdTransactionsFromBlock(this.#source.dataset, block)) {
+      const transactionIndex = sourcePosition(
+        transaction.payload.transactionIndex,
+        'EVM creation transaction index',
       );
+      if (transactionHashes.has(transactionIndex)) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'SQD EVM creation response contains duplicate transaction indexes.',
+        );
+      }
+      transactionHashes.set(transactionIndex, transaction.identity);
     }
-    return {
-      endpointId: this.endpointId,
-      value: creations,
-      coverage: {
-        fromBlock: fromBlock.toString(),
-        toBlock: toBlock.toString(),
-        nextBlock: summary.nextBlock.toString(),
-        finalizedHead: summary.finalizedHead?.toString() ?? null,
-        responseBlockCount: summary.blocks,
-        requestCount: summary.requests,
-        completion: 'REQUESTED_RANGE_COMPLETE',
-      },
-    };
+
+    for (const trace of sqdEvmTracesFromBlock(this.#source.dataset, block)) {
+      const payload = trace.payload;
+      if (payload.type !== 'create' || (payload.error !== undefined && payload.error !== null)) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'SQD returned a trace outside the requested successful creation filter.',
+        );
+      }
+      const transactionIndex = sourcePosition(
+        payload.transactionIndex,
+        'EVM creation trace transaction index',
+      );
+      const transactionHash = transactionHashes.get(transactionIndex);
+      if (transactionHash === undefined) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'SQD EVM creation trace is missing its parent transaction.',
+        );
+      }
+      const action = sqdObject(payload.action, 'creation action');
+      const result = sqdObject(payload.result, 'creation result');
+      const creator = sqdLogAddress(String(action.from ?? ''), 'creation creator');
+      const createdAddress = sqdLogAddress(
+        String(result.address ?? ''),
+        'created contract address',
+      );
+      const bytecode = result.code;
+      if (
+        createdAddress !== address ||
+        typeof bytecode !== 'string' ||
+        !EVM_HEX_DATA.test(bytecode) ||
+        bytecode === '0x'
+      ) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'SQD returned an invalid or mismatched EVM contract creation.',
+        );
+      }
+      const traceAddress = sourcePath(payload.traceAddress, 'EVM creation trace address', true);
+      const identity = `${blockHash}:${transactionHash}:${traceAddress.join('.') || 'root'}`;
+      if (seen.has(identity)) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          'SQD returned a duplicate EVM contract creation.',
+        );
+      }
+      seen.add(identity);
+      creations.push({
+        address: createdAddress,
+        creator,
+        bytecode: bytecode.toLowerCase(),
+        blockHash,
+        blockNumber: `0x${block.header.number.toString(16)}`,
+        transactionHash,
+        transactionIndex: `0x${transactionIndex.toString(16)}`,
+        traceAddress,
+        raw: payload,
+      });
+      if (creations.length > this.#maxResults) {
+        throw new ProviderError(
+          'INVALID_RESPONSE',
+          `SQD EVM creation result exceeds the configured ${this.#maxResults}-record limit.`,
+        );
+      }
+    }
   }
 
   async #metadata(): Promise<SqdDatasetMetadata> {

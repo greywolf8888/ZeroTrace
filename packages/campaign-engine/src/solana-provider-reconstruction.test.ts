@@ -117,6 +117,7 @@ function report(
   slot: string,
   blockhash: string,
   flows: readonly SolanaAssetFlow[],
+  includeLaunchpadObservation = false,
 ): SolanaTransactionIntelligenceReport {
   const transactionEvidence = createEvidence({
     ledger: 'SOLANA',
@@ -143,6 +144,35 @@ function report(
     finality: 'finalized',
     summary: 'Fixture Solana transaction semantics.',
   });
+  const launchpadObservation = includeLaunchpadObservation
+    ? {
+        schemaVersion: 'solana-launchpad-observation-v1' as const,
+        id: 'slo_' + 'a'.repeat(24),
+        platform: 'PUMP' as const,
+        programId: '11111111111111111111111111111111',
+        deploymentId: 'pump-solana-mainnet-test',
+        sourceCommit: 'a'.repeat(40),
+        abiOrIdlHash: 'b'.repeat(64),
+        officialSourceUris: ['https://pump.fun/docs/'],
+        signature,
+        slot,
+        instructionPath: 'outer:0',
+        instructionName: 'buy',
+        instructionVersion: 'LEGACY' as const,
+        category: 'TRADE' as const,
+        discriminator: 'a'.repeat(16),
+        accountIndexes: [],
+        accounts: [],
+        accountCoverage: 0,
+        decodedArguments: [],
+        argumentCoverage: 0,
+        decodeWarnings: ['Fixture observation carries no resolved account layout.'],
+        execution: 'SUCCESS' as const,
+        evidenceIds: [terminal.id],
+        snapshot: snapshot(slot, blockhash),
+        resultHash: 'c'.repeat(64),
+      }
+    : undefined;
   return {
     ledger: 'SOLANA',
     chainId: 'solana-mainnet',
@@ -162,6 +192,9 @@ function report(
     metadata: { snapshot: snapshot(slot, blockhash) },
     terminalEvidenceId: terminal.id,
     evidence: [transactionEvidence, ...flowEvidenceValues, terminal],
+    ...(launchpadObservation === undefined
+      ? {}
+      : { launchpadObservations: [launchpadObservation] }),
   } as unknown as SolanaTransactionIntelligenceReport;
 }
 
@@ -212,12 +245,13 @@ describe('Solana dealer provider reconstruction', () => {
       snapshot: snapshot('101', blockhash101),
       transactions: [
         {
-          report: report(signature100, '100', blockhash100, [
-            mintA,
-            mintB,
-            mintPda,
-            solTransfer('outer:1:flow:0', '7'),
-          ]),
+          report: report(
+            signature100,
+            '100',
+            blockhash100,
+            [mintA, mintB, mintPda, solTransfer('outer:1:flow:0', '7')],
+            true,
+          ),
           transactionIndex: '0',
         },
         {
@@ -259,6 +293,12 @@ describe('Solana dealer provider reconstruction', () => {
     expect(result.report.fundingEdges.length).toBeGreaterThan(0);
     expect(result.report.settlementEdges.length).toBeGreaterThan(0);
     expect(result.report.pdaSuppressedOwnerIds).toEqual([pdaOwner]);
+    expect(result.report.launchpadObservations).toEqual([
+      expect.objectContaining({ platform: 'PUMP', instructionName: 'buy', slot: '100' }),
+    ]);
+    const launchpadEvidenceId = result.report.launchpadObservations?.[0]?.evidenceIds[0];
+    expect(launchpadEvidenceId).toBeDefined();
+    expect(result.report.evidenceIds).toContain(launchpadEvidenceId);
     expect(result.report.evidence).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

@@ -28,6 +28,17 @@ describe('source operator registry', () => {
     expect(result.distinctOperatorIds).toEqual(['bnb-chain']);
   });
 
+  it('recognizes the documented keyless NodeReal endpoint as a distinct operator', () => {
+    const result = resolveSourceOperators([
+      'bsc-rpc@bsc-dataseed.bnbchain.org#1',
+      'bsc-rpc@bsc.nodereal.io#2',
+    ]);
+
+    expect(result.independence).toEqual({ state: 'known', value: true });
+    expect(result.distinctOperatorIds).toEqual(['bnb-chain', 'nodereal']);
+    expect(result.unresolvedSources).toEqual([]);
+  });
+
   it('keeps unregistered or malformed source ownership inconclusive', () => {
     const result = resolveSourceOperators([
       'bsc-rpc@bnb-mainnet.g.alchemy.com#1',

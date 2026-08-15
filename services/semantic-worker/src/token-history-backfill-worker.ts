@@ -110,6 +110,7 @@ export function createTokenHistoryBackfillWorkerResources(
         campaigns.close(),
         alerts.close(),
         facts.close(),
+        artifacts.close(),
       ]);
     },
   };
@@ -158,7 +159,12 @@ export async function runTokenHistoryBackfillWorkerCycle(
 ): Promise<TokenHistoryBackfillCycleSummary> {
   await preflight(resources);
   const handlers = new Map<CaptureKind, CaptureHandler>([
-    ['TOKEN_HISTORY_BACKFILL', createTokenHistoryBackfillHandler(config, resources)],
+    // An empty finalized archive chunk is a valid negative observation, not a missing candidate
+    // failure. The handler commits an explicit NO_TOKEN_FLOW_OBSERVATIONS terminal Evidence.
+    [
+      'TOKEN_HISTORY_BACKFILL',
+      createTokenHistoryBackfillHandler(config, resources, { allowEmptyCapture: true }),
+    ],
     ['TOKEN_LIVE_CAPTURE', createTokenHistoryLiveCaptureHandler(config, resources)],
   ]);
   return summarize(
@@ -166,6 +172,7 @@ export async function runTokenHistoryBackfillWorkerCycle(
       repository: resources.schedules,
       handlers,
       owner: config.owner,
+      ...(config.scheduleId === undefined ? {} : { scheduleId: config.scheduleId }),
       leaseSeconds: config.leaseSeconds,
       limit: config.batchSize,
       ...(signal === undefined ? {} : { signal }),

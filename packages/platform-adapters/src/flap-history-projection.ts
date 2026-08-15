@@ -31,10 +31,11 @@ export const FLAP_HISTORY_PROJECTION_MODEL_VERSION = 'flap-event-history-project
 export const FLAP_HISTORY_PROJECTION_CHECKPOINT_VERSION =
   'flap-event-history-projection-checkpoint-v1';
 export const FLAP_HISTORY_PROJECTION_CHECKPOINT_SOURCE = 'sqd:binance-mainnet';
-export const FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE = FLAP_HISTORY_MAX_RANGE_BLOCKS;
+export const FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE = 5_000;
+export const FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE = FLAP_HISTORY_MAX_RANGE_BLOCKS;
 export const FLAP_HISTORY_PROJECTION_MAX_SEGMENTS = 5_000;
 export const FLAP_HISTORY_PROJECTION_MAX_RANGE_BLOCKS =
-  FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE * FLAP_HISTORY_PROJECTION_MAX_SEGMENTS;
+  FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE * FLAP_HISTORY_PROJECTION_MAX_SEGMENTS;
 
 export interface FlapHistoryProjectionCheckpointRun {
   id: string;
@@ -242,7 +243,7 @@ function validateRequest(options: ProjectFlapEventHistoryOptions): ValidatedProj
   const selectedSegmentSize = boundedInteger(
     options.segmentSize,
     FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
-    FLAP_HISTORY_MAX_RANGE_BLOCKS,
+    FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE,
     'history projection segmentSize',
   );
   const requestedBlocks = toBlockNumber - fromBlockNumber + 1;

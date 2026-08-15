@@ -14,6 +14,10 @@ import {
   PUMP_LAUNCHPAD_PROTOCOL_VERSION,
   PUMPSWAP_LAUNCHPAD_PROTOCOL_VERSION,
 } from './launchpad-provenance.js';
+import {
+  RAYDIUM_LAUNCHLAB_PROTOCOL_VERSION,
+  RAYDIUM_LAUNCHLAB_SOURCE_COMMIT,
+} from './solana-raydium-launchlab.js';
 
 export {
   GenericLaunchDetectionSchema,
@@ -49,11 +53,18 @@ const officialReadOnlySources = {
     'https://github.com/pump-fun/pump-public-docs/blob/main/docs/PUMP_SWAP_README.md',
   ],
   raydium: [
+    'https://docs.raydium.io/reference/program-addresses',
     'https://docs.raydium.io/products/launchlab/bonding-curve',
+    'https://docs.raydium.io/products/launchlab/instructions',
     'https://docs.raydium.io/sdk-api/anchor-idl',
-    'https://github.com/raydium-io/raydium-idl',
+    `https://github.com/raydium-io/raydium-idl/tree/${RAYDIUM_LAUNCHLAB_SOURCE_COMMIT}`,
+    `https://raw.githubusercontent.com/raydium-io/raydium-idl/${RAYDIUM_LAUNCHLAB_SOURCE_COMMIT}/raydium_launchpad/raydium_launchpad.json`,
   ],
-  meteora: ['https://docs.meteora.ag/', 'https://github.com/MeteoraAg/dynamic-bonding-curve'],
+  meteora: [
+    'https://docs.meteora.ag/',
+    'https://github.com/MeteoraAg/dynamic-bonding-curve',
+    'https://raw.githubusercontent.com/MeteoraAg/dynamic-bonding-curve/main/license.md',
+  ],
   moonshot: ['https://docs.moonshot.cc/', 'https://api.moonshot.cc'],
   fourMeme: ['https://www.four.meme/', 'https://github.com/four-meme-community/four-meme-ai'],
   fomowell: ['https://btc.fomowell.com/'],
@@ -107,9 +118,11 @@ export const LAUNCHPAD_PROTOCOL_REGISTRY: readonly LaunchpadRegistryEntry[] = Ob
     name: 'Raydium LaunchLab',
     ledgers: ['SOLANA'],
     officialSourceUris: [...officialReadOnlySources.raydium],
-    provenanceStatus: 'LICENSE_REVIEW_REQUIRED',
+    provenanceStatus: 'PROVENANCE_PENDING',
+    decoderStatus: 'PARTIAL_READ_ONLY',
+    versions: [RAYDIUM_LAUNCHLAB_PROTOCOL_VERSION],
     integrationBoundary:
-      'Use the official IDL as a clean-room schema reference or an isolated sidecar. Do not copy the GPL-3.0 SDK into the permissively licensed core.',
+      'A clean-room discriminator/account decoder is wired for the pinned official LaunchLab program and source commit, including Borsh MintParams, CurveParams, VestingParams, the Token-2022 transfer-fee option, AMM/CPMM migration arguments, and the raw 429-byte PoolState layout. Historical pool-state reads, deployment-sensitive remaining accounts, and real-fixture Evidence closure are still required before activation. The GPL-licensed SDK is not copied into core.',
   }),
   pendingEntry({
     platform: 'meteora-dbc',

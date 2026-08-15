@@ -87,4 +87,23 @@ describe('Postgres capture schedule queries', () => {
     });
     expect(query).not.toHaveBeenCalled();
   });
+
+  it('rejects malformed targeted schedule selectors before storage access', async () => {
+    const query = vi.fn();
+    const repository = PostgresCaptureScheduleRepository.fromPool({
+      query,
+      connect: vi.fn(),
+      end: vi.fn(),
+    });
+    await expect(
+      repository.claimDue({
+        owner: 'worker-a',
+        captureKinds: ['TOKEN_HISTORY_BACKFILL'],
+        scheduleId: 'not-a-schedule',
+      }),
+    ).rejects.toMatchObject({
+      code: 'CAPTURE_SCHEDULER_INVALID',
+    });
+    expect(query).not.toHaveBeenCalled();
+  });
 });

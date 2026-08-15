@@ -459,6 +459,22 @@ const FundingSettlementReportParamsSchema = z.object({
   reportId: z.string().regex(/^fsr_[0-9a-f]{24}$/),
 });
 
+const FundingSettlementRangeQuerySchema = z
+  .object({
+    fromBlock: z.string().regex(/^(?:0|[1-9]\d*)$/),
+    toBlock: z.string().regex(/^(?:0|[1-9]\d*)$/),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (BigInt(value.toBlock) < BigInt(value.fromBlock)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Funding Settlement range must not end before it begins.',
+      });
+    }
+  });
+
 const ControlCampaignEvidenceItemParamsSchema = z.object({
   itemId: z.string().regex(/^cei_[0-9a-f]{24}$/),
 });
@@ -1383,6 +1399,34 @@ function rejectUngroundedAnalysis(
   });
 }
 
+function bindRequestAbort(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): {
+  signal: AbortSignal;
+  cleanup: () => void;
+} {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  const socket = request.raw.socket;
+  const disconnectPoll = setInterval(() => {
+    if (request.raw.aborted || socket?.destroyed || reply.raw.destroyed) abort();
+  }, 250);
+  disconnectPoll.unref?.();
+  request.raw.once('aborted', abort);
+  socket?.once('close', abort);
+  reply.raw.once('close', abort);
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      request.raw.removeListener('aborted', abort);
+      socket?.removeListener('close', abort);
+      reply.raw.removeListener('close', abort);
+      clearInterval(disconnectPoll);
+    },
+  };
+}
+
 function capabilityNotImplemented(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -2147,7 +2191,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? 'DURABLE_STORAGE_REQUIRED'
             : 'IMPLEMENTED_DURABLE_PROVIDER_FREE_REPLAY',
         detail:
-          'Token Flow, candidate screening, conserved Cluster Positions, Behavior Events, deterministic Campaign bundles and Forensic Evidence Lines replay from immutable PostgreSQL reports. Real token-history discovery and provider-backed backfill are wired; monitoring, alerts, calibration and independent acceptance remain explicit pending boundaries.',
+          'Token Flow, candidate screening, conserved Cluster Positions, Behavior Events, deterministic Campaign bundles, Evidence-bound alerts, and provider-free Campaign/SSE replay are wired from immutable PostgreSQL reports. Real token-history discovery and provider-backed backfill are wired; calibration and independent acceptance remain explicit pending boundaries.',
       },
       {
         id: 'global-intelligence-search',
@@ -2421,9 +2465,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         status:
           runtime.captureSchedules === undefined
             ? 'DURABLE_STORAGE_REQUIRED'
-            : 'IMPLEMENTED_DURABLE_CLAIM_AND_TOKEN_HISTORY_HANDLERS',
+            : 'IMPLEMENTED_DURABLE_CLAIM_TOKEN_HISTORY_AND_MONITOR_HANDLERS',
         detail:
-          'Generic EVM/Bitcoin/Solana read-only schedules use deterministic occurrence IDs, exclusive expiring leases, bounded retries and immutable attempts. CLAIM_ACTIONS and TOKEN_HISTORY_BACKFILL have production handler bindings; backfill persists restart-safe Token History, Funding/Settlement, Control Campaign and terminal Evidence results. Temporal/NATS adapters, non-EVM handlers, monitoring and alert delivery remain pending.',
+          'Generic EVM/Bitcoin/Solana read-only schedules use deterministic occurrence IDs, exclusive expiring leases, bounded retries and immutable attempts. CLAIM_ACTIONS and TOKEN_HISTORY_BACKFILL have production handler bindings; Token Live Capture persists restart-safe Token History, Funding/Settlement, Control Campaign, Evidence-bound alerts, and provider-free SSE replay. Temporal/NATS adapters and non-EVM handlers remain pending.',
       },
       {
         id: 'entity-evidence-fusion',
@@ -3046,9 +3090,11 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     { schema: { tags: ['intelligence'] } },
     async (request, reply) => {
       const body = SolanaDealerCampaignRequestSchema.parse(request.body);
+      const requestAbort = bindRequestAbort(request, reply);
       const source = runtime.sqdSolanaSource;
       const adapter = runtime.solanaAdapter;
       if (source === undefined || adapter === undefined) {
+        requestAbort.cleanup();
         return reply
           .code(503)
           .send(
@@ -3060,29 +3106,46 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ),
           );
       }
-      const result = await captureSolanaDealerCampaign({
-        ...body,
-        source,
-        adapter,
-        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
-          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
-      });
-      const durableReport = await runtime.solanaDealerReports?.put(result.report);
-      if (result.report.campaign !== null) {
-        await runtime.controlCampaignReports?.put(result.report.campaign);
-        for (const alert of result.report.alerts) {
-          await runtime.forensicCampaignAlerts?.put(alert);
+      try {
+        const result = await captureSolanaDealerCampaign({
+          ...body,
+          source,
+          adapter,
+          signal: requestAbort.signal,
+          writeEvidence: async (evidence, sourceEvidenceIds = [], snapshot) => {
+            if (requestAbort.signal.aborted) {
+              throw new ProviderError('TIMEOUT', 'Solana dealer capture was aborted.', {
+                retryable: false,
+              });
+            }
+            const stored = await addEvidence(runtime, evidence, sourceEvidenceIds, snapshot);
+            if (requestAbort.signal.aborted) {
+              throw new ProviderError('TIMEOUT', 'Solana dealer capture was aborted.', {
+                retryable: false,
+              });
+            }
+            return stored;
+          },
+        });
+        const durableReport = await runtime.solanaDealerReports?.put(result.report);
+        if (result.report.campaign !== null) {
+          await runtime.controlCampaignReports?.put(result.report.campaign);
+          for (const alert of result.report.alerts) {
+            await runtime.forensicCampaignAlerts?.put(alert);
+          }
         }
+        return {
+          replayed: false,
+          durable: durableReport !== undefined,
+          record: durableReport ?? null,
+          report: result.report,
+          sourceSummary: result.sourceSummary,
+          candidateCount: result.candidateCount,
+          truncated: result.truncated,
+        };
+      } finally {
+        requestAbort.cleanup();
       }
-      return {
-        replayed: false,
-        durable: durableReport !== undefined,
-        record: durableReport ?? null,
-        report: result.report,
-        sourceSummary: result.sourceSummary,
-        candidateCount: result.candidateCount,
-        truncated: result.truncated,
-      };
     },
   );
 
@@ -7027,6 +7090,35 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         false,
       ).error,
     });
+
+  app.get(
+    '/api/v1/funding-settlement/tokens/:chainId/:token/range',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      const query = FundingSettlementRangeQuerySchema.parse(request.query);
+      const repository = runtime.fundingSettlementReports;
+      if (repository === undefined) return fundingSettlementUnavailable(request, reply);
+      const report = await repository.forRange(
+        params.chainId,
+        params.token.toLowerCase(),
+        query.fromBlock,
+        query.toBlock,
+      );
+      if (report === undefined) {
+        return {
+          report: unknownValue(
+            'NOT_QUERIED',
+            'No durable Funding and Settlement report matches the selected campaign range.',
+          ),
+          snapshot: unknownValue('NOT_QUERIED'),
+          metadata: emptyMetadata('funding-settlement-v1.0.0'),
+          replayed: true,
+        };
+      }
+      return { report, replayed: true };
+    },
+  );
 
   app.get(
     '/api/v1/funding-settlement/tokens/:chainId/:token',

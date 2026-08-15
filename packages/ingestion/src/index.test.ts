@@ -306,6 +306,59 @@ describe('SqdFinalizedIngestionPipeline', () => {
     ]);
   });
 
+  it('advances bounded Raw Fact checkpoints before a dense range finishes', async () => {
+    const events: string[] = [];
+    const checkpoints = new FakeCheckpoints(events);
+    const stores = createStores(events);
+    const batchedFacts: RawFactWriter = {
+      put: async () => {
+        throw new Error('The pipeline should use putMany when it is available.');
+      },
+      putMany: async (facts) => {
+        events.push(`facts-batch:${facts.length}`);
+        stores.facts.push(...facts);
+        return facts;
+      },
+    };
+    const pipeline = new SqdFinalizedIngestionPipeline({
+      source: new FakeSource('ethereum-mainnet', 'EVM', '1', evmBlocks),
+      checkpoints,
+      artifacts: stores.artifacts,
+      evidence: stores.evidence,
+      facts: batchedFacts,
+      checkpointBatchSize: 1,
+    });
+
+    await pipeline.run({ fromBlock: 0, toBlock: 1 });
+
+    expect(events).toEqual([
+      'artifact:0',
+      'evidence:0',
+      'facts-batch:1',
+      'checkpoint:0',
+      'artifact:1',
+      'evidence:1',
+      'facts-batch:1',
+      'checkpoint:1',
+      'finish:REQUESTED_RANGE_COMPLETE',
+    ]);
+  });
+
+  it('rejects an unsafe checkpoint batch size', () => {
+    const stores = createStores([]);
+    expect(
+      () =>
+        new SqdFinalizedIngestionPipeline({
+          source: new FakeSource('ethereum-mainnet', 'EVM', '1', evmBlocks),
+          checkpoints: new FakeCheckpoints([]),
+          artifacts: stores.artifacts,
+          evidence: stores.evidence,
+          facts: stores.factWriter,
+          checkpointBatchSize: 0,
+        }),
+    ).toThrow('checkpointBatchSize must be an integer from 1 through 1000.');
+  });
+
   it('runs the pre-finish callback before terminal checkpoint advancement', async () => {
     const events: string[] = [];
     const checkpoints = new FakeCheckpoints(events);

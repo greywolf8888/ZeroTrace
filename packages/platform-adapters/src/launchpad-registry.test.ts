@@ -17,6 +17,7 @@ import {
   PUMPSWAP_LAUNCHPAD_PROVENANCE_RECORD,
   PUMPSWAP_LAUNCHPAD_PROTOCOL_VERSION,
 } from './launchpad-provenance.js';
+import { RAYDIUM_LAUNCHLAB_PROTOCOL_VERSION } from './solana-raydium-launchlab.js';
 import { EvidenceLedger } from '@zerotrace/evidence';
 
 describe('launchpad protocol registry', () => {
@@ -36,6 +37,15 @@ describe('launchpad protocol registry', () => {
           ]),
         );
         expect(entry.versions).toHaveLength(2);
+      } else if (entry.platform === 'raydium-launchlab') {
+        expect(entry.decoderStatus).toBe('PARTIAL_READ_ONLY');
+        expect(entry.provenanceStatus).toBe('PROVENANCE_PENDING');
+        expect(entry.versions).toEqual([RAYDIUM_LAUNCHLAB_PROTOCOL_VERSION]);
+        expect(RAYDIUM_LAUNCHLAB_PROTOCOL_VERSION.officialSourceUris).toEqual(
+          expect.arrayContaining([
+            `https://raw.githubusercontent.com/raydium-io/raydium-idl/e7e0c96fe77bcf6a020b84a44c47a722aac8e359/raydium_launchpad/raydium_launchpad.json`,
+          ]),
+        );
       } else {
         expect(entry.versions).toHaveLength(0);
       }
@@ -45,21 +55,32 @@ describe('launchpad protocol registry', () => {
           deploymentId:
             entry.platform === 'pump'
               ? PUMP_LAUNCHPAD_PROTOCOL_VERSION.deploymentId
-              : 'unresolved-current-deployment',
+              : entry.platform === 'raydium-launchlab'
+                ? RAYDIUM_LAUNCHLAB_PROTOCOL_VERSION.deploymentId
+                : 'unresolved-current-deployment',
           hasRealHistoricalFixture: entry.platform === 'pump',
           chainIdentityVerified: entry.platform === 'pump',
         }),
       ).toMatchObject(
         entry.platform === 'pump'
           ? { state: 'READY', reasons: [], version: PUMP_LAUNCHPAD_PROTOCOL_VERSION }
-          : {
-              state: 'BLOCKED',
-              reasons: expect.arrayContaining([
-                'DEPLOYMENT_VERSION_NOT_PINNED',
-                'CHAIN_IDENTITY_NOT_VERIFIED',
-                'REAL_HISTORICAL_FIXTURE_MISSING',
-              ]),
-            },
+          : entry.platform === 'raydium-launchlab'
+            ? {
+                state: 'BLOCKED',
+                reasons: expect.arrayContaining([
+                  'PROVENANCE_PROVENANCE_PENDING',
+                  'PROVENANCE_EVIDENCE_MISSING',
+                  'REAL_HISTORICAL_FIXTURE_MISSING',
+                ]),
+              }
+            : {
+                state: 'BLOCKED',
+                reasons: expect.arrayContaining([
+                  'DEPLOYMENT_VERSION_NOT_PINNED',
+                  'CHAIN_IDENTITY_NOT_VERIFIED',
+                  'REAL_HISTORICAL_FIXTURE_MISSING',
+                ]),
+              },
       );
     }
   });
@@ -110,8 +131,8 @@ describe('launchpad protocol registry', () => {
 
   it('records the license boundary for Raydium and Meteora', () => {
     expect(getLaunchpadProtocolRegistryEntry('raydium-launchlab')).toMatchObject({
-      provenanceStatus: 'LICENSE_REVIEW_REQUIRED',
-      decoderStatus: 'NOT_AVAILABLE',
+      provenanceStatus: 'PROVENANCE_PENDING',
+      decoderStatus: 'PARTIAL_READ_ONLY',
     });
     expect(getLaunchpadProtocolRegistryEntry('meteora-dbc')).toMatchObject({
       provenanceStatus: 'LICENSE_REVIEW_REQUIRED',

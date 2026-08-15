@@ -5,6 +5,29 @@
 
 The initial API has no authentication and is suitable only for local/staging use.
 
+## Read-only MCP bridge
+
+`npm run mcp:readonly` starts a newline-delimited JSON-RPC bridge over stdio for local analyst
+tools. It is intentionally narrower than the HTTP API: every provider request is a bounded `GET`
+to the configured `ZEROTRACE_API_URL` origin, redirects and unknown arguments are rejected, and no
+capture, publish, signing, broadcast, approval, or fund-movement method is exposed. The bridge
+implements the MCP initialization, discovery, ping, tool-list, and tool-call surface described by
+the [official MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema).
+
+| Tool                           | Read-only operation                 |
+| ------------------------------ | ----------------------------------- |
+| `zerotrace_health`             | full health and provider-state read |
+| `zerotrace_capabilities`       | capability and safety ledger        |
+| `zerotrace_search`             | exact local projection search       |
+| `zerotrace_subject`            | ledger subject snapshot             |
+| `zerotrace_evidence_drilldown` | Evidence/source traversal           |
+| `zerotrace_campaign`           | immutable Control Campaign read     |
+| `zerotrace_case_export`        | content-addressed forensic export   |
+
+Set `ZEROTRACE_MCP_ALLOWED_API_HOSTS` to a comma-separated host allowlist when the API is not on
+the default local origin. The bridge is a local integration boundary; it does not add HTTP
+authentication, tenancy, or production Agent-console acceptance.
+
 ## System endpoints
 
 | Method | Path                                 | Behavior                                                             |
@@ -324,6 +347,12 @@ identity, an exact Snapshot, coverage, freshness, source set, model versions and
 uncalibrated `evidenceScore` is a bounded score, not a probability; hard Service Hub, CEX, bridge,
 router and dust boundaries preserve explicit attribution suppression.
 
+The web workspace presents the Campaign bundle as a five-layer read-only view (`Combined`, `Token`,
+`Funding`, `Settlement`, and `Behavior`). When more than one immutable report is loaded, its
+comparison card calculates only descriptive set/count/coverage deltas and retains both report IDs,
+Snapshot positions, result hashes, and the no-merge boundary; it is not a calibrated Entity or
+ownership inference.
+
 - `GET /api/v1/control/tokens/:chainId/:token/overview`
 - `GET /api/v1/control/tokens/:chainId/:token/campaigns?limit=50`
 - `GET /api/v1/control/campaigns/:campaignId`
@@ -335,6 +364,7 @@ router and dust boundaries preserve explicit attribution suppression.
 - `GET /api/v1/control/campaigns/:campaignId/evidence-line`
 - `POST /api/v1/control/campaigns/:campaignId/export`
 - `GET /api/v1/control/campaigns/:campaignId/export`
+- `GET /api/v1/funding-settlement/tokens/:chainId/:token/range?fromBlock=...&toBlock=...`
 - `POST /api/v1/control/tokens/:chainId/:token/backfill` with `{ "fromBlock": "...", "toBlock": "..." }`
 - `GET /api/v1/control/tokens/:chainId/:token/backfill?limit=50`
 - `POST /api/v1/control-campaigns/EVM/:chainId/:token/backfills`
@@ -470,8 +500,24 @@ Token-2022 transfers without same-Snapshot mint extension state keep fee and rec
 Unknown even when the instructed gross amount is known. Explicit `TransferCheckedWithFee` data can
 establish its expected fee, but unmodeled withheld-fee, confidential, close/sync, hook, or missing
 CPI effects keep the reconciliation `PARTIAL`. Gross instruction flows are not equated to net
-pre/post balances. This foundation does not claim decoded Jupiter/launchpad/AMM events, controller
-identity, full Token-2022 extension execution, launch lifecycle or realizable value.
+pre/post balances. This foundation does not claim arbitrary Jupiter/launchpad/AMM events, controller
+identity, full Token-2022 extension execution, launch lifecycle or realizable value. A narrow,
+separately versioned read-only decoder may add an Evidence-bound observation for the pinned
+Pump/PumpSwap and partial Raydium LaunchLab program surfaces described below; an unknown program,
+web page, or unlabeled token does not imply a launchpad.
+
+Solana transaction and dealer responses may include optional `launchpadObservations`. Current
+platform values are `PUMP`, `PUMPSWAP`, and `RAYDIUM_LAUNCHLAB`. Each observation retains its exact
+instruction path, source commit, compact decoder hash, finalized Snapshot, execution state,
+argument/account coverage, warnings, and Evidence IDs. Raydium's pinned Borsh initialization
+parameters and migration primitives are decoded into bounded argument strings. A source-pinned
+raw `PoolState` account-byte decoder is also available for callers that already possess the
+account bytes, but historical account reads and deployment-sensitive remaining accounts remain
+opaque in the API; its registry state is
+`PARTIAL_READ_ONLY` and activation is blocked until a real finalized fixture closes the provenance
+graph. Missing
+observations remain absent/Unknown and are never converted into a zero count claim about lifetime
+launch activity.
 
 Bitcoin transaction facts expose `locktime`, every validated input sequence and direct opt-in RBF
 signaling. `transactionEntityAnalysis` additionally reconciles input/output/fee arithmetic, records

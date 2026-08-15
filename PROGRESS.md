@@ -1,6 +1,6 @@
 # ZeroTrace Progress Ledger
 
-Last updated: 2026-08-14
+Last updated: 2026-08-15
 
 This file reports engineering truth against the terminal architecture. “Implemented” means code and
 automated tests exist in this repository. “Validated” additionally requires clean-environment and
@@ -9,23 +9,768 @@ completed feature.
 
 ## Executive status
 
-| Measure                          | Current state                                                                                                                                                           |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Terminal architecture completion | **22% estimated**                                                                                                                                                       |
-| Runnable foundation              | **Yes; host build, browser and Windows wrapper pass; isolated PostgreSQL/ClickHouse/MinIO/AGE acceptance services were migrated and exercised locally**                 |
-| Production acceptance            | **No**                                                                                                                                                                  |
-| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                          |
-| Unit tests                       | **703 passing across 130 files; full repository run 828/828 across 138 files**                                                                                          |
-| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                              |
-| Integration tests                | **125/125 pass against isolated PostgreSQL/ClickHouse/MinIO/AGE acceptance services; no optional-store skips in that run**                                              |
-| Real-browser E2E                 | **38/38 across Chromium desktop and Pixel 7; Windows wrapper E2E also 38/38**                                                                                           |
-| Remote CI                        | **Not run for the current local changes; prior PR #20 runs remain historical evidence only**                                                                            |
-| Coverage                         | **81.85% statements / 75.03% branches / 91.62% functions / 83.39% lines; configured global threshold passes**                                                           |
-| Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                                                |
-| Durable evidence/history         | **Bounded fresh FFT durable capture and provider-free scheduler replay passed; archive-scale history, monitoring, reconciliation, and production approval remain open** |
+| Measure                          | Current state                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Terminal architecture completion | **22% estimated**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Runnable foundation              | **Yes; host build, browser and Windows wrapper pass; isolated PostgreSQL/ClickHouse/MinIO/AGE acceptance services were migrated and exercised locally**                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Production acceptance            | **No**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Transaction mode                 | **Read-only; signing/broadcast/private-key custody forbidden**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Unit tests                       | **760 passing across 136 files; the latest full repository coverage passed 888/888 across 144 files**                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Model evaluation tests           | **1 structural Entity Precision/False-Merge gate passing**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Integration tests                | **Current disposable-store run: 128/128 passed across 8 files against isolated PostgreSQL/ClickHouse/MinIO; 0 failed**                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Real-browser E2E                 | **Current Chromium desktop/mobile dashboard run passed 40/40 and the current Windows-wrapper run passed 40/40**                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Remote CI                        | **Not run for the current local changes; prior PR #20 runs remain historical evidence only**                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Coverage                         | **Current full run: 82.31% statements / 75.32% branches / 91.66% functions / 83.84% lines across 888 cases (888 passed)**                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Real-chain validation            | Four-chain raw/anchors plus scoped FFT market/control/supply/pension behavior and entry economics passed                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Durable evidence/history         | **Bounded FFT capture, candidate-scoped SQD transaction/trace Evidence closure, deployment-origin durability, verified-hint-to-target FFT history, empty-range monitor heartbeat, forensic export/replay, exact Campaign-range Funding/Settlement replay, bounded strict multi-provider Token History/Campaign capture, a contiguous 100,000-block BSC archive-range union, and a PostgreSQL-backed BNB Chain + NodeReal product reconciliation/restart replay passed; full dataset origin search, archive-grade reconciliation, and production approval remain open** |
 
 The percentage is a conservative terminal-scope estimate, not a velocity metric. Passing foundation
 tests does not increase unimplemented protocol, ingestion, intelligence, or operations scope.
+
+## 2026-08-15 read-only MCP bridge boundary
+
+The repository now exposes `npm run mcp:readonly`, a newline-delimited JSON-RPC bridge with seven
+bounded analyst tools: health, capabilities, search, subject, Evidence drilldown, Control Campaign,
+and forensic Case export. The bridge has a fixed API-origin allowlist, strict argument and identifier
+validation, response-size and body-timeout bounds, redirect rejection, and GET-only transport. It
+does not expose capture, publish, signing, broadcasting, approvals, private keys, or fund movement.
+Focused protocol tests passed `5/5`, and the standalone TypeScript plus ESLint checks passed.
+This is a local integration boundary only; it does not claim HTTP authentication, tenancy, an Agent
+console, or Production Acceptance.
+
+A fresh isolated API process on a non-conflicting port returned the real `/health` JSON through
+`zerotrace_health` with `readOnly=true` and explicit `DEGRADED`/unconfigured-provider state; the
+stdio response remained a valid MCP tool result with no write path. The temporary process was
+stopped and its port released.
+
+## 2026-08-15 Control Campaign Four Graph and comparison view
+
+The Campaign workspace now exposes explicit `Combined`, `Token`, `Funding`, `Settlement`, and
+`Behavior` layers. Switching to a layer hides unrelated graph data instead of mixing lanes, while
+the default Combined view preserves the existing Evidence Line, alert, monitor, and export flow.
+When the durable list contains multiple immutable reports, the workspace adds a descriptive
+comparison card with wallet-set overlap, count deltas, coverage, Snapshot positions, and result
+hashes. It never infers ownership, upgrades calibration, or mutates Entity membership. Web
+typecheck/build/ESLint passed; the updated Campaign interaction passed on Chromium desktop and
+mobile (`2/2`).
+
+## 2026-08-15 rebuilt image and isolated Compose rerun
+
+The current source rebuilt `zerotrace-api` and `zerotrace-web` images after the Campaign UI change.
+A fresh `zerotrace-compose-current` project then started PostgreSQL, ClickHouse, Valkey, NATS,
+MinIO, API, and Web on isolated ports. All dependencies reached their health gates; API
+`/health/live`, `/health/ready`, and `/health` returned HTTP `200`, `readOnly=true`, aggregate
+status `UP`, and live BSC/Blockstream providers `UP`; Web `/healthz` returned HTTP `200`. The
+project was stopped cleanly and its named volumes were retained.
+
+## 2026-08-15 Raydium LaunchLab current-provider qualification
+
+The real `npm run launchpad:raydium:smoke -- --rpc-url https://api.mainnet.solana.com` smoke
+completed against finalized slot `439398289` with transaction
+`5aaDX1PjKuV4vLB74oFav1aXPeyhXn4279shoAo6xbK6AyT74PfgHER1L6s7Q14kes6WzAvzAEZjXNvVN1f7b5CB`.
+It verified executable program `LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj`, decoded the
+official-version `buy_exact_in` instruction, read the complete 429-byte PoolState, and replayed
+the result with the same hash. The account context was later than the requested slot, so the
+PoolState remains `MIN_CONTEXT_ONLY` with `historyCoverage=0.5`; one public RPC leaves
+`sourceCoverage=0.5`. Twenty Evidence nodes were retained and provider health was `UP`. This is
+real current-state launchpad evidence, not historical exactness or full activation.
+
+## 2026-08-15 Current post-change regression and external validation boundary
+
+The latest code state adds the source-pinned Raydium LaunchLab partial read-only decoder, a
+finalized PoolState inspection boundary, the raw 429-byte account layout, and a live smoke command.
+It decodes official instruction data and PoolState fields without deriving price, graduation,
+ownership, or realizable value from an unqualified current account. Complex Anchor parameter
+structs remain opaque, and activation remains blocked until historical exactness and a durable
+fixture close the Evidence chain. The Bitcoin transaction/entity and forensic-graph paths also
+retain `Unknown(INSUFFICIENT_DATA)` when a prevout value is missing instead of substituting numeric
+zero. The web cards show partial/blocked states and do not turn absent arrays into known empty
+history.
+
+Current gates are unit `760/760` across 136 files, evaluation `1/1`, and full coverage `888/888`
+across 144 files; the complete disposable-store integration rerun passed `128/128` (`0` failed)
+across 8 files against isolated PostgreSQL/ClickHouse/MinIO. Format, ESLint, TypeScript,
+package/API/web/worker build, production license allowlist, Compose config, SBOM, `npm audit`
+(`0` vulnerabilities), and `git diff --check`. Current Chromium desktop/mobile dashboard E2E is
+`40/40`; the current Windows wrapper also passed `40/40`. The ClickHouse large-payload repair was revalidated
+against a freshly recreated disposable ClickHouse container and volume; the prior `123/126`
+failure remains documented as an environment-capacity diagnosis, not a hidden test failure. The
+post-hardening coverage rerun completed after the disposable stores recovered and passed `888/888` with
+file-level parallelism disabled for deterministic shared-store scheduling.
+The earlier containerized startup smoke passed with API and Web healthy on isolated host ports; API
+`/health/live` and Web `/healthz` returned HTTP 200. After Docker Engine recovered, the current
+`docker compose build api web` also completed successfully and rebuilt the API/Web images from this
+source checkpoint. A fresh isolated Compose project (`zerotrace-compose-current`) then started the
+current API/Web images with PostgreSQL, ClickHouse, Valkey, NATS, and MinIO on non-conflicting host
+ports (`18082`, `4179`, `26533`, `28125`, `26380`, `24223/28223`, `29012/29013`). Every dependency
+reported healthy/running; API `/health/live`, `/health/ready`, and aggregate `/health` returned
+HTTP 200, Web `/healthz` returned HTTP 200, API reported `readOnly=true`, and the live BSC and
+Blockstream providers reported `UP`. This closes current isolated Compose runtime acceptance. The
+default root Compose host-port deployment remains an environment gate because unrelated local
+services own `5432` and `6379`; no volume was deleted or reset. A no-volume container from the
+current API image was also smoke-tested against already-healthy disposable PostgreSQL/ClickHouse/
+MinIO/Valkey/NATS services, where aggregate `/health` correctly returned `DEGRADED` under
+intentionally unconfigured optional providers. This preserves the distinction between unavailable
+and zero.
+
+`RawArtifactStore` now bounds object-store health probes and closes its dedicated HTTP(S) keep-alive
+agent from API and worker teardown paths; the full coverage run exercised the new timeout/close
+regressions. The BNB Chain official endpoint registry documents NodeReal's keyless BSC endpoint.
+Manual read-only `eth_chainId` and target-block checks agreed with BNB Chain's endpoint at finalized
+block `115956636`. After the storage-backed attempt was interrupted by the local Docker failure,
+the exact product route was re-run in a clean process-local API with only those two public endpoints
+and FFT `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: it selected finalized block `116005076` and
+returned `200/PASS`, `VERIFIED_INDEPENDENT` with two operators, zero failed/inconclusive audit
+checks, and terminal Evidence `ev_241d928b691c0161a82c7b11`. This proves the real read-only
+application route and NodeReal registry path. The PostgreSQL-backed rerun selected finalized block
+`116009420`, returned `200/PASS` and `VERIFIED_INDEPENDENT` with zero failed/inconclusive audit
+checks, and emitted terminal Evidence `ev_441a017ac39b96ada5f1cca6`.
+
+A closed-and-recreated API process replayed that terminal through the Evidence drilldown with HTTP
+200, 82 nodes, and the terminal node present. This closes the read-only product route and PostgreSQL
+Evidence restart replay; archive-grade history, full dataset origin coverage, and production
+acceptance remain open.
+
+The durable Token History worker was then exercised against the requested FFT address using the
+same clean PostgreSQL/ClickHouse/MinIO stores and public SQD/BSC endpoints. A bounded window
+`115956000–115956636` completed as an explicit empty-range result (`cps_4c38a360f89b6059df86b9a9`,
+run `cpr_0fbda2c936a4bca83c824989`, terminal Evidence
+`ev_6d862f962f40d68bba51f6b0`); no Campaign was inferred from that negative observation. A second
+real-flow window `113416949–113417950` completed with Token History
+`thd_f43b5818d37310944298a57c`, Funding/Settlement `fsr_d39fc1c0fa7ba831f03cfa4a`, Campaign
+`cc_de3cff0e52d827b72b4a2058`, and terminal Evidence `ev_46624f675aaa8380cd334df3`. The run
+`cpr_11a0afc0e7709e7b6a2a856c` was `SUCCEEDED` with capture coverage/confidence `1/1`; the
+Campaign API reported `CLOSED`, `data/source/history=1/1/1`, 19 Evidence IDs, and an explicit
+`UNCALIBRATED` status. After API close/recreate, Campaign and Funding/Settlement reads returned
+HTTP 200, the terminal Evidence drilldown returned 88 nodes with the terminal present, and the
+backfill schedule replay returned `COMPLETED`/`SUCCEEDED` with the same result reference. This
+closes a real bounded provider-backed Campaign path and restart replay, but not full history,
+multi-provider Campaign qualification, calibrated inference, or Production Acceptance.
+
+The shared capture scheduler now supports a strictly validated optional
+`CAPTURE_WORKER_SCHEDULE_ID` selector. It is blank by default, preserves normal oldest-due queue
+ordering, and lets an operator replay one durable schedule without accidentally claiming older
+work; malformed selectors fail before storage access. Focused scheduler/config tests passed
+`17/17`; the integration selector is included in the next disposable-store regression.
+
+The Raydium live smoke selected finalized transaction
+`4WERw7UQns3xoLyxk13Y1txCMa1fpB8C3F33rtZAhmvdjX4gCgiRc8UVkRfk6QjXBDLeqE4vy18imW1gDkWaWi4S`
+at slot `439296420` from the public Solana RPC. It decoded `sell_exact_in`, verified the pinned
+program identity, decoded PoolState account `BEEmWVXzewWvYaD52iP5TGKY5ofA89Vq3fKHV5ut4izh`
+with all 429 bytes and all declared fields, and replayed the decoder with the same hash. The
+latest account response context was slot `439298807`, later than the requested transaction slot, so the
+PoolState result is explicitly `MIN_CONTEXT_ONLY` with `historyCoverage=0.5`; this is real current
+state evidence, not a historical exact read. The instruction decoder also records three trailing
+accounts outside the pinned layout rather than silently discarding them.
+
+The SQD EVM contract-creation reader now permits at most four bounded request windows in flight,
+then merges their sparse blocks strictly by range while retaining parent-hash, response-count,
+completion, and creation-result limits. A failed child window leaves the outer cursor unchanged.
+The focused SQD suite remains `34/34`; a real public-Portal measurement observed concurrent
+requests but no throughput improvement because this Portal instance serialized the responses, so
+full-dataset origin completion and performance qualification remain open.
+
+A fresh bounded public-SQD origin-worker smoke for FFT `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`
+over finalized BSC blocks `113416949–113417949` completed with two 1,000-block chunks,
+requested-range coverage `1`, terminal Evidence `ev_0fe0188838a1b04a41bf510b`, and an exact
+finalized Snapshot at block `113417949`. The result correctly kept `originState=unknown` because
+the requested range does not include the verified deployment origin at `112625803`; this closes
+the bounded SQD transport/coverage smoke only, not the full dataset-start origin search.
+
+This status is intentionally not Production Acceptance. It records the actual external boundary
+instead of promoting historical passes or a partial protocol decoder into a release claim.
+
+## 2026-08-15 live monitor provenance and reorg guard hardening
+
+The Token Live Capture heartbeat now derives its `sourceSet` from the exact finalized Snapshot
+provider versions, preserving every endpoint in a strict quorum instead of collapsing the result to
+the aggregate adapter ID. The heartbeat payload also commits those provider source IDs into its
+content hash. A focused handler regression passed `6/6`, covering durable-cursor continuation,
+strict two-endpoint heartbeat provenance, and fail-closed finalized-cursor hash replacement
+(`TOKEN_LIVE_CAPTURE_REORG_DETECTED`). Full typecheck and focused format/ESLint checks passed.
+
+This is an automated/local-provider boundary test, not a long-running production soak. Docker
+Desktop currently reports `running`, but the Docker Engine CLI and dependency health probes still
+hang or time out after the restart; the clean persistent monitor/alert/export rerun therefore stays
+open and no Docker image or Compose acceptance is claimed.
+
+A fresh process-local run then exercised the same heartbeat against the real public BNB Chain and
+NodeReal RPC endpoints for FFT, with an intentionally future cursor so no backfill or mutation path
+could be entered. Both endpoints agreed at finalized block `116030074`; the returned source set was
+`bsc-rpc@bsc-dataseed.bnbchain.org#1` and `bsc-rpc@bsc.nodereal.io#2`, and the heartbeat Evidence was
+`ev_27af40e985384c59bfb655c9`. This is real provider provenance evidence for the heartbeat only;
+it is not durable schedule, alert-delivery, outage-soak, or reorg-acceptance evidence.
+
+## 2026-08-15 bounded strict multi-provider Token History qualification
+
+The requested FFT address `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` completed an actual compiled
+worker capture with `TOKEN_HISTORY_REQUIRE_INDEPENDENT_RPC=true` over finalized BSC blocks
+`113416952–113417953`. The operator-selected schedule was `cps_7ed96d129818629d8d75fa97` and the
+worker reported `claimed=1`, `succeeded=1`, `retryWaiting=0`, and `failedTerminal=0`; the durable
+run was `cpr_9b853d0446eaf7c31a589686`, attempt 1, `SUCCEEDED`. Its Token History report was
+`thd_83a44329e7ffbacc8b7f41cd` with 12 observations and source IDs
+`bsc-rpc@bsc-dataseed.bnbchain.org#1` and `bsc-rpc@bsc.nodereal.io#2`, plus the SQD source
+`sqd:binance-mainnet`. The exact report contains source-reconciliation Evidence and one
+provider-attestation Evidence per agreed RPC source; mismatches and partial quorum failures are
+fail-closed rather than silently treated as one provider.
+
+The resulting Campaign was `cc_cb780760c06718c92ec033b8`, with result hash
+`7e866be0c772d250903550138bf8c024afc95d17bed195bdf4c76075d591ff34`, 18 Evidence IDs, source
+set containing both BSC RPC IDs, SQD, and the reconstruction model, and explicit
+`automaticOwnershipMergeAllowed=false` / `calibrationStatus=UNCALIBRATED`. API GET after the
+worker completed returned HTTP 200 and the same durable object. Replay now canonicalizes duplicate
+raw facts by semantic identity, while immutable failed or superseded historical reports remain
+unchanged. This is a bounded strict multi-provider qualification pass for the capture path; it
+does not prove operator independence, archive-grade coverage, full-dataset origin, long-running
+reorg/outage behavior, calibrated inference, Apache AGE projection, or Production Acceptance.
+
+## 2026-08-15 durable monitor and fresh Campaign replay closure
+
+The live heartbeat terminal provenance guard was repaired after a real PostgreSQL trigger rejected
+a provider-observation terminal as an incomplete capture closure. The fixed handler emits one
+`PROVIDER_OBSERVATION` Evidence node per strict RPC source and a `DERIVED_FEATURE` heartbeat terminal
+linked to all of them. Focused handler coverage passed `6/6`, typecheck and semantic-worker build
+passed, and the durable clean-store monitor `cps_d32faa0c70d0e81e0e05affb` recovered from attempt
+1 `LEASE_EXPIRED` to attempt 2 `SUCCEEDED` (`cpr_28a4744752cb4c8ea6518cfc`). Its terminal
+Evidence is `ev_e67e423cb2f77ae4ee7b397e`; the Evidence drilldown retained the terminal plus both
+BNB Chain/NodeReal provider observations and their source IDs.
+
+A fresh unoccupied 1,003-block clean-store capture for FFT was then run with strict BSC quorum and
+SQD: schedule `cps_be59eeba3e2de7c08c3c9050`, run `cpr_22b096d9c7c66ddc0436201b`, Token History
+`thd_fbca531453dd3db2cf43e392`, and Campaign `cc_3c7b119ee7df0964578cb7ef`. The run was
+`SUCCEEDED` with `1/1` coverage/confidence, both RPC IDs plus `sqd:binance-mainnet` in the source
+set, Campaign `CLOSED` at `SETTLEMENT`, and five Evidence-bound Alerts (two `CRITICAL`, three
+`INFO`). After API close/recreate, health returned HTTP 200/`UP`; Campaign GET, Alerts GET, SSE
+(`1` campaign + `5` alert + `1` complete event), Case read, and Case export all returned HTTP 200.
+The Case Bundle retained `38` Evidence nodes, `17` Snapshots, `13` raw artifacts, and offline
+content-addressed replay metadata. A separate bounded range whose clean ClickHouse Raw Facts did
+not contain the prior report's materialized facts remained an explicit empty-range result; no
+Campaign was fabricated from that storage mismatch.
+
+The web follow-up fixed long direct-code values in Campaign fact rows and prevents the detail column
+from becoming unreadably narrow at medium desktop widths. Playwright visual checks passed at
+1440x1000 and 390x844; mobile root `scrollWidth` equaled `clientWidth` (`390`), with zero browser
+errors or warnings. These real bounded replays and UI checks do not close full-dataset origin,
+archive-grade history, forced reorg/outage soak, calibration, current Compose health, or Production
+Acceptance.
+
+## 2026-08-15 current-source Apache AGE projection and replay closure
+
+A separate Compose project (`zerotrace-age-current`) initialized the current Apache AGE `1.7.0`
+sidecar and its immutable projection registry on a new named volume. The reusable
+`npm run graph:age:smoke -- --chain-id eip155:1` command read the latest durable investigation
+graph `eig_c718567bd03883990dc3dc02` from the isolated PostgreSQL store, then projected it to AGE
+with result hash `dbb9430af8b8190246f8764301c7ce6f3baa67001b191d6c1dff386c7b427d28`, 2 nodes and 1
+edge. The first direct run returned `PROJECTED`; the exact repeat returned `REPLAYED` with the same
+hash and counts. A current API image with `AGE_URL` returned `/health/ready` HTTP 200 and aggregate
+`/health` HTTP 200 with `readOnly=true` and `graphProjection.status=UP`/`backend=APACHE_AGE`.
+The sidecar was stopped after validation; the new volume and all pre-existing volumes were kept.
+This closes the bounded current-source AGE projection/replay gate, not full dataset origin,
+archive-grade history, long-running reorg/outage soak, calibration, current Compose health, or
+Production Acceptance.
+
+## 2026-08-15 full SQD dataset-origin attempt and rate-budget boundary
+
+The requested FFT lifetime worker was also started without an origin hint against the public SQD
+`binance-mainnet` dataset, with target block `116040177`. The durable parent run
+`cec99f2c-e695-42c0-84cd-cbe517d22096` and origin child
+`e1e226d0-798f-4272-b3a7-e100f46d7cf5` reached the contiguous origin cursor `7000000` from dataset
+start. No creation was selected and no terminal result was emitted. After measuring the public
+Portal's worker-range continuation behavior, the operator stopped the run under the explicit
+`OPERATOR_STOPPED_RATE_BUDGET` code; both checkpoints retain their state and can resume from the
+same cursor. This is an incomplete external scan, not lifetime coverage or a Production Acceptance
+pass. The public Portal is rate-limited and may return only a worker-range portion of a requested
+stream response, so the client correctly continues from the last finalized block; archive-grade or
+self-hosted SQD capacity is required for a practical full-dataset qualification.
+
+## 2026-08-15 FFT verified-hint lifetime materialization and adaptive history recovery
+
+The requested FFT token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` now has a completed durable
+origin-to-target history projection at finalized BSC target block `115956636` (hash
+`0x641aae147f3ab1d02a4d85081b2f38a61c0d7c33683d19f5eccef20da6215833`). The parent lifetime
+checkpoint `d2af31c5-7435-4e38-8d6d-dc84968b8d28` and history child
+`119b74d1-62d8-4607-bade-d0262e1c8219` are both `REQUESTED_RANGE_COMPLETE`; the history child
+contains 667 immutable 5,000-block segments, requested-range coverage `1`, and one reproduced
+Flap event transaction. The terminal lifetime Evidence is `ev_89ee9443007b3113dccb9dc1`, with
+metadata `data/source/history=1/1/1`, confidence `0.95`, and source set
+`bsc-rpc@bsc-dataseed.bnbchain.org#1`, `flap-official-event-guide@2026-08-10`, and
+`sqd:binance-mainnet`.
+
+The deployment origin was independently verified at hint block `112625803` through the durable
+origin child `cb35a3fd-3c0d-4c1a-8f63-7d1c84f7dc87`, including creation transaction
+`0x708256a1ad8c4f4ab8aefd021b4676fda9579eb61846f4957895fc8432467a63` and exact finalized
+Snapshot binding. The materialization explicitly records `originSearchMode=VERIFIED_HINT`.
+This makes the hint replayable and auditable but does not claim that the full SQD dataset-start
+origin search was completed; therefore `lifetimeCoverage` remains `Unknown(INSUFFICIENT_DATA)`.
+
+The first full-origin attempt and the earlier 10,000/50,000-block dense-window failures remain
+immutable diagnostics. The history worker now recognizes both platform and SQD log-result-limit
+errors, recursively splits only the failing bounded window, buffers range Evidence until the
+window succeeds, and merges the child results under the original outer checkpoint segment. The
+same real failing window `115125803–115130802` completed after this repair without increasing the
+25,000-log safety bound. Re-running the exact lifetime command returned the same scan ID,
+terminal Evidence, target Snapshot, and checkpoint state hash
+`7c1fb055b8253ad0d31a532719a0832c6f1a715dcda03b04e78a8c5aec6d77ff`.
+
+This closes real verified-hint origin-to-target history and deterministic replay for the target;
+it does not close full dataset origin coverage, independent-provider qualification, calibrated
+ownership/realizable-value inference, long-running reorg/outage soak, or Production Acceptance.
+
+## Historical final local regression gates — 2026-08-15 (before the latest post-change rerun)
+
+The final local gate run after the target-address repairs passed unit `726/726` across 131 files,
+integration `126/126` against the isolated PostgreSQL/ClickHouse/MinIO services, evaluation
+`1/1`, and coverage `852/852` across 139 files. Coverage is Statements `81.96%`, Branches
+`75.12%`, Functions `91.61%`, and Lines `83.52%`.
+
+Formatting, ESLint, TypeScript, package/API/web/worker build, license allowlist, `npm audit`
+(`0` vulnerabilities), Compose config validation, and CycloneDX SBOM generation all passed.
+Chromium desktop/mobile E2E passed `38/38`, and the Windows-wrapper E2E passed `38/38`.
+The focused storage health test also passed `3/3` after the local MinIO service recovered from a
+transient drive-offline event; no test failure was relabeled as a product success.
+
+These are runnable-foundation gates. They do not close the explicitly open production gates below,
+including lifetime archive history, independent-provider reconciliation, long-running reorg/outage
+soak, calibrated alerting, Apache AGE projection validation, remote CI/CodeQL, and production
+approval.
+
+## 2026-08-15 FFT exact-binding recovery and mixed-case boundary validation
+
+The requested FFT token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` was replayed over finalized
+BSC blocks `113416949–113417949` after the exact-binding recovery repair. The original immutable
+Token History report `thd_4896577ddd6379af0ca21d38` remains `COMPLETE` with six
+`UNAVAILABLE(EXACT_RPC_CONFLICT:ERROR)` bindings and telemetry showing the earlier failure; it was
+not rewritten. A recovery revision first produced `thd_a25f1e2fcb5880a32afb4354`, binding all six
+observations, and the canonicalized retry produced the final durable report
+`thd_7bfa3f58b90b39f103c6c79b` with 12 observations, 6/6 `BOUND` Action Semantics bindings,
+`1/1/1` data/source/history coverage, final Snapshot block `113417949`, and result hash
+`b20c94da4cf34eba0ea50a37200baa21c55ef22a2dedc401528053ac84977ecc`.
+
+The complete read-only capture was schedule `cps_5518ecae25b1142b0d66bc69`, run
+`cpr_45dae874f2ae81c9223eb148`, attempt `1`, status `SUCCEEDED`, with 67 Evidence IDs, terminal
+Evidence `ev_da83dc994e01ba0d6465f774`, and capture coverage/confidence `1/1`. Funding/Settlement
+is durable report `fsr_09af3097b288d14aaecc465e`, `COMPLETE`, `BOUNDED_RANGE`, with 5 funding and
+5 settlement edges; its result hash is
+`53cebc5efe664497b778495d5afcf7f2cabfe248cf0fcfc2808062124f3d43c8`. The resulting Campaign is
+`cc_a85a9c7caaa55529d673711c`, replayed by result reference
+`control-campaign:cc_a85a9c7caaa55529d673711c#sha256=dc8f0b94884ff786186f1ea44402cd509ba842033077da17d81a99c3cab81037`.
+
+The same run also exposed and fixed a robustness defect: mixed-case EVM schedule parameters were
+accepted by the parameter schema but later passed unchanged to the lowercase-only Funding/
+Settlement range repository. The worker now canonicalizes the token once at its boundary and uses
+that value for target checks, Token History, Funding/Settlement, historical expansion, and live
+capture evidence. The first uppercase recovery attempt remains immutable failure history; the
+canonicalized retry is the acceptance evidence above.
+
+This is a real bounded recovery and end-to-end target run. It does not close lifetime history,
+independent-provider qualification, long-running monitor/reorg/outage delivery, calibration,
+Apache AGE projection, remote CI/CodeQL, or Production Acceptance.
+
+## 2026-08-15 Real monitor, alert replay, and provider-outage recovery
+
+A durable Token Live Capture monitor for the same FFT token used schedule
+`cps_9b057eed93189e616ddcc60e` and run `cpr_5321d964baedf8904e2d13de` to capture finalized BSC
+window `113417951–113418950`. Attempt 1 succeeded with `coverage=1`, `confidence=1`, 52 Evidence
+IDs, terminal Evidence `ev_4fa800d834664fccaec8e941`, and Campaign
+`cc_59540f3585b8d7e09d9f87a` with result reference
+`control-campaign:cc_59540f3585b8d7e09d9f87a8#sha256=e872dcd7c9dac7904445cdd6899814c536ab8f18014e30b06b52edc5b60a7a3d`.
+The Token History report `thd_ad67bc13be0d184f1f461ec2` reached `1/1/1` coverage with 7
+observations. Three durable alerts (`fca_44490a0818f5fbd5a949ac91`,
+`fca_4ba0d390aaaf052611d6712c`, `fca_aecc3d73ec82bb31bc89baa9`) were persisted with Evidence
+edges. The PostgreSQL-backed API returned HTTP 200 for monitor and alerts, and HTTP 200
+`text/event-stream` for the Campaign replay stream with `campaign`, `alert`, and `complete` events.
+
+An immediate second worker invocation claimed `0` runs while the interval schedule's next
+occurrence was still pending, so the finalized window and alerts were not duplicated. A separate
+real outage drill for schedule `cps_7c3a1462ba2876ee41a89819` recorded attempt 1 of run
+`cpr_bd0953d185d5adbc0930b452` as `RETRY_WAIT` with `HTTP_ERROR` / `Provider hostname could not
+be resolved` and `sourceRetryable=true` when the configured RPC hostname was unavailable. After
+restoring the public BSC RPC list, attempt 2 succeeded with the explicit empty-range result
+`token-history-empty-range:thd_f4859de9de1fef13312f7cd1#sha256=ad03ae664fd4125afe4ae4fd5bb78315396693f3cd0d962a7639a04c61887842`, terminal Evidence
+`ev_9f1e810ae93fd20ccb7c3d58`, and `coverage/confidence=1/1`.
+
+This closes bounded restart-safe monitor, durable alert, SSE replay, no-duplicate occurrence, and
+retryable provider-outage recovery evidence. Multi-day soak, forced finalized reorg, independent
+provider qualification, calibrated alerts, and Production Acceptance remain open.
+
+## 2026-08-15 Real Solana dealer capture and Evidence-provenance repair
+
+The real Solana dealer API was exercised with Pump mint
+`EbudBPrWzLXLkkc3NrteDBvYDnyb9Pw7zCua36rnpump` over finalized slot `439138804`, the same slot as
+the public Pump `buy` transaction used by the launchpad smoke. The first durable attempt exposed
+two real defects: a range summary was incorrectly classified as a provider observation while
+deriving from per-slot observations, and its source IDs were omitted from the Evidence ID hash.
+Both boundaries are now fixed; the unit fixture uses the real `EvidenceLedger` validator instead of
+an identity-only writer.
+
+The repaired API call returned HTTP 200 with `durable=true`, report
+`sdc_9e7a7727e8c761f65310b836`, status `PARTIAL`, `candidateCount=1`, 2 holders, 1 token-flow
+edge, 31 Evidence IDs, 3 source IDs, and report/result hash
+`ae1d86eab71b348b65256ead1b423757544a9581ffa73df5210a76b2f5325c79`. Coverage was
+`data/source/history=1/1/0`: the finalized slot and token flow are observed, but one bounded buy
+does not prove lifetime holder opening balances, SOL funding, or settlement. Funding/Settlement and
+Campaign therefore remain absent/Unknown rather than being fabricated. Provider-free GET replay
+returned HTTP 200 with `replayed=true` and the same durable report hash.
+
+This is a real, durable Solana token-flow/holder boundary and a successful robustness repair. Full
+Solana dealer archive history, multiple trading/settlement windows, independent RPC reconciliation,
+PDA/Squads recursion, and production acceptance remain open.
+
+## 2026-08-15 Solana dealer bounded-range recovery and source-window hardening
+
+The same dealer path was re-run against Pump mint
+`EbudBPrWzLXLkkc3NrteDBvYDnyb9Pw7zCua36rnpump` over finalized slots
+`439138672–439138804`. The public SQD ledger-record response previously exceeded the generic
+8 MiB JSONL line limit; the API now uses a bounded Solana response budget and splits dealer source
+reads into contiguous 16-slot windows, aggregating request/response coverage without changing the
+requested range or silently treating a source-head result as complete.
+
+The real request completed durably as report `sdc_c9a09033ac08dca34a18f228`, `PARTIAL`, with
+`candidateCount=28`, 4 holders, 29 token-flow edges, `truncated=false`, and
+`data/source/history=1/1/0`. Its result hash is
+`3c3fa7b31cc1f3847461940a2e4dd087517c7a28bc14d2cca79571f1e0cd66e1`. The range is fully
+observed, but two holder opening balances remain Unknown, so history coverage and Campaign
+materialization remain closed rather than inferred.
+
+The focused Solana dealer suite passes `10/10`; the new unit fixture asserts three bounded source
+windows for a 33-slot request and rejects mismatched or invalid source cursors. This is a real
+bounded-history robustness improvement, not full Solana archive qualification.
+
+## 2026-08-15 Real Bitcoin forensic graph smoke and suppression boundary
+
+The read-only Bitcoin forensic graph smoke queried public Blockstream Esplora for confirmed
+transaction `074b02b446a3d55b26c33582f7a1b44691cd94ae87f50f430288b3213fea596a` at height `576833`.
+The live report `bfg_885d6729a6954592ddbd1a90` contained 597 nodes and 699 edges, including the
+observed UTXO funding/spend paths and the `COINJOIN_EQUAL_OUTPUT_PATTERN`,
+`PAYJOIN_NOT_EXCLUDABLE`, and `SERVICE_ATTRIBUTION_UNQUERIED` suppression reasons. The report
+result hash was `d85e27298b43800ac80addc92e5180eb3a1663fc55d43ac249094f7315c93cb1` and the public
+provider health was `UP` with a closed circuit and 16/16 successful transport attempts.
+
+The frozen provider-free replay produced the same hash twice (`cb7762c668b880606bf99e07f61851713eaa41b5ae9c1f88b047fb5c0d1e72e6`), retained
+`automaticOwnershipMergeAllowed=false`, and kept service/CoinJoin/PayJoin attribution as
+suppressed or Unknown. The same transaction was then captured through the configured API with
+public Esplora as report `bfg_13284efe37c91a1ce430501e`, 597 nodes, 699 edges, and result hash
+`18e2eeed0006de1ecf6ee1b2112d30dce3ae0c727c5e6bd6de1d587ec0eb4456`; its exact GET returned
+`replayed=true` with the identical stored hash. This closes a real public-provider graph/replay
+and durable API smoke, not Bitcoin Core archive/policy reconciliation or calibrated ownership
+inference.
+
+## 2026-08-15 FFT lifetime archive attempt and durable resume state
+
+The requested FFT token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` was started against finalized
+BSC target block `115956636`. The first lifetime attempt durably advanced the exact
+`FLAP_CONTRACT_ORIGIN` checkpoint to `next_block=5000000` before a retryable SQD `HTTP_ERROR`;
+the immutable `FLAP_LIFETIME_MATERIALIZATION` parent remains `RUNNING` with no result and was not
+promoted to complete. A second attempt was safely interrupted after proving the resume path, and
+a third attempt is currently running from the same checkpoint with a 100,000-block bounded SQD
+creation window, six provider attempts, and 120-second response deadlines. Until its origin and
+history scans finish, lifetime coverage remains Unknown and no full-history Campaign claim is made.
+
+## 2026-08-14 Mid-range checkpoint recovery and provider-boundary evidence
+
+A true process-level interruption drill used the real FFT token
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over BSC blocks
+`113417951–113419950` as schedule `cps_03775f9300ce9e8509dc1941` and run
+`cpr_df9c9a00ddb824da2b7d5e8c`. With checkpoint batch size `1`, attempt 1 was terminated after
+PostgreSQL durably advanced ingestion cursor `ce159bfa-7ded-4a1f-8860-246c1d0fa993` to
+`next_block=113418951`, strictly inside the requested range. After lease expiry and retry delay,
+attempt 2 resumed from that cursor and completed ingestion at `next_block=113419951` without
+replaying the already committed prefix.
+
+The durable Token History report `thd_46beba0e5be5e4603e3e4184` is `COMPLETE` with
+`historyCoverage=1`, `dataCoverage=1`, `sourceCoverage=1`, final Snapshot block `113419950`,
+170 observations, 3 range Evidence IDs, and result hash
+`9b1ec586c1aa949acee2bf12295869fe9293cd63d0ddb736814adf798d6b8443`. Its BSC provider
+telemetry records 7 exact-RPC errors. Because no observation passed the exact execution check,
+the Funding/Campaign stage correctly remained Unknown: attempts were
+`LEASE_EXPIRED` → `NO_CANDIDATE_WALLETS` → terminal `NO_CANDIDATE_WALLETS`; no Campaign or
+confidence was fabricated. This proves ingestion checkpoint recovery, not end-to-end Campaign
+continuation; independent archive-capable RPC qualification remains required for that gate.
+
+As a control comparison, the adjacent dense range `113416949–113417449` completed in one
+attempt as `cpr_5849112c25ffdda4660a564b`, with Campaign `cc_0a80a2ac4ef4863c0e715998`,
+Token History `thd_c9d8f0f331a95be0be4e1c2b`, 7 observations, 46 capture Evidence IDs, and
+result reference
+`control-campaign:cc_0a80a2ac4ef4863c0e715998#sha256=952a44b75c8e47c185223ff0fcf8eff23dcd082b6a7ccf3ccffc75759a04021f`.
+This confirms the target data path can produce a real Campaign under the same public provider,
+while the interrupted 1,001-block continuation run `cpr_332e7e49388f94e9856e276b` remained
+terminal `NO_CANDIDATE_WALLETS` after `LEASE_EXPIRED` → retry → retry; its ingestion cursor
+still completed at `113417950`. The two outcomes are retained separately.
+
+## 2026-08-14 Exact Campaign-range replay, runtime performance, and UI regression closure
+
+The latest real read-only BSC worker run for FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` covered the bounded range
+`113416950–113417450` as schedule `cps_1bd8262ec358341c60c85f43`, run
+`cpr_69bcd768ac5a11f79eac968e`, and completed in one attempt in approximately 43 seconds after
+the Funding/Settlement graph indexing repair. The run persisted ingestion
+`9336ae48-14df-41ec-8a5d-eb5e9eeac576`, Token History report `thd_aa568929752934249b18c3a0`,
+Funding/Settlement report `fsr_69562d9d17d47902a454afa8`, and Campaign
+`cc_7c24b67a08160c98321e311f`. The capture reached requested-range coverage `1`, final Snapshot
+block `113417450`, 46 capture Evidence IDs, and result reference
+`control-campaign:cc_7c24b67a08160c98321e311f#sha256=0e92b80806db10145adb33fa9793979e93687de4d0686cd658138525e392efee`.
+The Token History report contains 7 observations and the Funding/Settlement report is
+`COMPLETE`, `BOUNDED_RANGE`, with 1 funding edge and 2 settlement edges.
+
+The previous non-empty performance drill `cpr_3de02146b1ee64cb1d09f498` is retained as a failed
+historical run: its report-stage event loop was blocked by repeated O(n²) graph scans, the worker
+was explicitly terminated after lease expiry, and the scheduler recorded terminal
+`CAPTURE_LEASE_EXPIRED`. The repair now indexes transfer paths, funding roots, settlement edges,
+candidate observations, and transaction facts before traversal. The fresh run above completed
+without retry or lease expiry; no failed historical run was relabeled.
+
+Provider-free API replay of Campaign `cc_7c24b67a08160c98321e311f` returned the same Campaign
+result hash. The exact range endpoint returned `fsr_69562d9d17d47902a454afa8` for
+`113416950–113417450` and returned `Unknown(NOT_QUERIED)` for a non-matching range. The durable
+Forensic Case export contained 18 Evidence closures, 8 Snapshots, and 7 raw-artifact references;
+its manifest hash was `1fd5549f109a4a1dadd56536a22d289a3eca18d6a021b55920dd84b800c870f4`, and the
+offline verifier returned `valid=true`. Provider-free alert replay returned 2 durable alerts.
+
+The real API-backed browser audit selected the same Campaign, displayed the matching Funding/
+Settlement range rather than the latest unrelated report, downloaded the Case Bundle, replayed the
+stored Campaign, and passed the 390px mobile overflow check. The test-only Campaign fixture was
+updated to provide a known end block for the exact-range contract; Chromium desktop/mobile and
+Windows-wrapper E2E now pass `38/38` each. The full current gates pass unit `725/725`, integration
+`126/126`, evaluation `1/1`, coverage `851/851` at `82.00% / 75.12% / 91.63% / 83.55%`, build,
+format, lint, typecheck, license, audit (`0` vulnerabilities), Compose validation, and SBOM.
+
+This is stronger bounded runtime and UI evidence, not lifetime history, mid-range checkpoint
+continuation, independent-provider qualification, calibrated control probability, Apache AGE
+projection acceptance, remote CI/CodeQL, or Production Acceptance.
+
+## 2026-08-14 Durable child-report interruption and idempotent recovery
+
+A second real interruption drill used BSC blocks `113418001–113420000` for the same FFT token.
+Run `cpr_adc436a4f50877a19a786f3b` was terminated only after its Token History report
+`thd_994819fe2317a1637a240b80` and Funding/Settlement report `fsr_dab67da14cc383ce80f4ff4e`
+were durably `COMPLETE` while the Campaign capture was still `LEASED`. After natural lease expiry,
+attempt 2 resumed and completed as `SUCCEEDED` with Campaign
+`cc_5181df03a3ab8d47432d33ff`, capture coverage/confidence `1/1`, 75 Evidence IDs, terminal
+Evidence `ev_3774c1ed3a4106980bb79724`, and result reference
+`control-campaign:cc_5181df03a3ab8d47432d33ff#sha256=56db92f5f0d255742e6619c74eb84dc93603874eea61dd2d50011f43ab8a60c2`.
+Attempt history is `LEASE_EXPIRED` → `SUCCEEDED`; all 75 capture Evidence IDs existed in
+PostgreSQL at verification time.
+
+This real drill validates the new retry boundary: a durable exact-range Funding/Settlement child is
+reused on retry, so a transiently different public-RPC observation cannot create a same-ID report
+conflict. It is an interruption after the ingestion checkpoint completed, not proof of mid-range
+Token History checkpoint continuation. The separate 5,000-block non-empty interruption drill
+retained its exact-RPC `UNKNOWN` observations and terminal failure history; it remains unpromoted.
+
+## 2026-08-14 Sparse Token History hardening and deployment-origin durability
+
+The Token History path now separates sparse Transfer-event materialization from requested-range
+coverage. SQD no longer receives an all-block query for every block in the range; the report writes
+a dedicated, content-addressed range-coverage Evidence/Snapshot, anchors the final requested block
+through exact RPC when that block has no Transfer event, and computes coverage from the trusted
+cursor rather than the last observed event. Deployment-origin lookups are split into bounded,
+replayable Portal windows with aggregated request/response coverage and cross-window continuity
+checks. The web UI also now gives `stale`, `provider-down`, `unavailable`, `not-queried`, and
+`not-observed` states distinct styling and fixes the undefined `--border-strong` theme variable.
+
+The current focused and full gates passed: 37 focused SQD/Token History tests, 705 unit tests,
+125 integration tests, 1 evaluation, 830 coverage tests at `81.86% / 75.00% / 91.60% / 83.39%`
+(statements/branches/functions/lines), package/API/web/worker build, formatting, ESLint, typecheck,
+license, audit, SBOM, Compose validation, Chromium desktop/mobile `38/38`, and Windows-wrapper
+`38/38`. The Apache AGE optional projection was not measured because the acceptance PostgreSQL
+service does not provide the AGE extension; the AGE health failure is retained as an external gate.
+
+Using public read-only BSC RPC and SQD with the requested FFT token
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, the durable one-block deployment range
+`112625803–112625803` completed as schedule `cps_906b2fc11a65357355db9745`, run
+`cpr_67fe3afcb2449ebc5339bede`, status `SUCCEEDED`. The Token History report
+`thd_4ae3e83cf53b1f0997578900` resolved origin creator `0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0`,
+deployment transaction `0x708256a1ad8c4f4ab8aefd021b4676fda9579eb61846f4957895fc8432467a63`, and
+deployment block `112625803`; it retained `1/1/1` requested-range coverage, 11/11 durable
+History Evidence closure, and final Snapshot block `112625803`. The durable Campaign is
+`cc_cbc5882e38541d136e76b491` with bundle hash
+`02c8c176041b2ad8e4b977de97dbfbbfa80842b486e1200f652d82c906d10854`; provider-free report reads
+returned the same History and Campaign hashes, while a second worker invocation claimed `0` runs.
+The capture's measured coverage/confidence is `0/0` because its Funding/Settlement child remains
+`TRANSACTION_LOCAL` with `historyCoverage=0`; this is preserved as scope, not promoted to complete
+historical funding or calibrated control probability. The bounded result remains non-terminal for
+archive-scale history, interrupted/resumed-range drills, independent reconciliation, long-running
+monitor/reorg/outage acceptance, calibration, remote CI/CodeQL, and production approval.
+
+The same durable schedule also exercised the Token Live Capture path. Monitor
+`cps_5e137cd0af1f29410db64a0b` initially encountered a real empty-range handling defect: a finalized
+range with no token observations was incorrectly retried as `NO_CANDIDATE_WALLETS`, and the first
+repair exposed an invalid provider-observation derivation. The corrected worker emits a derived
+`NO_TOKEN_FLOW_OBSERVATIONS` terminal Evidence and completes the next interval occurrence
+`cpr_f2fa7a8064fc783fb60847fd` with `coverage=1`, `confidence=1`, and an exact Snapshot at block
+`115850017`; the next occurrence `cpr_557ad3ef8441a7f8da0a3daf` advanced to block `115850018`
+with the same result. This proves a bounded empty-range monitor heartbeat and durable cursor progression;
+it does not prove long-running monitor, forced-reorg/outage, or alert-delivery acceptance.
+
+The durable Control Campaign export endpoint was also exercised against the same PostgreSQL-backed
+run. `GET /api/v1/forensics/cases/fcb_cc_cbc5882e38541d136e76b491/export` returned HTTP 200 with
+attachment headers, `replayed=true`, a content-addressed Forensic Case Bundle, six Evidence closure
+nodes, three raw-artifact references, and offline `verifyForensicCaseBundle` result `valid=true`.
+
+## 2026-08-14 Archive-range decomposition and replay closure
+
+The requested BSC archive experiment for
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` now has a durable, contiguous bounded-range result.
+The original `113395944–113495943` request was intentionally decomposed after the single 100,000-
+block and several 10,000/2,000-block attempts exposed provider-response, candidate-Evidence-volume,
+and local ClickHouse memory boundaries. The failed attempts remain immutable scheduler history;
+they were not relabeled as successful. Runs `cpr_4107cdc4a8e0d66a84dc9338`,
+`cpr_18645f7dff55a8eefde2e6b2`, `cpr_568ba64a1fb6aef7f63ac924`, and
+`cpr_76a4b17eb13147a2183b9768` are recorded as `ARCHIVE_RANGE_DECOMPOSED` after safe interruption.
+
+- `113395944–113405943` completed as one successful 10,000-block run;
+- `113405944–113465943` completed as deterministic 500-block runs after high-volume 2,000-block
+  ranges were split further;
+- `113465944–113475943`, `113475944–113485943`, and `113485944–113495943` completed as successful
+  bounded runs;
+- PostgreSQL interval-union verification found `100000/100000` blocks with no gap, and no successful
+  run in the union had `coverage` other than `1`; the remaining paused schedules are superseded
+  historical definitions, not uncovered blocks.
+
+Across the union, `62` successful capture runs were verified. Their result references resolved to
+`26` durable Control Campaign reports and `36` durable empty-range Token History reports; every
+stored result-reference SHA-256 matched its PostgreSQL report hash, every terminal Evidence ID was
+inside its capture closure, and no closure Evidence ID was missing. A subsequent worker invocation
+claimed `0` runs, confirming one-shot idempotency after the range closure.
+
+A separate real retry drill used overlapping dense range `113416444–113416944` so it did not change
+the union result. Attempt 1 of run `cpr_dcb3eec655e2e32f6801eb74` failed retryably at ClickHouse
+while the large `factIds` form field exceeded the server boundary (`CLICKHOUSE_UNAVAILABLE` was
+persisted); after internal 1,000-key pagination was deployed, attempt 2 succeeded with `coverage=1`.
+Its result reference
+`control-campaign:cc_5f51a94312cba3ee3ca5eb1f#sha256=c084afb0647a49a092e375a633b89722f764c57ce48094146955a8057b232498`
+matched the durable Campaign hash, retained `11,759` closure Evidence IDs, and had zero missing
+Evidence. This proves real retryable storage-failure recovery; an OS-level interrupted-process
+resume remains a separate unmeasured gate.
+
+A real process-level interruption drill then used a one-block finalized empty range outside the
+archive union. Schedule `cps_f10b34631f6b21e35acb3c19`, run `cpr_291f1385974bea974361c984`, and
+Token History report `thd_41f41c8eb868f68ce1e74e40` covered block `115887000`. The first worker
+process was terminated after the durable run became `LEASED`; after the 30-second lease expired,
+a new worker persisted `RETRY_WAIT`, and the next worker completed attempt 2 as `SUCCEEDED` with
+`coverage=1`. Attempt history is `LEASE_EXPIRED` then `SUCCEEDED`; the result reference
+`token-history-empty-range:thd_41f41c8eb868f68ce1e74e40#sha256=987f5aece60fa2126f4cc9e6765c4e0cd24d851e0c3eeb8d5e71bba0fd11b08f`
+matched durable PostgreSQL state, with two range Evidence IDs plus the terminal capture Evidence.
+A separate overlapping interruption run `cpr_c550d6bcbdb942a3f6ea0086` also retained its
+`LEASE_EXPIRED` attempt 1 but reached terminal `INGESTION_FAILED` on attempt 2; it remains a
+provider/ingestion failure, not a relabeled success.
+
+The first non-empty mid-range interruption attempt exposed a separate replay-integrity defect.
+Schedule `cps_17a1be3eb15060bc0f0a969b`, run `cpr_5de47121ea35743df1e35c3d`, and range
+`113416445–113416945` reached a durable cursor at `113416946` after the worker was terminated,
+but recovery attempt 2 failed with `TOKEN_HISTORY_REPLAY_UNAVAILABLE`: shared ClickHouse ranges
+contained other-token generic LOGs and same-token `token-history-candidate-log:*` Evidence. The
+repair now re-applies both the requested Token address and the generic `evm-log:*` provenance
+predicate during durable replay. Focused ingestion/Token History tests pass `21/21`; the scheduler
+run remains immutable failed history and is not relabeled as a successful mid-range recovery.
+
+A subsequent real bounded range `113416446–113416946` (`cpr_2a2de9522e889894d2eb20df`) exercised
+the repaired durable path: attempt 1 recorded retryable `HTTP_ERROR` during later provider-backed
+expansion, while attempt 2 completed `SUCCEEDED` with `coverage=1`, result reference
+`control-campaign:cc_713a3d1617f8aa807e92784b#sha256=f4881fa607242bccb3acdce70dd049903a352ae0e57a48ccf654b9d2b02a0f40`,
+`12,000/12,000` capture Evidence closure, and zero missing Evidence. The worker reached the
+requested-range checkpoint before the first attempt's later failure, so this is real retry and
+replay validation, not proof of a mid-range process kill/resume.
+
+This proves OS-level lease recovery and durable retry ownership for a bounded empty range. It does
+not yet prove mid-range checkpoint continuation while a non-empty archive batch is interrupted;
+the failed attempt above remains the current evidence for that open gate.
+
+The live two-endpoint BSC anchor probe used `bsc-dataseed.bnbchain.org` and
+`bsc-dataseed-public.bnbchain.org` and reached `AGREEMENT` at finalized block `115888028`, hash
+`0xfbbb8e45c57472d08c9aeb759498881062a531035cea7acbf8a9c262e6860750`, with `2/2` observed
+sources, four in-process Evidence nodes, and two Snapshots. Both endpoints are documented as
+BNB Chain-operated; the result deliberately remains `sourceIndependence=Unknown(NOT_QUERIED)`.
+
+The post-change full repository rerun passed `722/722` unit tests, `126/126` configured integration
+tests, `1/1` evaluation, and `848/848` coverage tests with Statements `81.99%`, Branches `75.15%`,
+Functions `91.63%`, and Lines `83.53%`; these counts include the ClickHouse large-form-field and
+shared-range Token History replay regression tests. This execution also validated two robustness repairs against the real
+stores. Capture leases now
+renew through a bound repository method during long SQD/RPC work. ClickHouse range replay first
+pages lightweight `fact_id` keys and only then fetches payload-bearing Raw Facts, preventing large
+payloads from entering the deterministic `ORDER BY/LIMIT BY` sort; the patched query passed a live
+range read after the ClickHouse service restart, with data preserved. This proves a bounded archive
+range and restart-safe replay, not lifetime token history, mid-range checkpoint continuation,
+independent-provider agreement, archive-provider qualification, monitoring/alerts, calibration, or
+production approval.
+
+## 2026-08-14 Candidate-scoped native expansion and Evidence closure
+
+The finalized Token History worker now expands only the selected focus wallets over the requested
+SQD range with both parent transactions and EVM call traces. Each block is checked against an exact
+read-only BSC Snapshot; parent transaction indexes, trace identity, status, address, error, and
+canonical hexadecimal value fields are validated before a successful non-zero native transfer can
+enter Funding/Settlement. Candidate transaction and trace observations are persisted as Raw Facts
+and Evidence. They are also hydrated into the terminal capture Evidence closure when the bounded
+query finds only zero-value calls, so a negative observation remains replayable instead of becoming
+an orphan fact.
+
+Focused Funding/Settlement, worker, and candidate-expansion checks passed `12/12` after this
+closure change, and the
+repository typecheck passed. A fresh public-provider BSC run for
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over blocks `113485953–113495946` first received a
+retryable SQD HTTP `529` on an earlier adjacent range; the durable retry then succeeded. The
+successful run is schedule `cps_f9369c250ad4be063213cfab`, run
+`cpr_6710455c95c6bb50d4496781`, status `SUCCEEDED`, terminal Evidence
+`ev_42bedc578949ec61f9fc1e06`, capture result reference
+`control-campaign:cc_f332d26ff55fb5d3bcdef6d7#sha256=16a90771799f0810a536e646c406ea00228755d55ac0aea45560413b258c7b36`,
+and `66` Evidence IDs in its durable closure. Token History report
+`thd_9c76e760ce0bdd7c03e3e206` is `COMPLETE` with 12 observations, requested-range coverage
+`1/1/1`, and result hash
+`a5595b0f236562b96b4ecee6a1d9c6f2a0116815c2144196cd7940932774a0fb`.
+
+The candidate expansion persisted 8 transaction and 8 trace Evidence nodes in the capture closure.
+All 8 candidate traces had `action.value=0x0`, so no native transfer was derived; the Funding/
+Settlement report `fsr_000a27003a2d60c704482d06` remains `PARTIAL`,
+`TRANSACTION_LOCAL`, `historyCoverage=0`, with two exact-token funding edges and one exact-token
+settlement edge. Its result hash is
+`e62447e55eb2f458bdc6743c825fc54579938d9feb0c789edb4b76b578c4a022`; the durable report endpoint
+returned `replayed=true` with the same hash. This bounded zero-value observation does not prove
+that no historical native funding exists. Capture coverage/confidence remain measured `0/0`, not
+coerced to complete or calibrated confidence.
+
+Lifetime archive history, a non-zero native-transfer fixture, independent provider reconciliation,
+long-running monitor/reorg/outage, alerts, calibration, remote CI/CodeQL, and production approval
+remain open.
+
+## 2026-08-14 Candidate-scoped ERC-20 logs and bounded coverage continuation
+
+The candidate expansion now queries finalized ERC-20 `Transfer` logs with padded indexed wallet
+topics alongside the selected-wallet transaction and trace filters. Each log is validated as a
+canonical three-topic Transfer with a 32-byte amount, dynamic emitting asset address, transaction
+hash/index, exact block Snapshot, and finalized source. SQD log filters do not include a parent
+transaction unless a separate transaction filter selects it, so a present parent is cross-checked
+when available while a valid log remains independently replayable Evidence when it is absent. The
+Funding/Settlement provider also deduplicates exact and archival observations by chain-event
+identity and preserves the expansion's bounded `historyCoverage` instead of defaulting it to zero.
+
+The focused candidate/worker/provider suite passed `16/16`; full unit tests passed `714/714`,
+integration `125/125`, evaluation `1/1`, and coverage `839/839` with statements `81.85%`, branches
+`75.00%`, functions `91.61%`, and lines `83.39%`. Lint, typecheck, build, formatting, license,
+audit, SBOM, Compose validation, Chromium/Pixel 7 E2E `38/38`, and Windows-wrapper E2E `38/38` also
+passed.
+
+A new public-provider durable BSC run for
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` covered `113485956–113495943`: schedule
+`cps_69a137c4774deb026b738447`, run `cpr_b9da7041ca060623003a3c6f`, status `SUCCEEDED`, terminal
+Evidence `ev_ebeb97a593fc4b735ee489ca`, `88` capture Evidence IDs, and capture result reference
+`control-campaign:cc_c75fb986f5ddcf7578df48d9#sha256=a112b08d4ef8ac2e3f1db6187077ddc202229e27dd41d50421cf347fc8d20937`.
+The closure contains `40` LOG (`28` SQD candidate logs and `12` exact RPC logs), `8` TRACE, and
+`13` TRANSACTION Evidence nodes, with both BSC RPC and SQD in the source set.
+
+Token History report `thd_0ba39221dd3551102241e538` is `COMPLETE` with 12 observations,
+`dataCoverage/sourceCoverage/historyCoverage=1/1/1`, and result hash
+`12581e8c35125a9a18a905072ec9cd879b2b012667a8f3e7130f95ecf33907af`. Funding/Settlement report
+`fsr_434fcce05ac69af9f1a03c41` is `COMPLETE`, `BOUNDED_RANGE`, `historyCoverage=1`, with 8 funding
+and 1 settlement edge across 5 dynamically observed ERC-20 assets; its result hash is
+`1ada31d7ba8881f9db5fc663b6602a127fc7c688274942129dd6ebb768c78eaf`. The exact report endpoint
+returned HTTP 200 with `replayed=true` and the same result hash.
+
+This is bounded requested-range coverage, not lifetime token history or calibrated ownership
+proof. Lifetime archive history, non-zero native fixture/reconciliation, independent provider
+agreement, long-running monitor/reorg/outage, alerts, calibration, remote CI/CodeQL, and production
+approval remain open.
 
 ## 2026-08-14 Durable FFT capture continuation — bounded success
 
@@ -340,9 +1085,12 @@ LaunchLab, Meteora DBC, Moonshot/Moonit, Four.meme, FomoWell, and the existing F
 visible through `LAUNCHPAD_PROTOCOL_REGISTRY` and `GET /api/v1/platforms`. No guessed deployment
 address is activated: Pump and PumpSwap are the first pinned read-only versions with official
 source commit, IDL hash, chain identity, four-node Evidence provenance, and real finalized
-provider captures. The other
-named entries retain empty `versions` until their own gates pass. Raydium and Meteora retain an
-explicit license-review boundary. Generic mechanism detection remains
+provider captures. Raydium now has a source-pinned partial clean-room decoder record for
+initialization, Token-2022 transfer-fee, trade, migration arguments, and raw PoolState bytes;
+historical pool-state reads, remaining-account semantics, real finalized fixture, and Evidence
+closure keep activation blocked.
+The other named entries retain empty `versions` until their own gates pass;
+Meteora retains its explicit license-review boundary. Generic mechanism detection remains
 `UNKNOWN_LAUNCHPAD` and cannot infer a named platform. Registry/index focused tests passed `33/33`.
 
 A fresh provider-backed BSC replay was executed on 2026-08-14 with FFT
@@ -408,7 +1156,7 @@ The only allowed status vocabulary in this ledger is:
 | Architecture domain                  | Status                                      | Current boundary                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Repository, contracts, CI foundation | `IMPLEMENTED_AND_VERIFIED`                  | clean builds, automated gates, containers, browser flows, and remote CI passed                                                                                                                                                                                                                                                                                                                                                       |
-| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass and endpoint comparison work; forced outage drill pending                                                                                                                                                                                                                                                                                                                                        |
+| Read-only provider transport         | `IMPLEMENTED_PENDING_REAL_WORLD_VALIDATION` | request-scoped source, cache bypass, endpoint comparison, and one real retryable outage recovery pass; forced reorg and independent-provider qualification remain pending                                                                                                                                                                                                                                                            |
 | EVM current-state adapter            | `IMPLEMENTED_AND_VERIFIED`                  | parent-linked finalized/safe/latest anchors; Ethereum and BSC finalized smoke passed                                                                                                                                                                                                                                                                                                                                                 |
 | Bitcoin current-state adapter        | `IMPLEMENTED_AND_VERIFIED`                  | stable-tip address/UTXO reconciliation plus transaction/outpoint/script reads passed on public Esplora; Core/archive policy pending                                                                                                                                                                                                                                                                                                  |
 | Solana current-state adapter         | `IMPLEMENTED_AND_VERIFIED`                  | blockhash/parent-slot anchor, minimum-context account and live v0 ALT/CPI/balance semantic reads passed                                                                                                                                                                                                                                                                                                                              |
@@ -1578,15 +2326,18 @@ The only allowed status vocabulary in this ledger is:
 
 ### Solana terminal scope
 
-- protocol-specific Jupiter, Pump/PumpSwap, Raydium, Meteora, Moonshot and other instruction/event
-  decoding beyond the implemented official core System/SPL/Token-2022 flow layer;
+- complete protocol-specific Jupiter, Pump/PumpSwap, Raydium, Meteora, Moonshot and other
+  instruction/event decoding beyond the implemented official core System/SPL/Token-2022 flow layer;
+  Pump/PumpSwap have a pinned read-only slice and Raydium LaunchLab has a partial source-pinned
+  clean-room slice, but neither is a complete lifecycle/history adapter;
 - same-Snapshot Token-2022 transfer-fee/hook execution, confidential and withheld-fee flows,
   account close/sync lamport projection, plus semantic effects that cannot be established from the
   recorded SOL/SPL pre/post tables;
 - authority/controller history, PDA and Squads recursion, IDL/verifiable-build provenance, other
   loader families and independent-source reconciliation beyond the implemented finalized
   SPL Token/Token-2022/multisig/upgradeable-loader point-in-time surface;
-- Pump/PumpSwap, Raydium LaunchLab, Meteora DBC, Moonshot and AMM lifecycle adapters;
+- complete Pump/PumpSwap and Raydium LaunchLab lifecycle/history adapters, plus Meteora DBC,
+  Moonshot and AMM lifecycle adapters;
 - Geyser/Yellowstone or equivalent archive-grade ingestion.
 
 ### Intelligence products
@@ -1610,7 +2361,7 @@ The only allowed status vocabulary in this ledger is:
 
 | Validation              | Requirement                                                                                                               | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| EVM current state       | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; BSC endpoint agreement passed, operator independence/archive pending                                                                                                                                                                                                                                                                                                                                                                                                                |
+| EVM current state       | Named Ethereum and BSC snapshot-pinned current-state reads                                                                | Parent-linked finalized Alchemy/BSC reads passed; the real FFT BNB Chain + NodeReal product route passed with verified operator independence, while durable archive reconciliation remains pending                                                                                                                                                                                                                                                                                                                                    |
 | Bitcoin current state   | Named immutable fixtures reconciled against self-hosted Core and Esplora                                                  | Public address/UTXO, spent P2WPKH, unspent P2TR and two transaction-entity production paths passed; equal-output CoinJoin-like structure suppressed merging/change candidates, while Core/archive/policy and calibrated graph reconciliation remain pending                                                                                                                                                                                                                                                                           |
 | Solana current state    | Named immutable fixtures reconciled against dedicated RPC/archive history                                                 | Finalized blockhash/parent-slot/account smoke and a live v0 production-path replay with six ALTs, 43 loaded accounts, 26 CPI instructions, 20/20 official instruction identification, 9/9 core flow decoding, zero token-delta conflicts and explicit Partial/Unknown extension boundaries passed; the report also survived API restart and provider outage with identical content-addressed provider-free replay. Independent RPC/archive reconciliation remains pending                                                             |
 | Entity baseline         | Labeled independent, coordinated, service-hub, and CoinJoin fixtures                                                      | Test-only structural golden passes exact Precision/False-Merge gates; Snapshot/Evidence-backed real-world labels and calibration remain pending                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -1619,11 +2370,11 @@ The only allowed status vocabulary in this ledger is:
 | Launchpad decoders      | Versioned deployments and named launch/migration transactions per platform                                                | A named non-FFT Flap creation/configuration transaction and the named FFT migrated Pancake V2 point-in-time market passed; complete FFT migration history, forced real reorg and other platforms remain pending                                                                                                                                                                                                                                                                                                                       |
 | Flap/FFT reference case | BSC token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`: mechanism, entity, market, RV, Evidence and automatic error audit | Transfer/Safe, durable pension discovery/replay, five-size candidate-bound entry economics, buy/exit, burn promotion, 37-check market/RV reconciliation, four-transition supply continuity, and scoped EVM proxy/source control passed. FFT is an ERC-1167 proxy with exact-verified `FlapTaxTokenV3` logic and zero ERC-173 owner. Official attribution, no-exit/dividend action proof, effective authorization/history, full-history supply, fork settlement and entity calibration still gate a complete reference-case conclusion |
 | RV                      | Historic pool snapshots and executable quote reconciliation                                                               | Deterministic kernels, Portal preview, named FFT buy/exit Router/model checks and two-operator same-block reconciliation pass; actual fork settlement, additional routes, gas/executable capacity and history remain pending                                                                                                                                                                                                                                                                                                          |
-| Provider resilience     | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic disagreement/rollback tests, live common-position BSC continuity and scoped Alchemy/BNB market reconciliation passed; forced real reorg/outage and archive-grade acceptance remain pending                                                                                                                                                                                                                                                                                                                              |
+| Provider resilience     | timeout, quota, malformed data, fork/reorg, and cross-provider disagreement                                               | Deterministic disagreement/rollback tests, live common-position BSC continuity, and real BNB Chain + NodeReal market reconciliation passed; forced real reorg/outage and archive-grade acceptance remain pending                                                                                                                                                                                                                                                                                                                      |
 | Finalized block ingest  | Replayable EVM/BTC/Solana ranges across object, Evidence, fact and checkpoint stores                                      | Four SQD datasets passed; archive reconciliation pending                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Raw transaction ingest  | Named immutable EVM/BTC/Solana transactions persist and replay across all stores                                          | Ethereum 1, BSC 7, Bitcoin 2, Solana 1 passed; generic Solana v0/ALT/CPI/balance semantics, official core System/SPL asset flows and content-addressed query-report replay work. Continuous historical semantic projection and platform/program-specific decoders remain pending                                                                                                                                                                                                                                                      |
 | Raw ledger records      | EVM execution/state, BTC I/O, and Solana execution/balance records replay across stores                                   | Ethereum/BSC traces+diffs, BTC I/O, and all named Solana tables passed                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Token history discovery | Finalized ERC-20 Transfer observations with origin, exact-RPC, Action Semantics, and durable replay                       | Phase 1 code/tests/build pass; public BSC bounded smoke and isolated-store integration pass; Ethereum exact RPC remains `NOT_MEASURED`, and the fresh durable FFT worker run failed closed on ClickHouse memory limits                                                                                                                                                                                                                                                                                                                |
+| Token history discovery | Finalized ERC-20 Transfer observations with origin, exact-RPC, Action Semantics, and durable replay                       | Phase 1 code/tests/build pass; public BSC bounded smoke, isolated-store integration, and a contiguous 100,000-block archive-range union pass; Ethereum exact RPC, lifetime completeness, and independent archive reconciliation remain `NOT_MEASURED`                                                                                                                                                                                                                                                                                 |
 
 Public BSC, Bitcoin, and Solana endpoints in `.env.example` are development fallbacks. Rate-limited responses do not count
 as chain-validation failures, and a successful health probe alone does not validate semantic
@@ -1632,25 +2383,25 @@ correctness. Exact local smoke observations and limitations are in
 
 ## Test and verification record
 
-| Check                          | Latest result                             | Scope                                                                                                                                                                          |
-| ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reproducible install/build     | Pass                                      | locked npm install in production container; all packages/API/web                                                                                                               |
-| Unit tests                     | 703 pass                                  | 130 files, including Solana dealer/Bitcoin graph/launchpad/storage/worker robustness boundaries and the pre-existing durable intelligence/report suites                        |
-| Integration tests              | 125/125 pass                              | Isolated PostgreSQL/ClickHouse/MinIO/AGE acceptance services; no optional-store skips in the latest run                                                                        |
-| Model evaluation tests         | 1 pass                                    | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                                                                 |
-| Restart regression             | Pass                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                                                                        |
-| Coverage gate                  | Pass                                      | 828/828 tests; Statements 81.85%, Branches 75.03%, Functions 91.62%, Lines 83.39%, meeting configured thresholds                                                               |
-| Chromium E2E                   | 38/38 pass                                | Full rebuilt Playwright run passed desktop and Pixel 7; Control Campaign Timeline/Evidence/Alert/Monitor flow passed 2/2                                                       |
-| Formatting / ESLint / types    | Pass                                      | full repository, including Phase 1 changes                                                                                                                                     |
-| Dependency vulnerability audit | Pass                                      | 0 vulnerabilities across the complete npm dependency graph                                                                                                                     |
-| Dependency license allowlist   | Pass                                      | production dependency graph                                                                                                                                                    |
-| CycloneDX SBOM                 | Pass                                      | npm dependency graph                                                                                                                                                           |
-| Compose model                  | Pass                                      | rendered default topology                                                                                                                                                      |
-| Docker image build/start       | Not measured locally                      | Docker Desktop Linux engine is unavailable; prior remote/container results are historical evidence only                                                                        |
-| Database bootstrap             | Pass for bounded run                      | Isolated PostgreSQL/ClickHouse/MinIO/AGE migrations through PostgreSQL 036 passed; bounded FFT worker completion and scheduler replay passed                                   |
-| Runtime/browser smoke          | Host gates pass                           | production build, rebuilt browser replay, Windows wrapper E2E, read-only health, real BSC FFT alert derivation and provider-free UI path passed                                |
-| Public chain smoke             | Pass for bounded current/raw-ledger scope | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                 |
-| Remote CI                      | Not run for current uncommitted changes   | Earlier PR #20 CI/CodeQL runs remain valid only for their recorded heads; this Phase 4 working tree requires a fresh protected-branch CI/CodeQL run after intentional delivery |
+| Check                          | Latest result                                             | Scope                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible install/build     | Pass                                                      | locked npm install in production container; all packages/API/web                                                                                                                                                                                                                                                                                            |
+| Unit tests                     | 760/760 pass                                              | 136 files, including nearest workspace `.env` selection/precedence, scheduler heartbeat, candidate expansion, ClickHouse pagination, bounded Solana dealer windows, Raydium instruction/PoolState decoding, source-operator registration, and shared-range replay filtering                                                                                 |
+| Integration tests              | 128/128 pass                                              | Isolated PostgreSQL/ClickHouse/MinIO acceptance services; all integration cases passed, including the NodeReal route regression                                                                                                                                                                                                                             |
+| Model evaluation tests         | 1 pass                                                    | structural Entity controller/coordination precision plus Service Hub/CoinJoin false-merge gate                                                                                                                                                                                                                                                              |
+| Restart regression             | Pass                                                      | same-anchor recapture persists across repository/API restart without Snapshot collision                                                                                                                                                                                                                                                                     |
+| Coverage gate                  | Pass                                                      | 886/886 tests; Statements 82.15%, Branches 75.19%, Functions 91.54%, Lines 83.68%, meeting configured thresholds                                                                                                                                                                                                                                            |
+| Chromium E2E                   | 40/40 pass                                                | Current rebuilt dashboard Playwright run passed desktop and Pixel 7; narrow-screen navigation and Control Campaign Timeline/Evidence/Alert/Monitor flow passed                                                                                                                                                                                              |
+| Formatting / ESLint / types    | Pass                                                      | full repository, including Phase 1 changes                                                                                                                                                                                                                                                                                                                  |
+| Dependency vulnerability audit | Pass                                                      | 0 vulnerabilities across the complete npm dependency graph                                                                                                                                                                                                                                                                                                  |
+| Dependency license allowlist   | Pass                                                      | production dependency graph                                                                                                                                                                                                                                                                                                                                 |
+| CycloneDX SBOM                 | Pass                                                      | npm dependency graph                                                                                                                                                                                                                                                                                                                                        |
+| Compose model                  | Pass                                                      | rendered default topology                                                                                                                                                                                                                                                                                                                                   |
+| Docker image build/start       | Image build and API image smoke pass; Compose health open | Current `docker compose build api web` passed; a no-volume API image smoke returned `/health/live` and `/health/ready` HTTP 200 and aggregate `/health` HTTP 200 with explicit `DEGRADED`/read-only status; current Compose API/Web health was not measured after unrelated host-port conflicts (`5432`/`6379`) and dependency/ClickHouse resource timeouts |
+| Database bootstrap             | Pass for bounded run                                      | Isolated PostgreSQL/ClickHouse/MinIO/AGE migrations through PostgreSQL 036 passed; bounded FFT worker completion, 100,000-block union, and scheduler replay passed                                                                                                                                                                                          |
+| Runtime/browser smoke          | Host gates pass                                           | production build, rebuilt browser replay, Windows wrapper E2E, Raydium public-RPC smoke, read-only health, real BSC FFT alert derivation and provider-free UI path passed                                                                                                                                                                                   |
+| Public chain smoke             | Pass for bounded current/raw-ledger scope                 | four anchors/pipelines plus scoped FFT pension entry/market/control, Solana semantics and Bitcoin reads passed                                                                                                                                                                                                                                              |
+| Remote CI                      | Not run for current uncommitted changes                   | Earlier PR #20 CI/CodeQL runs remain valid only for their recorded heads; this Phase 4 working tree requires a fresh protected-branch CI/CodeQL run after intentional delivery                                                                                                                                                                              |
 
 The record is updated only after commands complete. Detailed commands and acceptance criteria are in
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).

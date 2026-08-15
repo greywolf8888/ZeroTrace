@@ -26,6 +26,7 @@ class FakeObjectStoreClient {
       return { etag: 'test-etag' };
     },
   );
+  readonly close = vi.fn(async () => undefined);
 
   async bucketExists(): Promise<boolean> {
     return this.bucket;
@@ -95,6 +96,8 @@ describe('RawArtifactStore', () => {
       durable: true,
       versioning: true,
     });
+    await expect(fixture.store.close()).resolves.toBeUndefined();
+    expect(fixture.client.close).toHaveBeenCalledOnce();
   });
 
   it('detects corruption instead of overwriting a content-addressed artifact', async () => {
@@ -138,5 +141,27 @@ describe('RawArtifactStore', () => {
       status: 'DOWN',
       errorCode: 'OBJECT_STORE_UNAVAILABLE',
     });
+  });
+
+  it('bounds a stalled object-store health probe instead of hanging the readiness aggregate', async () => {
+    const stalled = new FakeObjectStoreClient();
+    const bucketExists = vi
+      .spyOn(stalled, 'bucketExists')
+      .mockImplementation(() => new Promise<boolean>(() => {}));
+    const health = RawArtifactStore.fromClient({
+      client: stalled,
+      bucket: 'zerotrace-raw-test',
+      region: 'us-east-1',
+      maxArtifactBytes: 16_000_000,
+      healthTimeoutMs: 100,
+    });
+
+    await expect(health.health()).resolves.toMatchObject({
+      status: 'DOWN',
+      errorCode: 'OBJECT_STORE_UNAVAILABLE',
+    });
+
+    bucketExists.mockResolvedValue(false);
+    await expect(health.put(artifact)).resolves.toMatchObject({ created: true });
   });
 });

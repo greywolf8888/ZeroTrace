@@ -4,6 +4,7 @@ import {
   type BitcoinUtxoLedgerAdapter,
   type EvmLedgerAdapter,
   type SolanaLedgerAdapter,
+  type TransportReadOptions,
 } from '@zerotrace/chain-adapters';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import {
@@ -11,8 +12,10 @@ import {
   analyzeBitcoinTransactionEntity,
   analyzeSolanaTransactionSemantics,
   decodePumpLaunchpadInstructions,
+  decodeRaydiumLaunchlabInstructions,
   SOLANA_ASSET_FLOW_MODEL_VERSION,
   SOLANA_PUMP_LAUNCHPAD_MODEL_VERSION,
+  SOLANA_RAYDIUM_LAUNCHLAB_MODEL_VERSION,
   SOLANA_TRANSACTION_SEMANTICS_MODEL_VERSION,
 } from '@zerotrace/platform-adapters';
 import {
@@ -980,11 +983,12 @@ export async function querySolanaTransaction(
   adapter: SolanaLedgerAdapter,
   subject: SubjectReference,
   writeEvidence: EvidenceWriter,
+  options: TransportReadOptions = {},
 ) {
-  const observation = await adapter.getTransactionObservation(subject.normalizedId);
+  const observation = await adapter.getTransactionObservation(subject.normalizedId, options);
   const transaction = observation.value;
   if (transaction === null) {
-    const snapshot = await adapter.createSnapshot();
+    const snapshot = await adapter.createSnapshot(options);
     const providerObservation = await writeEvidence(
       createEvidence({
         ledger: 'SOLANA',
@@ -1039,7 +1043,7 @@ export async function querySolanaTransaction(
       evidence,
     };
   }
-  const anchor = await adapter.readAnchorAt(transaction.slot);
+  const anchor = await adapter.readAnchorAt(transaction.slot, options);
   const snapshot = anchor.snapshot;
   if (snapshot.ledger !== 'SOLANA') {
     throw new Error('Solana adapter returned a non-Solana Snapshot.');
@@ -1111,14 +1115,26 @@ export async function querySolanaTransaction(
       ),
     );
   }
-  const draftLaunchpadObservations = decodePumpLaunchpadInstructions({
-    transaction,
-    semantics,
-    snapshot,
-    evidenceIdsForInstruction: (path) => {
-      const instruction = instructionEvidenceByPath.get(path);
-      return [transactionEvidence.id, ...(instruction === undefined ? [] : [instruction.id])];
-    },
+  const decodeLaunchpadObservations = (
+    evidenceIdsForInstruction: (path: string) => readonly string[],
+  ) =>
+    [
+      ...decodePumpLaunchpadInstructions({
+        transaction,
+        semantics,
+        snapshot,
+        evidenceIdsForInstruction,
+      }),
+      ...decodeRaydiumLaunchlabInstructions({
+        transaction,
+        semantics,
+        snapshot,
+        evidenceIdsForInstruction,
+      }),
+    ].sort((left, right) => left.instructionPath.localeCompare(right.instructionPath));
+  const draftLaunchpadObservations = decodeLaunchpadObservations((path) => {
+    const instruction = instructionEvidenceByPath.get(path);
+    return [transactionEvidence.id, ...(instruction === undefined ? [] : [instruction.id])];
   });
   const launchpadEvidence: Evidence[] = [];
   const launchpadEvidenceByPath = new Map<string, Evidence>();
@@ -1133,7 +1149,11 @@ export async function querySolanaTransaction(
         ledger: 'SOLANA',
         chainId: snapshot.chainId,
         kind: 'DERIVED_FEATURE',
-        source: `zerotrace:${SOLANA_PUMP_LAUNCHPAD_MODEL_VERSION}`,
+        source: `zerotrace:${
+          observation.platform === 'RAYDIUM_LAUNCHLAB'
+            ? SOLANA_RAYDIUM_LAUNCHLAB_MODEL_VERSION
+            : SOLANA_PUMP_LAUNCHPAD_MODEL_VERSION
+        }`,
         locator: `launchpad:${observation.platform}:${transaction.signature}:${observation.instructionPath}@${transaction.slot}`,
         payload: observation,
         blockOrSlot: transaction.slot,
@@ -1147,19 +1167,14 @@ export async function querySolanaTransaction(
     launchpadEvidence.push(evidence);
     launchpadEvidenceByPath.set(observation.instructionPath, evidence);
   }
-  const launchpadObservations = decodePumpLaunchpadInstructions({
-    transaction,
-    semantics,
-    snapshot,
-    evidenceIdsForInstruction: (path) => {
-      const instruction = instructionEvidenceByPath.get(path);
-      const derived = launchpadEvidenceByPath.get(path);
-      return [
-        transactionEvidence.id,
-        ...(instruction === undefined ? [] : [instruction.id]),
-        ...(derived === undefined ? [] : [derived.id]),
-      ];
-    },
+  const launchpadObservations = decodeLaunchpadObservations((path) => {
+    const instruction = instructionEvidenceByPath.get(path);
+    const derived = launchpadEvidenceByPath.get(path);
+    return [
+      transactionEvidence.id,
+      ...(instruction === undefined ? [] : [instruction.id]),
+      ...(derived === undefined ? [] : [derived.id]),
+    ];
   });
   const semanticEvidence = await writeEvidence(
     createEvidence({

@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { loadWorkspaceEnv } from './workspace-env.js';
+
+loadWorkspaceEnv();
 
 import { loadFlapOriginWorkerConfig } from './config.js';
 import { publicWorkerError } from './errors.js';

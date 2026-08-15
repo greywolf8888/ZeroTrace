@@ -54,6 +54,8 @@ import {
 export const TOKEN_HISTORY_DISCOVERY_MODEL_VERSION = 'token-history-discovery-v1.0.0';
 export const TOKEN_HISTORY_DISCOVERY_POLICY_VERSION = 'token-history-policy-v1.0.0';
 export const TOKEN_HISTORY_EXACT_RPC_ADAPTER_VERSION = 'token-history-exact-rpc-v1.0.0';
+export const TOKEN_HISTORY_SOURCE_RECONCILIATION_MODEL_VERSION =
+  'token-history-source-reconciliation-v1.0.0';
 
 const ERC20_TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const ZERO_ADDRESS = `0x${'0'.repeat(40)}`;
@@ -90,6 +92,8 @@ export class TokenHistoryDiscoveryError extends Error {
 
 export interface TokenHistoryExactReader {
   readonly sourceId?: string;
+  /** Endpoint IDs participating in an explicit independent-provider comparison. */
+  readonly sourceIds?: readonly string[];
   readonly capabilities?: readonly ProviderCapability[];
   diagnostics?(): TransportDiagnostics | undefined;
   getTransactionObservation(
@@ -107,7 +111,13 @@ function providerCapabilityDeclarations(
   const chainId = `eip155:${options.source.chainId}`;
   const sqdId = `sqd:${options.source.dataset}`;
   const requestedExactId = options.exactReader?.sourceId ?? `exact-rpc:${chainId}`;
-  const exactId = requestedExactId === sqdId ? `exact:${requestedExactId}` : requestedExactId;
+  const configuredExactIds =
+    options.exactReader?.sourceIds !== undefined && options.exactReader.sourceIds.length > 0
+      ? options.exactReader.sourceIds
+      : [requestedExactId];
+  const exactIds = [...new Set(configuredExactIds)].map((id) =>
+    id === sqdId ? `exact:${id}` : id,
+  );
   const exactCapabilities =
     options.exactReader?.capabilities === undefined || options.exactReader.capabilities.length === 0
       ? TOKEN_HISTORY_EXACT_RPC_CAPABILITIES
@@ -121,14 +131,14 @@ function providerCapabilityDeclarations(
       configured: true,
       version: SQD_INGESTION_VERSION,
     },
-    {
-      id: exactId,
-      ledger: 'EVM',
+    ...exactIds.map((id) => ({
+      id,
+      ledger: 'EVM' as const,
       chainId,
       capabilities: exactCapabilities,
       configured: options.exactReader !== undefined,
       version: TOKEN_HISTORY_EXACT_RPC_ADAPTER_VERSION,
-    },
+    })),
   ]);
   return registry.declarations().map((declaration) => ({
     id: declaration.id,
@@ -170,6 +180,7 @@ export interface TokenHistoryDiscoveryOptions extends Pick<
   | 'artifacts'
   | 'evidence'
   | 'facts'
+  | 'checkpointBatchSize'
   | 'entityModelVersion'
   | 'labelSnapshot'
   | 'adapterVersion'
@@ -185,6 +196,12 @@ export interface TokenHistoryDiscoveryOptions extends Pick<
   evidenceReader?: TokenHistoryEvidenceReader;
   reportStore?: TokenHistoryReportStore;
   actionSemantics?: TokenHistoryActionSemanticsWriter;
+  /**
+   * A caller-owned retry identity used only when a terminal report contains unresolved exact
+   * observations. The original bounded SQD report remains immutable; a successful rebind is a
+   * separate report revision with its own Evidence closure.
+   */
+  recoveryRevision?: string;
 }
 
 export interface TokenHistoryDiscoveryResult {
@@ -203,7 +220,10 @@ interface EnrichmentResult {
   actionSemanticsId?: string;
   artifact?: RawArtifactWriteResult;
   rpcLogEvidenceIds: string[];
+  rpcAgreementEvidenceId?: string;
+  rpcProviderEvidenceIds?: readonly string[];
   sourceId?: string;
+  sourceIds?: readonly string[];
 }
 
 async function persistFacts(
@@ -322,21 +342,41 @@ function safeErrorCode(error: unknown): string {
   return typeof value === 'string' && /^[A-Z0-9_:-]{1,80}$/.test(value) ? value : 'ERROR';
 }
 
-function errorReason(error: unknown, prefix: string): string {
-  return `${prefix}:${safeErrorCode(error)}`;
+function safeErrorDetail(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const record = error as Record<string, unknown>;
+  const message = typeof record.message === 'string' ? record.message : undefined;
+  if (message === undefined) return undefined;
+  const normalized = message
+    .replace(/https?:\/\/[^\s/]+(?:\/[^\s]*)?/gi, '<provider>')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
+  return normalized === '' ? undefined : normalized;
 }
 
-function exactSnapshot(snapshot: AnalysisSnapshot, sourceId: string): AnalysisSnapshot {
+function errorReason(error: unknown, prefix: string): string {
+  const code = safeErrorCode(error);
+  const detail = safeErrorDetail(error);
+  return detail === undefined ? `${prefix}:${code}` : `${prefix}:${code}:${detail}`.slice(0, 320);
+}
+
+function exactSnapshot(
+  snapshot: AnalysisSnapshot,
+  sourceId: string,
+  sourceIds: readonly string[] = [sourceId],
+): AnalysisSnapshot {
   if (snapshot.ledger !== 'EVM') throw new Error('Exact token history Snapshot must be EVM.');
+  const canonicalSourceIds = canonical([sourceId, ...sourceIds]);
   return AnalysisSnapshotSchema.parse({
     ...snapshot,
     chainId: snapshot.chainId.startsWith('eip155:')
       ? snapshot.chainId
       : `eip155:${snapshot.chainId}`,
-    providerVersions: {
-      ...snapshot.providerVersions,
-      [sourceId]: 'json-rpc',
-    },
+    providerVersions: Object.fromEntries([
+      ...Object.entries(snapshot.providerVersions),
+      ...canonicalSourceIds.map((id) => [id, 'json-rpc']),
+    ]),
     adapterVersions: {
       ...snapshot.adapterVersions,
       [TOKEN_HISTORY_EXACT_RPC_ADAPTER_VERSION]: '1.0.0',
@@ -347,7 +387,7 @@ function exactSnapshot(snapshot: AnalysisSnapshot, sourceId: string): AnalysisSn
     configHash: hashPayload({
       schema: 'token-history-exact-snapshot-config-v1',
       baseConfigHash: snapshot.configHash,
-      exactSource: sourceId,
+      exactSources: canonicalSourceIds,
     }),
   });
 }
@@ -446,6 +486,44 @@ function createObservation(input: {
   });
 }
 
+function durableFactBelongsToRequestedToken(fact: RawChainFact, token: string): boolean {
+  if (fact.factType !== 'LOG') return false;
+  const payload = fact.payload;
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return false;
+  const address = payload.address;
+  // Durable Raw Facts are shared across bounded captures. A resumed run therefore has to
+  // re-apply the query's token predicate before replaying logs; validating the address shape
+  // here excludes malformed/shared rows from the selected history facts, while createObservation
+  // still validates every selected fact's topics, amount, transaction hash, and block identity.
+  return (
+    typeof address === 'string' && EVM_ADDRESS.test(address) && address.toLowerCase() === token
+  );
+}
+
+function replayFactIdentity(fact: RawChainFact): string {
+  return [fact.factType, fact.subject, fact.provider, fact.payloadHash].join('\u0000');
+}
+
+function canonicalReplayFacts(facts: readonly RawChainFact[]): RawChainFact[] {
+  const selected = new Map<string, RawChainFact>();
+  for (const fact of facts) {
+    const identity = replayFactIdentity(fact);
+    const current = selected.get(identity);
+    if (current === undefined || fact.id.localeCompare(current.id) < 0) {
+      selected.set(identity, fact);
+    }
+  }
+  return [...selected.values()].sort((left, right) => {
+    const position = Number(left.blockOrSlot) - Number(right.blockOrSlot);
+    if (position !== 0) return position;
+    return left.id.localeCompare(right.id);
+  });
+}
+
+function isGenericSqdLogEvidence(evidence: Evidence): boolean {
+  return evidence.kind === 'LOG' && evidence.locator.startsWith('evm-log:');
+}
+
 function createBinding(input: {
   transactionHash: string;
   status: TokenHistoryActionBinding['status'];
@@ -499,7 +577,7 @@ async function enrichTransaction(input: {
   snapshot: AnalysisSnapshot;
   options: TokenHistoryDiscoveryOptions;
   evidenceById: Map<string, Evidence>;
-  telemetry: { rpcRequests: number; rpcErrors: number };
+  telemetry: { rpcRequests: number; rpcErrors: number; lastError?: string };
 }): Promise<EnrichmentResult> {
   const evidenceIds = input.group.facts.map((fact) => fact.evidenceId);
   const exact = input.options.exactReader;
@@ -525,8 +603,18 @@ async function enrichTransaction(input: {
   const transaction = transactionObservation.value;
   const receipt = receiptObservation.value;
   const sourceId = exact.sourceId ?? transactionObservation.endpointId;
+  const sourceIds = canonical([
+    ...(transactionObservation.sourceIds ?? [transactionObservation.endpointId]),
+    ...(receiptObservation.sourceIds ?? [receiptObservation.endpointId]),
+  ]);
+  const independentlyReconciled =
+    (transactionObservation.sourceIds?.length ?? 0) >= 2 &&
+    (receiptObservation.sourceIds?.length ?? 0) >= 2 &&
+    canonical(transactionObservation.sourceIds ?? []).join('|') ===
+      canonical(receiptObservation.sourceIds ?? []).join('|');
   if (transaction === null || receipt === null) {
     input.telemetry.rpcErrors += 1;
+    input.telemetry.lastError = 'EXACT_RPC_TRANSACTION_OR_RECEIPT_UNAVAILABLE';
     return {
       application: 'UNKNOWN',
       binding: createBinding({
@@ -537,10 +625,12 @@ async function enrichTransaction(input: {
       }),
       rpcLogEvidenceIds: [],
       sourceId,
+      sourceIds,
     };
   }
 
   validateExactPlacement(transaction, receipt, input.block, input.group.transactionHash);
+  const exactSnapshotView = exactSnapshot(input.snapshot, sourceId, sourceIds);
   const rawArtifactPayload = JsonValueSchema.parse({
     transaction: transaction.raw,
     receipt: receipt.raw,
@@ -580,7 +670,7 @@ async function enrichTransaction(input: {
   const transactionNode = await input.options.evidence.put(
     transactionEvidence,
     [],
-    exactSnapshot(input.snapshot, sourceId),
+    exactSnapshotView,
   );
   input.evidenceById.set(transactionNode.evidence.id, transactionNode.evidence);
   const transactionFact = createRawChainFact({
@@ -613,11 +703,7 @@ async function enrichTransaction(input: {
       rawArtifactRef: artifact.ref,
       summary: 'Exact-provider token Transfer log bound to the finalized transaction receipt.',
     });
-    const node = await input.options.evidence.put(
-      logEvidence,
-      [],
-      exactSnapshot(input.snapshot, sourceId),
-    );
+    const node = await input.options.evidence.put(logEvidence, [], exactSnapshotView);
     input.evidenceById.set(node.evidence.id, node.evidence);
     rpcLogEvidence.push(node.evidence);
     rpcLogFacts.push(
@@ -637,10 +723,76 @@ async function enrichTransaction(input: {
       }),
     );
   }
+  let rpcAgreementEvidenceId: string | undefined;
+  let rpcProviderEvidenceIds: string[] = [];
+  if (independentlyReconciled) {
+    const providerAttestationEvidenceIds: string[] = [];
+    for (const providerSourceId of sourceIds) {
+      const providerAttestation = createEvidence({
+        ledger: 'EVM',
+        chainId: input.snapshot.chainId,
+        kind: 'PROVIDER_OBSERVATION',
+        source: providerSourceId,
+        locator: `token-history-rpc-provider-attestation:${input.group.transactionHash}:${hashPayload(providerSourceId)}`,
+        payload: {
+          schemaVersion: 'token-history-rpc-provider-attestation-v1',
+          transactionHash: input.group.transactionHash,
+          sourceId: providerSourceId,
+          transactionPayloadHash: hashPayload(transaction.raw),
+          receiptPayloadHash: hashPayload(receipt.raw),
+          status: 'AGREEMENT',
+        },
+        observedAt: input.snapshot.capturedAt,
+        blockOrSlot: String(input.block.header.number),
+        finality: 'finalized',
+        summary:
+          'Independent exact RPC provider participated in the matching transaction and receipt quorum.',
+      });
+      const providerNode = await input.options.evidence.put(
+        providerAttestation,
+        [],
+        exactSnapshotView,
+      );
+      input.evidenceById.set(providerNode.evidence.id, providerNode.evidence);
+      providerAttestationEvidenceIds.push(providerNode.evidence.id);
+    }
+    rpcProviderEvidenceIds = providerAttestationEvidenceIds.sort();
+    const sourceEvidenceIds = [
+      transactionNode.evidence.id,
+      ...rpcLogEvidence.map((item) => item.id),
+      ...rpcProviderEvidenceIds,
+    ];
+    const agreement = createEvidence({
+      ledger: 'EVM',
+      chainId: input.snapshot.chainId,
+      kind: 'DERIVED_FEATURE',
+      source: `zerotrace:${TOKEN_HISTORY_SOURCE_RECONCILIATION_MODEL_VERSION}`,
+      locator: `token-history-rpc-agreement:${input.group.transactionHash}:${hashPayload(sourceIds)}`,
+      payload: {
+        schemaVersion: 'token-history-source-reconciliation-v1',
+        transactionHash: input.group.transactionHash,
+        sourceIds,
+        observations: [
+          { kind: 'TRANSACTION', payloadHash: hashPayload(transaction.raw) },
+          { kind: 'RECEIPT', payloadHash: hashPayload(receipt.raw) },
+        ],
+        status: 'AGREEMENT',
+      },
+      observedAt: input.snapshot.capturedAt,
+      blockOrSlot: String(input.block.header.number),
+      finality: 'finalized',
+      summary:
+        'Independent exact RPC providers returned matching transaction and receipt observations.',
+      sourceEvidenceIds,
+    });
+    const node = await input.options.evidence.put(agreement, sourceEvidenceIds, exactSnapshotView);
+    input.evidenceById.set(node.evidence.id, node.evidence);
+    rpcAgreementEvidenceId = node.evidence.id;
+  }
   await persistFacts(input.options.facts, [transactionFact, ...rpcLogFacts]);
 
   const report = buildActionSemanticsFromRawFacts({
-    snapshot: exactSnapshot(input.snapshot, sourceId),
+    snapshot: exactSnapshotView,
     facts: [transactionFact, ...rpcLogFacts],
     evidence: [transactionNode.evidence, ...rpcLogEvidence],
     dataCoverage: 1,
@@ -672,14 +824,21 @@ async function enrichTransaction(input: {
     binding: createBinding({
       transactionHash: input.group.transactionHash,
       status: 'BOUND',
-      evidenceIds: report.metadata.evidenceIds,
+      evidenceIds: [
+        ...report.metadata.evidenceIds,
+        ...rpcProviderEvidenceIds,
+        ...(rpcAgreementEvidenceId === undefined ? [] : [rpcAgreementEvidenceId]),
+      ],
       actionSemanticsResultHash: report.resultHash,
       reason: 'EXACT_RPC_AND_ACTION_SEMANTICS_BOUND',
     }),
     actionSemanticsId: actionId,
     artifact,
     rpcLogEvidenceIds: rpcLogEvidence.map((item) => item.id),
+    ...(rpcAgreementEvidenceId === undefined ? {} : { rpcAgreementEvidenceId }),
+    ...(rpcProviderEvidenceIds.length === 0 ? {} : { rpcProviderEvidenceIds }),
     sourceId,
+    sourceIds,
   };
 }
 
@@ -689,14 +848,20 @@ function reportId(input: {
   fromBlock: number;
   toBlock: number;
   queryHash: string;
+  recoveryRevision?: string;
 }): string {
-  return `thd_${hashPayload({ schema: 'token-history-discovery-id-v1', ...input }).slice(0, 24)}`;
+  const { recoveryRevision, ...identity } = input;
+  return `thd_${hashPayload({
+    schema: 'token-history-discovery-id-v1',
+    ...identity,
+    ...(recoveryRevision === undefined ? {} : { recoveryRevision }),
+  }).slice(0, 24)}`;
 }
 
-function coverageRatio(fromBlock: number, toBlock: number, lastBlock: number | null): number {
+function coverageRatio(fromBlock: number, toBlock: number, nextBlock: number | null): number {
   const requested = toBlock - fromBlock + 1;
-  if (lastBlock === null || requested <= 0) return 0;
-  return Math.max(0, Math.min(1, (Math.min(lastBlock, toBlock) - fromBlock + 1) / requested));
+  if (nextBlock === null || requested <= 0) return 0;
+  return Math.max(0, Math.min(1, (Math.min(nextBlock, toBlock + 1) - fromBlock) / requested));
 }
 
 async function evidenceFor(
@@ -869,6 +1034,7 @@ async function buildTokenHistoryReport(input: {
   snapshots: Map<number, AnalysisSnapshot>;
   blockEvidenceIds: Map<number, string>;
   evidenceById: Map<string, Evidence>;
+  recoveryRevision?: string;
 }): Promise<TokenHistoryDiscoveryReport> {
   const { options, run, resumedFrom, sourceSummary, snapshots, blockEvidenceIds, evidenceById } =
     input;
@@ -879,6 +1045,7 @@ async function buildTokenHistoryReport(input: {
     fromBlock: options.fromBlock,
     toBlock: options.toBlock,
     queryHash,
+    ...(input.recoveryRevision === undefined ? {} : { recoveryRevision: input.recoveryRevision }),
   });
 
   let logFacts = [...input.collectedFacts.values()];
@@ -905,10 +1072,23 @@ async function buildTokenHistoryReport(input: {
         );
       }
     }
-    logFacts = durable.filter(
-      (fact) => fact.factType === 'LOG' && fact.provider === `sqd:${options.source.dataset}`,
-    );
-    for (const fact of durable) {
+    const canonicalDurable = canonicalReplayFacts(durable);
+    const replayFacts: RawChainFact[] = [];
+    for (const fact of canonicalDurable) {
+      if (
+        fact.provider !== `sqd:${options.source.dataset}` ||
+        !durableFactBelongsToRequestedToken(fact, options.token)
+      ) {
+        continue;
+      }
+      // Funding/Settlement candidate expansion deliberately shares the Raw Fact store with the
+      // token-history query, but its Evidence uses token-history-candidate-log:* locators. Only
+      // generic evm-log:* nodes belong to the original SQD token-history request.
+      const evidence = await evidenceFor(fact.evidenceId, evidenceById, options.evidenceReader);
+      if (isGenericSqdLogEvidence(evidence)) replayFacts.push(fact);
+    }
+    logFacts = replayFacts;
+    for (const fact of canonicalDurable) {
       if (fact.factType === 'BLOCK' && fact.provider === `sqd:${options.source.dataset}`) {
         blockEvidenceIds.set(Number(fact.blockOrSlot), fact.evidenceId);
       }
@@ -929,7 +1109,10 @@ async function buildTokenHistoryReport(input: {
   const observations: TokenFlowObservation[] = [];
   const bindings = new Map<string, TokenHistoryActionBinding>();
   const sourceSet = new Set<string>([`sqd:${options.source.dataset}`]);
-  const telemetry = { rpcRequests: 0, rpcErrors: 0 };
+  const telemetry: { rpcRequests: number; rpcErrors: number; lastError?: string } = {
+    rpcRequests: 0,
+    rpcErrors: 0,
+  };
   const groups = new Map<string, TokenGroup>();
   for (const fact of logFacts) {
     const payload = object(fact.payload, 'SQD log payload');
@@ -978,6 +1161,7 @@ async function buildTokenHistoryReport(input: {
       });
     } catch (error) {
       telemetry.rpcErrors += 1;
+      telemetry.lastError = errorReason(error, 'EXACT_RPC_CONFLICT');
       enrichment = {
         application: 'UNKNOWN',
         binding: createBinding({
@@ -990,11 +1174,19 @@ async function buildTokenHistoryReport(input: {
       };
     }
     if (enrichment.sourceId !== undefined) sourceSet.add(enrichment.sourceId);
+    for (const sourceId of enrichment.sourceIds ?? []) sourceSet.add(sourceId);
     bindings.set(group.transactionHash, enrichment.binding);
     for (const fact of group.facts) {
       const actionIds =
         enrichment.actionSemanticsId === undefined ? [] : [enrichment.actionSemanticsId];
-      const evidenceIds = [fact.evidenceId, ...enrichment.rpcLogEvidenceIds];
+      const evidenceIds = [
+        fact.evidenceId,
+        ...enrichment.rpcLogEvidenceIds,
+        ...(enrichment.rpcProviderEvidenceIds ?? []),
+        ...(enrichment.rpcAgreementEvidenceId === undefined
+          ? []
+          : [enrichment.rpcAgreementEvidenceId]),
+      ];
       observations.push(
         createObservation({
           token: options.token,
@@ -1022,17 +1214,23 @@ async function buildTokenHistoryReport(input: {
     evidenceReader: options.evidenceReader,
   });
   if (origin.sourceId !== undefined) sourceSet.add(origin.sourceId);
-  const lastBlock = run.lastBlock;
-  const rawFinalSnapshot =
-    lastBlock === null
-      ? undefined
-      : await snapshotForBlock({
-          blockNumber: lastBlock,
-          current: snapshots,
-          exactReader: options.exactReader,
-          blockEvidenceIds,
-          evidenceReader: options.evidenceReader,
-        });
+  const lastObservedBlock = run.lastBlock;
+  const completion: TokenHistoryDiscoveryReport['status'] =
+    sourceSummary?.completion === 'SOURCE_HEAD_REACHED' || run.status === 'SOURCE_HEAD_REACHED'
+      ? 'SOURCE_HEAD_REACHED'
+      : 'COMPLETE';
+  const finalBlock =
+    completion === 'SOURCE_HEAD_REACHED'
+      ? (sourceSummary?.lastBlock ??
+        Math.max(options.fromBlock, (sourceSummary?.nextBlock ?? 1) - 1))
+      : options.toBlock;
+  const rawFinalSnapshot = await snapshotForBlock({
+    blockNumber: finalBlock,
+    current: snapshots,
+    exactReader: options.exactReader,
+    blockEvidenceIds,
+    evidenceReader: options.evidenceReader,
+  });
   if (rawFinalSnapshot === undefined) {
     throw new TokenHistoryDiscoveryError(
       'TOKEN_HISTORY_REPLAY_UNAVAILABLE',
@@ -1040,17 +1238,56 @@ async function buildTokenHistoryReport(input: {
     );
   }
   const finalSnapshot = historySnapshot(rawFinalSnapshot);
-  const rangeEvidenceIds = canonical(
-    [blockEvidenceIds.get(options.fromBlock), blockEvidenceIds.get(lastBlock as number)].filter(
-      (value): value is string => value !== undefined,
-    ),
-  );
-  if (rangeEvidenceIds.length === 0) {
+  if (finalSnapshot.ledger !== 'EVM') {
     throw new TokenHistoryDiscoveryError(
-      'TOKEN_HISTORY_REPLAY_UNAVAILABLE',
-      'The completed token history range has no durable block Evidence.',
+      'TOKEN_HISTORY_INVALID_INPUT',
+      'Token history final Snapshot must be EVM.',
     );
   }
+  const coveragePayload = JsonValueSchema.parse({
+    schemaVersion: 'token-history-range-coverage-v1',
+    dataset: options.source.dataset,
+    requestedFrom: String(options.fromBlock),
+    requestedTo: String(options.toBlock),
+    nextBlock: String(sourceSummary?.nextBlock ?? run.nextBlock),
+    lastObservedBlock: lastObservedBlock === null ? null : String(lastObservedBlock),
+    finalizedHead: sourceSummary?.finalizedHead ?? null,
+    completion,
+    queryHash,
+  });
+  const coverageArtifact = await options.artifacts.put({
+    ledger: 'EVM',
+    chainId: finalSnapshot.chainId,
+    blockOrSlot: finalSnapshot.blockNumber,
+    provider: `sqd:${options.source.dataset}`,
+    capturedAt: finalSnapshot.capturedAt,
+    payload: coveragePayload,
+  });
+  const coverageNode = await options.evidence.put(
+    createEvidence({
+      ledger: 'EVM',
+      chainId: finalSnapshot.chainId,
+      kind: 'PROVIDER_OBSERVATION',
+      source: `sqd:${options.source.dataset}`,
+      locator: `token-history-range:${options.token}:${options.fromBlock}-${options.toBlock}`,
+      payload: coveragePayload,
+      blockOrSlot: finalSnapshot.blockNumber,
+      finality: finalSnapshot.finality,
+      observedAt: finalSnapshot.capturedAt,
+      rawArtifactRef: coverageArtifact.ref,
+      summary: 'SQD finalized token-history range coverage reached the recorded cursor.',
+    }),
+    [],
+    finalSnapshot,
+  );
+  evidenceById.set(coverageNode.evidence.id, coverageNode.evidence);
+  const rangeEvidenceIds = canonical(
+    [
+      coverageNode.evidence.id,
+      blockEvidenceIds.get(options.fromBlock),
+      blockEvidenceIds.get(lastObservedBlock as number),
+    ].filter((value): value is string => value !== undefined),
+  );
   const sortedObservations = observations.sort((left, right) => {
     const blockOrder = Number(left.blockNumber) - Number(right.blockNumber);
     if (blockOrder !== 0) return blockOrder;
@@ -1067,10 +1304,6 @@ async function buildTokenHistoryReport(input: {
     ...sortedBindings.flatMap((item) => item.evidenceIds),
     ...(origin.value.state === 'known' ? origin.value.value.evidenceIds : []),
   ]);
-  const completion: TokenHistoryDiscoveryReport['status'] =
-    sourceSummary?.completion === 'SOURCE_HEAD_REACHED' || run.status === 'SOURCE_HEAD_REACHED'
-      ? 'SOURCE_HEAD_REACHED'
-      : 'COMPLETE';
   const checkpointStatus =
     completion === 'SOURCE_HEAD_REACHED' ? 'SOURCE_HEAD_REACHED' : 'REQUESTED_RANGE_COMPLETE';
   const rpcDiagnostics = options.exactReader?.diagnostics?.();
@@ -1095,7 +1328,7 @@ async function buildTokenHistoryReport(input: {
       runId: run.id,
       nextBlock: String(sourceSummary?.nextBlock ?? run.nextBlock),
       status: checkpointStatus,
-      lastBlock: run.lastBlock === null ? null : String(run.lastBlock),
+      lastBlock: String(finalBlock),
       finalizedHead:
         sourceSummary?.finalizedHead === null || sourceSummary?.finalizedHead === undefined
           ? null
@@ -1109,15 +1342,29 @@ async function buildTokenHistoryReport(input: {
       rangeAdjustments: sourceSummary?.rangeAdjustments ?? 0,
       ...(telemetry.rpcErrors === 0
         ? {}
-        : { lastProviderError: `EXACT_RPC_ERRORS:${telemetry.rpcErrors}` }),
+        : {
+            lastProviderError: telemetry.lastError ?? `EXACT_RPC_ERRORS:${telemetry.rpcErrors}`,
+          }),
       ...(rpcDiagnostics === undefined ? {} : { rpcDiagnostics }),
     },
     providerCapabilityDeclarations: providerCapabilityDeclarations(options),
     snapshot: finalSnapshot,
     rangeEvidenceIds,
-    dataCoverage: coverageRatio(options.fromBlock, options.toBlock, lastBlock),
-    sourceCoverage: coverageRatio(options.fromBlock, options.toBlock, lastBlock),
-    historyCoverage: coverageRatio(options.fromBlock, options.toBlock, lastBlock),
+    dataCoverage: coverageRatio(
+      options.fromBlock,
+      options.toBlock,
+      sourceSummary?.nextBlock ?? run.nextBlock,
+    ),
+    sourceCoverage: coverageRatio(
+      options.fromBlock,
+      options.toBlock,
+      sourceSummary?.nextBlock ?? run.nextBlock,
+    ),
+    historyCoverage: coverageRatio(
+      options.fromBlock,
+      options.toBlock,
+      sourceSummary?.nextBlock ?? run.nextBlock,
+    ),
     freshness: finalSnapshot.capturedAt,
     sourceSet: canonical([...sourceSet]),
     modelVersion: TOKEN_HISTORY_DISCOVERY_MODEL_VERSION,
@@ -1147,7 +1394,7 @@ export function tokenHistoryDiscoveryRequest(input: {
   return {
     fromBlock: input.fromBlock,
     toBlock: input.toBlock,
-    includeAllBlocks: true,
+    includeAllBlocks: false,
     fields: {
       block: { timestamp: true },
       log: {
@@ -1198,6 +1445,10 @@ export class TokenHistoryDiscovery {
     let pendingReport: TokenHistoryDiscoveryReport | undefined;
     const ingestion = new SqdFinalizedIngestionPipeline({
       ...options,
+      // Token History must be restartable inside dense historical ranges. The generic ingestion
+      // worker keeps its larger write batch, while this bounded semantic path advances the
+      // durable cursor after at most 50 materialized event blocks.
+      checkpointBatchSize: options.checkpointBatchSize ?? 50,
       onBlockMaterialized: async ({ block, snapshot, facts, evidence }) => {
         snapshots.set(block.header.number, snapshot);
         const blockFact = facts.find((fact) => fact.factType === 'BLOCK');
@@ -1240,6 +1491,35 @@ export class TokenHistoryDiscovery {
           'TOKEN_HISTORY_REPLAY_UNAVAILABLE',
           `Completed token history run ${id} has no durable report for replay.`,
         );
+      }
+      const recoveryRevision = options.recoveryRevision;
+      const needsExactRecovery =
+        recoveryRevision !== undefined &&
+        recoveryRevision.trim() !== '' &&
+        options.exactReader !== undefined &&
+        (existing.actionSemanticsBindings.some((binding) => binding.status !== 'BOUND') ||
+          // A strict quorum report may already have BOUND action semantics while predating the
+          // provider-level attestation Evidence required by the durable capture source guard.
+          // Rebuild that immutable report revision from the durable SQD Facts so the exact
+          // observations and their provider provenance are closed together.
+          (options.exactReader.sourceIds?.length ?? 0) >= 2);
+      if (needsExactRecovery) {
+        // The ingestion cursor is already terminal, but a transient exact-provider or durable
+        // Evidence failure may have left the immutable first report with UNAVAILABLE bindings.
+        // Reconstruct from the durable SQD Facts and write a revision instead of returning the
+        // stale negative result or attempting to mutate the original report.
+        const recovered = await buildTokenHistoryReport({
+          options,
+          run: result.run,
+          resumedFrom: result.resumedFrom,
+          sourceSummary: null,
+          collectedFacts,
+          snapshots,
+          blockEvidenceIds,
+          evidenceById,
+          recoveryRevision,
+        });
+        return { report: recovered, ingestion: result };
       }
       return { report: TokenHistoryDiscoveryReportSchema.parse(existing), ingestion: result };
     }

@@ -31,6 +31,7 @@ const config: TokenHistoryBackfillWorkerConfig = {
   retryBaseDelayMs: 0,
   retryMaxDelayMs: 0,
   maxFactRows: 10,
+  checkpointBatchSize: 50,
   owner: 'test-worker',
   pollIntervalMs: 250,
   leaseSeconds: 30,

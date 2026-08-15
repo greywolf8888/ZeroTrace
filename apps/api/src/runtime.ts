@@ -116,7 +116,7 @@ export interface AppRuntime {
         errorCode?: string;
       }>;
     };
-    artifacts?: { health(): Promise<ObjectStoreHealth> };
+    artifacts?: { health(): Promise<ObjectStoreHealth>; close(): Promise<void> };
   };
   close?: () => Promise<void>;
 }
@@ -331,6 +331,10 @@ export function createRuntime(config: AppConfig): AppRuntime {
           maxAttempts: config.providerResilience.maxAttempts,
           retryBaseDelayMs: config.providerResilience.retryBaseDelayMs,
           retryMaxDelayMs: config.providerResilience.retryMaxDelayMs,
+          // Solana ledger-record lines can exceed the generic 8 MiB safety default on busy slots.
+          // Keep the response bounded while allowing a real finalized slot to be inspected.
+          maxResponseBytes: 128_000_000,
+          maxLineBytes: 32_000_000,
           requestsPerSecond: 2,
         });
 
@@ -777,6 +781,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       captureSchedules?.close(),
       ageInvestigationGraphProjection?.close(),
       rawFacts?.close(),
+      artifacts?.close(),
     ]);
   };
 

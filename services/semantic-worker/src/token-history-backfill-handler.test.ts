@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { createServer, type Server } from 'node:http';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CaptureRunSchema } from '@zerotrace/schemas';
+import { hashPayload } from '@zerotrace/evidence';
 
 import {
   createTokenHistoryBackfillHandler,
@@ -31,6 +34,7 @@ function config(overrides: Partial<TokenHistoryBackfillWorkerConfig> = {}) {
     retryBaseDelayMs: 0,
     retryMaxDelayMs: 0,
     maxFactRows: 10,
+    checkpointBatchSize: 50,
     owner: 'test-worker',
     pollIntervalMs: 250,
     leaseSeconds: 30,
@@ -43,6 +47,162 @@ function config(overrides: Partial<TokenHistoryBackfillWorkerConfig> = {}) {
 function resources(): TokenHistoryBackfillHandlerResources {
   return {} as TokenHistoryBackfillHandlerResources;
 }
+
+const TOKEN = '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777';
+const SOURCE_IDS = ['bsc-rpc@bsc.example#1', 'bsc-rpc@bsc-2.example#2'];
+const HASH_A = `0x${'a'.repeat(64)}`;
+const HASH_B = `0x${'b'.repeat(64)}`;
+
+function liveParameters() {
+  return {
+    schemaVersion: 'token-live-capture-v1' as const,
+    dataset: 'binance-mainnet' as const,
+    token: TOKEN,
+    initialFromBlock: '900',
+    windowBlocks: 1_000,
+    modelVersion: 'token-live-capture-v1.0.0',
+    policyVersion: 'token-history-policy-v1.0.0',
+  };
+}
+
+function snapshot(
+  blockNumber: string,
+  blockHash: string,
+  sourceIds: readonly string[] = SOURCE_IDS,
+) {
+  return {
+    ledger: 'EVM' as const,
+    chainId: 'eip155:56',
+    blockNumber,
+    blockHash,
+    parentBlockHash: HASH_A,
+    finality: 'finalized' as const,
+    blockTimestamp: '2026-08-14T00:00:00.000Z',
+    capturedAt: '2026-08-14T00:00:00.000Z',
+    providerVersions: Object.fromEntries(sourceIds.map((sourceId) => [sourceId, 'json-rpc'])),
+    adapterVersions: { evm: '0.1.0' },
+    configHash: 'c'.repeat(64),
+    entityModelVersion: 'entity-v0.1.0',
+    labelSnapshot: 'labels-empty-v1',
+  };
+}
+
+function previousSuccess(
+  blockNumber: string,
+  blockHash: string,
+  sourceIds: readonly string[] = SOURCE_IDS,
+) {
+  const previousSnapshot = snapshot(blockNumber, blockHash, sourceIds);
+  const evidenceId = 'ev_aaaaaaaaaaaaaaaaaaaaaaaa';
+  return run({
+    captureKind: 'TOKEN_LIVE_CAPTURE',
+    parameters: liveParameters(),
+    status: 'SUCCEEDED',
+    lease: { state: 'unknown', reason: 'NOT_APPLICABLE' },
+    result: {
+      state: 'known',
+      value: {
+        resultRef: `token-live-capture:previous#sha256=${'d'.repeat(64)}`,
+        snapshot: previousSnapshot,
+        terminalEvidenceId: evidenceId,
+        evidenceIds: [evidenceId],
+        sourceSet: [...sourceIds].sort(),
+        modelVersion: 'token-live-capture-v1.0.0',
+        coverage: 1,
+        freshness: previousSnapshot.capturedAt,
+        confidence: 1,
+      },
+    },
+    completedAt: { state: 'known', value: '2026-08-14T00:00:00.000Z' },
+  });
+}
+
+function monitorResources(runs: readonly ReturnType<typeof run>[]) {
+  const put = vi.fn(
+    async (
+      _evidence: { id: string; kind: string; payloadHash: string },
+      _sourceEvidenceIds: readonly string[] = [],
+    ) => undefined,
+  );
+  return {
+    ...resources(),
+    schedules: { listRunsForSchedule: vi.fn(async () => [...runs]) },
+    evidence: { put },
+  } as unknown as TokenHistoryBackfillHandlerResources & { evidence: { put: typeof put } };
+}
+
+async function openRpcPair(
+  resolveBlock: (blockTag: unknown) => { number: string; hash: string },
+): Promise<{ urls: readonly string[]; close: () => Promise<void> }> {
+  const servers: Server[] = [];
+  const urls: string[] = [];
+  try {
+    for (const host of ['127.0.0.1', '127.0.0.2']) {
+      const server = createServer((request, response) => {
+        let body = '';
+        request.setEncoding('utf8');
+        request.on('data', (chunk: string) => {
+          body += chunk;
+        });
+        request.on('end', () => {
+          const parsed = JSON.parse(body) as { id?: number; params?: readonly unknown[] };
+          const block = resolveBlock(parsed.params?.[0]);
+          response.writeHead(200, { 'content-type': 'application/json' });
+          response.end(
+            JSON.stringify({
+              jsonrpc: '2.0',
+              id: parsed.id ?? 1,
+              result: {
+                number: `0x${BigInt(block.number).toString(16)}`,
+                hash: block.hash,
+                parentHash: HASH_A,
+                timestamp: '0x68a4a800',
+              },
+            }),
+          );
+        });
+      });
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(0, host, () => resolve());
+      });
+      const address = server.address();
+      if (address === null || typeof address === 'string') {
+        throw new Error('RPC test server did not expose a TCP address.');
+      }
+      servers.push(server);
+      urls.push(`http://${host}:${address.port}/`);
+    }
+  } catch (error) {
+    await Promise.all(
+      servers.map(
+        (server) =>
+          new Promise<void>((resolve) => {
+            server.close(() => resolve());
+          }),
+      ),
+    );
+    throw error;
+  }
+  return {
+    urls,
+    close: async () => {
+      await Promise.all(
+        servers.map(
+          (server) =>
+            new Promise<void>((resolve) => {
+              server.close(() => resolve());
+            }),
+        ),
+      );
+    },
+  };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 function run(overrides: Record<string, unknown> = {}) {
   return CaptureRunSchema.parse({
@@ -145,15 +305,7 @@ describe('Token History backfill capture handler', () => {
   it('requires durable schedule history before starting a live monitor', async () => {
     const liveRun = run({
       captureKind: 'TOKEN_LIVE_CAPTURE',
-      parameters: {
-        schemaVersion: 'token-live-capture-v1',
-        dataset: 'binance-mainnet',
-        token: '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
-        initialFromBlock: '100',
-        windowBlocks: 1_000,
-        modelVersion: 'token-live-capture-v1.0.0',
-        policyVersion: 'token-history-policy-v1.0.0',
-      },
+      parameters: liveParameters(),
     });
     await expect(
       createTokenHistoryLiveCaptureHandler(config(), resources())(liveRun),
@@ -161,5 +313,94 @@ describe('Token History backfill capture handler', () => {
       code: 'TOKEN_LIVE_CAPTURE_SCHEDULER_UNAVAILABLE',
       sourceRetryable: false,
     });
+  });
+
+  it('keeps the complete strict-provider source set on a durable heartbeat', async () => {
+    const endpoints = await openRpcPair(() => ({ number: '1000', hash: HASH_A }));
+    try {
+      const sourceIds = endpoints.urls.map(
+        (url, index) => `bsc-rpc@${new URL(url).hostname}#${index + 1}`,
+      );
+      const monitor = monitorResources([previousSuccess('1000', HASH_A, sourceIds)]);
+      const result = await createTokenHistoryLiveCaptureHandler(
+        config({
+          requireIndependentRpc: true,
+          bscRpcUrls: [...endpoints.urls],
+          providerAllowedHosts: endpoints.urls.map((url) => new URL(url).hostname),
+          allowPrivateProviderUrls: true,
+        }),
+        monitor,
+      )(
+        run({
+          captureKind: 'TOKEN_LIVE_CAPTURE',
+          parameters: liveParameters(),
+        }),
+      );
+
+      expect(result.sourceSet).toEqual(sourceIds);
+      expect(result.evidenceIds).toHaveLength(sourceIds.length + 1);
+      expect(monitor.evidence.put).toHaveBeenCalledTimes(sourceIds.length + 1);
+      const providerEvidence = monitor.evidence.put.mock.calls
+        .slice(0, sourceIds.length)
+        .map((call) => call[0]);
+      expect(providerEvidence.map((evidence) => evidence.kind)).toEqual(
+        sourceIds.map(() => 'PROVIDER_OBSERVATION'),
+      );
+      expect(providerEvidence.map((evidence) => evidence.id).sort()).toEqual(
+        result.evidenceIds.filter((id) => id !== result.terminalEvidenceId).sort(),
+      );
+      const heartbeatCall = monitor.evidence.put.mock.calls[sourceIds.length];
+      const heartbeatEvidence = heartbeatCall?.[0];
+      expect(heartbeatEvidence?.kind).toBe('DERIVED_FEATURE');
+      expect(heartbeatCall?.[1]).toEqual(providerEvidence.map((evidence) => evidence.id).sort());
+      expect(heartbeatEvidence?.payloadHash).toBe(
+        hashPayload({
+          schemaVersion: 'token-live-capture-heartbeat-v1',
+          scheduleId: 'cps_0123456789abcdef01234567',
+          token: TOKEN,
+          fromBlock: '1001',
+          finalizedHead: '1000',
+          state: 'NO_NEW_FINALIZED_RANGE',
+          providerSources: sourceIds,
+        }),
+      );
+    } finally {
+      await endpoints.close();
+    }
+  });
+
+  it('fails closed when the durable finalized cursor no longer matches the chain', async () => {
+    const endpoints = await openRpcPair((blockTag) =>
+      blockTag === 'finalized' ? { number: '1000', hash: HASH_B } : { number: '999', hash: HASH_B },
+    );
+    try {
+      const sourceIds = endpoints.urls.map(
+        (url, index) => `bsc-rpc@${new URL(url).hostname}#${index + 1}`,
+      );
+      const monitor = monitorResources([previousSuccess('999', HASH_A, sourceIds)]);
+
+      await expect(
+        createTokenHistoryLiveCaptureHandler(
+          config({
+            requireIndependentRpc: true,
+            bscRpcUrls: [...endpoints.urls],
+            providerAllowedHosts: endpoints.urls.map((url) => new URL(url).hostname),
+            allowPrivateProviderUrls: true,
+          }),
+          monitor,
+        )(
+          run({
+            captureKind: 'TOKEN_LIVE_CAPTURE',
+            parameters: liveParameters(),
+          }),
+        ),
+      ).rejects.toMatchObject({
+        code: 'TOKEN_LIVE_CAPTURE_REORG_DETECTED',
+        sourceRetryable: true,
+      });
+      expect(monitor.evidence.put).not.toHaveBeenCalled();
+    } finally {
+      await endpoints.close();
+    }
   });
 });

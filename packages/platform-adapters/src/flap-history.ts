@@ -130,6 +130,168 @@ export async function discoverFlapEventHistory(options: {
   maxTransactions?: number;
   maxLogs?: number;
 }): Promise<FlapEventHistory> {
+  try {
+    return await discoverFlapEventHistorySingle(options);
+  } catch (error) {
+    if (!isLogLimitExceeded(error)) throw error;
+    const fromBlock = decimalPosition(options.fromBlock, 'history fromBlock');
+    const toBlock = decimalPosition(options.toBlock, 'history toBlock');
+    if (fromBlock >= toBlock) throw error;
+    const midpoint = fromBlock + (toBlock - fromBlock) / 2n;
+    const left = await discoverFlapEventHistory({
+      ...options,
+      fromBlock: fromBlock.toString(),
+      toBlock: midpoint.toString(),
+    });
+    const right = await discoverFlapEventHistory({
+      ...options,
+      fromBlock: (midpoint + 1n).toString(),
+      toBlock: toBlock.toString(),
+    });
+    return mergeAdaptiveHistories(options, left, right);
+  }
+}
+
+function isLogLimitExceeded(error: unknown): boolean {
+  return (
+    error instanceof ProviderError &&
+    (/log result limit\.$/.test(error.message) ||
+      /log result exceeds the configured \d+-record limit\.$/.test(error.message))
+  );
+}
+
+async function mergeAdaptiveHistories(
+  options: {
+    token: string;
+    fromBlock: string;
+    toBlock: string;
+    deployment: FlapDeployment;
+    writeEvidence: FlapEvidenceWriter;
+    chunkSize?: number;
+  },
+  left: FlapEventHistory,
+  right: FlapEventHistory,
+): Promise<FlapEventHistory> {
+  const fromBlock = decimalPosition(options.fromBlock, 'history fromBlock');
+  const toBlock = decimalPosition(options.toBlock, 'history toBlock');
+  const expectedRightFrom = BigInt(left.requestedRange.toBlock) + 1n;
+  if (
+    left.token !== right.token ||
+    left.token !== canonicalAddress(options.token, 'history token') ||
+    left.requestedRange.fromBlock !== fromBlock.toString() ||
+    BigInt(right.requestedRange.fromBlock) !== expectedRightFrom ||
+    right.requestedRange.toBlock !== toBlock.toString() ||
+    left.requestedRangeCoverage !== 1 ||
+    right.requestedRangeCoverage !== 1 ||
+    left.lifetimeCoverage.state === 'known' ||
+    right.lifetimeCoverage.state === 'known'
+  ) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Adaptive Flap history subranges are inconsistent.',
+    );
+  }
+  const leftSnapshot = left.metadata.snapshot;
+  const rightSnapshot = right.metadata.snapshot;
+  if (
+    leftSnapshot?.ledger !== 'EVM' ||
+    rightSnapshot?.ledger !== 'EVM' ||
+    leftSnapshot.chainId !== rightSnapshot.chainId ||
+    rightSnapshot.blockNumber !== toBlock.toString()
+  ) {
+    throw new ProviderError(
+      'INVALID_RESPONSE',
+      'Adaptive Flap history Snapshots are inconsistent.',
+    );
+  }
+  const chunkSize = boundedInteger(
+    options.chunkSize,
+    FLAP_HISTORY_DEFAULT_CHUNK_SIZE,
+    10_000,
+    'history chunkSize',
+  );
+  const requestedRange = {
+    fromBlock: fromBlock.toString(),
+    toBlock: toBlock.toString(),
+    chunkSize,
+    chunkCount: Number((toBlock - fromBlock + BigInt(chunkSize)) / BigInt(chunkSize)),
+  };
+  const chronology = [...left.chronology, ...right.chronology];
+  const transactions = [...left.transactions, ...right.transactions];
+  const unrecognizedPortalLogCount =
+    left.unrecognizedPortalLogCount + right.unrecognizedPortalLogCount;
+  const sourceEvidenceIds = [
+    ...new Set([...left.metadata.evidenceIds, ...right.metadata.evidenceIds]),
+  ].sort();
+  const payload = {
+    token: left.token,
+    requestedRange,
+    adaptiveSubranges: [left.requestedRange, right.requestedRange],
+    chronology,
+    unrecognizedPortalLogCount,
+  };
+  const terminal = await options.writeEvidence(
+    createEvidence({
+      ledger: 'EVM',
+      chainId: rightSnapshot.chainId,
+      kind: transactions.length === 0 ? 'NEGATIVE_EVIDENCE' : 'DERIVED_FEATURE',
+      source: `zerotrace:${FLAP_HISTORY_MODEL_VERSION}`,
+      locator: `flap-event-history:${left.token}:${fromBlock}-${toBlock}`,
+      payload,
+      observedAt: rightSnapshot.capturedAt,
+      blockOrSlot: toBlock.toString(),
+      finality: rightSnapshot.finality,
+      summary:
+        transactions.length === 0
+          ? 'No supported Flap event was found across adaptively bounded subranges.'
+          : 'Flap event transactions were discovered across adaptively bounded subranges.',
+      sourceEvidenceIds,
+    }),
+    sourceEvidenceIds,
+    rightSnapshot,
+  );
+  const evidenceById = new Map<string, Evidence>();
+  for (const evidence of [...left.evidence, ...right.evidence, terminal]) {
+    evidenceById.set(evidence.id, evidence);
+  }
+  const sourceSet = [...new Set([...left.metadata.sourceSet, ...right.metadata.sourceSet])].sort();
+  const evidenceIds = [
+    ...new Set([...left.metadata.evidenceIds, ...right.metadata.evidenceIds, terminal.id]),
+  ].sort();
+  return FlapEventHistorySchema.parse({
+    platform: 'flap',
+    token: left.token,
+    requestedRange,
+    requestedRangeCoverage: 1,
+    lifetimeCoverage: unknownValue(
+      'INSUFFICIENT_DATA',
+      'The requested bounded range is complete, but token-lifetime coverage requires an evidenced deployment origin and continuous index.',
+    ),
+    chronology,
+    transactions,
+    unrecognizedPortalLogCount,
+    metadata: metadata(
+      rightSnapshot,
+      sourceSet,
+      evidenceIds,
+      Math.min(left.metadata.confidence, right.metadata.confidence),
+    ),
+    evidence: [...evidenceById.values()],
+  });
+}
+
+async function discoverFlapEventHistorySingle(options: {
+  adapter: EvmLedgerAdapter;
+  logReader?: EvmLogReader;
+  token: string;
+  fromBlock: string;
+  toBlock: string;
+  deployment: FlapDeployment;
+  writeEvidence: FlapEvidenceWriter;
+  chunkSize?: number;
+  maxTransactions?: number;
+  maxLogs?: number;
+}): Promise<FlapEventHistory> {
   const { adapter, deployment, writeEvidence } = options;
   const logReader = options.logReader ?? adapter;
   const token = canonicalAddress(options.token, 'history token');
@@ -176,6 +338,13 @@ export async function discoverFlapEventHistory(options: {
   }
 
   const rangeEvidence: Evidence[] = [];
+  const pendingRangeObservations: Array<{
+    endpointId: string;
+    fromBlock: string;
+    toBlock: string;
+    snapshot: EvmSnapshot;
+    logs: readonly EvmLogRecord[];
+  }> = [];
   const candidates = new Map<string, CandidateTransaction>();
   const candidateLogs = new Map<string, EvmLogRecord[]>();
   const rangeSources = new Set<string>();
@@ -209,27 +378,13 @@ export async function discoverFlapEventHistory(options: {
       );
     }
     rangeSources.add(observation.endpointId);
-    const observationEvidence = await writeEvidence(
-      createEvidence({
-        ledger: 'EVM',
-        chainId: deployment.chainId,
-        kind: 'PROVIDER_OBSERVATION',
-        source: observation.endpointId,
-        locator: `flap-portal-logs:${portal}:${start}-${end}`,
-        payload: {
-          filter: { address: portal, fromBlock: start.toString(), toBlock: end.toString() },
-          topics: FLAP_EVENT_TOPIC0S,
-          logs: observation.value.map((log) => log.raw),
-        },
-        observedAt: anchor.snapshot.capturedAt,
-        blockOrSlot: end.toString(),
-        finality: anchor.snapshot.finality,
-        summary: `Flap Portal logs observed for bounded block range ${start}-${end}.`,
-      }),
-      [],
-      anchor.snapshot,
-    );
-    rangeEvidence.push(observationEvidence);
+    pendingRangeObservations.push({
+      endpointId: observation.endpointId,
+      fromBlock: start.toString(),
+      toBlock: end.toString(),
+      snapshot: anchor.snapshot,
+      logs: observation.value,
+    });
 
     for (const log of observation.value) {
       const identity = identifyFlapPortalEvent(log);
@@ -270,6 +425,34 @@ export async function discoverFlapEventHistory(options: {
 
   if (upperSnapshot === undefined) {
     throw new ProviderError('INVALID_RESPONSE', 'Flap history produced no replay Snapshot.');
+  }
+  for (const observation of pendingRangeObservations) {
+    rangeEvidence.push(
+      await writeEvidence(
+        createEvidence({
+          ledger: 'EVM',
+          chainId: deployment.chainId,
+          kind: 'PROVIDER_OBSERVATION',
+          source: observation.endpointId,
+          locator: `flap-portal-logs:${portal}:${observation.fromBlock}-${observation.toBlock}`,
+          payload: {
+            filter: {
+              address: portal,
+              fromBlock: observation.fromBlock,
+              toBlock: observation.toBlock,
+            },
+            topics: FLAP_EVENT_TOPIC0S,
+            logs: observation.logs.map((log) => log.raw),
+          },
+          observedAt: observation.snapshot.capturedAt,
+          blockOrSlot: observation.toBlock,
+          finality: observation.snapshot.finality,
+          summary: `Flap Portal logs observed for bounded block range ${observation.fromBlock}-${observation.toBlock}.`,
+        }),
+        [],
+        observation.snapshot,
+      ),
+    );
   }
   const orderedCandidates = [...candidates.values()].sort(compareCandidates);
   const transactions: FlapEventTransaction[] = [];

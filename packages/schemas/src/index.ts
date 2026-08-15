@@ -4699,7 +4699,7 @@ export type EvmControlSurfaceReport = z.infer<typeof EvmControlSurfaceReportSche
 
 export const SolanaPublicKeySchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
 
-export const SolanaLaunchpadPlatformSchema = z.enum(['PUMP', 'PUMPSWAP']);
+export const SolanaLaunchpadPlatformSchema = z.enum(['PUMP', 'PUMPSWAP', 'RAYDIUM_LAUNCHLAB']);
 export type SolanaLaunchpadPlatform = z.infer<typeof SolanaLaunchpadPlatformSchema>;
 
 export const SolanaLaunchpadInstructionCategorySchema = z.enum([
@@ -4784,6 +4784,87 @@ export const SolanaLaunchpadObservationSchema = z
     }
   });
 export type SolanaLaunchpadObservation = z.infer<typeof SolanaLaunchpadObservationSchema>;
+
+export const RaydiumLaunchlabPoolStateReadIdSchema = z.string().regex(/^rlp_[0-9a-f]{24}$/);
+
+export const RaydiumLaunchlabPoolStateReadSchema = z
+  .object({
+    schemaVersion: z.literal('raydium-launchlab-pool-state-read-v1'),
+    id: RaydiumLaunchlabPoolStateReadIdSchema,
+    account: SolanaPublicKeySchema,
+    programId: SolanaPublicKeySchema,
+    exists: z.boolean(),
+    ownerVerified: z.boolean(),
+    discriminatorMatched: z.boolean(),
+    accountDataLength: z.number().int().nonnegative(),
+    expectedAccountDataLength: z.number().int().positive(),
+    requestedSlot: UnsignedQuantityStringSchema.optional(),
+    observedContextSlot: UnsignedQuantityStringSchema,
+    stateAtRequestedSlot: z.enum(['EXACT', 'MIN_CONTEXT_ONLY', 'UNKNOWN']),
+    decodedFields: z.array(SolanaLaunchpadDecodedArgumentSchema).max(64),
+    fieldCoverage: CoverageRatioSchema,
+    decodeWarnings: z.array(z.string().min(1).max(320)).max(16),
+    evidenceIds: CanonicalStringArraySchema.min(1),
+    snapshot: AnalysisSnapshotSchema,
+    dataCoverage: CoverageRatioSchema,
+    sourceCoverage: CoverageRatioSchema,
+    historyCoverage: CoverageRatioSchema,
+    freshness: IsoDateTimeSchema,
+    sourceSet: CanonicalStringArraySchema.min(1),
+    modelVersion: z.literal('solana-raydium-launchlab-v1.0.0'),
+    resultHash: Hash256Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.snapshot.ledger !== 'SOLANA' ||
+      value.snapshot.chainId !== 'solana-mainnet' ||
+      value.snapshot.slot !== value.observedContextSlot ||
+      value.snapshot.commitment !== 'finalized'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['snapshot'],
+        message: 'Raydium PoolState reads require a finalized Snapshot at the RPC context slot.',
+      });
+    }
+    if (!value.exists && (value.ownerVerified || value.discriminatorMatched)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['exists'],
+        message: 'An absent PoolState account cannot be owner- or discriminator-verified.',
+      });
+    }
+    if (value.ownerVerified && !value.discriminatorMatched && value.fieldCoverage > 0) {
+      context.addIssue({
+        code: 'custom',
+        path: ['fieldCoverage'],
+        message: 'A non-PoolState discriminator cannot carry decoded PoolState fields.',
+      });
+    }
+    const evidenceIds = [...value.evidenceIds].sort();
+    if (
+      evidenceIds.length !== new Set(evidenceIds).size ||
+      evidenceIds.some((id, index) => id !== evidenceIds[index])
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['evidenceIds'],
+        message: 'Raydium PoolState read Evidence IDs must be sorted and unique.',
+      });
+    }
+    if (value.stateAtRequestedSlot === 'EXACT' && value.requestedSlot !== undefined) {
+      if (value.requestedSlot !== value.observedContextSlot) {
+        context.addIssue({
+          code: 'custom',
+          path: ['stateAtRequestedSlot'],
+          message:
+            'EXACT PoolState state must have the requested slot as its observed context slot.',
+        });
+      }
+    }
+  });
+export type RaydiumLaunchlabPoolStateRead = z.infer<typeof RaydiumLaunchlabPoolStateReadSchema>;
 
 export const SolanaTransactionAccountSourceSchema = z.enum([
   'STATIC',
@@ -5246,6 +5327,7 @@ export const SolanaDealerCampaignReportSchema = z
     settlementEdges: z.array(SolanaDealerSettlementEdgeSchema),
     openingBalanceUnknownWalletIds: CanonicalStringArraySchema,
     pdaSuppressedOwnerIds: CanonicalStringArraySchema,
+    launchpadObservations: z.array(SolanaLaunchpadObservationSchema).max(500).optional(),
     campaign: ControlCampaignBundleSchema.nullable(),
     alerts: z.array(ForensicCampaignAlertSchema),
     evidence: z.array(EvidenceSchema).min(1),
@@ -5281,6 +5363,7 @@ export const SolanaDealerCampaignReportSchema = z
       ...value.solTransfers.flatMap((edge) => edge.evidenceIds),
       ...value.fundingEdges.flatMap((edge) => edge.evidenceIds),
       ...value.settlementEdges.flatMap((edge) => edge.evidenceIds),
+      ...(value.launchpadObservations ?? []).flatMap((observation) => observation.evidenceIds),
       ...(value.campaign === null
         ? []
         : [
@@ -5298,10 +5381,13 @@ export const SolanaDealerCampaignReportSchema = z
     const evidenceIds = [...new Set(value.evidence.map((item) => item.id))].sort();
     const declared = [...value.evidenceIds].sort();
     const expected = [...new Set(nestedEvidenceIds)].sort();
+    const launchpadIds = (value.launchpadObservations ?? []).map((observation) => observation.id);
     if (
       evidenceIds.length !== value.evidence.length ||
       JSON.stringify(evidenceIds) !== JSON.stringify(declared) ||
-      expected.some((id) => !declared.includes(id))
+      expected.some((id) => !declared.includes(id)) ||
+      launchpadIds.length !== new Set(launchpadIds).size ||
+      launchpadIds.some((id, index) => id !== [...launchpadIds].sort()[index])
     ) {
       context.addIssue({
         code: 'custom',
@@ -5323,6 +5409,19 @@ export const SolanaDealerCampaignReportSchema = z
         code: 'custom',
         path: ['tokenFlowEdges'],
         message: 'Solana dealer token-flow edges must match the report mint and range.',
+      });
+    }
+    if (
+      (value.launchpadObservations ?? []).some(
+        (observation) =>
+          BigInt(observation.slot) < BigInt(value.fromSlot) ||
+          BigInt(observation.slot) > BigInt(value.toSlot),
+      )
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['launchpadObservations'],
+        message: 'Solana launchpad observations must remain inside the dealer report slot range.',
       });
     }
     if (
@@ -5893,6 +5992,9 @@ export const FlapTokenOriginValueSchema = z.object({
 });
 export type FlapTokenOriginValue = z.infer<typeof FlapTokenOriginValueSchema>;
 
+export const FlapOriginSearchModeSchema = z.enum(['FULL_DATASET', 'VERIFIED_HINT']);
+export type FlapOriginSearchMode = z.infer<typeof FlapOriginSearchModeSchema>;
+
 export const FlapTokenOriginSchema = z.object({
   platform: z.literal('flap'),
   token: z.string().regex(/^0x[0-9a-f]{40}$/),
@@ -5931,6 +6033,7 @@ export const FlapLifetimeMaterializationSchema = z
     datasetStartBlock: UnsignedQuantityStringSchema,
     targetBlock: UnsignedQuantityStringSchema,
     originScanId: z.string().uuid(),
+    originSearchMode: FlapOriginSearchModeSchema.default('FULL_DATASET'),
     originSearchCoverage: CoverageRatioSchema,
     origin: knowledgeValueSchema(FlapTokenOriginValueSchema),
     historyProjection: FlapLifetimeHistorySummarySchema.nullable(),
@@ -5959,6 +6062,7 @@ export const FlapLifetimeMaterializationSchema = z
     if (
       value.origin.state !== 'known' ||
       history === null ||
+      value.originSearchMode !== 'FULL_DATASET' ||
       value.originSearchCoverage !== 1 ||
       history.requestedRangeCoverage !== 1 ||
       history.fromBlock !== value.origin.value.creationTrace.blockNumber ||

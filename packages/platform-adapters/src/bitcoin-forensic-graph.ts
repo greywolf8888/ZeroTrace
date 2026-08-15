@@ -10,6 +10,7 @@ import {
   type BitcoinForensicGraphEdge,
   type BitcoinForensicGraphNode,
   type BitcoinForensicGraphReport,
+  type KnowledgeReason,
   knownValue,
   unknownValue,
   type BitcoinTransactionEntityAnalysis,
@@ -76,6 +77,8 @@ function addNode(
     reference: string;
     evidenceIds: readonly string[];
     valueSats?: string;
+    valueSatsUnknownReason?: KnowledgeReason;
+    valueSatsUnknownDetail?: string;
     label?: string;
   },
 ): string {
@@ -91,7 +94,10 @@ function addNode(
         : knownValue(input.label),
     valueSats:
       input.valueSats === undefined
-        ? unknownValue('NOT_APPLICABLE', 'This node is not a single observed UTXO value.')
+        ? unknownValue(
+            input.valueSatsUnknownReason ?? 'NOT_APPLICABLE',
+            input.valueSatsUnknownDetail ?? 'This node is not a single observed UTXO value.',
+          )
         : knownValue(input.valueSats),
     evidenceIds,
   });
@@ -277,14 +283,21 @@ export function buildBitcoinForensicGraph(
   const addOutpoint = (
     txid: string,
     vout: number,
-    valueSats: string,
+    valueSats: string | undefined,
     txEvidenceIds: readonly string[],
+    valueSatsUnknownReason?: KnowledgeReason,
+    valueSatsUnknownDetail?: string,
   ) =>
     addNode(nodes, {
       id: nodeId('outpoint', `${txid}:${vout}`),
       kind: 'OUTPOINT',
       reference: `${txid}:${vout}`,
-      valueSats,
+      ...(valueSats === undefined
+        ? {
+            ...(valueSatsUnknownReason === undefined ? {} : { valueSatsUnknownReason }),
+            ...(valueSatsUnknownDetail === undefined ? {} : { valueSatsUnknownDetail }),
+          }
+        : { valueSats }),
       evidenceIds: txEvidenceIds,
     });
   const addAddress = (address: string, txEvidenceIds: readonly string[]) =>
@@ -341,8 +354,10 @@ export function buildBitcoinForensicGraph(
       const previousNode = addOutpoint(
         inputRecord.previousTxid,
         Number(inputRecord.previousVout),
-        inputRecord.previousOutput?.valueSats ?? '0',
+        inputRecord.previousOutput?.valueSats,
         txEvidenceIds,
+        'INSUFFICIENT_DATA',
+        'Previous output value is unavailable; the graph does not substitute numeric zero.',
       );
       addEdge(edges, {
         from: previousNode,

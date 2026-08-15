@@ -2175,7 +2175,8 @@ describe('ZeroTrace API contract', () => {
       expect.arrayContaining([
         expect.objectContaining({
           platform: 'raydium-launchlab',
-          provenanceStatus: 'LICENSE_REVIEW_REQUIRED',
+          provenanceStatus: 'PROVENANCE_PENDING',
+          decoderStatus: 'PARTIAL_READ_ONLY',
         }),
       ]),
     );
@@ -4633,6 +4634,48 @@ describe('ZeroTrace API contract', () => {
     });
     expect(drilldown.statusCode, drilldown.body).toBe(200);
     expect(drilldown.json().nodes.length).toBeGreaterThan(40);
+  });
+
+  it('reconciles the FFT market through the configured keyless NodeReal operator path', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const sourceIds = ['bsc-rpc@bsc-dataseed.bnbchain.org#1', 'bsc-rpc@bsc.nodereal.io#2'];
+    configureReconciliationRuntime(runtime, {
+      sourceIds,
+      quoteReserve: 1_000n * 10n ** 18n,
+      tokenReserves: [1_000_000n * 10n ** 18n, 1_000_000n * 10n ** 18n],
+      quoteInput: 100n * 10n ** 18n,
+      tokenInput: 1_000n * 10n ** 18n,
+    });
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-reconciliation',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        quoteInputs: ['100'],
+        tokenInputs: ['1000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: 'PASS',
+      sourceIndependence: {
+        status: 'VERIFIED_INDEPENDENT',
+        independence: { state: 'known', value: true },
+        observedSources: 2,
+        operatorCount: 2,
+      },
+      sources: [
+        { sourceId: sourceIds[0], operatorId: { state: 'known', value: 'bnb-chain' } },
+        { sourceId: sourceIds[1], operatorId: { state: 'known', value: 'nodereal' } },
+      ],
+      audit: { status: 'PASS', summary: { failed: 0, inconclusive: 0 } },
+    });
   });
 
   it('keeps repeated endpoints from one documented operator inconclusive', async () => {
@@ -7462,8 +7505,14 @@ describe('ZeroTrace API contract', () => {
     const latest = vi.fn(async (chainId: string, lookupToken: string) =>
       chainId === 'eip155:56' && lookupToken === token ? report : undefined,
     );
+    const forRange = vi.fn(
+      async (chainId: string, lookupToken: string, fromBlock: string, toBlock: string) =>
+        chainId === 'eip155:56' && lookupToken === token && fromBlock === '100' && toBlock === '200'
+          ? report
+          : undefined,
+    );
     const get = vi.fn(async (id: string) => (id === reportId ? report : undefined));
-    runtime.fundingSettlementReports = { latest, get } as unknown as NonNullable<
+    runtime.fundingSettlementReports = { latest, forRange, get } as unknown as NonNullable<
       AppRuntime['fundingSettlementReports']
     >;
     const app = await createApp({ config, runtime, logger: false });
@@ -7475,6 +7524,21 @@ describe('ZeroTrace API contract', () => {
     });
     expect(latestResponse.statusCode, latestResponse.body).toBe(200);
     expect(latestResponse.json()).toEqual({ report, replayed: true });
+
+    const rangeResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/tokens/eip155:56/0x${'F'.repeat(40)}/range?fromBlock=100&toBlock=200`,
+    });
+    expect(rangeResponse.statusCode, rangeResponse.body).toBe(200);
+    expect(rangeResponse.json()).toEqual({ report, replayed: true });
+
+    const rangeMissingResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/tokens/eip155:56/0x${'F'.repeat(40)}/range?fromBlock=101&toBlock=200`,
+    });
+    expect(rangeMissingResponse.statusCode, rangeMissingResponse.body).toBe(200);
+    expect(rangeMissingResponse.json().report.state).toBe('unknown');
+    expect(rangeMissingResponse.json().report.reason).toBe('NOT_QUERIED');
 
     const exactResponse = await app.inject({
       method: 'GET',
@@ -7491,6 +7555,7 @@ describe('ZeroTrace API contract', () => {
     expect(missingResponse.json().error.code).toBe('FUNDING_SETTLEMENT_REPORT_NOT_FOUND');
 
     expect(latest).toHaveBeenCalledWith('eip155:56', token);
+    expect(forRange).toHaveBeenCalledWith('eip155:56', token, '100', '200');
     expect(get).toHaveBeenCalledWith(reportId);
   });
 

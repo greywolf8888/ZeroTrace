@@ -295,6 +295,7 @@ export interface SolanaDealerCampaignReport {
   settlementEdges: Array<{ source: string; destination: string; tokenAmountRaw: string }>;
   openingBalanceUnknownWalletIds: string[];
   pdaSuppressedOwnerIds: string[];
+  launchpadObservations?: SolanaLaunchpadObservationView[];
   campaign: { campaign: { id: string } } | null;
   alerts: ForensicCampaignAlert[];
   evidence: Array<{ id: string; kind: string; summary: string }>;
@@ -1250,7 +1251,7 @@ export interface EvidenceDrilldownResponse {
 
 export interface SolanaLaunchpadObservationView {
   id: string;
-  platform: 'PUMP' | 'PUMPSWAP';
+  platform: 'PUMP' | 'PUMPSWAP' | 'RAYDIUM_LAUNCHLAB';
   programId: string;
   deploymentId: string;
   instructionPath: string;
@@ -1738,6 +1739,7 @@ export interface FlapLifetimeMaterializationResponse {
     completedAt: string | null;
     terminalResult: {
       originScanId: string;
+      originSearchMode: 'FULL_DATASET' | 'VERIFIED_HINT';
       originSearchCoverage: number;
       origin: KnowledgeValue<{
         contractCreator: string;
@@ -2919,6 +2921,10 @@ export const api = {
   latestFundingSettlement: (chainId: string, token: string) =>
     requestJson<FundingSettlementReportResponse>(
       `/api/v1/funding-settlement/tokens/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}`,
+    ),
+  fundingSettlementRange: (chainId: string, token: string, fromBlock: string, toBlock: string) =>
+    requestJson<FundingSettlementReportResponse>(
+      `/api/v1/funding-settlement/tokens/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}/range?fromBlock=${encodeURIComponent(fromBlock)}&toBlock=${encodeURIComponent(toBlock)}`,
     ),
   fundingSettlementReport: (reportId: string) =>
     requestJson<FundingSettlementReportResponse>(

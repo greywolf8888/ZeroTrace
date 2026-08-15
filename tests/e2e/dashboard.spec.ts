@@ -59,6 +59,38 @@ test('renders capability truth and unknown values without fake market data', asy
   expect(browserErrors).toEqual([]);
 });
 
+test('keeps every primary view reachable from the narrow-screen navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  const primaryNav = page.getByRole('navigation', { name: 'Primary' });
+  for (const label of [
+    'Market Reality',
+    'Intelligence Search',
+    'Entity Intelligence',
+    'Control Rights',
+    'Control Campaigns',
+    'Claim Audit',
+    'Scenario Lab',
+    'Data Health',
+  ]) {
+    await expect(primaryNav.getByRole('button', { name: label })).toBeVisible();
+  }
+  await expect(page.getByLabel(/API status/i)).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const nav = document.querySelector<HTMLElement>('.sidebar nav');
+    return {
+      clientWidth: nav?.clientWidth ?? 0,
+      scrollWidth: nav?.scrollWidth ?? 0,
+      rootScrollWidth: document.documentElement.scrollWidth,
+      rootClientWidth: document.documentElement.clientWidth,
+    };
+  });
+  expect(layout.scrollWidth).toBeGreaterThan(layout.clientWidth);
+  expect(layout.rootScrollWidth).toBeLessThanOrEqual(layout.rootClientWidth);
+});
+
 test('replays an immutable Entity relationship hypothesis without enabling ownership merge', async ({
   page,
 }) => {
@@ -4863,7 +4895,7 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
               token: `0x${'b'.repeat(40)}`,
               originBlock: '90',
               startBlock: '95',
-              endBlock: { state: 'unknown', reason: 'NOT_QUERIED' },
+              endBlock: { state: 'known', value: '100' },
               status: 'ACTIVE',
               currentStage: 'ACCUMULATION',
               coreWalletIds: [`0x${'c'.repeat(40)}`],
@@ -5187,6 +5219,13 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
   );
   await expect(page.getByTestId('funding-settlement-report')).toContainText('Transaction Local');
   await expect(page.getByTestId('funding-settlement-report')).toContainText('First Funder');
+  await page.getByRole('tab', { name: 'Behavior', exact: true }).click();
+  await expect(page.getByTestId('control-campaign-timeline')).toBeVisible();
+  await expect(page.getByTestId('control-campaign-positions')).toHaveCount(0);
+  await expect(page.getByTestId('funding-settlement-report')).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Combined', exact: true }).click();
+  await expect(page.getByTestId('control-campaign-positions')).toBeVisible();
+  await expect(page.getByTestId('funding-settlement-report')).toBeVisible();
   await page.getByRole('button', { name: 'Export Case Bundle' }).click();
   await expect(page.getByTestId('control-campaign-export')).toContainText(`fcb_${campaignId}`);
   await expect(page.getByTestId('control-campaign-export')).toContainText('1 Evidence');

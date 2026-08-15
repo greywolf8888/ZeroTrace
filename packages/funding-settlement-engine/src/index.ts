@@ -578,6 +578,14 @@ function pathWithinSpan(
   return BigInt(path.at(-1)!.blockNumber) - BigInt(path[0]!.blockNumber) <= maxBlockSpan;
 }
 
+function sequentialTransferKey(
+  asset: EvmAssetTransferObservation['asset'],
+  amountAtomic: string,
+  source: string,
+): string {
+  return `${asset}\u0000${amountAtomic}\u0000${source}`;
+}
+
 interface SequentialPathResult {
   paths: EvmAssetTransferObservation[][];
   suppressed: Array<{
@@ -592,6 +600,17 @@ function sequentialPaths(
 ): SequentialPathResult {
   const paths: EvmAssetTransferObservation[][] = [];
   const suppressed: SequentialPathResult['suppressed'] = [];
+  // The previous traversal scanned every candidate for every path step. Candidate expansion can
+  // materialize tens of thousands of transfers, so index the only fields that can match a next
+  // hop. Lists are populated from the normalized (deterministically sorted) input and therefore
+  // preserve the old traversal order and replay hash.
+  const nextByAssetAmountSource = new Map<string, EvmAssetTransferObservation[]>();
+  for (const candidate of candidates) {
+    const key = sequentialTransferKey(candidate.asset, candidate.amountAtomic, candidate.source);
+    const list = nextByAssetAmountSource.get(key) ?? [];
+    list.push(candidate);
+    nextByAssetAmountSource.set(key, list);
+  }
   const visit = (path: EvmAssetTransferObservation[]) => {
     const current = path.at(-1)!;
     if (path.length > 1 && input.focusWalletIds.has(current.destination)) {
@@ -604,8 +623,10 @@ function sequentialPaths(
       return;
     }
     if (path.length >= input.maxHops) return;
-    for (const next of candidates) {
-      if (next.asset !== current.asset || next.amountAtomic !== current.amountAtomic) continue;
+    const nextCandidates = nextByAssetAmountSource.get(
+      sequentialTransferKey(current.asset, current.amountAtomic, current.destination),
+    );
+    for (const next of nextCandidates ?? []) {
       if (next.source !== current.destination || path.some((item) => item.id === next.id)) continue;
       if (
         BigInt(next.blockNumber) < BigInt(current.blockNumber) ||
@@ -715,6 +736,7 @@ export function deriveFundingSettlementReport(
   );
   const directFundingByDestination = new Map<string, EvmAssetTransferObservation[]>();
   const directFundingBySource = new Map<string, EvmAssetTransferObservation[]>();
+  const firstFundingByDestination = new Map<string, EvmAssetTransferObservation>();
   for (const transfer of directFunding) {
     const byDestination = directFundingByDestination.get(transfer.destination) ?? [];
     byDestination.push(transfer);
@@ -722,6 +744,10 @@ export function deriveFundingSettlementReport(
     const bySource = directFundingBySource.get(transfer.source) ?? [];
     bySource.push(transfer);
     directFundingBySource.set(transfer.source, bySource);
+    const first = firstFundingByDestination.get(transfer.destination);
+    if (first === undefined || compareTransfers(transfer, first) < 0) {
+      firstFundingByDestination.set(transfer.destination, transfer);
+    }
   }
   const fundingEdges = new Map<string, FundingEdge>();
   const settlementEdges = new Map<string, SettlementEdge>();
@@ -734,9 +760,7 @@ export function deriveFundingSettlementReport(
       suppressed.set(suppression.id, suppression);
       continue;
     }
-    const first = [...(directFundingByDestination.get(transfer.destination) ?? [])].sort(
-      compareTransfers,
-    )[0];
+    const first = firstFundingByDestination.get(transfer.destination);
     const sourceFanout = new Set(
       (directFundingBySource.get(transfer.source) ?? []).map((item) => item.destination),
     ).size;
@@ -927,6 +951,21 @@ export function deriveFundingSettlementReport(
   const patterns = new Map<string, FundingSettlementPattern>();
   const sortedFunding = [...fundingEdges.values()].sort(compareIds);
   const sortedSettlement = [...settlementEdges.values()].sort(compareIds);
+  const settlementEdgesByTransaction = new Map<string, SettlementEdge[]>();
+  for (const edge of sortedSettlement) {
+    const list = settlementEdgesByTransaction.get(edge.transactionHash) ?? [];
+    list.push(edge);
+    settlementEdgesByTransaction.set(edge.transactionHash, list);
+  }
+  const settlementEdgesForTransactions = (transactions: readonly string[]): SettlementEdge[] => {
+    const selected = new Map<string, SettlementEdge>();
+    for (const transactionHash of new Set(transactions)) {
+      for (const edge of settlementEdgesByTransaction.get(transactionHash) ?? []) {
+        selected.set(edge.id, edge);
+      }
+    }
+    return [...selected.values()].sort(compareIds);
+  };
   for (const [source] of directFundingBySource) {
     const edges = sortedFunding.filter((edge) => edge.source === source);
     const destinations = sortedUnique(edges.map((edge) => edge.destination));
@@ -945,8 +984,8 @@ export function deriveFundingSettlementReport(
     );
   }
   for (const transfers of bySweep.values()) {
-    const edges = sortedSettlement.filter((edge) =>
-      transfers.some((transfer) => transfer.transactionHash === edge.transactionHash),
+    const edges = settlementEdgesForTransactions(
+      transfers.map((transfer) => transfer.transactionHash),
     );
     if (transfers.length > 1) {
       addPattern(
@@ -962,8 +1001,8 @@ export function deriveFundingSettlementReport(
   }
   for (const transfers of convergence.values()) {
     if (new Set(transfers.map((transfer) => transfer.source)).size < 2) continue;
-    const edges = sortedSettlement.filter((edge) =>
-      transfers.some((transfer) => transfer.transactionHash === edge.transactionHash),
+    const edges = settlementEdgesForTransactions(
+      transfers.map((transfer) => transfer.transactionHash),
     );
     addPattern(
       normalized,
