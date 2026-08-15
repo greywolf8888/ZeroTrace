@@ -1,7 +1,855 @@
-# Local Validation Record — 2026-08-09
+# Local Validation Record — 2026-08-15
 
 This record captures the latest local acceptance run. It is evidence for the runnable foundation,
 not a terminal-product or production-deployment approval.
+
+## Current post-change gate ledger — 2026-08-15
+
+The latest code state passed unit `760/760` across 136 files, evaluation `1/1`, formatting, ESLint,
+TypeScript, package/API/web/worker build, production license allowlist, Compose config, CycloneDX
+SBOM generation, `npm audit --audit-level=high` (`0` vulnerabilities), and `git diff --check`.
+The latest full coverage run passed `888/888` across 144 files with file-level parallelism disabled
+for deterministic shared-store scheduling: Statements `82.31%`, Branches `75.32%`, Functions
+`91.66%`, and Lines `83.84%`.
+
+The earlier Docker multi-stage build completed for API, Web, ingest-worker, and action-capture-worker,
+and isolated Compose startup passed with healthy PostgreSQL, ClickHouse, Valkey, and MinIO
+dependencies; API `/health/live` and Web `/healthz` each returned HTTP 200. After Docker Engine
+recovered, the current `docker compose build api web` completed successfully from this source
+checkpoint. A fresh isolated Compose project `zerotrace-compose-current` then started the current
+API/Web images with PostgreSQL, ClickHouse, Valkey, NATS, and MinIO on non-conflicting host ports
+(`18082`, `4179`, `26533`, `28125`, `26380`, `24223/28223`, `29012/29013`). All dependencies
+reported healthy/running; API `/health/live`, `/health/ready`, and aggregate `/health` returned
+HTTP 200, Web `/healthz` returned HTTP 200, API reported `readOnly=true`, and live BSC and
+Blockstream providers reported `UP`. This validates the current isolated Compose runtime. The
+default root Compose host-port deployment remains an environment gate because unrelated local
+services own `5432` and `6379`; no volume was deleted or reset. The API aggregate `/health` may
+still be `DEGRADED` when optional external providers are unconfigured, which is an explicit
+availability state rather than a numeric-zero substitution.
+
+A no-volume container from the current API image was then smoke-tested against already-healthy
+disposable PostgreSQL/ClickHouse/MinIO/Valkey/NATS services. `/health/live` and `/health/ready`
+returned HTTP 200; aggregate `/health` returned HTTP 200 with `status=DEGRADED` and `readOnly=true`
+under intentionally unconfigured optional providers. This validates the current API image runtime
+boundary without converting the unavailable Compose dependency graph into a Compose acceptance pass.
+
+A separate Compose project (`zerotrace-age-current`) initialized the current Apache AGE `1.7.0`
+sidecar and immutable projection registry on a new named volume. The reusable
+`npm run graph:age:smoke -- --chain-id eip155:1` command read durable graph
+`eig_c718567bd03883990dc3dc02` from the isolated PostgreSQL store, projected it with result hash
+`dbb9430af8b8190246f8764301c7ce6f3baa67001b191d6c1dff386c7b427d28` (2 nodes, 1 edge), and an
+exact repeat returned `REPLAYED` with the same hash and counts. The API image with `AGE_URL`
+returned `/health/ready` HTTP 200 and aggregate `/health` HTTP 200 with `readOnly=true` and
+`graphProjection.status=UP`/`backend=APACHE_AGE`. The sidecar was stopped after validation; no
+pre-existing volume was deleted or reset.
+
+The latest complete real integration execution completed with `128/128` passed (`0` failed) across 8
+files against isolated disposable PostgreSQL/ClickHouse/MinIO services, including the NodeReal route
+regression. The ClickHouse large-payload repair
+was exercised after recreating the exact disposable ClickHouse container and volume. The current
+Chromium desktop/mobile dashboard E2E passed `40/40`; the Windows-wrapper rerun also
+passed `40/40` after the narrow-screen navigation change.
+
+The read-only MCP bridge focused suite passed `5/5`; its standalone strict TypeScript/ESLint checks
+passed, and a fresh isolated API process returned real `/health` JSON through `zerotrace_health` with
+`readOnly=true` and explicit degraded/unconfigured state. The Campaign workspace layer interaction
+passed on Chromium desktop/mobile (`2/2`) after adding Combined/Token/Funding/Settlement/Behavior
+tabs. A fresh real Raydium LaunchLab smoke reached finalized slot `439398289`, decoded the pinned
+`buy_exact_in` instruction, read the complete 429-byte PoolState, retained 20 Evidence nodes, and
+replayed the same result hash; later account context remains `MIN_CONTEXT_ONLY` with one-provider
+`sourceCoverage=0.5` and `historyCoverage=0.5`.
+
+The Token Live Capture heartbeat now derives provider provenance from the finalized Snapshot rather
+than the aggregate adapter ID. Its focused handler regression passed `6/6`, including durable cursor
+continuation and finalized-cursor hash replacement fail-closed behavior. A fresh process-local real
+provider run for FFT used BNB Chain + NodeReal, agreed at finalized block `116030074`, retained both
+RPC source IDs, and emitted heartbeat Evidence `ev_27af40e985384c59bfb655c9`. This does not close
+durable monitor/alert/export, outage-soak, or production acceptance gates.
+
+`RawArtifactStore` health probes are now deadline-bounded and its dedicated HTTP(S) keep-alive agent
+is closed by API/worker teardown; focused storage and full coverage regressions passed. The BNB Chain
+official endpoint registry documents NodeReal's keyless BSC endpoint. Manual read-only chain-id and
+target-block checks agreed with BNB Chain at finalized block `115956636`. A clean process-local API
+then exercised the real FFT product route with BNB Chain + NodeReal: it selected finalized block
+`116005076`, returned `200/PASS`, marked source independence `VERIFIED_INDEPENDENT` with two
+operators, produced zero failed/inconclusive audit checks, and emitted terminal Evidence
+`ev_241d928b691c0161a82c7b11`. After clean PostgreSQL recovered, the same route was executed with
+PostgreSQL Evidence storage at finalized block `116009420`; it returned `200/PASS`,
+`VERIFIED_INDEPENDENT`, two operators, zero failed/inconclusive audit checks, and terminal Evidence
+`ev_441a017ac39b96ada5f1cca6`. The API was closed and recreated, then the terminal Evidence
+drilldown replay returned HTTP 200 with 82 nodes and retained the terminal node. This closes the
+durable read-only application Evidence/restart path; archive-grade history, full dataset origin,
+long-running reorg/outage qualification, and Production Acceptance remain open.
+
+The durable Token History worker was also run against the requested FFT address with the same
+clean stores and public provider configuration. Window `115956000–115956636` completed as an
+explicit empty-range result (`cps_4c38a360f89b6059df86b9a9`, run `cpr_0fbda2c936a4bca83c824989`,
+terminal Evidence `ev_6d862f962f40d68bba51f6b0`), so no Campaign was fabricated. A separate
+real-flow window `113416949–113417950` completed with Token History
+`thd_f43b5818d37310944298a57c`, Funding/Settlement `fsr_d39fc1c0fa7ba831f03cfa4a`, Campaign
+`cc_de3cff0e52d827b72b4a2058`, and terminal Evidence `ev_46624f675aaa8380cd334df3`. Run
+`cpr_11a0afc0e7709e7b6a2a856c` was `SUCCEEDED` with capture coverage/confidence `1/1`; the
+Campaign returned `CLOSED`, `data/source/history=1/1/1`, 19 Evidence IDs, and explicit
+`UNCALIBRATED` status. After the API process was closed and recreated, Campaign and
+Funding/Settlement returned HTTP 200, the Evidence drilldown returned 88 nodes with the terminal
+present, and the backfill schedule replay returned `COMPLETED`/`SUCCEEDED` with the same result
+reference. The Campaign path is bounded and provider-backed; it is not multi-provider Campaign
+qualification, full dataset-origin proof, calibration, or Production Acceptance.
+
+The capture scheduler now accepts a strictly validated optional `CAPTURE_WORKER_SCHEDULE_ID` for
+one-schedule operator replays. The blank default preserves normal queue ordering, and invalid
+selectors fail before storage access. Focused scheduler/config tests passed `17/17`; the new
+disposable-store selector integration is included in the next full regression.
+
+After the source-pinned quorum transport and replay canonicalization changes, the actual compiled
+Token History worker completed a bounded strict multi-provider capture for FFT with
+`TOKEN_HISTORY_REQUIRE_INDEPENDENT_RPC=true` over finalized BSC blocks `113416952–113417953`.
+Schedule `cps_7ed96d129818629d8d75fa97` completed with run
+`cpr_9b853d0446eaf7c31a589686`, `SUCCEEDED` on attempt 1; the worker cycle reported one claimed
+and one successful run with no retry-waiting or terminal failures. Token History report
+`thd_83a44329e7ffbacc8b7f41cd` contains 12 observations and agrees across
+`bsc-rpc@bsc-dataseed.bnbchain.org#1` and `bsc-rpc@bsc.nodereal.io#2`, with
+`sqd:binance-mainnet` retained in the source set. The report stores source-reconciliation
+Evidence plus provider-attestation Evidence for each agreed RPC source, and the quorum fails
+closed on disagreement or partial provider failure.
+
+The resulting Campaign `cc_cb780760c06718c92ec033b8` returned HTTP 200 from the API after the
+worker completed, with result hash
+`7e866be0c772d250903550138bf8c024afc95d17bed195bdf4c76075d591ff34`, 18 Evidence IDs, both RPC
+source IDs, SQD, and the reconstruction model in its source set. `automaticOwnershipMergeAllowed`
+remained false and `calibrationStatus` remained `UNCALIBRATED`. Duplicate raw retry artifacts are
+now removed from durable replay by semantic fact identity; immutable earlier failed reports remain
+unchanged. This closes bounded strict capture-path qualification only. Operator independence,
+archive-grade/full-range history, full dataset origin, long-running reorg/outage soak, calibrated
+inference, Apache AGE projection, and Production Acceptance remain open.
+
+## Durable heartbeat provenance and fresh Campaign replay — 2026-08-15
+
+The first clean durable heartbeat exposed a real PostgreSQL capture-closure defect: a
+`PROVIDER_OBSERVATION` node cannot itself be the successful terminal Evidence. The handler now writes
+one provider observation per strict RPC source and a linked `DERIVED_FEATURE` heartbeat terminal.
+Focused handler coverage passed `6/6`, including durable-cursor continuation and fail-closed
+finalized-cursor reorg detection. Clean monitor schedule `cps_d32faa0c70d0e81e0e05affb` recovered
+from `LEASE_EXPIRED` to `SUCCEEDED` on run `cpr_28a4744752cb4c8ea6518cfc`; terminal Evidence was
+`ev_e67e423cb2f77ae4ee7b397e`, and its drilldown retained the terminal plus both BNB Chain/NodeReal
+provider observations.
+
+The compiled worker then completed a fresh clean-store FFT capture over finalized BSC blocks
+`113416949–113417951` with strict BSC quorum and SQD: schedule
+`cps_be59eeba3e2de7c08c3c9050`, run `cpr_22b096d9c7c66ddc0436201b`, Token History
+`thd_fbca531453dd3db2cf43e392`, and Campaign `cc_3c7b119ee7df0964578cb7ef`. The Campaign is
+`CLOSED` at `SETTLEMENT`, coverage/confidence are `1/1`, and the source set retains both RPC IDs,
+`sqd:binance-mainnet`, and the reconstruction model. Five durable Evidence-bound Alerts were
+materialized (`2 CRITICAL`, `3 INFO`). After API restart, `/health` returned HTTP 200/`UP`; the
+Campaign, Alerts, SSE (`1` campaign + `5` alert + `1` complete event), Case read, and Case export
+all returned HTTP 200. The Case Bundle contained `38` Evidence nodes, `17` Snapshots, and `13`
+raw artifacts. The result remains bounded and `UNCALIBRATED`; no Production Acceptance claim is
+made.
+
+The Web UI was rechecked against the same token at 1440x1000 and 390x844. Long direct-code values
+now wrap in Campaign fact rows and medium desktop widths use a readable single-column detail flow;
+mobile root `scrollWidth` equaled `clientWidth` (`390`) and the browser reported zero errors or
+warnings. Full-dataset origin, archive-grade history, forced reorg/outage soak, calibration,
+current Compose API/Web health, remote CI/CodeQL, and production approval remain open.
+
+The Raydium LaunchLab clean-room decoder now includes source-pinned Borsh instruction primitives,
+the official 429-byte `PoolState` layout, and a finalized account inspection adapter. A live
+smoke selected finalized transaction
+`4WERw7UQns3xoLyxk13Y1txCMa1fpB8C3F33rtZAhmvdjX4gCgiRc8UVkRfk6QjXBDLeqE4vy18imW1gDkWaWi4S`
+at slot `439296420` from `api.mainnet.solana.com`, decoded `sell_exact_in`, verified the
+executable program, and decoded PoolState account
+`BEEmWVXzewWvYaD52iP5TGKY5ofA89Vq3fKHV5ut4izh` with complete 429-byte field coverage and
+deterministic replay. Its latest account context was slot `439298807`, later than the requested slot,
+so the result is `MIN_CONTEXT_ONLY` with `historyCoverage=0.5`; no historical exactness or
+activation Evidence was claimed. The registry remains partial and blocked.
+
+The Solana dealer was then re-run for Pump mint
+`EbudBPrWzLXLkkc3NrteDBvYDnyb9Pw7zCua36rnpump` over finalized slots
+`439138672–439138804`. The API now splits SQD ledger-record reads into contiguous 16-slot
+windows and uses a bounded Solana response/line budget after the original 8 MiB line limit was
+hit. The durable result is report `sdc_c9a09033ac08dca34a18f228`, `PARTIAL`, with 28 candidates,
+4 holders, 29 token-flow edges, `truncated=false`, `data/source/history=1/1/0`, and result hash
+`3c3fa7b31cc1f3847461940a2e4dd087517c7a28bc14d2cca79571f1e0cd66e1`. Two opening balances remain
+Unknown, so no Campaign or history-complete claim was emitted.
+
+The Bitcoin forensic graph live smoke queried public Blockstream Esplora for confirmed transaction
+`074b02b446a3d55b26c33582f7a1b44691cd94ae87f50f430288b3213fea596a` at height `576833`. The live
+report `bfg_885d6729a6954592ddbd1a90` had 597 nodes, 699 edges, and result hash
+`d85e27298b43800ac80addc92e5180eb3a1663fc55d43ac249094f7315c93cb1`; its suppression ledger
+retained `COINJOIN_EQUAL_OUTPUT_PATTERN`, `PAYJOIN_NOT_EXCLUDABLE`, and
+`SERVICE_ATTRIBUTION_UNQUERIED`. Blockstream was `UP` with a closed circuit and 16/16 successful
+transport attempts. Frozen provider-free replay was deterministic and returned the same replay hash
+twice, while ownership merge remained disabled. The same transaction was then captured through the
+configured API as `bfg_13284efe37c91a1ce430501e` with 597 nodes, 699 edges, and result hash
+`18e2eeed0006de1ecf6ee1b2112d30dce3ae0c727c5e6bd6de1d587ec0eb4456`; its exact GET returned
+`replayed=true` with the identical stored hash. This closes a real graph/replay and durable API
+smoke, not Bitcoin Core/archive policy reconciliation or calibrated ownership inference.
+
+The FFT lifetime worker was completed against finalized target block `115956636` after the first
+full-origin attempt reached durable cursor `5000000` and failed with SQD `HTTP_ERROR`. The durable
+parent checkpoint `d2af31c5-7435-4e38-8d6d-dc84968b8d28` and history child
+`119b74d1-62d8-4607-bade-d0262e1c8219` now both have `REQUESTED_RANGE_COMPLETE`; the history
+projection contains 667 immutable 5,000-block segments, one reproduced Flap event transaction,
+and requested-range coverage `1` through target Snapshot block `115956636`.
+
+The exact deployment origin at block `112625803` was verified by origin child
+`cb35a3fd-3c0d-4c1a-8f63-7d1c84f7dc87`, so this run records
+`originSearchMode=VERIFIED_HINT`, terminal Evidence `ev_89ee9443007b3113dccb9dc1`, and metadata
+`data/source/history=1/1/1`. The full dataset-start origin search remains incomplete by design;
+the materialization therefore keeps `lifetimeCoverage=Unknown(INSUFFICIENT_DATA)`.
+
+A current no-hint retry was then started against public SQD `binance-mainnet` for the same FFT and
+target block `116040177`. It reached durable origin cursor `7000000` from dataset start, selected
+no creation, and emitted no terminal result. The parent checkpoint
+`cec99f2c-e695-42c0-84cd-cbe517d22096` and origin child
+`e1e226d0-798f-4272-b3a7-e100f46d7cf5` were stopped with explicit
+`OPERATOR_STOPPED_RATE_BUDGET` after the public Portal's worker-range continuation and rate-limit
+behavior made the unbounded local call impractical. Both checkpoints retain their state for a
+future archive-grade or self-hosted Portal run; this attempt does not change the
+`Unknown(INSUFFICIENT_DATA)` lifetime gate.
+
+During recovery, the real dense window `115125803–115130802` exceeded the 25,000-log bound in
+both the SQD reader and the platform projection. The worker now recursively splits only the
+failing bounded window, buffers range Evidence until successful completion, and merges the
+subranges under the original outer segment. The exact lifetime command was run again and
+returned the same scan ID, terminal Evidence, target Snapshot, and checkpoint state hash
+`7c1fb055b8253ad0d31a532719a0832c6f1a715dcda03b04e78a8c5aec6d77ff`.
+
+The current built API was also exercised with only the public BSC RPC configured. A real browser
+Inspect rendered the FFT contract, versioned Flap state, finalized Snapshot and Evidence; the same
+page replayed the lifetime scan and displayed `Verified hint only · full dataset incomplete` with
+667 segments and one transaction. At 390×844 the full result had no root horizontal overflow, the
+primary navigation remained intentionally scrollable, and the browser console had no errors or
+warnings. The SQD creation reader now uses at most four bounded concurrent windows and strict
+ordered merge; focused SQD coverage is `34/34`, while the public Portal serialized the measured
+requests and did not provide a throughput qualification.
+
+A fresh bounded SQD origin-worker smoke for FFT `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`
+over finalized BSC blocks `113416949–113417949` completed in two 1,000-block chunks with
+requested-range coverage `1`, terminal Evidence `ev_0fe0188838a1b04a41bf510b`, and an exact
+finalized Snapshot at block `113417949`. It correctly returned `originState=unknown` because this
+range excludes the verified deployment origin at `112625803`; the earlier immutable
+`HTTP_ERROR`/`fetch failed` attempt remains historical evidence, and this bounded smoke does not
+close the full dataset-start origin search.
+
+The current local record is therefore a truthful post-change engineering gate, not a production
+approval.
+
+## Historical full local regression gates — 2026-08-15 (before the latest post-change rerun)
+
+The final local run passed unit `726/726` across 131 files, integration `126/126` against the
+isolated PostgreSQL/ClickHouse/MinIO acceptance services, and evaluation `1/1`. Full coverage
+passed `852/852` across 139 files with Statements `81.96%`, Branches `75.12%`, Functions `91.61%`,
+and Lines `83.52%`.
+
+Formatting, ESLint, TypeScript, package/API/web/worker build, license allowlist, `npm audit`
+(`0` vulnerabilities), Compose config validation, and CycloneDX SBOM generation passed. Chromium
+desktop/mobile E2E passed `38/38`, and the Windows-wrapper E2E passed `38/38`. The focused storage
+health regression passed `3/3` after the local MinIO service recovered from a transient
+drive-offline event.
+
+This evidence establishes the runnable local foundation only. Lifetime archive history,
+independent-provider reconciliation, long-running finalized-reorg/provider-outage soak, alert
+calibration, Apache AGE projection validation, remote CI/CodeQL, operational controls, and
+Production Acceptance remain unmeasured or open.
+
+## FFT exact-binding recovery and canonicalization — 2026-08-15
+
+The original immutable report `thd_4896577ddd6379af0ca21d38` for FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over BSC blocks `113416949–113417949` retained six
+`UNAVAILABLE(EXACT_RPC_CONFLICT:ERROR)` exact bindings. The recovery implementation did not mutate
+that report. A separate recovery revision `thd_a25f1e2fcb5880a32afb4354` rebound all six
+observations, and the final canonicalized retry persisted `thd_7bfa3f58b90b39f103c6c79b` with
+12 observations, 6/6 `BOUND` bindings, `1/1/1` data/source/history coverage, final Snapshot
+`113417949`, and result hash
+`b20c94da4cf34eba0ea50a37200baa21c55ef22a2dedc401528053ac84977ecc`.
+
+The successful durable capture was schedule `cps_5518ecae25b1142b0d66bc69`, run
+`cpr_45dae874f2ae81c9223eb148`, attempt 1, with 67 Evidence IDs, terminal Evidence
+`ev_da83dc994e01ba0d6465f774`, and coverage/confidence `1/1`. Funding/Settlement
+`fsr_09af3097b288d14aaecc465e` was `COMPLETE` with `BOUNDED_RANGE` scope, 5 funding edges and
+5 settlement edges. Campaign `cc_a85a9c7caaa55529d673711c` completed with result reference
+`control-campaign:cc_a85a9c7caaa55529d673711c#sha256=dc8f0b94884ff786186f1ea44402cd509ba842033077da17d81a99c3cab81037`.
+
+The first retry used mixed-case schedule input and exposed a normalization defect: the parameter
+schema accepted the address, but the lowercase-only Funding/Settlement range lookup received it
+unchanged. The handler now lowercases the token once and reuses that canonical value for target
+validation, Token History, Funding/Settlement, historical expansion, and live-capture evidence.
+The uppercase run and its failure remain in the append-only scheduler history; only the subsequent
+canonicalized run is counted as successful evidence.
+
+This closes a bounded exact-binding recovery path. It does not close lifetime archive history,
+independent-provider reconciliation, long-running monitor/reorg/outage acceptance, calibration,
+Apache AGE projection, remote CI/CodeQL, or Production Acceptance.
+
+## Real monitor, alert replay, and provider outage recovery — 2026-08-15
+
+The durable Token Live Capture schedule `cps_9b057eed93189e616ddcc60e` processed finalized BSC
+window `113417951–113418950` for FFT in run `cpr_5321d964baedf8904e2d13de`. Attempt 1 completed
+successfully with `coverage=1`, `confidence=1`, 52 Evidence IDs, terminal Evidence
+`ev_4fa800d834664fccaec8e941`, and Campaign `cc_59540f3585b8d7e09d9f87a` with result hash
+`e872dcd7c9dac7904445cdd6899814c536ab8f18014e30b06b52edc5b60a7a3d`. Token History
+`thd_ad67bc13be0d184f1f461ec2` had 7 observations and `data/source/history=1/1/1`.
+
+The worker persisted three alerts with IDs `fca_44490a0818f5fbd5a949ac91`,
+`fca_4ba0d390aaaf052611d6712c`, and `fca_aecc3d73ec82bb31bc89baa9`; the PostgreSQL-backed API
+returned HTTP 200 for the monitor and alert reads, while Campaign SSE returned HTTP 200 and
+`text/event-stream` containing `campaign`, `alert`, and `complete` events. A second worker
+invocation immediately afterward claimed 0 runs because the next interval occurrence was not due.
+
+The outage drill schedule `cps_7c3a1462ba2876ee41a89819` produced run
+`cpr_bd0953d185d5adbc0930b452`. With an unavailable, policy-allowed RPC hostname, attempt 1 was
+durably recorded as `RETRY_WAIT` with `HTTP_ERROR`, detail `Provider hostname could not be
+resolved`, and `sourceRetryable=true`. After restoring the public BSC RPC list, attempt 2 succeeded
+with empty-range report `thd_f4859de9de1fef13312f7cd1`, terminal Evidence
+`ev_9f1e810ae93fd20ccb7c3d58`, result hash
+`ad03ae664fd4125afe4ae4fd5bb78315396693f3cd0d962a7639a04c61887842`, and `coverage/confidence=1/1`.
+
+This validates bounded finalized monitoring, evidence-bound alert persistence, provider-free SSE
+replay, no duplicate occurrence at the current interval, and retryable provider outage recovery.
+Multi-day soak, forced reorg, independent-provider reconciliation, alert calibration, and production
+approval remain unmeasured.
+
+## Real Solana dealer capture and Evidence-provenance repair — 2026-08-15
+
+The API was run against the public finalized Solana RPC and SQD with Pump mint
+`EbudBPrWzLXLkkc3NrteDBvYDnyb9Pw7zCua36rnpump`, from/to slot `439138804`, and
+`maxTransactions=10`. The first real request exposed that the SQD range summary was classified as
+`PROVIDER_OBSERVATION` while deriving from block observations, and that the source IDs were not
+included when its Evidence ID was generated. The durable Evidence repository correctly rejected
+both provenance inconsistencies. The repair changed the summary to `DERIVED_FEATURE`, included its
+block Evidence IDs in the hash input, and changed the unit default writer to use `EvidenceLedger`.
+
+The repaired request returned HTTP 200 with `durable=true`, report
+`sdc_9e7a7727e8c761f65310b836`, `PARTIAL` status, `candidateCount=1`, 2 holders, 1 token-flow
+edge, 31 Evidence IDs, and result hash
+`ae1d86eab71b348b65256ead1b423757544a9581ffa73df5210a76b2f5325c79`. Coverage was
+`data/source/history=1/1/0`; the single finalized Pump buy does not prove lifetime opening balances,
+SOL funding, or settlement, so no Campaign was materialized. Provider-free GET returned HTTP 200,
+`replayed=true`, and the same hash.
+
+This validates the durable Solana token-flow/holder boundary and its Evidence graph against a real
+provider. Archive history, multi-window dealer reconstruction, independent RPC reconciliation,
+PDA/Squads recursion, and production approval remain open.
+
+## Latest true mid-range interruption and recovery — 2026-08-14
+
+The real FFT token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` was scheduled over BSC blocks
+`113417951–113419950` as `cps_03775f9300ce9e8509dc1941`, run
+`cpr_df9c9a00ddb824da2b7d5e8c`. With `TOKEN_HISTORY_CHECKPOINT_BATCH_SIZE=1`, attempt 1 was
+terminated after the durable ingestion run `ce159bfa-7ded-4a1f-8860-246c1d0fa993` reached
+`next_block=113418951`, inside the requested range. After lease expiration and the configured
+retry delay, attempt 2 reused the durable prefix and advanced the same ingestion run to
+`next_block=113419951` (`REQUESTED_RANGE_COMPLETE`), so the already committed prefix was not
+replayed. The attempt ledger is `LEASE_EXPIRED` → `RETRYABLE_FAILURE` → `TERMINAL_FAILURE`.
+
+The resulting Token History report `thd_46beba0e5be5e4603e3e4184` is `COMPLETE`, with
+`historyCoverage=1`, `dataCoverage=1`, `sourceCoverage=1`, final Snapshot block `113419950`,
+170 observations, three range Evidence IDs, and result hash
+`9b1ec586c1aa949acee2bf12295869fe9293cd63d0ddb736814adf798d6b8443`. Public BSC telemetry
+recorded seven exact-RPC errors. Funding/Campaign therefore returned `NO_CANDIDATE_WALLETS`
+on attempts 2 and 3 and the run ended `FAILED_TERMINAL`; no Campaign, confidence, or numeric
+substitute was created. This is positive evidence for mid-range ingestion checkpoint recovery,
+but negative evidence for end-to-end Campaign continuation until an archive-capable independent
+RPC path is qualified.
+
+As a control comparison, adjacent BSC blocks `113416949–113417449` completed without
+interruption as `cpr_5849112c25ffdda4660a564b`. Token History
+`thd_c9d8f0f331a95be0be4e1c2b` had 7 observations and the durable Campaign was
+`cc_0a80a2ac4ef4863c0e715998`, with 46 capture Evidence IDs and result reference
+`control-campaign:cc_0a80a2ac4ef4863c0e715998#sha256=952a44b75c8e47c185223ff0fcf8eff23dcd082b6a7ccf3ccffc75759a04021f`.
+The comparison shows that the target data path can complete a Campaign; the interrupted
+1,001-block run `cpr_332e7e49388f94e9856e276b` is retained separately because its resumed
+Campaign stage encountered exact-RPC errors and ended `NO_CANDIDATE_WALLETS`.
+
+## Earlier post-archive code and UI quality gates — 2026-08-14
+
+- The post-fix repository gates passed: unit `725/725`, integration `126/126` against the configured
+  PostgreSQL/ClickHouse/MinIO stores, evaluation `1/1`, and coverage `851/851` with Statements
+  `82.00%`, Branches `75.12%`, Functions `91.63%`, and Lines `83.55%`.
+- Formatting, ESLint, TypeScript typecheck, package/API/web/worker build, license allowlist,
+  `npm audit --audit-level=high` (`0` vulnerabilities), CycloneDX SBOM, and Compose validation all
+  passed. Full Chromium desktop/mobile E2E passed `38/38`; Windows-wrapper E2E passed `38/38`.
+- The web status-state styling regression remained green across both E2E projects. Stale,
+  provider-down, unavailable, not-queried, not-observed, not-measured, human-review, and
+  calibration-required states retain distinct presentation paths; no state is coerced to numeric
+  zero by the UI changes.
+- The local `.env` keeps the Alchemy key entry blank after removing the exposed credential-shaped
+  value. Public BSC, SQD, Solana, and Blockstream endpoints remain keyless development fallbacks;
+  operator secrets must be injected outside the repository.
+
+## Latest exact-range runtime, replay, and UI validation — 2026-08-14
+
+The latest real read-only BSC run used FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over finalized blocks
+`113416950–113417450`. Schedule `cps_1bd8262ec358341c60c85f43` and run
+`cpr_69bcd768ac5a11f79eac968e` completed in one attempt in approximately 43 seconds after graph
+traversal was indexed. Ingestion `9336ae48-14df-41ec-8a5d-eb5e9eeac576` reached
+`REQUESTED_RANGE_COMPLETE` with `next_block=113417451`. The durable reports were Token History
+`thd_aa568929752934249b18c3a0`, Funding/Settlement `fsr_69562d9d17d47902a454afa8`, and Campaign
+`cc_7c24b67a08160c98321e311f`; the capture retained 46 Evidence IDs, requested-range coverage
+`1`, and final Snapshot block `113417450`. Its result reference was
+`control-campaign:cc_7c24b67a08160c98321e311f#sha256=0e92b80806db10145adb33fa9793979e93687de4d0686cd658138525e392efee`.
+
+The Token History report had 7 observations. The Funding/Settlement report was `COMPLETE` with
+`BOUNDED_RANGE` scope, 1 funding edge, 2 settlement edges, and 3 direct report Evidence IDs.
+The Campaign API replay returned the same result hash without contacting providers. The new exact
+range API returned this report for `113416950–113417450`; the adjacent non-matching range returned
+`Unknown(NOT_QUERIED)`, proving that the UI cannot silently attach the latest unrelated token
+report. The durable export returned 18 Evidence closures, 8 Snapshots, and 7 raw-artifact
+references; manifest hash was
+`1fd5549f109a4a1dadd56536a22d289a3eca18d6a021b55920dd84b800c870f4`, and offline
+`verifyForensicCaseBundle` returned `valid=true`. Provider-free alert replay returned 2 alerts.
+
+The real API-backed Playwright audit selected Campaign `cc_7c24b67a08160c98321e311f`, showed the
+matching Funding/Settlement block range, exported and replayed the stored bundle, and resized to
+390px without horizontal overflow. The older performance run `cpr_3de02146b1ee64cb1d09f498` was
+explicitly terminated after its O(n²) report-stage stall and remains terminal
+`CAPTURE_LEASE_EXPIRED`; it is not counted as success. After indexing sequential paths, funding
+roots, settlement edges, candidate observations, and transaction facts, the fresh run completed
+without retry or lease expiry.
+
+The current full gates passed unit `725/725`, integration `126/126`, evaluation `1/1`, coverage
+`851/851` at Statements `82.00%`, Branches `75.12%`, Functions `91.63%`, Lines `83.55%`, plus
+format, ESLint, typecheck, build, license, audit (`0` vulnerabilities), Compose validation, SBOM,
+Chromium desktop/mobile E2E `38/38`, and Windows-wrapper E2E `38/38`.
+
+This remains bounded real-provider validation. Lifetime archive history, mid-range process
+continuation, independent-provider qualification, calibrated control, Apache AGE projection,
+remote CI/CodeQL, and Production Acceptance are still not measured.
+
+## Durable child-report interruption and retry idempotency — 2026-08-14
+
+Run `cpr_adc436a4f50877a19a786f3b` covered BSC blocks `113418001–113420000` for FFT
+`0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`. The worker was terminated after PostgreSQL showed
+Token History `thd_994819fe2317a1637a240b80` (`COMPLETE`) and Funding/Settlement
+`fsr_dab67da14cc383ce80f4ff4e` (`COMPLETE`) while the capture remained `LEASED`. Its durable
+ingestion/report work was not deleted or rewritten.
+
+After lease expiry, attempt 2 resumed under a new worker owner and finished `SUCCEEDED`. It
+materialized Campaign `cc_5181df03a3ab8d47432d33ff`, terminal Evidence
+`ev_3774c1ed3a4106980bb79724`, 75 capture Evidence IDs, coverage/confidence `1/1`, and result
+reference
+`control-campaign:cc_5181df03a3ab8d47432d33ff#sha256=56db92f5f0d255742e6619c74eb84dc93603874eea61dd2d50011f43ab8a60c2`.
+The attempt ledger is `LEASE_EXPIRED` → `SUCCEEDED`; a PostgreSQL closure query found all 75
+capture Evidence IDs present. The retry did not emit the prior same-ID
+`FUNDING_SETTLEMENT_REPORT_CONFLICT`, demonstrating provider-free reuse of the durable exact-range
+child report.
+
+This is an interruption after the ingestion checkpoint completed. The separate non-empty
+5,000-block interruption reached a mid-range cursor but retained `UNKNOWN` exact-RPC observations
+and ultimately failed; it remains negative evidence, not a production pass. True mid-range
+checkpoint continuation, independent provider qualification, lifetime completeness, calibration,
+Apache AGE, remote CI/CodeQL, and Production Acceptance remain open.
+
+## Sparse Token History and deployment-origin continuation — 2026-08-14
+
+- The sparse-history hardening passed focused SQD/Token History tests `37/37`, full unit tests
+  `714/714` across 131 files, integration tests `125/125`, and the model evaluation `1/1`.
+  Formatting, ESLint, TypeScript, package/API/web/worker builds, license allowlist, high-severity
+  audit (`0` vulnerabilities), SBOM, Compose validation, and `git diff --check` passed.
+- Coverage ran with isolated PostgreSQL/ClickHouse/MinIO services configured and passed `839/839`:
+  Statements `81.85%`, Branches `75.00%`, Functions `91.61%`, Lines `83.39%`.
+  Chromium desktop/mobile E2E passed `38/38`; the Windows wrapper repeated `38/38`.
+- The ignored local `.env` retains the supplied ETH Alchemy URL template with its local API-key entry
+  intentionally blank, plus keyless BSC, SQD, Solana, and Blockstream endpoints. The exposed key was
+  removed from the workspace; operator secrets must be injected outside the repository. A fresh
+  in-process API health probe returned HTTP 200/`UP` for all four providers; storage remained
+  truthfully `EPHEMERAL` and historical ingestion storage `UNCONFIGURED` because the probe
+  intentionally did not attach durable-store credentials.
+- The code now materializes sparse Transfer blocks while recording a dedicated requested-range
+  coverage Evidence/Snapshot, anchors an event-free requested end through exact RPC, computes
+  coverage from the trusted cursor, and windows SQD contract-creation traces with aggregate coverage
+  and cross-window continuity checks. The web status system now styles stale/provider-down/
+  unavailable/not-queried/not-observed distinctly; the undefined `--border-strong` references were
+  replaced with the defined theme border.
+- A public-provider durable run for FFT
+  `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over BSC block `112625803` completed as `SUCCEEDED`:
+  schedule `cps_906b2fc11a65357355db9745`, run `cpr_67fe3afcb2449ebc5339bede`, capture terminal
+  Evidence `ev_7d0a1735aefcdba868001b65`, and result reference
+  `control-campaign:cc_cbc5882e38541d136e76b491#sha256=02c8c176041b2ad8e4b977de97dbfbbfa80842b486e1200f652d82c906d10854`.
+  Token History `thd_4ae3e83cf53b1f0997578900` resolved the real SQD deployment origin at block
+  `112625803` and transaction `0x708256a1ad8c4f4ab8aefd021b4676fda9579eb61846f4957895fc8432467a63`,
+  with creator `0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0`, `1/1/1` requested-range coverage, and
+  11/11 History Evidence closure. Durable rereads preserved the History/Campaign hashes; the
+  second worker run claimed `0` runs.
+- The durable run added 9 BSC Raw Facts to the existing ClickHouse instance (total `10,038` for
+  `eip155:56`) and stored 15 capture Evidence nodes. The child Campaign remains `UNCALIBRATED`, and
+  capture coverage/confidence remains measured `0/0` because Funding/Settlement is
+  `TRANSACTION_LOCAL` with `historyCoverage=0`; no numeric-zero substitution or production claim is
+  made.
+- Apache AGE was intentionally not included in the passing integration environment because the
+  acceptance PostgreSQL service lacks the extension. A controlled run with `TEST_AGE_URL` confirmed
+  the health state is `DOWN`; Apache AGE projection validation remains `NOT_MEASURED`, not passed.
+- Archive-scale history, interrupted/resumed-range drills, independent provider reconciliation,
+  long-running monitor/reorg/outage delivery, calibration, remote CI/CodeQL, operational controls,
+  and production migration approval remain open.
+
+The durable Token Live Capture path was then exercised on the same FFT token. Monitor
+`cps_5e137cd0af1f29410db64a0b` first exposed that an empty finalized range incorrectly retried as
+`NO_CANDIDATE_WALLETS`; after correcting the worker's derived-Evidence provenance, interval run
+`cpr_f2fa7a8064fc783fb60847fd` succeeded at BSC block `115850017`. Its result reference is
+`token-history-empty-range:thd_652adec84b244b402f950791#sha256=b189b3715906d41949823ede5da86955887f5e2924146212135700d23c7177ae`,
+with terminal derived Evidence, exact Snapshot, `coverage=1`, `confidence=1`, and no Campaign
+inference. The earlier failed attempts remain durable audit history; they were not rewritten.
+The following occurrence `cpr_557ad3ef8441a7f8da0a3daf` then succeeded at block `115850018`, proving
+the monitor cursor advanced across consecutive empty finalized ranges. The provider-free monitor
+read route returned HTTP 200 with `replayed=true` and all three durable run states.
+
+The real durable export route
+`GET /api/v1/forensics/cases/fcb_cc_cbc5882e38541d136e76b491/export` returned HTTP 200 with
+`content-disposition: attachment`, `replayed=true`, Forensic Case Bundle result hash
+`671c4479658ee485b0c1dc1fc4e57e27b8a5025ecd0ab65f3aae0b9cc1232a46`, six Evidence closure nodes,
+three raw-artifact references, and offline `verifyForensicCaseBundle` returned `valid=true`.
+
+## BSC archive-range decomposition and durable replay closure — 2026-08-14
+
+- The real FFT token `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` was replayed over the requested
+  `113395944–113495943` BSC range through public SQD plus the read-only BSC RPC anchor path. The
+  single 100,000-block attempt and several coarse retry attempts are retained as failed or
+  `ARCHIVE_RANGE_DECOMPOSED` scheduler history; none was promoted to success.
+- Deterministic successful ranges were `113395944–113405943`, a fully decomposed
+  `113405944–113465943`, `113465944–113475943`, `113475944–113485943`, and
+  `113485944–113495943`. The PostgreSQL interval union was exactly `100000/100000` blocks with no
+  gap. All `62` successful runs had `coverage=1`; the remaining paused schedules are superseded
+  historical definitions and do not represent missing blocks.
+- Provider-free durable verification resolved `26` Control Campaign result references and `36`
+  empty-range Token History references. Every result-reference SHA-256 matched the stored report
+  hash; every successful capture terminal Evidence ID was in its Evidence closure; no closure
+  Evidence ID was missing. A subsequent worker invocation claimed `0` runs.
+- A separate real retry drill on overlapping dense range `113416444–113416944` recorded attempt 1
+  of `cpr_dcb3eec655e2e32f6801eb74` as retryable `CLICKHOUSE_UNAVAILABLE` after ClickHouse rejected
+  the oversized `factIds` form field. After internal 1,000-key pagination, attempt 2 succeeded
+  with `coverage=1`; result reference
+  `control-campaign:cc_5f51a94312cba3ee3ca5eb1f#sha256=c084afb0647a49a092e375a633b89722f764c57ce48094146955a8057b232498`
+  matched the stored report hash, with `11,759` closure Evidence IDs and zero missing Evidence.
+- A real process-level interruption drill used one finalized empty block outside the archive union:
+  schedule `cps_f10b34631f6b21e35acb3c19`, run `cpr_291f1385974bea974361c984`, and report
+  `thd_41f41c8eb868f68ce1e74e40` at block `115887000`. The first worker was terminated after the
+  run became `LEASED`; after lease expiry, a new worker persisted `RETRY_WAIT`, and the next
+  worker completed attempt 2 as `SUCCEEDED` with `coverage=1`. Attempt outcomes are
+  `LEASE_EXPIRED` → `SUCCEEDED`; the result reference SHA matched the durable report, with two
+  range Evidence IDs plus the terminal capture Evidence. This proves lease recovery for a bounded
+  interruption, not mid-range checkpoint continuation.
+- A second overlapping interruption drill `cpr_c550d6bcbdb942a3f6ea0086` retained the same
+  `LEASE_EXPIRED` attempt-1 history but reached terminal `INGESTION_FAILED` on attempt 2; it is
+  recorded as an unsuccessful provider/ingestion recovery, not a success.
+- The first non-empty mid-range recovery attempt `cpr_5de47121ea35743df1e35c3d` reached durable
+  `next_block=113416946` but failed recovery with `TOKEN_HISTORY_REPLAY_UNAVAILABLE` because
+  shared Raw Facts included other-token generic logs and same-token candidate-expansion logs.
+  Durable replay now requires both the requested Token address and generic `evm-log:*` Evidence
+  provenance; the focused regression suite passed `21/21`. The failed scheduler history remains
+  immutable and is not promoted to a pass.
+- A subsequent real bounded retry `cpr_2a2de9522e889894d2eb20df` completed attempt 2 as
+  `SUCCEEDED` with `coverage=1`; attempt 1 was retryable `HTTP_ERROR`. Its result reference was
+  `control-campaign:cc_713a3d1617f8aa807e92784b#sha256=f4881fa607242bccb3acdce70dd049903a352ae0e57a48ccf654b9d2b02a0f40`,
+  and PostgreSQL verified `12,000/12,000` capture Evidence closure with zero missing nodes. The
+  ingestion cursor completed before the first attempt's later failure, so mid-range process
+  continuation remains unmeasured.
+- A live two-endpoint BSC anchor probe reached `AGREEMENT` at finalized block `115888028` with
+  hash `0xfbbb8e45c57472d08c9aeb759498881062a531035cea7acbf8a9c262e6860750`, `2/2` observations,
+  four in-process Evidence nodes, and two Snapshots. The endpoints are both BNB Chain-operated,
+  so `sourceIndependence` remains `Unknown(NOT_QUERIED)`.
+- Long-running leases now renew through the bound Postgres repository method. ClickHouse range reads
+  now page lightweight `fact_id` keys before fetching payload-bearing facts, so the deterministic
+  sort does not carry large payload strings through `LIMIT BY`. A live post-restart range read
+  returned `96` facts from the durable store, confirming the memory repair without data deletion.
+- The initial 100,000-block and coarse-range failures remain explicit evidence of provider/store
+  capacity boundaries. This is bounded archive-range acceptance, not lifetime token history,
+  independent-provider reconciliation, archive-provider qualification, mid-range checkpoint
+  continuation, monitoring/alerts, calibration, or production approval.
+
+## Candidate-scoped SQD transaction/trace expansion — 2026-08-14
+
+The Funding/Settlement worker was hardened to expand only selected Token History focus wallets over
+the requested finalized SQD range. It requests parent transactions and EVM call traces, validates
+the exact RPC block Snapshot, parent transaction index, trace identity, successful status, address,
+error, and canonical hexadecimal value before creating a native transfer observation. Candidate
+transaction and trace Evidence are now hydrated into the capture terminal closure even when the
+bounded query finds no non-zero native value. This keeps negative observations replayable and avoids
+orphan Raw Facts.
+
+- Focused Funding/Settlement, semantic-worker, and candidate-expansion tests passed `12/12`, and repository typecheck
+  passed after the closure change.
+- A fresh public-provider BSC run for
+  `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over blocks `113485953–113495946` succeeded as
+  schedule `cps_f9369c250ad4be063213cfab`, run `cpr_6710455c95c6bb50d4496781`, with terminal
+  Evidence `ev_42bedc578949ec61f9fc1e06`, result reference
+  `control-campaign:cc_f332d26ff55fb5d3bcdef6d7#sha256=16a90771799f0810a536e646c406ea00228755d55ac0aea45560413b258c7b36`,
+  and 66 Evidence IDs in the durable capture closure. An earlier adjacent real range received a
+  retryable SQD HTTP 529 and was later completed by the scheduler's durable retry.
+- Token History report `thd_9c76e760ce0bdd7c03e3e206` completed with 12 observations, requested
+  range coverage `1/1/1`, and result hash
+  `a5595b0f236562b96b4ecee6a1d9c6f2a0116815c2144196cd7940932774a0fb`. The current capture closure
+  contains 8 candidate transaction and 8 candidate trace Evidence nodes.
+- All 8 observed candidate trace calls had `action.value=0x0`; no native transfer was derived.
+  Funding/Settlement report `fsr_000a27003a2d60c704482d06` remains `PARTIAL`,
+  `TRANSACTION_LOCAL`, `historyCoverage=0`, with two exact-token funding edges and one exact-token
+  settlement edge. Its result hash is
+  `e62447e55eb2f458bdc6743c825fc54579938d9feb0c789edb4b76b578c4a022`, and the API replay endpoint
+  returned `replayed=true` with that same hash. This is a bounded zero-value observation, not proof
+  that no historical native funding exists.
+
+This validates bounded candidate trace materialization and closure integrity. A non-zero native
+transfer fixture, archive-scale history, independent provider reconciliation, long-running
+monitor/reorg/outage, alerts, calibration, remote CI/CodeQL, and production approval remain open.
+
+## Candidate-scoped ERC-20 Transfer-log expansion and coverage continuation — 2026-08-14
+
+The candidate expansion now queries finalized SQD Transfer logs using padded indexed wallet topics
+and dynamically records the emitting asset address. Log Evidence is accepted without requiring the
+parent transaction to be present in the same SQD response; when the parent is present, its hash and
+successful status are cross-checked. Exact and archival observations are deduplicated by chain
+event identity, and the archival expansion's bounded coverage is retained in Funding/Settlement.
+
+- Focused candidate/worker/provider tests passed `16/16`; the full repository passed unit `714/714`,
+  integration `125/125`, eval `1/1`, and coverage `839/839`.
+- New public BSC run `cpr_b9da7041ca060623003a3c6f` (schedule
+  `cps_69a137c4774deb026b738447`) covered blocks `113485956–113495943`, succeeded, retained
+  terminal Evidence `ev_ebeb97a593fc4b735ee489ca`, and closed `88` Evidence IDs. The closure has
+  `40` LOG (`28` SQD candidate + `12` exact RPC), `8` TRACE, and `13` TRANSACTION nodes.
+- Token History `thd_0ba39221dd3551102241e538` is `COMPLETE` with 12 observations and
+  `dataCoverage/sourceCoverage/historyCoverage=1/1/1`, result hash
+  `12581e8c35125a9a18a905072ec9cd879b2b012667a8f3e7130f95ecf33907af`.
+- Funding/Settlement `fsr_434fcce05ac69af9f1a03c41` is `COMPLETE` with `BOUNDED_RANGE`,
+  `historyCoverage=1`, 8 funding edges, 1 settlement edge, and result hash
+  `1ada31d7ba8881f9db5fc663b6602a127fc7c688274942129dd6ebb768c78eaf`. Its exact report API
+  replay returned HTTP 200 and `replayed=true` with the same hash.
+
+This remains bounded requested-range evidence. It does not establish lifetime token history,
+independent-provider agreement, calibrated control, or production acceptance.
+
+## Local acceptance hardening and durable worker continuation — 2026-08-14
+
+- The final local gate passed formatting, ESLint, TypeScript typecheck, package/API/web/worker
+  builds, production license allowlist, `npm audit --audit-level=high` with zero vulnerabilities,
+  SBOM generation, and `git diff --check`.
+- `npm run test:unit` passed `703/703` tests across `130` files; `npm run test:integration` passed
+  `125/125` against fresh isolated PostgreSQL, ClickHouse, MinIO, and Apache AGE-compatible test
+  services; `npm run test:evals` passed `1/1`.
+- `npm run test:coverage` passed `828/828` tests with Statements `81.85%`, Branches `75.03%`,
+  Functions `91.62%`, and Lines `83.39%`, meeting configured global thresholds.
+- Rebuilt Playwright Chromium desktop/mobile E2E passed `38/38`; the Windows wrapper repeated
+  `38/38`. The read-only health check returned `live=UP`, `ready=DEGRADED`, `readOnly=true` with
+  four provider declarations; degraded readiness was expected because the temporary host API had
+  no durable store credentials.
+- A fresh PostgreSQL/ClickHouse/MinIO run for BSC FFT
+  `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, blocks `113485950–113495949`, completed as
+  `SUCCEEDED` in capture run `cpr_1ceade71d6c5cfd3b9943e98`. It persisted 10,029 Raw Facts,
+  10,047 Evidence nodes, Action Semantics `5`, Token History `1`, Funding/Settlement `1`, Control
+  Campaign `1`, and `4` alerts. Terminal Evidence `ev_313145f71268bbc8df65cfc5` had a `49/49`
+  result Evidence closure, all raw facts/Evidence used canonical `eip155:56`, and the second worker
+  invocation claimed `0` runs.
+- The first memory-limited durable attempt remains recorded as a failed historical attempt. The
+  successful continuation followed cross-block ClickHouse batching, terminal-Evidence persistence,
+  exact Snapshot identity, freshness/source-set, and EVM chain-identity fixes. The bounded durable
+  result is not production approval: capture `coverage=0`/`confidence=0` remain measured values for
+  partial historical funding/settlement scope, while archive-scale history, interrupted-run replay,
+  independent reconciliation, calibration, long-running monitoring, alerts/export operations, and
+  production migration approval remain open.
+
+## Token History Discovery Phase 1 validation — 2026-08-14
+
+This checkpoint covers the implemented read-only Phase 1 path. It is not production qualification.
+
+- `npm run format:check`, full ESLint, full TypeScript typecheck, package/worker builds, the
+  production license allowlist, `npm audit --omit=dev --audit-level=high`, and
+  `docker compose config --quiet` passed; the audit reported zero high-severity production
+  vulnerabilities;
+- `npm run test:unit` passed `610/610` tests across `109` files;
+- the parallel `npm run test:integration` invocation had one API-contract setup timeout; a bounded
+  serial Vitest replay passed `81/81` enabled cases, with `38` explicit optional-store/provider skips;
+  `npm run test:evals` passed `1/1` structural Entity evaluation;
+- focused Phase 1 tests passed `65/65` cases across SQD transport, capability declarations, token
+  history, immutable report storage, ClickHouse range pagination, and worker configuration;
+- public read-only endpoint probes returned `SQD=200`, `BSC eth_chainId=0x38`,
+  `Solana getHealth=ok`, and `Blockstream Esplora tip height=962307`. These are reachability and
+  protocol-shape smoke observations, not semantic history acceptance;
+- the current process had no `ALCHEMY_API_KEY`, `ETH_RPC_URL`, `BSC_RPC_URL`, `SQD_PORTAL_URL`,
+  `SOLANA_RPC_URL`, or `BTC_ESPLORA_URL` variables. The key was not written to the repository or
+  printed. Therefore Ethereum exact-RPC token history is `NOT_MEASURED` in this checkpoint;
+- the worker now fails closed unless the token-history discovery report and Action Semantics
+  PostgreSQL migrations are healthy. A fresh durable token-history range, exact-RPC binding on
+  Ethereum, archive-scale backfill, provider reconciliation, live monitoring, alerts, export,
+  calibration, and remote CI/CodeQL remain open acceptance gates.
+- a real BSC worker invocation against the existing PostgreSQL/ClickHouse/MinIO stack reached the
+  durable preflight but failed closed with ClickHouse error `241 MEMORY_LIMIT_EXCEEDED` under the
+  existing roughly `800 MiB` server limit; it emitted no report and no result was promoted. A
+  separate clean-store Compose attempt was stopped after BuildKit wedged the Docker Desktop Linux
+  backend, so clean-store token-history acceptance remains `NOT_MEASURED` rather than `PASS`.
+- a fresh bounded live smoke through the actual Token History Discovery composition used FFT
+  `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over BSC blocks `113485950–113495949`. It produced
+  12 finalized observations, 5 exact-RPC-and-Action-Semantics-bound transactions, a terminal
+  `REQUESTED_RANGE_COMPLETE` checkpoint, `1/1/1` data/source/history coverage, 10,029 Raw Facts,
+  and 10,029 Evidence records. SQD completed in 3 requests with 0 retries; exact BSC RPC was
+  `UP`, `CLOSED`, and 12/12 successful attempts. The report replay returned the same result hash
+  without providers (`thd_5ef5001212f0b4c8409bfc7c`, result hash
+  `d8d35b8a10317c3de5756c524db296a9b609cd535e632706990823f30deaede9`). This smoke used
+  in-memory stores only, so it is not durable production
+  acceptance; deployment origin correctly remained `Unknown/NOT_QUERIED` because the requested
+  range does not prove token lifetime.
+- the real ZeroTrace UI path `Trace → Inspect` against the same FFT address returned a live BSC
+  Snapshot, contract classification, versioned Flap state, and Evidence. At 390px, long addresses
+  and atomic values now wrap inside `.fact-row`; the regression ran on Chromium desktop and Pixel
+  7 (`2/2`). The full serial browser suite passed `38/38`.
+
+## Funding and Settlement Phase 2 validation — 2026-08-14
+
+This checkpoint records the bounded evidence layer and real public-chain smokes. It is not durable
+production acceptance.
+
+- The engine passed `7/7` focused tests, including transaction/receipt identity rejection,
+  failed/provisional `UNKNOWN` status, service-boundary suppression, bounded hop limits, and
+  endpoint-convergence suppression. Storage passed `3/3`; API integration passed `83/83`; the
+  Campaign plus Funding/Settlement UI route passed Chromium desktop and Pixel 7 `2/2`.
+- BSC FFT `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777`, blocks `113485950–113495949`, produced
+  report `fsr_d53d644a6be1844432e03b65`, result hash
+  `dc4c244a395b634fc07bde3f00f8b8bc726f8e3fde83d06fe84c805c84795e1c`, status `PARTIAL`, scope
+  `TRANSACTION_LOCAL`, coverage `1/1/0`, two funding edges, one sell-proceeds settlement edge,
+  and provider-free same-hash replay. Historical BSC code probes returned `missing trie node`;
+  four exact transaction senders were used as the explicitly labeled focus fallback. Current code
+  was not substituted.
+- Ethereum WETH `0xc02aa39b223fe8d0a0e5c4f27ead9083c756cc2`, block `25748600`, produced report
+  `fsr_1c1a7d6564b8d2a3e71b8887`, result hash
+  `c09432ddafcf97969d252c2939a585f188d8ba8a297577cd99941d2522b8d4ea`, status `PARTIAL`, scope
+  `TRANSACTION_LOCAL`, coverage `1/1/0`, one funding edge, one sell-proceeds settlement edge,
+  and provider-free same-hash replay. Exact transaction/receipt binding succeeded; historical
+  origin/code expansion was explicitly `NOT_QUERIED`.
+- Both reports were generated from bounded in-memory smoke composition with S3-shaped raw artifact
+  references. They were not written through a fresh PostgreSQL/ClickHouse/MinIO production run.
+  No report is promoted to range-complete history, entity ownership, calibrated probability,
+  service attribution, or live monitoring acceptance.
+- The full coverage command completed all `703` enabled tests and `38` skips, but the configured
+  global threshold was not met locally: Statements `77.27%`, Branches `70.78%`, Lines `78.56%`.
+  Existing low-covered worker/storage boundary files account for most of the gap; this result is
+  recorded as a failed gate rather than weakened or relabeled. SBOM generation passed. Docker
+  daemon validation remained unavailable because `dockerDesktopLinuxEngine` was not running.
+
+## Provider-backed Control Campaign Phase 3 validation — 2026-08-14
+
+This checkpoint records the current provider composition and UI regression. It is not durable
+production acceptance.
+
+- `npm run test:unit` passed `635/635` tests across `117` files. The Phase 3 targeted provider
+  tests passed `4/4`: Campaign reconstruction `1/1` and shared Funding/Settlement composition
+  `3/3`; the focused backfill checks passed `100/100`.
+- Full TypeScript typecheck, production build, formatting, ESLint, license allowlist, audit with
+  zero vulnerabilities, SBOM generation, and `git diff --check` passed. The production E2E run
+  rebuilt the app and passed `38/38` across Chromium desktop and Pixel 7, including the Control
+  Campaign Timeline/Evidence Line flow. The Windows wrapper (`npm run test:e2e:windows`) repeated
+  the same `38/38` result.
+- A fresh real BSC FFT smoke over blocks `113485950–113495949` produced Token History
+  `thd_5ef5001212f0b4c8409bfc7c` with latest run hash
+  `0fdd7d8b0e32a2bef9cfd35573bfbfc6f1422de2935c210e409821d345a9f72a`, Funding/Settlement
+  `fsr_a3d4fdad3dd130e1bc8077f5` with hash
+  `e8f6bd68b7c584750814f28e610316c053630b3900ec88c7ea5b774958183d22`, and Campaign
+  `cc_89ef265544cf3687b7633444` with bundle hash
+  `2f126ea842f1136fe1e0bcf54fe8ef95f699604de8c4c998a19b656a8b65b271`. Funding/Settlement and
+  Campaign provider-free replay hashes matched their original runs.
+- The real smoke remained bounded and in-memory: Token History coverage was `1/1/1`; the
+  Funding/Settlement report was `PARTIAL`, `TRANSACTION_LOCAL`, coverage `1/1/0`, with two
+  funding edges and one sell-proceeds settlement edge; the Campaign remained `UNCALIBRATED`,
+  selected five wallets, and reported five opening-balance-unknown wallets. Historical BSC code
+  probes returned `missing trie node`; transaction-sender fallback stayed explicitly labeled and
+  current code was not substituted.
+- `npm run test:coverage` completed all `707` enabled tests with `38` explicit skips, but failed
+  the configured global thresholds at Statements `77.32%`, Branches `70.88%`, Functions `87.76%`,
+  and Lines `78.62%`. Low-covered worker/storage boundaries remain the primary gap; this is
+  recorded as a failed gate, not relabeled as acceptance.
+- Fresh PostgreSQL/ClickHouse/MinIO worker capture and durable replay remain `NOT_MEASURED`;
+  clean migration bootstrap is unavailable because the local Docker Desktop Linux engine named
+  pipe is absent. Archive-scale history, independent provider reconciliation, service-registry
+  qualification, calibration, live monitoring, alerts, export, remote CI/CodeQL, and production
+  approval remain open.
+
+## Forensic Case Bundle export closure — 2026-08-14
+
+- The provider-free Case Bundle builder and verifier passed `3/3` focused tests. It validates the
+  stored Control Campaign, walks every referenced Evidence source, rejects missing closure,
+  conflicting payloads, and cycles, and emits full Snapshot/artifact/source/model/policy registries
+  with manifest and result hashes. Same chain-anchor Snapshots with different capture metadata are
+  preserved separately by full Snapshot hash rather than overwritten.
+- API integration replay passed `85/85` after adding Control Campaign export and
+  `/api/v1/forensics/cases` create/read/export routes. A missing durable Campaign remains `503`;
+  incomplete Evidence closure is `422`; no fixture or synthetic empty case is returned.
+- The Campaign UI downloads the JSON bundle and shows the Case ID, Evidence/Snapshot/raw-artifact
+  counts and closure state. The targeted desktop/Pixel 7 flow passed `2/2`.
+- A fresh real BSC FFT smoke over `113485950–113495949` produced Case
+  `fcb_cc_89ef265544cf3687b7633444`, manifest hash
+  `c2f152fb3bd90120a4340443ce8ac18112780d239c04816ecc7e4ccc3238b06a`, result hash
+  `b85017621c05c9af69854755057f4efd13c648a6ee125a587b3f311d6480e8a5`, with `10041` Evidence,
+  `10011` Snapshots, `10005` raw-artifact references, and offline verification `true`.
+- The smoke is real-provider but in-memory. Durable clean-store export/replay, backfill execution,
+  monitoring, alerts, calibration, and production acceptance remain `NOT_MEASURED`/open; this
+  slice does not unlock clean-store production acceptance.
+
+## Token History backfill scheduling and handler binding — 2026-08-14
+
+- The API now validates bounded Ethereum/BSC ranges and exposes both the legacy-compatible
+  `/api/v1/control/tokens/:chainId/:token/backfill` route and the target-package
+  `/api/v1/control-campaigns/EVM/:chainId/:token/backfills` alias. The first canonical request is
+  `202`, repeated range requests replay the same one-shot schedule with `200`, and GET routes
+  replay schedule/run state without contacting providers.
+- The scheduler identity for one-shot `TOKEN_HISTORY_BACKFILL` excludes enqueue time while retaining
+  the actual trigger in the immutable definition, closing the concurrent-request duplicate window.
+  The storage repository now lists schedules by target/kind and runs by schedule ID.
+- The semantic worker's production handler validates target/parameter identity, requires durable
+  PostgreSQL/ClickHouse/versioned object storage, selects Ethereum/BSC read-only RPC by dataset,
+  executes `TokenHistoryDiscovery`, hydrates/persists Evidence closure, derives Funding/Settlement
+  and Control Campaign reports, and commits a terminal Evidence-bound capture result through the
+  existing lease/retry state machine. Provider failures, missing historical state, Evidence gaps,
+  and fact-budget overflow remain typed failures; no zeros or synthetic reports are used.
+- Focused serial validation passed `100/100` across the API, capture scheduler, storage query,
+  worker configuration, and worker handler tests; `npx tsc -b --pretty false` passed. A real durable
+  worker execution was not promoted because the local Docker Desktop Linux engine is unavailable;
+  the existing real BSC smoke remains an in-memory provider exercise.
+
+## Incremental monitor, alert, and replay-stream validation — 2026-08-14
+
+- Focused serial API/scheduler/alert-storage/live-handler validation passed `101/101`: API monitor
+  enqueue/replay/read, JSON alert replay, finite SSE framing, interval identity stability, alert
+  repository conflict/round-trip checks, and the worker's durable-schedule requirement are covered.
+- The API build and production web build passed. The Campaign UI now calls the provider-free alert
+  route when a report is selected, renders severity/Evidence/suppression state, and exposes a
+  finalized incremental monitor action. The updated Chromium desktop and Pixel 7 flow passed `2/2`.
+- The live monitor's production handler remains read-only and fails closed on missing durable
+  schedule history, unsafe numeric ranges, finalized cursor regression, or block-hash mismatch.
+  It does not use current state as a substitute for unavailable historical state.
+- A fresh real BSC FFT smoke for `0xdcfb441a1f38802820a4e7b4cc8aab37833c7777` over
+  `113485950–113495949` produced `thd_5ef5001212f0b4c8409bfc7c`, 12 observations, 10,029 Raw
+  Facts, 10,041 Evidence, same-hash replay, four derived Evidence-bound alerts, and offline Case
+  Bundle verification (`fcb_cc_1eaa01396441cbf9e846edfd`). It used in-memory stores and therefore
+  does not establish durable monitor/alert persistence or restart acceptance.
+- The final host gates recorded `639/639` unit tests across 118 files, `87` enabled integration
+  tests with `38` explicit skips, `1/1` eval, full rebuilt Playwright `38/38` and Windows-wrapper
+  `38/38`, plus format/lint/typecheck/build/license/audit/SBOM/Compose checks. Coverage completed
+  `726` enabled tests with `38` skips but remained below thresholds at `76.48%` statements,
+  `70.25%` branches, `86.87%` functions, and `77.86%` lines.
+- Clean PostgreSQL/ClickHouse/MinIO persistence, long-running monitor progression, forced reorg and
+  provider-outage delivery, alert restart/replay, calibration, and migration acceptance are
+  `NOT_MEASURED`; Docker Desktop's Linux engine is unavailable on this host.
+
+## Control Campaign P0 checkpoint validation — 2026-08-13
+
+This checkpoint records the first read-only Control Campaign implementation before continuing to
+provider-backed Token History Discovery. It is a local implementation gate, not production
+qualification.
+
+- P0 contracts and engines passed the repository test suite: `599/599` unit tests across `106`
+  files, `81` integration tests with `38` explicit optional-store/provider skips, and `1/1` model
+  evaluation;
+- formatting, ESLint, TypeScript, production build, production license allowlist and
+  `npm audit --audit-level=high` passed with `0` high-severity vulnerabilities;
+- the new Campaign Timeline/Evidence Line UI passed Chromium desktop and Pixel 7 targeted E2E
+  `2/2`; the latest fully-parallel host run was `33/38` because five pre-existing views timed out
+  under load, and serial replay of those eight views passed `8/8`;
+- `git diff --check` passed and no credential-shaped secret was found in the P0 diff; phrases such
+  as `private-key custody` are architectural prohibitions, not credentials;
+- `docker compose config --quiet` passed, but empty-database bootstrap for PostgreSQL migration
+  `031_control_campaign_reports.sql` and ClickHouse migration `002_control_campaign_flow.sql`
+  remained unavailable because the local Docker Desktop Linux engine named pipe was absent;
+- provider-backed historical discovery, real finalized-chain campaign capture, calibration and
+  remote CI/CodeQL for this uncommitted checkpoint remain open gates.
 
 ## Environment
 

@@ -1,9 +1,12 @@
 import { SQD_DATASETS, type SqdDataset } from '@zerotrace/chain-adapters';
 import { SQD_INGESTION_PROFILES, type SqdIngestionProfile } from '@zerotrace/ingestion';
 
+export const TOKEN_HISTORY_PROFILE = 'token-history' as const;
+export type IngestWorkerProfile = SqdIngestionProfile | typeof TOKEN_HISTORY_PROFILE;
+
 export interface IngestWorkerConfig {
   dataset: SqdDataset;
-  profile: SqdIngestionProfile;
+  profile: IngestWorkerProfile;
   fromBlock: number;
   toBlock: number;
   portalUrl: string;
@@ -25,6 +28,9 @@ export interface IngestWorkerConfig {
   objectStoreAccessKey: string;
   objectStoreSecretKey: string;
   objectStoreBucket: string;
+  token?: string;
+  evmRpcUrl?: string;
+  evmChainId: number;
 }
 
 interface ParsedArguments {
@@ -32,13 +38,14 @@ interface ParsedArguments {
   profile?: string;
   fromBlock?: string;
   toBlock?: string;
+  token?: string;
 }
 
 function parseArguments(args: readonly string[]): ParsedArguments {
   const result: ParsedArguments = {};
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
-    if (!['--dataset', '--profile', '--from', '--to'].includes(argument ?? '')) {
+    if (!['--dataset', '--profile', '--from', '--to', '--token'].includes(argument ?? '')) {
       throw new Error(`Unknown ingest argument: ${argument ?? ''}`);
     }
     const value = args[index + 1];
@@ -50,6 +57,7 @@ function parseArguments(args: readonly string[]): ParsedArguments {
     if (argument === '--profile') result.profile = value;
     if (argument === '--from') result.fromBlock = value;
     if (argument === '--to') result.toBlock = value;
+    if (argument === '--token') result.token = value;
   }
   return result;
 }
@@ -114,8 +122,13 @@ export function loadIngestWorkerConfig(
   }
   const dataset = parsed.dataset as SqdDataset;
   const profile = parsed.profile ?? 'block-headers';
-  if (!SQD_INGESTION_PROFILES.includes(profile as SqdIngestionProfile)) {
-    throw new Error('--profile must be block-headers, transactions, or ledger-records.');
+  if (
+    profile !== TOKEN_HISTORY_PROFILE &&
+    !SQD_INGESTION_PROFILES.includes(profile as SqdIngestionProfile)
+  ) {
+    throw new Error(
+      '--profile must be block-headers, transactions, ledger-records, or token-history.',
+    );
   }
   const fromBlock = integer(parsed.fromBlock, '--from', undefined, 0, Number.MAX_SAFE_INTEGER);
   const toBlock = integer(parsed.toBlock, '--to', undefined, 0, Number.MAX_SAFE_INTEGER);
@@ -130,6 +143,14 @@ export function loadIngestWorkerConfig(
   if (toBlock - fromBlock + 1 > maximumRange) {
     throw new Error(`Requested range exceeds SQD_MAX_RANGE_BLOCKS (${maximumRange}).`);
   }
+  if (profile === TOKEN_HISTORY_PROFILE) {
+    if (SQD_DATASETS[dataset].queryType !== 'evm') {
+      throw new Error('--profile token-history requires an EVM dataset.');
+    }
+    if (parsed.token === undefined || !/^0x[0-9a-fA-F]{40}$/.test(parsed.token)) {
+      throw new Error('--token must be a valid EVM token address for token-history.');
+    }
+  }
   const allowedHosts = (env.SQD_PROVIDER_ALLOW_HOSTS ?? 'portal.sqd.dev')
     .split(',')
     .map((host) => host.trim().toLowerCase())
@@ -137,9 +158,26 @@ export function loadIngestWorkerConfig(
   if (allowedHosts.length === 0) throw new Error('SQD_PROVIDER_ALLOW_HOSTS must not be empty.');
   const clickHouseUsername = optional(env.CLICKHOUSE_USERNAME);
   const clickHousePassword = optional(env.CLICKHOUSE_PASSWORD);
+  const configuredRpcUrl =
+    dataset === 'ethereum-mainnet'
+      ? (optional(env.ETH_RPC_URL) ?? optional(env.EVM_ETHEREUM_RPC_URL))
+      : dataset === 'binance-mainnet'
+        ? (optional(env.BSC_RPC_URL) ?? optional(env.EVM_BSC_RPC_URL))
+        : undefined;
+  const alchemyKey = optional(env.ALCHEMY_API_KEY);
+  const expandedRpcUrl = configuredRpcUrl?.includes('${ALCHEMY_API_KEY}')
+    ? alchemyKey === undefined
+      ? undefined
+      : configuredRpcUrl.replaceAll('${ALCHEMY_API_KEY}', encodeURIComponent(alchemyKey))
+    : configuredRpcUrl;
+  const evmRpcUrl =
+    expandedRpcUrl ||
+    (dataset === 'ethereum-mainnet' && alchemyKey !== undefined
+      ? `https://eth-mainnet.g.alchemy.com/v2/${encodeURIComponent(alchemyKey)}`
+      : undefined);
   return {
     dataset,
-    profile: profile as SqdIngestionProfile,
+    profile: profile as IngestWorkerProfile,
     fromBlock,
     toBlock,
     portalUrl: env.SQD_PORTAL_URL?.trim() || 'https://portal.sqd.dev',
@@ -177,5 +215,8 @@ export function loadIngestWorkerConfig(
     objectStoreAccessKey: required(env, 'OBJECT_STORE_ACCESS_KEY'),
     objectStoreSecretKey: required(env, 'OBJECT_STORE_SECRET_KEY'),
     objectStoreBucket: env.OBJECT_STORE_BUCKET?.trim() || 'zerotrace-raw',
+    ...(parsed.token === undefined ? {} : { token: parsed.token.toLowerCase() }),
+    ...(evmRpcUrl === undefined ? {} : { evmRpcUrl }),
+    evmChainId: dataset === 'ethereum-mainnet' ? 1 : 56,
   };
 }

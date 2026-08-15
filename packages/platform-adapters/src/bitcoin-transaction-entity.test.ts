@@ -162,6 +162,30 @@ describe('Bitcoin transaction entity analysis', () => {
     expect(result.changeCandidates).toEqual([]);
   });
 
+  it('keeps missing prevout value Unknown instead of treating it as zero', () => {
+    const missingPrevout = input(1, '5000', 'bc1qsource2');
+    delete missingPrevout.previousOutput;
+    const result = analyzeBitcoinTransactionEntity(
+      transaction({
+        inputs: [input(0, '6000', 'bc1qsource1'), missingPrevout],
+        outputs: [output('10000', 'bc1qrecipient')],
+        feeSats: '1000',
+      }),
+    );
+
+    expect(result.inputValueSats).toEqual({
+      state: 'unknown',
+      reason: 'INSUFFICIENT_DATA',
+      detail: 'At least one input prevout value is unavailable; input total is not zero.',
+    });
+    expect(result.feeReconciles).toEqual({
+      state: 'unknown',
+      reason: 'INSUFFICIENT_DATA',
+      detail:
+        'At least one input prevout value is unavailable; fee reconciliation is not zero-filled.',
+    });
+  });
+
   it('treats coinbase clustering, change, and fee reconciliation as not applicable', () => {
     const coinbaseInput: BitcoinTransactionInput = {
       coinbase: true,

@@ -145,6 +145,28 @@ describe('SqdPortalClient', () => {
     ).rejects.toMatchObject({ code: 'TIMEOUT', retryable: true });
   });
 
+  it('cancels a streaming range when the caller aborts', async () => {
+    const controller = new AbortController();
+    const fetchImplementation = vi.fn<typeof fetch>().mockImplementation((_input, init) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          'abort',
+          () => reject(new DOMException('aborted', 'AbortError')),
+          { once: true },
+        );
+      });
+    });
+    const pending = client(fetchImplementation, { maxAttempts: 3 }).readFinalizedRange(
+      { fromBlock: 10, toBlock: 10, signal: controller.signal },
+      () => undefined,
+    );
+    await vi.waitFor(() => expect(fetchImplementation).toHaveBeenCalledOnce());
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ code: 'TIMEOUT', retryable: false });
+    expect(fetchImplementation).toHaveBeenCalledOnce();
+  });
+
   it('streams bounded JSONL, preserves constant-memory chunks, and resumes at last block plus one', async () => {
     const first = `${JSON.stringify(block(10))}\n${JSON.stringify(block(11))}\n`;
     const fetchImplementation = vi
@@ -350,6 +372,47 @@ describe('SqdPortalClient', () => {
     expect(result).toMatchObject({ requests: 2, retries: 1, blocks: 1 });
   });
 
+  it('shrinks a large retryable range and reports the actual adjustment', async () => {
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response('limited', { status: 429, headers: { 'retry-after': '0' } }),
+      )
+      .mockResolvedValueOnce(jsonlResponse([block(10), block(11)]))
+      .mockResolvedValueOnce(jsonlResponse([block(12), block(13)]));
+    const received: number[] = [];
+
+    const result = await client(fetchImplementation).readFinalizedRange(
+      { fromBlock: 10, toBlock: 13 },
+      (item) => {
+        received.push(item.header.number);
+      },
+    );
+
+    expect(received).toEqual([10, 11, 12, 13]);
+    expect(result).toMatchObject({
+      requests: 3,
+      retries: 1,
+      rangeAdjustments: 1,
+      blocks: 4,
+    });
+    const firstBody = JSON.parse(String(fetchImplementation.mock.calls[0]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    const secondBody = JSON.parse(String(fetchImplementation.mock.calls[1]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    const thirdBody = JSON.parse(String(fetchImplementation.mock.calls[2]?.[1]?.body)) as Record<
+      string,
+      unknown
+    >;
+    expect(firstBody).toMatchObject({ fromBlock: 10, toBlock: 13 });
+    expect(secondBody).toMatchObject({ fromBlock: 10, toBlock: 11 });
+    expect(thirdBody).toMatchObject({ fromBlock: 12, toBlock: 13 });
+  });
+
   it('accepts provider JSONL served as text/plain while preserving strict parsing', async () => {
     const validFetch = vi
       .fn<typeof fetch>()
@@ -498,6 +561,109 @@ describe('SqdEvmContractCreationReader', () => {
         trace: { createFrom: true, createResultAddress: true, createResultCode: true },
       },
     });
+  });
+
+  it('splits large origin lookups into bounded Portal windows and aggregates coverage', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    const creator = `0x${'b'.repeat(40)}`;
+    const firstHash = `0x${'c'.repeat(64)}`;
+    const secondHash = `0x${'d'.repeat(64)}`;
+    const creation = (item: SqdFinalizedBlock, transactionHash: string) => ({
+      ...item,
+      transactions: [{ transactionIndex: 0, hash: transactionHash }],
+      traces: [
+        {
+          transactionIndex: 0,
+          traceAddress: [],
+          type: 'create' as const,
+          error: null,
+          action: { from: creator },
+          result: { address, code: '0x1234' },
+        },
+      ],
+    });
+    let activeRequests = 0;
+    let maxActiveRequests = 0;
+    const fetchImplementation = vi.fn<typeof fetch>().mockImplementation(async (_input, init) => {
+      if (init?.body === undefined) {
+        return new Response(
+          JSON.stringify({
+            dataset: 'binance-mainnet',
+            aliases: [],
+            real_time: true,
+            start_block: 0,
+          }),
+          { status: 200 },
+        );
+      }
+      activeRequests += 1;
+      maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const query = JSON.parse(String(init.body)) as { fromBlock: number };
+        if (query.fromBlock === 10) {
+          return jsonlResponse([creation(block(10), firstHash)], { finalizedHead: 20 });
+        }
+        if (query.fromBlock === 11) {
+          return jsonlResponse([], { finalizedHead: 20 });
+        }
+        if (query.fromBlock === 20) {
+          return jsonlResponse([creation(block(20), secondHash)], { finalizedHead: 20 });
+        }
+        throw new Error(`Unexpected SQD test window ${query.fromBlock}.`);
+      } finally {
+        activeRequests -= 1;
+      }
+    });
+    const progress = vi.fn();
+
+    const result = await new SqdEvmContractCreationReader({
+      source: client(fetchImplementation, { dataset: 'binance-mainnet' }),
+      maxRangeBlocks: 20,
+      requestRangeBlocks: 10,
+      onProgress: progress,
+    }).getContractCreationsObservation({ address, fromBlock: '10', toBlock: '20' });
+
+    expect(result.value.map((item) => item.transactionHash)).toEqual([firstHash, secondHash]);
+    expect(maxActiveRequests).toBeGreaterThan(1);
+    expect(result.coverage).toMatchObject({
+      fromBlock: '10',
+      toBlock: '20',
+      nextBlock: '21',
+      finalizedHead: '20',
+      responseBlockCount: 2,
+      requestCount: 3,
+      completion: 'REQUESTED_RANGE_COMPLETE',
+    });
+    expect(progress).toHaveBeenCalledTimes(2);
+    expect(progress.mock.calls.map(([value]) => value)).toEqual([
+      {
+        fromBlock: '10',
+        toBlock: '20',
+        nextBlock: '20',
+        requestCount: 2,
+        responseBlockCount: 1,
+        creationCount: 1,
+      },
+      {
+        fromBlock: '10',
+        toBlock: '20',
+        nextBlock: '21',
+        requestCount: 3,
+        responseBlockCount: 2,
+        creationCount: 2,
+      },
+    ]);
+    const queries = fetchImplementation.mock.calls
+      .slice(1)
+      .map(([, init]) => JSON.parse(String(init?.body)) as { fromBlock: number; toBlock: number });
+    expect(queries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fromBlock: 10, toBlock: 19 }),
+        expect.objectContaining({ fromBlock: 11, toBlock: 19 }),
+        expect.objectContaining({ fromBlock: 20, toBlock: 20 }),
+      ]),
+    );
   });
 
   it('fails closed on a mismatched creation result or incomplete source coverage', async () => {
@@ -754,6 +920,38 @@ describe('SqdEvmLogReader', () => {
       includeAllBlocks: false,
     });
     expect(secondRequest.fromBlock).toBe(11);
+  });
+
+  it('treats an empty 204 as complete sparse coverage when finalized head covers the window', async () => {
+    const address = `0x${'a'.repeat(40)}`;
+    const fetchImplementation = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            dataset: 'binance-mainnet',
+            aliases: [],
+            real_time: true,
+            start_block: 0,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 204,
+          headers: { 'x-sqd-finalized-head-number': '12' },
+        }),
+      );
+    const reader = new SqdEvmLogReader({
+      source: client(fetchImplementation, { dataset: 'binance-mainnet' }),
+      includeAllBlocks: false,
+    });
+
+    await expect(
+      reader.getLogsObservation({ address, fromBlock: '10', toBlock: '12' }),
+    ).resolves.toMatchObject({ value: [] });
+    expect(fetchImplementation).toHaveBeenCalledTimes(2);
   });
 
   it('rejects unsupported coverage and source-head shortfalls without fabricating completeness', async () => {

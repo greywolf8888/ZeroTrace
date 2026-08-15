@@ -156,12 +156,12 @@ export function analyzeBitcoinTransactionEntity(
     (sum, output) => sum + BigInt(output.valueSats),
     0n,
   );
-  const inputValue = coinbase
-    ? undefined
-    : nonCoinbaseInputs.reduce(
-        (sum, input) => sum + BigInt(input.previousOutput?.valueSats ?? '0'),
-        0n,
-      );
+  const completeInputValueCoverage =
+    coinbase || nonCoinbaseInputs.every((input) => input.previousOutput?.valueSats !== undefined);
+  const inputValue =
+    coinbase || !completeInputValueCoverage
+      ? undefined
+      : nonCoinbaseInputs.reduce((sum, input) => sum + BigInt(input.previousOutput!.valueSats), 0n);
   const fee = BigInt(transaction.feeSats);
   const weight = BigInt(transaction.weight);
   if (weight <= 0n) {
@@ -218,17 +218,22 @@ export function analyzeBitcoinTransactionEntity(
     inputAddressCoverage,
     inputAddresses,
     outputAddresses,
-    inputValueSats:
-      inputValue === undefined
-        ? unknownValue('NOT_APPLICABLE', 'Coinbase inputs do not spend previous outputs.')
+    inputValueSats: coinbase
+      ? unknownValue('NOT_APPLICABLE', 'Coinbase inputs do not spend previous outputs.')
+      : inputValue === undefined
+        ? unknownValue(
+            'INSUFFICIENT_DATA',
+            'At least one input prevout value is unavailable; input total is not zero.',
+          )
         : knownValue(inputValue.toString()),
     outputValueSats: outputValue.toString(),
     feeSats: transaction.feeSats,
-    feeReconciles:
-      inputValue === undefined
+    feeReconciles: coinbase
+      ? unknownValue('NOT_APPLICABLE', 'Coinbase subsidy accounting is outside fee reconciliation.')
+      : inputValue === undefined
         ? unknownValue(
-            'NOT_APPLICABLE',
-            'Coinbase subsidy accounting is outside fee reconciliation.',
+            'INSUFFICIENT_DATA',
+            'At least one input prevout value is unavailable; fee reconciliation is not zero-filled.',
           )
         : knownValue(inputValue - outputValue === fee),
     virtualSizeBytes: virtualSize.toString(),

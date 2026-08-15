@@ -31,15 +31,20 @@ import {
   PostgresClaimRuleReviewReportRepository,
   PostgresClaimReportRepository,
   PostgresClaimVerificationReportRepository,
+  PostgresControlCampaignReportRepository,
+  PostgresForensicCampaignAlertRepository,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
+  PostgresSolanaDealerCampaignReportRepository,
   PostgresSolanaTransactionReportRepository,
+  PostgresBitcoinForensicGraphReportRepository,
   DataQualityStorageError,
   PostgresDataQualityRepository,
   PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
   PostgresFlapLifetimeHeadRepository,
   PostgresFlapPensionEntryReportRepository,
+  PostgresFundingSettlementReportRepository,
   PostgresEntityRelationshipReportRepository,
   PostgresEntityRelationshipTimelineRepository,
   PostgresEntityInvestigationGraphRepository,
@@ -67,6 +72,7 @@ export interface AppRuntime {
   evmSourceVerification?: EvmSourceVerificationAdapter;
   sqdBscLogReader?: EvmLogReader;
   sqdBscCreationReader?: EvmContractCreationReader;
+  sqdSolanaSource?: SqdPortalClient;
   bitcoinAdapter?: BitcoinUtxoLedgerAdapter;
   solanaAdapter?: SolanaLedgerAdapter;
   evidenceLedger: EvidenceLedger;
@@ -81,6 +87,8 @@ export interface AppRuntime {
   controlSurfaces?: PostgresEvmControlSurfaceRepository;
   solanaControlSurfaces?: PostgresSolanaControlSurfaceRepository;
   solanaTransactionReports?: PostgresSolanaTransactionReportRepository;
+  solanaDealerReports?: PostgresSolanaDealerCampaignReportRepository;
+  bitcoinForensicGraphReports?: PostgresBitcoinForensicGraphReportRepository;
   actionSemanticsReports?: PostgresActionSemanticsReportRepository;
   pensionCandidateReports?: PostgresPensionCandidateReportRepository;
   pensionEntryReports?: PostgresFlapPensionEntryReportRepository;
@@ -88,6 +96,9 @@ export interface AppRuntime {
   entityRelationshipTimelines?: PostgresEntityRelationshipTimelineRepository;
   entityInvestigationGraphs?: PostgresEntityInvestigationGraphRepository;
   entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
+  controlCampaignReports?: PostgresControlCampaignReportRepository;
+  forensicCampaignAlerts?: PostgresForensicCampaignAlertRepository;
+  fundingSettlementReports?: PostgresFundingSettlementReportRepository;
   intelligenceSearch?: PostgresIntelligenceSearchRepository;
   labelIntelligenceReports?: PostgresLabelIntelligenceReportRepository;
   captureSchedules?: PostgresCaptureScheduleRepository;
@@ -105,7 +116,7 @@ export interface AppRuntime {
         errorCode?: string;
       }>;
     };
-    artifacts?: { health(): Promise<ObjectStoreHealth> };
+    artifacts?: { health(): Promise<ObjectStoreHealth>; close(): Promise<void> };
   };
   close?: () => Promise<void>;
 }
@@ -307,6 +318,24 @@ export function createRuntime(config: AppConfig): AppRuntime {
           source: sqdBscSource,
           maxRangeBlocks: 1_000_000,
           maxResults: 16,
+        });
+  const sqdSolanaSource =
+    config.sqdPortalUrl === undefined
+      ? undefined
+      : new SqdPortalClient({
+          portalUrl: config.sqdPortalUrl,
+          dataset: 'solana-mainnet',
+          policy: policyFor(config.sqdPortalUrl, config),
+          timeoutMs: Math.max(config.requestTimeoutMs, 30_000),
+          maxRangeBlocks: 50_000,
+          maxAttempts: config.providerResilience.maxAttempts,
+          retryBaseDelayMs: config.providerResilience.retryBaseDelayMs,
+          retryMaxDelayMs: config.providerResilience.retryMaxDelayMs,
+          // Solana ledger-record lines can exceed the generic 8 MiB safety default on busy slots.
+          // Keep the response bounded while allowing a real finalized slot to be inspected.
+          maxResponseBytes: 128_000_000,
+          maxLineBytes: 32_000_000,
+          requestsPerSecond: 2,
         });
 
   let bitcoinAdapter: BitcoinUtxoLedgerAdapter | undefined;
@@ -625,6 +654,51 @@ export function createRuntime(config: AppConfig): AppRuntime {
           statementTimeoutMs: config.requestTimeoutMs,
           maxConnections: 4,
         });
+  const controlCampaignReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresControlCampaignReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const forensicCampaignAlerts =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresForensicCampaignAlertRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const solanaDealerReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresSolanaDealerCampaignReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const bitcoinForensicGraphReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresBitcoinForensicGraphReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
+  const fundingSettlementReports =
+    config.postgresUrl === undefined
+      ? undefined
+      : new PostgresFundingSettlementReportRepository({
+          connectionString: config.postgresUrl,
+          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
+          statementTimeoutMs: config.requestTimeoutMs,
+          maxConnections: 4,
+        });
   const intelligenceSearch =
     config.postgresUrl === undefined
       ? undefined
@@ -690,6 +764,8 @@ export function createRuntime(config: AppConfig): AppRuntime {
       controlSurfaces?.close(),
       solanaControlSurfaces?.close(),
       solanaTransactionReports?.close(),
+      solanaDealerReports?.close(),
+      bitcoinForensicGraphReports?.close(),
       actionSemanticsReports?.close(),
       pensionCandidateReports?.close(),
       pensionEntryReports?.close(),
@@ -697,11 +773,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
       entityRelationshipTimelines?.close(),
       entityInvestigationGraphs?.close(),
       entityInvestigationGraphTimelines?.close(),
+      controlCampaignReports?.close(),
+      forensicCampaignAlerts?.close(),
+      fundingSettlementReports?.close(),
       intelligenceSearch?.close(),
       labelIntelligenceReports?.close(),
       captureSchedules?.close(),
       ageInvestigationGraphProjection?.close(),
       rawFacts?.close(),
+      artifacts?.close(),
     ]);
   };
 
@@ -715,6 +795,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(evmSourceVerification === undefined ? {} : { evmSourceVerification }),
     ...(sqdBscLogReader === undefined ? {} : { sqdBscLogReader }),
     ...(sqdBscCreationReader === undefined ? {} : { sqdBscCreationReader }),
+    ...(sqdSolanaSource === undefined ? {} : { sqdSolanaSource }),
     evidenceLedger,
     dataQuality,
     ingestionStorage: {
@@ -734,6 +815,8 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
     ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
     ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),
+    ...(solanaDealerReports === undefined ? {} : { solanaDealerReports }),
+    ...(bitcoinForensicGraphReports === undefined ? {} : { bitcoinForensicGraphReports }),
     ...(actionSemanticsReports === undefined ? {} : { actionSemanticsReports }),
     ...(pensionCandidateReports === undefined ? {} : { pensionCandidateReports }),
     ...(pensionEntryReports === undefined ? {} : { pensionEntryReports }),
@@ -743,6 +826,9 @@ export function createRuntime(config: AppConfig): AppRuntime {
     ...(entityInvestigationGraphTimelines === undefined
       ? {}
       : { entityInvestigationGraphTimelines }),
+    ...(controlCampaignReports === undefined ? {} : { controlCampaignReports }),
+    ...(forensicCampaignAlerts === undefined ? {} : { forensicCampaignAlerts }),
+    ...(fundingSettlementReports === undefined ? {} : { fundingSettlementReports }),
     ...(intelligenceSearch === undefined ? {} : { intelligenceSearch }),
     ...(labelIntelligenceReports === undefined ? {} : { labelIntelligenceReports }),
     ...(captureSchedules === undefined ? {} : { captureSchedules }),

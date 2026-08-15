@@ -5,6 +5,29 @@
 
 The initial API has no authentication and is suitable only for local/staging use.
 
+## Read-only MCP bridge
+
+`npm run mcp:readonly` starts a newline-delimited JSON-RPC bridge over stdio for local analyst
+tools. It is intentionally narrower than the HTTP API: every provider request is a bounded `GET`
+to the configured `ZEROTRACE_API_URL` origin, redirects and unknown arguments are rejected, and no
+capture, publish, signing, broadcast, approval, or fund-movement method is exposed. The bridge
+implements the MCP initialization, discovery, ping, tool-list, and tool-call surface described by
+the [official MCP schema](https://modelcontextprotocol.io/specification/2025-11-25/schema).
+
+| Tool                           | Read-only operation                 |
+| ------------------------------ | ----------------------------------- |
+| `zerotrace_health`             | full health and provider-state read |
+| `zerotrace_capabilities`       | capability and safety ledger        |
+| `zerotrace_search`             | exact local projection search       |
+| `zerotrace_subject`            | ledger subject snapshot             |
+| `zerotrace_evidence_drilldown` | Evidence/source traversal           |
+| `zerotrace_campaign`           | immutable Control Campaign read     |
+| `zerotrace_case_export`        | content-addressed forensic export   |
+
+Set `ZEROTRACE_MCP_ALLOWED_API_HOSTS` to a comma-separated host allowlist when the API is not on
+the default local origin. The bridge is a local integration boundary; it does not add HTTP
+authentication, tenancy, or production Agent-console acceptance.
+
 ## System endpoints
 
 | Method | Path                                 | Behavior                                                             |
@@ -314,6 +337,114 @@ IDL/verifiable-build provenance, history and independent-source agreement as Unk
 inspection stores an immutable `scs_...` report with nested Evidence and exact derivation edges.
 Latest, exact-ID and list routes replay PostgreSQL without contacting Solana RPC.
 
+### Control Campaigns and Forensic Evidence Lines
+
+The Control Campaign surface is a read-only, provider-free replay layer over durable campaign
+bundles, with explicit schedule creation for incremental monitoring. It does not discover history
+inline, assign Entity membership, or broadcast transactions. Every bundle carries canonical
+Campaign/cluster/position/event/Evidence
+identity, an exact Snapshot, coverage, freshness, source set, model versions and a result hash. An
+uncalibrated `evidenceScore` is a bounded score, not a probability; hard Service Hub, CEX, bridge,
+router and dust boundaries preserve explicit attribution suppression.
+
+The web workspace presents the Campaign bundle as a five-layer read-only view (`Combined`, `Token`,
+`Funding`, `Settlement`, and `Behavior`). When more than one immutable report is loaded, its
+comparison card calculates only descriptive set/count/coverage deltas and retains both report IDs,
+Snapshot positions, result hashes, and the no-merge boundary; it is not a calibrated Entity or
+ownership inference.
+
+- `GET /api/v1/control/tokens/:chainId/:token/overview`
+- `GET /api/v1/control/tokens/:chainId/:token/campaigns?limit=50`
+- `GET /api/v1/control/campaigns/:campaignId`
+- `POST /api/v1/control/campaigns/:campaignId/replay`
+- `GET /api/v1/control/campaigns/:campaignId/timeline`
+- `GET /api/v1/control/campaigns/:campaignId/positions`
+- `GET /api/v1/control/campaigns/:campaignId/wallets`
+- `GET /api/v1/control/campaigns/:campaignId/graph?layer=control|funding|token|settlement`
+- `GET /api/v1/control/campaigns/:campaignId/evidence-line`
+- `POST /api/v1/control/campaigns/:campaignId/export`
+- `GET /api/v1/control/campaigns/:campaignId/export`
+- `GET /api/v1/funding-settlement/tokens/:chainId/:token/range?fromBlock=...&toBlock=...`
+- `POST /api/v1/control/tokens/:chainId/:token/backfill` with `{ "fromBlock": "...", "toBlock": "..." }`
+- `GET /api/v1/control/tokens/:chainId/:token/backfill?limit=50`
+- `POST /api/v1/control-campaigns/EVM/:chainId/:token/backfills`
+- `GET /api/v1/control-campaigns/EVM/:chainId/:token/backfills?limit=50`
+- `POST /api/v1/control/tokens/:chainId/:token/monitor` with `{ "initialFromBlock": "...", "windowBlocks": 10000, "everySeconds": 60 }`
+- `POST /api/v1/control-campaigns/EVM/:chainId/:token/monitors` (target-package alias)
+- `GET /api/v1/control-campaigns/monitors/:monitorId`
+- `GET /api/v1/control-campaigns/:campaignId/alerts`
+- `GET /api/v1/control-campaigns/:campaignId/stream` (provider-free replay SSE)
+- `POST /api/v1/forensics/cases` with `{ "campaignId": "cc_..." }`
+- `GET /api/v1/forensics/cases/:caseId`
+- `GET /api/v1/forensics/cases/:caseId/export`
+- `GET /api/v1/control/events/:eventId`
+- `GET /api/v1/control/evidence/:itemId`
+
+When PostgreSQL Control Campaign storage is not configured, report reads return `503` with an explicit
+storage-unavailable error. Token History backfill is a durable one-shot `TOKEN_HISTORY_BACKFILL`
+capture schedule: the first accepted request returns `202`, repeated requests for the same canonical
+range return the same schedule with `200`, and the list route replays schedules/runs without providers.
+Only Ethereum (`eip155:1`) and BNB Smart Chain (`eip155:56`) are accepted, with a bounded maximum of
+1,000,000 blocks. Missing scheduler storage returns `503`; malformed or unsupported ranges return
+`400`. The semantic worker is started with `npm run dev:token-history:backfill -- --once` (or without
+`--once` for polling) after configuring PostgreSQL, ClickHouse, versioned object storage, SQD, and
+read-only RPC endpoints. The worker persists restart-safe Token History, Funding/Settlement,
+Control Campaign, Evidence-bound alerts, and terminal capture results; provider-down, missing
+historical state, finalized cursor disagreement, and incomplete coverage remain explicit
+failure/unknown states.
+
+The live monitor is an interval `TOKEN_LIVE_CAPTURE` schedule. Its identity excludes the enqueue
+timestamp, so concurrent equivalent requests replay one monitor. Each worker run reads the finalized
+head, checks the prior successful Snapshot/block hash, captures only the next bounded range, and
+uses a typed retryable reorg error when the durable cursor no longer matches. A monitor requires
+durable schedule history and does not fall back to current state when historical reads fail.
+
+Campaign alerts are immutable `forensic-campaign-alert-v1` rows under migration
+`034_control_campaign_alerts`. Every alert is linked to at least one Evidence node and retains its
+Snapshot, confidence knowledge value, suppression list, model version, and result hash. The JSON
+alerts route and SSE stream replay PostgreSQL only; SSE emits `campaign`, `alert`, and `complete`
+events and closes after the current durable set. This is a replay stream, not an unbounded push
+subscription. Forensic export is implemented provider-free: it rebuilds a
+canonical `forensic-case-bundle-v1` from the stored Campaign and the complete Evidence closure,
+includes full Snapshots, raw-artifact references/hashes, source/model/policy registries, a manifest
+hash, and a result hash. Missing closure returns `422` with a typed forensic error; it never returns
+fixtures, synthetic empty facts, or a partial case. Replay and export do not contact chain
+providers.
+
+### Funding and Settlement evidence reports
+
+Funding and Settlement reports are a bounded, read-only EVM evidence projection. The decoder accepts
+only exact mined transaction/receipt pairs and finalized Snapshots, then materializes native-value
+and canonical ERC-20 Transfer observations. Identity, placement, sender, destination, transaction
+index, and Snapshot block checks fail closed on disagreement. Failed or unknown receipts remain
+provisional and cannot create funding or settlement edges.
+
+The report model carries deterministic bounded edges and patterns, raw transaction drilldown,
+coverage scope (`TRANSACTION_LOCAL`, `BOUNDED_RANGE`, or `RANGE_COMPLETE`), exact Snapshot, Evidence
+IDs, freshness, source set, model/policy versions, and an explicitly uncalibrated confidence value.
+Service hubs, CEX endpoints, DEX routers, and bridge endpoints are hard path boundaries; their
+suppression records are retained and no entity or ownership merge follows through them.
+
+- `GET /api/v1/funding-settlement/tokens/:chainId/:token`
+- `GET /api/v1/funding-settlement/reports/:reportId`
+
+Both routes replay PostgreSQL only. An unconfigured repository returns `503`; an absent latest
+report returns a typed `NOT_QUERIED` response; an absent exact report returns `404`. Neither route
+refreshes providers, starts a backfill/monitor, or broadcasts a transaction. PostgreSQL migration
+`033_funding_settlement_reports` enforces immutable rows, report identity, coverage scope, counts,
+provenance arrays, model/policy versions, and insert-time JSON identity checks.
+
+### Provider-backed Campaign materialization
+
+The Token History backfill handler composes the finalized SQD report, exact receipt-derived
+Funding/Settlement observations, and the Campaign engine. It hydrates source Evidence and persists
+newly derived Campaign Evidence before writing an immutable Campaign bundle, so the API reads the
+same provider-backed result through the Campaign endpoints above. Missing exact RPC, source
+Evidence, or durable report storage yields a typed retryable/terminal capture failure; no fixture or
+synthetic empty Campaign is materialized. The provider-backed capture remains bounded and does not
+claim calibrated attribution; its durable Campaign can be exported through the Forensic Case Bundle
+routes.
+
 ### Typed ledger records
 
 `type` accepts `BLOCK` and `TRANSACTION` on EVM, Bitcoin, and Solana, plus `OUTPOINT` on Bitcoin.
@@ -369,8 +500,24 @@ Token-2022 transfers without same-Snapshot mint extension state keep fee and rec
 Unknown even when the instructed gross amount is known. Explicit `TransferCheckedWithFee` data can
 establish its expected fee, but unmodeled withheld-fee, confidential, close/sync, hook, or missing
 CPI effects keep the reconciliation `PARTIAL`. Gross instruction flows are not equated to net
-pre/post balances. This foundation does not claim decoded Jupiter/launchpad/AMM events, controller
-identity, full Token-2022 extension execution, launch lifecycle or realizable value.
+pre/post balances. This foundation does not claim arbitrary Jupiter/launchpad/AMM events, controller
+identity, full Token-2022 extension execution, launch lifecycle or realizable value. A narrow,
+separately versioned read-only decoder may add an Evidence-bound observation for the pinned
+Pump/PumpSwap and partial Raydium LaunchLab program surfaces described below; an unknown program,
+web page, or unlabeled token does not imply a launchpad.
+
+Solana transaction and dealer responses may include optional `launchpadObservations`. Current
+platform values are `PUMP`, `PUMPSWAP`, and `RAYDIUM_LAUNCHLAB`. Each observation retains its exact
+instruction path, source commit, compact decoder hash, finalized Snapshot, execution state,
+argument/account coverage, warnings, and Evidence IDs. Raydium's pinned Borsh initialization
+parameters and migration primitives are decoded into bounded argument strings. A source-pinned
+raw `PoolState` account-byte decoder is also available for callers that already possess the
+account bytes, but historical account reads and deployment-sensitive remaining accounts remain
+opaque in the API; its registry state is
+`PARTIAL_READ_ONLY` and activation is blocked until a real finalized fixture closes the provenance
+graph. Missing
+observations remain absent/Unknown and are never converted into a zero count claim about lifetime
+launch activity.
 
 Bitcoin transaction facts expose `locktime`, every validated input sequence and direct opt-in RBF
 signaling. `transactionEntityAnalysis` additionally reconciles input/output/fee arithmetic, records

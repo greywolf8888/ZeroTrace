@@ -16,6 +16,13 @@ const workspacePackages = [
   'rv',
   'schemas',
   'storage',
+  'token-flow-engine',
+  'funding-settlement-engine',
+  'cluster-position-engine',
+  'candidate-discovery',
+  'behavior-engine',
+  'campaign-engine',
+  'forensic-evidence',
 ];
 
 export default defineConfig({
@@ -41,6 +48,10 @@ export default defineConfig({
         'packages/chain-adapters/src/index.ts',
         'apps/api/src/server.ts',
         'services/ingest-worker/src/cli.ts',
+        // Semantic worker CLI modules are process bootstraps only; their configuration,
+        // handlers, and worker loops remain included and are covered independently.
+        'services/semantic-worker/src/*-cli.ts',
+        'services/semantic-worker/src/cli.ts',
       ],
       thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
     },

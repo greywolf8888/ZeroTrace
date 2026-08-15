@@ -6,6 +6,12 @@ import { Counter, Registry, collectDefaultMetrics } from 'prom-client';
 import { z, ZodError } from 'zod';
 
 import { ProviderError } from '@zerotrace/chain-adapters';
+import {
+  BitcoinForensicGraphCaptureError,
+  captureBitcoinForensicGraph,
+} from './bitcoin-forensic-graph.js';
+import { SolanaDealerCaptureError, captureSolanaDealerCampaign } from './solana-dealer.js';
+import { defineCaptureSchedule } from '@zerotrace/capture-scheduler';
 import { parseEvmClaimDeclaration, reviewClaimDeclarationDraft } from '@zerotrace/claim-audit';
 import {
   auditDiscrepancies,
@@ -25,6 +31,12 @@ import {
   traverseEntityInvestigationGraph,
 } from '@zerotrace/entity-engine';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
+import type { EvidenceNode } from '@zerotrace/evidence';
+import {
+  ForensicCaseBundleError,
+  buildForensicCaseBundle,
+  caseIdForCampaign,
+} from '@zerotrace/forensic-evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
 import {
   buildLabelIntelligenceCore,
@@ -42,6 +54,7 @@ import {
   FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
   FLAP_TOKEN_ORIGIN_MAX_CHUNKS,
   FLAP_TOKEN_ORIGIN_MODEL_VERSION,
+  LAUNCHPAD_PROTOCOL_REGISTRY,
   PLATFORM_REGISTRY,
   discoverErc20BurnCandidates,
   discoverEvmPensionCandidates,
@@ -70,6 +83,7 @@ import {
   ClaimRuleReviewReportStorageError,
   ClaimReportStorageError,
   ClaimVerificationReportStorageError,
+  ControlCampaignReportStorageError,
   ControlSurfaceReportStorageError,
   EntityRelationshipReportStorageError,
   EntityRelationshipTimelineStorageError,
@@ -79,16 +93,22 @@ import {
   FlapHistoryProjectionError,
   FlapLifetimeHeadError,
   FlapPensionEntryReportStorageError,
+  FundingSettlementReportStorageError,
+  CaptureScheduleStorageError,
+  ForensicCampaignAlertStorageError,
   IntelligenceSearchStorageError,
   LabelIntelligenceStorageError,
   PensionCandidateReportStorageError,
   SemanticCheckpointError,
   SolanaTransactionReportStorageError,
+  SolanaDealerCampaignReportStorageError,
+  BitcoinForensicGraphReportStorageError,
   StorageError,
   type ObjectStoreHealth,
   type RawFactStorageHealth,
   type StorageHealth,
   type StoredSolanaTransactionReport,
+  type StoredControlCampaignReport,
   type AgeInvestigationGraphProjectionResult,
 } from '@zerotrace/storage';
 import {
@@ -104,12 +124,17 @@ import {
   LabelIntelligenceReportSchema,
   LabelIntelligenceRequestSchema,
   SolanaTransactionIntelligenceReportSchema,
+  SolanaDealerCampaignRequestSchema,
   knownValue,
   unavailableValue,
   unknownValue,
   type AnalysisMetadata,
   type AnalysisSnapshot,
   type Evidence,
+  type ControlCampaignBundle,
+  TokenHistoryBackfillParametersSchema,
+  TokenLiveCaptureParametersSchema,
+  type ForensicCampaignAlert,
   type KnowledgeValue,
   type Ledger,
   ClaimExpectedActionSchema,
@@ -189,6 +214,52 @@ const SolanaTransactionReportParamsSchema = z.object({
 const SolanaTransactionReportByIdParamsSchema = SolanaTransactionReportParamsSchema.extend({
   reportId: z.string().regex(/^str_[0-9a-f]{24}$/),
 });
+
+const SolanaDealerCampaignReportParamsSchema = z.object({
+  reportId: z.string().regex(/^sdc_[0-9a-f]{24}$/),
+});
+
+const SolanaDealerCampaignMintParamsSchema = z.object({
+  mint: z
+    .string()
+    .trim()
+    .regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
+});
+
+const BitcoinForensicGraphReportParamsSchema = z.object({
+  reportId: z.string().regex(/^bfg_[0-9a-f]{24}$/),
+});
+
+const BitcoinForensicGraphRootParamsSchema = z.object({
+  txid: z
+    .string()
+    .trim()
+    .regex(/^[0-9a-fA-F]{64}$/),
+});
+
+const BitcoinForensicGraphRequestSchema = z
+  .object({
+    transactionIds: z
+      .array(
+        z
+          .string()
+          .trim()
+          .regex(/^[0-9a-fA-F]{64}$/),
+      )
+      .min(1)
+      .max(100),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const normalized = value.transactionIds.map((txid) => txid.toLowerCase());
+    if (new Set(normalized).size !== normalized.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['transactionIds'],
+        message: 'Bitcoin forensic graph transaction IDs must be unique.',
+      });
+    }
+  });
 
 const ActionSemanticsReportLookupQuerySchema = z
   .object({
@@ -322,6 +393,102 @@ const EvmControlSurfaceParamsSchema = z.object({
     .string()
     .trim()
     .regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+const ControlCampaignTokenParamsSchema = z.object({
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  token: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+const ControlCampaignBackfillAliasParamsSchema = z.object({
+  ledger: z
+    .string()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.literal('EVM')),
+  chainId: z.string().regex(/^eip155:[1-9]\d*$/),
+  token: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+});
+
+const UnsignedBlockRequestSchema = z
+  .union([
+    z.string().regex(/^(?:0|[1-9]\d*)$/),
+    z.number().int().nonnegative().refine(Number.isSafeInteger, 'Block number is too large.'),
+  ])
+  .transform((value) => String(value));
+
+const ControlCampaignBackfillRequestSchema = z
+  .object({
+    fromBlock: UnsignedBlockRequestSchema,
+    toBlock: UnsignedBlockRequestSchema,
+  })
+  .strict();
+
+const ControlCampaignMonitorRequestSchema = z
+  .object({
+    initialFromBlock: UnsignedBlockRequestSchema,
+    windowBlocks: z
+      .number()
+      .int()
+      .refine(Number.isSafeInteger, 'windowBlocks is too large.')
+      .min(1)
+      .max(1_000_000)
+      .optional(),
+    everySeconds: z.number().int().min(30).max(86_400).optional(),
+  })
+  .strict();
+
+const ControlCampaignParamsSchema = z.object({
+  campaignId: z.string().regex(/^cc_[0-9a-f]{24}$/),
+});
+
+const ControlCampaignMonitorParamsSchema = z.object({
+  monitorId: z.string().regex(/^cps_[0-9a-f]{24}$/),
+});
+
+const ForensicCaseParamsSchema = z.object({
+  caseId: z.string().regex(/^fcb_cc_[0-9a-f]{24}$/),
+});
+
+const ForensicCaseCreateSchema = z
+  .object({
+    campaignId: z.string().regex(/^cc_[0-9a-f]{24}$/),
+  })
+  .strict();
+
+const FundingSettlementReportParamsSchema = z.object({
+  reportId: z.string().regex(/^fsr_[0-9a-f]{24}$/),
+});
+
+const FundingSettlementRangeQuerySchema = z
+  .object({
+    fromBlock: z.string().regex(/^(?:0|[1-9]\d*)$/),
+    toBlock: z.string().regex(/^(?:0|[1-9]\d*)$/),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (BigInt(value.toBlock) < BigInt(value.fromBlock)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toBlock'],
+        message: 'Funding Settlement range must not end before it begins.',
+      });
+    }
+  });
+
+const ControlCampaignEvidenceItemParamsSchema = z.object({
+  itemId: z.string().regex(/^cei_[0-9a-f]{24}$/),
+});
+
+const ControlCampaignEventParamsSchema = z.object({
+  eventId: z.string().regex(/^be_[0-9a-f]{24}$/),
+});
+
+const ControlCampaignListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+const ControlCampaignGraphQuerySchema = z.object({
+  layer: z.enum(['control', 'funding', 'token', 'settlement']).default('control'),
 });
 const SolanaControlSurfaceParamsSchema = z.object({
   ledger: z
@@ -1017,8 +1184,85 @@ function solanaTransactionReportResponse(
   };
 }
 
+function controlCampaignResponse(record: StoredControlCampaignReport, replayed = false) {
+  return {
+    ...record.bundle,
+    durableReport: {
+      id: record.id,
+      resultHash: record.resultHash,
+      createdAt: record.createdAt,
+      capturedAt: record.capturedAt,
+      replayed,
+      liveRefresh: replayed
+        ? unknownValue('NOT_QUERIED', 'Replay is provider-free.')
+        : unknownValue('NOT_QUERIED', 'No live monitor refresh was requested.'),
+    },
+  };
+}
+
 async function getEvidenceNode(runtime: AppRuntime, id: string) {
   return runtime.evidenceLedger.get(id) ?? runtime.evidenceRepository?.get(id);
+}
+
+function forensicCaseRootEvidenceIds(campaign: ControlCampaignBundle): string[] {
+  return [
+    ...campaign.campaign.metadata.evidenceIds,
+    ...campaign.clusterVersion.membershipEvidenceIds,
+    ...campaign.memberships.flatMap((membership) => membership.evidenceIds),
+    ...campaign.positions.flatMap((position) => [
+      ...position.positionEvidenceIds,
+      ...position.membershipEvidenceIds,
+    ]),
+    ...campaign.behaviorEvents.flatMap((event) => [
+      ...event.supportingEvidenceIds,
+      ...event.contradictingEvidenceIds,
+      ...event.featureVector.flatMap((feature) => feature.evidenceIds),
+    ]),
+    ...campaign.evidenceItems.flatMap((item) => [item.evidenceId, ...item.parentEvidenceIds]),
+    ...campaign.evidenceLine.evidenceIds,
+  ]
+    .filter((id, index, ids) => ids.indexOf(id) === index)
+    .sort();
+}
+
+async function forensicCaseEvidenceClosure(
+  runtime: AppRuntime,
+  campaign: ControlCampaignBundle,
+): Promise<EvidenceNode[]> {
+  const nodes = new Map<string, EvidenceNode>();
+  for (const rootId of forensicCaseRootEvidenceIds(campaign)) {
+    const drilled =
+      runtime.evidenceRepository === undefined
+        ? runtime.evidenceLedger.drilldown(rootId)
+        : await runtime.evidenceRepository.drilldown(rootId);
+    for (const node of drilled) nodes.set(node.evidence.id, node);
+  }
+  return [...nodes.values()];
+}
+
+async function forensicCaseBundleForCampaign(
+  runtime: AppRuntime,
+  record: StoredControlCampaignReport,
+) {
+  const evidenceNodes = await forensicCaseEvidenceClosure(runtime, record.bundle);
+  return buildForensicCaseBundle({
+    campaign: record.bundle,
+    evidenceNodes,
+    gitCommit: process.env.GIT_COMMIT ?? null,
+  });
+}
+
+function forensicCaseBundleError(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  error: ForensicCaseBundleError,
+) {
+  return reply.code(422).send({
+    status: unknownValue('INSUFFICIENT_DATA', error.message),
+    metadata: emptyMetadata('forensic-case-bundle-v1'),
+    forensicCode: error.code,
+    error: errorResponse(request, `FORENSIC_${error.code}`, error.message, false).error,
+  });
 }
 
 async function addEvidence(
@@ -1155,6 +1399,34 @@ function rejectUngroundedAnalysis(
   });
 }
 
+function bindRequestAbort(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): {
+  signal: AbortSignal;
+  cleanup: () => void;
+} {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  const socket = request.raw.socket;
+  const disconnectPoll = setInterval(() => {
+    if (request.raw.aborted || socket?.destroyed || reply.raw.destroyed) abort();
+  }, 250);
+  disconnectPoll.unref?.();
+  request.raw.once('aborted', abort);
+  socket?.once('close', abort);
+  reply.raw.once('close', abort);
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      request.raw.removeListener('aborted', abort);
+      socket?.removeListener('close', abort);
+      reply.raw.removeListener('close', abort);
+      clearInterval(disconnectPoll);
+    },
+  };
+}
+
 function capabilityNotImplemented(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -1278,6 +1550,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['controlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaControlSurfaces']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['solanaTransactionReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['solanaDealerReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['bitcoinForensicGraphReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['actionSemanticsReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionCandidateReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['pensionEntryReports']>['health']>>
@@ -1285,6 +1559,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     | Awaited<ReturnType<NonNullable<AppRuntime['entityRelationshipTimelines']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphs']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['entityInvestigationGraphTimelines']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['controlCampaignReports']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['forensicCampaignAlerts']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['fundingSettlementReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['intelligenceSearch']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['labelIntelligenceReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['captureSchedules']>['health']>>
@@ -1320,6 +1597,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         controlSurfaces,
         solanaControlSurfaces,
         solanaTransactionReports,
+        solanaDealerReports,
+        bitcoinForensicGraphReports,
         actionSemanticsReports,
         pensionCandidateReports,
         pensionEntryReports,
@@ -1327,6 +1606,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         entityRelationshipTimelines,
         entityInvestigationGraphs,
         entityInvestigationGraphTimelines,
+        controlCampaignReports,
+        forensicCampaignAlerts,
+        fundingSettlementReports,
         intelligenceSearch,
         labelIntelligenceReports,
         captureSchedules,
@@ -1342,6 +1624,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.controlSurfaces?.health(),
         runtime.solanaControlSurfaces?.health(),
         runtime.solanaTransactionReports?.health(),
+        runtime.solanaDealerReports?.health(),
+        runtime.bitcoinForensicGraphReports?.health(),
         runtime.actionSemanticsReports?.health(),
         runtime.pensionCandidateReports?.health(),
         runtime.pensionEntryReports?.health(),
@@ -1349,6 +1633,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         runtime.entityRelationshipTimelines?.health(),
         runtime.entityInvestigationGraphs?.health(),
         runtime.entityInvestigationGraphTimelines?.health(),
+        runtime.controlCampaignReports?.health(),
+        runtime.forensicCampaignAlerts?.health(),
+        runtime.fundingSettlementReports?.health(),
         runtime.intelligenceSearch?.health(),
         runtime.labelIntelligenceReports?.health(),
         runtime.captureSchedules?.health(),
@@ -1366,6 +1653,8 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           controlSurfaces,
           solanaControlSurfaces,
           solanaTransactionReports,
+          solanaDealerReports,
+          bitcoinForensicGraphReports,
           actionSemanticsReports,
           pensionCandidateReports,
           pensionEntryReports,
@@ -1373,6 +1662,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           entityRelationshipTimelines,
           entityInvestigationGraphs,
           entityInvestigationGraphTimelines,
+          controlCampaignReports,
+          forensicCampaignAlerts,
+          fundingSettlementReports,
           intelligenceSearch,
           labelIntelligenceReports,
           captureSchedules,
@@ -1573,9 +1865,46 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof SolanaDealerCaptureError) {
+      const status =
+        error.code === 'SOLANA_DEALER_CAPTURE_INVALID'
+          ? 400
+          : error.code === 'SOLANA_DEALER_CAPTURE_NO_SOURCE'
+            ? 503
+            : 502;
+      return reply.code(status).send(errorResponse(request, error.code, error.message, false));
+    }
+    if (error instanceof BitcoinForensicGraphCaptureError) {
+      const status =
+        error.code === 'BITCOIN_FORENSIC_GRAPH_INVALID_REQUEST'
+          ? 400
+          : error.code === 'BITCOIN_FORENSIC_GRAPH_UNCONFIRMED'
+            ? 409
+            : 502;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     if (error instanceof StorageError) {
       return reply
         .code(503)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof CaptureScheduleStorageError) {
+      const status =
+        error.code === 'CAPTURE_SCHEDULER_INVALID'
+          ? 400
+          : error.code === 'CAPTURE_SCHEDULER_CONFLICT'
+            ? 409
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ForensicCampaignAlertStorageError) {
+      const status = error.code === 'FORENSIC_ALERT_STORAGE_CONFLICT' ? 409 : 503;
+      return reply
+        .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
     if (error instanceof FlapHistoryProjectionError) {
@@ -1641,6 +1970,28 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
+    if (error instanceof SolanaDealerCampaignReportStorageError) {
+      const status =
+        error.code === 'SOLANA_DEALER_REPORT_INVALID'
+          ? 400
+          : error.code === 'SOLANA_DEALER_REPORT_CONFLICT'
+            ? 409
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof BitcoinForensicGraphReportStorageError) {
+      const status =
+        error.code === 'BITCOIN_FORENSIC_GRAPH_INVALID'
+          ? 400
+          : error.code === 'BITCOIN_FORENSIC_GRAPH_CONFLICT'
+            ? 409
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
     if (error instanceof ActionSemanticsReportStorageError) {
       const status = error.code === 'ACTION_SEMANTICS_REPORT_INVALID' ? 400 : 503;
       return reply
@@ -1679,6 +2030,28 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
     }
     if (error instanceof EntityInvestigationGraphTimelineStorageError) {
       const status = error.code === 'ENTITY_INVESTIGATION_GRAPH_TIMELINE_INVALID' ? 400 : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof ControlCampaignReportStorageError) {
+      const status =
+        error.code === 'CONTROL_CAMPAIGN_REPORT_INVALID'
+          ? 400
+          : error.code === 'CONTROL_CAMPAIGN_REPORT_CONFLICT'
+            ? 409
+            : 503;
+      return reply
+        .code(status)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof FundingSettlementReportStorageError) {
+      const status =
+        error.code === 'FUNDING_SETTLEMENT_REPORT_INVALID'
+          ? 400
+          : error.code === 'FUNDING_SETTLEMENT_REPORT_CONFLICT'
+            ? 409
+            : 503;
       return reply
         .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
@@ -1810,6 +2183,15 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           runtime.evidenceRepository === undefined
             ? 'POSTGRES_URL is absent; Evidence is process-local.'
             : 'PostgreSQL append-only Evidence and Snapshot persistence is configured.',
+      },
+      {
+        id: 'control-campaign-p0',
+        status:
+          runtime.controlCampaignReports === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PROVIDER_FREE_REPLAY',
+        detail:
+          'Token Flow, candidate screening, conserved Cluster Positions, Behavior Events, deterministic Campaign bundles, Evidence-bound alerts, and provider-free Campaign/SSE replay are wired from immutable PostgreSQL reports. Real token-history discovery and provider-backed backfill are wired; calibration and independent acceptance remain explicit pending boundaries.',
       },
       {
         id: 'global-intelligence-search',
@@ -2035,7 +2417,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
             ? 'DURABLE_STORAGE_REQUIRED'
             : 'IMPLEMENTED_DURABLE_PROVIDER_FREE_REPLAY',
         detail:
-          'Chain-neutral EVM, Bitcoin and Solana action primitives persist as immutable content-addressed reports with canonical transaction identities, exact Snapshot-bound Evidence closure and non-derived source provenance. Latest/exact reads never contact a provider; trusted production ledger adapters, scheduler handler binding and historical backfill remain pending. There is no public report-write endpoint.',
+          'Chain-neutral EVM, Bitcoin and Solana action primitives persist as immutable content-addressed reports with canonical transaction identities, exact Snapshot-bound Evidence closure and non-derived source provenance. Latest/exact reads never contact a provider; the durable capture scheduler and Token History backfill binding are separate from the action report surface. There is no public report-write endpoint.',
       },
       {
         id: 'claim-declaration-replay',
@@ -2076,16 +2458,16 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
               ? 'STORAGE_PARTIALLY_CONFIGURED'
               : 'STORAGE_REQUIRED',
         detail:
-          'Restart-safe SQD finalized blocks, transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards are implemented with durable provenance. Anchor continuity/reorg detection is wired separately; semantic transfers, protocol decoding, continuous scheduling, and historical replay policy remain pending.',
+          'Restart-safe SQD finalized blocks, transactions, EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards are implemented with durable provenance. Anchor continuity/reorg detection is wired separately; semantic transfers, protocol decoding, and non-EVM continuous handlers remain pending.',
       },
       {
         id: 'durable-capture-scheduling',
         status:
           runtime.captureSchedules === undefined
             ? 'DURABLE_STORAGE_REQUIRED'
-            : 'IMPLEMENTED_DURABLE_CLAIM_ACTIONS_HANDLER',
+            : 'IMPLEMENTED_DURABLE_CLAIM_TOKEN_HISTORY_AND_MONITOR_HANDLERS',
         detail:
-          'Generic EVM/Bitcoin/Solana read-only schedules use deterministic occurrence IDs, exclusive expiring leases, bounded retries and immutable attempts. CLAIM_ACTIONS now has a production BSC handler and durable terminal verification report; transaction Action Semantics remains separately registered. Temporal/NATS adapters, non-EVM claim handlers and continuous backfill remain pending.',
+          'Generic EVM/Bitcoin/Solana read-only schedules use deterministic occurrence IDs, exclusive expiring leases, bounded retries and immutable attempts. CLAIM_ACTIONS and TOKEN_HISTORY_BACKFILL have production handler bindings; Token Live Capture persists restart-safe Token History, Funding/Settlement, Control Campaign, Evidence-bound alerts, and provider-free SSE replay. Temporal/NATS adapters and non-EVM handlers remain pending.',
       },
       {
         id: 'entity-evidence-fusion',
@@ -2143,6 +2525,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
 
   app.get('/api/v1/platforms', { schema: { tags: ['system'] } }, async () => ({
     platforms: PLATFORM_REGISTRY,
+    launchpadRegistry: LAUNCHPAD_PROTOCOL_REGISTRY,
     gmgnConfigured: options.config.gmgnConfigured,
   }));
 
@@ -2699,6 +3082,246 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           );
       }
       return { record };
+    },
+  );
+
+  app.post(
+    '/api/v1/solana/dealer-campaigns',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const body = SolanaDealerCampaignRequestSchema.parse(request.body);
+      const requestAbort = bindRequestAbort(request, reply);
+      const source = runtime.sqdSolanaSource;
+      const adapter = runtime.solanaAdapter;
+      if (source === undefined || adapter === undefined) {
+        requestAbort.cleanup();
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_CAPTURE_NO_SOURCE',
+              'A finalized Solana RPC adapter and SQD solana-mainnet source are required for dealer capture.',
+              false,
+            ),
+          );
+      }
+      try {
+        const result = await captureSolanaDealerCampaign({
+          ...body,
+          source,
+          adapter,
+          signal: requestAbort.signal,
+          writeEvidence: async (evidence, sourceEvidenceIds = [], snapshot) => {
+            if (requestAbort.signal.aborted) {
+              throw new ProviderError('TIMEOUT', 'Solana dealer capture was aborted.', {
+                retryable: false,
+              });
+            }
+            const stored = await addEvidence(runtime, evidence, sourceEvidenceIds, snapshot);
+            if (requestAbort.signal.aborted) {
+              throw new ProviderError('TIMEOUT', 'Solana dealer capture was aborted.', {
+                retryable: false,
+              });
+            }
+            return stored;
+          },
+        });
+        const durableReport = await runtime.solanaDealerReports?.put(result.report);
+        if (result.report.campaign !== null) {
+          await runtime.controlCampaignReports?.put(result.report.campaign);
+          for (const alert of result.report.alerts) {
+            await runtime.forensicCampaignAlerts?.put(alert);
+          }
+        }
+        return {
+          replayed: false,
+          durable: durableReport !== undefined,
+          record: durableReport ?? null,
+          report: result.report,
+          sourceSummary: result.sourceSummary,
+          candidateCount: result.candidateCount,
+          truncated: result.truncated,
+        };
+      } finally {
+        requestAbort.cleanup();
+      }
+    },
+  );
+
+  app.get(
+    '/api/v1/solana/dealer-campaigns/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = SolanaDealerCampaignReportParamsSchema.parse(request.params);
+      const repository = runtime.solanaDealerReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_REPORT_UNAVAILABLE',
+              'Durable Solana dealer campaign report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_REPORT_NOT_FOUND',
+              'The durable Solana dealer campaign report was not found.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/solana/mints/:mint/dealer-campaigns/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = SolanaDealerCampaignMintParamsSchema.parse(request.params);
+      const repository = runtime.solanaDealerReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_REPORT_UNAVAILABLE',
+              'Durable Solana dealer campaign report storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.latest(params.mint);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'SOLANA_DEALER_REPORT_NOT_FOUND',
+              'No durable Solana dealer campaign report exists for this mint.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.post(
+    '/api/v1/bitcoin/forensic-graphs',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const body = BitcoinForensicGraphRequestSchema.parse(request.body);
+      const adapter = runtime.bitcoinAdapter;
+      if (adapter === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_PROVIDER_UNCONFIGURED',
+              'A Bitcoin Esplora adapter is required for forensic graph capture.',
+              false,
+            ),
+          );
+      }
+      const result = await captureBitcoinForensicGraph({
+        adapter,
+        request: body,
+        writeEvidence: (evidence, sourceEvidenceIds = [], snapshot) =>
+          addEvidence(runtime, evidence, sourceEvidenceIds, snapshot),
+      });
+      const durableReport = await runtime.bitcoinForensicGraphReports?.put(result.report);
+      return {
+        replayed: false,
+        durable: durableReport !== undefined,
+        record: durableReport ?? null,
+        report: result.report,
+        sourceSummary: result.sourceSummary,
+        capturedEvidence: result.evidence.map((item) => item.id),
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/bitcoin/forensic-graphs/:reportId',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = BitcoinForensicGraphReportParamsSchema.parse(request.params);
+      const repository = runtime.bitcoinForensicGraphReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_UNAVAILABLE',
+              'Durable Bitcoin forensic graph storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = await repository.get(params.reportId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_NOT_FOUND',
+              'The durable Bitcoin forensic graph was not found.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
+    },
+  );
+
+  app.get(
+    '/api/v1/bitcoin/transactions/:txid/forensic-graphs/latest',
+    { schema: { tags: ['intelligence'] } },
+    async (request, reply) => {
+      const params = BitcoinForensicGraphRootParamsSchema.parse(request.params);
+      const repository = runtime.bitcoinForensicGraphReports;
+      if (repository === undefined) {
+        return reply
+          .code(503)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_UNAVAILABLE',
+              'Durable Bitcoin forensic graph storage is not configured.',
+              false,
+            ),
+          );
+      }
+      const record = (await repository.list({ rootTxid: params.txid, limit: 1 }))[0];
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'BITCOIN_FORENSIC_GRAPH_NOT_FOUND',
+              'No durable Bitcoin forensic graph exists for this transaction.',
+              false,
+            ),
+          );
+      }
+      return { replayed: true, record };
     },
   );
 
@@ -6055,6 +6678,1085 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
           ? await runtime.controlSurfaces?.latest(query.chainId, query.subject.toLowerCase())
           : await runtime.solanaControlSurfaces?.latest(query.subject);
       return { records: record === undefined ? [] : [record] };
+    },
+  );
+
+  const controlCampaignUnavailable = (request: FastifyRequest, reply: FastifyReply) =>
+    reply.code(503).send({
+      status: unknownValue(
+        'STORAGE_UNCONFIGURED',
+        'PostgreSQL Control Campaign storage is not configured.',
+      ),
+      metadata: emptyMetadata('control-campaign-v1'),
+      error: errorResponse(
+        request,
+        'CONTROL_CAMPAIGN_STORAGE_UNAVAILABLE',
+        'Durable Control Campaign storage is not configured.',
+        false,
+      ).error,
+    });
+
+  const captureScheduleUnavailable = (request: FastifyRequest, reply: FastifyReply) =>
+    reply.code(503).send({
+      status: unknownValue(
+        'STORAGE_UNCONFIGURED',
+        'PostgreSQL capture scheduler storage is not configured.',
+      ),
+      metadata: emptyMetadata('capture-scheduler-v1'),
+      error: errorResponse(
+        request,
+        'CAPTURE_SCHEDULER_UNAVAILABLE',
+        'Durable capture scheduler storage is not configured.',
+        false,
+      ).error,
+    });
+
+  const queueControlCampaignBackfill = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    params: { chainId: string; token: string },
+  ) => {
+    const schedules = runtime.captureSchedules;
+    if (schedules === undefined) return captureScheduleUnavailable(request, reply);
+    const body = ControlCampaignBackfillRequestSchema.parse(request.body);
+    const dataset =
+      params.chainId === 'eip155:1'
+        ? 'ethereum-mainnet'
+        : params.chainId === 'eip155:56'
+          ? 'binance-mainnet'
+          : undefined;
+    if (dataset === undefined) {
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            request,
+            'CONTROL_CAMPAIGN_BACKFILL_UNSUPPORTED_CHAIN',
+            'Token History backfill currently supports Ethereum and BNB Smart Chain only.',
+            false,
+          ),
+        );
+    }
+    const parameters = TokenHistoryBackfillParametersSchema.parse({
+      schemaVersion: 'token-history-backfill-v1',
+      dataset,
+      token: params.token.toLowerCase(),
+      fromBlock: body.fromBlock,
+      toBlock: body.toBlock,
+      modelVersion: 'token-history-backfill-v1.0.0',
+      policyVersion: 'token-history-policy-v1.0.0',
+    });
+    const fromBlock = BigInt(parameters.fromBlock);
+    const toBlock = BigInt(parameters.toBlock);
+    if (
+      fromBlock > BigInt(Number.MAX_SAFE_INTEGER) ||
+      toBlock > BigInt(Number.MAX_SAFE_INTEGER) ||
+      toBlock - fromBlock + 1n > 1_000_000n
+    ) {
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            request,
+            'CONTROL_CAMPAIGN_BACKFILL_RANGE_INVALID',
+            'Token History backfill must fit a safe integer range and at most 1,000,000 blocks.',
+            false,
+          ),
+        );
+    }
+    const target = {
+      ledger: 'EVM' as const,
+      chainId: params.chainId,
+      subjectType: 'TOKEN' as const,
+      normalizedIdentifier: params.token.toLowerCase(),
+    };
+    const existing = (
+      await schedules.listSchedules({
+        target,
+        captureKind: 'TOKEN_HISTORY_BACKFILL',
+        limit: 100,
+      })
+    ).find((schedule) => hashPayload(schedule.definition.parameters) === hashPayload(parameters));
+    const schedule =
+      existing ??
+      (() => {
+        // Bind creation and one-shot execution to the same millisecond. If these
+        // calls straddle a millisecond boundary, the schedule can be born
+        // COMPLETED instead of QUEUED and a valid backfill is never claimable.
+        const enqueueAt = new Date().toISOString();
+        return defineCaptureSchedule({
+          captureKind: 'TOKEN_HISTORY_BACKFILL',
+          target,
+          parameters,
+          createdAt: enqueueAt,
+          trigger: { type: 'ONCE', at: enqueueAt },
+          retryPolicy: {
+            maxAttempts: 3,
+            initialDelaySeconds: 30,
+            maximumDelaySeconds: 900,
+            backoffMultiplierBps: 20_000,
+          },
+        });
+      })();
+    const stored = existing ?? (await schedules.putSchedule(schedule));
+    const runs = await schedules.listRunsForSchedule(stored.definition.id, 20);
+    const response = {
+      backfill: {
+        scheduleId: stored.definition.id,
+        status: stored.status === 'ACTIVE' ? 'QUEUED' : stored.status,
+        target: stored.definition.target,
+        parameters: TokenHistoryBackfillParametersSchema.parse(stored.definition.parameters),
+        nextRunAt: stored.nextRunAt,
+      },
+      schedule: stored,
+      runs,
+      replayed: existing !== undefined,
+    };
+    return reply.code(existing === undefined ? 202 : 200).send(response);
+  };
+
+  const listControlCampaignBackfills = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    params: { chainId: string; token: string },
+  ) => {
+    const schedules = runtime.captureSchedules;
+    if (schedules === undefined) return captureScheduleUnavailable(request, reply);
+    const query = ControlCampaignListQuerySchema.parse(request.query);
+    const target = {
+      ledger: 'EVM' as const,
+      chainId: params.chainId,
+      subjectType: 'TOKEN' as const,
+      normalizedIdentifier: params.token.toLowerCase(),
+    };
+    const records = await schedules.listSchedules({
+      target,
+      captureKind: 'TOKEN_HISTORY_BACKFILL',
+      ...(query.limit === undefined ? {} : { limit: query.limit }),
+    });
+    return {
+      records: await Promise.all(
+        records.map(async (schedule) => ({
+          schedule,
+          runs: await schedules.listRunsForSchedule(schedule.definition.id, 20),
+        })),
+      ),
+      replayed: true,
+    };
+  };
+
+  const queueControlCampaignMonitor = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    params: { chainId: string; token: string },
+  ) => {
+    const schedules = runtime.captureSchedules;
+    if (schedules === undefined) return captureScheduleUnavailable(request, reply);
+    const body = ControlCampaignMonitorRequestSchema.parse(request.body);
+    const dataset =
+      params.chainId === 'eip155:1'
+        ? 'ethereum-mainnet'
+        : params.chainId === 'eip155:56'
+          ? 'binance-mainnet'
+          : undefined;
+    if (dataset === undefined) {
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            request,
+            'CONTROL_CAMPAIGN_MONITOR_UNSUPPORTED_CHAIN',
+            'Token Campaign monitoring currently supports Ethereum and BNB Smart Chain only.',
+            false,
+          ),
+        );
+    }
+    const initialFromBlock = BigInt(body.initialFromBlock);
+    if (initialFromBlock > BigInt(Number.MAX_SAFE_INTEGER)) {
+      return reply
+        .code(400)
+        .send(
+          errorResponse(
+            request,
+            'CONTROL_CAMPAIGN_MONITOR_RANGE_INVALID',
+            'Monitor initialFromBlock must fit a safe integer range.',
+            false,
+          ),
+        );
+    }
+    const parameters = TokenLiveCaptureParametersSchema.parse({
+      schemaVersion: 'token-live-capture-v1',
+      dataset,
+      token: params.token.toLowerCase(),
+      initialFromBlock: body.initialFromBlock,
+      windowBlocks: body.windowBlocks ?? 10_000,
+      modelVersion: 'token-live-capture-v1.0.0',
+      policyVersion: 'token-history-policy-v1.0.0',
+    });
+    const everySeconds = body.everySeconds ?? 60;
+    const target = {
+      ledger: 'EVM' as const,
+      chainId: params.chainId,
+      subjectType: 'TOKEN' as const,
+      normalizedIdentifier: params.token.toLowerCase(),
+    };
+    const existing = (
+      await schedules.listSchedules({
+        target,
+        captureKind: 'TOKEN_LIVE_CAPTURE',
+        limit: 100,
+      })
+    ).find(
+      (schedule) =>
+        hashPayload(schedule.definition.parameters) === hashPayload(parameters) &&
+        schedule.definition.trigger.type === 'INTERVAL' &&
+        schedule.definition.trigger.everySeconds === everySeconds,
+    );
+    const schedule =
+      existing ??
+      defineCaptureSchedule({
+        captureKind: 'TOKEN_LIVE_CAPTURE',
+        target,
+        parameters,
+        trigger: {
+          type: 'INTERVAL',
+          anchorAt: new Date().toISOString(),
+          everySeconds,
+          catchupPolicy: 'SKIP_MISSED',
+        },
+        retryPolicy: {
+          maxAttempts: 3,
+          initialDelaySeconds: 30,
+          maximumDelaySeconds: 900,
+          backoffMultiplierBps: 20_000,
+        },
+      });
+    const stored = existing ?? (await schedules.putSchedule(schedule));
+    const runs = await schedules.listRunsForSchedule(stored.definition.id, 20);
+    return reply.code(existing === undefined ? 202 : 200).send({
+      monitor: {
+        monitorId: stored.definition.id,
+        scheduleId: stored.definition.id,
+        status: stored.status,
+        target: stored.definition.target,
+        parameters: TokenLiveCaptureParametersSchema.parse(stored.definition.parameters),
+        trigger: stored.definition.trigger,
+        nextRunAt: stored.nextRunAt,
+      },
+      schedule: stored,
+      runs,
+      replayed: existing !== undefined,
+    });
+  };
+
+  const readControlCampaignMonitor = async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = ControlCampaignMonitorParamsSchema.parse(request.params);
+    const schedules = runtime.captureSchedules;
+    if (schedules === undefined) return captureScheduleUnavailable(request, reply);
+    const schedule = await schedules.getSchedule(params.monitorId);
+    if (schedule === undefined || schedule.definition.captureKind !== 'TOKEN_LIVE_CAPTURE') {
+      return reply
+        .code(404)
+        .send(
+          errorResponse(
+            request,
+            'CONTROL_CAMPAIGN_MONITOR_NOT_FOUND',
+            'Control Campaign monitor was not found.',
+            false,
+          ),
+        );
+    }
+    return {
+      monitor: {
+        monitorId: schedule.definition.id,
+        scheduleId: schedule.definition.id,
+        status: schedule.status,
+        target: schedule.definition.target,
+        parameters: TokenLiveCaptureParametersSchema.parse(schedule.definition.parameters),
+        trigger: schedule.definition.trigger,
+        nextRunAt: schedule.nextRunAt,
+      },
+      schedule,
+      runs: await schedules.listRunsForSchedule(schedule.definition.id, 50),
+      replayed: true,
+    };
+  };
+
+  const alertsUnavailable = (request: FastifyRequest, reply: FastifyReply) =>
+    reply.code(503).send({
+      status: unknownValue(
+        'STORAGE_UNCONFIGURED',
+        'PostgreSQL Forensic Campaign Alert storage is not configured.',
+      ),
+      metadata: emptyMetadata('forensic-campaign-alert-v1'),
+      error: errorResponse(
+        request,
+        'FORENSIC_ALERT_STORAGE_UNAVAILABLE',
+        'Durable Forensic Campaign Alert storage is not configured.',
+        false,
+      ).error,
+    });
+
+  const campaignAlerts = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    campaignId: string,
+  ): Promise<
+    FastifyReply | { campaignId: string; alerts: ForensicCampaignAlert[]; replayed: true }
+  > => {
+    const campaigns = runtime.controlCampaignReports;
+    const alerts = runtime.forensicCampaignAlerts;
+    if (campaigns === undefined) return controlCampaignUnavailable(request, reply);
+    if (alerts === undefined) return alertsUnavailable(request, reply);
+    const record = await campaigns.get(campaignId);
+    if (record === undefined) {
+      return reply
+        .code(404)
+        .send(
+          errorResponse(
+            request,
+            'CONTROL_CAMPAIGN_NOT_FOUND',
+            'Control Campaign was not found.',
+            false,
+          ),
+        );
+    }
+    return { campaignId, alerts: await alerts.listByCampaign(campaignId), replayed: true };
+  };
+
+  const streamControlCampaignById = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    campaignId: string,
+  ) => {
+    const campaigns = runtime.controlCampaignReports;
+    const alerts = runtime.forensicCampaignAlerts;
+    if (campaigns === undefined) return controlCampaignUnavailable(request, reply);
+    if (alerts === undefined) return alertsUnavailable(request, reply);
+    const record = await campaigns.get(campaignId);
+    if (record === undefined) {
+      return reply
+        .code(404)
+        .send(
+          errorResponse(
+            request,
+            'CONTROL_CAMPAIGN_NOT_FOUND',
+            'Control Campaign was not found.',
+            false,
+          ),
+        );
+    }
+    const records = await alerts.listByCampaign(campaignId);
+    const events = [
+      `event: campaign\ndata: ${JSON.stringify({
+        campaignId: record.id,
+        resultHash: record.resultHash,
+        snapshotPosition: record.snapshotPosition,
+        capturedAt: record.capturedAt,
+        replayed: true,
+      })}\n\n`,
+      ...records.map(
+        (alert) => `id: ${alert.id}\nevent: alert\ndata: ${JSON.stringify(alert)}\n\n`,
+      ),
+      `event: complete\ndata: ${JSON.stringify({
+        campaignId: record.id,
+        alertCount: records.length,
+        replayed: true,
+      })}\n\n`,
+    ];
+    return reply
+      .header('content-type', 'text/event-stream; charset=utf-8')
+      .header('cache-control', 'no-cache, no-store')
+      .header('connection', 'keep-alive')
+      .send(events.join(''));
+  };
+
+  const streamControlCampaign = async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = ControlCampaignParamsSchema.parse(request.params);
+    return streamControlCampaignById(request, reply, params.campaignId);
+  };
+
+  const fundingSettlementUnavailable = (request: FastifyRequest, reply: FastifyReply) =>
+    reply.code(503).send({
+      status: unknownValue(
+        'STORAGE_UNCONFIGURED',
+        'PostgreSQL Funding and Settlement report storage is not configured.',
+      ),
+      metadata: emptyMetadata('funding-settlement-v1.0.0'),
+      error: errorResponse(
+        request,
+        'FUNDING_SETTLEMENT_REPORT_UNAVAILABLE',
+        'Durable Funding and Settlement report storage is not configured.',
+        false,
+      ).error,
+    });
+
+  app.get(
+    '/api/v1/funding-settlement/tokens/:chainId/:token/range',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      const query = FundingSettlementRangeQuerySchema.parse(request.query);
+      const repository = runtime.fundingSettlementReports;
+      if (repository === undefined) return fundingSettlementUnavailable(request, reply);
+      const report = await repository.forRange(
+        params.chainId,
+        params.token.toLowerCase(),
+        query.fromBlock,
+        query.toBlock,
+      );
+      if (report === undefined) {
+        return {
+          report: unknownValue(
+            'NOT_QUERIED',
+            'No durable Funding and Settlement report matches the selected campaign range.',
+          ),
+          snapshot: unknownValue('NOT_QUERIED'),
+          metadata: emptyMetadata('funding-settlement-v1.0.0'),
+          replayed: true,
+        };
+      }
+      return { report, replayed: true };
+    },
+  );
+
+  app.get(
+    '/api/v1/funding-settlement/tokens/:chainId/:token',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      const repository = runtime.fundingSettlementReports;
+      if (repository === undefined) return fundingSettlementUnavailable(request, reply);
+      const report = await repository.latest(params.chainId, params.token.toLowerCase());
+      if (report === undefined) {
+        return {
+          report: unknownValue(
+            'NOT_QUERIED',
+            'No durable Funding and Settlement report has been materialized for this token.',
+          ),
+          snapshot: unknownValue('NOT_QUERIED'),
+          metadata: emptyMetadata('funding-settlement-v1.0.0'),
+          replayed: true,
+        };
+      }
+      return { report, replayed: true };
+    },
+  );
+
+  app.get(
+    '/api/v1/funding-settlement/reports/:reportId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = FundingSettlementReportParamsSchema.parse(request.params);
+      const repository = runtime.fundingSettlementReports;
+      if (repository === undefined) return fundingSettlementUnavailable(request, reply);
+      const report = await repository.get(params.reportId);
+      if (report === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'FUNDING_SETTLEMENT_REPORT_NOT_FOUND',
+              'The requested durable Funding and Settlement report was not found.',
+              false,
+            ),
+          );
+      }
+      return { report, replayed: true };
+    },
+  );
+
+  app.get(
+    '/api/v1/control/tokens/:chainId/:token/overview',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.latest(params.chainId, params.token.toLowerCase());
+      if (record === undefined) {
+        return {
+          campaign: unknownValue(
+            'NOT_QUERIED',
+            'No durable Control Campaign has been materialized for this token.',
+          ),
+          snapshot: unknownValue('NOT_QUERIED'),
+          metadata: emptyMetadata('control-campaign-v1'),
+        };
+      }
+      return controlCampaignResponse(record);
+    },
+  );
+
+  app.get(
+    '/api/v1/control/tokens/:chainId/:token/campaigns',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      const query = ControlCampaignListQuerySchema.parse(request.query);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const records = await repository.list({
+        chainId: params.chainId,
+        token: params.token.toLowerCase(),
+        ...(query.limit === undefined ? {} : { limit: query.limit }),
+      });
+      return { records: records.map((record) => controlCampaignResponse(record)) };
+    },
+  );
+
+  app.post(
+    '/api/v1/control/tokens/:chainId/:token/backfill',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      return queueControlCampaignBackfill(request, reply, params);
+    },
+  );
+
+  app.get(
+    '/api/v1/control/tokens/:chainId/:token/backfill',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      return listControlCampaignBackfills(request, reply, params);
+    },
+  );
+
+  app.post(
+    '/api/v1/control-campaigns/:ledger/:chainId/:token/backfills',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignBackfillAliasParamsSchema.parse(request.params);
+      return queueControlCampaignBackfill(request, reply, params);
+    },
+  );
+
+  app.get(
+    '/api/v1/control-campaigns/:ledger/:chainId/:token/backfills',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignBackfillAliasParamsSchema.parse(request.params);
+      return listControlCampaignBackfills(request, reply, params);
+    },
+  );
+
+  app.post(
+    '/api/v1/control/tokens/:chainId/:token/monitor',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      return queueControlCampaignMonitor(request, reply, params);
+    },
+  );
+
+  app.get(
+    '/api/v1/control/tokens/:chainId/:token/alerts',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      const campaigns = runtime.controlCampaignReports;
+      if (campaigns === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await campaigns.latest(params.chainId, params.token.toLowerCase());
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'No latest Control Campaign was found for this token.',
+              false,
+            ),
+          );
+      }
+      return campaignAlerts(request, reply, record.id);
+    },
+  );
+
+  app.get(
+    '/api/v1/control/tokens/:chainId/:token/stream',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignTokenParamsSchema.parse(request.params);
+      const campaigns = runtime.controlCampaignReports;
+      if (campaigns === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await campaigns.latest(params.chainId, params.token.toLowerCase());
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'No latest Control Campaign was found for this token.',
+              false,
+            ),
+          );
+      }
+      return streamControlCampaignById(request, reply, record.id);
+    },
+  );
+
+  app.post(
+    '/api/v1/control-campaigns/:ledger/:chainId/:token/monitors',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignBackfillAliasParamsSchema.parse(request.params);
+      return queueControlCampaignMonitor(request, reply, params);
+    },
+  );
+
+  app.get(
+    '/api/v1/control-campaigns/monitors/:monitorId',
+    { schema: { tags: ['analysis'] } },
+    readControlCampaignMonitor,
+  );
+
+  app.get(
+    '/api/v1/control-campaigns/:campaignId/alerts',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      return campaignAlerts(request, reply, params.campaignId);
+    },
+  );
+
+  app.get(
+    '/api/v1/control-campaigns/:campaignId/stream',
+    { schema: { tags: ['analysis'] } },
+    streamControlCampaign,
+  );
+
+  app.get(
+    '/api/v1/control/campaigns/:campaignId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      return controlCampaignResponse(record);
+    },
+  );
+
+  app.post(
+    '/api/v1/control/campaigns/:campaignId/replay',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      return controlCampaignResponse(record, true);
+    },
+  );
+
+  app.post(
+    '/api/v1/control/campaigns/:campaignId/export',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      try {
+        return { case: await forensicCaseBundleForCampaign(runtime, record), replayed: true };
+      } catch (error) {
+        if (error instanceof ForensicCaseBundleError)
+          return forensicCaseBundleError(request, reply, error);
+        throw error;
+      }
+    },
+  );
+
+  app.get(
+    '/api/v1/control/campaigns/:campaignId/export',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      try {
+        return { case: await forensicCaseBundleForCampaign(runtime, record), replayed: true };
+      } catch (error) {
+        if (error instanceof ForensicCaseBundleError)
+          return forensicCaseBundleError(request, reply, error);
+        throw error;
+      }
+    },
+  );
+
+  app.post(
+    '/api/v1/forensics/cases',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const body = ForensicCaseCreateSchema.parse(request.body);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(body.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      try {
+        return { case: await forensicCaseBundleForCampaign(runtime, record), replayed: true };
+      } catch (error) {
+        if (error instanceof ForensicCaseBundleError)
+          return forensicCaseBundleError(request, reply, error);
+        throw error;
+      }
+    },
+  );
+
+  const readForensicCase = async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = ForensicCaseParamsSchema.parse(request.params);
+    const campaignId = params.caseId.slice('fcb_'.length);
+    const repository = runtime.controlCampaignReports;
+    if (repository === undefined) return controlCampaignUnavailable(request, reply);
+    const record = await repository.get(campaignId);
+    if (record === undefined || caseIdForCampaign(record.id) !== params.caseId) {
+      return reply
+        .code(404)
+        .send(
+          errorResponse(
+            request,
+            'FORENSIC_CASE_NOT_FOUND',
+            'Forensic Case Bundle was not found.',
+            false,
+          ),
+        );
+    }
+    try {
+      return { case: await forensicCaseBundleForCampaign(runtime, record), replayed: true };
+    } catch (error) {
+      if (error instanceof ForensicCaseBundleError)
+        return forensicCaseBundleError(request, reply, error);
+      throw error;
+    }
+  };
+
+  app.get('/api/v1/forensics/cases/:caseId', { schema: { tags: ['analysis'] } }, readForensicCase);
+  app.get(
+    '/api/v1/forensics/cases/:caseId/export',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const response = await readForensicCase(request, reply);
+      if (reply.sent || response === undefined) return response;
+      reply.header('content-type', 'application/json; charset=utf-8');
+      reply.header('content-disposition', 'attachment; filename="forensic-case-bundle.json"');
+      return response;
+    },
+  );
+
+  app.get(
+    '/api/v1/control/campaigns/:campaignId/timeline',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      return {
+        campaignId: record.id,
+        snapshot: record.bundle.campaign.snapshotEnd,
+        metadata: record.bundle.campaign.metadata,
+        events: record.bundle.behaviorEvents,
+        evidenceLine: record.bundle.evidenceLine,
+        resultHash: record.resultHash,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/control/campaigns/:campaignId/positions',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      return {
+        campaignId: record.id,
+        snapshot: record.bundle.campaign.snapshotEnd,
+        metadata: record.bundle.campaign.metadata,
+        positions: record.bundle.positions,
+        resultHash: record.resultHash,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/control/campaigns/:campaignId/wallets',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      return {
+        campaignId: record.id,
+        snapshot: record.bundle.campaign.snapshotEnd,
+        metadata: record.bundle.campaign.metadata,
+        memberships: record.bundle.memberships,
+        resultHash: record.resultHash,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/control/campaigns/:campaignId/graph',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const query = ControlCampaignGraphQuerySchema.parse(request.query);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      const bundle = record.bundle;
+      const phaseForLayer = {
+        control: undefined,
+        funding: 'FUNDING',
+        token: 'TOKEN_CONTROL',
+        settlement: 'SETTLEMENT',
+      }[query.layer];
+      const phaseItems =
+        phaseForLayer === undefined
+          ? bundle.evidenceItems
+          : bundle.evidenceItems.filter((item) => item.phase === phaseForLayer);
+      const nodes = new Map<string, { id: string; type: string; role?: string }>();
+      for (const wallet of bundle.clusterVersion.memberWalletIds) {
+        nodes.set(wallet, { id: wallet, type: 'WALLET' });
+      }
+      const edges = phaseItems
+        .filter((item) => item.subjectA !== undefined && item.subjectB !== undefined)
+        .map((item) => {
+          const subjectA = item.subjectA!;
+          const subjectB = item.subjectB!;
+          nodes.set(subjectA, { id: subjectA, type: 'SUBJECT' });
+          nodes.set(subjectB, { id: subjectB, type: 'SUBJECT' });
+          return {
+            id: item.id,
+            source: subjectA,
+            target: subjectB,
+            relation: item.featureKind ?? item.phase,
+            evidenceIds: [item.evidenceId],
+            automaticEntityMembershipAllowed: false,
+          };
+        });
+      return {
+        layer: query.layer,
+        campaignId: record.id,
+        snapshot: bundle.campaign.snapshotEnd,
+        metadata: bundle.campaign.metadata,
+        automaticEntityMembershipAllowed: false,
+        nodes: [...nodes.values()].sort((left, right) => left.id.localeCompare(right.id)),
+        edges,
+        resultHash: hashPayload({
+          layer: query.layer,
+          campaignId: record.id,
+          nodes: [...nodes.keys()].sort(),
+          edges,
+        }),
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/control/campaigns/:campaignId/evidence-line',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.get(params.campaignId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_CAMPAIGN_NOT_FOUND',
+              'Control Campaign was not found.',
+              false,
+            ),
+          );
+      }
+      return {
+        campaignId: record.id,
+        snapshot: record.bundle.campaign.snapshotEnd,
+        metadata: record.bundle.campaign.metadata,
+        evidenceLine: record.bundle.evidenceLine,
+        items: record.bundle.evidenceItems,
+        resultHash: record.resultHash,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/control/events/:eventId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignEventParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.findByBehaviorEventId(params.eventId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_EVENT_NOT_FOUND',
+              'Behavior Event was not found.',
+              false,
+            ),
+          );
+      }
+      const event = record.bundle.behaviorEvents.find((item) => item.id === params.eventId);
+      return {
+        campaignId: record.id,
+        event,
+        snapshot: record.bundle.campaign.snapshotEnd,
+        resultHash: record.resultHash,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/control/evidence/:itemId',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = ControlCampaignEvidenceItemParamsSchema.parse(request.params);
+      const repository = runtime.controlCampaignReports;
+      if (repository === undefined) return controlCampaignUnavailable(request, reply);
+      const record = await repository.findByEvidenceItemId(params.itemId);
+      if (record === undefined) {
+        return reply
+          .code(404)
+          .send(
+            errorResponse(
+              request,
+              'CONTROL_EVIDENCE_NOT_FOUND',
+              'Campaign Evidence Item was not found.',
+              false,
+            ),
+          );
+      }
+      const item = record.bundle.evidenceItems.find((candidate) => candidate.id === params.itemId);
+      return {
+        campaignId: record.id,
+        item,
+        evidenceLine: record.bundle.evidenceLine,
+        snapshot: record.bundle.campaign.snapshotEnd,
+        resultHash: record.resultHash,
+      };
     },
   );
 

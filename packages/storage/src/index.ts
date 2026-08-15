@@ -19,6 +19,8 @@ export * from './claim-reports.js';
 export * from './control-surface-reports.js';
 export * from './solana-control-surface-reports.js';
 export * from './solana-transaction-reports.js';
+export * from './solana-dealer-campaign-reports.js';
+export * from './bitcoin-forensic-graph-reports.js';
 export * from './pension-candidate-reports.js';
 export * from './flap-pension-entry-reports.js';
 export * from './entity-relationship-reports.js';
@@ -32,7 +34,11 @@ export * from './claim-declaration-reports.js';
 export * from './claim-rule-review-reports.js';
 export * from './claim-verification-reports.js';
 export * from './action-semantics-reports.js';
+export * from './token-history-discovery-reports.js';
+export * from './funding-settlement-reports.js';
 export * from './age-investigation-graph.js';
+export * from './control-campaign-reports.js';
+export * from './forensic-campaign-alerts.js';
 
 type DatabaseRow = Record<string, unknown>;
 

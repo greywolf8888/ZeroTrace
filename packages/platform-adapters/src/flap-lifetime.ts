@@ -16,12 +16,14 @@ import {
   type ChainAnchorRead,
   type Evidence,
   type FlapLifetimeMaterialization,
+  type FlapOriginSearchMode,
   type JsonValue,
 } from '@zerotrace/schemas';
 import { getAddress } from 'viem';
 
 import {
   FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+  FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE,
   FLAP_HISTORY_PROJECTION_MAX_RANGE_BLOCKS,
   runFlapEventHistoryProjectionRestartSafe,
   type FlapEventHistoryProjectionRun,
@@ -61,6 +63,12 @@ export interface MaterializeFlapLifetimeOptions {
   writeEvidence: FlapEvidenceWriter;
   readDatasetMetadata(): Promise<SqdDatasetMetadata>;
   targetAnchor?: ChainAnchorRead;
+  /**
+   * Explicitly narrows origin discovery to one finalized block that has been
+   * independently verified. This is an auditable hint, not full dataset
+   * origin coverage; lifetime coverage therefore remains Unknown.
+   */
+  originHintBlock?: number;
   originChunkSize?: number;
   historySegmentSize?: number;
   historyChunkSize?: number;
@@ -88,6 +96,9 @@ interface ValidatedMaterializationRequest extends MaterializeFlapLifetimeOptions
   originChunkSize: number;
   historySegmentSize: number;
   historyChunkSize: number;
+  originSearchMode: FlapOriginSearchMode;
+  originSearchFromBlock: number;
+  originSearchToBlock: number;
 }
 
 function sortedUnique(values: readonly string[]): string[] {
@@ -110,6 +121,17 @@ function exactTargetSnapshot(value: unknown, target: ChainAnchorRead): boolean {
     snapshot.chainId === 'eip155:56' &&
     snapshot.blockNumber === target.anchor.position &&
     snapshot.blockHash === target.anchor.hash &&
+    snapshot.finality === 'finalized'
+  );
+}
+
+function exactFinalizedEvmSnapshotAt(value: unknown, blockNumber: number): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const snapshot = value as Record<string, unknown>;
+  return (
+    snapshot.ledger === 'EVM' &&
+    snapshot.chainId === 'eip155:56' &&
+    snapshot.blockNumber === String(blockNumber) &&
     snapshot.finality === 'finalized'
   );
 }
@@ -162,6 +184,19 @@ async function validateRequest(
   ) {
     throw new RangeError('Flap lifetime source-to-target range exceeds the durable safety limit.');
   }
+  const originHintBlock = options.originHintBlock;
+  if (
+    originHintBlock !== undefined &&
+    (!Number.isSafeInteger(originHintBlock) ||
+      originHintBlock < rawMetadata.startBlock ||
+      originHintBlock > targetBlock)
+  ) {
+    throw new RangeError(
+      `originHintBlock must be an integer between ${rawMetadata.startBlock} and ${targetBlock}.`,
+    );
+  }
+  const originSearchMode: FlapOriginSearchMode =
+    originHintBlock === undefined ? 'FULL_DATASET' : 'VERIFIED_HINT';
   return {
     ...options,
     token,
@@ -169,6 +204,9 @@ async function validateRequest(
     targetBlock,
     targetAnchor,
     datasetMetadata: { ...rawMetadata, startBlock: rawMetadata.startBlock },
+    originSearchMode,
+    originSearchFromBlock: originHintBlock ?? rawMetadata.startBlock,
+    originSearchToBlock: originHintBlock ?? targetBlock,
     originChunkSize: safeInteger(
       options.originChunkSize,
       FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
@@ -179,7 +217,7 @@ async function validateRequest(
       options.historySegmentSize,
       FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
       'historySegmentSize',
-      FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+      FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE,
     ),
     historyChunkSize: safeInteger(options.historyChunkSize, 2_000, 'historyChunkSize', 10_000),
   };
@@ -243,6 +281,8 @@ function checkpointIdentity(
     historyChunkSize: request.historyChunkSize,
     historyMaxTransactions: request.historyMaxTransactions ?? null,
     historyMaxLogs: request.historyMaxLogs ?? null,
+    originSearchMode: request.originSearchMode,
+    originHintBlock: request.originHintBlock ?? null,
   };
 }
 
@@ -280,12 +320,14 @@ async function materializationEvidence(
   const origin = originRun.result;
   if (
     origin.token !== request.token ||
-    origin.searchedRange.fromBlock !== String(request.datasetStartBlock) ||
-    origin.searchedRange.toBlock !== String(request.targetBlock) ||
+    origin.searchedRange.fromBlock !== String(request.originSearchFromBlock) ||
+    origin.searchedRange.toBlock !== String(request.originSearchToBlock) ||
     origin.searchedRangeCoverage !== 1 ||
-    !exactTargetSnapshot(origin.metadata.snapshot, request.targetAnchor)
+    !(request.originSearchMode === 'FULL_DATASET'
+      ? exactTargetSnapshot(origin.metadata.snapshot, request.targetAnchor)
+      : exactFinalizedEvmSnapshotAt(origin.metadata.snapshot, request.originSearchToBlock))
   ) {
-    throw new RangeError('Flap origin result does not prove dataset-start-to-target coverage.');
+    throw new RangeError('Flap origin result is not bound to its requested finalized Snapshot.');
   }
   const originTerminal = terminalOriginEvidence(originRun);
   let historySummary: FlapLifetimeMaterialization['historyProjection'] = null;
@@ -329,7 +371,13 @@ async function materializationEvidence(
       requestedRangeCoverage: history.requestedRangeCoverage,
       terminalEvidenceId: history.terminalEvidenceId,
     };
-    lifetimeCoverage = knownValue(true);
+    lifetimeCoverage =
+      request.originSearchMode === 'FULL_DATASET'
+        ? knownValue(true)
+        : unknownValue(
+            'INSUFFICIENT_DATA',
+            'A verified origin hint is replayable, but full dataset origin search is incomplete.',
+          );
   } else if (historyRun !== null) {
     throw new RangeError('Unknown Flap origin cannot carry a lifetime history projection.');
   }
@@ -348,6 +396,10 @@ async function materializationEvidence(
           dataset: request.datasetMetadata.dataset,
           datasetStartBlock: String(request.datasetStartBlock),
           targetBlock: String(request.targetBlock),
+          originSearchMode: request.originSearchMode,
+          originSearchFromBlock: String(request.originSearchFromBlock),
+          originSearchToBlock: String(request.originSearchToBlock),
+          originHintVerified: request.originSearchMode === 'VERIFIED_HINT',
           originScanId: originRun.scanId,
           originState: origin.origin.state,
           historyScanId: historyRun?.scanId ?? null,
@@ -359,7 +411,9 @@ async function materializationEvidence(
         summary:
           lifetimeCoverage.state === 'known'
             ? 'Flap deployment origin and every supported Portal event are materialized through one finalized target Snapshot.'
-            : 'Flap lifetime coverage remains Unknown because a unique deployment origin was not established.',
+            : request.originSearchMode === 'VERIFIED_HINT' && origin.origin.state === 'known'
+              ? 'Flap origin was verified at an explicit finalized hint block, but full dataset origin search remains incomplete; lifetime coverage is Unknown.'
+              : 'Flap lifetime coverage remains Unknown because a unique deployment origin was not established.',
         sourceEvidenceIds: canonicalSources,
       }),
       canonicalSources,
@@ -377,6 +431,7 @@ async function materializationEvidence(
     datasetStartBlock: String(request.datasetStartBlock),
     targetBlock: String(request.targetBlock),
     originScanId: originRun.scanId,
+    originSearchMode: request.originSearchMode,
     originSearchCoverage: origin.searchedRangeCoverage,
     origin: origin.origin,
     historyProjection: historySummary,
@@ -386,7 +441,11 @@ async function materializationEvidence(
       snapshot: request.targetAnchor.snapshot,
       dataCoverage: 1,
       sourceCoverage: Math.min(1, sourceSet.size / 2),
-      historyCoverage: lifetimeCoverage.state === 'known' ? 1 : 0,
+      historyCoverage:
+        historyRun?.result.requestedRangeCoverage === 1 &&
+        historyRun.result.metadata.dataCoverage === 1
+          ? 1
+          : 0,
       simulationCoverage: 0,
       freshness: request.targetAnchor.snapshot.capturedAt,
       sourceSet: [...sourceSet].sort(),
@@ -477,8 +536,8 @@ export async function materializeFlapLifetimeRestartSafe(
       adapter: request.adapter,
       creationReader: request.creationReader,
       token: request.token,
-      fromBlock: String(request.datasetStartBlock),
-      toBlock: String(request.targetBlock),
+      fromBlock: String(request.originSearchFromBlock),
+      toBlock: String(request.originSearchToBlock),
       chunkSize: request.originChunkSize,
       deployment: request.deployment,
       checkpoints: request.checkpoints,

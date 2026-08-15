@@ -7,12 +7,21 @@ import {
   type Erc20DecimalsObservationResponse,
   type Capability,
   type ClaimReportResponse,
+  type ControlCampaignRecord,
+  type ControlCampaignSnapshot,
+  type ControlCampaignMonitorResponse,
+  type ForensicCaseBundleResponse,
+  type ForensicCampaignAlert,
   type EvmClaimBurnCandidateDiscoveryResponse,
   type EvmClaimBurnConservationResponse,
   type EvmClaimBurnPromotionReplayResponse,
   type StoredPensionCandidateReport,
   type EvmSupplyContinuityReplayResponse,
   type EvmControlSurfaceResponse,
+  type FundingSettlementReport,
+  type FundingSettlementReportResponse,
+  type BitcoinForensicGraphReport,
+  type BitcoinForensicGraphResponse,
   type EntityRelationshipReportReplayResponse,
   type EntityRelationshipTimelineReplayResponse,
   type EvidenceRecord,
@@ -34,16 +43,19 @@ import {
   type KnowledgeValue,
   type LabelIntelligenceIdentity,
   type LabelIntelligenceReportResponse,
+  type LaunchpadRegistryEntry,
   type PlatformDescriptor,
   type ReviewedClaimRuleValues,
   type SearchResponse,
   type SolanaControlSurfaceResponse,
+  type SolanaDealerCampaignReport,
   type SubjectCandidate,
   type SubjectResponse,
 } from './api.js';
 import { InvestigationGraphWorkspace } from './InvestigationGraph.js';
 
-type View = 'overview' | 'search' | 'entities' | 'control' | 'claims' | 'scenario' | 'health';
+type View =
+  'overview' | 'search' | 'entities' | 'control' | 'campaigns' | 'claims' | 'scenario' | 'health';
 type Theme = 'dark' | 'light';
 
 const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
@@ -51,12 +63,13 @@ const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
   { id: 'search', label: 'Intelligence Search', marker: 'IS' },
   { id: 'entities', label: 'Entity Intelligence', marker: 'EI' },
   { id: 'control', label: 'Control Rights', marker: 'CR' },
+  { id: 'campaigns', label: 'Control Campaigns', marker: 'CC' },
   { id: 'claims', label: 'Claim Audit', marker: 'CA' },
   { id: 'scenario', label: 'Scenario Lab', marker: 'SL' },
   { id: 'health', label: 'Data Health', marker: 'DH' },
 ];
 
-const FUTURE_DOMAINS = ['Evidence Ledger', 'Control Timeline', 'Analyst Workbench'];
+const FUTURE_DOMAINS = ['Evidence Ledger', 'Analyst Workbench'];
 
 function shortId(value: string, length = 12): string {
   if (value.length <= length * 2 + 1) return value;
@@ -83,6 +96,36 @@ function isValidBoundedBlockRange(fromBlock: string, toBlock: string): boolean {
   const from = BigInt(fromBlock);
   const to = BigInt(toBlock);
   return to >= from && to - from + 1n <= 50_000n;
+}
+
+function nextMonitorStart(block: string): string | undefined {
+  if (!/^(?:0|[1-9]\d*)$/.test(block)) return undefined;
+  const next = BigInt(block) + 1n;
+  return next <= BigInt(Number.MAX_SAFE_INTEGER) ? next.toString() : undefined;
+}
+
+type CampaignGraphLayer = 'combined' | 'token' | 'funding' | 'settlement' | 'behavior';
+
+const CAMPAIGN_GRAPH_LAYERS: ReadonlyArray<{ id: CampaignGraphLayer; label: string }> = [
+  { id: 'combined', label: 'Combined' },
+  { id: 'token', label: 'Token' },
+  { id: 'funding', label: 'Funding' },
+  { id: 'settlement', label: 'Settlement' },
+  { id: 'behavior', label: 'Behavior' },
+];
+
+function campaignSnapshotPosition(snapshot: ControlCampaignSnapshot): string {
+  return snapshot.blockNumber ?? snapshot.height ?? snapshot.slot ?? 'Unknown';
+}
+
+function overlapPercent(left: readonly string[], right: readonly string[]): number | undefined {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  const union = new Set([...leftSet, ...rightSet]);
+  if (union.size === 0) return undefined;
+  let intersection = 0;
+  for (const value of leftSet) if (rightSet.has(value)) intersection += 1;
+  return Math.round((intersection / union.size) * 100);
 }
 
 function StatusPill({ status }: { status: string }) {
@@ -606,6 +649,7 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
   if (semantics === undefined) return null;
   const instructions = [...semantics.outerInstructions, ...semantics.innerInstructions];
   const reconciliation = semantics.tokenFlowReconciliation;
+  const launchpadObservations = response.launchpadObservations ?? [];
   const resolutionComplete =
     semantics.accountResolutionComplete.state === 'known' &&
     semantics.accountResolutionComplete.value;
@@ -810,6 +854,87 @@ function SolanaTransactionIntelligencePanel({ response }: { response: SubjectRes
             )}
           </tbody>
         </table>
+      </div>
+      <div className="solana-launchpad-panel" data-testid="solana-launchpad-decoder">
+        <div className="panel-header compact-header">
+          <div>
+            <span className="eyebrow">
+              Pinned official program IDs · raw discriminator evidence
+            </span>
+            <h4>Solana launchpad decoder</h4>
+          </div>
+          <StatusPill status={launchpadObservations.length > 0 ? 'OBSERVED' : 'NOT_OBSERVED'} />
+        </div>
+        {launchpadObservations.length === 0 ? (
+          <p className="empty-cell">
+            No pinned Pump, PumpSwap, or Raydium LaunchLab instruction was observed. The decoder
+            does not infer a launch mechanism from an unknown program or from a web page.
+          </p>
+        ) : (
+          <div className="table-scroll solana-launchpad-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Platform</th>
+                  <th>Instruction</th>
+                  <th>Execution</th>
+                  <th>Arguments</th>
+                  <th>Coverage</th>
+                  <th>Warnings</th>
+                </tr>
+              </thead>
+              <tbody>
+                {launchpadObservations.map((observation) => (
+                  <tr key={observation.id}>
+                    <td>
+                      <strong>{observation.platform}</strong>
+                      <small title={observation.programId}>
+                        {shortId(observation.programId, 10)}
+                      </small>
+                    </td>
+                    <td>
+                      <strong>{observation.instructionName}</strong>
+                      <small>
+                        {observation.instructionPath} · {observation.instructionVersion}
+                      </small>
+                    </td>
+                    <td>
+                      <StatusPill status={observation.execution} />
+                    </td>
+                    <td>
+                      {observation.decodedArguments.length === 0 ? (
+                        <span>None decoded</span>
+                      ) : (
+                        observation.decodedArguments.map((argument) => (
+                          <small key={argument.name}>
+                            {argument.name}={argument.value}
+                          </small>
+                        ))
+                      )}
+                    </td>
+                    <td>
+                      <span>accounts {Math.round(observation.accountCoverage * 100)}%</span>
+                      <small>args {Math.round(observation.argumentCoverage * 100)}%</small>
+                    </td>
+                    <td>
+                      {observation.decodeWarnings.length === 0 ? (
+                        <span>None</span>
+                      ) : (
+                        observation.decodeWarnings.map((warning) => (
+                          <small key={warning}>{warning}</small>
+                        ))
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="solana-launchpad-boundary">
+          Decoder version and Evidence remain visible in the report; no signing, broadcast, quote,
+          swap, or ownership merge is enabled.
+        </p>
       </div>
       <div className="solana-flow-audit" data-testid="solana-asset-flow-audit">
         <div className="panel-header compact-header">
@@ -1018,7 +1143,11 @@ function Header({
           <span className="pulse-dot" />
           Read-only
         </div>
-        <div className="api-state" title={health?.checkedAt}>
+        <div
+          className="api-state"
+          title={health?.checkedAt}
+          aria-label={'API status ' + (health?.status ?? 'checking')}
+        >
           <span
             className={'state-light ' + (health?.status === 'UP' ? 'state-up' : 'state-warn')}
           />
@@ -1198,12 +1327,14 @@ function Overview({
   health,
   capabilities,
   platforms,
+  launchpadRegistry,
   onSearch,
   searchBusy,
 }: {
   health?: HealthResponse | undefined;
   capabilities: Capability[];
   platforms: PlatformDescriptor[];
+  launchpadRegistry: LaunchpadRegistryEntry[];
   onSearch: (query: string, network: string) => Promise<void>;
   searchBusy: boolean;
 }) {
@@ -1328,6 +1459,19 @@ function Overview({
                   </span>
                 ))}
               </div>
+              {(() => {
+                const registry = launchpadRegistry.find((entry) => entry.platform === platform.id);
+                return registry === undefined ? null : (
+                  <div className="platform-provenance">
+                    <StatusPill status={registry.provenanceStatus} />
+                    <span>
+                      {registry.versions.length > 0
+                        ? `${registry.versions.length} pinned version${registry.versions.length === 1 ? '' : 's'}`
+                        : 'No pinned version'}
+                    </span>
+                  </div>
+                );
+              })()}
               <p>{platform.integrationBoundary}</p>
             </article>
           ))}
@@ -3538,6 +3682,1556 @@ function EntityIntelligenceWorkspace() {
   );
 }
 
+function isFundingSettlementReport(
+  value: FundingSettlementReportResponse['report'] | undefined,
+): value is FundingSettlementReport {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'schemaVersion' in value &&
+    value.schemaVersion === 'funding-settlement-report-v1'
+  );
+}
+
+function FundingSettlementPanel({
+  response,
+  error,
+  layer = 'combined',
+}: {
+  response: FundingSettlementReportResponse | undefined;
+  error: string | undefined;
+  layer?: 'combined' | 'funding' | 'settlement';
+}) {
+  if (error !== undefined) {
+    return (
+      <section className="panel funding-settlement-panel" data-testid="funding-settlement-report">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Funding &amp; Settlement Graph</span>
+            <h3>Durable report unavailable</h3>
+          </div>
+          <StatusPill status="UNAVAILABLE" />
+        </div>
+        <p className="panel-copy funding-settlement-copy">{error}</p>
+      </section>
+    );
+  }
+
+  const report = isFundingSettlementReport(response?.report) ? response.report : undefined;
+  if (report === undefined) {
+    return (
+      <section className="panel funding-settlement-panel" data-testid="funding-settlement-report">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Funding &amp; Settlement Graph</span>
+            <h3>No durable report was found</h3>
+          </div>
+          <StatusPill status="NOT_QUERIED" />
+        </div>
+        <p className="panel-copy funding-settlement-copy">
+          Funding and settlement inference has not been materialized for this token. No numeric
+          coverage or ownership conclusion is inferred from the absence of a report.
+        </p>
+      </section>
+    );
+  }
+
+  const edges = [
+    ...(layer === 'settlement'
+      ? []
+      : report.fundingEdges.map((edge) => ({ lane: 'Funding', edge }))),
+    ...(layer === 'funding'
+      ? []
+      : report.settlementEdges.map((edge) => ({ lane: 'Settlement', edge }))),
+  ];
+
+  return (
+    <section className="panel funding-settlement-panel" data-testid="funding-settlement-report">
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">
+            {layer === 'combined' ? 'Funding &amp; Settlement Graph' : `${titleCase(layer)} Graph`}{' '}
+            · replayable Snapshot
+          </span>
+          <h3>Transaction evidence, not ownership proof</h3>
+        </div>
+        <StatusPill status={report.status} />
+      </div>
+      <p className="panel-copy funding-settlement-copy">
+        This bounded graph records observed asset paths and explicit service boundaries. It does not
+        merge entities, establish common control, or treat an uncalibrated confidence value as a
+        probability.
+      </p>
+      <div className="metric-grid compact-grid funding-settlement-metrics">
+        <MetricTile
+          label="Funding edges"
+          value={String(report.fundingEdges.length)}
+          detail="Observed relations"
+          state="known"
+        />
+        <MetricTile
+          label="Settlement edges"
+          value={String(report.settlementEdges.length)}
+          detail="Observed exits or proceeds"
+          state="known"
+        />
+        <MetricTile
+          label="Patterns"
+          value={String(report.patterns.length)}
+          detail="Deterministic bounded patterns"
+          state={report.patterns.length === 0 ? 'unknown' : 'known'}
+        />
+        <MetricTile
+          label="History coverage"
+          value={`${Math.round(report.historyCoverage * 100)}%`}
+          detail={titleCase(report.coverageScope)}
+          state={report.coverageScope === 'RANGE_COMPLETE' ? 'known' : 'unknown'}
+        />
+      </div>
+      <div className="fact-grid funding-settlement-facts">
+        <div className="fact-row">
+          <span>Report ID</span>
+          <code>{report.id}</code>
+        </div>
+        <div className="fact-row">
+          <span>Block range</span>
+          <code>
+            {report.fromBlock} → {report.toBlock}
+          </code>
+        </div>
+        <div className="fact-row">
+          <span>Coverage scope</span>
+          <StatusPill status={report.coverageScope} />
+        </div>
+        <div className="fact-row">
+          <span>Snapshot</span>
+          <code>{report.snapshot.blockNumber}</code>
+        </div>
+        <div className="fact-row">
+          <span>Confidence</span>
+          <KnowledgeDisplay data={report.confidence} />
+        </div>
+        <div className="fact-row">
+          <span>Evidence / drilldown</span>
+          <span>
+            {report.evidenceIds.length} / {report.drilldown.length} transactions
+          </span>
+        </div>
+        <div className="fact-row">
+          <span>Freshness</span>
+          <span>{formatTime(report.freshness)}</span>
+        </div>
+        <div className="fact-row">
+          <span>Result hash</span>
+          <code>{shortId(report.resultHash, 18)}</code>
+        </div>
+      </div>
+      <div className="funding-settlement-section">
+        <div className="panel-header funding-settlement-subheader">
+          <div>
+            <span className="eyebrow">Exact transaction paths</span>
+            <h4>Observed relations</h4>
+          </div>
+          <span className="panel-note">{edges.length} edge(s)</span>
+        </div>
+        <div className="table-scroll">
+          <table className="funding-settlement-table">
+            <thead>
+              <tr>
+                <th>Lane</th>
+                <th>Relation</th>
+                <th>Path</th>
+                <th>Asset / amount</th>
+                <th>Block / hops</th>
+              </tr>
+            </thead>
+            <tbody>
+              {edges.length === 0 ? (
+                <tr>
+                  <td className="empty-cell" colSpan={5}>
+                    No relation was derived within the declared coverage scope.
+                  </td>
+                </tr>
+              ) : (
+                edges.map(({ lane, edge }) => (
+                  <tr key={lane + ':' + edge.id}>
+                    <td>
+                      <StatusPill status={lane} />
+                    </td>
+                    <td>{titleCase(edge.relation)}</td>
+                    <td>
+                      <code title={edge.path.join(' → ')}>
+                        {shortId(edge.source, 6)} → {shortId(edge.destination, 6)}
+                      </code>
+                      <small className="funding-settlement-subline">
+                        tx {shortId(edge.transactionHash, 7)}
+                      </small>
+                    </td>
+                    <td>
+                      <code>{edge.asset === 'NATIVE' ? 'Native' : shortId(edge.asset, 7)}</code>
+                      <small className="funding-settlement-subline">{edge.amountAtomic}</small>
+                    </td>
+                    <td>
+                      {edge.blockNumber}
+                      <small className="funding-settlement-subline">{edge.hopDepth} hop(s)</small>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {report.suppressedPaths.length === 0 ? null : (
+        <div className="funding-settlement-section funding-settlement-suppressions">
+          <div className="panel-header funding-settlement-subheader">
+            <div>
+              <span className="eyebrow">Attribution boundaries</span>
+              <h4>Suppressed paths</h4>
+            </div>
+            <span className="panel-note">{report.suppressedPaths.length} path(s)</span>
+          </div>
+          <div className="table-scroll">
+            <table className="funding-settlement-table">
+              <thead>
+                <tr>
+                  <th>Reason</th>
+                  <th>Path</th>
+                  <th>Transaction</th>
+                  <th>Evidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.suppressedPaths.map((path) => (
+                  <tr key={path.id}>
+                    <td>
+                      <StatusPill status={path.reason} />
+                    </td>
+                    <td>
+                      <code>
+                        {shortId(path.source, 6)} → {shortId(path.destination, 6)}
+                      </code>
+                    </td>
+                    <td>
+                      <code>{shortId(path.transactionHash, 8)}</code>
+                    </td>
+                    <td>{path.evidenceIds.length}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SolanaDealerPanel() {
+  const [mint, setMint] = useState('');
+  const [fromSlot, setFromSlot] = useState('');
+  const [toSlot, setToSlot] = useState('');
+  const [report, setReport] = useState<SolanaDealerCampaignReport>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+
+  async function capture() {
+    const normalizedMint = mint.trim();
+    const normalizedFrom = fromSlot.trim();
+    const normalizedTo = toSlot.trim();
+    if (
+      normalizedMint.length === 0 ||
+      !/^\d+$/.test(normalizedFrom) ||
+      !/^\d+$/.test(normalizedTo) ||
+      BigInt(normalizedTo) < BigInt(normalizedFrom) ||
+      BigInt(normalizedTo) - BigInt(normalizedFrom) + 1n > 50_000n
+    ) {
+      setError('Enter a Solana mint and an ordered finalized slot range up to 50,000 slots.');
+      return;
+    }
+    setBusy(true);
+    setError(undefined);
+    try {
+      const response = await api.captureSolanaDealerCampaign({
+        mint: normalizedMint,
+        fromSlot: normalizedFrom,
+        toSlot: normalizedTo,
+      });
+      const next = response.report ?? response.record?.report;
+      if (next === undefined) throw new Error('Capture returned no Solana dealer report.');
+      setReport(next);
+    } catch (cause) {
+      setReport(undefined);
+      setError(cause instanceof Error ? cause.message : 'Solana dealer capture failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="panel subject-panel" data-testid="solana-dealer-panel">
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Solana · SQD + finalized RPC · read-only</span>
+          <h3>Dealer Evidence capture</h3>
+        </div>
+        <StatusPill status={report?.status ?? 'NOT_RUN'} />
+      </div>
+      <p className="quote-note">
+        Captures bounded token-account flows, owner separation, ALT/CPI-normalized transaction
+        semantics, same-transaction SOL funding, and possible settlement paths. Unknown opening
+        balances and venue attribution remain explicit.
+      </p>
+      <form
+        className="quote-form control-campaign-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void capture();
+        }}
+      >
+        <label htmlFor="solana-dealer-mint">Mint</label>
+        <input
+          id="solana-dealer-mint"
+          value={mint}
+          onChange={(event) => setMint(event.target.value)}
+          placeholder="Solana mint address"
+          spellCheck={false}
+        />
+        <label htmlFor="solana-dealer-from">From slot</label>
+        <input
+          id="solana-dealer-from"
+          value={fromSlot}
+          onChange={(event) => setFromSlot(event.target.value)}
+          placeholder="e.g. 250000000"
+          inputMode="numeric"
+          spellCheck={false}
+        />
+        <label htmlFor="solana-dealer-to">To slot</label>
+        <input
+          id="solana-dealer-to"
+          value={toSlot}
+          onChange={(event) => setToSlot(event.target.value)}
+          placeholder="finalized slot"
+          inputMode="numeric"
+          spellCheck={false}
+        />
+        <div className="control-actions">
+          <button className="primary-button" type="submit" disabled={busy}>
+            {busy ? 'Capturing…' : 'Capture Dealer Evidence'}
+          </button>
+        </div>
+      </form>
+      {error === undefined ? null : <p className="inline-error">{error}</p>}
+      {report === undefined ? null : (
+        <div className="campaign-detail-stack" data-testid="solana-dealer-results">
+          <div className="metric-grid">
+            <MetricTile
+              label="Range"
+              value={`${report.fromSlot} → ${report.toSlot}`}
+              detail="Finalized bounded range"
+              state="known"
+            />
+            <MetricTile
+              label="Holders"
+              value={String(report.holders.length)}
+              detail="Owner identities observed"
+              state="known"
+            />
+            <MetricTile
+              label="Token edges"
+              value={String(report.tokenFlowEdges.length)}
+              detail="Evidence-bound flow edges"
+              state="known"
+            />
+            <MetricTile
+              label="Evidence"
+              value={String(report.evidenceIds.length)}
+              detail="Replayable observations"
+              state="known"
+            />
+            <MetricTile
+              label="Launchpad signals"
+              value={
+                report.launchpadObservations === undefined
+                  ? 'Unknown'
+                  : String(report.launchpadObservations.length)
+              }
+              detail="Pinned Solana launchpad decodes"
+              state={report.launchpadObservations === undefined ? 'unknown' : 'known'}
+            />
+          </div>
+          <div className="two-column">
+            <div className="detail-card">
+              <span className="eyebrow">Control boundary</span>
+              <strong>{report.campaign?.campaign.id ?? 'Not materialized'}</strong>
+              <span>
+                Funding {report.fundingEdges.length} · Settlement candidates{' '}
+                {report.settlementEdges.length}
+              </span>
+              <span>
+                Opening balance Unknown for {report.openingBalanceUnknownWalletIds.length} wallet(s)
+              </span>
+              <span>PDA owners suppressed: {report.pdaSuppressedOwnerIds.length}</span>
+            </div>
+            <div className="detail-card">
+              <span className="eyebrow">Origin</span>
+              <strong>{report.origin.state === 'known' ? 'Observed in range' : 'Unknown'}</strong>
+              <span>
+                {report.origin.state === 'known' && report.origin.value !== undefined
+                  ? `${report.origin.value.tokenProgram} · ${report.origin.value.firstObservedSlot}`
+                  : report.origin.reason}
+              </span>
+              <span>{report.sourceSet.join(' · ')}</span>
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Owner</th>
+                  <th>Token account(s)</th>
+                  <th>Balance raw</th>
+                  <th>Opening</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.holders.map((holder) => (
+                  <tr key={holder.owner}>
+                    <td>
+                      <code>{shortId(holder.owner, 8)}</code>
+                    </td>
+                    <td>
+                      <code>
+                        {holder.tokenAccounts.map((account) => shortId(account, 8)).join(', ')}
+                      </code>
+                    </td>
+                    <td>{holder.observedBalanceRaw}</td>
+                    <td>
+                      <KnowledgeDisplay data={holder.openingBalance} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {report.launchpadObservations === undefined ? null : (
+            <div className="table-wrap" data-testid="solana-dealer-launchpad-observations">
+              <div className="panel-header funding-settlement-subheader">
+                <div>
+                  <span className="eyebrow">Official read-only decoder</span>
+                  <h4>Launchpad observations</h4>
+                </div>
+                <span className="panel-note">{report.launchpadObservations.length} signal(s)</span>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Platform</th>
+                    <th>Instruction</th>
+                    <th>Path</th>
+                    <th>Coverage</th>
+                    <th>Execution</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.launchpadObservations.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="empty-cell">
+                        No pinned Solana launchpad instruction was decoded in this bounded range.
+                      </td>
+                    </tr>
+                  ) : (
+                    report.launchpadObservations.map((observation) => (
+                      <tr key={observation.id}>
+                        <td>
+                          <StatusPill status={observation.platform} />
+                        </td>
+                        <td>{observation.instructionName}</td>
+                        <td>
+                          <code>{observation.instructionPath}</code>
+                        </td>
+                        <td>
+                          {Math.round(
+                            Math.min(observation.accountCoverage, observation.argumentCoverage) *
+                              100,
+                          )}
+                          %
+                        </td>
+                        <td>
+                          <StatusPill status={observation.execution} />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BitcoinForensicGraphPanel() {
+  const [transactionInput, setTransactionInput] = useState('');
+  const [response, setResponse] = useState<BitcoinForensicGraphResponse>();
+  const [report, setReport] = useState<BitcoinForensicGraphReport>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const transactionIds = useMemo(
+    () => [
+      ...new Set(
+        transactionInput
+          .split(/[\s,]+/)
+          .map((value) => value.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ],
+    [transactionInput],
+  );
+  const invalidTransactionId = transactionIds.some((txid) => !/^[0-9a-f]{64}$/.test(txid));
+  const validRequest =
+    transactionIds.length > 0 && transactionIds.length <= 100 && !invalidTransactionId;
+
+  async function capture() {
+    if (!validRequest) {
+      setError('Enter 1–100 unique canonical Bitcoin transaction IDs (64 hex characters each).');
+      return;
+    }
+    setBusy(true);
+    setError(undefined);
+    try {
+      const next = await api.captureBitcoinForensicGraph(transactionIds);
+      const nextReport = next.report ?? next.record?.report;
+      if (nextReport === undefined) throw new Error('Capture returned no Bitcoin forensic graph.');
+      setResponse(next);
+      setReport(nextReport);
+    } catch (cause) {
+      setResponse(undefined);
+      setReport(undefined);
+      setError(cause instanceof Error ? cause.message : 'Bitcoin forensic graph capture failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const nodeLabels = useMemo(
+    () => new Map((report?.nodes ?? []).map((node) => [node.id, node.reference])),
+    [report],
+  );
+
+  return (
+    <section className="panel subject-panel" data-testid="bitcoin-forensic-graph-panel">
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Bitcoin · Esplora · best-chain · read-only</span>
+          <h3>UTXO Forensic Graph</h3>
+        </div>
+        <StatusPill status={report?.case.evidenceLine.terminalBoundary ?? 'NOT_RUN'} />
+      </div>
+      <p className="quote-note">
+        Captures confirmed transaction UTXO paths, common-input/change candidates, peeling, fanout,
+        consolidation, funding and settlement representations. CoinJoin, PayJoin, service
+        attribution, and ownership merges remain explicitly suppressed or Unknown.
+      </p>
+      <form
+        className="quote-form control-campaign-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void capture();
+        }}
+      >
+        <label htmlFor="bitcoin-forensic-transactions">Transaction IDs</label>
+        <textarea
+          id="bitcoin-forensic-transactions"
+          value={transactionInput}
+          onChange={(event) => setTransactionInput(event.target.value)}
+          placeholder="One or more 64-character txids, separated by spaces or commas"
+          spellCheck={false}
+          rows={3}
+        />
+        <div className="control-actions">
+          <button className="primary-button" type="submit" disabled={busy || !validRequest}>
+            {busy ? 'Capturing…' : 'Capture Forensic Graph'}
+          </button>
+          <span className="panel-note">{transactionIds.length}/100 transaction IDs</span>
+        </div>
+      </form>
+      {error === undefined ? null : <p className="inline-error">{error}</p>}
+      {report === undefined ? null : (
+        <div className="campaign-detail-stack" data-testid="bitcoin-forensic-graph-results">
+          <div className="metric-grid">
+            <MetricTile
+              label="Transactions"
+              value={String(report.transactionIds.length)}
+              detail="Confirmed best-chain observations"
+              state="known"
+            />
+            <MetricTile
+              label="Graph nodes"
+              value={String(report.nodes.length)}
+              detail="Addresses, UTXOs, transactions, Unknowns"
+              state="known"
+            />
+            <MetricTile
+              label="Graph edges"
+              value={String(report.edges.length)}
+              detail="Observed and bounded candidates"
+              state="known"
+            />
+            <MetricTile
+              label="Data coverage"
+              value={`${Math.round(report.dataCoverage * 100)}%`}
+              detail={`History ${Math.round(report.historyCoverage * 100)}%`}
+              state={report.dataCoverage === 1 ? 'known' : 'unknown'}
+            />
+          </div>
+          <div className="two-column">
+            <div className="detail-card">
+              <span className="eyebrow">Snapshot boundary</span>
+              <strong>
+                {report.snapshotStart.height ?? 'Unknown'} →{' '}
+                {report.snapshotEnd.height ?? 'Unknown'}
+              </strong>
+              <span>Sources: {report.sourceSet.join(' · ')}</span>
+              <span>Freshness: {formatTime(report.freshness)}</span>
+            </div>
+            <div className="detail-card">
+              <span className="eyebrow">Ownership policy</span>
+              <strong>Automatic merge blocked</strong>
+              <span>Case {shortId(report.case.id, 10)}</span>
+              <span>
+                Graph confidence <KnowledgeDisplay data={report.confidence} />
+              </span>
+            </div>
+          </div>
+          {response?.durable === false ? (
+            <div className="bitcoin-policy-boundary">
+              <strong>Durability boundary</strong>
+              <p>PostgreSQL is not configured; this capture is available in the response only.</p>
+            </div>
+          ) : null}
+          {report.suppressionReasons.length > 0 ? (
+            <div className="bitcoin-policy-boundary bitcoin-suppression-ledger">
+              <strong>Suppression ledger</strong>
+              <ul>
+                {report.suppressionReasons.map((reason) => (
+                  <li key={reason}>{titleCase(reason)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Relationship</th>
+                  <th>Class</th>
+                  <th>Amount</th>
+                  <th>Evidence</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.edges.slice(0, 120).map((edge) => (
+                  <tr key={edge.id}>
+                    <td>
+                      <StatusPill status={edge.kind} />
+                      <code>
+                        {shortId(nodeLabels.get(edge.from) ?? edge.from, 7)} →{' '}
+                        {shortId(nodeLabels.get(edge.to) ?? edge.to, 7)}
+                      </code>
+                    </td>
+                    <td>{titleCase(edge.classification)}</td>
+                    <td>
+                      <KnowledgeDisplay data={edge.amountSats} />
+                    </td>
+                    <td>{edge.evidenceIds.length}</td>
+                    <td>{edge.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {report.edges.length > 120 ? (
+            <p className="panel-note">
+              Showing 120 of {report.edges.length} edges; the durable report retains the full
+              bounded graph.
+            </p>
+          ) : null}
+          <div className="snapshot-strip">
+            <span>
+              <b>Evidence</b> {report.evidenceIds.length}
+            </span>
+            <span>
+              <b>Source coverage</b> {Math.round(report.sourceCoverage * 100)}%
+            </span>
+            <span>
+              <b>Evidence line</b> {report.case.evidenceLine.phases.length} phase(s)
+            </span>
+            <span>
+              <b>Result</b> <code title={report.resultHash}>{shortId(report.resultHash, 8)}</code>
+            </span>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ControlCampaignWorkspace() {
+  const [chainId, setChainId] = useState('eip155:56');
+  const [token, setToken] = useState('');
+  const [records, setRecords] = useState<ControlCampaignRecord[]>([]);
+  const [selectedId, setSelectedId] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [fundingSettlement, setFundingSettlement] = useState<FundingSettlementReportResponse>();
+  const [fundingSettlementKey, setFundingSettlementKey] = useState<string>();
+  const [fundingSettlementError, setFundingSettlementError] = useState<string>();
+  const [fundingSettlementErrorKey, setFundingSettlementErrorKey] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [forensicCase, setForensicCase] = useState<ForensicCaseBundleResponse>();
+  const [forensicCaseError, setForensicCaseError] = useState<string>();
+  const [campaignAlerts, setCampaignAlerts] = useState<ForensicCampaignAlert[]>([]);
+  const [alertsCampaignId, setAlertsCampaignId] = useState<string>();
+  const [alertsLoaded, setAlertsLoaded] = useState(false);
+  const [alertsError, setAlertsError] = useState<string>();
+  const [monitor, setMonitor] = useState<ControlCampaignMonitorResponse>();
+  const [monitorError, setMonitorError] = useState<string>();
+  const [graphLayer, setGraphLayer] = useState<CampaignGraphLayer>('combined');
+
+  const selected = records.find((record) => record.campaign.id === selectedId) ?? records[0];
+  const selectedCampaignId = selected?.campaign.id;
+  const comparisonReference =
+    selected === undefined
+      ? undefined
+      : records.find((record) => record.campaign.id !== selected.campaign.id);
+
+  useEffect(() => {
+    if (selectedCampaignId === undefined) return;
+    let active = true;
+    void api
+      .campaignAlerts(selectedCampaignId)
+      .then((response) => {
+        if (!active) return;
+        setAlertsCampaignId(selectedCampaignId);
+        setCampaignAlerts(response.alerts);
+        setAlertsLoaded(true);
+        setAlertsError(undefined);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setAlertsCampaignId(selectedCampaignId);
+        setCampaignAlerts([]);
+        setAlertsLoaded(true);
+        setAlertsError(cause instanceof Error ? cause.message : 'Campaign alert replay failed.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedCampaignId]);
+
+  const selectedFundingFromBlock =
+    selected?.campaign.ledger === 'EVM' && selected.campaign.endBlock.state === 'known'
+      ? selected.campaign.startBlock
+      : undefined;
+  const selectedFundingToBlock =
+    selected?.campaign.ledger === 'EVM' &&
+    selected.campaign.endBlock.state === 'known' &&
+    typeof selected.campaign.endBlock.value === 'string'
+      ? selected.campaign.endBlock.value
+      : undefined;
+  const selectedFundingChainId =
+    selected?.campaign.ledger === 'EVM' ? selected.campaign.chainId : undefined;
+  const selectedFundingToken =
+    selected?.campaign.ledger === 'EVM' ? selected.campaign.token : undefined;
+  const selectedFundingKey =
+    selectedCampaignId !== undefined &&
+    selectedFundingChainId !== undefined &&
+    selectedFundingToken !== undefined &&
+    selectedFundingFromBlock !== undefined &&
+    selectedFundingToBlock !== undefined
+      ? JSON.stringify([
+          selectedCampaignId,
+          selectedFundingChainId,
+          selectedFundingToken,
+          selectedFundingFromBlock,
+          selectedFundingToBlock,
+        ])
+      : undefined;
+
+  useEffect(() => {
+    if (
+      selectedFundingKey === undefined ||
+      selectedFundingChainId === undefined ||
+      selectedFundingToken === undefined ||
+      selectedFundingFromBlock === undefined ||
+      selectedFundingToBlock === undefined
+    )
+      return;
+    let active = true;
+    void api
+      .fundingSettlementRange(
+        selectedFundingChainId,
+        selectedFundingToken,
+        selectedFundingFromBlock,
+        selectedFundingToBlock,
+      )
+      .then((response) => {
+        if (!active) return;
+        setFundingSettlement(response);
+        setFundingSettlementKey(selectedFundingKey);
+        setFundingSettlementError(undefined);
+        setFundingSettlementErrorKey(undefined);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setFundingSettlement(undefined);
+        setFundingSettlementKey(undefined);
+        setFundingSettlementError(
+          cause instanceof Error ? cause.message : 'Funding and Settlement request failed.',
+        );
+        setFundingSettlementErrorKey(selectedFundingKey);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    selectedFundingChainId,
+    selectedFundingFromBlock,
+    selectedFundingKey,
+    selectedFundingToBlock,
+    selectedFundingToken,
+  ]);
+
+  const visibleFundingSettlement =
+    fundingSettlementKey === selectedFundingKey ? fundingSettlement : undefined;
+  const visibleFundingSettlementError =
+    fundingSettlementErrorKey === selectedFundingKey ? fundingSettlementError : undefined;
+
+  const visibleAlerts =
+    alertsCampaignId === selectedCampaignId ? campaignAlerts : ([] as ForensicCampaignAlert[]);
+  const visibleAlertsLoaded = alertsCampaignId === selectedCampaignId && alertsLoaded;
+  const visibleAlertsError = alertsCampaignId === selectedCampaignId ? alertsError : undefined;
+
+  async function load() {
+    const normalizedToken = token.trim();
+    if (chainId.trim().length === 0 || normalizedToken.length === 0) return;
+    setBusy(true);
+    setError(undefined);
+    const campaignResult = await Promise.allSettled([
+      api.controlCampaigns(chainId.trim(), normalizedToken),
+    ]).then(([result]) => result);
+    if (campaignResult.status === 'fulfilled') {
+      setRecords(campaignResult.value.records);
+      setSelectedId(campaignResult.value.records[0]?.campaign.id);
+      setGraphLayer('combined');
+    } else {
+      setError(
+        campaignResult.reason instanceof Error
+          ? campaignResult.reason.message
+          : 'Control Campaign request failed.',
+      );
+      setRecords([]);
+      setSelectedId(undefined);
+    }
+    setLoaded(true);
+    setBusy(false);
+  }
+
+  async function replay() {
+    if (selected === undefined) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const replayed = await api.replayControlCampaign(selected.campaign.id);
+      setRecords((current) => [
+        replayed,
+        ...current.filter((record) => record.campaign.id !== replayed.campaign.id),
+      ]);
+      setSelectedId(replayed.campaign.id);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Provider-free replay failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function exportCase() {
+    if (selected === undefined) return;
+    setBusy(true);
+    setError(undefined);
+    setForensicCaseError(undefined);
+    try {
+      const response = await api.exportControlCampaign(selected.campaign.id);
+      setForensicCase(response);
+      const blob = new Blob([JSON.stringify(response.case, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${response.case.caseId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch (cause) {
+      setForensicCase(undefined);
+      setForensicCaseError(
+        cause instanceof Error ? cause.message : 'Forensic Case Bundle export failed.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const campaign = selected?.campaign;
+  const evidenceLine = selected?.evidenceLine;
+  const snapshotPosition =
+    campaign?.snapshotEnd.blockNumber ??
+    campaign?.snapshotEnd.height ??
+    campaign?.snapshotEnd.slot ??
+    'Unknown';
+  const monitorStartBlock = nextMonitorStart(snapshotPosition);
+  const showTokenLayer = graphLayer === 'combined' || graphLayer === 'token';
+  const showFundingLayer = graphLayer === 'combined' || graphLayer === 'funding';
+  const showSettlementLayer = graphLayer === 'combined' || graphLayer === 'settlement';
+  const showBehaviorLayer = graphLayer === 'combined' || graphLayer === 'behavior';
+  const visibleFundingLayer =
+    graphLayer === 'funding' || graphLayer === 'settlement' ? graphLayer : 'combined';
+  const comparisonWalletOverlap =
+    selected !== undefined && comparisonReference !== undefined
+      ? overlapPercent(
+          [...selected.campaign.coreWalletIds, ...selected.campaign.satelliteWalletIds],
+          [
+            ...comparisonReference.campaign.coreWalletIds,
+            ...comparisonReference.campaign.satelliteWalletIds,
+          ],
+        )
+      : undefined;
+  const comparisonWalletDelta =
+    selected !== undefined && comparisonReference !== undefined
+      ? selected.campaign.coreWalletIds.length +
+        selected.campaign.satelliteWalletIds.length -
+        (comparisonReference.campaign.coreWalletIds.length +
+          comparisonReference.campaign.satelliteWalletIds.length)
+      : undefined;
+  const comparisonEvidenceDelta =
+    selected !== undefined && comparisonReference !== undefined
+      ? selected.evidenceItems.length - comparisonReference.evidenceItems.length
+      : undefined;
+
+  async function startMonitor() {
+    if (selected === undefined || monitorStartBlock === undefined) return;
+    setBusy(true);
+    setMonitorError(undefined);
+    try {
+      setMonitor(
+        await api.createControlCampaignMonitor(
+          chainId.trim(),
+          selected.campaign.token,
+          monitorStartBlock,
+        ),
+      );
+    } catch (cause) {
+      setMonitorError(cause instanceof Error ? cause.message : 'Live monitor request failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">Control Campaign · Evidence Line · replayable Snapshot</span>
+          <h1>Control Campaigns</h1>
+          <p>
+            Follow token flow, cluster positions, behavior events, and forensic Evidence without
+            silently turning labels into ownership or attribution into certainty.
+          </p>
+        </div>
+        <StatusPill status="READ_ONLY" />
+      </div>
+      <section className="panel subject-panel quote-panel" data-testid="control-campaign-query">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Durable Postgres reports only</span>
+            <h3>Load a token campaign history</h3>
+          </div>
+          <span className="snapshot-badge">Provider-free forensic export available</span>
+        </div>
+        <form
+          className="quote-form control-campaign-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void load();
+          }}
+        >
+          <label htmlFor="campaign-chain">Chain ID</label>
+          <input
+            id="campaign-chain"
+            value={chainId}
+            onChange={(event) => setChainId(event.target.value)}
+            placeholder="eip155:56"
+            spellCheck={false}
+          />
+          <label htmlFor="campaign-token">Token</label>
+          <input
+            id="campaign-token"
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            placeholder="0x…"
+            spellCheck={false}
+          />
+          <div className="control-actions">
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={busy || token.trim().length === 0}
+            >
+              {busy ? 'Loading…' : 'Load campaigns'}
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={busy || selected === undefined}
+              onClick={() => void replay()}
+            >
+              Replay stored Snapshot
+            </button>
+          </div>
+        </form>
+        <p className="quote-note">
+          Unknown, unavailable, stale, and provider-down remain distinct. An uncalibrated Evidence
+          score is displayed as a score, never as a probability or ownership conclusion.
+        </p>
+        {error === undefined ? null : <p className="inline-error">{error}</p>}
+      </section>
+
+      <BitcoinForensicGraphPanel />
+
+      <SolanaDealerPanel />
+
+      {loaded && (showFundingLayer || showSettlementLayer) ? (
+        <FundingSettlementPanel
+          response={visibleFundingSettlement}
+          error={visibleFundingSettlementError}
+          layer={visibleFundingLayer}
+        />
+      ) : null}
+
+      {loaded && records.length === 0 && error === undefined ? (
+        <section className="panel empty-state" data-testid="control-campaign-empty">
+          <strong>No durable Control Campaign report was found.</strong>
+          <span>The token may not have been materialized, or storage is not configured.</span>
+        </section>
+      ) : null}
+
+      {records.length > 0 ? (
+        <section
+          className="two-column control-campaign-layout"
+          data-testid="control-campaign-results"
+        >
+          <div className="panel">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Immutable campaign reports</span>
+                <h3>Campaign index</h3>
+              </div>
+              <span className="panel-note">{records.length} report(s)</span>
+            </div>
+            <div className="campaign-index-list">
+              {records.map((record) => (
+                <button
+                  className={
+                    'campaign-index-item ' + (record === selected ? 'campaign-index-active' : '')
+                  }
+                  key={record.campaign.id}
+                  type="button"
+                  onClick={() => setSelectedId(record.campaign.id)}
+                >
+                  <span>
+                    <strong>{titleCase(record.campaign.currentStage)}</strong>
+                    <small>{shortId(record.campaign.id, 9)}</small>
+                  </span>
+                  <span>
+                    <StatusPill status={record.campaign.status} />
+                    <small>block {record.campaign.startBlock}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selected === undefined || campaign === undefined || evidenceLine === undefined ? null : (
+            <div className="campaign-detail-stack">
+              <div
+                className="campaign-graph-tabs"
+                role="tablist"
+                aria-label="Control Campaign graph layers"
+              >
+                {CAMPAIGN_GRAPH_LAYERS.map((layer) => (
+                  <button
+                    className={'campaign-graph-tab ' + (graphLayer === layer.id ? 'active' : '')}
+                    key={layer.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={graphLayer === layer.id}
+                    onClick={() => setGraphLayer(layer.id)}
+                  >
+                    {layer.label}
+                  </button>
+                ))}
+              </div>
+              <section className="panel">
+                <div className="panel-header">
+                  <div>
+                    <span className="eyebrow">
+                      {shortId(campaign.id, 13)} · {campaign.token}
+                    </span>
+                    <h3>Campaign posture</h3>
+                  </div>
+                  <StatusPill status={campaign.currentStage} />
+                </div>
+                <div className="metric-grid compact-grid">
+                  <MetricTile
+                    label="Campaign score"
+                    value={campaign.evidenceScore.toFixed(3)}
+                    detail="Uncalibrated Evidence score"
+                    state="known"
+                  />
+                  <MetricTile
+                    label="Controlled supply"
+                    value={
+                      campaign.controlledSupply.state === 'known'
+                        ? (campaign.controlledSupply.value ?? 'Unknown')
+                        : 'Unknown'
+                    }
+                    detail="Cluster position aggregate"
+                    state={campaign.controlledSupply.state === 'known' ? 'known' : 'unknown'}
+                  />
+                  <MetricTile
+                    label="Data coverage"
+                    value={`${Math.round(campaign.evidenceCoverage * 100)}%`}
+                    detail="Observed campaign Evidence"
+                    state={campaign.evidenceCoverage === 1 ? 'known' : 'unknown'}
+                  />
+                  <MetricTile
+                    label="Source coverage"
+                    value={`${Math.round(campaign.sourceCoverage * 100)}%`}
+                    detail="Provider/source completeness"
+                    state={campaign.sourceCoverage === 1 ? 'known' : 'unknown'}
+                  />
+                  <MetricTile
+                    label="History coverage"
+                    value={`${Math.round(campaign.historyCoverage * 100)}%`}
+                    detail="Range completeness"
+                    state={campaign.historyCoverage === 1 ? 'known' : 'unknown'}
+                  />
+                  <MetricTile
+                    label="Wallets"
+                    value={String(
+                      campaign.coreWalletIds.length + campaign.satelliteWalletIds.length,
+                    )}
+                    detail="Core + satellite candidates"
+                    state="known"
+                  />
+                </div>
+                <div className="fact-grid">
+                  <div className="fact-row">
+                    <span>Campaign ID</span>
+                    <code>{campaign.id}</code>
+                  </div>
+                  <div className="fact-row">
+                    <span>Block range</span>
+                    <span>
+                      {campaign.startBlock} → <KnowledgeDisplay data={campaign.endBlock} />
+                    </span>
+                  </div>
+                  <div className="fact-row">
+                    <span>Snapshot position</span>
+                    <code>{snapshotPosition}</code>
+                  </div>
+                  <div className="fact-row">
+                    <span>Calibration</span>
+                    <StatusPill status={campaign.calibrationStatus} />
+                  </div>
+                  <div className="fact-row">
+                    <span>Campaign confidence</span>
+                    <KnowledgeDisplay data={campaign.campaignConfidence} />
+                  </div>
+                  <div className="fact-row">
+                    <span>Entity mutation</span>
+                    <strong className="knowledge-unknown">Blocked</strong>
+                  </div>
+                  <div className="fact-row">
+                    <span>Sources</span>
+                    <span>{campaign.metadata.sourceSet.join(' · ')}</span>
+                  </div>
+                  <div className="fact-row">
+                    <span>Result hash</span>
+                    <code>{shortId(selected.resultHash, 18)}</code>
+                  </div>
+                </div>
+                <div className="case-export-bar" data-testid="control-campaign-export">
+                  <div>
+                    <span className="eyebrow">Forensic Case Bundle</span>
+                    <strong>Evidence closure · manifest hash · offline replay</strong>
+                    {forensicCase === undefined ? null : (
+                      <small>
+                        {forensicCase.case.caseId} · {forensicCase.case.manifest.evidenceCount}{' '}
+                        Evidence · {forensicCase.case.manifest.snapshotCount} Snapshots ·{' '}
+                        {forensicCase.case.manifest.rawArtifactCount} raw artifacts
+                      </small>
+                    )}
+                    {forensicCaseError === undefined ? null : (
+                      <small className="knowledge-unknown">{forensicCaseError}</small>
+                    )}
+                  </div>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void exportCase()}
+                  >
+                    {busy ? 'Exporting…' : 'Export Case Bundle'}
+                  </button>
+                </div>
+                <div className="case-export-bar monitor-bar" data-testid="control-campaign-monitor">
+                  <div>
+                    <span className="eyebrow">Incremental finalized monitor</span>
+                    <strong>Read-only schedule · reorg-aware cursor · no automatic action</strong>
+                    {monitor === undefined ? (
+                      <small>
+                        Starts after Snapshot {snapshotPosition}; the worker captures only newly
+                        finalized blocks.
+                      </small>
+                    ) : (
+                      <small>
+                        {monitor.monitor.monitorId} · {titleCase(monitor.monitor.status)} · next{' '}
+                        <KnowledgeDisplay data={monitor.monitor.nextRunAt} />
+                      </small>
+                    )}
+                    {monitorError === undefined ? null : (
+                      <small className="knowledge-unknown">{monitorError}</small>
+                    )}
+                  </div>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={busy || monitorStartBlock === undefined}
+                    onClick={() => void startMonitor()}
+                    title={
+                      monitorStartBlock === undefined
+                        ? 'A known safe Snapshot block is required to start a monitor.'
+                        : undefined
+                    }
+                  >
+                    {busy
+                      ? 'Starting…'
+                      : monitor === undefined
+                        ? 'Start monitor'
+                        : 'Replay monitor'}
+                  </button>
+                </div>
+              </section>
+
+              {comparisonReference === undefined ? null : (
+                <section className="panel campaign-comparison" data-testid="campaign-comparison">
+                  <div className="panel-header">
+                    <div>
+                      <span className="eyebrow">
+                        Immutable report comparison · descriptive only
+                      </span>
+                      <h3>Campaign comparison</h3>
+                    </div>
+                    <StatusPill status="READ_ONLY" />
+                  </div>
+                  <p className="panel-copy">
+                    This compares two stored Snapshot-bound reports. It does not infer ownership,
+                    merge entities, or convert an uncalibrated score into probability.
+                  </p>
+                  <div className="metric-grid compact-grid">
+                    <MetricTile
+                      label="Wallet overlap"
+                      value={
+                        comparisonWalletOverlap === undefined
+                          ? 'Unknown'
+                          : `${comparisonWalletOverlap}%`
+                      }
+                      detail="Jaccard over observed core + satellite IDs"
+                      state={comparisonWalletOverlap === undefined ? 'unknown' : 'known'}
+                    />
+                    <MetricTile
+                      label="Wallet count Δ"
+                      value={
+                        comparisonWalletDelta === undefined
+                          ? 'Unknown'
+                          : String(comparisonWalletDelta)
+                      }
+                      detail="Selected minus reference report"
+                      state={comparisonWalletDelta === undefined ? 'unknown' : 'known'}
+                    />
+                    <MetricTile
+                      label="Evidence item Δ"
+                      value={
+                        comparisonEvidenceDelta === undefined
+                          ? 'Unknown'
+                          : String(comparisonEvidenceDelta)
+                      }
+                      detail="Selected minus reference report"
+                      state={comparisonEvidenceDelta === undefined ? 'unknown' : 'known'}
+                    />
+                    <MetricTile
+                      label="Coverage"
+                      value={`${Math.round(campaign.evidenceCoverage * 100)}% → ${Math.round(comparisonReference.campaign.evidenceCoverage * 100)}%`}
+                      detail="Selected → reference Evidence coverage"
+                      state="known"
+                    />
+                  </div>
+                  <div className="fact-grid">
+                    <div className="fact-row">
+                      <span>Selected report</span>
+                      <code>{selected.campaign.id}</code>
+                    </div>
+                    <div className="fact-row">
+                      <span>Reference report</span>
+                      <code>{comparisonReference.campaign.id}</code>
+                    </div>
+                    <div className="fact-row">
+                      <span>Snapshot positions</span>
+                      <span>
+                        {campaignSnapshotPosition(selected.campaign.snapshotEnd)} →{' '}
+                        {campaignSnapshotPosition(comparisonReference.campaign.snapshotEnd)}
+                      </span>
+                    </div>
+                    <div className="fact-row">
+                      <span>Result hashes</span>
+                      <code title={`${selected.resultHash} → ${comparisonReference.resultHash}`}>
+                        {shortId(selected.resultHash, 8)} →{' '}
+                        {shortId(comparisonReference.resultHash, 8)}
+                      </code>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              <section className="panel" data-testid="control-campaign-alerts">
+                <div className="panel-header">
+                  <div>
+                    <span className="eyebrow">Forensic Alert Stream · Evidence-bound</span>
+                    <h3>Campaign Alerts</h3>
+                  </div>
+                  <span className="panel-note">
+                    {visibleAlertsLoaded ? `${visibleAlerts.length} alert(s)` : 'Loading…'}
+                  </span>
+                </div>
+                {visibleAlertsError !== undefined ? (
+                  <p className="inline-error alert-state-message">{visibleAlertsError}</p>
+                ) : !visibleAlertsLoaded ? (
+                  <p className="empty-cell alert-state-message">Replaying durable alerts…</p>
+                ) : visibleAlerts.length === 0 ? (
+                  <p className="empty-cell alert-state-message">
+                    No durable alert was materialized for this campaign.
+                  </p>
+                ) : (
+                  <div className="alert-list">
+                    {visibleAlerts.map((alert) => (
+                      <article
+                        className={'campaign-alert alert-' + alert.severity.toLowerCase()}
+                        key={alert.id}
+                      >
+                        <div className="campaign-alert-heading">
+                          <div>
+                            <span className="eyebrow">{titleCase(alert.classification)}</span>
+                            <strong>{shortId(alert.id, 10)}</strong>
+                          </div>
+                          <StatusPill status={alert.severity} />
+                        </div>
+                        <p>
+                          {alert.evidenceIds.length} Evidence node(s) · confidence{' '}
+                          <KnowledgeDisplay data={alert.confidence} /> ·{' '}
+                          {formatTime(alert.createdAt)}
+                        </p>
+                        <small>
+                          {alert.suppressionApplied.length === 0
+                            ? 'No suppression applied.'
+                            : `Suppression: ${alert.suppressionApplied.join(' · ')}`}
+                        </small>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {showTokenLayer ? (
+                <section className="panel" data-testid="control-campaign-positions">
+                  <div className="panel-header">
+                    <div>
+                      <span className="eyebrow">Conserved Cluster Position snapshots</span>
+                      <h3>Position Timeline</h3>
+                    </div>
+                    <span className="panel-note">{selected.positions.length} snapshot(s)</span>
+                  </div>
+                  {selected.positions.length === 0 ? (
+                    <p className="empty-cell">No conserved position snapshot was materialized.</p>
+                  ) : (
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Block</th>
+                            <th>Token balance</th>
+                            <th>External in / out</th>
+                            <th>Wallets</th>
+                            <th>Sell-ready</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selected.positions.map((position) => (
+                            <tr key={position.id}>
+                              <td>{position.atBlock}</td>
+                              <td>
+                                <code>{position.tokenBalanceRaw}</code>
+                              </td>
+                              <td>
+                                <code>{position.externalTokenInflowRaw}</code>
+                                <br />
+                                <small>−{position.externalTokenOutflowRaw}</small>
+                              </td>
+                              <td>{position.walletCount}</td>
+                              <td>
+                                <KnowledgeDisplay data={position.sellReadyTokenRaw} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              ) : null}
+
+              {showBehaviorLayer ? (
+                <section className="panel" data-testid="control-campaign-timeline">
+                  <div className="panel-header">
+                    <div>
+                      <span className="eyebrow">Behavior Events · ordered by observed range</span>
+                      <h3>Campaign Timeline</h3>
+                    </div>
+                    <span className="panel-note">{selected.behaviorEvents.length} event(s)</span>
+                  </div>
+                  {selected.behaviorEvents.length === 0 ? (
+                    <p className="empty-cell">No behavior event was materialized.</p>
+                  ) : (
+                    <div className="timeline-list">
+                      {selected.behaviorEvents.map((event) => (
+                        <article className="timeline-event" key={event.id}>
+                          <div className="timeline-marker" />
+                          <div>
+                            <div className="timeline-event-heading">
+                              <strong>{titleCase(event.type)}</strong>
+                              <StatusPill status={event.status} />
+                            </div>
+                            <span className="timeline-range">
+                              {event.startBlock} → {event.endBlock} · {formatTime(event.startTime)}
+                            </span>
+                            <p>{event.explanation}</p>
+                            <small>
+                              {event.supportingEvidenceIds.length} supporting Evidence · confidence{' '}
+                              <KnowledgeDisplay data={event.confidence} />
+                            </small>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ) : null}
+
+              <section className="panel" data-testid="control-campaign-evidence-line">
+                <div className="panel-header">
+                  <div>
+                    <span className="eyebrow">Forensic Evidence Line · no direct entity merge</span>
+                    <h3>Evidence Line</h3>
+                  </div>
+                  <StatusPill status={evidenceLine.terminalBoundary} />
+                </div>
+                <div className="evidence-line-phases">
+                  {evidenceLine.phases.map((phase) => (
+                    <div className="evidence-line-phase" key={phase.phase}>
+                      <div>
+                        <strong>{titleCase(phase.phase)}</strong>
+                        <span>{phase.itemIds.length} item(s)</span>
+                      </div>
+                      <div className="coverage-bar">
+                        <span style={{ width: `${Math.round(phase.coverage * 100)}%` }} />
+                      </div>
+                      {phase.attributionStopped ? (
+                        <small className="knowledge-unknown">Attribution stopped at boundary</small>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Evidence</th>
+                        <th>Phase</th>
+                        <th>Block</th>
+                        <th>Subjects</th>
+                        <th>Review</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selected.evidenceItems.length === 0 ? (
+                        <tr>
+                          <td className="empty-cell" colSpan={5}>
+                            No campaign Evidence item was materialized.
+                          </td>
+                        </tr>
+                      ) : (
+                        selected.evidenceItems.map((item) => (
+                          <tr key={item.id}>
+                            <td>
+                              <code title={item.id}>{shortId(item.evidenceId, 9)}</code>
+                              <br />
+                              <small>{item.polarity}</small>
+                            </td>
+                            <td>
+                              {titleCase(item.phase)}
+                              <br />
+                              <small>{titleCase(item.role)}</small>
+                            </td>
+                            <td>{item.blockNumber}</td>
+                            <td>
+                              {item.subjectA === undefined && item.subjectB === undefined
+                                ? 'Not specified'
+                                : `${shortId(item.subjectA ?? 'Unknown', 7)} → ${shortId(item.subjectB ?? 'Unknown', 7)}`}
+                            </td>
+                            <td>
+                              <StatusPill status={item.reviewState} />
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          )}
+        </section>
+      ) : null}
+    </>
+  );
+}
+
 function ControlRightsWorkspace() {
   const [ledger, setLedger] = useState<'EVM' | 'SOLANA'>('EVM');
   return (
@@ -5145,6 +6839,16 @@ function FlapEventTransactionPanel({ token }: { token: string }) {
                   <code title={lifetimeResult.scan.terminalResult.originScanId}>
                     {shortId(lifetimeResult.scan.terminalResult.originScanId, 10)}
                   </code>
+                </div>
+                <div className="fact-row">
+                  <span>Origin search</span>
+                  {lifetimeResult.scan.terminalResult.originSearchMode === 'VERIFIED_HINT' ? (
+                    <span className="knowledge-unknown">
+                      Verified hint only · full dataset incomplete
+                    </span>
+                  ) : (
+                    <code>Full dataset</code>
+                  )}
                 </div>
                 <div className="fact-row">
                   <span>History projection</span>
@@ -7402,6 +9106,7 @@ export function App() {
   const [health, setHealth] = useState<HealthResponse>();
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [platforms, setPlatforms] = useState<PlatformDescriptor[]>([]);
+  const [launchpadRegistry, setLaunchpadRegistry] = useState<LaunchpadRegistryEntry[]>([]);
   const [loadingCore, setLoadingCore] = useState(true);
   const [coreError, setCoreError] = useState<string>();
   const [searchBusy, setSearchBusy] = useState(false);
@@ -7427,6 +9132,7 @@ export function App() {
       setHealth(nextHealth);
       setCapabilities(nextCapabilities.core);
       setPlatforms(nextPlatforms.platforms);
+      setLaunchpadRegistry(nextPlatforms.launchpadRegistry);
       setCoreError(undefined);
     } catch (error) {
       setCoreError(error instanceof Error ? error.message : 'The API could not be reached.');
@@ -7516,6 +9222,7 @@ export function App() {
     }
     if (view === 'entities') return <EntityIntelligenceWorkspace />;
     if (view === 'control') return <ControlRightsWorkspace />;
+    if (view === 'campaigns') return <ControlCampaignWorkspace />;
     if (view === 'scenario') return <ScenarioLab />;
     if (view === 'claims') return <ClaimAuditWorkspace />;
     if (view === 'health') {
@@ -7526,6 +9233,7 @@ export function App() {
         health={health}
         capabilities={capabilities}
         platforms={platforms}
+        launchpadRegistry={launchpadRegistry}
         onSearch={search}
         searchBusy={searchBusy}
       />
@@ -7545,6 +9253,7 @@ export function App() {
     refreshCore,
     capabilities,
     platforms,
+    launchpadRegistry,
   ]);
 
   return (

@@ -3,6 +3,7 @@ import {
   FLAP_HISTORY_MAX_LOGS,
   FLAP_HISTORY_MAX_TRANSACTIONS,
   FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+  FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE,
   FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
   FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
 } from '@zerotrace/platform-adapters';
@@ -21,11 +22,13 @@ import {
 export interface FlapLifetimeWorkerConfig {
   token: string;
   targetBlock?: number;
+  originHintBlock?: number;
   originChunkSize: number;
   historySegmentSize: number;
   historyChunkSize: number;
   historyMaxTransactions: number;
   historyMaxLogs: number;
+  sqdCreationRequestRangeBlocks: number;
   bscRpcUrls: string[];
   sqdPortalUrl: string;
   providerAllowedHosts: string[];
@@ -43,11 +46,13 @@ export interface FlapLifetimeWorkerConfig {
 interface Arguments {
   token?: string;
   targetBlock?: string;
+  originHintBlock?: string;
   originChunkSize?: string;
   historySegmentSize?: string;
   historyChunkSize?: string;
   historyMaxTransactions?: string;
   historyMaxLogs?: string;
+  sqdCreationRequestRangeBlocks?: string;
 }
 
 function parseArguments(args: readonly string[]): Arguments {
@@ -55,11 +60,13 @@ function parseArguments(args: readonly string[]): Arguments {
   const supported = new Set([
     '--token',
     '--target',
+    '--origin-hint-block',
     '--origin-chunk-size',
     '--history-segment-size',
     '--history-chunk-size',
     '--history-max-transactions',
     '--history-max-logs',
+    '--sqd-creation-request-range-size',
   ]);
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -73,11 +80,15 @@ function parseArguments(args: readonly string[]): Arguments {
     index += 1;
     if (argument === '--token') result.token = value;
     if (argument === '--target') result.targetBlock = value;
+    if (argument === '--origin-hint-block') result.originHintBlock = value;
     if (argument === '--origin-chunk-size') result.originChunkSize = value;
     if (argument === '--history-segment-size') result.historySegmentSize = value;
     if (argument === '--history-chunk-size') result.historyChunkSize = value;
     if (argument === '--history-max-transactions') result.historyMaxTransactions = value;
     if (argument === '--history-max-logs') result.historyMaxLogs = value;
+    if (argument === '--sqd-creation-request-range-size') {
+      result.sqdCreationRequestRangeBlocks = value;
+    }
   }
   return result;
 }
@@ -104,6 +115,12 @@ export function loadFlapLifetimeWorkerConfig(
     targetInput === undefined
       ? undefined
       : integer(targetInput, '--target', undefined, 0, Number.MAX_SAFE_INTEGER);
+  const originHintInput =
+    parsed.originHintBlock ?? (env.FLAP_LIFETIME_ORIGIN_HINT_BLOCK?.trim() || undefined);
+  const originHintBlock =
+    originHintInput === undefined
+      ? undefined
+      : integer(originHintInput, '--origin-hint-block', undefined, 0, Number.MAX_SAFE_INTEGER);
   const originChunkSize = integer(
     parsed.originChunkSize,
     '--origin-chunk-size',
@@ -116,7 +133,7 @@ export function loadFlapLifetimeWorkerConfig(
     '--history-segment-size',
     FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
     1,
-    FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+    FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE,
   );
   const historyChunkSize = integer(
     parsed.historyChunkSize,
@@ -139,6 +156,13 @@ export function loadFlapLifetimeWorkerConfig(
     1,
     FLAP_HISTORY_MAX_LOGS,
   );
+  const sqdCreationRequestRangeBlocks = integer(
+    parsed.sqdCreationRequestRangeBlocks ?? env.SQD_CREATION_REQUEST_RANGE_BLOCKS,
+    'SQD_CREATION_REQUEST_RANGE_BLOCKS',
+    10_000,
+    1,
+    1_000_000,
+  );
   const bscRpcUrls = configuredUrls(env);
   const bscUrlObjects = bscRpcUrls.map((url, index) =>
     providerUrl(url, `BSC RPC URL ${index + 1}`, allowPrivateProviderUrls),
@@ -148,11 +172,13 @@ export function loadFlapLifetimeWorkerConfig(
   return {
     token,
     ...(targetBlock === undefined ? {} : { targetBlock }),
+    ...(originHintBlock === undefined ? {} : { originHintBlock }),
     originChunkSize,
     historySegmentSize,
     historyChunkSize,
     historyMaxTransactions,
     historyMaxLogs,
+    sqdCreationRequestRangeBlocks,
     bscRpcUrls,
     sqdPortalUrl,
     providerAllowedHosts: hosts(

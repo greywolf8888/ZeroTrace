@@ -19,6 +19,7 @@ import {
   type CaptureRunSuccess,
   type CaptureKind,
   type CaptureScheduleRecord,
+  type CaptureTarget,
 } from '@zerotrace/schemas';
 
 export interface CaptureScheduleRepositoryOptions {
@@ -75,6 +76,8 @@ export class CaptureScheduleStorageError extends Error {
 export interface ClaimDueCaptureRunsInput {
   owner: string;
   captureKinds: readonly CaptureKind[];
+  /** Optional operational selector for a single durable schedule replay. */
+  scheduleId?: string;
   now?: string;
   leaseSeconds?: number;
   limit?: number;
@@ -94,6 +97,19 @@ export interface FailCaptureRunInput {
   detail: string;
   sourceRetryable: boolean;
   failedAt?: string;
+}
+
+export interface RenewCaptureLeaseInput {
+  runId: string;
+  leaseToken: string;
+  leaseSeconds?: number;
+  renewedAt?: string;
+}
+
+export interface ListCaptureSchedulesInput {
+  target: CaptureTarget;
+  captureKind: CaptureKind;
+  limit?: number;
 }
 
 const SELECT_SCHEDULE = `
@@ -443,8 +459,76 @@ export class PostgresCaptureScheduleRepository {
     }
   }
 
+  async listSchedules(input: ListCaptureSchedulesInput): Promise<CaptureScheduleRecord[]> {
+    const target = input.target;
+    const captureKind = CaptureKindSchema.parse(input.captureKind);
+    const limit = boundedInteger(input.limit ?? 50, 'limit', 1, 100);
+    try {
+      const result = await this.#pool.query(
+        `${SELECT_SCHEDULE}
+         WHERE ledger = $1::ledger_kind
+           AND chain_id = $2
+           AND subject_type = $3
+           AND normalized_identifier = $4
+           AND capture_kind = $5
+         ORDER BY created_at DESC, id DESC
+         LIMIT $6`,
+        [
+          target.ledger,
+          target.chainId,
+          target.subjectType,
+          target.normalizedIdentifier,
+          captureKind,
+          limit,
+        ],
+      );
+      return result.rows.map(scheduleFromRow);
+    } catch (error) {
+      if (error instanceof CaptureScheduleStorageError) throw error;
+      throw new CaptureScheduleStorageError(
+        'CAPTURE_SCHEDULER_UNAVAILABLE',
+        'Durable capture schedule list failed.',
+        { retryable: true, cause: error },
+      );
+    }
+  }
+
+  async listRunsForSchedule(scheduleId: string, limit = 20): Promise<CaptureRun[]> {
+    if (!/^cps_[0-9a-f]{24}$/.test(scheduleId)) {
+      throw new CaptureScheduleStorageError(
+        'CAPTURE_SCHEDULER_INVALID',
+        'Capture schedule ID is invalid.',
+      );
+    }
+    const boundedLimit = boundedInteger(limit, 'limit', 1, 100);
+    try {
+      const result = await this.#pool.query(
+        `${SELECT_RUN}
+         WHERE run.schedule_id = $1
+         ORDER BY run.created_at DESC, run.id DESC
+         LIMIT $2`,
+        [scheduleId, boundedLimit],
+      );
+      return result.rows.map(runFromRow);
+    } catch (error) {
+      if (error instanceof CaptureScheduleStorageError) throw error;
+      throw new CaptureScheduleStorageError(
+        'CAPTURE_SCHEDULER_UNAVAILABLE',
+        'Durable capture run list failed.',
+        { retryable: true, cause: error },
+      );
+    }
+  }
+
   async claimDue(input: ClaimDueCaptureRunsInput): Promise<CaptureRun[]> {
     const owner = validateOwner(input.owner);
+    const scheduleId = input.scheduleId;
+    if (scheduleId !== undefined && !/^cps_[0-9a-f]{24}$/.test(scheduleId)) {
+      throw new CaptureScheduleStorageError(
+        'CAPTURE_SCHEDULER_INVALID',
+        'Capture schedule ID is invalid.',
+      );
+    }
     const captureKinds = [
       ...new Set(CaptureKindSchema.array().min(1).parse(input.captureKinds)),
     ].sort();
@@ -463,11 +547,12 @@ export class PostgresCaptureScheduleRepository {
             WHERE run.status = 'RETRY_WAIT'
               AND run.available_at <= $1::timestamptz
               AND schedule.capture_kind = ANY($2::text[])
+              AND ($3::text IS NULL OR schedule.id = $3)
             ORDER BY run.available_at, run.scheduled_for, run.id
             FOR UPDATE OF run SKIP LOCKED
-            LIMIT $3
+            LIMIT $4
           `,
-          [now, captureKinds, limit],
+          [now, captureKinds, scheduleId ?? null, limit],
         );
         for (const row of retries.rows) {
           const id = requiredString(row, 'id');
@@ -501,6 +586,7 @@ export class PostgresCaptureScheduleRepository {
               WHERE status = 'ACTIVE'
                 AND next_run_at <= $1::timestamptz
                 AND capture_kind = ANY($2::text[])
+                AND ($3::text IS NULL OR schedule.id = $3)
                 AND NOT EXISTS (
                   SELECT 1 FROM capture_runs run
                   WHERE run.schedule_id = schedule.id
@@ -508,9 +594,9 @@ export class PostgresCaptureScheduleRepository {
                 )
               ORDER BY next_run_at, id
               FOR UPDATE SKIP LOCKED
-              LIMIT $3
+              LIMIT $4
             `,
-            [now, captureKinds, remaining],
+            [now, captureKinds, scheduleId ?? null, remaining],
           );
           for (const row of due.rows) {
             const definition = CaptureScheduleDefinitionSchema.parse(row.definition);
@@ -686,6 +772,57 @@ export class PostgresCaptureScheduleRepository {
       return stored;
     } catch (error) {
       throw writeFailure(error, 'Durable capture completion failed.');
+    }
+  }
+
+  async renew(input: RenewCaptureLeaseInput): Promise<CaptureRun> {
+    const renewedAt = canonicalTime(input.renewedAt ?? new Date().toISOString(), 'renewedAt');
+    const leaseSeconds = boundedInteger(input.leaseSeconds ?? 300, 'leaseSeconds', 30, 3_600);
+    try {
+      await transaction(this.#pool, async (client) => {
+        const locked = await client.query(
+          `
+            SELECT status, lease_token, lease_expires_at
+            FROM capture_runs
+            WHERE id = $1
+            FOR UPDATE
+          `,
+          [input.runId],
+        );
+        const row = locked.rows[0];
+        if (row === undefined) {
+          throw new CaptureScheduleStorageError(
+            'CAPTURE_SCHEDULER_NOT_FOUND',
+            'Capture run was not found.',
+          );
+        }
+        this.#assertLease(row, input.leaseToken, renewedAt);
+        const updated = await client.query(
+          `
+            UPDATE capture_runs
+            SET lease_expires_at = $3::timestamptz + make_interval(secs => $4),
+                updated_at = $3::timestamptz
+            WHERE id = $1 AND status = 'LEASED' AND lease_token = $2
+          `,
+          [input.runId, input.leaseToken, renewedAt, leaseSeconds],
+        );
+        if (updated.rowCount !== 1) {
+          throw new CaptureScheduleStorageError(
+            'CAPTURE_SCHEDULER_LEASE_LOST',
+            'Capture lease was lost before renewal.',
+          );
+        }
+      });
+      const stored = await this.getRun(input.runId);
+      if (stored === undefined) {
+        throw new CaptureScheduleStorageError(
+          'CAPTURE_SCHEDULER_CONFLICT',
+          'Renewed capture run vanished.',
+        );
+      }
+      return stored;
+    } catch (error) {
+      throw writeFailure(error, 'Durable capture lease renewal failed.');
     }
   }
 

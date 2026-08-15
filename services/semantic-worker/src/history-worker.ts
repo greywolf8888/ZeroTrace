@@ -106,6 +106,7 @@ async function executeFlapHistory(
       source,
       maxRangeBlocks: config.chunkSize,
       maxResults: config.maxLogs,
+      includeAllBlocks: false,
     }),
     token: config.token,
     fromBlock: String(config.fromBlock),

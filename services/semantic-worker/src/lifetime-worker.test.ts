@@ -136,6 +136,7 @@ describe('Flap lifetime semantic worker', () => {
         datasetStartBlock: '0',
         targetBlock: '50000103',
         originScanId: '11111111-1111-4111-8111-111111111111',
+        originSearchMode: 'FULL_DATASET',
         originSearchCoverage: 1,
         origin: {
           state: 'known',
@@ -201,6 +202,7 @@ describe('Flap lifetime semantic worker', () => {
       datasetStartBlock: '0',
       targetBlock: '50000103',
       originScanId: '11111111-1111-4111-8111-111111111111',
+      originSearchMode: 'FULL_DATASET',
       originState: 'known',
       historyScanId: '22222222-2222-4222-8222-222222222222',
       lifetimeCoverage: { state: 'known', reason: null },

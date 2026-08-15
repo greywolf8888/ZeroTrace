@@ -38,6 +38,17 @@ const WEIGHTS: Record<EntityFeatureKind, FeatureWeights> = {
   SERVICE_HUB: { sameController: -8, coordination: -4, independence: 0 },
   COINJOIN: { sameController: -10, coordination: -4, independence: 0 },
   BOT_COMMON_INFRASTRUCTURE: { sameController: -4, coordination: -2, independence: 0.4 },
+  FIRST_FUNDING_COMMON_SOURCE: { sameController: 2.4, coordination: 1.1, independence: -1.2 },
+  REPEATED_GAS_TOPUP_SOURCE: { sameController: 1.5, coordination: 0.8, independence: -0.8 },
+  FUNDING_TIMING_SYNCHRONY: { sameController: 1, coordination: 1.6, independence: -0.5 },
+  FUNDING_AMOUNT_SIGNATURE: { sameController: 0.7, coordination: 0.9, independence: -0.3 },
+  TOKEN_FAN_OUT: { sameController: 1.8, coordination: 1.1, independence: -0.7 },
+  TOKEN_FAN_IN: { sameController: 2.3, coordination: 1, independence: -0.8 },
+  POST_DISTRIBUTION_ACTION_SYNC: { sameController: 2, coordination: 1.8, independence: -0.7 },
+  ROUTER_METHOD_SIMILARITY: { sameController: 0.8, coordination: 1.5, independence: -0.2 },
+  FINAL_SWEEP: { sameController: 2.2, coordination: 1.1, independence: -1 },
+  QUOTE_ASSET_CONVERGENCE: { sameController: 2.8, coordination: 1.5, independence: -1.7 },
+  NATIVE_ASSET_CONVERGENCE: { sameController: 2, coordination: 1.2, independence: -1.2 },
 };
 
 const NEGATIVE_FEATURES = new Set<EntityFeatureKind>([

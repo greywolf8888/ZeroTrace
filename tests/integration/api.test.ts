@@ -35,6 +35,11 @@ import {
   hashPayload,
   type EvidenceNode,
 } from '@zerotrace/evidence';
+import { buildControlCampaign, buildControlClusterVersion } from '@zerotrace/campaign-engine';
+import {
+  buildForensicEvidenceLine,
+  createCampaignEvidenceItem,
+} from '@zerotrace/forensic-evidence';
 import {
   ERC20_TRANSFER_TOPIC,
   PANCAKE_V2_BSC_DEPLOYMENT,
@@ -44,6 +49,7 @@ import {
 import {
   knownValue,
   unknownValue,
+  ControlCampaignBundleSchema,
   GlobalIntelligenceSearchRecordTypeSchema,
   type ChainAnchorRead,
   type ComparisonObservation,
@@ -55,6 +61,8 @@ import {
   type LabelObservation,
   type ClaimDeclarationParseResult,
   type ClaimRuleReviewReport,
+  type CaptureScheduleRecord,
+  type ForensicCampaignAlert,
 } from '@zerotrace/schemas';
 import {
   StorageError,
@@ -1042,6 +1050,131 @@ function addFixtureEvidence(runtime: AppRuntime, blockOrSlot = '16') {
   return evidence;
 }
 
+function addFixtureControlCampaign(runtime: AppRuntime) {
+  const token = `0x${'c'.repeat(40)}`;
+  const evidence = createEvidence({
+    ledger: 'EVM',
+    chainId: fixtureSnapshot.chainId,
+    kind: 'LOG',
+    source: 'fixture-rpc',
+    locator: `0x${'1'.repeat(64)}`,
+    payload: { token, amount: '100' },
+    blockOrSlot: fixtureSnapshot.blockNumber,
+    finality: fixtureSnapshot.finality,
+    summary: 'Fixture token transfer for forensic export.',
+    observedAt: fixtureSnapshot.capturedAt,
+  });
+  runtime.evidenceLedger.add(evidence, [], fixtureSnapshot);
+  const cluster = buildControlClusterVersion({
+    ledger: 'EVM',
+    chainId: fixtureSnapshot.chainId,
+    token,
+    validFromBlock: '1',
+    memberWalletIds: [`0x${'a'.repeat(40)}`],
+    coreWalletIds: [`0x${'a'.repeat(40)}`],
+    satelliteWalletIds: [],
+    membershipEvidenceIds: [evidence.id],
+    snapshot: fixtureSnapshot,
+    dataCoverage: 1,
+    sourceCoverage: 1,
+    historyCoverage: 1,
+    sourceSet: ['fixture-rpc'],
+  });
+  const campaignSeed = buildControlCampaign({
+    ledger: 'EVM',
+    chainId: fixtureSnapshot.chainId,
+    token,
+    originBlock: '1',
+    startBlock: '1',
+    endBlock: unknownValue('NOT_QUERIED'),
+    clusterVersion: cluster,
+    snapshotStart: fixtureSnapshot,
+    snapshotEnd: fixtureSnapshot,
+    positions: [],
+    behaviorEvents: [],
+    dataCoverage: 1,
+    sourceCoverage: 1,
+    historyCoverage: 1,
+    sourceSet: ['fixture-rpc'],
+  });
+  const item = createCampaignEvidenceItem({
+    evidence,
+    campaignId: campaignSeed.id,
+    phase: 'TOKEN_CONTROL',
+    role: 'DIRECT',
+    polarity: 'SUPPORT',
+    snapshot: fixtureSnapshot,
+    featureKind: 'TOKEN_TRANSFER',
+    strength: 1,
+    reliability: 1,
+    explanation: 'Fixture Evidence supports the token control observation.',
+  });
+  const campaign = buildControlCampaign({
+    ledger: 'EVM',
+    chainId: fixtureSnapshot.chainId,
+    token,
+    originBlock: '1',
+    startBlock: '1',
+    endBlock: unknownValue('NOT_QUERIED'),
+    clusterVersion: cluster,
+    snapshotStart: fixtureSnapshot,
+    snapshotEnd: fixtureSnapshot,
+    positions: [],
+    behaviorEvents: [],
+    evidenceLineItemIds: [item.id],
+    dataCoverage: 1,
+    sourceCoverage: 1,
+    historyCoverage: 1,
+    sourceSet: ['fixture-rpc'],
+  });
+  const evidenceLine = buildForensicEvidenceLine({
+    campaignId: campaign.id,
+    items: [item],
+    snapshotStart: fixtureSnapshot,
+    snapshotEnd: fixtureSnapshot,
+    dataCoverage: 1,
+    sourceCoverage: 1,
+    historyCoverage: 1,
+    sourceSet: ['fixture-rpc'],
+  });
+  const bundleWithoutIdentity = {
+    schemaVersion: 'control-campaign-bundle-v1' as const,
+    campaign,
+    clusterVersion: cluster,
+    memberships: [],
+    positions: [],
+    behaviorEvents: [],
+    evidenceItems: [item],
+    evidenceLine,
+  };
+  const bundle = ControlCampaignBundleSchema.parse({
+    ...bundleWithoutIdentity,
+    resultHash: hashPayload(bundleWithoutIdentity),
+  });
+  runtime.controlCampaignReports = {
+    get: vi.fn(async (id: string) =>
+      id === campaign.id
+        ? {
+            id: campaign.id,
+            ledger: 'EVM',
+            chainId: fixtureSnapshot.chainId,
+            token,
+            snapshotPosition: fixtureSnapshot.blockNumber,
+            snapshotHash: fixtureSnapshot.blockHash,
+            resultHash: bundle.resultHash,
+            bundle,
+            evidenceIds: [evidence.id],
+            sourceSet: ['fixture-rpc'],
+            modelVersion: campaign.ruleVersion,
+            capturedAt: fixtureSnapshot.capturedAt,
+            createdAt: fixtureSnapshot.capturedAt,
+          }
+        : undefined,
+    ),
+  } as unknown as NonNullable<AppRuntime['controlCampaignReports']>;
+  return { campaign, bundle };
+}
+
 function attachEntityReportDurability(runtime: AppRuntime) {
   const records = new Map<string, StoredEntityRelationshipReport>();
   const timelines = new Map<string, StoredEntityRelationshipTimeline>();
@@ -2014,6 +2147,39 @@ describe('ZeroTrace API contract', () => {
     const platforms = await app.inject({ method: 'GET', url: '/api/v1/platforms' });
     expect(platforms.json()).toMatchObject({ gmgnConfigured: false });
     expect(platforms.json().platforms.length).toBeGreaterThan(5);
+    const launchpadRegistry = platforms.json().launchpadRegistry;
+    const pumpEntry = launchpadRegistry.find((entry) => entry.platform === 'pump');
+    expect(pumpEntry).toMatchObject({
+      platform: 'pump',
+      provenanceStatus: 'PINNED',
+      decoderStatus: 'READY_READ_ONLY',
+    });
+    expect(pumpEntry?.versions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          deploymentId: 'pump-solana-mainnet-9c82f61cb711',
+          chain: 'solana-mainnet',
+          programOrContract: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
+          evidenceIds: expect.arrayContaining([expect.stringMatching(/^ev_/)]),
+        }),
+        expect.objectContaining({
+          deploymentId: 'pumpswap-solana-mainnet-9c82f61cb711',
+          chain: 'solana-mainnet',
+          programOrContract: 'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',
+          evidenceIds: expect.arrayContaining([expect.stringMatching(/^ev_/)]),
+        }),
+      ]),
+    );
+    expect(pumpEntry?.versions).toHaveLength(2);
+    expect(launchpadRegistry).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          platform: 'raydium-launchlab',
+          provenanceStatus: 'PROVENANCE_PENDING',
+          decoderStatus: 'PARTIAL_READ_ONLY',
+        }),
+      ]),
+    );
 
     const metrics = await app.inject({ method: 'GET', url: '/metrics' });
     expect(metrics.statusCode).toBe(200);
@@ -4468,6 +4634,48 @@ describe('ZeroTrace API contract', () => {
     });
     expect(drilldown.statusCode, drilldown.body).toBe(200);
     expect(drilldown.json().nodes.length).toBeGreaterThan(40);
+  });
+
+  it('reconciles the FFT market through the configured keyless NodeReal operator path', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const sourceIds = ['bsc-rpc@bsc-dataseed.bnbchain.org#1', 'bsc-rpc@bsc.nodereal.io#2'];
+    configureReconciliationRuntime(runtime, {
+      sourceIds,
+      quoteReserve: 1_000n * 10n ** 18n,
+      tokenReserves: [1_000_000n * 10n ** 18n, 1_000_000n * 10n ** 18n],
+      quoteInput: 100n * 10n ** 18n,
+      tokenInput: 1_000n * 10n ** 18n,
+    });
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/rv/flap-pancake-v2-reconciliation',
+      payload: {
+        chainId: 'eip155:56',
+        platform: 'flap',
+        token: fixtureFlapToken,
+        quoteInputs: ['100'],
+        tokenInputs: ['1000'],
+      },
+    });
+
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({
+      status: 'PASS',
+      sourceIndependence: {
+        status: 'VERIFIED_INDEPENDENT',
+        independence: { state: 'known', value: true },
+        observedSources: 2,
+        operatorCount: 2,
+      },
+      sources: [
+        { sourceId: sourceIds[0], operatorId: { state: 'known', value: 'bnb-chain' } },
+        { sourceId: sourceIds[1], operatorId: { state: 'known', value: 'nodereal' } },
+      ],
+      audit: { status: 'PASS', summary: { failed: 0, inconclusive: 0 } },
+    });
   });
 
   it('keeps repeated endpoints from one documented operator inconclusive', async () => {
@@ -7073,5 +7281,295 @@ describe('ZeroTrace API contract', () => {
     });
     expect(replay.statusCode).toBe(503);
     expect(replay.json().error.code).toBe('CONTROL_SURFACE_UNAVAILABLE');
+  });
+
+  it('keeps Control Campaign storage, monitor, and backfill boundaries explicit', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const token = `0x${'e'.repeat(40)}`;
+
+    const unavailable = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control/tokens/eip155:56/${token}/campaigns`,
+    });
+    expect(unavailable.statusCode).toBe(503);
+    expect(unavailable.json().error.code).toBe('CONTROL_CAMPAIGN_STORAGE_UNAVAILABLE');
+
+    const backfill = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control/tokens/eip155:56/${token}/backfill`,
+    });
+    expect(backfill.statusCode).toBe(503);
+    expect(backfill.json().error.code).toBe('CAPTURE_SCHEDULER_UNAVAILABLE');
+
+    const monitor = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control/tokens/eip155:56/${token}/monitor`,
+    });
+    expect(monitor.statusCode).toBe(503);
+    expect(monitor.json().error.code).toBe('CAPTURE_SCHEDULER_UNAVAILABLE');
+  });
+
+  it('queues and replays a deterministic Token History backfill schedule', async () => {
+    const runtime = runtimeWithAllLedgers();
+    let storedSchedule: CaptureScheduleRecord | undefined;
+    const scheduler = {
+      listSchedules: vi.fn(async () => (storedSchedule === undefined ? [] : [storedSchedule])),
+      putSchedule: vi.fn(async (input: CaptureScheduleRecord) => {
+        storedSchedule ??= input;
+        return storedSchedule;
+      }),
+      listRunsForSchedule: vi.fn(async (_scheduleId: string, _limit?: number) => []),
+    };
+    runtime.captureSchedules = scheduler as unknown as NonNullable<AppRuntime['captureSchedules']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const token = `0x${'f'.repeat(40)}`;
+    const payload = { fromBlock: '113485950', toBlock: '113495949' };
+
+    const queued = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control/tokens/eip155:56/${token}/backfill`,
+      payload,
+    });
+    expect(queued.statusCode, queued.body).toBe(202);
+    expect(queued.json().backfill.status).toBe('QUEUED');
+    expect(queued.json().backfill.parameters.dataset).toBe('binance-mainnet');
+    expect(queued.json().schedule.definition.captureKind).toBe('TOKEN_HISTORY_BACKFILL');
+
+    const replay = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control/tokens/eip155:56/${token}/backfill`,
+      payload,
+    });
+    expect(replay.statusCode, replay.body).toBe(200);
+    expect(replay.json().replayed).toBe(true);
+    expect(replay.json().backfill.scheduleId).toBe(queued.json().backfill.scheduleId);
+
+    const listed = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-campaigns/EVM/eip155:56/${token}/backfills?limit=10`,
+    });
+    expect(listed.statusCode, listed.body).toBe(200);
+    expect(listed.json().records).toHaveLength(1);
+    expect(scheduler.putSchedule).toHaveBeenCalledTimes(1);
+  });
+
+  it('queues, replays, and reads an incremental Token Campaign monitor schedule', async () => {
+    const runtime = runtimeWithAllLedgers();
+    let storedSchedule: CaptureScheduleRecord | undefined;
+    const scheduler = {
+      getSchedule: vi.fn(async (scheduleId: string) =>
+        storedSchedule?.definition.id === scheduleId ? storedSchedule : undefined,
+      ),
+      listSchedules: vi.fn(async () => (storedSchedule === undefined ? [] : [storedSchedule])),
+      putSchedule: vi.fn(async (input: CaptureScheduleRecord) => {
+        storedSchedule ??= input;
+        return storedSchedule;
+      }),
+      listRunsForSchedule: vi.fn(async (_scheduleId: string, _limit?: number) => []),
+    };
+    runtime.captureSchedules = scheduler as unknown as NonNullable<AppRuntime['captureSchedules']>;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const token = `0x${'1'.repeat(40)}`;
+    const payload = { initialFromBlock: '113495950', windowBlocks: 20_000, everySeconds: 120 };
+
+    const queued = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control-campaigns/EVM/eip155:56/${token}/monitors`,
+      payload,
+    });
+    expect(queued.statusCode, queued.body).toBe(202);
+    expect(queued.json().monitor.parameters.initialFromBlock).toBe(payload.initialFromBlock);
+    expect(queued.json().monitor.parameters.windowBlocks).toBe(payload.windowBlocks);
+    expect(queued.json().monitor.trigger.everySeconds).toBe(payload.everySeconds);
+    expect(queued.json().schedule.definition.captureKind).toBe('TOKEN_LIVE_CAPTURE');
+
+    const replay = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control/tokens/eip155:56/${token}/monitor`,
+      payload,
+    });
+    expect(replay.statusCode, replay.body).toBe(200);
+    expect(replay.json().replayed).toBe(true);
+    expect(replay.json().monitor.monitorId).toBe(queued.json().monitor.monitorId);
+
+    const read = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-campaigns/monitors/${queued.json().monitor.monitorId}`,
+    });
+    expect(read.statusCode, read.body).toBe(200);
+    expect(read.json().replayed).toBe(true);
+    expect(read.json().monitor.parameters.token).toBe(token);
+    expect(scheduler.putSchedule).toHaveBeenCalledTimes(1);
+    expect(scheduler.getSchedule).toHaveBeenCalledWith(queued.json().monitor.monitorId);
+  });
+
+  it('replays Evidence-bound campaign alerts through JSON and SSE without a provider call', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const { campaign } = addFixtureControlCampaign(runtime);
+    const alertPayload = {
+      schemaVersion: 'forensic-campaign-alert-v1' as const,
+      id: `fca_${'2'.repeat(24)}`,
+      campaignId: campaign.id,
+      behaviorEventId: `be_${'3'.repeat(24)}`,
+      severity: 'HIGH' as const,
+      classification: 'COORDINATED_SELLING',
+      evidenceIds: [campaign.metadata.evidenceIds[0]],
+      snapshot: fixtureSnapshot,
+      confidence: { state: 'known' as const, value: 0.72 },
+      suppressionApplied: [],
+      details: { explanation: 'Evidence-bound campaign alert fixture.' },
+      modelVersion: 'campaign-v1.0.0',
+      createdAt: fixtureSnapshot.capturedAt,
+    };
+    const alert = {
+      ...alertPayload,
+      resultHash: hashPayload(alertPayload),
+    } satisfies ForensicCampaignAlert;
+    const listByCampaign = vi.fn(async (campaignId: string) =>
+      campaignId === campaign.id ? [alert] : [],
+    );
+    runtime.forensicCampaignAlerts = { listByCampaign } as unknown as NonNullable<
+      AppRuntime['forensicCampaignAlerts']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const json = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-campaigns/${campaign.id}/alerts`,
+    });
+    expect(json.statusCode, json.body).toBe(200);
+    expect(json.json()).toMatchObject({ campaignId: campaign.id, replayed: true, alerts: [alert] });
+
+    const stream = await app.inject({
+      method: 'GET',
+      url: `/api/v1/control-campaigns/${campaign.id}/stream`,
+    });
+    expect(stream.statusCode, stream.body).toBe(200);
+    expect(stream.headers['content-type']).toContain('text/event-stream');
+    expect(stream.body).toContain('event: campaign');
+    expect(stream.body).toContain(`event: alert`);
+    expect(stream.body).toContain(alert.id);
+    expect(stream.body).toContain('event: complete');
+    expect(listByCampaign).toHaveBeenCalledTimes(2);
+  });
+
+  it('exports a provider-free forensic case bundle with a closed Evidence graph', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const { campaign } = addFixtureControlCampaign(runtime);
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const exported = await app.inject({
+      method: 'POST',
+      url: `/api/v1/control/campaigns/${campaign.id}/export`,
+    });
+    expect(exported.statusCode, exported.body).toBe(200);
+    expect(exported.json().replayed).toBe(true);
+    expect(exported.json().case.caseId).toBe(`fcb_${campaign.id}`);
+    expect(exported.json().case.manifest.evidenceCount).toBe(1);
+
+    const caseId = exported.json().case.caseId as string;
+    const read = await app.inject({
+      method: 'GET',
+      url: `/api/v1/forensics/cases/${caseId}`,
+    });
+    expect(read.statusCode, read.body).toBe(200);
+    expect(read.json().case.resultHash).toBe(exported.json().case.resultHash);
+
+    const downloaded = await app.inject({
+      method: 'GET',
+      url: `/api/v1/forensics/cases/${caseId}/export`,
+    });
+    expect(downloaded.statusCode, downloaded.body).toBe(200);
+    expect(downloaded.headers['content-disposition']).toContain('forensic-case-bundle.json');
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/v1/forensics/cases',
+      payload: { campaignId: campaign.id },
+    });
+    expect(created.statusCode, created.body).toBe(200);
+    expect(created.json().case.caseId).toBe(caseId);
+  });
+
+  it('exposes Funding and Settlement reports as provider-free durable replays', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const token = `0x${'f'.repeat(40)}`;
+    const reportId = `fsr_${'1'.repeat(24)}`;
+    const report = { id: reportId, chainId: 'eip155:56', token };
+    const latest = vi.fn(async (chainId: string, lookupToken: string) =>
+      chainId === 'eip155:56' && lookupToken === token ? report : undefined,
+    );
+    const forRange = vi.fn(
+      async (chainId: string, lookupToken: string, fromBlock: string, toBlock: string) =>
+        chainId === 'eip155:56' && lookupToken === token && fromBlock === '100' && toBlock === '200'
+          ? report
+          : undefined,
+    );
+    const get = vi.fn(async (id: string) => (id === reportId ? report : undefined));
+    runtime.fundingSettlementReports = { latest, forRange, get } as unknown as NonNullable<
+      AppRuntime['fundingSettlementReports']
+    >;
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+
+    const latestResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/tokens/eip155:56/0x${'F'.repeat(40)}`,
+    });
+    expect(latestResponse.statusCode, latestResponse.body).toBe(200);
+    expect(latestResponse.json()).toEqual({ report, replayed: true });
+
+    const rangeResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/tokens/eip155:56/0x${'F'.repeat(40)}/range?fromBlock=100&toBlock=200`,
+    });
+    expect(rangeResponse.statusCode, rangeResponse.body).toBe(200);
+    expect(rangeResponse.json()).toEqual({ report, replayed: true });
+
+    const rangeMissingResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/tokens/eip155:56/0x${'F'.repeat(40)}/range?fromBlock=101&toBlock=200`,
+    });
+    expect(rangeMissingResponse.statusCode, rangeMissingResponse.body).toBe(200);
+    expect(rangeMissingResponse.json().report.state).toBe('unknown');
+    expect(rangeMissingResponse.json().report.reason).toBe('NOT_QUERIED');
+
+    const exactResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/reports/${reportId}`,
+    });
+    expect(exactResponse.statusCode, exactResponse.body).toBe(200);
+    expect(exactResponse.json()).toEqual({ report, replayed: true });
+
+    const missingResponse = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/reports/fsr_${'2'.repeat(24)}`,
+    });
+    expect(missingResponse.statusCode).toBe(404);
+    expect(missingResponse.json().error.code).toBe('FUNDING_SETTLEMENT_REPORT_NOT_FOUND');
+
+    expect(latest).toHaveBeenCalledWith('eip155:56', token);
+    expect(forRange).toHaveBeenCalledWith('eip155:56', token, '100', '200');
+    expect(get).toHaveBeenCalledWith(reportId);
+  });
+
+  it('keeps Funding and Settlement storage absence explicit', async () => {
+    const runtime = runtimeWithAllLedgers();
+    const app = await createApp({ config, runtime, logger: false });
+    apps.push(app);
+    const token = `0x${'f'.repeat(40)}`;
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/funding-settlement/tokens/eip155:56/${token}`,
+    });
+    expect(response.statusCode).toBe(503);
+    expect(response.json().error.code).toBe('FUNDING_SETTLEMENT_REPORT_UNAVAILABLE');
   });
 });

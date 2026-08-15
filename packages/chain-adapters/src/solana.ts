@@ -855,22 +855,30 @@ export class SolanaLedgerAdapter {
     };
   }
 
-  async getTransaction(signature: string): Promise<SolanaTransactionRecord | null> {
-    return (await this.getTransactionObservation(signature)).value;
+  async getTransaction(
+    signature: string,
+    options: TransportReadOptions = {},
+  ): Promise<SolanaTransactionRecord | null> {
+    return (await this.getTransactionObservation(signature, options)).value;
   }
 
   async getTransactionObservation(
     signature: string,
+    options: TransportReadOptions = {},
   ): Promise<TransportObservation<SolanaTransactionRecord | null>> {
     const normalizedSignature = requireSignature(signature, 'requested transaction signature');
-    const observation = await this.readSourced<unknown>('getTransaction', [
-      normalizedSignature,
-      {
-        encoding: 'json',
-        commitment: this.config.commitment,
-        maxSupportedTransactionVersion: 0,
-      },
-    ]);
+    const observation = await this.readSourced<unknown>(
+      'getTransaction',
+      [
+        normalizedSignature,
+        {
+          encoding: 'json',
+          commitment: this.config.commitment,
+          maxSupportedTransactionVersion: 0,
+        },
+      ],
+      options,
+    );
     return {
       ...observation,
       value: parseTransaction(observation.value, normalizedSignature),
@@ -932,6 +940,7 @@ export class SolanaLedgerAdapter {
   async #readAnchorAt(
     slotNumber: number,
     initialSourceIds: readonly string[] = [],
+    options: TransportReadOptions = {},
   ): Promise<ChainAnchorRead> {
     requireSafeInteger(slotNumber, 'slot');
     const blockObservation = await this.readSourced<unknown>(
@@ -945,7 +954,7 @@ export class SolanaLedgerAdapter {
           maxSupportedTransactionVersion: 0,
         },
       ],
-      { cacheMode: 'bypass' },
+      { ...options, cacheMode: 'bypass' },
     );
     const rawBlock = blockObservation.value;
     if (typeof rawBlock !== 'object' || rawBlock === null || Array.isArray(rawBlock)) {
@@ -1003,21 +1012,24 @@ export class SolanaLedgerAdapter {
     });
   }
 
-  async readHeadAnchor(): Promise<ChainAnchorRead> {
+  async readHeadAnchor(options: TransportReadOptions = {}): Promise<ChainAnchorRead> {
     const slotObservation = await this.readSourced<unknown>(
       'getSlot',
       [{ commitment: this.config.commitment }],
-      { cacheMode: 'bypass' },
+      { ...options, cacheMode: 'bypass' },
     );
     const slotNumber = requireSafeQuantityNumber(slotObservation.value, 'slot');
-    return this.#readAnchorAt(slotNumber, [slotObservation.endpointId]);
+    return this.#readAnchorAt(slotNumber, [slotObservation.endpointId], options);
   }
 
-  async readAnchorAt(position: string): Promise<ChainAnchorRead> {
-    return this.#readAnchorAt(requirePosition(position));
+  async readAnchorAt(
+    position: string,
+    options: TransportReadOptions = {},
+  ): Promise<ChainAnchorRead> {
+    return this.#readAnchorAt(requirePosition(position), [], options);
   }
 
-  async createSnapshot(): Promise<SolanaSnapshot> {
-    return (await this.readHeadAnchor()).snapshot as SolanaSnapshot;
+  async createSnapshot(options: TransportReadOptions = {}): Promise<SolanaSnapshot> {
+    return (await this.readHeadAnchor(options)).snapshot as SolanaSnapshot;
   }
 }

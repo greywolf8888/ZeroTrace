@@ -17,7 +17,7 @@ describe('Flap history worker configuration', () => {
       token: `0x${'a'.repeat(40)}`,
       fromBlock: 100_000,
       toBlock: 199_999,
-      segmentSize: 50_000,
+      segmentSize: 5_000,
       chunkSize: 2_000,
       maxTransactions: 250,
       maxLogs: 25_000,

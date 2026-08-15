@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { loadWorkspaceEnv } from './workspace-env.js';
+
+loadWorkspaceEnv();
 
 import { publicWorkerError } from './errors.js';
 import { loadSupplyContinuityWorkerConfig } from './supply-continuity-config.js';

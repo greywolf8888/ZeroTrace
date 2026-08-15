@@ -38,6 +38,10 @@ test('renders capability truth and unknown values without fake market data', asy
     ),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Platform adapter boundaries' })).toBeVisible();
+  await expect(page.getByText('No pinned version').first()).toBeVisible();
+  await expect(page.getByText('2 pinned versions', { exact: true })).toBeVisible();
+  await expect(page.getByText('Pinned', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Provenance Pending').first()).toBeVisible();
   await expect(page.getByText('API unavailable')).toHaveCount(0);
 
   const layout = await page.evaluate(() => ({
@@ -53,6 +57,38 @@ test('renders capability truth and unknown values without fake market data', asy
     layout.panels.every(({ left, right }) => left >= -1 && right <= layout.clientWidth + 1),
   ).toBe(true);
   expect(browserErrors).toEqual([]);
+});
+
+test('keeps every primary view reachable from the narrow-screen navigation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  const primaryNav = page.getByRole('navigation', { name: 'Primary' });
+  for (const label of [
+    'Market Reality',
+    'Intelligence Search',
+    'Entity Intelligence',
+    'Control Rights',
+    'Control Campaigns',
+    'Claim Audit',
+    'Scenario Lab',
+    'Data Health',
+  ]) {
+    await expect(primaryNav.getByRole('button', { name: label })).toBeVisible();
+  }
+  await expect(page.getByLabel(/API status/i)).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const nav = document.querySelector<HTMLElement>('.sidebar nav');
+    return {
+      clientWidth: nav?.clientWidth ?? 0,
+      scrollWidth: nav?.scrollWidth ?? 0,
+      rootScrollWidth: document.documentElement.scrollWidth,
+      rootClientWidth: document.documentElement.clientWidth,
+    };
+  });
+  expect(layout.scrollWidth).toBeGreaterThan(layout.clientWidth);
+  expect(layout.rootScrollWidth).toBeLessThanOrEqual(layout.rootClientWidth);
 });
 
 test('replays an immutable Entity relationship hypothesis without enabling ownership merge', async ({
@@ -1250,6 +1286,31 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
             },
           },
         },
+        launchpadObservations: [
+          {
+            id: 'slo_' + '1'.repeat(24),
+            platform: 'PUMP',
+            programId: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
+            deploymentId: 'pump-solana-mainnet-9c82f61cb711',
+            instructionPath: 'outer:0/inner:0',
+            instructionName: 'buy_v2',
+            instructionVersion: 'V2',
+            category: 'TRADE',
+            discriminator: 'b817ee6167c5d33d',
+            accountCoverage: 1,
+            argumentCoverage: 1,
+            decodedArguments: [
+              { name: 'amount', value: '123' },
+              { name: 'max_sol_cost', value: '456' },
+            ],
+            decodeWarnings: [
+              'Instruction carries 2 trailing account(s) outside the pinned layout.',
+            ],
+            execution: 'SUCCESS',
+            evidenceIds: ['ev_' + '2'.repeat(24)],
+            resultHash: '3'.repeat(64),
+          },
+        ],
         metadata: {
           snapshot: {
             ledger: 'SOLANA',
@@ -1315,6 +1376,16 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
   await expect(semantics.getByText('Lookup Writable', { exact: true })).toBeVisible();
   await expect(semantics.getByText('outer:0/inner:0', { exact: true })).toBeVisible();
   await expect(semantics.getByText('-30', { exact: true })).toBeVisible();
+  const launchpadDecoder = page.getByTestId('solana-launchpad-decoder');
+  await expect(launchpadDecoder).toBeVisible();
+  await expect(launchpadDecoder.getByText('Observed', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('PUMP', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('buy_v2', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('amount=123', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('accounts 100%', { exact: true })).toBeVisible();
+  await expect(
+    launchpadDecoder.getByText(/2 trailing account\(s\) outside the pinned layout/),
+  ).toBeVisible();
   const reportProvenance = page.getByTestId('solana-report-provenance');
   await expect(reportProvenance.getByText('str_111111111111111111111111')).toBeVisible();
   await expect(reportProvenance.getByText('Replayed', { exact: true })).toBeVisible();
@@ -2383,6 +2454,26 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(
     page.getByText('Flap launch mechanism normalized from versioned Portal state.'),
   ).toBeVisible();
+
+  const originalViewport = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const factLayout = await page.locator('.fact-row').evaluateAll((rows) =>
+    rows.map((row) => {
+      const rect = row.getBoundingClientRect();
+      return {
+        right: rect.right,
+        viewport: document.documentElement.clientWidth,
+        clientWidth: row.clientWidth,
+        scrollWidth: row.scrollWidth,
+      };
+    }),
+  );
+  expect(
+    factLayout.every(
+      (row) => row.right <= row.viewport + 1 && row.scrollWidth <= row.clientWidth + 1,
+    ),
+  ).toBe(true);
+  if (originalViewport !== null) await page.setViewportSize(originalViewport);
 
   await expect(page.getByRole('heading', { name: 'Claim Report' })).toBeVisible();
   await page.getByLabel('Claim wallet address').fill(claimAddress);
@@ -4392,7 +4483,18 @@ test('keeps scenario execution gated and exposes provider availability', async (
     'Endpoint operator independence remains Unknown until explicitly configured and verified.',
   );
   await expect(anchorPanel.locator('.anchor-quality-card')).toHaveCount(4);
-  await expect(anchorPanel.getByText('0/0 observed · 2 required')).toHaveCount(4);
+  const sourceCoverage = await anchorPanel.locator('.anchor-quality-card').evaluateAll((cards) =>
+    cards.map((card) => {
+      const sourceTerm = [...card.querySelectorAll('dt')].find(
+        (term) => term.textContent?.trim() === 'Sources',
+      );
+      return sourceTerm?.parentElement?.querySelector('dd')?.textContent?.trim();
+    }),
+  );
+  expect(sourceCoverage).toHaveLength(4);
+  expect(
+    sourceCoverage.every((value) => /^\d+\/\d+ observed · 2 required$/.test(value ?? '')),
+  ).toBe(true);
   await expect(anchorPanel).toContainText('Memory · process-local');
   const evidenceStorageCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: 'Evidence storage' }),
@@ -4759,4 +4861,374 @@ test('renders finalized Solana Token-2022 authority and explicit pending domains
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+});
+
+test('renders a Control Campaign Timeline and Evidence Line without merging entities', async ({
+  page,
+}) => {
+  const campaignId = `cc_${'1'.repeat(24)}`;
+  const clusterVersionId = `clv_${'2'.repeat(24)}`;
+  const eventId = `be_${'3'.repeat(24)}`;
+  const evidenceItemId = `cei_${'4'.repeat(24)}`;
+  const evidenceId = `ev_${'5'.repeat(24)}`;
+  const blockHash = `0x${'a'.repeat(64)}`;
+  const snapshot = {
+    ledger: 'EVM',
+    chainId: 'eip155:56',
+    blockNumber: '100',
+    blockHash,
+    finality: 'finalized',
+    capturedAt: '2026-08-13T00:00:00.000Z',
+  };
+  await page.route('**/api/v1/control/tokens/**/campaigns*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        records: [
+          {
+            schemaVersion: 'control-campaign-bundle-v1',
+            campaign: {
+              id: campaignId,
+              ledger: 'EVM',
+              chainId: 'eip155:56',
+              token: `0x${'b'.repeat(40)}`,
+              originBlock: '90',
+              startBlock: '95',
+              endBlock: { state: 'known', value: '100' },
+              status: 'ACTIVE',
+              currentStage: 'ACCUMULATION',
+              coreWalletIds: [`0x${'c'.repeat(40)}`],
+              satelliteWalletIds: [`0x${'d'.repeat(40)}`],
+              controlledSupply: { state: 'known', value: '0.42' },
+              controlConfidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+              coordinationConfidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+              campaignConfidence: {
+                state: 'unknown',
+                reason: 'NOT_QUERIED',
+                detail: 'Uncalibrated score.',
+              },
+              evidenceScore: 0.73,
+              evidenceCoverage: 0.85,
+              sourceCoverage: 0.5,
+              historyCoverage: 0.4,
+              snapshotStart: snapshot,
+              snapshotEnd: snapshot,
+              metadata: {
+                snapshot,
+                dataCoverage: 0.85,
+                sourceCoverage: 0.5,
+                historyCoverage: 0.4,
+                freshness: snapshot.capturedAt,
+                sourceSet: ['fixture-campaign-source'],
+                modelVersion: 'campaign-v1.0.0',
+                confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+                evidenceIds: [evidenceId],
+                calibrationStatus: 'UNCALIBRATED',
+              },
+              calibrationStatus: 'UNCALIBRATED',
+              automaticOwnershipMergeAllowed: false,
+              automaticEntityMembershipMutationAllowed: false,
+              resultHash: 'f'.repeat(64),
+            },
+            clusterVersion: {
+              id: clusterVersionId,
+              memberWalletIds: [`0x${'c'.repeat(40)}`, `0x${'d'.repeat(40)}`],
+              coreWalletIds: [`0x${'c'.repeat(40)}`],
+              satelliteWalletIds: [`0x${'d'.repeat(40)}`],
+              fundingRootIds: [],
+              settlementRootIds: [],
+            },
+            memberships: [],
+            positions: [
+              {
+                schemaVersion: 'cluster-position-v1',
+                id: `cpos_${'8'.repeat(24)}`,
+                campaignId,
+                ledger: 'EVM',
+                chainId: 'eip155:56',
+                token: `0x${'b'.repeat(40)}`,
+                clusterVersionId,
+                atBlock: '100',
+                blockHash,
+                tokenBalanceRaw: '420',
+                controlledSupplyRatio: { state: 'unknown', reason: 'NOT_QUERIED' },
+                externalTokenInflowRaw: '420',
+                externalTokenOutflowRaw: '0',
+                mintRaw: '0',
+                burnRaw: '0',
+                internalTransferRaw: '0',
+                dexBuyRaw: '420',
+                dexSellRaw: '0',
+                quoteAssets: {},
+                sellReadyTokenRaw: { state: 'known', value: '420' },
+                realizableQuoteValue: { state: 'unknown', reason: 'NOT_QUERIED' },
+                top1Concentration: { state: 'unknown', reason: 'NOT_QUERIED' },
+                top3Concentration: { state: 'unknown', reason: 'NOT_QUERIED' },
+                walletCount: 2,
+                positionEvidenceIds: [evidenceItemId],
+                membershipEvidenceIds: [evidenceItemId],
+                snapshot,
+                dataCoverage: 0.85,
+                sourceCoverage: 0.5,
+                historyCoverage: 0.4,
+                freshness: snapshot.capturedAt,
+                sourceSet: ['fixture-campaign-source'],
+                modelVersion: 'cluster-position-v1.0.0',
+                confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+                resultHash: 'a'.repeat(64),
+              },
+            ],
+            behaviorEvents: [
+              {
+                id: eventId,
+                type: 'ACCUMULATION',
+                status: 'FINAL',
+                startBlock: '95',
+                endBlock: '100',
+                startTime: snapshot.capturedAt,
+                endTime: snapshot.capturedAt,
+                actors: [`0x${'c'.repeat(40)}`],
+                counterparties: [],
+                evidenceScore: 0.73,
+                confidence: { state: 'known', value: 0.58 },
+                supportingEvidenceIds: [evidenceItemId],
+                contradictingEvidenceIds: [],
+                suppressionReasons: [],
+                attributionStopped: false,
+                explanation: 'Observed Evidence-backed token accumulation.',
+                snapshot,
+              },
+            ],
+            evidenceItems: [
+              {
+                id: evidenceItemId,
+                evidenceId,
+                phase: 'FUNDING',
+                role: 'DIRECT',
+                polarity: 'SUPPORT',
+                blockNumber: '98',
+                blockHash,
+                subjectA: `0x${'e'.repeat(40)}`,
+                subjectB: `0x${'c'.repeat(40)}`,
+                explanation: 'Funding Evidence.',
+                reviewState: 'UNREVIEWED',
+                snapshotHash: blockHash,
+                resultHash: 'e'.repeat(64),
+              },
+            ],
+            evidenceLine: {
+              terminalBoundary: 'NONE_OBSERVED',
+              phases: [
+                {
+                  phase: 'FUNDING',
+                  itemIds: [evidenceItemId],
+                  evidenceIds: [evidenceId],
+                  coverage: 1,
+                  attributionStopped: false,
+                },
+              ],
+              itemIds: [evidenceItemId],
+              evidenceIds: [evidenceId],
+              dataCoverage: 0.85,
+              freshness: snapshot.capturedAt,
+              sourceSet: ['fixture-campaign-source'],
+              modelVersion: 'forensic-evidence-v1.0.0',
+              confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+              sourceCoverage: 0.5,
+              historyCoverage: 0.4,
+              resultHash: 'd'.repeat(64),
+            },
+            resultHash: 'f'.repeat(64),
+            durableReport: {
+              id: campaignId,
+              resultHash: 'f'.repeat(64),
+              capturedAt: snapshot.capturedAt,
+              createdAt: snapshot.capturedAt,
+              replayed: false,
+              liveRefresh: { state: 'unknown', reason: 'NOT_QUERIED' },
+            },
+          },
+        ],
+      }),
+    });
+  });
+  await page.route('**/api/v1/funding-settlement/tokens/**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        report: {
+          schemaVersion: 'funding-settlement-report-v1',
+          id: `fsr_${'6'.repeat(24)}`,
+          ledger: 'EVM',
+          chainId: 'eip155:56',
+          token: `0x${'b'.repeat(40)}`,
+          fromBlock: '95',
+          toBlock: '100',
+          status: 'PARTIAL',
+          fundingEdges: [
+            {
+              id: `fue_${'7'.repeat(24)}`,
+              relation: 'FIRST_FUNDER',
+              source: `0x${'e'.repeat(40)}`,
+              destination: `0x${'c'.repeat(40)}`,
+              asset: `0x${'a'.repeat(40)}`,
+              amountAtomic: '1000000',
+              blockNumber: '98',
+              transactionHash: `0x${'1'.repeat(64)}`,
+              path: [`0x${'e'.repeat(40)}`, `0x${'c'.repeat(40)}`],
+              hopDepth: 1,
+              evidenceIds: [evidenceId],
+              rawArtifactRefs: ['s3://fixture/raw#sha256=' + 'a'.repeat(64)],
+              confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+            },
+          ],
+          settlementEdges: [],
+          patterns: [],
+          suppressedPaths: [],
+          drilldown: [
+            {
+              transactionHash: `0x${'1'.repeat(64)}`,
+              evidenceIds: [evidenceId],
+              rawArtifactRefs: ['s3://fixture/raw#sha256=' + 'a'.repeat(64)],
+            },
+          ],
+          snapshot: { ...snapshot, blockNumber: '100' },
+          dataCoverage: 0.5,
+          sourceCoverage: 0.5,
+          historyCoverage: 0,
+          coverageScope: 'TRANSACTION_LOCAL',
+          freshness: snapshot.capturedAt,
+          sourceSet: ['fixture-funding-source'],
+          confidence: { state: 'unknown', reason: 'NOT_QUERIED' },
+          evidenceIds: [evidenceId],
+          resultHash: 'e'.repeat(64),
+        },
+        replayed: true,
+      }),
+    });
+  });
+  await page.route('**/api/v1/control/campaigns/**/export', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        replayed: true,
+        case: {
+          caseId: `fcb_${campaignId}`,
+          campaignId,
+          resultHash: '1'.repeat(64),
+          manifest: {
+            evidenceCount: 1,
+            snapshotCount: 1,
+            rawArtifactCount: 1,
+            manifestHash: '2'.repeat(64),
+          },
+        },
+      }),
+    });
+  });
+  await page.route(`**/api/v1/control-campaigns/${campaignId}/alerts`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        campaignId,
+        replayed: true,
+        alerts: [
+          {
+            schemaVersion: 'forensic-campaign-alert-v1',
+            id: `fca_${'6'.repeat(24)}`,
+            campaignId,
+            behaviorEventId: eventId,
+            severity: 'HIGH',
+            classification: 'COORDINATED_SELLING',
+            evidenceIds: [evidenceId],
+            snapshot,
+            confidence: { state: 'known', value: 0.72 },
+            suppressionApplied: [],
+            details: { explanation: 'Evidence-bound alert.' },
+            modelVersion: 'campaign-v1.0.0',
+            createdAt: snapshot.capturedAt,
+            resultHash: '6'.repeat(64),
+          },
+        ],
+      }),
+    });
+  });
+  await page.route('**/api/v1/control/tokens/**/monitor', async (route) => {
+    await route.fulfill({
+      status: 202,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        replayed: false,
+        monitor: {
+          monitorId: `cps_${'7'.repeat(24)}`,
+          scheduleId: `cps_${'7'.repeat(24)}`,
+          status: 'ACTIVE',
+          target: {
+            ledger: 'EVM',
+            chainId: 'eip155:56',
+            subjectType: 'TOKEN',
+            normalizedIdentifier: `0x${'b'.repeat(40)}`,
+          },
+          parameters: {
+            schemaVersion: 'token-live-capture-v1',
+            dataset: 'binance-mainnet',
+            token: `0x${'b'.repeat(40)}`,
+            initialFromBlock: '101',
+            windowBlocks: 10000,
+            modelVersion: 'token-live-capture-v1.0.0',
+            policyVersion: 'token-history-policy-v1.0.0',
+          },
+          trigger: {
+            type: 'INTERVAL',
+            anchorAt: snapshot.capturedAt,
+            everySeconds: 60,
+            catchupPolicy: 'SKIP_MISSED',
+          },
+          nextRunAt: { state: 'known', value: '2026-08-13T00:01:00.000Z' },
+        },
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Control Campaigns' }).click();
+  await expect(page.getByRole('heading', { name: 'Control Campaigns' })).toBeVisible();
+  await page.getByLabel('Token').fill(`0x${'b'.repeat(40)}`);
+  await page.getByRole('button', { name: 'Load campaigns' }).click();
+
+  await expect(page.getByTestId('control-campaign-timeline')).toContainText('Campaign Timeline');
+  await expect(page.getByTestId('control-campaign-timeline')).toContainText('Accumulation');
+  await expect(page.getByTestId('control-campaign-alerts')).toContainText('Coordinated Selling');
+  await expect(page.getByTestId('control-campaign-alerts')).toContainText('High');
+  await expect(page.getByTestId('control-campaign-positions')).toContainText('Position Timeline');
+  await expect(page.getByTestId('control-campaign-positions')).toContainText('420');
+  await expect(page.getByTestId('control-campaign-evidence-line')).toContainText('Evidence Line');
+  await expect(page.getByTestId('control-campaign-evidence-line')).toContainText(
+    evidenceId.slice(0, 9),
+  );
+  await expect(page.getByText('Blocked')).toBeVisible();
+  await expect(
+    page.getByTestId('control-campaign-results').getByText('Uncalibrated Evidence score'),
+  ).toBeVisible();
+  await expect(page.getByTestId('funding-settlement-report')).toContainText(
+    'Transaction evidence, not ownership proof',
+  );
+  await expect(page.getByTestId('funding-settlement-report')).toContainText('Transaction Local');
+  await expect(page.getByTestId('funding-settlement-report')).toContainText('First Funder');
+  await page.getByRole('tab', { name: 'Behavior', exact: true }).click();
+  await expect(page.getByTestId('control-campaign-timeline')).toBeVisible();
+  await expect(page.getByTestId('control-campaign-positions')).toHaveCount(0);
+  await expect(page.getByTestId('funding-settlement-report')).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Combined', exact: true }).click();
+  await expect(page.getByTestId('control-campaign-positions')).toBeVisible();
+  await expect(page.getByTestId('funding-settlement-report')).toBeVisible();
+  await page.getByRole('button', { name: 'Export Case Bundle' }).click();
+  await expect(page.getByTestId('control-campaign-export')).toContainText(`fcb_${campaignId}`);
+  await expect(page.getByTestId('control-campaign-export')).toContainText('1 Evidence');
+  await page.getByRole('button', { name: 'Start monitor' }).click();
+  await expect(page.getByTestId('control-campaign-monitor')).toContainText(`cps_${'7'.repeat(24)}`);
 });

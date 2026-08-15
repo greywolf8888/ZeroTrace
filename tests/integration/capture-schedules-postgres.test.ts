@@ -409,6 +409,61 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
     });
   });
 
+  it('renews an active lease before the original expiry and rejects a late heartbeat', async () => {
+    const nonce = randomBytes(8).toString('hex');
+    await schedules.putSchedule(
+      defineCaptureSchedule({
+        captureKind: 'TOKEN_HISTORY_BACKFILL',
+        target: target(nonce),
+        parameters: { range: nonce },
+        trigger: { type: 'ONCE', at: '2026-08-12T01:30:00.000Z' },
+        retryPolicy: {
+          maxAttempts: 1,
+          initialDelaySeconds: 5,
+          maximumDelaySeconds: 5,
+          backoffMultiplierBps: 10_000,
+        },
+        createdAt: '2026-08-12T01:30:00.000Z',
+      }),
+    );
+    const [run] = await schedules.claimDue({
+      owner: 'heartbeat-worker',
+      captureKinds: ['TOKEN_HISTORY_BACKFILL'],
+      now: '2026-08-12T01:30:00.000Z',
+      leaseSeconds: 30,
+      limit: 1,
+    });
+    if (run === undefined || run.lease.state !== 'known') throw new Error('Expected lease.');
+    const renewed = await schedules.renew({
+      runId: run.id,
+      leaseToken: run.lease.value.token,
+      leaseSeconds: 60,
+      renewedAt: '2026-08-12T01:30:20.000Z',
+    });
+    expect(renewed.lease).toMatchObject({
+      state: 'known',
+      value: { expiresAt: '2026-08-12T01:31:20.000Z' },
+    });
+    await expect(
+      schedules.renew({
+        runId: run.id,
+        leaseToken: run.lease.value.token,
+        leaseSeconds: 60,
+        renewedAt: '2026-08-12T01:31:20.001Z',
+      }),
+    ).rejects.toMatchObject({ code: 'CAPTURE_SCHEDULER_LEASE_LOST' });
+    await expect(
+      schedules.fail({
+        runId: run.id,
+        leaseToken: run.lease.value.token,
+        code: 'HEARTBEAT_TEST_COMPLETE',
+        detail: 'Integration heartbeat test cleanup.',
+        sourceRetryable: false,
+        failedAt: '2026-08-12T01:30:21.000Z',
+      }),
+    ).resolves.toMatchObject({ status: 'FAILED_TERMINAL' });
+  });
+
   it('rejects terminal writes after lease expiry', async () => {
     const nonce = randomBytes(8).toString('hex');
     await schedules.putSchedule(
@@ -444,5 +499,50 @@ postgresDescribe('PostgreSQL durable capture scheduling', () => {
         failedAt: '2026-08-12T02:00:31.000Z',
       }),
     ).rejects.toBeInstanceOf(CaptureScheduleStorageError);
+  });
+
+  it('claims only the explicitly selected schedule when a queue contains older due work', async () => {
+    const selectedNonce = randomBytes(8).toString('hex');
+    const otherNonce = randomBytes(8).toString('hex');
+    const retryPolicy = {
+      maxAttempts: 1,
+      initialDelaySeconds: 5,
+      maximumDelaySeconds: 5,
+      backoffMultiplierBps: 10_000,
+    } as const;
+    const selected = await schedules.putSchedule(
+      defineCaptureSchedule({
+        captureKind: 'TOKEN_HISTORY_BACKFILL',
+        target: target(selectedNonce),
+        parameters: { range: selectedNonce },
+        trigger: { type: 'ONCE', at: '2026-08-12T03:00:00.000Z' },
+        retryPolicy,
+        createdAt: '2026-08-12T03:00:00.000Z',
+      }),
+    );
+    await schedules.putSchedule(
+      defineCaptureSchedule({
+        captureKind: 'TOKEN_HISTORY_BACKFILL',
+        target: target(otherNonce),
+        parameters: { range: otherNonce },
+        trigger: { type: 'ONCE', at: '2026-08-12T03:00:00.000Z' },
+        retryPolicy,
+        createdAt: '2026-08-12T03:00:00.000Z',
+      }),
+    );
+
+    const [run] = await schedules.claimDue({
+      owner: 'targeted-worker',
+      captureKinds: ['TOKEN_HISTORY_BACKFILL'],
+      scheduleId: selected.definition.id,
+      now: '2026-08-12T03:00:00.000Z',
+      leaseSeconds: 30,
+      limit: 1,
+    });
+    expect(run).toMatchObject({
+      scheduleId: selected.definition.id,
+      target: selected.definition.target,
+      status: 'LEASED',
+    });
   });
 });

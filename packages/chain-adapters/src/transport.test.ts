@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   FailoverJsonRpcTransport,
+  QuorumJsonRpcTransport,
   FailoverRestTransport,
   SafeJsonRpcTransport,
   SafeRestTransport,
+  type JsonRpcTransport,
 } from './transport.js';
 
 const localPolicy = {
@@ -14,6 +16,35 @@ const localPolicy = {
 };
 
 describe('safe transports', () => {
+  it('cancels an in-flight read without retrying after the caller aborts', async () => {
+    const controller = new AbortController();
+    const fetchImplementation = vi.fn<typeof fetch>().mockImplementation((_input, init) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          'abort',
+          () => reject(new DOMException('aborted', 'AbortError')),
+          { once: true },
+        );
+      });
+    });
+    const transport = new SafeRestTransport({
+      endpointId: 'local',
+      baseUrl: 'http://localhost:8080',
+      policy: localPolicy,
+      timeoutMs: 1_000,
+      resilience: { maxAttempts: 3, retryBaseDelayMs: 0, retryMaxDelayMs: 0 },
+      fetchImplementation,
+    });
+
+    const pending = transport.getText('/slow', { signal: controller.signal });
+    await vi.waitFor(() => expect(fetchImplementation).toHaveBeenCalledOnce());
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ code: 'TIMEOUT', retryable: false });
+    expect(fetchImplementation).toHaveBeenCalledOnce();
+    expect(transport.diagnostics()).toMatchObject({ retries: 0 });
+  });
+
   it('retries bounded transient failures and records diagnostics', async () => {
     const fakeFetch = vi
       .fn<typeof fetch>()
@@ -289,6 +320,63 @@ describe('safe transports', () => {
       'http://localhost:8081/blocks/tip/height',
     );
     expect(transport.lastEndpointId).toBe('secondary');
+  });
+
+  it('returns only an explicitly agreed value and records every contributing source', async () => {
+    const endpoint = (endpointId: string, value: unknown) =>
+      ({
+        endpointId,
+        request: vi.fn(async <T>() => value as T),
+        requestSourced: vi.fn(async <T>() => ({ value: value as T, endpointId })),
+      }) as unknown as JsonRpcTransport & { requestSourced: ReturnType<typeof vi.fn> };
+    const primary = endpoint('bsc-rpc@primary#1', { block: '0x10' });
+    const secondary = endpoint('bsc-rpc@secondary#2', { block: '0x10' });
+    const transport = new QuorumJsonRpcTransport('bsc-rpc:independent', [primary, secondary]);
+
+    await expect(transport.requestSourced('eth_getBlockByNumber')).resolves.toEqual({
+      value: { block: '0x10' },
+      endpointId: 'bsc-rpc@primary#1',
+      sourceIds: ['bsc-rpc@primary#1', 'bsc-rpc@secondary#2'],
+    });
+    expect(primary.requestSourced).toHaveBeenCalledTimes(1);
+    expect(secondary.requestSourced).toHaveBeenCalledTimes(1);
+    expect(transport.diagnostics()).toMatchObject({
+      logicalRequests: 1,
+      successes: 1,
+      failures: 0,
+    });
+  });
+
+  it('fails closed on an independent-provider disagreement or partial quorum', async () => {
+    const endpoint = (endpointId: string, result: unknown, failure = false) =>
+      ({
+        endpointId,
+        request: vi.fn(async <T>() => {
+          if (failure) throw new Error('provider down');
+          return result as T;
+        }),
+        requestSourced: vi.fn(async <T>() => {
+          if (failure) throw new Error('provider down');
+          return { value: result as T, endpointId };
+        }),
+      }) as unknown as JsonRpcTransport;
+    const disagreement = new QuorumJsonRpcTransport('pool', [
+      endpoint('primary', 'a'),
+      endpoint('secondary', 'b'),
+    ]);
+    await expect(disagreement.request('eth_blockNumber')).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      retryable: false,
+    });
+
+    const partial = new QuorumJsonRpcTransport('pool', [
+      endpoint('primary', 'a'),
+      endpoint('secondary', 'b', true),
+    ]);
+    await expect(partial.request('eth_blockNumber')).rejects.toMatchObject({
+      code: 'HTTP_ERROR',
+      retryable: true,
+    });
   });
 
   it('maps JSON-RPC quota errors to retryable rate limiting', async () => {

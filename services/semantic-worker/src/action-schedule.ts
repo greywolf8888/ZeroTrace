@@ -83,6 +83,10 @@ export function loadActionScheduleConfig(
 
 export function buildActionTransactionSchedule(config: ActionScheduleConfig) {
   const dataset = SQD_DATASETS[config.dataset];
+  const chainId =
+    dataset.ledger === 'EVM' && !dataset.chainId.startsWith('eip155:')
+      ? `eip155:${dataset.chainId}`
+      : dataset.chainId;
   const parameters = ActionSemanticsTransactionCaptureParametersSchema.parse({
     schemaVersion: 'action-semantics-transaction-capture-v1',
     dataset: config.dataset,
@@ -94,7 +98,7 @@ export function buildActionTransactionSchedule(config: ActionScheduleConfig) {
     captureKind: 'TRANSACTION',
     target: {
       ledger: dataset.ledger,
-      chainId: dataset.chainId,
+      chainId,
       subjectType: 'TRANSACTION',
       normalizedIdentifier: config.transactionId,
     },

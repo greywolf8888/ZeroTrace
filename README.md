@@ -140,7 +140,12 @@ The current foundation includes:
   test-only structural golden corpus, and fail-closed real-world corpus requirements;
 - exact-integer constant-product exit quoting and seeded, reproducible shared-liquidity exit races;
 - a Fastify API with OpenAPI, health, readiness, capability truth, and Prometheus metrics;
+- a local read-only MCP stdio bridge with bounded health, capability, search, subject, Evidence,
+  Campaign, and forensic Case-export tools; every bridge call is a fixed-path GET and write methods
+  are not exposed;
 - a responsive React intelligence workspace that renders missing knowledge as Unknown rather than 0;
+- a Control Campaign workspace with Combined/Token/Funding/Settlement/Behavior graph layers and a
+  descriptive immutable-report comparison that never promotes ownership or uncalibrated scores;
 - dedicated desktop/mobile Bitcoin UTXO, transaction-entity and script-control panels that separate
   structural candidates, suppression reasons, visible conditions, hidden commitments, controller
   identity, and node-policy boundaries;
@@ -311,6 +316,19 @@ Open:
 - API health: [http://localhost:8080/health](http://localhost:8080/health)
 - OpenAPI UI: [http://localhost:8080/docs](http://localhost:8080/docs)
 - Prometheus metrics: [http://localhost:8080/metrics](http://localhost:8080/metrics)
+
+For a local analyst integration, start the bounded MCP bridge after the API is running:
+
+```powershell
+$env:ZEROTRACE_API_URL = 'http://127.0.0.1:8080'
+$env:ZEROTRACE_MCP_ALLOWED_API_HOSTS = '127.0.0.1'
+npm run mcp:readonly
+```
+
+The bridge speaks newline-delimited JSON-RPC over stdio. It is suitable for local integration only;
+it does not add HTTP authentication, tenancy, Agent-console acceptance, signing, broadcasting,
+publishing, or durable writes. See [API Guide](docs/API.md#read-only-mcp-bridge) and
+[Local Development](docs/DEVELOPMENT.md#local-read-only-mcp-bridge).
 
 The default Compose stack starts PostgreSQL, ClickHouse, Valkey, NATS, MinIO, API, and web UI. The
 API requires PostgreSQL for durable Evidence/Snapshot writes and exposes that state in readiness and
