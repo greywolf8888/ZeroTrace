@@ -17,32 +17,24 @@ test('renders capability truth and unknown values without fake market data', asy
 
   await page.goto('/');
 
-  await expect(page.getByAltText('ZeroTrace company icon')).toBeVisible();
+  await expect(page.getByAltText('ZeroTrace 图标')).toBeVisible();
   await expect(
     page.getByRole('heading', {
-      name: 'See control, liquidity, and realizable value as chain facts—not assumptions.',
+      name: '以链上事实重建控制关系、供应现实、坐庄活动与可兑现 U 价值。',
     }),
   ).toBeVisible();
-  await expect(page.getByText('Read-only', { exact: true })).toBeVisible();
-  await expect(page.getByText('0 transaction write methods')).toBeVisible();
-  await expect(page.getByText('Unknown · select an asset')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Capability ledger' })).toBeVisible();
-  await expect(
-    page.getByText(
-      /Evidence-grounded same-Snapshot comparisons enforce zero mismatch for exact state/,
-    ),
-  ).toBeVisible();
-  await expect(
-    page.getByText(
-      /EVM logs\/traces\/state diffs, Bitcoin inputs\/outputs, and Solana instructions\/logs\/balances\/token balances\/rewards are implemented/,
-    ),
-  ).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Platform adapter boundaries' })).toBeVisible();
-  await expect(page.getByText('No pinned version').first()).toBeVisible();
-  await expect(page.getByText('2 pinned versions', { exact: true })).toBeVisible();
-  await expect(page.getByText('Pinned', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('Provenance Pending').first()).toBeVisible();
-  await expect(page.getByText('API unavailable')).toHaveCount(0);
+  await expect(page.getByText('链上只读', { exact: true })).toBeVisible();
+  await expect(page.getByText('0 个写链方法')).toBeVisible();
+  await expect(page.getByText('未知 · 请选择资产')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '能力账本' })).toBeVisible();
+  await expect(page.getByText(/基于同一快照的证据对照要求精确状态零偏差/)).toBeVisible();
+  await expect(page.getByText('已实现 EVM 日志')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '平台适配边界' })).toBeVisible();
+  await expect(page.getByText('无钉扎版本').first()).toBeVisible();
+  await expect(page.getByText('2 个钉扎版本', { exact: true })).toBeVisible();
+  await expect(page.getByText('已钉扎', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('来源待确认').first()).toBeVisible();
+  await expect(page.getByText('接口不可用')).toHaveCount(0);
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -57,26 +49,34 @@ test('renders capability truth and unknown values without fake market data', asy
     layout.panels.every(({ left, right }) => left >= -1 && right <= layout.clientWidth + 1),
   ).toBe(true);
   expect(browserErrors).toEqual([]);
+
+  await page.getByText('名义市值').click();
+  await expect(page.getByText(/证据钻取：当前状态为未知/).first()).toBeVisible();
 });
 
 test('keeps every primary view reachable from the narrow-screen navigation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
-  const primaryNav = page.getByRole('navigation', { name: 'Primary' });
+  const primaryNav = page.getByRole('navigation', { name: '主导航' });
   for (const label of [
-    'Market Reality',
-    'Intelligence Search',
-    'Entity Intelligence',
-    'Control Rights',
-    'Control Campaigns',
-    'Claim Audit',
-    'Scenario Lab',
-    'Data Health',
+    '盘面总览',
+    '案件与调查',
+    '实体与角色',
+    '系统管理',
+    '坐庄时间线',
+    '声明核验',
+    '可兑现价值',
+    '数据健康',
+    '供应现实',
+    '资金回流',
+    '活动损益',
+    '证据账本',
+    '分析员工作台',
   ]) {
     await expect(primaryNav.getByRole('button', { name: label })).toBeVisible();
   }
-  await expect(page.getByLabel(/API status/i)).toBeVisible();
+  await expect(page.getByLabel(/接口状态/)).toBeVisible();
 
   const layout = await page.evaluate(() => {
     const nav = document.querySelector<HTMLElement>('.sidebar nav');
@@ -89,6 +89,22 @@ test('keeps every primary view reachable from the narrow-screen navigation', asy
   });
   expect(layout.scrollWidth).toBeGreaterThan(layout.clientWidth);
   expect(layout.rootScrollWidth).toBeLessThanOrEqual(layout.rootClientWidth);
+});
+
+test('forensic workstation surfaces Chinese supply, capital and analyst views', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const nav = page.getByRole('navigation', { name: '主导航' });
+  await nav.getByRole('button', { name: '供应现实' }).click();
+  await expect(page.getByRole('heading', { name: '供应现实' })).toBeVisible();
+  await expect(page.getByText(/销毁若已反映在协议供应中，不再次扣除/)).toBeVisible();
+  await expect(page.getByText('计算与证据检查器')).toBeVisible();
+  await nav.getByRole('button', { name: '资金回流' }).click();
+  await expect(page.getByRole('heading', { name: '资金回流', exact: true })).toBeVisible();
+  await nav.getByRole('button', { name: '分析员工作台' }).click();
+  await expect(page.getByRole('heading', { name: '分析员工作台' })).toBeVisible();
+  await expect(page.getByText(/法律结论必须由分析员明确写出/)).toBeVisible();
 });
 
 test('replays an immutable Entity relationship hypothesis without enabling ownership merge', async ({
@@ -131,7 +147,7 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
       observedAt: '2026-08-11T08:17:11.381Z',
       blockOrSlot: '115279243',
       finality: 'finalized',
-      summary: 'Observed a common funding path at the report Snapshot.',
+      summary: '已观测 a common funding path at the report Snapshot.',
     },
     {
       id: terminalEvidenceId,
@@ -458,7 +474,7 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
     source: 'zerotrace:entity-investigation-graph-timeline-v0.1.0',
     locator: `entity-investigation-graph-timeline:EVM:eip155:56:115279243-115279243:${'b'.repeat(64)}`,
     payloadHash: 'b'.repeat(64),
-    summary: 'Cross-Snapshot graph evolution derived from exact immutable investigation reports.',
+    summary: '由精确不可变调查报告派生的跨快照图演化。',
   };
   const firstGraphPairState = {
     timelineId,
@@ -567,7 +583,7 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
             ],
             unchangedPairCount: 0,
             evidenceIds: [graphTerminalEvidenceId, revisedGraphTerminalEvidenceId].sort(),
-            omittedSubjectsEstablishExit: false,
+            omitted主体EstablishExit: false,
             omittedPairsEstablishRelationshipEnd: false,
             automaticEntityMembershipMutationAllowed: false,
           },
@@ -687,70 +703,63 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   );
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Entity Intelligence' }).click();
-  await page.getByLabel('Subject A').fill(subjectB);
-  await page.getByLabel('Subject B').fill(subjectA);
-  await page
-    .getByTestId('entity-report-replay')
-    .getByRole('button', { name: 'Load latest' })
-    .click();
+  await page.getByRole('button', { name: '实体与角色' }).click();
+  await page.getByLabel('主体 A').fill(subjectB);
+  await page.getByLabel('主体 B').fill(subjectA);
+  await page.getByTestId('entity-report-replay').getByRole('button', { name: '加载最新' }).click();
 
   const resultPanel = page.getByTestId('entity-report-result');
-  await expect(resultPanel).toContainText('Coordinated But Independent');
-  await expect(resultPanel).toContainText('Automatic ownership merge');
-  await expect(resultPanel).toContainText('Blocked');
+  await expect(resultPanel).toContainText('协同但独立');
+  await expect(resultPanel).toContainText('自动所有权合并');
+  await expect(resultPanel).toContainText('已阻止');
   await expect(resultPanel).toContainText(reportId);
-  await expect(page.getByRole('heading', { name: 'Entity relationship Evidence' })).toBeVisible();
-  await expect(page.getByText('No labels-to-merge path')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '实体关系证据' })).toBeVisible();
+  await expect(page.getByText('不存在标签直接合并路径')).toBeVisible();
 
   await page
     .getByTestId('entity-timeline-controls')
-    .getByRole('button', { name: 'Load latest' })
+    .getByRole('button', { name: '加载最新' })
     .click();
   const timelinePanel = page.getByTestId('entity-timeline-result');
-  await expect(timelinePanel).toContainText('Probable Same Controller');
-  await expect(timelinePanel).toContainText('Automatic merge blocked');
-  await expect(page.getByRole('heading', { name: 'Relationship evolution' })).toBeVisible();
-  await expect(page.getByText(/^115279243 → 115279243 · Revision$/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Timeline Evidence' })).toBeVisible();
+  await expect(timelinePanel).toContainText('疑似同一控制者');
+  await expect(timelinePanel).toContainText('自动合并 已阻断');
+  await expect(page.getByRole('heading', { name: '关系演化' })).toBeVisible();
+  await expect(page.getByText(/115279243 → 115279243 · 修订/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: '时间线证据' })).toBeVisible();
 
   const graphWorkspace = page.getByTestId('investigation-graph-workspace');
   await graphWorkspace
     .locator('section[aria-labelledby="graph-controls-heading"]')
-    .getByRole('button', { name: 'Load latest' })
+    .getByRole('button', { name: '加载最新' })
     .click();
   const graphResult = page.getByTestId('investigation-graph-result');
-  await expect(graphResult).toContainText('Evidence-backed investigation projection');
-  await expect(graphResult).toContainText('Raw transfer copy');
+  await expect(graphResult).toContainText('有证据支撑的调查投影');
+  await expect(graphResult).toContainText('原始转账副本');
   await expect(
     page.getByTestId('controller-graph-canvas').locator('canvas').first(),
   ).toBeAttached();
-  await page.getByRole('button', { name: /Same Controller/ }).click();
+  await page.getByRole('button', { name: /同一控制者/ }).click();
   const graphEvidence = page.getByTestId('controller-graph-evidence-ledger');
-  await expect(graphEvidence.getByRole('heading', { name: 'Evidence Ledger' })).toBeVisible();
+  await expect(graphEvidence.getByRole('heading', { name: '证据账本' })).toBeVisible();
   await expect(graphEvidence).toContainText('Durable relationship timeline Evidence.');
 
   const graphTimelineWorkspace = page.getByTestId('investigation-graph-timeline-workspace');
   await graphTimelineWorkspace
-    .getByLabel('Graph IDs (two or more, comma or whitespace separated)')
+    .getByLabel('图 ID（两个及以上，逗号或空白分隔）')
     .fill(`${graphId}\n${revisedGraphId}`);
-  await graphTimelineWorkspace.getByRole('button', { name: 'Materialize evolution' }).click();
+  await graphTimelineWorkspace.getByRole('button', { name: '物化演化' }).click();
   const graphTimelineResult = page.getByTestId('investigation-graph-timeline-result');
-  await expect(graphTimelineResult).toContainText('Evidence-backed graph evolution');
+  await expect(graphTimelineResult).toContainText('有证据支撑的图演化');
   await expect(graphTimelineResult).toContainText(graphTimelineId);
-  await expect(graphTimelineResult).toContainText('Relationship termination');
-  await expect(graphTimelineWorkspace.getByText('Absence ≠ relationship end')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Cross-Snapshot transitions' })).toBeVisible();
-  await expect(page.getByText('Relation Changed')).toBeVisible();
-  await expect(page.getByText('true continuity')).toBeVisible();
-  await graphTimelineWorkspace.getByRole('button', { name: 'Open terminal Evidence' }).click();
+  await expect(graphTimelineResult).toContainText('关系终止');
+  await expect(graphTimelineWorkspace.getByText('缺失 ≠ 关系结束')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '跨快照转换' })).toBeVisible();
+  await expect(page.getByText('关系已变更')).toBeVisible();
+  await expect(page.getByText('真实连续性')).toBeVisible();
+  await graphTimelineWorkspace.getByRole('button', { name: '打开终端证据' }).click();
   const evolutionEvidence = page.getByTestId('investigation-graph-timeline-evidence-ledger');
-  await expect(
-    evolutionEvidence.getByRole('heading', { name: 'Evolution Evidence Ledger' }),
-  ).toBeVisible();
-  await expect(evolutionEvidence).toContainText(
-    'Cross-Snapshot graph evolution derived from exact immutable investigation reports.',
-  );
+  await expect(evolutionEvidence.getByRole('heading', { name: '演化证据账本' })).toBeVisible();
+  await expect(evolutionEvidence).toContainText('由精确不可变调查报告派生的跨快照图演化。');
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -815,7 +824,7 @@ test('renders an Evidence-bound durable search match without claiming missing re
                   observedAt: '2026-08-12T00:00:00.000Z',
                   blockOrSlot: '16',
                   finality: 'finalized',
-                  summary: 'Immutable control-surface terminal Evidence.',
+                  summary: '不可变控制面终端证据。',
                 },
                 sourceSet: ['ethereum-rpc'],
                 modelVersion: 'evm-control-surface-v0.1.0',
@@ -881,7 +890,7 @@ test('renders an Evidence-bound durable search match without claiming missing re
       payloadHash: 'd'.repeat(64),
       observedAt: '2026-08-12T00:00:00.000Z',
       finality: 'label-observation-set',
-      summary: 'Immutable Label observation-set review with preserved conflicts.',
+      summary: '保留冲突的不可变标签观测集审阅。',
     },
   ];
   const labelReport = {
@@ -1012,38 +1021,34 @@ test('renders an Evidence-bound durable search match without claiming missing re
     });
   });
   await page.goto('/');
-  await page.getByLabel('Address or transaction identifier').fill(checksummedEvmAddress);
-  await page.getByLabel('Network').selectOption('ethereum');
-  await page.getByRole('button', { name: 'Trace' }).click();
+  await page.getByLabel('地址或交易标识').fill(checksummedEvmAddress);
+  await page.getByLabel('网络').selectOption('ethereum');
+  await page.getByRole('button', { name: '追踪' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Trace an on-chain subject' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '1 candidate' })).toBeVisible();
-  await expect(page.getByText('Checksum Valid')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '追踪链上调查对象' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '1 个候选' })).toBeVisible();
+  await expect(page.getByText('校验和有效')).toBeVisible();
   await expect(page.locator('.candidate-card').getByText('eip155:1')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Inspect' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '检查' })).toBeEnabled();
   const durableResults = page.getByTestId('durable-search-results');
-  await expect(durableResults).toContainText('Evm Control Surface');
-  await expect(durableResults).toContainText('Not Queried');
+  await expect(durableResults).toContainText('EVM 控制面');
+  await expect(durableResults).toContainText('未查询');
   await expect(durableResults).toContainText(terminalEvidenceId.slice(0, 7));
-  await expect(page.getByRole('heading', { name: 'Search evidence ledger' })).toBeVisible();
-  await expect(page.getByText('Immutable control-surface terminal Evidence.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '检索证据账本' })).toBeVisible();
+  await expect(page.getByText('不可变控制面终端证据。')).toBeVisible();
 
   const labelPanel = page.getByTestId('label-intelligence');
-  await expect(labelPanel.getByRole('heading', { name: 'Label Intelligence' })).toBeVisible();
-  await labelPanel.getByRole('button', { name: 'Capture label audit' }).click();
-  await expect(labelPanel).toContainText('Entity merge blocked');
-  await expect(labelPanel).toContainText('Risk ≠ control');
+  await expect(labelPanel.getByRole('heading', { name: '标签情报' })).toBeVisible();
+  await labelPanel.getByRole('button', { name: '捕获标签审计' }).click();
+  await expect(labelPanel).toContainText('实体合并已阻断');
+  await expect(labelPanel).toContainText('风险 ≠ 控制');
   await expect(labelPanel).toContainText('Cross-chain merge blocked');
   await expect(labelPanel).toContainText('Applied · ownership propagation suppressed');
-  await expect(labelPanel.getByRole('heading', { name: 'Preserved conflicts' })).toBeVisible();
+  await expect(labelPanel.getByRole('heading', { name: '保留的冲突' })).toBeVisible();
   await expect(labelPanel).toContainText('Different Exchange Name ↔ Example Exchange');
-  await expect(labelPanel).toContainText('Conflicting Sources');
-  await expect(
-    page.getByRole('heading', { name: 'Label Intelligence evidence ledger' }),
-  ).toBeVisible();
-  await expect(
-    page.getByText('Immutable Label observation-set review with preserved conflicts.'),
-  ).toBeVisible();
+  await expect(labelPanel).toContainText('来源冲突');
+  await expect(page.getByRole('heading', { name: '标签情报证据账本' })).toBeVisible();
+  await expect(page.getByText('保留冲突的不可变标签观测集审阅。')).toBeVisible();
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -1303,9 +1308,7 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
               { name: 'amount', value: '123' },
               { name: 'max_sol_cost', value: '456' },
             ],
-            decodeWarnings: [
-              'Instruction carries 2 trailing account(s) outside the pinned layout.',
-            ],
+            decodeWarnings: ['Instruction carries 2 个尾部账户超出钉扎布局.'],
             execution: 'SUCCESS',
             evidenceIds: ['ev_' + '2'.repeat(24)],
             resultHash: '3'.repeat(64),
@@ -1341,7 +1344,7 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
             observedAt: '2026-08-10T00:00:00.000Z',
             blockOrSlot: '300000000',
             finality: 'finalized',
-            summary: 'Solana transaction bound to its committed slot Snapshot.',
+            summary: 'Solana 交易绑定到其已提交 slot 快照。',
           },
         ],
         durableReport: {
@@ -1361,51 +1364,43 @@ test('opens a typed Solana transaction result with Snapshot and Evidence', async
   });
 
   await page.goto('/');
-  await page.getByLabel('Address or transaction identifier').fill(solanaSignature);
-  await page.getByLabel('Network').selectOption('solana');
-  await page.getByRole('button', { name: 'Trace' }).click();
-  await expect(page.getByRole('heading', { name: '1 candidate' })).toBeVisible();
+  await page.getByLabel('地址或交易标识').fill(solanaSignature);
+  await page.getByLabel('网络').selectOption('solana');
+  await page.getByRole('button', { name: '追踪' }).click();
+  await expect(page.getByRole('heading', { name: '1 个候选' })).toBeVisible();
   await expect(page.getByText('TRANSACTION', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Inspect' }).click();
+  await page.getByRole('button', { name: '检查' }).click();
 
   const semantics = page.getByTestId('solana-transaction-semantics');
-  await expect(
-    semantics.getByRole('heading', { name: 'Solana transaction semantics' }),
-  ).toBeVisible();
-  await expect(semantics.getByText('Resolved', { exact: true })).toBeVisible();
-  await expect(semantics.getByText('Lookup Writable', { exact: true })).toBeVisible();
+  await expect(semantics.getByRole('heading', { name: 'Solana 交易语义' })).toBeVisible();
+  await expect(semantics.getByText('已解析', { exact: true })).toBeVisible();
+  await expect(semantics.getByText('Writable', { exact: true })).toBeVisible();
   await expect(semantics.getByText('outer:0/inner:0', { exact: true })).toBeVisible();
   await expect(semantics.getByText('-30', { exact: true })).toBeVisible();
   const launchpadDecoder = page.getByTestId('solana-launchpad-decoder');
   await expect(launchpadDecoder).toBeVisible();
-  await expect(launchpadDecoder.getByText('Observed', { exact: true })).toBeVisible();
+  await expect(launchpadDecoder.getByText('已观测', { exact: true })).toBeVisible();
   await expect(launchpadDecoder.getByText('PUMP', { exact: true })).toBeVisible();
   await expect(launchpadDecoder.getByText('buy_v2', { exact: true })).toBeVisible();
   await expect(launchpadDecoder.getByText('amount=123', { exact: true })).toBeVisible();
   await expect(launchpadDecoder.getByText('accounts 100%', { exact: true })).toBeVisible();
-  await expect(
-    launchpadDecoder.getByText(/2 trailing account\(s\) outside the pinned layout/),
-  ).toBeVisible();
+  await expect(launchpadDecoder.getByText(/2 个尾部账户超出钉扎布局/)).toBeVisible();
   const reportProvenance = page.getByTestId('solana-report-provenance');
   await expect(reportProvenance.getByText('str_111111111111111111111111')).toBeVisible();
-  await expect(reportProvenance.getByText('Replayed', { exact: true })).toBeVisible();
-  await expect(reportProvenance.getByText('Provider Down', { exact: true })).toBeVisible();
+  await expect(reportProvenance.getByText('已回放', { exact: true })).toBeVisible();
+  await expect(reportProvenance.getByText('数据源不可用', { exact: true })).toBeVisible();
   const assetFlowAudit = page.getByTestId('solana-asset-flow-audit');
-  await expect(
-    assetFlowAudit.getByRole('heading', { name: 'Core asset-flow audit' }),
-  ).toBeVisible();
-  await expect(assetFlowAudit.getByText('Matched', { exact: true })).toBeVisible();
+  await expect(assetFlowAudit.getByRole('heading', { name: '核心资产流审计' })).toBeVisible();
+  await expect(assetFlowAudit.getByText('已匹配', { exact: true })).toBeVisible();
   await expect(assetFlowAudit.getByText('0.000000%', { exact: true })).toBeVisible();
   await expect(semantics.getByText('Transfer', { exact: true }).first()).toBeVisible();
   await expect(semantics.getByText('Stake11111111111111111111111111111111111111')).toBeVisible();
-  await expect(semantics.getByText(/never coerced to an atomic zero/)).toBeVisible();
-  await expect(page.getByText('Snapshot-bound ledger record')).toBeVisible();
+  await expect(semantics.getByText(/从未被强制写成原子零/)).toBeVisible();
+  await expect(page.getByText('绑定快照的账本记录')).toBeVisible();
   await expect(page.getByText('Fee Lamports')).toBeVisible();
   await expect(page.getByText('5000', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Evidence ledger' })).toBeVisible();
-  await expect(
-    page.getByText('Solana transaction bound to its committed slot Snapshot.'),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '证据账本' })).toBeVisible();
+  await expect(page.getByText('Solana 交易绑定到其已提交 slot 快照。')).toBeVisible();
 });
 
 test('renders reconciled Bitcoin UTXOs and keeps node policy Unknown', async ({ page }) => {
@@ -1487,24 +1482,22 @@ test('renders reconciled Bitcoin UTXOs and keeps node policy Unknown', async ({ 
   });
 
   await page.goto('/');
-  await page.getByLabel('Address or transaction identifier').fill(bitcoinAddress);
-  await page.getByLabel('Network').selectOption('bitcoin');
-  await page.getByRole('button', { name: 'Trace' }).click();
+  await page.getByLabel('地址或交易标识').fill(bitcoinAddress);
+  await page.getByLabel('网络').selectOption('bitcoin');
+  await page.getByRole('button', { name: '追踪' }).click();
   await page
     .locator('.candidate-card')
     .filter({ hasText: 'BITCOIN' })
     .filter({ has: page.getByText('ADDRESS', { exact: true }) })
-    .getByRole('button', { name: 'Inspect' })
+    .getByRole('button', { name: '检查' })
     .click();
 
   const panel = page.getByTestId('bitcoin-address-intelligence');
-  await expect(panel.getByRole('heading', { name: 'Bitcoin UTXO reconciliation' })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'Bitcoin UTXO 对账' })).toBeVisible();
   await expect(panel.getByText('290 sats', { exact: true }).first()).toBeVisible();
-  await expect(panel.getByText('1 confirmed · 0 mempool', { exact: true })).toBeVisible();
-  await expect(panel.getByText('Policy boundary', { exact: true })).toBeVisible();
-  await expect(
-    panel.getByText(/RBF effectiveness and CPFP package state remain Unknown/),
-  ).toBeVisible();
+  await expect(panel.getByText('1 已确认 · 0 内存池', { exact: true })).toBeVisible();
+  await expect(panel.getByText('策略边界', { exact: true })).toBeVisible();
+  await expect(panel.getByText(/RBF 有效性与 CPFP 包状态/)).toBeVisible();
   await expect(panel.getByText('839999', { exact: true })).toBeVisible();
 });
 
@@ -1595,39 +1588,35 @@ test('screens Bitcoin transaction clustering without merging CoinJoin inputs', a
   });
 
   await page.goto('/');
-  await page.getByLabel('Address or transaction identifier').fill(bitcoinTransactionId);
-  await page.getByLabel('Network').selectOption('bitcoin');
-  await page.getByRole('button', { name: 'Trace' }).click();
+  await page.getByLabel('地址或交易标识').fill(bitcoinTransactionId);
+  await page.getByLabel('网络').selectOption('bitcoin');
+  await page.getByRole('button', { name: '追踪' }).click();
   await page
     .locator('.candidate-card')
     .filter({ hasText: 'BITCOIN' })
     .filter({ has: page.getByText('TRANSACTION', { exact: true }) })
-    .getByRole('button', { name: 'Inspect' })
+    .getByRole('button', { name: '检查' })
     .click();
 
   const panel = page.getByTestId('bitcoin-transaction-entity');
-  await expect(
-    panel.getByRole('heading', { name: 'Bitcoin transaction entity screening' }),
-  ).toBeVisible();
-  await expect(panel.getByText('Equal Output Coinjoin Like', { exact: true })).toBeVisible();
-  await expect(panel.getByText('Blocked', { exact: true })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'Bitcoin 交易实体筛查' })).toBeVisible();
+  await expect(panel.getByText('等额输出类混币形态', { exact: true })).toBeVisible();
+  await expect(panel.getByText('已阻止', { exact: true })).toBeVisible();
   await expect(
     panel
       .locator('.bitcoin-entity-boundaries > div')
-      .filter({ hasText: 'Ownership conclusion' })
-      .getByText('Precision Unsafe', { exact: true }),
+      .filter({ hasText: '所有权结论' })
+      .getByText('精度不安全', { exact: true }),
   ).toBeVisible();
   await expect(
     panel
       .locator('.bitcoin-entity-boundaries > div')
-      .filter({ hasText: 'Selected change output' })
-      .getByText('Precision Unsafe', { exact: true }),
+      .filter({ hasText: '选中找零输出' })
+      .getByText('精度不安全', { exact: true }),
   ).toBeVisible();
-  await expect(panel.getByText('Coinjoin Equal Output Pattern', { exact: true })).toBeVisible();
-  await expect(panel.getByText(/never directly merge entities/)).toBeVisible();
-  await expect(
-    panel.getByText('No bounded change candidate survived the structural filter.'),
-  ).toBeVisible();
+  await expect(panel.getByText('混币等额输出模式', { exact: true })).toBeVisible();
+  await expect(panel.getByText(/绝不直接合并实体/)).toBeVisible();
+  await expect(panel.getByText('没有有界变更候选通过结构过滤。')).toBeVisible();
 });
 
 test('renders Bitcoin script conditions without converting keys into controller identity', async ({
@@ -1715,21 +1704,19 @@ test('renders Bitcoin script conditions without converting keys into controller 
   });
 
   await page.goto('/');
-  await page.getByLabel('Address or transaction identifier').fill(`${bitcoinTransactionId}:0`);
-  await page.getByLabel('Network').selectOption('bitcoin');
-  await page.getByRole('button', { name: 'Trace' }).click();
-  await page.getByRole('button', { name: 'Inspect' }).click();
+  await page.getByLabel('地址或交易标识').fill(`${bitcoinTransactionId}:0`);
+  await page.getByLabel('网络').selectOption('bitcoin');
+  await page.getByRole('button', { name: '追踪' }).click();
+  await page.getByRole('button', { name: '检查' }).click();
 
   const panel = page.getByTestId('bitcoin-outpoint-intelligence');
-  await expect(panel.getByRole('heading', { name: 'Bitcoin script control' })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'Bitcoin 脚本控制' })).toBeVisible();
   await expect(panel.getByText('P2WSH', { exact: true })).toBeVisible();
   await expect(panel.getByText('2-of-3', { exact: true })).toBeVisible();
-  await expect(panel.getByText(/Absolute Height · 840000/)).toBeVisible();
-  await expect(panel.getByText('Insufficient Data', { exact: true }).first()).toBeVisible();
-  await expect(
-    panel.getByText(/public key, hash, or script is not an entity identity/i),
-  ).toBeVisible();
-  await expect(panel.getByText('Unsupported', { exact: true })).toBeVisible();
+  await expect(panel.getByText(/绝对高度 · 840000/)).toBeVisible();
+  await expect(panel.getByText('覆盖不足', { exact: true }).first()).toBeVisible();
+  await expect(panel.getByText(/公钥、哈希或脚本不是实体身份/i)).toBeVisible();
+  await expect(panel.getByText('协议未识别', { exact: true })).toBeVisible();
 });
 
 test('shows versioned Flap state and preserves unqueried values as Unknown', async ({ page }) => {
@@ -1850,7 +1837,7 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
             observedAt: '2026-08-10T00:00:00.000Z',
             blockOrSlot: '50000000',
             finality: 'finalized',
-            summary: 'Flap launch mechanism normalized from versioned Portal state.',
+            summary: 'Flap 发射机制 normalized from versioned Portal state.',
           },
         ],
       }),
@@ -2440,19 +2427,19 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   });
 
   await page.goto('/');
-  await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
-  await page.getByLabel('Network').selectOption('bsc');
-  await page.getByRole('button', { name: 'Trace' }).click();
-  await page.getByRole('button', { name: 'Inspect' }).click();
+  await page.getByLabel('地址或交易标识').fill(bscTokenAddress);
+  await page.getByLabel('网络').selectOption('bsc');
+  await page.getByRole('button', { name: '追踪' }).click();
+  await page.getByRole('button', { name: '检查' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Flap launch mechanism' })).toBeVisible();
-  await expect(page.getByText('Primary Market')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap 发射机制' })).toBeVisible();
+  await expect(page.getByText('一级市场')).toBeVisible();
   await expect(page.getByText('Current Sell Capacity')).toBeVisible();
-  await expect(page.getByText('Not Queried').first()).toBeVisible();
+  await expect(page.getByText('未查询').first()).toBeVisible();
   await expect(page.getByText('Snapshot block')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Flap evidence ledger' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap 证据账本' })).toBeVisible();
   await expect(
-    page.getByText('Flap launch mechanism normalized from versioned Portal state.'),
+    page.getByText('Flap 发射机制 normalized from versioned Portal state.'),
   ).toBeVisible();
 
   const originalViewport = page.viewportSize();
@@ -2475,27 +2462,25 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   ).toBe(true);
   if (originalViewport !== null) await page.setViewportSize(originalViewport);
 
-  await expect(page.getByRole('heading', { name: 'Claim Report' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '声明报告' })).toBeVisible();
   await page.getByLabel('Claim wallet address').fill(claimAddress);
-  await page.getByRole('button', { name: 'Load latest report' }).click();
+  await page.getByRole('button', { name: '加载最新报告' }).click();
   const claimPanel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Claim Report' }),
+    has: page.getByRole('heading', { name: '声明报告' }),
   });
-  await expect(claimPanel).toContainText('Safe Multisig');
+  await expect(claimPanel).toContainText('Safe 多签');
   await expect(claimPanel).toContainText('4-of-6 threshold');
   await expect(claimPanel).toContainText('176000010000000000000000000');
-  await expect(claimPanel).toContainText('Insufficient Data');
-  await expect(claimPanel.getByText('Observed whole shares')).toBeVisible();
+  await expect(claimPanel).toContainText('覆盖不足');
+  await expect(claimPanel.getByText('已观测 whole shares')).toBeVisible();
   await expect(claimPanel.getByText('176', { exact: true })).toBeVisible();
   await expect(claimPanel.getByText('Non-multiple deposits')).toBeVisible();
   await expect(claimPanel.getByText('16', { exact: true })).toBeVisible();
   await expect(claimPanel).toContainText(claimTerminalEvidenceId);
 
-  await expect(
-    page.getByRole('heading', { name: 'Flap creation / migration transaction' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap 创建 / 迁移交易' })).toBeVisible();
   await page.getByLabel('Creation or migration transaction hash').fill(bscFlapCreationTransaction);
-  await page.getByRole('button', { name: 'Inspect events' }).click();
+  await page.getByRole('button', { name: '检查 events' }).click();
   await expect(page.locator('.event-panel .snapshot-strip')).toContainText(
     'Classification Creation Configuration',
   );
@@ -2504,41 +2489,37 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(
     page.locator('.event-panel .snapshot-strip').filter({ hasText: 'Classification' }),
   ).toContainText('History coverage');
-  await expect(
-    page.getByRole('heading', { name: 'Flap transaction evidence ledger' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap 交易证据账本' })).toBeVisible();
   await expect(
     page.getByText('Flap transaction-local creation and configuration events normalized.'),
   ).toBeVisible();
 
-  await expect(page.getByRole('heading', { name: 'Flap bounded event history' })).toBeVisible();
-  await page.getByLabel('From block').fill('49900000');
-  await page.getByLabel('To block').fill('49900000');
-  await page.getByRole('button', { name: 'Scan range' }).click();
+  await expect(page.getByRole('heading', { name: 'Flap 有界事件历史' })).toBeVisible();
+  await page.getByLabel('起始区块').fill('49900000');
+  await page.getByLabel('结束区块').fill('49900000');
+  await page.getByRole('button', { name: '扫描区间' }).click();
   const historyPanel = page.locator('.event-history-panel').filter({
-    has: page.getByRole('heading', { name: 'Flap bounded event history' }),
+    has: page.getByRole('heading', { name: 'Flap 有界事件历史' }),
   });
   await expect(historyPanel).toContainText('Range coverage 100%');
-  await expect(historyPanel).toContainText('Lifetime coverage Insufficient Data');
+  await expect(historyPanel).toContainText('Lifetime coverage 覆盖不足');
   await expect(historyPanel).toContainText('Block 49900000 · Creation Configuration');
-  await expect(page.getByRole('heading', { name: 'Flap history evidence ledger' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap 历史证据账本' })).toBeVisible();
   await expect(
     page.getByText('Flap event transactions discovered in the requested bounded range.'),
   ).toBeVisible();
 
-  await expect(
-    page.getByRole('heading', { name: 'Flap durable history projection' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap 持久化历史投影' })).toBeVisible();
   await page.getByLabel('Worker scan ID').fill(bscFlapHistoryScan);
   await page.getByRole('button', { name: 'Replay projection' }).click();
   const projectionPanel = page.locator('.event-history-panel').filter({
-    has: page.getByRole('heading', { name: 'Flap durable history projection' }),
+    has: page.getByRole('heading', { name: 'Flap 持久化历史投影' }),
   });
   await expect(projectionPanel).toContainText('Range coverage 50%');
   await expect(projectionPanel).toContainText('Blocks 100000–149999 · 0 transactions');
   await page.getByRole('button', { name: 'Next stored page' }).click();
   await expect(projectionPanel).toContainText('Range coverage 100%');
-  await expect(projectionPanel).toContainText('Lifetime coverage Insufficient Data');
+  await expect(projectionPanel).toContainText('Lifetime coverage 覆盖不足');
   await expect(projectionPanel).toContainText('Blocks 150000–199999 · 1 transactions');
 
   await page.getByLabel('Worker scan ID').fill(unavailableFlapHistoryScan);
@@ -2546,19 +2527,15 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(page.getByText('Projection replay unavailable')).toBeVisible();
   await expect(page.getByText('Durable history projection storage is unavailable.')).toBeVisible();
 
-  await expect(
-    page.getByRole('heading', { name: 'Flap exact lifetime materialization' }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Load latest accepted head' }).click();
+  await expect(page.getByRole('heading', { name: 'Flap 精确生命周期物化' })).toBeVisible();
+  await page.getByRole('button', { name: '加载最新已接受头' }).click();
   const lifetimePanel = page.locator('.event-history-panel').filter({
-    has: page.getByRole('heading', { name: 'Flap exact lifetime materialization' }),
+    has: page.getByRole('heading', { name: 'Flap 精确生命周期物化' }),
   });
   await expect(lifetimePanel).toContainText('Accepted sequence 3');
   await expect(lifetimePanel).toContainText('Head type Extension');
-  await expect(lifetimePanel).toContainText('Historical Match · 50000103 → 50000105');
-  await expect(
-    page.getByRole('heading', { name: 'Latest Flap lifetime head Evidence root' }),
-  ).toBeVisible();
+  await expect(lifetimePanel).toContainText('历史匹配 · 50000103 → 50000105');
+  await expect(page.getByRole('heading', { name: '最新 Flap 生命周期头证据根' })).toBeVisible();
   await expect(
     page.getByText('Accepted Flap lifetime head extends exact finalized coverage.'),
   ).toBeVisible();
@@ -2568,19 +2545,19 @@ test('shows versioned Flap state and preserves unqueried values as Unknown', asy
   await expect(lifetimePanel).toContainText('Lifetime coverage true');
   await expect(lifetimePanel).toContainText('Block 50000000');
   await expect(lifetimePanel).toContainText('1 segments · 2 transactions');
-  await expect(page.getByRole('heading', { name: 'Flap lifetime Evidence root' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap 生命周期证据根' })).toBeVisible();
   await expect(
     page.getByText(
       'Flap deployment origin and every supported Portal event are materialized through one finalized target Snapshot.',
     ),
   ).toBeVisible();
 
-  await page.getByLabel('Sell amount (atomic units)').fill('1000000000000000000');
+  await page.getByLabel('卖出数量（原子单位）').fill('1000000000000000000');
   await page.getByRole('button', { name: 'Preview sell' }).click();
-  await expect(page.getByRole('heading', { name: 'Flap realizable sell preview' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flap 可兑现卖出预览' })).toBeVisible();
   await expect(page.getByText('2500000000000000', { exact: true })).toBeVisible();
   await expect(page.getByText('Price Impact Bps')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Sell quote evidence ledger' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '卖出报价证据账本' })).toBeVisible();
   await expect(
     page.getByText('Flap sell preview normalized into a realizable-value observation.'),
   ).toBeVisible();
@@ -2708,7 +2685,7 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
             observedAt: '2026-08-10T13:00:00.000Z',
             blockOrSlot: '115128697',
             finality: 'finalized',
-            summary: 'Migrated Flap launch mechanism normalized from Portal state.',
+            summary: 'Migrated Flap 发射机制 normalized from Portal state.',
           },
         ],
       }),
@@ -2733,7 +2710,7 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
       executionNetTokenOutput: {
         state: 'unknown',
         reason: 'NOT_QUERIED',
-        detail: 'Pinned-fork execution has not run.',
+        detail: '已钉扎-fork execution has not run.',
       },
       averageGrossBuyPrice: { state: 'known', value: average },
       averageConfiguredTaxBuyPrice: { state: 'known', value: average },
@@ -3119,7 +3096,7 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
       executionNetQuoteOutput: {
         state: 'unknown',
         reason: 'NOT_QUERIED',
-        detail: 'Pinned-fork settlement balance delta has not run.',
+        detail: '已钉扎-fork settlement balance delta has not run.',
       },
       averageGrossExitPrice: { state: 'known', value: average },
       averageConfiguredTaxExitPrice: { state: 'known', value: average },
@@ -3700,101 +3677,99 @@ test('renders migrated Flap buy and exit scenarios without calling custody a bur
   });
 
   await page.goto('/');
-  await page.getByLabel('Address or transaction identifier').fill(bscTokenAddress);
-  await page.getByLabel('Network').selectOption('bsc');
-  await page.getByRole('button', { name: 'Trace' }).click();
-  await page.getByRole('button', { name: 'Inspect' }).click();
+  await page.getByLabel('地址或交易标识').fill(bscTokenAddress);
+  await page.getByLabel('网络').selectOption('bsc');
+  await page.getByRole('button', { name: '追踪' }).click();
+  await page.getByRole('button', { name: '检查' }).click();
 
   await expect(page.getByText('Dex Trading')).toBeVisible();
   await expect(page.getByText('Spot Price')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Flap realizable sell preview' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Flap 可兑现卖出预览' })).toHaveCount(0);
   const declarationPanel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Claim Declaration Review' }),
+    has: page.getByRole('heading', { name: '声明文本审阅' }),
   });
   await expect(declarationPanel).toContainText('Declaration ≠ chain fact');
   await declarationPanel
-    .getByLabel('Announcement text')
+    .getByLabel('公告文本')
     .fill(
       '税费接收总钱包（100%）\n0x8231Bb4E2891e85E79f28f0816EDE7AeAab06af1\n' +
         '社区建设基金（20%）\n0x412DFD5Ac528C05ab78cd005385bC51759e29e46',
     );
   await declarationPanel
-    .getByLabel('Audit window start (optional, ISO 8601 with timezone)')
+    .getByLabel('审计窗口开始（可选，带时区的 ISO 8601）')
     .fill('2026-08-02T00:00:00.000Z');
   await declarationPanel
     .getByLabel('Audit window end (optional, ISO 8601 with timezone)')
     .fill('2026-08-10T00:00:00.000Z');
   await declarationPanel.getByRole('button', { name: 'Compile review drafts' }).click();
-  await expect(declarationPanel).toContainText('Community Fund');
-  await expect(declarationPanel).toContainText('Ready For Review');
+  await expect(declarationPanel).toContainText('社区基金');
+  await expect(declarationPanel).toContainText('待审阅');
   await expect(declarationPanel).toContainText('Human review required');
   await expect(declarationPanel).toContainText('ev_9876543210abcdef98765432');
   await expect(declarationPanel).toContainText('csd_999999999999999999999999');
-  await expect(declarationPanel).toContainText('Not Queried');
+  await expect(declarationPanel).toContainText('未查询');
   await expect(declarationPanel).toContainText('cdr_999999999999999999999999');
   await declarationPanel.getByRole('button', { name: 'Save reviewed Expected rule' }).click();
-  await expect(declarationPanel).toContainText('Immutable Expected rule');
+  await expect(declarationPanel).toContainText('不可变预期规则');
   await expect(declarationPanel).toContainText('clr_1234567890abcdef12345678');
   await expect(declarationPanel).toContainText('Review saved');
   await expect(declarationPanel).toContainText('ev_777788889999000011112222');
   await expect(declarationPanel).toContainText('ev_333344445555666677778888');
   const reconciliationPanel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Independent market and RV reconciliation' }),
+    has: page.getByRole('heading', { name: '独立市场与可兑现价值对账' }),
   });
   await expect(reconciliationPanel).toBeVisible();
   await reconciliationPanel.getByRole('button', { name: 'Run independent check' }).click();
   await expect(reconciliationPanel.getByText('Pass', { exact: true }).first()).toBeVisible();
-  await expect(reconciliationPanel).toContainText('Verified Independent');
+  await expect(reconciliationPanel).toContainText('已独立验证');
   await expect(reconciliationPanel).toContainText('2 / 2');
   await expect(reconciliationPanel).toContainText('bsc-rpc@bnb-mainnet.g.alchemy.com#1');
   await expect(reconciliationPanel).toContainText('bsc-rpc@bsc-dataseed.bnbchain.org#2');
   await expect(reconciliationPanel).toContainText('0.000413358773223814');
-  await expect(
-    page.getByRole('heading', { name: 'Multi-source reconciliation Evidence' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: '多源对账证据' })).toBeVisible();
   const scenarioPanel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Pancake V2 buy-size scenarios' }),
+    has: page.getByRole('heading', { name: 'Pancake V2 买入规模情景' }),
   });
   await expect(scenarioPanel).toBeVisible();
   await page.getByRole('button', { name: 'Run buy scenarios' }).click();
   await expect(scenarioPanel).toContainText('0.000413358773223814');
   await expect(scenarioPanel).toContainText('240530.618355934388100371');
   await expect(scenarioPanel).toContainText('Pass · 0 Failed');
-  await expect(scenarioPanel).toContainText('Not Queried');
+  await expect(scenarioPanel).toContainText('未查询');
   await expect(scenarioPanel).toContainText('movable custody, not supply burn');
   await expect(scenarioPanel.getByText(/Pass 0 Bps/).first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Pancake V2 scenario Evidence' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pancake V2 情景证据' })).toBeVisible();
 
   const pensionEntryPanel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Pension entry economics' }),
+    has: page.getByRole('heading', { name: '养老金入场经济' }),
   });
   await expect(pensionEntryPanel).toBeVisible();
-  await pensionEntryPanel.getByRole('button', { name: 'Calculate pension entry' }).click();
+  await pensionEntryPanel.getByRole('button', { name: '计算养老金入场' }).click();
   await expect(pensionEntryPanel).toContainText('1000000');
   await expect(pensionEntryPanel).toContainText('0.233314699805256356');
   await expect(pensionEntryPanel).toContainText('2.266745991147');
   await expect(pensionEntryPanel).toContainText('441.16');
   await expect(pensionEntryPanel).toContainText('Custody is not supply burn');
-  await expect(pensionEntryPanel).toContainText('Not Queried');
-  await expect(pensionEntryPanel).toContainText('Insufficient Data');
+  await expect(pensionEntryPanel).toContainText('未查询');
+  await expect(pensionEntryPanel).toContainText('覆盖不足');
   await expect(pensionEntryPanel).toContainText('Persisted live result');
-  await pensionEntryPanel.getByRole('button', { name: 'Load latest Scenario Report' }).click();
+  await pensionEntryPanel.getByRole('button', { name: '加载最新情景报告' }).click();
   await expect(pensionEntryPanel).toContainText('Provider-free replay');
   await expect(pensionEntryPanel).toContainText('441.16');
-  await expect(page.getByRole('heading', { name: 'Pension entry Evidence' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '养老金入场证据' })).toBeVisible();
 
   const exitPanel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Pancake V2 exit-size scenarios' }),
+    has: page.getByRole('heading', { name: 'Pancake V2 退出规模情景' }),
   });
   await expect(exitPanel).toBeVisible();
   await page.getByRole('button', { name: 'Run exit scenarios' }).click();
   await expect(exitPanel).toContainText('Configured sell tax bps');
   await expect(exitPanel).toContainText('413.358773223814');
   await expect(exitPanel).toContainText('395.312');
-  await expect(exitPanel).toContainText('Not Queried');
+  await expect(exitPanel).toContainText('未查询');
   await expect(exitPanel).toContainText('Execution capacity remains Unknown');
   await expect(exitPanel.getByText(/Pass 0 Bps/).first()).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Pancake V2 exit Evidence' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pancake V2 退出证据' })).toBeVisible();
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -3890,24 +3865,24 @@ test('compiles a public pension statement as a human-review draft without invent
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Claim Audit' }).click();
-  await expect(page.getByRole('heading', { name: 'Claim Audit' })).toBeVisible();
+  await page.getByRole('button', { name: '声明核验' }).click();
+  await expect(page.getByRole('heading', { name: '声明核验' })).toBeVisible();
   await page.getByLabel('BSC token address').fill(bscTokenAddress);
   await page
-    .getByLabel('Announcement text')
+    .getByLabel('公告文本')
     .fill('养老钱包打入100w币为1股，不可退出，每周分红，8月2号开始。');
   await page.getByRole('button', { name: 'Compile review drafts' }).click();
   const declarationPanel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Claim Declaration Review' }),
+    has: page.getByRole('heading', { name: '声明文本审阅' }),
   });
   await expect(page.getByText('Declaration ≠ chain fact')).toBeVisible();
   await expect(page.getByText('Pension Vault', { exact: true })).toBeVisible();
   await expect(declarationPanel.getByText('1,000,000')).toHaveCount(0);
   await expect(page.getByText('1000000', { exact: true })).toBeVisible();
   await expect(page.getByText('Incomplete', { exact: true })).toBeVisible();
-  await expect(page.getByText('Insufficient Data').first()).toBeVisible();
-  await expect(declarationPanel.getByText('Not Queried').first()).toBeVisible();
-  await expect(declarationPanel.getByText('Storage Unconfigured')).toBeVisible();
+  await expect(page.getByText('覆盖不足').first()).toBeVisible();
+  await expect(declarationPanel.getByText('未查询').first()).toBeVisible();
+  await expect(declarationPanel.getByText('存储未配置')).toBeVisible();
   await expect(declarationPanel).toContainText('ev_bbbbbbbbbbbbbbbbbbbbbbbb');
   await expect(page.getByText('Human review required', { exact: true })).toBeVisible();
   await expect(
@@ -4026,17 +4001,17 @@ test('shows durable pension behavior candidates on mobile without inventing soci
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  await page.getByRole('button', { name: '声明核验' }).click();
   const panel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Pension Vault Candidates' }),
+    has: page.getByRole('heading', { name: '养老金金库候选' }),
   });
   await expect(panel).toContainText('Behavior is not identity');
   await panel.getByLabel('BSC token').fill(fftToken);
-  await panel.getByLabel('From block').fill('113485950');
-  await panel.getByLabel('Share unit (atomic)').fill('1000000000000000000000000');
+  await panel.getByLabel('起始区块').fill('113485950');
+  await panel.getByLabel('份额单位（原子量）').fill('1000000000000000000000000');
   await expect(panel.getByLabel('BSC token')).toHaveValue(fftToken);
-  await expect(panel.getByLabel('From block')).toHaveValue('113485950');
-  await panel.getByLabel('Finalized to block').fill('115154970');
+  await expect(panel.getByLabel('起始区块')).toHaveValue('113485950');
+  await panel.getByLabel('终局至区块').fill('115154970');
   await panel.getByRole('button', { name: 'Discover candidates' }).click();
 
   await expect(panel.getByTestId('pension-candidate-result')).toContainText(
@@ -4046,9 +4021,9 @@ test('shows durable pension behavior candidates on mobile without inventing soci
   await expect(panel).toContainText('176');
   await expect(panel).toContainText('71');
   await expect(panel).toContainText('109');
-  await expect(panel).toContainText('Role Unknown');
-  await expect(panel).toContainText('Insufficient Data');
-  await expect(panel).toContainText('Not Queried');
+  await expect(panel).toContainText('角色未知');
+  await expect(panel).toContainText('覆盖不足');
+  await expect(panel).toContainText('未查询');
   await expect(panel).toContainText(reportId);
   await expect(panel).toContainText(terminalEvidenceId);
 
@@ -4126,9 +4101,9 @@ test('shows a supply-conserved burn action without treating the zero address as 
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  await page.getByRole('button', { name: '声明核验' }).click();
   const panel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Burn Supply Conservation' }),
+    has: page.getByRole('heading', { name: '销毁供应守恒' }),
   });
   await expect(panel).toContainText('Zero address alone is insufficient');
   await panel.getByLabel('Burn token address').fill(bscTokenAddress);
@@ -4195,16 +4170,16 @@ test('keeps a complete burn-event range distinct from silent supply-change cover
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  await page.getByRole('button', { name: '声明核验' }).click();
   const panel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Burn Candidate Range' }),
+    has: page.getByRole('heading', { name: '销毁候选区间' }),
   });
   await panel.getByLabel('Candidate token address').fill(bscTokenAddress);
-  await panel.getByLabel('From block').fill('113485950');
-  await panel.getByLabel('To block').fill('115154970');
+  await panel.getByLabel('起始区块').fill('113485950');
+  await panel.getByLabel('结束区块').fill('115154970');
   await panel.getByRole('button', { name: 'Discover burn candidates' }).click();
 
-  await expect(panel).toContainText('No Event Candidates');
+  await expect(panel).toContainText('无事件候选');
   await expect(panel).toContainText('ERC20_ZERO_ADDRESS_TRANSFER_EVENTS');
   await expect(panel).toContainText('Unknown');
   await expect(panel).toContainText('This is not proof that totalSupply never changed silently');
@@ -4305,17 +4280,17 @@ test('replays a durable burn promotion without converting scoped coverage into s
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  await page.getByRole('button', { name: '声明核验' }).click();
   const panel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'Burn Promotion Certificate' }),
+    has: page.getByRole('heading', { name: '销毁晋升证书' }),
   });
   await panel.getByLabel('Promoted token address').fill(bscTokenAddress);
   await panel.getByLabel('Promotion scan ID').fill(scanId);
   await panel.getByRole('button', { name: 'Replay promotion' }).click();
 
-  await expect(panel).toContainText('Requested Range Complete');
+  await expect(panel).toContainText('请求区间完整');
   await expect(panel).toContainText('100.00%');
-  await expect(panel.getByText('Unknown', { exact: true })).toBeVisible();
+  await expect(panel.getByText('未知', { exact: true })).toBeVisible();
   await expect(panel).toContainText(
     'Silent totalSupply changes require an all-block state analysis',
   );
@@ -4435,9 +4410,9 @@ test('replays independently verified all-block supply continuity without extendi
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Claim Audit' }).click();
+  await page.getByRole('button', { name: '声明核验' }).click();
   const panel = page.locator('.quote-panel').filter({
-    has: page.getByRole('heading', { name: 'All-block Supply Continuity' }),
+    has: page.getByRole('heading', { name: '全区块供应连续性' }),
   });
   await panel.getByLabel('Supply token address').fill(bscTokenAddress);
   await panel.getByLabel('Supply scan ID').fill(scanId);
@@ -4463,22 +4438,20 @@ test('replays independently verified all-block supply continuity without extendi
 
 test('keeps scenario execution gated and exposes provider availability', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Scenario Lab' }).click();
-  await expect(page.getByRole('heading', { name: 'Shared-liquidity Exit Race' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Analysis gate is closed' })).toBeVisible();
+  await page.getByRole('button', { name: '可兑现价值' }).click();
+  await expect(page.getByRole('heading', { name: '共享流动性退出竞赛' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '分析门已关闭' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run scenario' })).toBeDisabled();
 
-  await page.getByRole('button', { name: 'Data Health' }).click();
-  await expect(page.getByRole('heading', { name: 'Data Health' })).toBeVisible();
+  await page.getByRole('button', { name: '数据健康' }).click();
+  await expect(page.getByRole('heading', { name: '数据健康' })).toBeVisible();
   await expect(
     page.getByText(
       'A failed or unconfigured provider becomes an availability state—never a business value of zero.',
     ),
   ).toBeVisible();
   const anchorPanel = page.locator('.anchor-quality-panel');
-  await expect(
-    anchorPanel.getByRole('heading', { name: 'Anchor reconciliation and continuity' }),
-  ).toBeVisible();
+  await expect(anchorPanel.getByRole('heading', { name: '锚点对账与连续性' })).toBeVisible();
   await expect(anchorPanel).toContainText(
     'Endpoint operator independence remains Unknown until explicitly configured and verified.',
   );
@@ -4497,20 +4470,20 @@ test('keeps scenario execution gated and exposes provider availability', async (
   ).toBe(true);
   await expect(anchorPanel).toContainText('Memory · process-local');
   const evidenceStorageCard = page.locator('.storage-card').filter({
-    has: page.getByRole('heading', { name: 'Evidence storage' }),
+    has: page.getByRole('heading', { name: '证据存储' }),
   });
   await expect(evidenceStorageCard).toContainText('Memory');
   await expect(evidenceStorageCard).toContainText('Process-local');
   await expect(evidenceStorageCard).toContainText('Ephemeral');
   const ingestionStorageCard = page.locator('.storage-card').filter({
-    has: page.getByRole('heading', { name: 'Finalized ingestion stores' }),
+    has: page.getByRole('heading', { name: '终局摄入存储' }),
   });
   await expect(ingestionStorageCard).toContainText('Unconfigured');
   await expect(ingestionStorageCard).toContainText('0/3');
   const graphProjectionCard = page.locator('.storage-card').filter({
-    has: page.getByRole('heading', { name: 'Investigation projection' }),
+    has: page.getByRole('heading', { name: '调查投影' }),
   });
-  await expect(graphProjectionCard).toContainText('Apache Age');
+  await expect(graphProjectionCard).toContainText('Apache AGE');
   await expect(graphProjectionCard).toContainText('PostgreSQL report');
   await expect(graphProjectionCard).toContainText('Unconfigured');
   await expect(page.getByRole('button', { name: 'Refresh providers' })).toBeEnabled();
@@ -4683,10 +4656,10 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Control Rights' }).click();
-  await expect(page.getByRole('heading', { name: 'EVM Control Rights' })).toBeVisible();
+  await page.getByRole('button', { name: '系统管理' }).click();
+  await expect(page.getByRole('heading', { name: 'EVM 系统管理' })).toBeVisible();
   await page.getByLabel('Contract address').fill(subject);
-  await page.getByRole('button', { name: 'Inspect and persist' }).click();
+  await page.getByRole('button', { name: '检查并持久化' }).click();
 
   await expect(page.getByText('Erc1167 Minimal Proxy')).toBeVisible();
   await expect(page.getByText(implementation)).toBeVisible();
@@ -4694,12 +4667,12 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
   await expect(page.getByText('No direct right was positively established')).toBeVisible();
   await expect(page.getByRole('link', { name: 'FlapTaxTokenV3' })).toBeVisible();
   await expect(page.getByText('Exact Bytecode Match')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Declared mutation surface' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '已声明可变表面' })).toBeVisible();
   const coverage = page.locator('section.panel').filter({
-    has: page.getByRole('heading', { name: 'Coverage matrix' }),
+    has: page.getByRole('heading', { name: '覆盖矩阵' }),
   });
-  await expect(coverage).toContainText('Tax Change');
-  await expect(coverage).toContainText('Not Queried');
+  await expect(coverage).toContainText('税率变更');
+  await expect(coverage).toContainText('未查询');
   await expect(page.getByText(terminalEvidenceId)).toBeVisible();
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -4841,20 +4814,20 @@ test('renders finalized Solana Token-2022 authority and explicit pending domains
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Control Rights' }).click();
+  await page.getByRole('button', { name: '系统管理' }).click();
   await page.getByLabel('Ledger').selectOption('SOLANA');
-  await expect(page.getByRole('heading', { name: 'Solana Control Rights' })).toBeVisible();
-  await page.getByRole('button', { name: 'Inspect and persist' }).click();
+  await expect(page.getByRole('heading', { name: 'Solana 系统管理' })).toBeVisible();
+  await page.getByRole('button', { name: '检查并持久化' }).click();
 
   await expect(page.getByText('Token 2022 Mint')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Decoded extensions' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '已解码扩展' })).toBeVisible();
   await expect(page.getByText('Permanent Delegate').first()).toBeVisible();
   await expect(page.getByText(controller)).toBeVisible();
   const coverage = page.locator('section.panel').filter({
-    has: page.getByRole('heading', { name: 'Coverage matrix' }),
+    has: page.getByRole('heading', { name: '覆盖矩阵' }),
   });
-  await expect(coverage).toContainText('Squads Configuration');
-  await expect(coverage).toContainText('Not Implemented');
+  await expect(coverage).toContainText('Squads 配置');
+  await expect(coverage).toContainText('能力未实现');
   await expect(page.getByText(terminalEvidenceId)).toBeVisible();
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -4863,9 +4836,7 @@ test('renders finalized Solana Token-2022 authority and explicit pending domains
   expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
 });
 
-test('renders a Control Campaign Timeline and Evidence Line without merging entities', async ({
-  page,
-}) => {
+test('renders a Control 活动时间线 and 证据线 without merging entities', async ({ page }) => {
   const campaignId = `cc_${'1'.repeat(24)}`;
   const clusterVersionId = `clv_${'2'.repeat(24)}`;
   const eventId = `be_${'3'.repeat(24)}`;
@@ -4996,7 +4967,7 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
                 contradictingEvidenceIds: [],
                 suppressionReasons: [],
                 attributionStopped: false,
-                explanation: 'Observed Evidence-backed token accumulation.',
+                explanation: '已观测 Evidence-backed token accumulation.',
                 snapshot,
               },
             ],
@@ -5195,35 +5166,35 @@ test('renders a Control Campaign Timeline and Evidence Line without merging enti
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Control Campaigns' }).click();
-  await expect(page.getByRole('heading', { name: 'Control Campaigns' })).toBeVisible();
+  await page.getByRole('button', { name: '坐庄时间线' }).click();
+  await expect(page.getByRole('heading', { name: '坐庄时间线' })).toBeVisible();
   await page.getByLabel('Token').fill(`0x${'b'.repeat(40)}`);
   await page.getByRole('button', { name: 'Load campaigns' }).click();
 
-  await expect(page.getByTestId('control-campaign-timeline')).toContainText('Campaign Timeline');
+  await expect(page.getByTestId('control-campaign-timeline')).toContainText('活动时间线');
   await expect(page.getByTestId('control-campaign-timeline')).toContainText('Accumulation');
-  await expect(page.getByTestId('control-campaign-alerts')).toContainText('Coordinated Selling');
+  await expect(page.getByTestId('control-campaign-alerts')).toContainText('协同卖出');
   await expect(page.getByTestId('control-campaign-alerts')).toContainText('High');
-  await expect(page.getByTestId('control-campaign-positions')).toContainText('Position Timeline');
+  await expect(page.getByTestId('control-campaign-positions')).toContainText('仓位时间线');
   await expect(page.getByTestId('control-campaign-positions')).toContainText('420');
-  await expect(page.getByTestId('control-campaign-evidence-line')).toContainText('Evidence Line');
+  await expect(page.getByTestId('control-campaign-evidence-line')).toContainText('证据线');
   await expect(page.getByTestId('control-campaign-evidence-line')).toContainText(
     evidenceId.slice(0, 9),
   );
-  await expect(page.getByText('Blocked')).toBeVisible();
+  await expect(page.getByText('已阻止')).toBeVisible();
   await expect(
     page.getByTestId('control-campaign-results').getByText('Uncalibrated Evidence score'),
   ).toBeVisible();
   await expect(page.getByTestId('funding-settlement-report')).toContainText(
-    'Transaction evidence, not ownership proof',
+    '交易证据，不是所有权证明',
   );
-  await expect(page.getByTestId('funding-settlement-report')).toContainText('Transaction Local');
-  await expect(page.getByTestId('funding-settlement-report')).toContainText('First Funder');
-  await page.getByRole('tab', { name: 'Behavior', exact: true }).click();
+  await expect(page.getByTestId('funding-settlement-report')).toContainText('交易局部');
+  await expect(page.getByTestId('funding-settlement-report')).toContainText('首个出资人');
+  await page.getByRole('tab', { name: '行为', exact: true }).click();
   await expect(page.getByTestId('control-campaign-timeline')).toBeVisible();
   await expect(page.getByTestId('control-campaign-positions')).toHaveCount(0);
   await expect(page.getByTestId('funding-settlement-report')).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Combined', exact: true }).click();
+  await page.getByRole('tab', { name: '合并', exact: true }).click();
   await expect(page.getByTestId('control-campaign-positions')).toBeVisible();
   await expect(page.getByTestId('funding-settlement-report')).toBeVisible();
   await page.getByRole('button', { name: 'Export Case Bundle' }).click();

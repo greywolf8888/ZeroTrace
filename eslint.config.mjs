@@ -13,6 +13,8 @@ export default tseslint.config(
       'playwright-report/**',
       'test-results/**',
       'reports/**',
+      'output/**',
+      'ZeroTrace_监管取证级盘面结构分析_全量升级提示词包/**',
     ],
   },
   {

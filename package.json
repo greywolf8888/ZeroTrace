@@ -2,7 +2,7 @@
   "name": "zerotrace",
   "version": "0.1.0",
   "private": true,
-  "description": "Read-only, evidence-first multi-chain intelligence for EVM, Bitcoin, and Solana.",
+  "description": "Read-only, evidence-first on-chain market-structure forensic analysis for EVM, Bitcoin, and Solana.",
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
@@ -15,7 +15,7 @@
     "services/*"
   ],
   "scripts": {
-    "build": "npm run build:packages && npm run build -w @zerotrace/api && npm run build -w @zerotrace/web && npm run build -w @zerotrace/ingest-worker && npm run build -w @zerotrace/semantic-worker",
+    "build": "npm run build:packages && npm run build -w @zerotrace/api && npm run build -w @zerotrace/web && npm run build -w @zerotrace/ingest-worker && npm run build -w @zerotrace/semantic-worker && npm run build -w @zerotrace/simulation-worker && npm run build -w @zerotrace/llm-worker",
     "build:packages": "tsc -b tsconfig.packages.json",
     "clean": "tsc -b --clean",
     "dev": "npm run build:packages && concurrently --kill-others --names packages,api,web \"tsc -b tsconfig.packages.json --watch --preserveWatchOutput\" \"npm run dev -w @zerotrace/api\" \"npm run dev -w @zerotrace/web\"",
@@ -55,8 +55,13 @@
     "test:e2e:windows": "npm run build && pwsh -NoProfile -File scripts/test-e2e-windows.ps1",
     "test:coverage": "vitest run --coverage packages services apps/api/test tests/integration --no-file-parallelism",
     "typecheck": "tsc -b --pretty false && tsc -p tsconfig.evals.json --noEmit --pretty false",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run license:check && npm run audit",
-    "verify:full": "npm run verify && npm run test:coverage && npm run test:e2e && npm run sbom"
+    "architecture:check": "tsx scripts/architecture-check.ts",
+    "ui:chinese:check": "tsx scripts/ui-chinese-check.ts",
+    "schema:drift:check": "tsx scripts/schema-drift-check.ts",
+    "forensic:golden": "vitest run packages/supply-reality-engine packages/identity-intelligence packages/campaign-intelligence packages/capital-intelligence packages/market-reality-engine evals/market-structure",
+    "market-exit:golden": "vitest run packages/market-reality-engine",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run license:check && npm run audit && npm run architecture:check && npm run ui:chinese:check && npm run schema:drift:check",
+    "verify:full": "npm run verify && npm run test:coverage && npm run test:e2e && npm run sbom && npm run forensic:golden && npm run market-exit:golden"
   },
   "devDependencies": {
     "@cyclonedx/cyclonedx-npm": "6.0.0",

@@ -1,5 +1,9 @@
 # ZeroTrace Architecture
 
+> 冲突优先级（2026-08-19）：监管取证升级入口 > 提示词包 > `AGENTS.md` > 本目录 ADR > 本文档 > 旧 Master Prompt。新要求不得削弱 Evidence、Snapshot、Unknown≠0、只读链上边界、来源独立性、可回放和许可证隔离。
+
+产品定位：链上监管取证级盘面结构分析。UI 为中文取证工作站；LLM 只做声明解析、证据解释、协议研究、结构化报告和只读查询编排。
+
 ## Status and authority
 
 This document translates the terminal product requirements in

@@ -1,5 +1,14 @@
 # Final Acceptance Checklist
 
+## 2026-08-19 监管取证升级门禁
+
+- [x] G01 架构边界：App.tsx / app.ts / schemas index 行数门禁与手写 web API 合同拆除
+- [x] G02–G06 由新包单测与 `evals/market-structure` 黄金案件覆盖
+- [x] G07 中文工作站扫描与案件导出
+- [x] G08 全量 format/lint/typecheck/unit/integration/e2e/build/license/sbom：见 `docs/market-structure-upgrade/最终交付.md` 第 6–7 节命令退出码；PostgreSQL 集成 40 tests skipped、Live Smoke/覆盖率本会话未重跑已显式记录
+
+This checklist tracks the terminal-product Definition of Done. It is intentionally not complete.
+
 This checklist tracks the terminal-product Definition of Done. It is intentionally not complete.
 Named assets are reference cases for the shared architecture. They never define a standalone
 roadmap phase, shared runtime defaults, protocol constants or token-specific inference behavior.
@@ -117,6 +126,7 @@ roadmap phase, shared runtime defaults, protocol constants or token-specific inf
       the bounded strict run does not prove operator independence, full dataset origin,
       long-running reorg/outage behavior, calibrated inference, or production migration approval
 - [x] Current Playwright Chromium desktop/mobile dashboard execution passed `40/40`
+- [x] 2026-08-19 forensic workstation Playwright Chromium desktop/mobile passed `42/42`; command and skips are in `docs/market-structure-upgrade/最终交付.md`
 - [x] Windows-wrapper E2E rerun after the narrow-screen navigation change passed `40/40`
 - [x] A fresh API process using only the public BSC RPC reported provider `UP`; browser Inspect
       of FFT rendered the contract, versioned Flap state, Snapshot and Evidence, then replayed

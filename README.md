@@ -1,7 +1,7 @@
 <div align="center">
   <img src="apps/web/public/zerotrace-company-icon.png" width="220" alt="ZeroTrace company icon" />
   <h1>ZeroTrace</h1>
-  <p><strong>Evidence-first, read-only intelligence across EVM, Bitcoin, and Solana.</strong></p>
+  <p><strong>链上监管取证级盘面结构分析：只读重建控制关系、供应现实、坐庄活动与可兑现 U 价值。</strong></p>
   <p>
     Resolve control relationships, inspect launch mechanisms, and estimate realizable value
     without signing or broadcasting a transaction.
