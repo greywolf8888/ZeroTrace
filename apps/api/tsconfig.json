@@ -20,6 +20,15 @@
     { "path": "../../packages/entity-engine" },
     { "path": "../../packages/forensic-evidence" },
     { "path": "../../packages/ingestion" },
-    { "path": "../../packages/rv" }
+    { "path": "../../packages/rv" },
+    { "path": "../../packages/identity-intelligence" },
+    { "path": "../../packages/supply-reality-engine" },
+    { "path": "../../packages/campaign-intelligence" },
+    { "path": "../../packages/capital-intelligence" },
+    { "path": "../../packages/market-reality-engine" },
+    { "path": "../../packages/casework" },
+    { "path": "../../packages/llm-gateway" },
+    { "path": "../../packages/label-engine" },
+    { "path": "../../packages/action-semantics" }
   ]
 }
