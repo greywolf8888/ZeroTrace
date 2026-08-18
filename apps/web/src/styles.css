@@ -615,6 +615,26 @@ button.nav-item:hover {
   border-radius: 11px;
 }
 
+.metric-tile details {
+  margin: 0;
+}
+
+.metric-tile summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.metric-tile summary::-webkit-details-marker {
+  display: none;
+}
+
+.metric-evidence-drill {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 .metric-label {
   color: var(--text-secondary);
   font-size: 0.72rem;
@@ -2988,4 +3008,37 @@ footer a {
     transition: none !important;
     animation: none !important;
   }
+}
+
+.forensic-form {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.forensic-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin-top: 12px;
+}
+
+.forensic-metrics dt {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.forensic-metrics dd {
+  margin: 0;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.evidence-json {
+  max-height: 360px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  white-space: pre-wrap;
 }

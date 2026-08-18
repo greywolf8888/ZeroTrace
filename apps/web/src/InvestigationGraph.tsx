@@ -9,7 +9,8 @@ import {
   type EntityInvestigationGraphResponse,
   type EntityInvestigationGraphTimelineResponse,
   type EvidenceDrilldownResponse,
-} from './api.js';
+} from './generated-api/client.js';
+import { zhLabel, zhReason } from './i18n/zh-CN.js';
 
 type Ledger = 'EVM' | 'BITCOIN' | 'SOLANA';
 
@@ -19,12 +20,7 @@ function shortId(value: string, length = 12): string {
 }
 
 function titleCase(value: string): string {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .toLowerCase()
-    .split(/[_\s-]+/)
-    .map((item) => item.charAt(0).toUpperCase() + item.slice(1))
-    .join(' ');
+  return zhLabel(value);
 }
 
 function knowledgeLabel(value: {
@@ -32,8 +28,10 @@ function knowledgeLabel(value: {
   value?: string | number | boolean | null;
   reason?: string;
 }): string {
-  if (value.state !== 'known') return titleCase(value.reason ?? value.state);
-  if (value.value === null) return 'None';
+  if (value.state !== 'known') return zhReason(value.reason ?? value.state);
+  if (value.value === null) return '无';
+  if (value.value === true) return '是';
+  if (value.value === false) return '否';
   if (typeof value.value === 'number') return value.value.toFixed(3);
   return String(value.value);
 }
@@ -67,7 +65,7 @@ function ControllerGraphCanvas({
           id: edge.id,
           source: edge.sourceNodeId,
           target: edge.targetNodeId,
-          label: edge.relation === 'SAME_CONTROLLER' ? 'same controller' : 'coordinated',
+          label: edge.relation === 'SAME_CONTROLLER' ? '同一控制者' : '协同',
           relation: edge.relation,
           terminalEvidenceId: edge.terminalEvidenceId,
         },
@@ -174,7 +172,7 @@ function ControllerGraphCanvas({
       className="controller-graph-canvas"
       data-testid="controller-graph-canvas"
       role="application"
-      aria-label="Interactive controller and coordination investigation graph"
+      aria-label="交互式控制与协同调查图"
     />
   );
 }
@@ -184,8 +182,8 @@ function EvidenceLedgerDrawer({
   result,
   busy,
   error,
-  eyebrow = 'Selected edge → derivation parents',
-  title = 'Evidence Ledger',
+  eyebrow = '选中边 → 派生父证据',
+  title = '证据账本',
   testId = 'controller-graph-evidence-ledger',
 }: {
   evidenceId?: string;
@@ -212,7 +210,7 @@ function EvidenceLedgerDrawer({
         </div>
         <code title={evidenceId}>{shortId(evidenceId, 8)}</code>
       </div>
-      {busy ? <div className="inline-empty">Loading Evidence lineage…</div> : null}
+      {busy ? <div className="inline-empty">正在加载证据谱系…</div> : null}
       {error === undefined ? null : <div className="provider-error">{error}</div>}
       {result === undefined ? null : (
         <div className="contract-list">
@@ -340,20 +338,19 @@ export function InvestigationGraphWorkspace({
         <div className="panel-header">
           <div>
             <span className="eyebrow">Exact Snapshot · durable timelines · bounded projection</span>
-            <h3 id="graph-controls-heading">Controller Graph</h3>
+            <h3 id="graph-controls-heading">控制关系图</h3>
           </div>
           <span className="snapshot-badge">No automatic Entity merge</span>
         </div>
         <p className="panel-copy">
-          Paste one or more timeline IDs that terminate at the same Snapshot. Same-controller and
-          coordination edges remain distinct; independent, service, infrastructure, and Unknown
-          observations stay visible without creating a relationship edge.
+          粘贴一条或多条终止于同一快照的时间线
+          ID。同一控制者边与协同边保持区分；独立、服务、基础设施与未知观测会显示出来，但不会因此画出关系边。
         </p>
         <form
           className="quote-form graph-control-form"
           onSubmit={(event) => void load('latest', event)}
         >
-          <label htmlFor="graph-timeline-ids">Timeline IDs (comma or whitespace separated)</label>
+          <label htmlFor="graph-timeline-ids">时间线 ID（逗号或空白分隔）</label>
           <textarea
             id="graph-timeline-ids"
             spellCheck={false}
@@ -361,7 +358,7 @@ export function InvestigationGraphWorkspace({
             onChange={(event) => setTimelineIdsText(event.target.value)}
             placeholder="ert_…"
           />
-          <label htmlFor="graph-id">Exact graph ID (optional)</label>
+          <label htmlFor="graph-id">精确图 ID（可选）</label>
           <input
             id="graph-id"
             spellCheck={false}
@@ -369,17 +366,17 @@ export function InvestigationGraphWorkspace({
             onChange={(event) => setGraphId(event.target.value.trim())}
             placeholder="eig_…"
           />
-          <label htmlFor="graph-seed-subject">Seed subject (optional)</label>
+          <label htmlFor="graph-seed-subject">种子主体（可选）</label>
           <input
             id="graph-seed-subject"
             spellCheck={false}
             value={seedSubjectId}
             onChange={(event) => setSeedSubjectId(event.target.value.trim())}
-            placeholder="Bound latest lookup and traversal to one subject"
+            placeholder="将最新查找与遍历限制到一个主体"
           />
           <div className="graph-bounds">
             <label htmlFor="graph-max-depth">
-              Max depth
+              最大深度
               <input
                 id="graph-max-depth"
                 inputMode="numeric"
@@ -388,7 +385,7 @@ export function InvestigationGraphWorkspace({
               />
             </label>
             <label htmlFor="graph-max-nodes">
-              Max nodes
+              最大节点数
               <input
                 id="graph-max-nodes"
                 inputMode="numeric"
@@ -404,10 +401,10 @@ export function InvestigationGraphWorkspace({
               disabled={!validTimelineIds || busy}
               onClick={() => void load('materialize')}
             >
-              {busy ? 'Working…' : 'Materialize graph'}
+              {busy ? '处理中…' : '物化图'}
             </button>
             <button className="secondary-button" type="submit" disabled={!validTraversal || busy}>
-              Load latest
+              加载最新
             </button>
             <button
               className="secondary-button"
@@ -415,7 +412,7 @@ export function InvestigationGraphWorkspace({
               disabled={!validGraphId || !validTraversal || busy}
               onClick={() => void load('exact')}
             >
-              Replay exact
+              精确回放
             </button>
           </div>
         </form>
@@ -428,20 +425,20 @@ export function InvestigationGraphWorkspace({
             <div className="panel-header">
               <div>
                 <span className="eyebrow">{record.id}</span>
-                <h3>Evidence-backed investigation projection</h3>
+                <h3>有证据支撑的调查投影</h3>
               </div>
               <span className="status-pill status-replayed">
-                {response?.replayed === true ? 'Replayed' : 'Materialized'}
+                {response?.replayed === true ? '已回放' : 'Materialized'}
               </span>
             </div>
             <div className="metric-grid">
               <article className="metric-tile metric-known">
-                <div className="metric-label">Subjects</div>
+                <div className="metric-label">主体</div>
                 <div className="metric-value">{graph.summary.nodeCount}</div>
                 <div className="metric-detail">Typed only when Evidence supports it</div>
               </article>
               <article className="metric-tile metric-known">
-                <div className="metric-label">Same controller</div>
+                <div className="metric-label">同一控制者</div>
                 <div className="metric-value">{graph.summary.sameControllerEdgeCount}</div>
                 <div className="metric-detail">Candidate edges, never automatic merges</div>
               </article>
@@ -473,7 +470,7 @@ export function InvestigationGraphWorkspace({
                     : titleCase(response.ageProjection.reason ?? response.ageProjection.state)}
               </span>
               <span>
-                <b>Raw transfer copy</b> forbidden
+                <b>原始转账副本</b> 禁止
               </span>
             </div>
           </section>
@@ -485,7 +482,7 @@ export function InvestigationGraphWorkspace({
             <div className="panel-header">
               <div>
                 <span className="eyebrow">Click an edge to open its Evidence lineage</span>
-                <h3 id="controller-graph-heading">Controller and coordination topology</h3>
+                <h3 id="controller-graph-heading">控制与协同拓扑</h3>
               </div>
               <span className="snapshot-badge">
                 {nodes.length} nodes · {edges.length} edges
@@ -496,26 +493,25 @@ export function InvestigationGraphWorkspace({
                 Traversal reached the configured node limit; this view is intentionally truncated.
               </div>
             ) : null}
-            <div className="graph-legend" aria-label="Graph legend">
+            <div className="graph-legend" aria-label="图例">
               <span>
-                <i className="graph-legend-line graph-control-line" /> Same controller
+                <i className="graph-legend-line graph-control-line" /> 同一控制者
               </span>
               <span>
-                <i className="graph-legend-line graph-coordination-line" /> Coordinated
+                <i className="graph-legend-line graph-coordination-line" /> 协同
               </span>
               <span>
-                <i className="graph-legend-node" /> Subject
+                <i className="graph-legend-node" /> 主体
               </span>
             </div>
             {edges.length === 0 ? (
               <div className="inline-empty">
-                No relationship edge is justified at this Snapshot. Retained observations below
-                preserve the reason and Evidence instead of drawing a false connection.
+                此快照下没有足够证据画出关系边。下方保留的观测记录原因与证据，而不是画出虚假连接。
               </div>
             ) : (
               <ControllerGraphCanvas nodes={nodes} edges={edges} onOpenEvidence={openEvidence} />
             )}
-            <div className="graph-edge-list" aria-label="Accessible graph edge list">
+            <div className="graph-edge-list" aria-label="可访问的关系边列表">
               {edges.map((edge) => (
                 <button
                   type="button"
@@ -540,7 +536,7 @@ export function InvestigationGraphWorkspace({
             <div className="panel-header">
               <div>
                 <span className="eyebrow">Every requested timeline remains auditable</span>
-                <h3 id="graph-observations-heading">Projection decisions</h3>
+                <h3 id="graph-observations-heading">投影判定</h3>
               </div>
               <span className="snapshot-badge">{observations.length} observations</span>
             </div>
@@ -685,22 +681,19 @@ export function InvestigationGraphTimelineWorkspace({
             <span className="eyebrow">
               Cross-Snapshot · immutable graph reports · no membership mutation
             </span>
-            <h3 id="graph-timeline-controls-heading">Investigation evolution</h3>
+            <h3 id="graph-timeline-controls-heading">调查演化</h3>
           </div>
-          <span className="snapshot-badge">Absence ≠ relationship end</span>
+          <span className="snapshot-badge">缺失 ≠ 关系结束</span>
         </div>
         <p className="panel-copy">
-          Compare two to 100 durable graph reports. Added or omitted pairs describe only the
-          requested graph scopes; they never establish controller membership, exits, relationship
-          starts, or relationship termination.
+          比较 2 到 100
+          份持久化图报告。新增或缺失的配对只描述所请求的图范围；它们从不构成控制成员、退出、关系开始或关系结束。
         </p>
         <form
           className="quote-form graph-control-form"
           onSubmit={(event) => void load('latest', event)}
         >
-          <label htmlFor="graph-timeline-graph-ids">
-            Graph IDs (two or more, comma or whitespace separated)
-          </label>
+          <label htmlFor="graph-timeline-graph-ids">图 ID（两个及以上，逗号或空白分隔）</label>
           <textarea
             id="graph-timeline-graph-ids"
             spellCheck={false}
@@ -708,7 +701,7 @@ export function InvestigationGraphTimelineWorkspace({
             onChange={(event) => setGraphIdsText(event.target.value)}
             placeholder="eig_… eig_…"
           />
-          <label htmlFor="graph-timeline-id">Exact timeline ID (optional)</label>
+          <label htmlFor="graph-timeline-id">精确时间线 ID（可选）</label>
           <input
             id="graph-timeline-id"
             spellCheck={false}
@@ -716,13 +709,13 @@ export function InvestigationGraphTimelineWorkspace({
             onChange={(event) => setTimelineId(event.target.value.trim())}
             placeholder="eit_…"
           />
-          <label htmlFor="graph-timeline-subject">Subject filter (optional)</label>
+          <label htmlFor="graph-timeline-subject">主体过滤（可选）</label>
           <input
             id="graph-timeline-subject"
             spellCheck={false}
             value={subjectId}
             onChange={(event) => setSubjectId(event.target.value.trim())}
-            placeholder="Filter latest or exact replay"
+            placeholder="过滤最新或精确回放"
           />
           <div className="control-actions graph-actions">
             <button
@@ -731,10 +724,10 @@ export function InvestigationGraphTimelineWorkspace({
               disabled={!validGraphIds || busy}
               onClick={() => void load('materialize')}
             >
-              {busy ? 'Working…' : 'Materialize evolution'}
+              {busy ? '处理中…' : '物化演化'}
             </button>
             <button className="secondary-button" type="submit" disabled={busy}>
-              Load latest
+              加载最新
             </button>
             <button
               className="secondary-button"
@@ -742,7 +735,7 @@ export function InvestigationGraphTimelineWorkspace({
               disabled={!validTimelineId || busy}
               onClick={() => void load('exact')}
             >
-              Replay exact
+              精确回放
             </button>
           </div>
         </form>
@@ -755,10 +748,10 @@ export function InvestigationGraphTimelineWorkspace({
             <div className="panel-header">
               <div>
                 <span className="eyebrow">{record.id}</span>
-                <h3>Evidence-backed graph evolution</h3>
+                <h3>有证据支撑的图演化</h3>
               </div>
               <span className="status-pill status-replayed">
-                {response?.replayed === true ? 'Replayed' : 'Materialized'}
+                {response?.replayed === true ? '已回放' : 'Materialized'}
               </span>
             </div>
             <div className="metric-grid">
@@ -785,7 +778,7 @@ export function InvestigationGraphTimelineWorkspace({
             </div>
             <div className="snapshot-strip">
               <span>
-                <b>Range</b> {record.fromPosition} → {record.toPosition}
+                <b>区间</b> {record.fromPosition} → {record.toPosition}
               </span>
               <span>
                 <b>Continuity</b> {knowledgeLabel(timeline.summary.chainObservationContinuity)}
@@ -794,7 +787,7 @@ export function InvestigationGraphTimelineWorkspace({
                 <b>Graph set</b> {record.graphIds.length} exact reports
               </span>
               <span>
-                <b>Relationship termination</b> not inferred
+                <b>关系终止</b> 不由缺失推断
               </span>
             </div>
           </section>
@@ -803,14 +796,14 @@ export function InvestigationGraphTimelineWorkspace({
             <div className="panel-header">
               <div>
                 <span className="eyebrow">Ordered revisions and position advances</span>
-                <h3 id="graph-timeline-transitions-heading">Cross-Snapshot transitions</h3>
+                <h3 id="graph-timeline-transitions-heading">跨快照转换</h3>
               </div>
               <button
                 type="button"
                 className="evidence-button"
                 onClick={() => void openEvidence(record.terminalEvidenceId)}
               >
-                Open terminal Evidence
+                打开终端证据
               </button>
             </div>
             <div className="graph-timeline-list">
@@ -824,14 +817,19 @@ export function InvestigationGraphTimelineWorkspace({
                       {transition.fromPosition} → {transition.toPosition} ·{' '}
                       {titleCase(transition.kind)}
                     </strong>
-                    <span>{knowledgeLabel(transition.snapshotContinuity)} continuity</span>
+                    <span>
+                      {transition.snapshotContinuity.state === 'known' &&
+                      transition.snapshotContinuity.value === true
+                        ? '真实连续性'
+                        : `${knowledgeLabel(transition.snapshotContinuity)} 连续性`}
+                    </span>
                   </div>
                   <p>
                     {transition.pairChanges.length} pair changes · {transition.unchangedPairCount}{' '}
                     unchanged · {transition.unobservedPositionCount} unobserved positions
                   </p>
                   {transition.pairChanges.length === 0 ? (
-                    <div className="inline-empty">No pair-state change in this graph revision.</div>
+                    <div className="inline-empty">此图修订中无配对状态变化。</div>
                   ) : (
                     <div className="contract-list graph-timeline-change-list">
                       {transition.pairChanges.map((change) => (
@@ -859,7 +857,7 @@ export function InvestigationGraphTimelineWorkspace({
           <EvidenceLedgerDrawer
             busy={evidenceBusy}
             eyebrow="Graph terminals → cross-Snapshot derivation"
-            title="Evolution Evidence Ledger"
+            title="演化证据账本"
             testId="investigation-graph-timeline-evidence-ledger"
             {...(selectedEvidenceId === undefined ? {} : { evidenceId: selectedEvidenceId })}
             {...(evidenceResult === undefined ? {} : { result: evidenceResult })}
