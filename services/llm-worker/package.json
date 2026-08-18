@@ -1,0 +1,17 @@
+{
+  "name": "@zerotrace/llm-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/cli.js",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsx --tsconfig ../../tsconfig.base.json src/cli.ts",
+    "start": "node dist/src/cli.js"
+  },
+  "dependencies": {
+    "@zerotrace/llm-gateway": "*",
+    "@zerotrace/workflow-core": "*",
+    "dotenv": "17.4.2"
+  }
+}

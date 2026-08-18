@@ -21,6 +21,15 @@
     { "path": "./packages/candidate-discovery" },
     { "path": "./packages/behavior-engine" },
     { "path": "./packages/campaign-engine" },
-    { "path": "./packages/forensic-evidence" }
+    { "path": "./packages/forensic-evidence" },
+    { "path": "./packages/asset-ledger" },
+    { "path": "./packages/supply-reality-engine" },
+    { "path": "./packages/identity-intelligence" },
+    { "path": "./packages/campaign-intelligence" },
+    { "path": "./packages/capital-intelligence" },
+    { "path": "./packages/market-reality-engine" },
+    { "path": "./packages/casework" },
+    { "path": "./packages/workflow-core" },
+    { "path": "./packages/llm-gateway" }
   ]
 }

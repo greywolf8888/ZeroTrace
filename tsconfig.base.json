@@ -41,7 +41,16 @@
       "@zerotrace/candidate-discovery": ["./packages/candidate-discovery/src/index.ts"],
       "@zerotrace/behavior-engine": ["./packages/behavior-engine/src/index.ts"],
       "@zerotrace/campaign-engine": ["./packages/campaign-engine/src/index.ts"],
-      "@zerotrace/forensic-evidence": ["./packages/forensic-evidence/src/index.ts"]
+      "@zerotrace/forensic-evidence": ["./packages/forensic-evidence/src/index.ts"],
+      "@zerotrace/asset-ledger": ["./packages/asset-ledger/src/index.ts"],
+      "@zerotrace/supply-reality-engine": ["./packages/supply-reality-engine/src/index.ts"],
+      "@zerotrace/identity-intelligence": ["./packages/identity-intelligence/src/index.ts"],
+      "@zerotrace/campaign-intelligence": ["./packages/campaign-intelligence/src/index.ts"],
+      "@zerotrace/capital-intelligence": ["./packages/capital-intelligence/src/index.ts"],
+      "@zerotrace/market-reality-engine": ["./packages/market-reality-engine/src/index.ts"],
+      "@zerotrace/casework": ["./packages/casework/src/index.ts"],
+      "@zerotrace/workflow-core": ["./packages/workflow-core/src/index.ts"],
+      "@zerotrace/llm-gateway": ["./packages/llm-gateway/src/index.ts"]
     }
   }
 }

@@ -23,6 +23,15 @@ const workspacePackages = [
   'behavior-engine',
   'campaign-engine',
   'forensic-evidence',
+  'asset-ledger',
+  'supply-reality-engine',
+  'identity-intelligence',
+  'campaign-intelligence',
+  'capital-intelligence',
+  'market-reality-engine',
+  'casework',
+  'workflow-core',
+  'llm-gateway',
 ];
 
 export default defineConfig({
