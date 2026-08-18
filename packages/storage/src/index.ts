@@ -39,6 +39,7 @@ export * from './funding-settlement-reports.js';
 export * from './age-investigation-graph.js';
 export * from './control-campaign-reports.js';
 export * from './forensic-campaign-alerts.js';
+export * from './forensic-reports.js';
 
 type DatabaseRow = Record<string, unknown>;
 
