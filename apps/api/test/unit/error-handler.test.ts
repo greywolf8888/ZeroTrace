@@ -5,9 +5,14 @@ import { ZodError } from 'zod';
 import { ProviderError } from '@zerotrace/chain-adapters';
 import {
   AgeInvestigationGraphProjectionError,
+  CaptureScheduleStorageError,
   ControlCampaignReportStorageError,
   EntityInvestigationGraphStorageError,
   EntityInvestigationGraphTimelineStorageError,
+  EntityRelationshipReportStorageError,
+  EntityRelationshipTimelineStorageError,
+  FlapHistoryProjectionError,
+  FlapPensionEntryReportStorageError,
   ForensicReportStorageError,
   FundingSettlementReportStorageError,
   LabelIntelligenceStorageError,
@@ -171,6 +176,83 @@ describe('API error handler', () => {
         }),
         status: 503,
         code: 'SEMANTIC_CHECKPOINT_UNAVAILABLE',
+      },
+      {
+        error: new EntityRelationshipReportStorageError(
+          'ENTITY_RELATIONSHIP_REPORT_INVALID',
+          'shape',
+        ),
+        status: 400,
+        code: 'ENTITY_RELATIONSHIP_REPORT_INVALID',
+      },
+      {
+        error: new EntityRelationshipReportStorageError(
+          'ENTITY_RELATIONSHIP_REPORT_UNAVAILABLE',
+          'down',
+          { retryable: true },
+        ),
+        status: 503,
+        code: 'ENTITY_RELATIONSHIP_REPORT_UNAVAILABLE',
+      },
+      {
+        error: new EntityRelationshipTimelineStorageError(
+          'ENTITY_RELATIONSHIP_TIMELINE_INVALID',
+          'shape',
+        ),
+        status: 400,
+        code: 'ENTITY_RELATIONSHIP_TIMELINE_INVALID',
+      },
+      {
+        error: new EntityRelationshipTimelineStorageError(
+          'ENTITY_RELATIONSHIP_TIMELINE_UNAVAILABLE',
+          'down',
+          { retryable: true },
+        ),
+        status: 503,
+        code: 'ENTITY_RELATIONSHIP_TIMELINE_UNAVAILABLE',
+      },
+      {
+        error: new FlapHistoryProjectionError('FLAP_HISTORY_PROJECTION_INVALID', 'range'),
+        status: 400,
+        code: 'FLAP_HISTORY_PROJECTION_INVALID',
+      },
+      {
+        error: new FlapHistoryProjectionError('FLAP_HISTORY_PROJECTION_UNAVAILABLE', 'down', {
+          retryable: true,
+        }),
+        status: 503,
+        code: 'FLAP_HISTORY_PROJECTION_UNAVAILABLE',
+      },
+      {
+        error: new FlapPensionEntryReportStorageError('FLAP_PENSION_ENTRY_REPORT_INVALID', 'quote'),
+        status: 400,
+        code: 'FLAP_PENSION_ENTRY_REPORT_INVALID',
+      },
+      {
+        error: new FlapPensionEntryReportStorageError(
+          'FLAP_PENSION_ENTRY_REPORT_UNAVAILABLE',
+          'down',
+          { retryable: true },
+        ),
+        status: 503,
+        code: 'FLAP_PENSION_ENTRY_REPORT_UNAVAILABLE',
+      },
+      {
+        error: new CaptureScheduleStorageError('CAPTURE_SCHEDULER_INVALID', 'trigger'),
+        status: 400,
+        code: 'CAPTURE_SCHEDULER_INVALID',
+      },
+      {
+        error: new CaptureScheduleStorageError('CAPTURE_SCHEDULER_CONFLICT', 'dup'),
+        status: 409,
+        code: 'CAPTURE_SCHEDULER_CONFLICT',
+      },
+      {
+        error: new CaptureScheduleStorageError('CAPTURE_SCHEDULER_UNAVAILABLE', 'down', {
+          retryable: true,
+        }),
+        status: 503,
+        code: 'CAPTURE_SCHEDULER_UNAVAILABLE',
       },
       {
         error: new EntityInvestigationGraphStorageError(
