@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { ProviderError } from '@zerotrace/chain-adapters';
 import { captureBitcoinForensicGraph } from '../bitcoin-forensic-graph.js';
 import { captureSolanaDealerCampaign } from '../solana-dealer.js';
@@ -45,15 +45,7 @@ export async function registerSolanaBitcoinLedgerRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime, config } = ctx;
   app.get(
     '/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/latest',
     { schema: { tags: ['intelligence'] } },

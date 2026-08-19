@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { defineCaptureSchedule } from '@zerotrace/capture-scheduler';
 import { hashPayload } from '@zerotrace/evidence';
 import {
@@ -14,11 +14,11 @@ import {
   ControlCampaignMonitorParamsSchema,
   ControlCampaignListQuerySchema,
 } from '../http/request-schemas.js';
-import { errorResponse, emptyMetadata, snapshotPosition } from '../http/helpers.js';
+import { errorResponse, emptyMetadata } from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
 export function createCampaignHandlers(ctx: AppHttpContext) {
-  const { runtime, config } = ctx;
+  const { runtime } = ctx;
   const controlCampaignUnavailable = (request: FastifyRequest, reply: FastifyReply) =>
     reply.code(503).send({
       status: unknownValue(

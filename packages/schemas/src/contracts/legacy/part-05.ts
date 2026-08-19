@@ -1,11 +1,9 @@
 import { z } from 'zod';
 export * from './part-04.js';
-import type { Evidence } from './part-04.js';
 import {
   AnalysisMetadataSchema,
   AnalysisSnapshotSchema,
   ConfidenceSchema,
-  ControlCampaignBundleSchema,
   CoverageRatioSchema,
   DecimalStringSchema,
   EvidenceSchema,
@@ -15,8 +13,6 @@ import {
   SubjectTypeSchema,
   knowledgeValueSchema,
 } from './part-04.js';
-
-export type ControlCampaignBundle = z.infer<typeof ControlCampaignBundleSchema>;
 
 export const DiscrepancyClassSchema = z.enum([
   'EXACT_IDENTITY_STATE',
@@ -522,3 +518,4 @@ export const LabelIntelligenceReportSchema = z
       });
     }
   });
+export type LabelIntelligenceReport = z.infer<typeof LabelIntelligenceReportSchema>;

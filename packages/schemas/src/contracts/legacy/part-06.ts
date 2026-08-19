@@ -1,6 +1,5 @@
 import { z } from 'zod';
 export * from './part-05.js';
-import type { Evidence } from './part-05.js';
 import {
   AnalysisMetadataSchema,
   AnalysisSnapshotSchema,
@@ -8,7 +7,6 @@ import {
   EvidenceSchema,
   Hash256Schema,
   IsoDateTimeSchema,
-  LabelIntelligenceReportSchema,
   LedgerSchema,
   SubjectTypeSchema,
   UnsignedQuantityStringSchema,
@@ -17,8 +15,6 @@ import {
   unavailableValue,
   unknownValue,
 } from './part-05.js';
-
-export type LabelIntelligenceReport = z.infer<typeof LabelIntelligenceReportSchema>;
 
 export const GlobalIntelligenceSearchRecordTypeSchema = z.enum([
   'LABEL_OBSERVATION',

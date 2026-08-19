@@ -6,7 +6,6 @@ import {
   type EvidenceDrilldownResponse,
 } from './generated-api/client.js';
 import {
-  ControllerGraphCanvas,
   EvidenceLedgerDrawer,
   knowledgeLabel,
   shortId,

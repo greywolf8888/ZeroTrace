@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import {
-  DEFAULT_SNAPSHOT,
   Field,
   Inspector,
   Panel,

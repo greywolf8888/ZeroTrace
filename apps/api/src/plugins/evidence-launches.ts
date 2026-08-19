@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { classifyIdentifier } from '@zerotrace/identifiers';
 import {
   FLAP_BSC_MAINNET_DEPLOYMENT,
@@ -20,7 +20,6 @@ import {
   FlapEventHistoryProjectionSchema,
   FlapLifetimeMaterializationSchema,
   unavailableValue,
-  type Evidence,
 } from '@zerotrace/schemas';
 import {
   LaunchInspectionParamsSchema,
@@ -39,15 +38,7 @@ export async function registerEvidenceAndLaunchRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime } = ctx;
   app.get(
     '/api/v1/evidence/:id',
     { schema: { tags: ['intelligence'] } },

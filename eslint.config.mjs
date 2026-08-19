@@ -15,6 +15,10 @@ export default tseslint.config(
       'reports/**',
       'output/**',
       'ZeroTrace_监管取证级盘面结构分析_全量升级提示词包/**',
+      'scripts/split-*.mjs',
+      'scripts/trim-api-imports.mjs',
+      'scripts/fix-api-split.mjs',
+      'scripts/patch-runtime-stores.mjs',
     ],
   },
   {

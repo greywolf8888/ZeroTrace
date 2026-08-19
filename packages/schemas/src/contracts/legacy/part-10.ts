@@ -1,6 +1,6 @@
 import { z } from 'zod';
 export * from './part-09.js';
-import type { AnalysisSnapshot, Evidence } from './part-09.js';
+import type { AnalysisSnapshot } from './part-09.js';
 import {
   AnalysisMetadataSchema,
   AnalysisSnapshotSchema,
@@ -580,3 +580,6 @@ export const SolanaTransactionIntelligenceReportSchema = z
       }
     }
   });
+export type SolanaTransactionIntelligenceReport = z.infer<
+  typeof SolanaTransactionIntelligenceReportSchema
+>;

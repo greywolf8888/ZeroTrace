@@ -1,6 +1,5 @@
 import { z } from 'zod';
 export * from './part-03.js';
-import type { Evidence } from './part-03.js';
 import {
   AnalysisSnapshotSchema,
   BehaviorEventIdSchema,
@@ -12,7 +11,6 @@ import {
   CampaignEvidenceIdSchema,
   CampaignEvidenceItemIdSchema,
   CampaignWalletRoleSchema,
-  CandidateDiscoveryResultSchema,
   CanonicalStringArraySchema,
   CexBoundaryIdSchema,
   ClusterPositionIdSchema,
@@ -31,8 +29,6 @@ import {
   UnsignedQuantityStringSchema,
   knowledgeValueSchema,
 } from './part-03.js';
-
-export type CandidateDiscoveryResult = z.infer<typeof CandidateDiscoveryResultSchema>;
 
 export const CampaignMetadataSchema = z
   .object({
@@ -549,3 +545,4 @@ export const ControlCampaignBundleSchema = z
       });
     }
   });
+export type ControlCampaignBundle = z.infer<typeof ControlCampaignBundleSchema>;

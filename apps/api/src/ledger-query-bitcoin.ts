@@ -3,7 +3,7 @@ import {
   type BitcoinTransactionRecord,
   type BitcoinUtxoLedgerAdapter,
 } from '@zerotrace/chain-adapters';
-import { createEvidence, hashPayload } from '@zerotrace/evidence';
+import { createEvidence } from '@zerotrace/evidence';
 import {
   analyzeBitcoinScriptControl,
   analyzeBitcoinTransactionEntity,

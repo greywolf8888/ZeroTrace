@@ -1,8 +1,6 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { Registry } from 'prom-client';
+import type { FastifyInstance } from 'fastify';
 import { resolveSourceOperators } from '@zerotrace/data-quality';
 import { LAUNCHPAD_PROTOCOL_REGISTRY, PLATFORM_REGISTRY } from '@zerotrace/platform-adapters';
-import type { Evidence } from '@zerotrace/schemas';
 import type { AppHttpContext } from '../http/context.js';
 
 export async function registerSystemRoutes(

@@ -23,8 +23,7 @@ import {
   type DataQualityEvidenceWriter,
 } from '@zerotrace/data-quality';
 import { EvidenceLedger, hashPayload } from '@zerotrace/evidence';
-import {
-  ClickHouseRawFactRepository,
+import type {
   PostgresActionSemanticsReportRepository,
   PostgresCaptureScheduleRepository,
   PostgresClaimDeclarationReportRepository,
@@ -40,9 +39,6 @@ import {
   PostgresSolanaDealerCampaignReportRepository,
   PostgresSolanaTransactionReportRepository,
   PostgresBitcoinForensicGraphReportRepository,
-  DataQualityStorageError,
-  PostgresDataQualityRepository,
-  PostgresEvidenceRepository,
   PostgresFlapHistoryProjectionRepository,
   PostgresFlapLifetimeHeadRepository,
   PostgresFlapPensionEntryReportRepository,
@@ -52,12 +48,15 @@ import {
   PostgresEntityInvestigationGraphRepository,
   PostgresEntityInvestigationGraphTimelineRepository,
   AgeInvestigationGraphProjectionRepository,
-  PostgresIngestionCheckpointRepository,
   PostgresIntelligenceSearchRepository,
   PostgresLabelIntelligenceReportRepository,
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
-  RawArtifactStore,
+} from '@zerotrace/storage';
+import {
+  DataQualityStorageError,
+  PostgresDataQualityRepository,
+  PostgresEvidenceRepository,
   type EvidenceRepository,
   type DataQualityStorageHealth,
   type ObjectStoreHealth,

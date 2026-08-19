@@ -1,5 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { Registry } from 'prom-client';
+import type { FastifyInstance } from 'fastify';
 import { createEvidence } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
 import {
@@ -28,7 +27,6 @@ import {
   emptyMetadata,
   addEvidence,
   rejectUngroundedAnalysis,
-  incompatibleEvidenceIds,
   uniqueEvidenceIds,
   uniqueSourceIds,
   evidenceSourceId,
@@ -41,15 +39,7 @@ export async function registerSearchAndLabelRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime, config } = ctx;
   app.get('/api/v1/search', { schema: { tags: ['intelligence'] } }, async (request) => {
     const query = SearchQuerySchema.parse(request.query);
     const result = classifyIdentifier(query.q, {

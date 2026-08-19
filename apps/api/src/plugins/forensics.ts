@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { hashPayload } from '@zerotrace/evidence';
 import { ForensicCaseBundleError, caseIdForCampaign } from '@zerotrace/forensic-evidence';
-import type { Evidence } from '@zerotrace/schemas';
 import {
   ControlCampaignParamsSchema,
   ForensicCaseParamsSchema,
@@ -23,28 +22,8 @@ export async function registerForensicCaseRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
-  const {
-    controlCampaignUnavailable,
-    captureScheduleUnavailable,
-    queueControlCampaignBackfill,
-    listControlCampaignBackfills,
-    queueControlCampaignMonitor,
-    readControlCampaignMonitor,
-    alertsUnavailable,
-    campaignAlerts,
-    streamControlCampaignById,
-    streamControlCampaign,
-    fundingSettlementUnavailable,
-  } = createCampaignHandlers(ctx);
+  const { runtime } = ctx;
+  const { controlCampaignUnavailable } = createCampaignHandlers(ctx);
   app.post(
     '/api/v1/forensics/cases',
     { schema: { tags: ['analysis'] } },

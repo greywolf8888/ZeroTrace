@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { auditDiscrepancies, DISCREPANCY_MODEL_VERSION } from '@zerotrace/data-quality';
 import { hashPayload } from '@zerotrace/evidence';
 import {
@@ -36,15 +36,7 @@ export async function registerRvAndFlapMarketRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime, config } = ctx;
   app.post('/api/v1/rv/flap-sell', { schema: { tags: ['analysis'] } }, async (request, reply) => {
     const input = FlapSellQuoteRequestSchema.parse(request.body);
     const adapter = runtime.evmAdapters.get(56);

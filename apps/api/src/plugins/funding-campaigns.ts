@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { ForensicCaseBundleError } from '@zerotrace/forensic-evidence';
 import { unknownValue } from '@zerotrace/schemas';
 import {
@@ -23,23 +23,13 @@ export async function registerFundingAndCampaignRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime } = ctx;
   const {
     controlCampaignUnavailable,
-    captureScheduleUnavailable,
     queueControlCampaignBackfill,
     listControlCampaignBackfills,
     queueControlCampaignMonitor,
     readControlCampaignMonitor,
-    alertsUnavailable,
     campaignAlerts,
     streamControlCampaignById,
     streamControlCampaign,

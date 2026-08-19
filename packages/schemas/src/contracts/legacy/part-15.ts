@@ -1,6 +1,5 @@
 import { z } from 'zod';
 export * from './part-14.js';
-import type { Evidence } from './part-14.js';
 import {
   AnalysisMetadataSchema,
   ClaimLiquidityControlSchema,
@@ -573,3 +572,4 @@ export const EvmClaimBurnPromotionSchema = z
       });
     }
   });
+export type EvmClaimBurnPromotion = z.infer<typeof EvmClaimBurnPromotionSchema>;

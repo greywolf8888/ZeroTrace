@@ -1,9 +1,8 @@
 import { z } from 'zod';
 export * from './part-16.js';
-import type { Evidence, Ledger } from './part-16.js';
+import type { Ledger } from './part-16.js';
 import {
   AnalysisSnapshotSchema,
-  ClaimVerificationObservationReportSchema,
   ConfidenceSchema,
   CoverageRatioSchema,
   Hash256Schema,
@@ -14,10 +13,6 @@ import {
   UnsignedQuantityStringSchema,
   knowledgeValueSchema,
 } from './part-16.js';
-
-export type ClaimVerificationObservationReport = z.infer<
-  typeof ClaimVerificationObservationReportSchema
->;
 
 export const CaptureKindSchema = z.enum([
   'CHAIN_HEAD',
@@ -528,3 +523,4 @@ export const ActionSemanticCandidateSchema = z
       });
     }
   });
+export type ActionSemanticCandidate = z.infer<typeof ActionSemanticCandidateSchema>;

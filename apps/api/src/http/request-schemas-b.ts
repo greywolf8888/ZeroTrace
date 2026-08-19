@@ -2,7 +2,6 @@ import { z } from 'zod';
 import {
   AnalysisMetadataSchema,
   DiscrepancyCheckInputSchema,
-  type Evidence,
   ClaimExpectedActionSchema,
   ClaimWalletRoleSchema,
 } from '@zerotrace/schemas';

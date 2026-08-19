@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { ProviderError } from '@zerotrace/chain-adapters';
 import { BitcoinForensicGraphCaptureError } from '../bitcoin-forensic-graph.js';

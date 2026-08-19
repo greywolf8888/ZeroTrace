@@ -1,6 +1,5 @@
 import { z } from 'zod';
 export * from './part-02.js';
-import type { Evidence } from './part-02.js';
 import {
   AnalysisSnapshotSchema,
   CampaignEvidenceIdSchema,
@@ -22,12 +21,9 @@ import {
   SettlementEdgeIdSchema,
   TokenFlowEdgeIdSchema,
   TokenFlowKindSchema,
-  TokenHistoryDiscoveryReportSchema,
   UnsignedQuantityStringSchema,
   knowledgeValueSchema,
 } from './part-02.js';
-
-export type TokenHistoryDiscoveryReport = z.infer<typeof TokenHistoryDiscoveryReportSchema>;
 
 export const TokenFlowEdgeSchema = z
   .object({
@@ -515,3 +511,4 @@ export const CandidateDiscoveryResultSchema = z
     automaticEntityMembershipAllowed: z.literal(false),
   })
   .strict();
+export type CandidateDiscoveryResult = z.infer<typeof CandidateDiscoveryResultSchema>;

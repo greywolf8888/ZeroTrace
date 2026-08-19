@@ -1,10 +1,10 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { ProviderError } from '@zerotrace/chain-adapters';
 import { parseEvmClaimDeclaration, reviewClaimDeclarationDraft } from '@zerotrace/claim-audit';
 import { observeErc20Decimals } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import { ClaimRuleReviewReportStorageError } from '@zerotrace/storage';
-import { knownValue, unknownValue, type Evidence } from '@zerotrace/schemas';
+import { knownValue, unknownValue } from '@zerotrace/schemas';
 import {
   ClaimDeclarationReportParamsSchema,
   ClaimDeclarationReportLookupQuerySchema,
@@ -35,15 +35,7 @@ export async function registerScenarioAndClaimDeclarationRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime } = ctx;
   app.post(
     '/api/v1/rv/constant-product',
     { schema: { tags: ['analysis'] } },

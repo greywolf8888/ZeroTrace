@@ -1,6 +1,5 @@
 import { z } from 'zod';
 export * from './part-10.js';
-import type { Evidence } from './part-10.js';
 import {
   AnalysisSnapshotSchema,
   CanonicalStringArraySchema,
@@ -15,15 +14,10 @@ import {
   QuantityStringSchema,
   SolanaLaunchpadObservationSchema,
   SolanaPublicKeySchema,
-  SolanaTransactionIntelligenceReportSchema,
   TokenFlowEdgeSchema,
   UnsignedQuantityStringSchema,
   knowledgeValueSchema,
 } from './part-10.js';
-
-export type SolanaTransactionIntelligenceReport = z.infer<
-  typeof SolanaTransactionIntelligenceReportSchema
->;
 
 export const SolanaDealerCampaignReportIdSchema = z.string().regex(/^sdc_[0-9a-f]{24}$/);
 export const SolanaDealerAssetObservationIdSchema = z.string().regex(/^sdao_[0-9a-f]{24}$/);

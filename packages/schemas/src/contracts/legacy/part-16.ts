@@ -1,6 +1,5 @@
 import { z } from 'zod';
 export * from './part-15.js';
-import type { Evidence } from './part-15.js';
 import {
   AnalysisMetadataSchema,
   ClaimActionObservationSchema,
@@ -12,7 +11,6 @@ import {
   ClaimWindowSchema,
   CoverageRatioSchema,
   DecimalStringSchema,
-  EvmClaimBurnPromotionSchema,
   EvmClaimTransferObservationSchema,
   EvmSnapshotSchema,
   Hash256Schema,
@@ -22,8 +20,6 @@ import {
   UnsignedQuantityStringSchema,
   knowledgeValueSchema,
 } from './part-15.js';
-
-export type EvmClaimBurnPromotion = z.infer<typeof EvmClaimBurnPromotionSchema>;
 
 export const EvmSupplyContinuityChangeSchema = z
   .object({
@@ -538,3 +534,6 @@ export const ClaimVerificationObservationReportSchema = z
       });
     }
   });
+export type ClaimVerificationObservationReport = z.infer<
+  typeof ClaimVerificationObservationReportSchema
+>;

@@ -4,7 +4,6 @@ import {
   Field,
   Inspector,
   Panel,
-  ResultBlock,
   asRecord,
   asString,
   requestJson,

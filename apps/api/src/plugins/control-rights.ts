@@ -1,9 +1,8 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import {
   inspectEvmControlSurface,
   inspectSolanaControlSurface,
 } from '@zerotrace/platform-adapters';
-import type { Evidence, Ledger } from '@zerotrace/schemas';
 import {
   ControlSurfaceParamsSchema,
   ControlSurfaceByIdParamsSchema,
@@ -18,15 +17,7 @@ export async function registerControlRightsRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime } = ctx;
   app.post(
     '/api/v1/control-rights/:ledger/:subject/inspect',
     { schema: { tags: ['intelligence'] } },

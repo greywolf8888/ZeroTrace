@@ -1,6 +1,5 @@
 import { z } from 'zod';
 export * from './part-01.js';
-import type { Evidence } from './part-01.js';
 import {
   AnalysisSnapshotSchema,
   AnchorContinuityAssessmentSchema,
@@ -542,3 +541,4 @@ export const TokenHistoryDiscoveryReportSchema = z
       });
     }
   });
+export type TokenHistoryDiscoveryReport = z.infer<typeof TokenHistoryDiscoveryReportSchema>;

@@ -1,12 +1,10 @@
 import { z } from 'zod';
 export * from './part-17.js';
-import type { Evidence } from './part-17.js';
 import {
   ActionApplicationSchema,
   ActionAssetDeltaSchema,
   ActionPrimitiveKindSchema,
   ActionProofKindSchema,
-  ActionSemanticCandidateSchema,
   AnalysisMetadataSchema,
   AnalysisSnapshotSchema,
   ClaimExpectedActionSchema,
@@ -20,8 +18,6 @@ import {
   isCanonicalActionTransactionId,
   knowledgeValueSchema,
 } from './part-17.js';
-
-export type ActionSemanticCandidate = z.infer<typeof ActionSemanticCandidateSchema>;
 
 export const ActionSemanticFindingCodeSchema = z.enum([
   'PRIMITIVE_CONFIRMED',

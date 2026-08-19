@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import {
   canonicalizeEntityRelationshipInput,
   ENTITY_RELATIONSHIP_MODEL_VERSION,
@@ -34,15 +34,7 @@ export async function registerEntityRelationshipRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime } = ctx;
   app.post(
     '/api/v1/entities/resolve',
     { schema: { tags: ['analysis'] } },

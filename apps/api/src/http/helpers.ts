@@ -2,7 +2,10 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ProviderError } from '@zerotrace/chain-adapters';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import type { EvidenceNode } from '@zerotrace/evidence';
-import { ForensicCaseBundleError, buildForensicCaseBundle } from '@zerotrace/forensic-evidence';
+import {
+  buildForensicCaseBundle,
+  type ForensicCaseBundleError,
+} from '@zerotrace/forensic-evidence';
 import {
   StorageError,
   type StoredSolanaTransactionReport,
@@ -10,12 +13,12 @@ import {
 } from '@zerotrace/storage';
 import {
   knownValue,
-  unavailableValue,
   unknownValue,
   type AnalysisMetadata,
   type AnalysisSnapshot,
-  type Evidence,
   type ControlCampaignBundle,
+  type Evidence,
+  type KnowledgeReason,
 } from '@zerotrace/schemas';
 import type { AppRuntime } from '../runtime.js';
 
@@ -47,7 +50,8 @@ export function solanaTransactionReportResponse(
   record: StoredSolanaTransactionReport,
   replayed: boolean,
   liveRefresh:
-    ReturnType<typeof unavailableValue> | ReturnType<typeof knownValue<boolean>> = knownValue(true),
+    | ReturnType<typeof knownValue<boolean>>
+    | { state: 'unavailable'; reason: KnowledgeReason; detail?: string } = knownValue(true),
 ) {
   return {
     ...record.report,

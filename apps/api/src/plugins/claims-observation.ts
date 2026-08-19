@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import {
   discoverErc20BurnCandidates,
   discoverEvmPensionCandidates,
@@ -6,7 +6,6 @@ import {
   replayErc20BurnPromotionResult,
   replayErc20SupplyContinuityResult,
 } from '@zerotrace/platform-adapters';
-import type { Evidence } from '@zerotrace/schemas';
 import {
   ClaimReportParamsSchema,
   ClaimReportByIdParamsSchema,
@@ -26,15 +25,7 @@ export async function registerClaimObservationRoutes(
   app: FastifyInstance,
   ctx: AppHttpContext,
 ): Promise<void> {
-  const {
-    runtime,
-    config,
-    providerHealth,
-    storageHealth,
-    ingestionStorageHealth,
-    dataQualityHealth,
-    graphProjectionHealth,
-  } = ctx;
+  const { runtime } = ctx;
   app.get(
     '/api/v1/claims/:ledger/:token/pension-candidates/reports/latest',
     { schema: { tags: ['intelligence'] } },
