@@ -37,7 +37,7 @@ export function App() {
   const [theme, setTheme] = useState<Theme>(() =>
     window.localStorage.getItem('zerotrace-theme') === 'light' ? 'light' : 'dark',
   );
-  const [view, setView] = useState<View>('analyze');
+  const [view, setView] = useState<View>('overview');
   const [health, setHealth] = useState<HealthResponse>();
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [platforms, setPlatforms] = useState<PlatformDescriptor[]>([]);
