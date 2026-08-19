@@ -364,4 +364,27 @@ describe('market-structure v2 API', { timeout: 60_000 }, () => {
       error: { code: 'JOB_QUEUE_UNAVAILABLE' },
     });
   });
+
+  it('returns 404 for unknown jobs and serves the analyze job after offline materialize', async () => {
+    const app = await createApp({ config: baseConfig(), logger: false });
+    apps.push(app);
+    const missing = await app.inject({
+      method: 'GET',
+      url: '/api/v2/jobs/job_aaaaaaaaaaaaaaaaaaaaaaaa',
+    });
+    expect(missing.statusCode).toBe(404);
+    const analyzed = await app.inject({
+      method: 'POST',
+      url: '/api/v2/tokens/EVM/eip155:56/0xAeCBD0E461047d6B7Cfc82e637AD197097407777/analyze',
+      payload: { snapshotPolicy: 'FINALIZED', analysisMode: 'BOUNDED_WINDOW' },
+    });
+    expect(analyzed.statusCode).toBe(200);
+    const body = analyzed.json() as { job: { id: string }; status: string };
+    const stored = await app.inject({
+      method: 'GET',
+      url: `/api/v2/jobs/${body.job.id}`,
+    });
+    expect(stored.statusCode).toBe(200);
+    expect(stored.json()).toMatchObject({ id: body.job.id, status: 'SUCCEEDED' });
+  });
 });

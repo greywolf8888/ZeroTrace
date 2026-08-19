@@ -10,6 +10,34 @@ export interface PostgresJobQueueOptions {
   maxConnections?: number;
 }
 
+interface JobQueryResult {
+  rows: Array<Record<string, unknown>>;
+}
+
+interface JobClient {
+  query(text: string, values?: readonly unknown[]): Promise<JobQueryResult>;
+  release(): void;
+}
+
+export interface JobPool {
+  query(text: string, values?: readonly unknown[]): Promise<JobQueryResult>;
+  connect(): Promise<JobClient>;
+  end(): Promise<void>;
+}
+
+function createPool(options: PostgresJobQueueOptions): JobPool {
+  const pool = new Pool({
+    connectionString: options.connectionString,
+    max: options.maxConnections ?? 4,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: options.connectionTimeoutMs ?? 5_000,
+    statement_timeout: options.statementTimeoutMs ?? 15_000,
+    application_name: 'zerotrace-durable-jobs',
+  });
+  pool.on('error', () => undefined);
+  return pool;
+}
+
 function asJob(row: Record<string, unknown>): DurableJob {
   const payload = row.payload;
   const payloadText =
@@ -50,17 +78,14 @@ function asJob(row: Record<string, unknown>): DurableJob {
 }
 
 export class PostgresJobQueue implements JobQueue {
-  readonly #pool: Pool;
+  readonly #pool: JobPool;
 
-  constructor(options: PostgresJobQueueOptions) {
-    this.#pool = new Pool({
-      connectionString: options.connectionString,
-      max: options.maxConnections ?? 4,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: options.connectionTimeoutMs ?? 5_000,
-      statement_timeout: options.statementTimeoutMs ?? 15_000,
-      application_name: 'zerotrace-durable-jobs',
-    });
+  constructor(options: PostgresJobQueueOptions | { pool: JobPool }) {
+    this.#pool = 'pool' in options ? options.pool : createPool(options);
+  }
+
+  static fromPool(pool: JobPool): PostgresJobQueue {
+    return new PostgresJobQueue({ pool });
   }
 
   async enqueue(input: {

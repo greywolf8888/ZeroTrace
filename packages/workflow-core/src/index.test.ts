@@ -16,4 +16,30 @@ describe('workflow-core', () => {
     }
     expect(last.status).toBe('DEAD_LETTER');
   });
+
+  it('stores payload, expires stale leases, and fail-closes missing ids', () => {
+    const queue = new InMemoryJobQueue();
+    expect(queue.claim('worker-1')).toBeUndefined();
+    const job = queue.enqueue({
+      type: 'origin',
+      idempotencyKey: 'payload',
+      payload: '{"ok":true}',
+      maxAttempts: 1,
+    });
+    expect(job.payload).toBe('{"ok":true}');
+    const running = queue.claim('worker-1', new Date('2026-08-19T00:00:00.000Z'), 1);
+    expect(running?.status).toBe('RUNNING');
+    expect(queue.claim('worker-2', new Date('2026-08-19T00:00:01.000Z'), 1_000)).toBeUndefined();
+    expect(queue.get(job.id)?.status).toBe('DEAD_LETTER');
+    const live = queue.enqueue({ type: 'origin', idempotencyKey: 'live' });
+    const claimed = queue.claim('worker-3');
+    expect(queue.checkpoint(live.id, 'block:9').checkpoint).toBe('block:9');
+    expect(queue.succeed(live.id, 'done')).toMatchObject({
+      status: 'SUCCEEDED',
+      resultRef: 'done',
+    });
+    expect(queue.get(live.id)?.status).toBe('SUCCEEDED');
+    expect(claimed?.id).toBe(live.id);
+    expect(() => queue.succeed('missing', 'x')).toThrow('was not found');
+  });
 });

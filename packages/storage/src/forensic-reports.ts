@@ -9,6 +9,28 @@ export interface ForensicReportRepositoryOptions {
   maxConnections?: number;
 }
 
+interface ReportQueryResult {
+  rows: Array<Record<string, unknown>>;
+}
+
+export interface ForensicReportPool {
+  query(text: string, values?: readonly unknown[]): Promise<ReportQueryResult>;
+  end(): Promise<void>;
+}
+
+function createPool(options: ForensicReportRepositoryOptions): ForensicReportPool {
+  const pool = new Pool({
+    connectionString: options.connectionString,
+    max: options.maxConnections ?? 4,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: options.connectionTimeoutMs ?? 5_000,
+    statement_timeout: options.statementTimeoutMs ?? 15_000,
+    application_name: 'zerotrace-forensic-reports',
+  });
+  pool.on('error', () => undefined);
+  return pool;
+}
+
 export class ForensicReportStorageError extends Error {
   readonly code:
     'FORENSIC_REPORT_INVALID' | 'FORENSIC_REPORT_CONFLICT' | 'FORENSIC_REPORT_UNAVAILABLE';
@@ -26,17 +48,14 @@ export class ForensicReportStorageError extends Error {
 }
 
 export class PostgresForensicReportRepository {
-  readonly #pool: Pool;
+  readonly #pool: ForensicReportPool;
 
-  constructor(options: ForensicReportRepositoryOptions) {
-    this.#pool = new Pool({
-      connectionString: options.connectionString,
-      max: options.maxConnections ?? 4,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: options.connectionTimeoutMs ?? 5_000,
-      statement_timeout: options.statementTimeoutMs ?? 15_000,
-      application_name: 'zerotrace-forensic-reports',
-    });
+  constructor(options: ForensicReportRepositoryOptions | { pool: ForensicReportPool }) {
+    this.#pool = 'pool' in options ? options.pool : createPool(options);
+  }
+
+  static fromPool(pool: ForensicReportPool): PostgresForensicReportRepository {
+    return new PostgresForensicReportRepository({ pool });
   }
 
   async put(envelope: ReportEnvelope): Promise<ReportEnvelope> {

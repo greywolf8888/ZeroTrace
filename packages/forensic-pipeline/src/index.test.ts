@@ -99,9 +99,45 @@ describe('forensic pipeline', () => {
     expect(report.limitations.some((item) => item.includes('未物化供应现实'))).toBe(true);
   });
 
-  it('keeps origin history fail-closed when the creation reader is absent', () => {
-    const origin = originHistoryWithoutReader();
-    expect(origin.status).toBe('OFFLINE');
-    expect(origin.limitations.some((item) => item.includes('0'))).toBe(true);
+  it('rejects unsupported snapshot policy and malformed EVM tokens without inventing coverage', () => {
+    expect(
+      decideTokenAnalyzeCapability({
+        ...request,
+        snapshotPolicy: 'SAFE' as typeof request.snapshotPolicy,
+      }).reason,
+    ).toContain('FINALIZED');
+    expect(decideTokenAnalyzeCapability({ ...request, token: 'not-an-address' }).status).toBe(
+      'UNSUPPORTED',
+    );
+    const unfinalized = materializeTokenMarketStructure({
+      request: { ...request, snapshotPolicy: 'FINALIZED' },
+      observation: {
+        token: request.token,
+        chainId: request.chainId,
+        snapshot: { ...snapshot, finality: 'safe' },
+        evidence: [evidence('a'), evidence('b')],
+      },
+    });
+    expect(unfinalized).toMatchObject({ status: 'FAILED', reason: 'SNAPSHOT_NOT_FINALIZED' });
+    const thin = materializeTokenMarketStructure({
+      request,
+      observation: {
+        token: request.token,
+        chainId: request.chainId,
+        snapshot,
+        evidence: [evidence('only-one')],
+      },
+    });
+    expect(thin).toMatchObject({ status: 'FAILED', reason: 'INSUFFICIENT_EVIDENCE' });
+    const bounded = materializeTokenMarketStructure({
+      request: { ...request, analysisMode: 'BOUNDED_WINDOW' },
+    });
+    expect(bounded.status).toBe('OFFLINE');
+    expect(
+      materializeTokenMarketStructure({
+        request: { ...request, ledger: 'BITCOIN', chainId: 'bitcoin-mainnet', token: 'addr' },
+      }).status,
+    ).toBe('UNSUPPORTED');
+    expect(originHistoryWithoutReader().status).toBe('OFFLINE');
   });
 });
