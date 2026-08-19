@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../src/app.js';
 import type { AppConfig } from '../../src/config.js';
+import { createRuntime } from '../../src/runtime.js';
 
 function baseConfig(): AppConfig {
   return {
@@ -386,5 +387,68 @@ describe('market-structure v2 API', { timeout: 60_000 }, () => {
     });
     expect(stored.statusCode).toBe(200);
     expect(stored.json()).toMatchObject({ id: body.job.id, status: 'SUCCEEDED' });
+  });
+
+  it('does not invent forensic cases when campaign storage is absent', async () => {
+    const app = await createApp({ config: baseConfig(), logger: false });
+    apps.push(app);
+    const hex = 'a'.repeat(24);
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/v1/forensics/cases',
+      payload: { campaignId: `cc_${hex}` },
+    });
+    expect(created.statusCode).toBe(503);
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/api/v1/forensics/cases/fcb_cc_${hex}`,
+        })
+      ).statusCode,
+    ).toBe(503);
+    expect(
+      (await app.inject({ method: 'GET', url: `/api/v1/control/events/be_${hex}` })).statusCode,
+    ).toBe(503);
+    expect(
+      (await app.inject({ method: 'GET', url: `/api/v1/control/evidence/cei_${hex}` })).statusCode,
+    ).toBe(503);
+    const missingRepo = await createApp({
+      config: baseConfig(),
+      runtime: Object.assign(createRuntime(baseConfig()), {
+        controlCampaignReports: {
+          get: async () => undefined,
+          findByBehaviorEventId: async () => undefined,
+          findByEvidenceItemId: async () => undefined,
+        },
+      }),
+      logger: false,
+    });
+    apps.push(missingRepo);
+    expect(
+      (
+        await missingRepo.inject({
+          method: 'POST',
+          url: '/api/v1/forensics/cases',
+          payload: { campaignId: `cc_${hex}` },
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (
+        await missingRepo.inject({
+          method: 'GET',
+          url: `/api/v1/control/events/be_${hex}`,
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (
+        await missingRepo.inject({
+          method: 'GET',
+          url: `/api/v1/control/evidence/cei_${hex}`,
+        })
+      ).statusCode,
+    ).toBe(404);
   });
 });

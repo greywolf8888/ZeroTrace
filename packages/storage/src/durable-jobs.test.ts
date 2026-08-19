@@ -215,4 +215,11 @@ describe('PostgresJobQueue', () => {
     await expect(queue.claim('worker-4')).rejects.toThrow('lease update failed');
     expect(clientQuery).toHaveBeenCalledWith('ROLLBACK');
   });
+
+  it('can construct a real pg pool without querying it', async () => {
+    const queue = new PostgresJobQueue({
+      connectionString: 'postgresql://127.0.0.1:1/zerotrace',
+    });
+    await queue.close();
+  });
 });
