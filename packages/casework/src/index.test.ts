@@ -81,6 +81,8 @@ describe('casework', () => {
       createdAt: '2026-08-19T00:00:00.000Z',
     });
     expect(exported['summary.zh-CN.html']).toContain('链上盘面结构取证案件');
+    expect(exported['evidence.jsonl']).toContain(finding.id);
+    expect(exported['replay.ps1']).toContain('Invoke-RestMethod');
     expect(exported.manifest.files.some((file) => file.name === 'hashes.sha256')).toBe(true);
   });
 });

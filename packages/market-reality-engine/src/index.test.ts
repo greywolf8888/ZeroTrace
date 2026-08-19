@@ -44,6 +44,8 @@ const venue: VenueSnapshot = {
   quoteToken: quote,
   feeBps: '25',
   sellEnabled: true,
+  quoteSettlesInU: true,
+  lpTotalSupplyAtomic: '1000000',
   reserves: { baseAtomic: '1000000', quoteAtomic: '1000000' },
   evidenceIds: [`ev_${'1'.repeat(24)}`],
 };

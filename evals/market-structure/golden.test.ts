@@ -109,6 +109,7 @@ describe('market-structure golden case', () => {
           disclosedTeam: true,
           publicAirdrop: false,
           publicVesting: false,
+          onchainPrivilegeEvidence: true,
         },
       ],
     });
@@ -186,6 +187,7 @@ describe('market-structure golden case', () => {
           quoteToken: { ledger: 'EVM', chainId: 'eip155:56', token: `0x${'d'.repeat(40)}` },
           feeBps: '25',
           sellEnabled: true,
+          quoteSettlesInU: true,
           reserves: { baseAtomic: '1000000', quoteAtomic: '1000000' },
           evidenceIds: [`ev_${'1'.repeat(24)}`],
         },

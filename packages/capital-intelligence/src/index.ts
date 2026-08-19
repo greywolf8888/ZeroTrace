@@ -6,6 +6,7 @@ import {
   type AssetId,
   type CampaignLedgerEntry,
   type CampaignProfitReport,
+  type CapitalAttribution,
   type CapitalIntelligencePayload,
   type ChainPosition,
   type EconomicLot,
@@ -49,19 +50,44 @@ export function createLot(input: LotCreateInput): EconomicLot {
   return lot;
 }
 
-function sortLots(lots: EconomicLot[], policy: LotPolicy): EconomicLot[] {
+function compareNumericSlot(left: string, right: string): number {
+  const a = BigInt(left);
+  const b = BigInt(right);
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function lotUnitCost(lot: EconomicLot): bigint {
+  const original = parseAtomic(lot.originalAmountAtomic, 'original');
+  if (original === 0n) return 0n;
+  const cost = lot.acquisitionCostU.state === 'known' ? BigInt(lot.acquisitionCostU.value) : 0n;
+  return (cost * 10n ** 18n) / original;
+}
+
+function sortLots(
+  lots: EconomicLot[],
+  policy: LotPolicy,
+  sourceLotIds?: readonly string[],
+): EconomicLot[] {
   const copy = [...lots];
-  copy.sort((left, right) => {
-    if (policy === 'LIFO')
-      return right.originPosition.blockOrSlot.localeCompare(left.originPosition.blockOrSlot);
-    if (policy === 'HIFO') {
-      const leftCost =
-        left.acquisitionCostU.state === 'known' ? BigInt(left.acquisitionCostU.value) : 0n;
-      const rightCost =
-        right.acquisitionCostU.state === 'known' ? BigInt(right.acquisitionCostU.value) : 0n;
-      return rightCost === leftCost ? 0 : rightCost > leftCost ? 1 : -1;
+  if (policy === 'ACTUAL_SOURCE') {
+    if (sourceLotIds === undefined || sourceLotIds.length === 0) {
+      throw new Error('ACTUAL_SOURCE requires explicit sourceLotIds; refusing FIFO fallback.');
     }
-    return left.originPosition.blockOrSlot.localeCompare(right.originPosition.blockOrSlot);
+    const order = new Map(sourceLotIds.map((id, index) => [id, index]));
+    return copy
+      .filter((lot) => order.has(lot.id))
+      .sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
+  }
+  copy.sort((left, right) => {
+    if (policy === 'LIFO') {
+      return compareNumericSlot(right.originPosition.blockOrSlot, left.originPosition.blockOrSlot);
+    }
+    if (policy === 'HIFO') {
+      const leftUnit = lotUnitCost(left);
+      const rightUnit = lotUnitCost(right);
+      if (rightUnit !== leftUnit) return rightUnit > leftUnit ? 1 : -1;
+    }
+    return compareNumericSlot(left.originPosition.blockOrSlot, right.originPosition.blockOrSlot);
   });
   return copy;
 }
@@ -74,6 +100,7 @@ export function transferLots(input: {
   policy: LotPolicy;
   position: ChainPosition;
   evidenceIds: readonly string[];
+  sourceLotIds?: readonly string[];
 }): { lots: EconomicLot[]; created: EconomicLot[] } {
   let remaining = parseAtomic(input.amountAtomic, 'amountAtomic');
   const owned = sortLots(
@@ -83,6 +110,7 @@ export function transferLots(input: {
         parseAtomic(lot.remainingAmountAtomic, 'remaining') > 0n,
     ),
     input.policy,
+    input.sourceLotIds,
   );
   const created: EconomicLot[] = [];
   const updated = input.lots.map((lot) => ({ ...lot }));
@@ -217,10 +245,20 @@ export function realizeProfit(input: {
   const net = proceeds + fees - costs - gas;
   let debit = 0n;
   let credit = 0n;
+  let unmatchedCount = 0;
   for (const entry of input.entries) {
-    if (entry.amountU.state !== 'known') continue;
-    debit += BigInt(entry.amountU.value);
-    credit += BigInt(entry.amountU.value);
+    if (entry.internalTransfer) continue;
+    if (entry.amountU.state !== 'known') {
+      unmatchedCount += 1;
+      continue;
+    }
+    const amount = BigInt(entry.amountU.value);
+    if (entry.debit === entry.credit) {
+      unmatchedCount += 1;
+      continue;
+    }
+    debit += amount;
+    credit += amount;
   }
   return {
     campaignId: input.campaignId as CampaignProfitReport['campaignId'],
@@ -241,23 +279,60 @@ export function realizeProfit(input: {
     roi: unknownValue('NOT_QUERIED'),
     ledgerEntries: [...input.entries],
     reconciliation: {
-      balanced: debit === credit,
+      balanced: unmatchedCount === 0 && debit === credit,
       debitSumU: knownValue(debit.toString()),
       creditSumU: knownValue(credit.toString()),
-      unmatchedCount: 0,
+      unmatchedCount,
     },
   };
+}
+
+export interface SwapAttributionLink {
+  sourceEventId: string;
+  destinationEventId: string;
+  fromAsset: AssetId;
+  toAsset: AssetId;
+  amountAtomic: string;
+  amountU: string;
+  txId: string;
+  position: ChainPosition;
+  evidenceIds?: readonly string[];
 }
 
 export function buildCapitalReport(input: {
   lots: readonly EconomicLot[];
   entries: readonly CampaignLedgerEntry[];
   campaignId: string;
+  swapLinks?: readonly SwapAttributionLink[];
 }): CapitalIntelligencePayload {
   void unknownCoverageVector;
+  const attributions: CapitalAttribution[] = (input.swapLinks ?? []).map((link) => ({
+    sourceEventId: link.sourceEventId,
+    destinationEventId: link.destinationEventId,
+    assetPath: [link.fromAsset, link.toAsset],
+    amountU: knownValue(link.amountU),
+    attributionMethod: 'FIFO',
+    lowerBoundU: link.amountU,
+    upperBoundU: link.amountU,
+    path: [
+      {
+        from: link.sourceEventId,
+        to: link.destinationEventId,
+        asset: link.toAsset,
+        amountAtomic: link.amountAtomic,
+        amountU: knownValue(link.amountU),
+        txId: link.txId,
+        position: link.position,
+        capacityAtomic: link.amountAtomic,
+        evidenceIds: [...(link.evidenceIds ?? [])],
+      },
+    ],
+    boundary: 'NONE',
+    evidenceIds: [...(link.evidenceIds ?? [])],
+  }));
   return {
     lots: [...input.lots],
-    attributions: [],
+    attributions,
     profit: realizeProfit({ campaignId: input.campaignId, entries: input.entries }),
   };
 }

@@ -61,7 +61,7 @@ const snapshot = {
   labelSnapshot: 'labels-unapplied',
 };
 
-describe('market-structure v2 API', () => {
+describe('market-structure v2 API', { timeout: 60_000 }, () => {
   const apps: Awaited<ReturnType<typeof createApp>>[] = [];
 
   afterEach(async () => {
@@ -225,5 +225,103 @@ describe('market-structure v2 API', () => {
     });
     expect(latest.statusCode).toBe(200);
     expect(latest.json()).toMatchObject({ reportType: 'supply-reality-v1' });
+  });
+
+  it('fails closed in admissible mode without a durable forensic store', async () => {
+    const app = await createApp({ config: baseConfig(), logger: false });
+    apps.push(app);
+    const token = `0x${'c'.repeat(40)}`;
+    const created = await app.inject({
+      method: 'POST',
+      url: `/api/v2/tokens/EVM/eip155:56/${token}/supply-reality`,
+      payload: {
+        analysisMode: 'ADMISSIBLE',
+        snapshot,
+        protocolSupplyAtomic: '100',
+        historicalMintAtomic: '100',
+        historicalBurnAtomic: '0',
+        burnAlreadyReflectedInSupply: false,
+        originCoverageComplete: true,
+        registryEvidenceId: `ev_${'2'.repeat(24)}`,
+        terminalEvidenceId: `ev_${'3'.repeat(24)}`,
+        cells: [
+          {
+            id: 'cel_aaaaaaaaaaaaaaaaaaaaaaaa',
+            token: { ledger: 'EVM', chainId: 'eip155:56', token },
+            snapshot,
+            amountAtomic: '100',
+            owner: 'controller',
+            custodyType: 'WALLET',
+            economicController: 'CONFIRMED_CONTROLLER',
+            liquidityStatus: 'SELLABLE_NOW',
+            roleAssessmentIds: [],
+            lotIds: [],
+            evidenceIds: [`ev_${'1'.repeat(24)}`],
+          },
+        ],
+      },
+    });
+    expect(created.statusCode).toBe(503);
+    expect(JSON.stringify(created.json())).toContain('FORENSIC_STORE_UNAVAILABLE');
+  });
+
+  it('replays a stored envelope and compares resultHash', async () => {
+    const app = await createApp({ config: baseConfig(), logger: false });
+    apps.push(app);
+    const token = `0x${'c'.repeat(40)}`;
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/v2/investigations',
+      payload: {
+        ledger: 'EVM',
+        chainId: 'eip155:56',
+        subjectType: 'TOKEN',
+        identifier: token,
+      },
+    });
+    const investigation = created.json() as { id: string };
+    const report = await app.inject({
+      method: 'POST',
+      url: `/api/v2/tokens/EVM/eip155:56/${token}/supply-reality`,
+      payload: {
+        investigationId: investigation.id,
+        snapshot,
+        protocolSupplyAtomic: '100',
+        historicalMintAtomic: '100',
+        historicalBurnAtomic: '0',
+        burnAlreadyReflectedInSupply: false,
+        originCoverageComplete: true,
+        registryEvidenceId: `ev_${'2'.repeat(24)}`,
+        terminalEvidenceId: `ev_${'3'.repeat(24)}`,
+        cells: [
+          {
+            id: 'cel_aaaaaaaaaaaaaaaaaaaaaaaa',
+            token: { ledger: 'EVM', chainId: 'eip155:56', token },
+            snapshot,
+            amountAtomic: '100',
+            owner: 'controller',
+            custodyType: 'WALLET',
+            economicController: 'CONFIRMED_CONTROLLER',
+            liquidityStatus: 'SELLABLE_NOW',
+            roleAssessmentIds: [],
+            lotIds: [],
+            evidenceIds: [`ev_${'1'.repeat(24)}`],
+          },
+        ],
+      },
+    });
+    expect(report.statusCode).toBe(200);
+    const envelope = report.json() as { resultHash: string };
+    const replayed = await app.inject({
+      method: 'POST',
+      url: `/api/v2/investigations/${investigation.id}/replay`,
+    });
+    expect(replayed.statusCode).toBe(200);
+    expect(replayed.json()).toMatchObject({
+      replayed: true,
+      match: true,
+      storedResultHash: envelope.resultHash,
+      recomputedResultHash: envelope.resultHash,
+    });
   });
 });

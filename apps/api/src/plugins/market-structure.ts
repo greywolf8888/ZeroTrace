@@ -1,6 +1,9 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
-import { buildCampaignIntelligence } from '@zerotrace/campaign-intelligence';
+import {
+  buildCampaignIntelligence,
+  type TacticObservation,
+} from '@zerotrace/campaign-intelligence';
 import { buildCapitalReport } from '@zerotrace/capital-intelligence';
 import { exportCasePackage, recordAnalystDecision } from '@zerotrace/casework';
 import {
@@ -30,13 +33,17 @@ import {
   type VenueSnapshot,
 } from '@zerotrace/schemas';
 import { materializeSupplyReality } from '@zerotrace/supply-reality-engine';
-import type { PostgresForensicReportRepository } from '@zerotrace/storage';
 
 import type { AppRuntime } from '../runtime.js';
 
+export interface ForensicReportStore {
+  put(envelope: ReportEnvelope): Promise<ReportEnvelope>;
+  latest(reportType: string, chainId: string, token: string): Promise<ReportEnvelope | undefined>;
+}
+
 export interface MarketStructurePluginOptions {
   runtime: AppRuntime;
-  forensicReports?: PostgresForensicReportRepository;
+  forensicReports?: ForensicReportStore;
 }
 
 function errorBody(code: string, message: string) {
@@ -47,25 +54,87 @@ function snapshotFromBody(snapshot: AnalysisSnapshot): AnalysisSnapshot {
   return snapshot;
 }
 
+function isAdmissibleMode(mode: unknown): boolean {
+  return mode === 'ADMISSIBLE' || mode === 'FORENSIC';
+}
+
+function analysisModeOf(request: FastifyRequest): unknown {
+  const body = request.body as { analysisMode?: unknown } | undefined;
+  const query = request.query as { analysisMode?: unknown } | undefined;
+  return body?.analysisMode ?? query?.analysisMode;
+}
+
+function replayEnvelope(stored: ReportEnvelope): {
+  storedResultHash: string;
+  recomputedResultHash: string;
+  match: boolean;
+  envelope: ReportEnvelope;
+} {
+  const { id: _id, resultHash: _resultHash, ...rest } = stored;
+  void _id;
+  void _resultHash;
+  const recomputed = buildReportEnvelope(rest);
+  return {
+    storedResultHash: stored.resultHash,
+    recomputedResultHash: recomputed.resultHash,
+    match: stored.resultHash === recomputed.resultHash,
+    envelope: recomputed,
+  };
+}
+
 export async function registerMarketStructureV2(
   app: FastifyInstance,
   options: MarketStructurePluginOptions,
 ): Promise<void> {
   const investigations = new Map<string, Record<string, unknown>>();
   const envelopes = new Map<string, ReportEnvelope>();
+  const envelopesByInvestigation = new Map<string, ReportEnvelope[]>();
 
   const envelopeKey = (reportType: string, chainId: string, token: string): string =>
     `${reportType}:${chainId}:${token}`;
 
-  const rememberEnvelope = async (envelope: ReportEnvelope): Promise<ReportEnvelope> => {
-    envelopes.set(
-      envelopeKey(envelope.reportType, envelope.subject.chainId, envelope.subject.identifier),
-      envelope,
-    );
+  const rememberEnvelope = async (
+    envelope: ReportEnvelope,
+    request: FastifyRequest,
+    reply: FastifyReply,
+    investigationId?: string,
+  ): Promise<ReportEnvelope | FastifyReply> => {
+    const admissible = isAdmissibleMode(analysisModeOf(request));
+    if (admissible && options.forensicReports === undefined) {
+      return reply
+        .code(503)
+        .send(errorBody('FORENSIC_STORE_UNAVAILABLE', '取证模式禁止内存降级，PostgreSQL 不可用。'));
+    }
     try {
-      await options.forensicReports?.put(envelope);
+      if (options.forensicReports !== undefined) {
+        await options.forensicReports.put(envelope);
+      } else {
+        envelopes.set(
+          envelopeKey(envelope.reportType, envelope.subject.chainId, envelope.subject.identifier),
+          envelope,
+        );
+      }
     } catch (error) {
+      if (admissible) {
+        return reply
+          .code(503)
+          .send(
+            errorBody(
+              'FORENSIC_STORE_UNAVAILABLE',
+              error instanceof Error ? error.message : '取证报告持久化失败。',
+            ),
+          );
+      }
       app.log.warn({ err: error }, 'forensic report persist skipped');
+      envelopes.set(
+        envelopeKey(envelope.reportType, envelope.subject.chainId, envelope.subject.identifier),
+        envelope,
+      );
+    }
+    if (investigationId !== undefined) {
+      const list = envelopesByInvestigation.get(investigationId) ?? [];
+      list.push(envelope);
+      envelopesByInvestigation.set(investigationId, list);
     }
     return envelope;
   };
@@ -123,11 +192,37 @@ export async function registerMarketStructureV2(
   app.post(
     '/api/v2/investigations/:investigationId/replay',
     { schema: { tags: ['analysis'] } },
-    async (request) => ({
-      investigationId: (request.params as { investigationId: string }).investigationId,
-      replayed: true,
-      readOnly: true,
-    }),
+    async (request, reply) => {
+      const params = request.params as { investigationId: string };
+      InvestigationIdSchema.parse(params.investigationId);
+      const record = investigations.get(params.investigationId) as
+        | {
+            subject?: { chainId?: string; identifier?: string };
+          }
+        | undefined;
+      const linked = envelopesByInvestigation.get(params.investigationId) ?? [];
+      const latest =
+        linked.at(-1) ??
+        (record?.subject?.chainId !== undefined && record.subject.identifier !== undefined
+          ? await loadEnvelope(
+              'supply-reality-v1',
+              record.subject.chainId,
+              record.subject.identifier,
+            )
+          : undefined);
+      if (latest === undefined) {
+        return reply.code(404).send(errorBody('NOT_FOUND', '没有可回放的取证信封。'));
+      }
+      const replayed = replayEnvelope(latest);
+      return {
+        investigationId: params.investigationId,
+        replayed: true,
+        readOnly: true,
+        storedResultHash: replayed.storedResultHash,
+        recomputedResultHash: replayed.recomputedResultHash,
+        match: replayed.match,
+      };
+    },
   );
 
   app.post(
@@ -149,6 +244,7 @@ export async function registerMarketStructureV2(
         cells: SupplyCell[];
         registryEvidenceId: string;
         terminalEvidenceId: string;
+        investigationId?: string;
       };
       const payload = materializeSupplyReality({
         token: { ledger: params.ledger, chainId: params.chainId, token: params.token },
@@ -193,7 +289,9 @@ export async function registerMarketStructureV2(
         },
         payload,
       });
-      return reply.send(await rememberEnvelope(envelope));
+      const persisted = await rememberEnvelope(envelope, request, reply, body.investigationId);
+      if (reply.sent) return persisted;
+      return reply.send(persisted);
     },
   );
 
@@ -212,7 +310,7 @@ export async function registerMarketStructureV2(
   app.post(
     '/api/v2/tokens/:ledger/:chainId/:token/roles',
     { schema: { tags: ['analysis'] } },
-    async (request) => {
+    async (request, reply) => {
       const params = request.params as {
         ledger: RoleCandidateInput['subject']['ledger'];
         chainId: string;
@@ -229,7 +327,7 @@ export async function registerMarketStructureV2(
         marketWideExitU: string;
       };
       const payload = assessRoles(body);
-      return rememberEnvelope(
+      const persisted = await rememberEnvelope(
         buildReportEnvelope({
           schemaVersion: 'report-envelope-v1',
           reportType: 'identity-roles-v1',
@@ -261,7 +359,11 @@ export async function registerMarketStructureV2(
           },
           payload,
         }),
+        request,
+        reply,
       );
+      if (reply.sent) return persisted;
+      return persisted;
     },
   );
 
@@ -281,6 +383,7 @@ export async function registerMarketStructureV2(
         windows: CampaignFeatureWindow[];
         originComplete: boolean;
         controllerEntityIds: string[];
+        tactics?: TacticObservation[];
       };
       const payload = buildCampaignIntelligence({
         token: { ledger: params.ledger, chainId: params.chainId, token: params.token },
@@ -290,7 +393,7 @@ export async function registerMarketStructureV2(
         windows: body.windows,
         originComplete: body.originComplete,
         controllerEntityIds: body.controllerEntityIds,
-        tactics: [],
+        tactics: body.tactics ?? [],
       });
       return payload;
     },
@@ -304,11 +407,13 @@ export async function registerMarketStructureV2(
       const body = request.body as {
         lots: Parameters<typeof buildCapitalReport>[0]['lots'];
         entries: Parameters<typeof buildCapitalReport>[0]['entries'];
+        swapLinks?: Parameters<typeof buildCapitalReport>[0]['swapLinks'];
       };
       return buildCapitalReport({
         lots: [...body.lots],
         entries: [...body.entries],
         campaignId: params.campaignId,
+        ...(body.swapLinks === undefined ? {} : { swapLinks: body.swapLinks }),
       });
     },
   );

@@ -153,7 +153,7 @@ import {
   querySolanaTransaction,
 } from './ledger-query.js';
 import { createRuntime, type AppRuntime } from './runtime.js';
-import { registerMarketStructureV2 } from './plugins/market-structure.js';
+import { registerMarketStructureV2, type ForensicReportStore } from './plugins/market-structure.js';
 
 const SearchQuerySchema = z.object({
   q: z.string().trim().min(1).max(512),
@@ -1459,6 +1459,7 @@ export interface CreateAppOptions {
   config: AppConfig;
   runtime?: AppRuntime;
   logger?: boolean;
+  forensicReports?: ForensicReportStore;
 }
 
 class CorsOriginError extends Error {
@@ -7770,7 +7771,11 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
 
   await registerMarketStructureV2(app, {
     runtime,
-    ...(runtime.forensicReports === undefined ? {} : { forensicReports: runtime.forensicReports }),
+    ...(options.forensicReports !== undefined
+      ? { forensicReports: options.forensicReports }
+      : runtime.forensicReports === undefined
+        ? {}
+        : { forensicReports: runtime.forensicReports }),
   });
 
   return app;

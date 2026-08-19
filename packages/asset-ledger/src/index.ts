@@ -96,12 +96,22 @@ export function assertNoUnlinkedSwapIncome(events: readonly AssetLedgerEvent[]):
   }
 }
 
+function sameAssetIdentity(left: AssetId, right: AssetId): boolean {
+  return left.ledger === right.ledger && left.token.toLowerCase() === right.token.toLowerCase();
+}
+
 export function matchBridgePair(
   deposit: AssetLedgerEvent,
   release: AssetLedgerEvent,
 ): { deposit: AssetLedgerEvent; release: AssetLedgerEvent } {
   if (deposit.kind !== 'BRIDGE_DEPOSIT' || release.kind !== 'BRIDGE_RELEASE') {
     throw new Error('Bridge match requires deposit and release events.');
+  }
+  if (
+    deposit.amountAtomic !== release.amountAtomic ||
+    !sameAssetIdentity(deposit.asset, release.asset)
+  ) {
+    throw new Error('Bridge match requires matching amount and asset identity.');
   }
   return {
     deposit: { ...deposit, matchedBridgeEventId: release.id },
@@ -112,11 +122,18 @@ export function matchBridgePair(
 export function netAtomicFlow(
   events: readonly AssetLedgerEvent[],
   owner: string,
-  token: string,
+  asset: AssetId,
 ): bigint {
   let net = 0n;
   for (const event of events) {
-    if (event.failed || event.asset.token !== token) continue;
+    if (event.failed) continue;
+    if (
+      event.asset.ledger !== asset.ledger ||
+      event.asset.chainId !== asset.chainId ||
+      event.asset.token.toLowerCase() !== asset.token.toLowerCase()
+    ) {
+      continue;
+    }
     const amount = parseAtomic(event.amountAtomic, 'amountAtomic');
     if (event.to === owner) net += amount;
     if (event.from === owner) net -= amount;

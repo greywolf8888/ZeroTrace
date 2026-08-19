@@ -74,6 +74,6 @@ describe('asset ledger', () => {
       event({ id: 'a', kind: 'TRANSFER', from: 'x', to: 'owner', amountAtomic: '5' }),
       event({ id: 'b', kind: 'TRANSFER', from: 'owner', to: 'y', amountAtomic: '2' }),
     ];
-    expect(netAtomicFlow(events, 'owner', asset.token).toString()).toBe('3');
+    expect(netAtomicFlow(events, 'owner', asset).toString()).toBe('3');
   });
 });

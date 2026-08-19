@@ -57,16 +57,36 @@ export function exportCasePackage(input: CaseExportInput): CaseExportFiles {
     caseId,
     investigationId: input.investigationId,
     findingIds: input.findings.map((item) => item.id),
+    evidenceIds: [
+      ...new Set(input.findings.flatMap((item) => item.evidenceFor.map((ref) => ref.id))),
+    ].sort(),
     createdAt: input.createdAt,
   });
   const findingsJsonl = input.findings.map((item) => canonicalJson(item)).join('\n');
-  const evidenceIds = [
-    ...new Set(input.findings.flatMap((item) => item.evidenceFor.map((ref) => ref.id))),
-  ].sort();
-  const evidenceJsonl = evidenceIds.map((id) => canonicalJson({ id })).join('\n');
+  const evidenceJsonl = input.findings
+    .flatMap((finding) =>
+      finding.evidenceFor.map((ref) =>
+        canonicalJson({
+          id: ref.id,
+          findingId: finding.id,
+          resultHash: finding.resultHash,
+          snapshot: finding.snapshot,
+          familyKind: ref.familyKind,
+          summary: ref.summary,
+        }),
+      ),
+    )
+    .join('\n');
   const limitations = `# 限制\n\n${input.limitations.map((item) => `- ${item}`).join('\n')}\n`;
   const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"/><title>案件 ${caseId}</title></head><body><h1>链上盘面结构取证案件</h1><p>调查 ${input.investigationId}</p><p>发现 ${input.findings.length} 项，均绑定快照与证据。</p></body></html>`;
-  const replay = `param([string]$InvestigationId = '${input.investigationId}')\nWrite-Host "回放调查 $InvestigationId — 只读，不广播交易"\n`;
+  const replay = `param([string]$InvestigationId = '${input.investigationId}', [string]$ApiBase = 'http://127.0.0.1:8080')
+$uri = "$ApiBase/api/v2/investigations/$InvestigationId/replay"
+$response = Invoke-RestMethod -Method POST -Uri $uri
+if ($null -eq $response.recomputedResultHash -or $response.match -ne $true) {
+  throw "Replay hash mismatch for $InvestigationId"
+}
+Write-Host "回放调查 $InvestigationId 只读完成，resultHash=$($response.recomputedResultHash)"
+`;
   const files = {
     'case.json': caseJson,
     'summary.zh-CN.html': html,

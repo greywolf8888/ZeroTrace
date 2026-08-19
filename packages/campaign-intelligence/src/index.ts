@@ -22,7 +22,21 @@ export const CAMPAIGN_INTELLIGENCE_MODEL_VERSION = 'campaign-intelligence-v1.0.0
 
 export interface FeatureSeriesPoint {
   position: ChainPosition;
-  value: number;
+  value: number | string;
+}
+
+function asSafeNumbers(series: readonly FeatureSeriesPoint[]): number[] {
+  const ints = series.map((point) =>
+    BigInt(typeof point.value === 'string' ? point.value : Math.trunc(point.value)),
+  );
+  let max = 0n;
+  for (const value of ints) {
+    const magnitude = value < 0n ? -value : value;
+    if (magnitude > max) max = magnitude;
+  }
+  let scale = 1n;
+  while (max / scale > BigInt(Number.MAX_SAFE_INTEGER)) scale *= 10n;
+  return ints.map((value) => Number(value / scale));
 }
 
 export function detectChangePoints(
@@ -30,7 +44,7 @@ export function detectChangePoints(
   penalty = 3,
 ): FeatureSeriesPoint[] {
   if (series.length < 4) return [];
-  const values = series.map((point) => point.value);
+  const values = asSafeNumbers(series);
   const n = values.length;
   const prefix = new Array<number>(n + 1).fill(0);
   const prefixSq = new Array<number>(n + 1).fill(0);
@@ -122,31 +136,43 @@ export function buildCampaignIntelligence(input: CampaignBuildInput): CampaignIn
   }
   const series = input.windows.map((window) => ({
     position: window.start,
-    value: Number(window.controllerNetToken),
+    value: window.controllerNetToken,
   }));
   const changePoints = detectChangePoints(series);
+  const changePointScores = asSafeNumbers(changePoints);
   const campaigns: MarketControlCampaign[] = [];
+  const firstStart = input.windows[0]?.start;
+  const lastEnd = input.windows.at(-1)?.end;
   const boundaries =
     changePoints.length === 0
-      ? [{ start: input.windows[0]?.start, end: input.windows.at(-1)?.end }]
-      : changePoints.map((point, index) => ({
-          start: point.position,
-          end: changePoints[index + 1]?.position ?? input.windows.at(-1)?.end,
-        }));
+      ? [{ start: firstStart, end: lastEnd }]
+      : [firstStart, ...changePoints.map((point) => point.position)].map(
+          (start, index, starts) => ({
+            start,
+            end: index + 1 < starts.length ? starts[index + 1] : lastEnd,
+          }),
+        );
 
   for (const [index, boundary] of boundaries.entries()) {
     const start = boundary.start;
     const end = boundary.end;
     if (start === undefined || end === undefined) continue;
-    const windowSlice = input.windows.filter(
-      (item) => BigInt(item.start.blockOrSlot) >= BigInt(start.blockOrSlot),
-    );
+    const startKey = BigInt(start.blockOrSlot);
+    const endKey = BigInt(end.blockOrSlot);
+    if (endKey < startKey) continue;
+    const lastBoundary = index === boundaries.length - 1;
+    const windowSlice = input.windows.filter((item) => {
+      const at = BigInt(item.start.blockOrSlot);
+      if (at < startKey) return false;
+      return lastBoundary ? at <= endKey : at < endKey;
+    });
+    if (windowSlice.length === 0) continue;
     const evidenceIds = [
       ...new Set(windowSlice.flatMap((item) => [...item.evidenceIds, input.terminalEvidenceId])),
     ].sort();
     const finding = buildForensicFinding({
       schemaVersion: 'forensic-finding-v1',
-      assertionClass: 'DETERMINISTIC_DERIVATION',
+      assertionClass: 'MODEL_HYPOTHESIS',
       subject: {
         ledger: input.token.ledger,
         chainId: input.token.chainId,
@@ -204,9 +230,9 @@ export function buildCampaignIntelligence(input: CampaignBuildInput): CampaignIn
           changePoints.length > 0
             ? ['change-point', 'feature-window']
             : ['single-observation-window'],
-        changePointCandidates: changePoints.map((point) => ({
+        changePointCandidates: changePoints.map((point, pointIndex) => ({
           position: point.position,
-          score: point.value,
+          score: changePointScores[pointIndex] ?? 0,
           evidenceIds: [input.terminalEvidenceId],
         })),
       },
@@ -297,6 +323,11 @@ export function buildCampaignIntelligence(input: CampaignBuildInput): CampaignIn
       impactQuoteU: unknownValue('NOT_QUERIED'),
     };
   });
+
+  const tacticFindingIds = tactics.map((item) => item.finding.id);
+  for (const campaign of campaigns) {
+    campaign.tacticFindingIds.push(...tacticFindingIds);
+  }
 
   return {
     campaigns,

@@ -38,6 +38,8 @@ export interface RoleCandidateInput {
   disclosedTeam: boolean;
   publicAirdrop: boolean;
   publicVesting: boolean;
+  onchainPrivilegeEvidence?: boolean;
+  entityId?: string;
 }
 
 export interface IdentityAssessmentInput {
@@ -104,14 +106,21 @@ export function assessRoles(input: IdentityAssessmentInput): IdentityRolesReport
   let hiddenUnknown = 0n;
   let retailHolding = 0n;
   let retailExecutable = 0n;
-  let retailEntities = 0;
+  const retailEntityKeys = new Set<string>();
   let rawAddresses = 0;
+  const hiddenLowerExec = 0n;
+  let hiddenScenarioExec = 0n;
+  let hiddenUpperExec = 0n;
+  let hiddenUnknownExec = 0n;
 
   for (const candidate of input.candidates) {
     rawAddresses += 1;
     const amount = BigInt(candidate.amountAtomic);
     const executable = BigInt(candidate.executableAtomic);
     let role = candidate.proposedRole;
+    if (role === 'CONFIRMED_ONCHAIN_CONTROLLER' && candidate.onchainPrivilegeEvidence !== true) {
+      role = candidate.disclosedTeam ? 'DISCLOSED_TEAM_OR_TREASURY' : 'UNKNOWN';
+    }
     if (candidate.serviceHub) {
       role = role === 'CEX_CUSTODY' || role === 'BRIDGE_CUSTODY' ? role : 'ROUTER_OR_SERVICE';
       serviceHubs.push(candidate.subject);
@@ -128,15 +137,18 @@ export function assessRoles(input: IdentityAssessmentInput): IdentityRolesReport
     if (role === 'UNKNOWN') {
       unattributed += 1;
       hiddenUnknown += amount;
+      hiddenUnknownExec += executable;
     }
     if (role === 'INDEPENDENT_NATURAL_TRADER') {
-      retailEntities += 1;
+      retailEntityKeys.add(candidate.entityId ?? candidate.subject.identifier);
       retailHolding += amount;
       retailExecutable += executable;
     }
     if (role === 'SUSPECTED_HIDDEN_AFFILIATE') {
       hiddenScenario += amount;
       hiddenUpper += amount;
+      hiddenScenarioExec += executable;
+      hiddenUpperExec += executable;
     }
     if (role === 'CONFIRMED_ONCHAIN_CONTROLLER' || role === 'DISCLOSED_TEAM_OR_TREASURY') {
       hiddenLower += 0n;
@@ -156,7 +168,10 @@ export function assessRoles(input: IdentityAssessmentInput): IdentityRolesReport
 
     const finding = buildForensicFinding({
       schemaVersion: 'forensic-finding-v1',
-      assertionClass: role === 'CONFIRMED_ONCHAIN_CONTROLLER' ? 'ONCHAIN_FACT' : 'MODEL_HYPOTHESIS',
+      assertionClass:
+        role === 'CONFIRMED_ONCHAIN_CONTROLLER' && candidate.onchainPrivilegeEvidence === true
+          ? 'ONCHAIN_FACT'
+          : 'MODEL_HYPOTHESIS',
       subject: candidate.subject,
       findingType: `role:${role}`,
       payload: candidate.features,
@@ -238,10 +253,10 @@ export function assessRoles(input: IdentityAssessmentInput): IdentityRolesReport
       unknown: hiddenUnknown.toString(),
     },
     ofExecutableSellable: {
-      lower: hiddenLower.toString(),
-      scenario: hiddenScenario.toString(),
-      upper: hiddenUpper.toString(),
-      unknown: hiddenUnknown.toString(),
+      lower: hiddenLowerExec.toString(),
+      scenario: hiddenScenarioExec.toString(),
+      upper: hiddenUpperExec.toString(),
+      unknown: hiddenUnknownExec.toString(),
     },
     ofNonServiceNonPool: {
       lower: '0',
@@ -259,8 +274,8 @@ export function assessRoles(input: IdentityAssessmentInput): IdentityRolesReport
 
   const retail: RetailMetrics = {
     rawAddressCount: rawAddresses,
-    independentEntityCandidates: retailEntities,
-    effectiveRetailCount: retailEntities,
+    independentEntityCandidates: retailEntityKeys.size,
+    effectiveRetailCount: retailEntityKeys.size,
     currentHoldingAtomic: retailHolding.toString(),
     executableHoldingAtomic: retailExecutable.toString(),
     netOrganicCapitalU: unknownValue('NOT_QUERIED'),
