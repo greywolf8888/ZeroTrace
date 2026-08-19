@@ -450,5 +450,8 @@ describe('market-structure v2 API', { timeout: 60_000 }, () => {
         })
       ).statusCode,
     ).toBe(404);
+    expect((await missingRepo.inject({ method: 'GET', url: '/api/v1/assets' })).statusCode).toBe(
+      501,
+    );
   });
 });

@@ -5,6 +5,9 @@ import { ZodError } from 'zod';
 import { ProviderError } from '@zerotrace/chain-adapters';
 import {
   AgeInvestigationGraphProjectionError,
+  ControlCampaignReportStorageError,
+  EntityInvestigationGraphStorageError,
+  EntityInvestigationGraphTimelineStorageError,
   ForensicReportStorageError,
   FundingSettlementReportStorageError,
   LabelIntelligenceStorageError,
@@ -168,6 +171,59 @@ describe('API error handler', () => {
         }),
         status: 503,
         code: 'SEMANTIC_CHECKPOINT_UNAVAILABLE',
+      },
+      {
+        error: new EntityInvestigationGraphStorageError(
+          'ENTITY_INVESTIGATION_GRAPH_INVALID',
+          'shape',
+        ),
+        status: 400,
+        code: 'ENTITY_INVESTIGATION_GRAPH_INVALID',
+      },
+      {
+        error: new EntityInvestigationGraphStorageError(
+          'ENTITY_INVESTIGATION_GRAPH_UNAVAILABLE',
+          'down',
+          { retryable: true },
+        ),
+        status: 503,
+        code: 'ENTITY_INVESTIGATION_GRAPH_UNAVAILABLE',
+      },
+      {
+        error: new EntityInvestigationGraphTimelineStorageError(
+          'ENTITY_INVESTIGATION_GRAPH_TIMELINE_INVALID',
+          'shape',
+        ),
+        status: 400,
+        code: 'ENTITY_INVESTIGATION_GRAPH_TIMELINE_INVALID',
+      },
+      {
+        error: new EntityInvestigationGraphTimelineStorageError(
+          'ENTITY_INVESTIGATION_GRAPH_TIMELINE_UNAVAILABLE',
+          'down',
+          { retryable: true },
+        ),
+        status: 503,
+        code: 'ENTITY_INVESTIGATION_GRAPH_TIMELINE_UNAVAILABLE',
+      },
+      {
+        error: new ControlCampaignReportStorageError('CONTROL_CAMPAIGN_REPORT_INVALID', 'bundle'),
+        status: 400,
+        code: 'CONTROL_CAMPAIGN_REPORT_INVALID',
+      },
+      {
+        error: new ControlCampaignReportStorageError('CONTROL_CAMPAIGN_REPORT_CONFLICT', 'dup'),
+        status: 409,
+        code: 'CONTROL_CAMPAIGN_REPORT_CONFLICT',
+      },
+      {
+        error: new ControlCampaignReportStorageError(
+          'CONTROL_CAMPAIGN_REPORT_UNAVAILABLE',
+          'down',
+          { retryable: true },
+        ),
+        status: 503,
+        code: 'CONTROL_CAMPAIGN_REPORT_UNAVAILABLE',
       },
       { error: new Error('boom'), status: 500, code: 'INTERNAL_ERROR' },
       { error: 'string-throw', status: 500, code: 'INTERNAL_ERROR' },
