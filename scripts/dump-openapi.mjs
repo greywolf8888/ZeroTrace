@@ -16,7 +16,9 @@ function walk(dir, files = []) {
 const paths = new Map();
 for (const file of walk(join(root, 'apps/api/src'))) {
   const text = readFileSync(file, 'utf8');
-  for (const match of text.matchAll(/\bapp\.(get|post|put|patch|delete)\(\s*['"`]([^'"`]+)['"`]/g)) {
+  for (const match of text.matchAll(
+    /\bapp\.(get|post|put|patch|delete)\(\s*['"`]([^'"`]+)['"`]/g,
+  )) {
     const method = match[1].toUpperCase();
     const path = match[2];
     const key = `${method} ${path}`;

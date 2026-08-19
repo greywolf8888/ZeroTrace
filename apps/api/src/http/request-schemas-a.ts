@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { FLAP_HISTORY_DEFAULT_CHUNK_SIZE, FLAP_HISTORY_MAX_CHUNKS, FLAP_HISTORY_MAX_RANGE_BLOCKS, FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE, FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE, FLAP_TOKEN_ORIGIN_MAX_CHUNKS } from '@zerotrace/platform-adapters';
+import {
+  FLAP_HISTORY_DEFAULT_CHUNK_SIZE,
+  FLAP_HISTORY_MAX_CHUNKS,
+  FLAP_HISTORY_MAX_RANGE_BLOCKS,
+  FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
+  FLAP_TOKEN_ORIGIN_MAX_CHUNK_SIZE,
+  FLAP_TOKEN_ORIGIN_MAX_CHUNKS,
+} from '@zerotrace/platform-adapters';
 
 export const SearchQuerySchema = z.object({
   q: z.string().trim().min(1).max(512),
@@ -620,4 +627,3 @@ export const ClaimDeclarationParseRequestSchema = z
       });
     }
   });
-

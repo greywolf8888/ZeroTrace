@@ -2,12 +2,27 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { hashPayload } from '@zerotrace/evidence';
 import { ForensicCaseBundleError, caseIdForCampaign } from '@zerotrace/forensic-evidence';
 import type { Evidence } from '@zerotrace/schemas';
-import { ControlCampaignParamsSchema, ForensicCaseParamsSchema, ForensicCaseCreateSchema, ControlCampaignEvidenceItemParamsSchema, ControlCampaignEventParamsSchema, ControlCampaignGraphQuerySchema } from '../http/request-schemas.js';
-import { errorResponse, capabilityNotImplemented, forensicCaseBundleForCampaign, forensicCaseBundleError } from '../http/helpers.js';
+import {
+  ControlCampaignParamsSchema,
+  ForensicCaseParamsSchema,
+  ForensicCaseCreateSchema,
+  ControlCampaignEvidenceItemParamsSchema,
+  ControlCampaignEventParamsSchema,
+  ControlCampaignGraphQuerySchema,
+} from '../http/request-schemas.js';
+import {
+  errorResponse,
+  capabilityNotImplemented,
+  forensicCaseBundleForCampaign,
+  forensicCaseBundleError,
+} from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 import { createCampaignHandlers } from './campaign-handlers.js';
 
-export async function registerForensicCaseRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerForensicCaseRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,

@@ -70,7 +70,8 @@ export interface DurableRuntimeStores {
   entityRelationshipReports?: PostgresEntityRelationshipReportRepository | undefined;
   entityRelationshipTimelines?: PostgresEntityRelationshipTimelineRepository | undefined;
   entityInvestigationGraphs?: PostgresEntityInvestigationGraphRepository | undefined;
-  entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository | undefined;
+  entityInvestigationGraphTimelines?:
+    PostgresEntityInvestigationGraphTimelineRepository | undefined;
   controlCampaignReports?: PostgresControlCampaignReportRepository | undefined;
   forensicReports?: PostgresForensicReportRepository | undefined;
   jobQueue?: PostgresJobQueue | undefined;
@@ -105,10 +106,7 @@ export function createDurableStores(config: AppConfig): DurableRuntimeStores {
           : { password: config.clickhousePassword.reveal() }),
       });
     }),
-    checkpoints: optionalStore(
-      postgres,
-      () => new PostgresIngestionCheckpointRepository(pg()),
-    ),
+    checkpoints: optionalStore(postgres, () => new PostgresIngestionCheckpointRepository(pg())),
     semanticCheckpoints: optionalStore(
       postgres,
       () => new PostgresSemanticScanCheckpointRepository(pg()),

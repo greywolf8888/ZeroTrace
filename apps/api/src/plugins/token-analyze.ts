@@ -1,6 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
-import { materializeTokenMarketStructure, originHistoryWithoutReader } from '@zerotrace/forensic-pipeline';
+import {
+  materializeTokenMarketStructure,
+  originHistoryWithoutReader,
+} from '@zerotrace/forensic-pipeline';
 import { FLAP_BSC_MAINNET_DEPLOYMENT, inspectFlapToken } from '@zerotrace/platform-adapters';
 import { TokenAnalyzeRequestSchema, type ReportEnvelope } from '@zerotrace/schemas';
 import { InMemoryJobQueue, type JobQueue } from '@zerotrace/workflow-core';
@@ -49,7 +52,9 @@ export async function registerTokenAnalyze(
         analysisMode: body.analysisMode ?? 'FULL_LIFETIME',
         ...(body.forensicMode === undefined ? {} : { forensicMode: body.forensicMode }),
       });
-      const admissible = options.isAdmissibleMode(parsed.forensicMode ?? options.analysisModeOf(request));
+      const admissible = options.isAdmissibleMode(
+        parsed.forensicMode ?? options.analysisModeOf(request),
+      );
       if (admissible && durableQueue === undefined) {
         return reply
           .code(503)

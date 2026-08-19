@@ -30,7 +30,10 @@ if (!schemaIndex.includes("export * from './market-structure/index.js'")) {
   failures.push('packages/schemas/src/index.ts missing market-structure re-export');
 }
 for (const route of requiredV2) {
-  if (!plugin.includes(route.replace(/\/$/, '')) && !tokenPlugin.includes(route.replace(/\/$/, ''))) {
+  if (
+    !plugin.includes(route.replace(/\/$/, '')) &&
+    !tokenPlugin.includes(route.replace(/\/$/, ''))
+  ) {
     failures.push(`API v2 plugin missing ${route}`);
   }
 }
@@ -42,11 +45,7 @@ if (!client.includes('/api/v2/tokens/') || !client.includes('analyzeToken')) {
 }
 const openapiPaths = Object.keys(openapi.paths ?? {});
 if (openapiPaths.length === 0) failures.push('generated-api/openapi.json has no paths');
-const requiredClientPaths = [
-  '/health',
-  '/api/v2/tokens/',
-  '/api/v2/jobs/',
-];
+const requiredClientPaths = ['/health', '/api/v2/tokens/', '/api/v2/jobs/'];
 for (const path of requiredClientPaths) {
   if (!client.includes(path) && !client.includes('analyzeToken')) {
     failures.push(`generated client missing ${path}`);

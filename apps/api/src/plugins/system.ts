@@ -5,7 +5,10 @@ import { LAUNCHPAD_PROTOCOL_REGISTRY, PLATFORM_REGISTRY } from '@zerotrace/platf
 import type { Evidence } from '@zerotrace/schemas';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerSystemRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerSystemRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -455,5 +458,4 @@ export async function registerSystemRoutes(app: FastifyInstance, ctx: AppHttpCon
     launchpadRegistry: LAUNCHPAD_PROTOCOL_REGISTRY,
     gmgnConfigured: config.gmgnConfigured,
   }));
-
 }

@@ -1,13 +1,41 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { auditDiscrepancies, DISCREPANCY_MODEL_VERSION } from '@zerotrace/data-quality';
 import { hashPayload } from '@zerotrace/evidence';
-import { FLAP_BSC_MAINNET_DEPLOYMENT, quoteFlapPancakeV2BuyScenarios, quoteFlapPancakeV2SellScenarios, quoteFlapPensionEntryScenarios, reconcileFlapPancakeV2Market, quoteFlapSell } from '@zerotrace/platform-adapters';
+import {
+  FLAP_BSC_MAINNET_DEPLOYMENT,
+  quoteFlapPancakeV2BuyScenarios,
+  quoteFlapPancakeV2SellScenarios,
+  quoteFlapPensionEntryScenarios,
+  reconcileFlapPancakeV2Market,
+  quoteFlapSell,
+} from '@zerotrace/platform-adapters';
 import { unavailableValue, unknownValue, type Evidence } from '@zerotrace/schemas';
-import { FlapSellQuoteRequestSchema, FlapPancakeV2BuyScenarioRequestSchema, FlapPancakeV2SellScenarioRequestSchema, FlapPancakeV2PensionEntryRequestSchema, FlapPensionEntryReportQuerySchema, FlapPensionEntryReportParamsSchema, FlapPancakeV2ReconciliationRequestSchema, DiscrepancyAuditRequestSchema } from '../http/request-schemas.js';
-import { errorResponse, emptyMetadata, addEvidence, rejectUngroundedAnalysis, addDerivedAnalysisEvidence, missingEvidenceIds, incompatibleEvidenceIds, uniqueEvidenceIds } from '../http/helpers.js';
+import {
+  FlapSellQuoteRequestSchema,
+  FlapPancakeV2BuyScenarioRequestSchema,
+  FlapPancakeV2SellScenarioRequestSchema,
+  FlapPancakeV2PensionEntryRequestSchema,
+  FlapPensionEntryReportQuerySchema,
+  FlapPensionEntryReportParamsSchema,
+  FlapPancakeV2ReconciliationRequestSchema,
+  DiscrepancyAuditRequestSchema,
+} from '../http/request-schemas.js';
+import {
+  errorResponse,
+  emptyMetadata,
+  addEvidence,
+  rejectUngroundedAnalysis,
+  addDerivedAnalysisEvidence,
+  missingEvidenceIds,
+  incompatibleEvidenceIds,
+  uniqueEvidenceIds,
+} from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerRvAndFlapMarketRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerRvAndFlapMarketRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -446,5 +474,4 @@ export async function registerRvAndFlapMarketRoutes(app: FastifyInstance, ctx: A
       };
     },
   );
-
 }

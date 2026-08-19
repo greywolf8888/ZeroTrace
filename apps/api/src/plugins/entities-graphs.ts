@@ -1,13 +1,39 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION, ENTITY_INVESTIGATION_GRAPH_TIMELINE_MODEL_VERSION, buildEntityInvestigationGraph, buildEntityInvestigationGraphTimeline, traverseEntityInvestigationGraph } from '@zerotrace/entity-engine';
+import {
+  ENTITY_INVESTIGATION_GRAPH_MODEL_VERSION,
+  ENTITY_INVESTIGATION_GRAPH_TIMELINE_MODEL_VERSION,
+  buildEntityInvestigationGraph,
+  buildEntityInvestigationGraphTimeline,
+  traverseEntityInvestigationGraph,
+} from '@zerotrace/entity-engine';
 import { hashPayload } from '@zerotrace/evidence';
-import { AgeInvestigationGraphProjectionError, type AgeInvestigationGraphProjectionResult } from '@zerotrace/storage';
-import { EntityInvestigationGraphReportSchema, EntityInvestigationGraphTimelineReportSchema, knownValue, unavailableValue, type Evidence, type KnowledgeValue } from '@zerotrace/schemas';
-import { EntityInvestigationGraphMaterializeSchema, EntityInvestigationGraphQuerySchema, EntityInvestigationGraphParamsSchema, EntityInvestigationGraphTimelineMaterializeSchema, EntityInvestigationGraphTimelineQuerySchema, EntityInvestigationGraphTimelineParamsSchema } from '../http/request-schemas.js';
+import {
+  AgeInvestigationGraphProjectionError,
+  type AgeInvestigationGraphProjectionResult,
+} from '@zerotrace/storage';
+import {
+  EntityInvestigationGraphReportSchema,
+  EntityInvestigationGraphTimelineReportSchema,
+  knownValue,
+  unavailableValue,
+  type Evidence,
+  type KnowledgeValue,
+} from '@zerotrace/schemas';
+import {
+  EntityInvestigationGraphMaterializeSchema,
+  EntityInvestigationGraphQuerySchema,
+  EntityInvestigationGraphParamsSchema,
+  EntityInvestigationGraphTimelineMaterializeSchema,
+  EntityInvestigationGraphTimelineQuerySchema,
+  EntityInvestigationGraphTimelineParamsSchema,
+} from '../http/request-schemas.js';
 import { errorResponse, addDerivedAnalysisEvidence } from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerEntityGraphRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerEntityGraphRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -532,5 +558,4 @@ export async function registerEntityGraphRoutes(app: FastifyInstance, ctx: AppHt
       return { replayed: true, record };
     },
   );
-
 }

@@ -27,7 +27,11 @@ export interface JobQueue {
     maxAttempts?: number;
     payload?: string;
   }): DurableJob | Promise<DurableJob>;
-  claim(workerId: string, now?: Date, leaseMs?: number): DurableJob | undefined | Promise<DurableJob | undefined>;
+  claim(
+    workerId: string,
+    now?: Date,
+    leaseMs?: number,
+  ): DurableJob | undefined | Promise<DurableJob | undefined>;
   succeed(id: string, resultRef: string): DurableJob | Promise<DurableJob>;
   fail(id: string, error: string): DurableJob | Promise<DurableJob>;
   checkpoint(id: string, checkpoint: string): DurableJob | Promise<DurableJob>;

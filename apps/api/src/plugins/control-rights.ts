@@ -1,11 +1,23 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { inspectEvmControlSurface, inspectSolanaControlSurface } from '@zerotrace/platform-adapters';
+import {
+  inspectEvmControlSurface,
+  inspectSolanaControlSurface,
+} from '@zerotrace/platform-adapters';
 import type { Evidence, Ledger } from '@zerotrace/schemas';
-import { ControlSurfaceParamsSchema, ControlSurfaceByIdParamsSchema, ControlSurfaceQuerySchema, ControlSurfaceInspectSchema, ControlSurfaceListQuerySchema } from '../http/request-schemas.js';
+import {
+  ControlSurfaceParamsSchema,
+  ControlSurfaceByIdParamsSchema,
+  ControlSurfaceQuerySchema,
+  ControlSurfaceInspectSchema,
+  ControlSurfaceListQuerySchema,
+} from '../http/request-schemas.js';
 import { errorResponse, addEvidence } from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerControlRightsRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerControlRightsRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -272,5 +284,4 @@ export async function registerControlRightsRoutes(app: FastifyInstance, ctx: App
       return { records: record === undefined ? [] : [record] };
     },
   );
-
 }

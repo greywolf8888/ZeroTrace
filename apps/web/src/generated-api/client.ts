@@ -3149,7 +3149,8 @@ export const api = {
       `/api/v2/tokens/${encodeURIComponent(ledger)}/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}/analyze`,
       { method: 'POST', body: JSON.stringify(body) },
     ),
-  forensicJob: (jobId: string) => requestJson<TokenAnalyzeResponse['job']>(`/api/v2/jobs/${encodeURIComponent(jobId)}`),
+  forensicJob: (jobId: string) =>
+    requestJson<TokenAnalyzeResponse['job']>(`/api/v2/jobs/${encodeURIComponent(jobId)}`),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',

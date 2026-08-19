@@ -1,8 +1,6 @@
 import { z } from 'zod';
 export * from './part-12.js';
-import type {
-  Evidence,
-} from './part-12.js';
+import type { Evidence } from './part-12.js';
 import {
   AnalysisMetadataSchema,
   CoverageRatioSchema,

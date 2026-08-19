@@ -1,8 +1,6 @@
 import { z } from 'zod';
 export * from './part-13.js';
-import type {
-  Evidence,
-} from './part-13.js';
+import type { Evidence } from './part-13.js';
 import {
   AnalysisMetadataSchema,
   AnchorReconciliationResultSchema,
@@ -170,9 +168,12 @@ export const ClaimLiquidityControlSchema = z.enum([
   'UNKNOWN',
 ]);
 
-export const ClaimBpsSchema = UnsignedQuantityStringSchema.refine((value) => BigInt(value) <= 10_000n, {
-  message: 'Basis points may not exceed 10000.',
-});
+export const ClaimBpsSchema = UnsignedQuantityStringSchema.refine(
+  (value) => BigInt(value) <= 10_000n,
+  {
+    message: 'Basis points may not exceed 10000.',
+  },
+);
 
 export const ClaimWindowSchema = z
   .object({ from: IsoDateTimeSchema, to: IsoDateTimeSchema })

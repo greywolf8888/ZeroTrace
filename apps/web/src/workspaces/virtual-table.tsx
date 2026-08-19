@@ -15,7 +15,11 @@ export function VirtualTable({
   const truncated = rows.length > TABLE_ROW_CAP;
   if (rows.length === 0) return <p>{empty}</p>;
   return (
-    <div className="virtual-table" role="region" aria-label={columns.map((item) => item.header).join('、')}>
+    <div
+      className="virtual-table"
+      role="region"
+      aria-label={columns.map((item) => item.header).join('、')}
+    >
       <table>
         <thead>
           <tr>
@@ -36,7 +40,8 @@ export function VirtualTable({
       </table>
       {truncated ? (
         <p>
-          仅渲染前 {TABLE_ROW_CAP} 行，其余 {rows.length - TABLE_ROW_CAP} 行由后端聚合，避免一次装入全部地址。
+          仅渲染前 {TABLE_ROW_CAP} 行，其余 {rows.length - TABLE_ROW_CAP}{' '}
+          行由后端聚合，避免一次装入全部地址。
         </p>
       ) : null}
     </div>

@@ -9,969 +9,727 @@
     "/api/v1/claims/:ledger/:token/pension-candidates/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_claims_ledger_token_pension_candidates_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/pension-candidates/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_claims_ledger_token_pension_candidates_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/pension-candidates": {
       "post": {
         "operationId": "POST__api_v1_claims_ledger_token_pension_candidates",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/burn-candidates": {
       "post": {
         "operationId": "POST__api_v1_claims_ledger_token_burn_candidates",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/burn-promotions/:scanId": {
       "get": {
         "operationId": "GET__api_v1_claims_ledger_token_burn_promotions_scanId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/supply-continuity/:scanId": {
       "get": {
         "operationId": "GET__api_v1_claims_ledger_token_supply_continuity_scanId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/burn-conservation": {
       "post": {
         "operationId": "POST__api_v1_claims_ledger_token_burn_conservation",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/addresses/:address/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_claims_ledger_token_addresses_address_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/addresses/:address/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_claims_ledger_token_addresses_address_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-rights/:ledger/:subject/inspect": {
       "post": {
         "operationId": "POST__api_v1_control_rights_ledger_subject_inspect",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-rights/:ledger/:subject/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_control_rights_ledger_subject_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-rights/:ledger/:subject/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_control_rights_ledger_subject_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-rights": {
       "get": {
         "operationId": "GET__api_v1_control_rights",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/investigation-graphs/materialize": {
       "post": {
         "operationId": "POST__api_v1_entities_investigation_graphs_materialize",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/investigation-graphs/latest": {
       "get": {
         "operationId": "GET__api_v1_entities_investigation_graphs_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/investigation-graphs/:graphId": {
       "get": {
         "operationId": "GET__api_v1_entities_investigation_graphs_graphId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/investigation-graph-timelines/materialize": {
       "post": {
         "operationId": "POST__api_v1_entities_investigation_graph_timelines_materialize",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/investigation-graph-timelines/latest": {
       "get": {
         "operationId": "GET__api_v1_entities_investigation_graph_timelines_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/investigation-graph-timelines/:timelineId": {
       "get": {
         "operationId": "GET__api_v1_entities_investigation_graph_timelines_timelineId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/resolve": {
       "post": {
         "operationId": "POST__api_v1_entities_resolve",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/relationships/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_entities_relationships_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/relationships/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_entities_relationships_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/relationships/timelines/materialize": {
       "post": {
         "operationId": "POST__api_v1_entities_relationships_timelines_materialize",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/relationships/timelines/latest": {
       "get": {
         "operationId": "GET__api_v1_entities_relationships_timelines_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/entities/relationships/timelines/:timelineId": {
       "get": {
         "operationId": "GET__api_v1_entities_relationships_timelines_timelineId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/evidence/:id": {
       "get": {
         "operationId": "GET__api_v1_evidence_id",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/launches/:ledger/:token": {
       "get": {
         "operationId": "GET__api_v1_launches_ledger_token",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/evidence/:id/drilldown": {
       "get": {
         "operationId": "GET__api_v1_evidence_id_drilldown",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/launches/:ledger/:token/events/:transactionHash": {
       "get": {
         "operationId": "GET__api_v1_launches_ledger_token_events_transactionHash",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/launches/:ledger/:token/history": {
       "get": {
         "operationId": "GET__api_v1_launches_ledger_token_history",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/launches/:ledger/:token/history/projections/:scanId": {
       "get": {
         "operationId": "GET__api_v1_launches_ledger_token_history_projections_scanId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/launches/:ledger/:token/history/lifetime/heads/latest": {
       "get": {
         "operationId": "GET__api_v1_launches_ledger_token_history_lifetime_heads_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/launches/:ledger/:token/history/lifetime/materializations/:scanId": {
       "get": {
         "operationId": "GET__api_v1_launches_ledger_token_history_lifetime_materializations_scanId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/launches/:ledger/:token/origin": {
       "get": {
         "operationId": "GET__api_v1_launches_ledger_token_origin",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/forensics/cases": {
       "post": {
         "operationId": "POST__api_v1_forensics_cases",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/forensics/cases/:caseId": {
       "get": {
         "operationId": "GET__api_v1_forensics_cases_caseId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/forensics/cases/:caseId/export": {
       "get": {
         "operationId": "GET__api_v1_forensics_cases_caseId_export",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/campaigns/:campaignId/timeline": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId_timeline",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/campaigns/:campaignId/positions": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId_positions",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/campaigns/:campaignId/wallets": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId_wallets",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/campaigns/:campaignId/graph": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId_graph",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/campaigns/:campaignId/evidence-line": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId_evidence_line",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/events/:eventId": {
       "get": {
         "operationId": "GET__api_v1_control_events_eventId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/evidence/:itemId": {
       "get": {
         "operationId": "GET__api_v1_control_evidence_itemId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/funding-settlement/tokens/:chainId/:token/range": {
       "get": {
         "operationId": "GET__api_v1_funding_settlement_tokens_chainId_token_range",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/funding-settlement/tokens/:chainId/:token": {
       "get": {
         "operationId": "GET__api_v1_funding_settlement_tokens_chainId_token",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/funding-settlement/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_funding_settlement_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/tokens/:chainId/:token/overview": {
       "get": {
         "operationId": "GET__api_v1_control_tokens_chainId_token_overview",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/tokens/:chainId/:token/campaigns": {
       "get": {
         "operationId": "GET__api_v1_control_tokens_chainId_token_campaigns",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/tokens/:chainId/:token/backfill": {
       "get": {
         "operationId": "GET__api_v1_control_tokens_chainId_token_backfill",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-campaigns/:ledger/:chainId/:token/backfills": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_ledger_chainId_token_backfills",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/tokens/:chainId/:token/monitor": {
       "post": {
         "operationId": "POST__api_v1_control_tokens_chainId_token_monitor",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/tokens/:chainId/:token/alerts": {
       "get": {
         "operationId": "GET__api_v1_control_tokens_chainId_token_alerts",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/tokens/:chainId/:token/stream": {
       "get": {
         "operationId": "GET__api_v1_control_tokens_chainId_token_stream",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-campaigns/:ledger/:chainId/:token/monitors": {
       "post": {
         "operationId": "POST__api_v1_control_campaigns_ledger_chainId_token_monitors",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-campaigns/monitors/:monitorId": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_monitors_monitorId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-campaigns/:campaignId/alerts": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId_alerts",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control-campaigns/:campaignId/stream": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId_stream",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/campaigns/:campaignId": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/campaigns/:campaignId/replay": {
       "post": {
         "operationId": "POST__api_v1_control_campaigns_campaignId_replay",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/control/campaigns/:campaignId/export": {
       "get": {
         "operationId": "GET__api_v1_control_campaigns_campaignId_export",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v2/investigations": {
       "post": {
         "operationId": "POST__api_v2_investigations",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/investigations/:investigationId": {
       "get": {
         "operationId": "GET__api_v2_investigations_investigationId",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/investigations/:investigationId/replay": {
       "post": {
         "operationId": "POST__api_v2_investigations_investigationId_replay",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/tokens/:ledger/:chainId/:token/supply-reality": {
       "post": {
         "operationId": "POST__api_v2_tokens_ledger_chainId_token_supply_reality",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/tokens/:ledger/:chainId/:token/supply-reality/latest": {
       "get": {
         "operationId": "GET__api_v2_tokens_ledger_chainId_token_supply_reality_latest",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/tokens/:ledger/:chainId/:token/roles": {
       "post": {
         "operationId": "POST__api_v2_tokens_ledger_chainId_token_roles",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/tokens/:ledger/:chainId/:token/campaigns/materialize": {
       "post": {
         "operationId": "POST__api_v2_tokens_ledger_chainId_token_campaigns_materialize",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/campaigns/:campaignId/profit": {
       "post": {
         "operationId": "POST__api_v2_campaigns_campaignId_profit",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/tokens/:ledger/:chainId/:token/exit-scenarios": {
       "post": {
         "operationId": "POST__api_v2_tokens_ledger_chainId_token_exit_scenarios",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/exit-scenarios/distribution": {
       "post": {
         "operationId": "POST__api_v2_exit_scenarios_distribution",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/analyst-decisions": {
       "post": {
         "operationId": "POST__api_v2_analyst_decisions",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/cases/export": {
       "post": {
         "operationId": "POST__api_v2_cases_export",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/cases/:caseId/export": {
       "get": {
         "operationId": "GET__api_v2_cases_caseId_export",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/llm/validate": {
       "post": {
         "operationId": "POST__api_v2_llm_validate",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/tokens/:ledger/:chainId/:token/market-structure/latest": {
       "get": {
         "operationId": "GET__api_v2_tokens_ledger_chainId_token_market_structure_latest",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v1/rv/flap-sell": {
       "post": {
         "operationId": "POST__api_v1_rv_flap_sell",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/rv/flap-pancake-v2-buy-scenarios": {
       "post": {
         "operationId": "POST__api_v1_rv_flap_pancake_v2_buy_scenarios",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/rv/flap-pancake-v2-pension-entry-scenarios": {
       "post": {
         "operationId": "POST__api_v1_rv_flap_pancake_v2_pension_entry_scenarios",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_rv_flap_pancake_v2_pension_entry_scenarios_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/rv/flap-pancake-v2-pension-entry-scenarios/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_rv_flap_pancake_v2_pension_entry_scenarios_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/rv/flap-pancake-v2-sell-scenarios": {
       "post": {
         "operationId": "POST__api_v1_rv_flap_pancake_v2_sell_scenarios",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/rv/flap-pancake-v2-reconciliation": {
       "post": {
         "operationId": "POST__api_v1_rv_flap_pancake_v2_reconciliation",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/data-quality/discrepancies": {
       "post": {
         "operationId": "POST__api_v1_data_quality_discrepancies",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/rv/constant-product": {
       "post": {
         "operationId": "POST__api_v1_rv_constant_product",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/scenarios/exit-race": {
       "post": {
         "operationId": "POST__api_v1_scenarios_exit_race",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/declarations/parse": {
       "post": {
         "operationId": "POST__api_v1_claims_declarations_parse",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/declarations/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_claims_declarations_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/declarations/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_claims_declarations_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/rules/review": {
       "post": {
         "operationId": "POST__api_v1_claims_rules_review",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/:ledger/:token/metadata/decimals": {
       "post": {
         "operationId": "POST__api_v1_claims_ledger_token_metadata_decimals",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/rules/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_claims_rules_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/rules/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_claims_rules_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/verification/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_claims_verification_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/claims/verification/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_claims_verification_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/search": {
       "get": {
         "operationId": "GET__api_v1_search",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/labels/reports": {
       "post": {
         "operationId": "POST__api_v1_labels_reports",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/labels/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_labels_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/labels/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_labels_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/subjects/:ledger/:id": {
       "get": {
         "operationId": "GET__api_v1_subjects_ledger_id",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_ledger_SOLANA_TRANSACTION_signature_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/ledger/SOLANA/TRANSACTION/:signature/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_ledger_SOLANA_TRANSACTION_signature_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/solana/dealer-campaigns": {
       "post": {
         "operationId": "POST__api_v1_solana_dealer_campaigns",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/solana/dealer-campaigns/:reportId": {
       "get": {
         "operationId": "GET__api_v1_solana_dealer_campaigns_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/solana/mints/:mint/dealer-campaigns/latest": {
       "get": {
         "operationId": "GET__api_v1_solana_mints_mint_dealer_campaigns_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/bitcoin/forensic-graphs": {
       "post": {
         "operationId": "POST__api_v1_bitcoin_forensic_graphs",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/bitcoin/forensic-graphs/:reportId": {
       "get": {
         "operationId": "GET__api_v1_bitcoin_forensic_graphs_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/bitcoin/transactions/:txid/forensic-graphs/latest": {
       "get": {
         "operationId": "GET__api_v1_bitcoin_transactions_txid_forensic_graphs_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/actions/semantics/reports/latest": {
       "get": {
         "operationId": "GET__api_v1_actions_semantics_reports_latest",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/actions/semantics/reports/:reportId": {
       "get": {
         "operationId": "GET__api_v1_actions_semantics_reports_reportId",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/ledger/:ledger/:type/:id": {
       "get": {
         "operationId": "GET__api_v1_ledger_ledger_type_id",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/health/live": {
       "get": {
         "operationId": "GET__health_live",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/health/ready": {
       "get": {
         "operationId": "GET__health_ready",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/health": {
       "get": {
         "operationId": "GET__health",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/metrics": {
       "get": {
         "operationId": "GET__metrics",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/data-quality/anchors": {
       "get": {
         "operationId": "GET__api_v1_data_quality_anchors",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/capabilities": {
       "get": {
         "operationId": "GET__api_v1_capabilities",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/chains": {
       "get": {
         "operationId": "GET__api_v1_chains",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v1/platforms": {
       "get": {
         "operationId": "GET__api_v1_platforms",
-        "tags": [
-          "intelligence"
-        ]
+        "tags": ["intelligence"]
       }
     },
     "/api/v2/tokens/:ledger/:chainId/:token/analyze": {
       "post": {
         "operationId": "POST__api_v2_tokens_ledger_chainId_token_analyze",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     },
     "/api/v2/jobs/:jobId": {
       "get": {
         "operationId": "GET__api_v2_jobs_jobId",
-        "tags": [
-          "analysis"
-        ]
+        "tags": ["analysis"]
       }
     }
   }

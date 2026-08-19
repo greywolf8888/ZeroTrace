@@ -223,7 +223,9 @@ export function materializeTokenMarketStructure(input: {
     if (!circulatingKnown || !reserveKnown) {
       limitations.push('协议供应仅覆盖已观察的储备或流通分量，不是独立 totalSupply。');
     } else {
-      limitations.push('协议供应取自检查接口 circulating+reserve 之和，不是独立 totalSupply 观察。');
+      limitations.push(
+        '协议供应取自检查接口 circulating+reserve 之和，不是独立 totalSupply 观察。',
+      );
     }
     envelopes.push(
       envelopeFor(

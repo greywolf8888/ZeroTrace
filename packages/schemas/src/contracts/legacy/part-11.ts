@@ -1,8 +1,6 @@
 import { z } from 'zod';
 export * from './part-10.js';
-import type {
-  Evidence,
-} from './part-10.js';
+import type { Evidence } from './part-10.js';
 import {
   AnalysisSnapshotSchema,
   CanonicalStringArraySchema,

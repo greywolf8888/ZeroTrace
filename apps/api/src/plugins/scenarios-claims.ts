@@ -5,11 +5,36 @@ import { observeErc20Decimals } from '@zerotrace/platform-adapters';
 import { quoteConstantProductExit, simulateExitRace } from '@zerotrace/rv';
 import { ClaimRuleReviewReportStorageError } from '@zerotrace/storage';
 import { knownValue, unknownValue, type Evidence } from '@zerotrace/schemas';
-import { ClaimDeclarationReportParamsSchema, ClaimDeclarationReportLookupQuerySchema, ClaimRuleReviewReportParamsSchema, ClaimRuleReviewReportLookupQuerySchema, ClaimVerificationReportParamsSchema, ClaimVerificationReportLookupQuerySchema, ClaimBurnParamsSchema, ClaimDeclarationParseRequestSchema, ClaimRuleReviewRequestSchema, Erc20DecimalsObservationRequestSchema, RvRequestSchema, ExitRaceRequestSchema } from '../http/request-schemas.js';
-import { errorResponse, addEvidence, rejectUngroundedAnalysis, addDerivedAnalysisEvidence, missingEvidenceIds, incompatibleEvidenceIds, uniqueEvidenceIds, getEvidenceNode } from '../http/helpers.js';
+import {
+  ClaimDeclarationReportParamsSchema,
+  ClaimDeclarationReportLookupQuerySchema,
+  ClaimRuleReviewReportParamsSchema,
+  ClaimRuleReviewReportLookupQuerySchema,
+  ClaimVerificationReportParamsSchema,
+  ClaimVerificationReportLookupQuerySchema,
+  ClaimBurnParamsSchema,
+  ClaimDeclarationParseRequestSchema,
+  ClaimRuleReviewRequestSchema,
+  Erc20DecimalsObservationRequestSchema,
+  RvRequestSchema,
+  ExitRaceRequestSchema,
+} from '../http/request-schemas.js';
+import {
+  errorResponse,
+  addEvidence,
+  rejectUngroundedAnalysis,
+  addDerivedAnalysisEvidence,
+  missingEvidenceIds,
+  incompatibleEvidenceIds,
+  uniqueEvidenceIds,
+  getEvidenceNode,
+} from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerScenarioAndClaimDeclarationRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerScenarioAndClaimDeclarationRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -571,5 +596,4 @@ export async function registerScenarioAndClaimDeclarationRoutes(app: FastifyInst
       return { replayed: true, record };
     },
   );
-
 }

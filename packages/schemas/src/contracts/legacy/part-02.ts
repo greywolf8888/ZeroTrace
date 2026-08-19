@@ -1,8 +1,6 @@
 import { z } from 'zod';
 export * from './part-01.js';
-import type {
-  Evidence,
-} from './part-01.js';
+import type { Evidence } from './part-01.js';
 import {
   AnalysisSnapshotSchema,
   AnchorContinuityAssessmentSchema,
@@ -156,15 +154,17 @@ export const FundingSettlementReportIdSchema = z.string().regex(/^fsr_[0-9a-f]{2
 export const CandidateWalletIdSchema = z.string().regex(/^cw_[0-9a-f]{24}$/);
 export const CandidateDiscoveryIdSchema = z.string().regex(/^cd_[0-9a-f]{24}$/);
 
-export const CanonicalStringArraySchema = z.array(z.string().min(1)).superRefine((items, context) => {
-  const sorted = [...new Set(items)].sort();
-  if (sorted.length !== items.length || sorted.some((item, index) => item !== items[index])) {
-    context.addIssue({
-      code: 'custom',
-      message: 'Values must be unique and sorted.',
-    });
-  }
-});
+export const CanonicalStringArraySchema = z
+  .array(z.string().min(1))
+  .superRefine((items, context) => {
+    const sorted = [...new Set(items)].sort();
+    if (sorted.length !== items.length || sorted.some((item, index) => item !== items[index])) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Values must be unique and sorted.',
+      });
+    }
+  });
 
 export const ControlCampaignStageSchema = z.enum([
   'DISCOVERY',

@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-
 export const IsoDateTimeSchema = z.iso.datetime({ offset: true });
 export const Hash256Schema = z.string().regex(/^[a-fA-F0-9]{64}$/);
 export const ConfidenceSchema = z.number().min(0).max(1);

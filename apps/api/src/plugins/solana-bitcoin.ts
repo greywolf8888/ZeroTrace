@@ -3,13 +3,48 @@ import { ProviderError } from '@zerotrace/chain-adapters';
 import { captureBitcoinForensicGraph } from '../bitcoin-forensic-graph.js';
 import { captureSolanaDealerCampaign } from '../solana-dealer.js';
 import { classifyIdentifier } from '@zerotrace/identifiers';
-import { SolanaTransactionIntelligenceReportSchema, SolanaDealerCampaignRequestSchema, unavailableValue, type AnalysisSnapshot, type Evidence } from '@zerotrace/schemas';
-import { queryBitcoinBlock, queryBitcoinOutpoint, queryBitcoinTransaction, queryEvmBlock, queryEvmTransaction, querySolanaBlock, querySolanaTransaction } from '../ledger-query.js';
-import { LedgerRecordParamsSchema, LedgerRecordQuerySchema, SolanaTransactionReportParamsSchema, SolanaTransactionReportByIdParamsSchema, SolanaDealerCampaignReportParamsSchema, SolanaDealerCampaignMintParamsSchema, BitcoinForensicGraphReportParamsSchema, BitcoinForensicGraphRootParamsSchema, BitcoinForensicGraphRequestSchema, ActionSemanticsReportLookupQuerySchema, ActionSemanticsReportParamsSchema } from '../http/request-schemas.js';
-import { errorResponse, emptyMetadata, addEvidence, bindRequestAbort, solanaTransactionReportResponse } from '../http/helpers.js';
+import {
+  SolanaTransactionIntelligenceReportSchema,
+  SolanaDealerCampaignRequestSchema,
+  unavailableValue,
+  type AnalysisSnapshot,
+  type Evidence,
+} from '@zerotrace/schemas';
+import {
+  queryBitcoinBlock,
+  queryBitcoinOutpoint,
+  queryBitcoinTransaction,
+  queryEvmBlock,
+  queryEvmTransaction,
+  querySolanaBlock,
+  querySolanaTransaction,
+} from '../ledger-query.js';
+import {
+  LedgerRecordParamsSchema,
+  LedgerRecordQuerySchema,
+  SolanaTransactionReportParamsSchema,
+  SolanaTransactionReportByIdParamsSchema,
+  SolanaDealerCampaignReportParamsSchema,
+  SolanaDealerCampaignMintParamsSchema,
+  BitcoinForensicGraphReportParamsSchema,
+  BitcoinForensicGraphRootParamsSchema,
+  BitcoinForensicGraphRequestSchema,
+  ActionSemanticsReportLookupQuerySchema,
+  ActionSemanticsReportParamsSchema,
+} from '../http/request-schemas.js';
+import {
+  errorResponse,
+  emptyMetadata,
+  addEvidence,
+  bindRequestAbort,
+  solanaTransactionReportResponse,
+} from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerSolanaBitcoinLedgerRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerSolanaBitcoinLedgerRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -567,5 +602,4 @@ export async function registerSolanaBitcoinLedgerRoutes(app: FastifyInstance, ct
       }
     },
   );
-
 }

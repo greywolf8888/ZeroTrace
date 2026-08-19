@@ -1,13 +1,44 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { classifyIdentifier } from '@zerotrace/identifiers';
-import { FLAP_BSC_MAINNET_DEPLOYMENT, FLAP_EVENT_MODEL_VERSION, FLAP_HISTORY_DEFAULT_CHUNK_SIZE, FLAP_HISTORY_MODEL_VERSION, FLAP_LIFETIME_MATERIALIZATION_SOURCE, FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE, FLAP_TOKEN_ORIGIN_MODEL_VERSION, discoverFlapEventHistory, inspectFlapEventTransaction, inspectFlapTokenOrigin, inspectFlapTokenOriginRestartSafe, inspectFlapToken, type InspectFlapTokenOriginOptions } from '@zerotrace/platform-adapters';
+import {
+  FLAP_BSC_MAINNET_DEPLOYMENT,
+  FLAP_EVENT_MODEL_VERSION,
+  FLAP_HISTORY_DEFAULT_CHUNK_SIZE,
+  FLAP_HISTORY_MODEL_VERSION,
+  FLAP_LIFETIME_MATERIALIZATION_SOURCE,
+  FLAP_TOKEN_ORIGIN_DEFAULT_CHUNK_SIZE,
+  FLAP_TOKEN_ORIGIN_MODEL_VERSION,
+  discoverFlapEventHistory,
+  inspectFlapEventTransaction,
+  inspectFlapTokenOrigin,
+  inspectFlapTokenOriginRestartSafe,
+  inspectFlapToken,
+  type InspectFlapTokenOriginOptions,
+} from '@zerotrace/platform-adapters';
 import { FlapHistoryProjectionError, SemanticCheckpointError } from '@zerotrace/storage';
-import { FlapEventHistoryProjectionSchema, FlapLifetimeMaterializationSchema, unavailableValue, type Evidence } from '@zerotrace/schemas';
-import { LaunchInspectionParamsSchema, LaunchInspectionQuerySchema, FlapEventTransactionParamsSchema, FlapEventTransactionQuerySchema, FlapEventHistoryQuerySchema, FlapHistoryProjectionParamsSchema, FlapHistoryProjectionPageQuerySchema, FlapTokenOriginQuerySchema } from '../http/request-schemas.js';
+import {
+  FlapEventHistoryProjectionSchema,
+  FlapLifetimeMaterializationSchema,
+  unavailableValue,
+  type Evidence,
+} from '@zerotrace/schemas';
+import {
+  LaunchInspectionParamsSchema,
+  LaunchInspectionQuerySchema,
+  FlapEventTransactionParamsSchema,
+  FlapEventTransactionQuerySchema,
+  FlapEventHistoryQuerySchema,
+  FlapHistoryProjectionParamsSchema,
+  FlapHistoryProjectionPageQuerySchema,
+  FlapTokenOriginQuerySchema,
+} from '../http/request-schemas.js';
 import { errorResponse, emptyMetadata, addEvidence, getEvidenceNode } from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerEvidenceAndLaunchRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerEvidenceAndLaunchRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -488,5 +519,4 @@ export async function registerEvidenceAndLaunchRoutes(app: FastifyInstance, ctx:
           });
     },
   );
-
 }

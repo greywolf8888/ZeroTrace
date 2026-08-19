@@ -1,8 +1,6 @@
 import { z } from 'zod';
 export * from './part-04.js';
-import type {
-  Evidence,
-} from './part-04.js';
+import type { Evidence } from './part-04.js';
 import {
   AnalysisMetadataSchema,
   AnalysisSnapshotSchema,

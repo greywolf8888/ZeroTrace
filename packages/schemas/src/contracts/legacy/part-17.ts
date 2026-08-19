@@ -1,9 +1,6 @@
 import { z } from 'zod';
 export * from './part-16.js';
-import type {
-  Evidence,
-  Ledger,
-} from './part-16.js';
+import type { Evidence, Ledger } from './part-16.js';
 import {
   AnalysisSnapshotSchema,
   ClaimVerificationObservationReportSchema,

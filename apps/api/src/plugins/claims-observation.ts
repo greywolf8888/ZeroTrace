@@ -1,11 +1,31 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { discoverErc20BurnCandidates, discoverEvmPensionCandidates, observeEvmClaimBurnBlock, replayErc20BurnPromotionResult, replayErc20SupplyContinuityResult } from '@zerotrace/platform-adapters';
+import {
+  discoverErc20BurnCandidates,
+  discoverEvmPensionCandidates,
+  observeEvmClaimBurnBlock,
+  replayErc20BurnPromotionResult,
+  replayErc20SupplyContinuityResult,
+} from '@zerotrace/platform-adapters';
 import type { Evidence } from '@zerotrace/schemas';
-import { ClaimReportParamsSchema, ClaimReportByIdParamsSchema, ClaimReportQuerySchema, ClaimBurnParamsSchema, ClaimBurnRequestSchema, ClaimBurnPromotionParamsSchema, ClaimSupplyContinuityParamsSchema, ClaimBurnDiscoveryRequestSchema, PensionCandidateReportByIdParamsSchema, PensionCandidateDiscoveryRequestSchema } from '../http/request-schemas.js';
+import {
+  ClaimReportParamsSchema,
+  ClaimReportByIdParamsSchema,
+  ClaimReportQuerySchema,
+  ClaimBurnParamsSchema,
+  ClaimBurnRequestSchema,
+  ClaimBurnPromotionParamsSchema,
+  ClaimSupplyContinuityParamsSchema,
+  ClaimBurnDiscoveryRequestSchema,
+  PensionCandidateReportByIdParamsSchema,
+  PensionCandidateDiscoveryRequestSchema,
+} from '../http/request-schemas.js';
 import { errorResponse, addEvidence } from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerClaimObservationRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerClaimObservationRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -496,5 +516,4 @@ export async function registerClaimObservationRoutes(app: FastifyInstance, ctx: 
       return { record };
     },
   );
-
 }

@@ -2,15 +2,45 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { Registry } from 'prom-client';
 import { createEvidence } from '@zerotrace/evidence';
 import { classifyIdentifier } from '@zerotrace/identifiers';
-import { buildLabelIntelligenceCore, LABEL_INTELLIGENCE_MODEL_VERSION } from '@zerotrace/label-engine';
+import {
+  buildLabelIntelligenceCore,
+  LABEL_INTELLIGENCE_MODEL_VERSION,
+} from '@zerotrace/label-engine';
 import { IntelligenceSearchStorageError } from '@zerotrace/storage';
-import { LabelIntelligenceReportSchema, LabelIntelligenceRequestSchema, knownValue, unavailableValue, unknownValue, type AnalysisMetadata, type Evidence, type Ledger } from '@zerotrace/schemas';
+import {
+  LabelIntelligenceReportSchema,
+  LabelIntelligenceRequestSchema,
+  knownValue,
+  unavailableValue,
+  unknownValue,
+  type AnalysisMetadata,
+  type Evidence,
+  type Ledger,
+} from '@zerotrace/schemas';
 import { queryBitcoinAddress } from '../ledger-query.js';
-import { SearchQuerySchema, LabelIntelligenceIdentityQuerySchema, LabelIntelligenceReportParamsSchema } from '../http/request-schemas.js';
-import { errorResponse, emptyMetadata, addEvidence, rejectUngroundedAnalysis, incompatibleEvidenceIds, uniqueEvidenceIds, uniqueSourceIds, evidenceSourceId, snapshotSourceIds, parseHexQuantity } from '../http/helpers.js';
+import {
+  SearchQuerySchema,
+  LabelIntelligenceIdentityQuerySchema,
+  LabelIntelligenceReportParamsSchema,
+} from '../http/request-schemas.js';
+import {
+  errorResponse,
+  emptyMetadata,
+  addEvidence,
+  rejectUngroundedAnalysis,
+  incompatibleEvidenceIds,
+  uniqueEvidenceIds,
+  uniqueSourceIds,
+  evidenceSourceId,
+  snapshotSourceIds,
+  parseHexQuantity,
+} from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerSearchAndLabelRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerSearchAndLabelRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -505,5 +535,4 @@ export async function registerSearchAndLabelRoutes(app: FastifyInstance, ctx: Ap
       };
     },
   );
-
 }

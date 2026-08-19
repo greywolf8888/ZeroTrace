@@ -1,7 +1,4 @@
-import {
-  type SolanaLedgerAdapter,
-  type TransportReadOptions,
-} from '@zerotrace/chain-adapters';
+import { type SolanaLedgerAdapter, type TransportReadOptions } from '@zerotrace/chain-adapters';
 import { createEvidence } from '@zerotrace/evidence';
 import {
   analyzeSolanaTransactionSemantics,
@@ -19,7 +16,12 @@ import {
   type Evidence,
   type SubjectReference,
 } from '@zerotrace/schemas';
-import { blockResult, metadata, snapshotFinality, type EvidenceWriter } from './ledger-query-shared.js';
+import {
+  blockResult,
+  metadata,
+  snapshotFinality,
+  type EvidenceWriter,
+} from './ledger-query-shared.js';
 
 export async function querySolanaBlock(
   adapter: SolanaLedgerAdapter,

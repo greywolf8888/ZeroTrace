@@ -1,8 +1,6 @@
 import { z } from 'zod';
 export * from './part-17.js';
-import type {
-  Evidence,
-} from './part-17.js';
+import type { Evidence } from './part-17.js';
 import {
   ActionApplicationSchema,
   ActionAssetDeltaSchema,

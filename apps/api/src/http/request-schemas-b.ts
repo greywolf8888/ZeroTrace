@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { AnalysisMetadataSchema, DiscrepancyCheckInputSchema, type Evidence, ClaimExpectedActionSchema, ClaimWalletRoleSchema } from '@zerotrace/schemas';
+import {
+  AnalysisMetadataSchema,
+  DiscrepancyCheckInputSchema,
+  type Evidence,
+  ClaimExpectedActionSchema,
+  ClaimWalletRoleSchema,
+} from '@zerotrace/schemas';
 
 export const ReviewedClaimRuleValuesRequestSchema = z
   .object({
@@ -187,28 +193,29 @@ export const EntityRelationshipReportParamsSchema = z
   .object({ reportId: z.string().regex(/^erh_[0-9a-f]{24}$/) })
   .strict();
 
-export const EntityRelationshipTimelineMaterializeSchema = EntityRelationshipReportQuerySchema.safeExtend({
-  fromPosition: z
-    .string()
-    .regex(/^(?:0|[1-9]\d*)$/)
-    .optional(),
-  toPosition: z
-    .string()
-    .regex(/^(?:0|[1-9]\d*)$/)
-    .optional(),
-}).superRefine((value, context) => {
-  if (
-    value.fromPosition !== undefined &&
-    value.toPosition !== undefined &&
-    BigInt(value.fromPosition) > BigInt(value.toPosition)
-  ) {
-    context.addIssue({
-      code: 'custom',
-      path: ['toPosition'],
-      message: 'Timeline toPosition must be greater than or equal to fromPosition.',
-    });
-  }
-});
+export const EntityRelationshipTimelineMaterializeSchema =
+  EntityRelationshipReportQuerySchema.safeExtend({
+    fromPosition: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+    toPosition: z
+      .string()
+      .regex(/^(?:0|[1-9]\d*)$/)
+      .optional(),
+  }).superRefine((value, context) => {
+    if (
+      value.fromPosition !== undefined &&
+      value.toPosition !== undefined &&
+      BigInt(value.fromPosition) > BigInt(value.toPosition)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['toPosition'],
+        message: 'Timeline toPosition must be greater than or equal to fromPosition.',
+      });
+    }
+  });
 
 export const EntityRelationshipTimelineParamsSchema = z
   .object({ timelineId: z.string().regex(/^ert_[0-9a-f]{24}$/) })
@@ -320,9 +327,12 @@ export const DiscrepancyAuditRequestSchema = z
   .strict();
 
 export const AtomicQuantitySchema = z.string().regex(/^(0|[1-9]\d*)$/);
-export const PositiveAtomicQuantitySchema = AtomicQuantitySchema.refine((value) => BigInt(value) > 0n, {
-  message: 'Quantity must be greater than zero.',
-});
+export const PositiveAtomicQuantitySchema = AtomicQuantitySchema.refine(
+  (value) => BigInt(value) > 0n,
+  {
+    message: 'Quantity must be greater than zero.',
+  },
+);
 
 export const PoolSchema = z
   .object({

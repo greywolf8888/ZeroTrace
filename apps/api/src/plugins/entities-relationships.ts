@@ -1,11 +1,39 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { canonicalizeEntityRelationshipInput, ENTITY_RELATIONSHIP_MODEL_VERSION, ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION, buildEntityRelationshipTimeline, resolveEntityRelationship } from '@zerotrace/entity-engine';
-import { EntityRelationshipInputSchema, EntityRelationshipReportSchema, EntityRelationshipTimelineReportSchema, type Evidence } from '@zerotrace/schemas';
-import { EntityRelationshipReportQuerySchema, EntityRelationshipReportParamsSchema, EntityRelationshipTimelineMaterializeSchema, EntityRelationshipTimelineParamsSchema } from '../http/request-schemas.js';
-import { errorResponse, rejectUngroundedAnalysis, addDerivedAnalysisEvidence, missingEvidenceIds, incompatibleEvidenceIds, uniqueEvidenceIds, uniqueSourceIds, canonicalSubjectPair } from '../http/helpers.js';
+import {
+  canonicalizeEntityRelationshipInput,
+  ENTITY_RELATIONSHIP_MODEL_VERSION,
+  ENTITY_RELATIONSHIP_TIMELINE_MODEL_VERSION,
+  buildEntityRelationshipTimeline,
+  resolveEntityRelationship,
+} from '@zerotrace/entity-engine';
+import {
+  EntityRelationshipInputSchema,
+  EntityRelationshipReportSchema,
+  EntityRelationshipTimelineReportSchema,
+  type Evidence,
+} from '@zerotrace/schemas';
+import {
+  EntityRelationshipReportQuerySchema,
+  EntityRelationshipReportParamsSchema,
+  EntityRelationshipTimelineMaterializeSchema,
+  EntityRelationshipTimelineParamsSchema,
+} from '../http/request-schemas.js';
+import {
+  errorResponse,
+  rejectUngroundedAnalysis,
+  addDerivedAnalysisEvidence,
+  missingEvidenceIds,
+  incompatibleEvidenceIds,
+  uniqueEvidenceIds,
+  uniqueSourceIds,
+  canonicalSubjectPair,
+} from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 
-export async function registerEntityRelationshipRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerEntityRelationshipRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -420,5 +448,4 @@ export async function registerEntityRelationshipRoutes(app: FastifyInstance, ctx
       return { replayed: true, record };
     },
   );
-
 }

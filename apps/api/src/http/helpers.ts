@@ -3,11 +3,28 @@ import { ProviderError } from '@zerotrace/chain-adapters';
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import type { EvidenceNode } from '@zerotrace/evidence';
 import { ForensicCaseBundleError, buildForensicCaseBundle } from '@zerotrace/forensic-evidence';
-import { StorageError, type StoredSolanaTransactionReport, type StoredControlCampaignReport } from '@zerotrace/storage';
-import { knownValue, unavailableValue, unknownValue, type AnalysisMetadata, type AnalysisSnapshot, type Evidence, type ControlCampaignBundle } from '@zerotrace/schemas';
+import {
+  StorageError,
+  type StoredSolanaTransactionReport,
+  type StoredControlCampaignReport,
+} from '@zerotrace/storage';
+import {
+  knownValue,
+  unavailableValue,
+  unknownValue,
+  type AnalysisMetadata,
+  type AnalysisSnapshot,
+  type Evidence,
+  type ControlCampaignBundle,
+} from '@zerotrace/schemas';
 import type { AppRuntime } from '../runtime.js';
 
-export function errorResponse(request: FastifyRequest, code: string, message: string, retryable: boolean) {
+export function errorResponse(
+  request: FastifyRequest,
+  code: string,
+  message: string,
+  retryable: boolean,
+) {
   return { error: { code, message, requestId: request.id, retryable } };
 }
 
@@ -176,7 +193,10 @@ export function snapshotSourceIds(snapshot: AnalysisSnapshot): string[] {
   return Object.keys(snapshot.providerVersions);
 }
 
-export async function missingEvidenceIds(runtime: AppRuntime, ids: readonly string[]): Promise<string[]> {
+export async function missingEvidenceIds(
+  runtime: AppRuntime,
+  ids: readonly string[],
+): Promise<string[]> {
   const unique = uniqueEvidenceIds(ids);
   const nodes = await Promise.all(unique.map((id) => getEvidenceNode(runtime, id)));
   return unique.filter((_id, index) => nodes[index] === undefined);

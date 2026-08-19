@@ -1,12 +1,28 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ForensicCaseBundleError } from '@zerotrace/forensic-evidence';
 import { unknownValue } from '@zerotrace/schemas';
-import { ControlCampaignTokenParamsSchema, ControlCampaignBackfillAliasParamsSchema, ControlCampaignParamsSchema, FundingSettlementReportParamsSchema, FundingSettlementRangeQuerySchema, ControlCampaignListQuerySchema } from '../http/request-schemas.js';
-import { errorResponse, emptyMetadata, forensicCaseBundleForCampaign, forensicCaseBundleError, controlCampaignResponse } from '../http/helpers.js';
+import {
+  ControlCampaignTokenParamsSchema,
+  ControlCampaignBackfillAliasParamsSchema,
+  ControlCampaignParamsSchema,
+  FundingSettlementReportParamsSchema,
+  FundingSettlementRangeQuerySchema,
+  ControlCampaignListQuerySchema,
+} from '../http/request-schemas.js';
+import {
+  errorResponse,
+  emptyMetadata,
+  forensicCaseBundleForCampaign,
+  forensicCaseBundleError,
+  controlCampaignResponse,
+} from '../http/helpers.js';
 import type { AppHttpContext } from '../http/context.js';
 import { createCampaignHandlers } from './campaign-handlers.js';
 
-export async function registerFundingAndCampaignRoutes(app: FastifyInstance, ctx: AppHttpContext): Promise<void> {
+export async function registerFundingAndCampaignRoutes(
+  app: FastifyInstance,
+  ctx: AppHttpContext,
+): Promise<void> {
   const {
     runtime,
     config,
@@ -374,5 +390,4 @@ export async function registerFundingAndCampaignRoutes(app: FastifyInstance, ctx
       }
     },
   );
-
 }
