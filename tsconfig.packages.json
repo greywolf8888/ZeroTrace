@@ -31,6 +31,12 @@
     { "path": "./packages/market-reality-engine" },
     { "path": "./packages/casework" },
     { "path": "./packages/forensic-pipeline" },
+    { "path": "./packages/source-registry" },
+    { "path": "./packages/provider-scheduler" },
+    { "path": "./packages/platform-auth" },
+    { "path": "./packages/terminal-pipeline" },
+    { "path": "./packages/local-index" },
+    { "path": "./packages/token-market-capture" },
     { "path": "./packages/llm-gateway" }
   ]
 }

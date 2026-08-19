@@ -179,6 +179,39 @@ for (const dir of packageDirs('packages')) {
   }
 }
 
+const requiredRustCrates = [
+  'zerotrace-types',
+  'zerotrace-ledger',
+  'zerotrace-query-planner',
+  'zerotrace-provider-scheduler',
+  'zerotrace-graph',
+  'zerotrace-entity',
+  'zerotrace-campaign',
+  'zerotrace-capital',
+  'zerotrace-protocol-sdk',
+  'zerotrace-evm-executor',
+  'zerotrace-route-optimizer',
+  'zerotrace-replay',
+  'zerotrace-desktop-core',
+  'zerotrace-compute',
+];
+for (const name of requiredRustCrates) {
+  try {
+    statSync(join(root, 'crates', name, 'src', 'lib.rs'));
+  } catch {
+    if (name === 'zerotrace-compute') {
+      try {
+        statSync(join(root, 'crates', name, 'src', 'main.rs'));
+        continue;
+      } catch {
+        failures.push(`missing_rust_crate ${name}`);
+      }
+    } else {
+      failures.push(`missing_rust_crate ${name}`);
+    }
+  }
+}
+
 if (failures.length > 0) {
   process.stderr.write(`architecture-check failed:\n${failures.join('\n')}\n`);
   process.exit(1);

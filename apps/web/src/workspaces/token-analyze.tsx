@@ -21,6 +21,10 @@ export function TokenAnalyzeWorkspace() {
         await api.analyzeToken('EVM', chainId, token, {
           snapshotPolicy: 'FINALIZED',
           analysisMode: mode,
+          forensicMode: 'FORENSIC',
+        } as {
+          snapshotPolicy: 'FINALIZED';
+          analysisMode: 'FULL_LIFETIME' | 'BOUNDED_WINDOW';
         }),
       );
     } catch (cause) {
@@ -140,6 +144,9 @@ export function TokenAnalyzeWorkspace() {
         </div>
         <p>入口不得要求粘贴 SupplyCell、Role 或分录 JSON。</p>
         <p>快照策略固定为 FINALIZED。未知、不可用、过期与 Provider 中断不得记为 0。</p>
+        <div className="expert-only">
+          <p>专家视图：角色分数是证据分，不是校准概率。服务路由与工厂不得标为控制实体或散户。</p>
+        </div>
         <p>
           调查标识：
           {result?.investigationId ?? '未知 · 尚未物化'}

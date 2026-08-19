@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode, type UIEvent } from 'react';
 
-export const TABLE_ROW_CAP = 200;
+const ROW_HEIGHT = 32;
+const OVERSCAN = 8;
 
 export function VirtualTable({
   rows,
@@ -11,39 +12,56 @@ export function VirtualTable({
   columns: readonly { key: string; header: string }[];
   empty: string;
 }) {
-  const visible = rows.slice(0, TABLE_ROW_CAP);
-  const truncated = rows.length > TABLE_ROW_CAP;
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(480);
+
+  const onScroll = (event: UIEvent<HTMLDivElement>) => {
+    setScrollTop(event.currentTarget.scrollTop);
+    setViewportHeight(event.currentTarget.clientHeight);
+  };
+
+  const windowed = useMemo(() => {
+    const start = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
+    const visible = Math.ceil(viewportHeight / ROW_HEIGHT) + OVERSCAN * 2;
+    const end = Math.min(rows.length, start + visible);
+    return { start, end, offsetY: start * ROW_HEIGHT };
+  }, [rows.length, scrollTop, viewportHeight]);
+
   if (rows.length === 0) return <p>{empty}</p>;
   return (
     <div
       className="virtual-table"
       role="region"
       aria-label={columns.map((item) => item.header).join('、')}
+      ref={viewportRef}
+      onScroll={onScroll}
+      style={{ maxHeight: 480, overflow: 'auto' }}
     >
-      <table>
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key}>{column.header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map((row, index) => (
-            <tr key={String(row.id ?? index)}>
+      <div style={{ height: rows.length * ROW_HEIGHT, position: 'relative' }}>
+        <table style={{ transform: `translateY(${windowed.offsetY}px)` }}>
+          <thead>
+            <tr>
               {columns.map((column) => (
-                <td key={column.key}>{row[column.key]}</td>
+                <th key={column.key}>{column.header}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {truncated ? (
-        <p>
-          仅渲染前 {TABLE_ROW_CAP} 行，其余 {rows.length - TABLE_ROW_CAP}{' '}
-          行由后端聚合，避免一次装入全部地址。
-        </p>
-      ) : null}
+          </thead>
+          <tbody>
+            {rows.slice(windowed.start, windowed.end).map((row, index) => (
+              <tr key={String(row.id ?? windowed.start + index)} style={{ height: ROW_HEIGHT }}>
+                {columns.map((column) => (
+                  <td key={column.key}>{row[column.key]}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        共 {rows.length} 行，当前渲染 {windowed.end - windowed.start}{' '}
+        行窗口；其余行保留在后端游标，不截断为 200。
+      </p>
     </div>
   );
 }

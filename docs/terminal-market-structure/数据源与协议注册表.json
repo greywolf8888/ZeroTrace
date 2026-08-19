@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "zerotrace-source-protocol-registry-v1",
+  "operators": [
+    {
+      "operatorId": "bnbchain-public",
+      "independenceGroup": "bnbchain",
+      "endpoints": ["https://bsc-dataseed.bnbchain.org"],
+      "archiveCapability": "unknown",
+      "finalitySemantics": "finalized",
+      "termsReference": "https://docs.bnbchain.org/"
+    },
+    {
+      "operatorId": "nodereal-public",
+      "independenceGroup": "nodereal",
+      "endpoints": ["https://bsc.nodereal.io"],
+      "archiveCapability": "unknown",
+      "finalitySemantics": "finalized",
+      "termsReference": "https://docs.nodereal.io/"
+    },
+    {
+      "operatorId": "sqd-portal",
+      "independenceGroup": "sqd",
+      "endpoints": ["https://portal.sqd.dev"],
+      "archiveCapability": "history-gateway",
+      "finalitySemantics": "finalized-stream",
+      "termsReference": "https://docs.sqd.ai/"
+    }
+  ],
+  "note": "两个 URL 不等于两个独立 Operator。同组多 URL 只能故障转移。"
+}

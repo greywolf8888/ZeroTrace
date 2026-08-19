@@ -66,6 +66,9 @@ const EnvironmentSchema = z.object({
   DUNE_API_KEY: optionalString,
   NANSEN_API_KEY: optionalString,
   ARKHAM_API_KEY: optionalString,
+  OIDC_ISSUER: optionalString,
+  OIDC_AUDIENCE: optionalString,
+  LOCAL_DEV_AUTH: z.enum(['0', '1']).default('0'),
 });
 
 export interface ProviderResilienceConfig {
@@ -130,6 +133,9 @@ export interface AppConfig {
   duneConfigured: boolean;
   nansenConfigured: boolean;
   arkhamConfigured: boolean;
+  oidcIssuer?: string;
+  oidcAudience?: string;
+  localDevAuth: boolean;
 }
 
 function splitUrls(value: string | undefined): string[] {
@@ -312,6 +318,9 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     duneConfigured: parsed.DUNE_API_KEY !== undefined,
     nansenConfigured: parsed.NANSEN_API_KEY !== undefined,
     arkhamConfigured: parsed.ARKHAM_API_KEY !== undefined,
+    localDevAuth: parsed.LOCAL_DEV_AUTH === '1',
+    ...(parsed.OIDC_ISSUER === undefined ? {} : { oidcIssuer: parsed.OIDC_ISSUER }),
+    ...(parsed.OIDC_AUDIENCE === undefined ? {} : { oidcAudience: parsed.OIDC_AUDIENCE }),
     ...(ethereumPrimary === undefined ? {} : { ethereumRpcUrl: ethereumPrimary }),
     ...(bscPrimary === undefined ? {} : { bscRpcUrl: bscPrimary }),
     ...(bitcoinPrimary === undefined ? {} : { bitcoinEsploraUrl: bitcoinPrimary }),

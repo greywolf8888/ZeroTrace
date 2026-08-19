@@ -10,3 +10,8 @@ docs/architecture/ZEROTRACE_MASTER_PROMPT.md
 ZeroTrace_监管取证级盘面结构分析_全量升级提示词包
 ZeroTrace_监管取证级盘面结构分析_全量升级提示词包.zip
 output
+target
+crates
+apps/desktop/src-tauri
+ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包
+ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包.zip

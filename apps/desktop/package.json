@@ -1,0 +1,7 @@
+{
+  "name": "@zerotrace/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only Tauri host sharing the web forensic workstation."
+}

@@ -32,6 +32,12 @@ const workspacePackages = [
   'casework',
   'workflow-core',
   'llm-gateway',
+  'source-registry',
+  'provider-scheduler',
+  'platform-auth',
+  'terminal-pipeline',
+  'local-index',
+  'token-market-capture',
 ];
 
 export default defineConfig({
@@ -46,7 +52,13 @@ export default defineConfig({
   test: {
     testTimeout: 15_000,
     hookTimeout: 15_000,
-    exclude: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/tests/e2e/**'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '**/tests/e2e/**',
+      'evals/terminal-formulas/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],

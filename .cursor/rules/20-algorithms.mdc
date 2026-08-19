@@ -1,0 +1,7 @@
+---
+description: 算法正确性与证据规则
+globs: ["packages/*intelligence/**", "packages/*engine/**", "packages/forensic-pipeline/**", "crates/**"]
+alwaysApply: false
+---
+
+原子量使用整数/定点；顺序绑定区块、交易和日志/指令索引；候选生成优化召回，确认层优化精度；Must-Link/Cannot-Link 与模型分分离；按时间外和协议外数据校准；保留反证与替代解释；输出下界/情景/上界/未知；RV 使用真实协议执行和共享流动性；利润必须消费真实 Economic Lot；所有关键结果必须由真实案件包重现。

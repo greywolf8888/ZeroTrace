@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "zerotrace-agent-state-v1",
+  "repositorySha": "58b3ca2c55fab41fe66453fed2f1833735e7ee30",
+  "branch": "agent/terminal-market-structure-v1",
+  "currentStage": "S3",
+  "currentGate": "G3_ARBITRARY_TOKEN",
+  "gates": {
+    "G0_TRUTH": "PASS",
+    "G1_ARCHITECTURE": "PARTIAL",
+    "G2_DATA": "PARTIAL",
+    "G3_ARBITRARY_TOKEN": "PARTIAL",
+    "G4_ENTITY_ROLE": "PARTIAL",
+    "G5_CAMPAIGN_TACTIC": "PARTIAL",
+    "G6_CAPITAL_PROFIT": "PARTIAL",
+    "G7_RV": "PARTIAL",
+    "G8_REPLAY": "PARTIAL",
+    "G9_PLATFORM": "PARTIAL",
+    "G10_WEB_DESKTOP": "PARTIAL",
+    "G11_UI": "PARTIAL",
+    "G12_LIVE_ACCURACY": "PARTIAL",
+    "G13_STABILITY_SPEED": "NOT_RUN",
+    "G14_RELEASE": "NOT_RUN"
+  },
+  "activeFailures": [],
+  "liveCases": {
+    "P0_dual_operator_capture": "8 PASS / 1 UNSUPPORTED / 0 FAIL",
+    "origin_receipt": "Flap 起源为内部 CREATE，ORIGIN 保持 PARTIAL"
+  },
+  "lastCommand": "npx tsx scripts/live-case-runner.ts",
+  "lastResult": "pass=8 fail=0 blockedExternal=0 unsupported=1",
+  "nextAction": "creation traces、Archive fork、Exact VM、50 Token 人工核验 Corpus、OIDC 真接线",
+  "updatedAt": "2026-08-20T06:02:00.000Z",
+  "originMainSha": "58b3ca2c55fab41fe66453fed2f1833735e7ee30"
+}

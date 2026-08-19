@@ -45,6 +45,7 @@ function baseConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     duneConfigured: false,
     nansenConfigured: false,
     arkhamConfigured: false,
+    localDevAuth: false,
     ...overrides,
   };
 }

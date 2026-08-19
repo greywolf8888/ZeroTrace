@@ -123,6 +123,7 @@ const config: AppConfig = {
   duneConfigured: false,
   nansenConfigured: false,
   arkhamConfigured: false,
+  localDevAuth: false,
 };
 
 function testDataQuality(

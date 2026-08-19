@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/zerotrace-types",
+  "crates/zerotrace-ledger",
+  "crates/zerotrace-query-planner",
+  "crates/zerotrace-provider-scheduler",
+  "crates/zerotrace-graph",
+  "crates/zerotrace-entity",
+  "crates/zerotrace-campaign",
+  "crates/zerotrace-capital",
+  "crates/zerotrace-protocol-sdk",
+  "crates/zerotrace-evm-executor",
+  "crates/zerotrace-route-optimizer",
+  "crates/zerotrace-replay",
+  "crates/zerotrace-desktop-core",
+  "crates/zerotrace-compute",
+  "apps/desktop/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+rust-version = "1.85"
+
+[workspace.dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+sha2 = "0.10.9"
+hex = "0.4.3"
+thiserror = "2.0.16"

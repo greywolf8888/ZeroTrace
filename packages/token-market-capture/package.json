@@ -1,0 +1,24 @@
+{
+  "name": "@zerotrace/token-market-capture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@zerotrace/campaign-intelligence": "*",
+    "@zerotrace/capital-intelligence": "*",
+    "@zerotrace/evidence": "*",
+    "@zerotrace/identity-intelligence": "*",
+    "@zerotrace/local-index": "*",
+    "@zerotrace/schemas": "*",
+    "@zerotrace/source-registry": "*",
+    "@zerotrace/terminal-pipeline": "*"
+  }
+}

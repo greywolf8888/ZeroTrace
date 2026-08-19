@@ -1,0 +1,13 @@
+[package]
+name = "zerotrace-replay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Offline case replay from hashed raw artifacts."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+zerotrace-types = { path = "../zerotrace-types" }

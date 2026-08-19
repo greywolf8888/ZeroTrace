@@ -45,6 +45,7 @@ function baseConfig(): AppConfig {
     duneConfigured: false,
     nansenConfigured: false,
     arkhamConfigured: false,
+    localDevAuth: false,
   };
 }
 
@@ -453,5 +454,27 @@ describe('market-structure v2 API', { timeout: 60_000 }, () => {
     expect((await missingRepo.inject({ method: 'GET', url: '/api/v1/assets' })).statusCode).toBe(
       501,
     );
+  });
+
+  it('rejects caller-supplied role scores in forensic mode', async () => {
+    const app = await createApp({ config: baseConfig(), logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v2/tokens/EVM/eip155:56/0xAeCBD0E461047d6B7Cfc82e637AD197097407777/roles',
+      headers: { 'x-zerotrace-forensic': '1' },
+      payload: {
+        snapshot,
+        registryEvidenceId: `ev_${'1'.repeat(24)}`,
+        terminalEvidenceId: `ev_${'2'.repeat(24)}`,
+        candidates: [],
+        protocolSupplyAtomic: '1',
+        executableSellableAtomic: '1',
+        nonServiceNonPoolAtomic: '1',
+        marketWideExitU: '1',
+      },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('CALLER_SUPPLIED_INTERNAL_FORBIDDEN');
   });
 });

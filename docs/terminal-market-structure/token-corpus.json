@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "zerotrace-live-corpus-v1",
+  "capturedAt": "2026-08-20T06:10:00.000Z",
+  "reviewed": false,
+  "note": "Pancake PairCreated 全量扫描在公开 RPC 上超时/限流。此处只登记 P0 固定 Token，不是 50 Token 核验 Corpus，不得记 G12 PASS。",
+  "tokens": [
+    {
+      "token": "0xaecbd0e461047d6b7cfc82e637ad197097407777",
+      "caseId": "BSC_FLAP_TAX_V6_ORIGIN",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x13aa2c5bbfd15b65b15ef1129ff3dcddf8c17777",
+      "caseId": "BSC_FLAP_TAX_V3_LIFETIME",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x711770df85f79c4aebba1f1d8db263110d3d7777",
+      "caseId": "BSC_FLAP_NEW_TOKEN_V2",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xdcfb441a1f38802820a4e7b4cc8aab37833c7777",
+      "caseId": "BSC_FFT_REFERENCE",
+      "codeAgree": true,
+      "empty": false
+    }
+  ]
+}

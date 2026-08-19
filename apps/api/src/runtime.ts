@@ -63,9 +63,11 @@ import {
   type RawFactStorageHealth,
 } from '@zerotrace/storage';
 import { SourcifyV2Adapter, type EvmSourceVerificationAdapter } from '@zerotrace/platform-adapters';
+import type { TokenCaptureRuntime } from '@zerotrace/token-market-capture';
 
 import type { AppConfig } from './config.js';
 import { createDurableStores } from './runtime-stores.js';
+import { createTokenCaptureRuntime } from './token-capture-runtime.js';
 
 export interface AppRuntime {
   providerRegistry: ProviderRegistry;
@@ -123,6 +125,7 @@ export interface AppRuntime {
     artifacts?: { health(): Promise<ObjectStoreHealth>; close(): Promise<void> };
   };
   close?: () => Promise<void>;
+  tokenCapture?: TokenCaptureRuntime;
 }
 
 function policyFor(url: string, config: AppConfig): ProviderUrlPolicy {
@@ -484,6 +487,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
 
   const stores = createDurableStores(config);
   const { closeStores, ...durable } = stores;
+  const tokenCapture = createTokenCaptureRuntime(config);
   const close = async () => {
     await closeStores(
       evidenceRepository,
@@ -519,5 +523,6 @@ export function createRuntime(config: AppConfig): AppRuntime {
       : {}),
     ...(bitcoinAdapter === undefined ? {} : { bitcoinAdapter }),
     ...(solanaAdapter === undefined ? {} : { solanaAdapter }),
+    ...(tokenCapture === undefined ? {} : { tokenCapture }),
   };
 }

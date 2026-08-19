@@ -1,0 +1,8 @@
+---
+description: ZeroTrace 终局零信任规则
+alwaysApply: true
+---
+
+始终：核对 SHA；绑定 Snapshot/Evidence/Source/Version/Replay；取证模式 fail-closed；保存失败证据；连续执行完整阶段图。
+
+禁止：降低门槛、排除新增代码、移动文件绕过检查、Fixture 冒充实盘、Unknown 变零、分数冒充概率、CEX 转入冒充卖出、调用方自封链上事实、LLM 编造事实、增加任何写链能力。

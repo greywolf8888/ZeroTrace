@@ -14,3 +14,7 @@ reports/*.json
 .DS_Store
 Thumbs.db
 *.log
+target/
+data/local-index/
+ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包/
+ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包.zip

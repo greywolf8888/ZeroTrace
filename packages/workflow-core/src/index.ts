@@ -18,6 +18,7 @@ export interface DurableJob {
   payload?: string;
   resultRef?: string;
   lastError?: string;
+  fencingToken?: number;
 }
 
 export interface JobQueue {
@@ -74,6 +75,7 @@ export class InMemoryJobQueue implements JobQueue {
       if (job.status !== 'PENDING') continue;
       job.status = 'RUNNING';
       job.attempt += 1;
+      job.fencingToken = (job.fencingToken ?? 0) + 1;
       job.leaseOwner = workerId;
       job.leaseExpiresAt = new Date(now.getTime() + leaseMs).toISOString();
       return job;

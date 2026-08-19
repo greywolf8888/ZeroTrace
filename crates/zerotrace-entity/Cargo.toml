@@ -1,0 +1,12 @@
+[package]
+name = "zerotrace-entity"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Controller, hidden-affiliate, and retail bound rules."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+zerotrace-graph = { path = "../zerotrace-graph" }

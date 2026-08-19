@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "dist", "tsBuildInfoFile": "dist/.tsbuildinfo" },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../campaign-intelligence" },
+    { "path": "../capital-intelligence" },
+    { "path": "../evidence" },
+    { "path": "../identity-intelligence" },
+    { "path": "../local-index" },
+    { "path": "../schemas" },
+    { "path": "../source-registry" },
+    { "path": "../terminal-pipeline" }
+  ]
+}

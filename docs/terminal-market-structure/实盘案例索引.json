@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "zerotrace-live-case-index-v1",
+  "repositorySha": "58b3ca2c55fab41fe66453fed2f1833735e7ee30",
+  "capturedAt": "2026-08-20T06:02:00.000Z",
+  "operators": ["bnbchain-public", "nodereal-public"],
+  "independenceGroups": ["bnbchain", "nodereal"],
+  "note": "PASS 仅表示双 Operator 只读捕获一致，不是完整盘面 COMPLETE。Flap 起源回执不是 Token 地址。",
+  "cases": {
+    "BSC_FLAP_PORTAL_IDENTITY": "PASS",
+    "BSC_FLAP_TAX_V6_ORIGIN": "PASS",
+    "BSC_FLAP_TAX_V3_LIFETIME": "PASS",
+    "BSC_FLAP_NEW_TOKEN_V2": "PASS",
+    "BSC_FFT_REFERENCE": "PASS",
+    "BSC_PANCAKE_ROUTER_NEGATIVE": "PASS",
+    "BSC_PANCAKE_FACTORY_NEGATIVE": "PASS",
+    "PROVIDER_DISAGREEMENT_NEGATIVE_CASE": "PASS",
+    "UNSUPPORTED_V3_EXACT_EXIT": "UNSUPPORTED"
+  }
+}
