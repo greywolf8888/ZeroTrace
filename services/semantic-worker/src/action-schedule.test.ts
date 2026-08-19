@@ -7,7 +7,7 @@ const env = { POSTGRES_URL: 'postgresql://zerotrace:secret@database.example/zero
 
 describe('Action Semantics transaction schedules', () => {
   it.each([
-    ['ethereum-mainnet', `0x${'AB'.repeat(32)}`, `0x${'ab'.repeat(32)}`, 'EVM', '1'],
+    ['ethereum-mainnet', `0x${'AB'.repeat(32)}`, `0x${'ab'.repeat(32)}`, 'EVM', 'eip155:1'],
     ['bitcoin-mainnet', 'CD'.repeat(32), 'cd'.repeat(32), 'BITCOIN', 'bitcoin-mainnet'],
     [
       'solana-mainnet',

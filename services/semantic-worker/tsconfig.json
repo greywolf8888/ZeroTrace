@@ -14,7 +14,10 @@
     { "path": "../../packages/action-semantics" },
     { "path": "../../packages/capture-scheduler" },
     { "path": "../../packages/chain-adapters" },
+    { "path": "../../packages/campaign-engine" },
     { "path": "../../packages/claim-audit" },
+    { "path": "../../packages/funding-settlement-engine" },
+    { "path": "../../packages/ingestion" },
     { "path": "../../packages/platform-adapters" }
   ]
 }

@@ -19,6 +19,7 @@ import { getAddress } from 'viem';
 
 import {
   FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+  FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE,
   FLAP_HISTORY_PROJECTION_MAX_RANGE_BLOCKS,
   runFlapEventHistoryProjectionRestartSafe,
   type FlapEventHistoryProjectionRun,
@@ -158,7 +159,7 @@ function validateRequest(options: ExtendFlapLifetimeOptions): ValidatedExtension
       options.historySegmentSize,
       FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
       'historySegmentSize',
-      FLAP_HISTORY_PROJECTION_DEFAULT_SEGMENT_SIZE,
+      FLAP_HISTORY_PROJECTION_MAX_SEGMENT_SIZE,
     ),
     historyChunkSize: safeInteger(options.historyChunkSize, 2_000, 'historyChunkSize', 10_000),
   };

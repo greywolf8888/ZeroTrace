@@ -28,6 +28,7 @@ export interface FlapLifetimeWorkerSummary {
   datasetStartBlock: string;
   targetBlock: string;
   originScanId: string;
+  originSearchMode: 'FULL_DATASET' | 'VERIFIED_HINT';
   originState: 'known' | 'unknown' | 'unavailable' | 'stale';
   historyScanId: string | null;
   lifetimeCoverage: {
@@ -134,6 +135,7 @@ async function executeFlapLifetime(
     },
     createBscTransport(config),
   );
+  let lastOriginProgressAt = 0;
   const targetAnchor = await exactFinalizedTarget(adapter, config.targetBlock);
   return materializeFlapLifetimeRestartSafe({
     adapter,
@@ -141,11 +143,32 @@ async function executeFlapLifetime(
       source,
       maxRangeBlocks: config.originChunkSize,
       maxResults: 16,
+      requestRangeBlocks: config.sqdCreationRequestRangeBlocks,
+      onProgress: (progress) => {
+        const now = Date.now();
+        if (now - lastOriginProgressAt < 15_000 && progress.nextBlock !== progress.toBlock) {
+          return;
+        }
+        lastOriginProgressAt = now;
+        process.stderr.write(
+          `${JSON.stringify({
+            event: 'flap_lifetime_origin_progress',
+            token: config.token,
+            fromBlock: progress.fromBlock,
+            toBlock: progress.toBlock,
+            nextBlock: progress.nextBlock,
+            requestCount: progress.requestCount,
+            responseBlockCount: progress.responseBlockCount,
+            creationCount: progress.creationCount,
+          })}\n`,
+        );
+      },
     }),
     logReader: new SqdEvmLogReader({
       source,
       maxRangeBlocks: config.historyChunkSize,
       maxResults: config.historyMaxLogs,
+      includeAllBlocks: false,
     }),
     token: config.token,
     deployment: FLAP_BSC_MAINNET_DEPLOYMENT,
@@ -155,6 +178,7 @@ async function executeFlapLifetime(
       (await resources.evidence.put(evidence, sourceEvidenceIds, snapshot)).evidence,
     readDatasetMetadata: () => source.metadata(),
     targetAnchor,
+    ...(config.originHintBlock === undefined ? {} : { originHintBlock: config.originHintBlock }),
     originChunkSize: config.originChunkSize,
     historySegmentSize: config.historySegmentSize,
     historyChunkSize: config.historyChunkSize,
@@ -191,6 +215,7 @@ export async function runFlapLifetimeWorker(
     datasetStartBlock: result.datasetStartBlock,
     targetBlock: result.targetBlock,
     originScanId: result.originScanId,
+    originSearchMode: result.originSearchMode,
     originState: result.origin.state,
     historyScanId: result.historyProjection?.scanId ?? null,
     lifetimeCoverage: {

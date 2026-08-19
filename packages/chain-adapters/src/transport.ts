@@ -1,5 +1,6 @@
 import { ProviderError, toProviderError } from './errors.js';
 import { assertProviderUrlSafe, type ProviderUrlPolicy } from './security.js';
+import { canonicalJson } from '@zerotrace/evidence';
 
 export type FetchImplementation = typeof fetch;
 
@@ -27,16 +28,22 @@ export interface TransportDiagnostics {
 
 export interface TransportReadOptions {
   cacheMode?: 'default' | 'bypass';
+  /** Abort the individual read without disabling the transport for other callers. */
+  signal?: AbortSignal;
 }
 
 export interface TransportObservation<T> {
   value: T;
   endpointId: string;
+  /** All independently successful endpoint IDs that contributed to this value. */
+  sourceIds?: readonly string[];
 }
 
 export interface JsonRpcTransport {
   readonly endpointId: string;
   readonly lastEndpointId?: string | undefined;
+  /** Present when the transport performed an explicit multi-source comparison. */
+  readonly sourceIds?: readonly string[] | undefined;
   request<T>(
     method: string,
     params?: readonly unknown[],
@@ -184,6 +191,67 @@ function defaultSleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted !== true) return;
+  throw new ProviderError('TIMEOUT', 'Provider request was aborted.', {
+    retryable: false,
+    cause: signal.reason,
+  });
+}
+
+async function waitWithSignal(
+  operation: Promise<void>,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  if (signal === undefined) {
+    await operation;
+    return;
+  }
+  throwIfAborted(signal);
+  let abort: (() => void) | undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    abort = () => {
+      reject(
+        new ProviderError('TIMEOUT', 'Provider request was aborted.', {
+          retryable: false,
+          cause: signal.reason,
+        }),
+      );
+    };
+    signal.addEventListener('abort', abort, { once: true });
+  });
+  try {
+    await Promise.race([operation, aborted]);
+  } finally {
+    if (abort !== undefined) signal.removeEventListener('abort', abort);
+  }
+}
+
+async function raceWithSignal<T>(
+  operation: Promise<T>,
+  signal: AbortSignal | undefined,
+): Promise<T> {
+  if (signal === undefined) return operation;
+  throwIfAborted(signal);
+  let abort: (() => void) | undefined;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    abort = () => {
+      reject(
+        new ProviderError('TIMEOUT', 'Provider request was aborted.', {
+          retryable: false,
+          cause: signal.reason,
+        }),
+      );
+    };
+    signal.addEventListener('abort', abort, { once: true });
+  });
+  try {
+    return await Promise.race([operation, aborted]);
+  } finally {
+    if (abort !== undefined) signal.removeEventListener('abort', abort);
+  }
+}
+
 function isoTimestamp(milliseconds: number | null): string | null {
   return milliseconds === null ? null : new Date(milliseconds).toISOString();
 }
@@ -215,6 +283,7 @@ async function fetchSafely(
   options: TransportOptions,
   init: RequestInit,
   relativePath = '',
+  signal?: AbortSignal,
 ): Promise<string> {
   const base = await assertProviderUrlSafe(options.baseUrl, options.policy);
   if (relativePath !== '' && (!relativePath.startsWith('/') || relativePath.includes('..'))) {
@@ -228,6 +297,11 @@ async function fetchSafely(
   );
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
+  const abort = () => controller.abort(signal?.reason);
+  if (signal !== undefined) {
+    throwIfAborted(signal);
+    signal.addEventListener('abort', abort, { once: true });
+  }
   try {
     const response = await (options.fetchImplementation ?? fetch)(url, {
       ...init,
@@ -265,6 +339,7 @@ async function fetchSafely(
       );
     }
     const body = await response.text();
+    throwIfAborted(signal);
     if (Buffer.byteLength(body) > maxBytes) {
       throw new ProviderError(
         'INVALID_RESPONSE',
@@ -276,6 +351,7 @@ async function fetchSafely(
     throw toProviderError(error);
   } finally {
     clearTimeout(timeout);
+    if (signal !== undefined) signal.removeEventListener('abort', abort);
   }
 }
 
@@ -317,6 +393,7 @@ class ResilientExecutor {
     operation: () => Promise<T>,
     options: TransportReadOptions = {},
   ): Promise<T> {
+    throwIfAborted(options.signal);
     this.#logicalRequests += 1;
     const bypassCache = options.cacheMode === 'bypass';
     if (bypassCache) {
@@ -330,10 +407,10 @@ class ResilientExecutor {
     const existing = this.#inFlight.get(inFlightKey);
     if (existing !== undefined) {
       this.#cacheHits += 1;
-      return existing as Promise<T>;
+      return raceWithSignal(existing as Promise<T>, options.signal);
     }
 
-    const promise = this.#run(operation).then((value) => {
+    const promise = this.#run(operation, options.signal).then((value) => {
       if (!bypassCache) this.#writeCache(cacheKey, value);
       return value;
     });
@@ -366,7 +443,7 @@ class ResilientExecutor {
     };
   }
 
-  async #run<T>(operation: () => Promise<T>): Promise<T> {
+  async #run<T>(operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
     let halfOpenAttempt: boolean;
     try {
       halfOpenAttempt = this.#enterCircuit();
@@ -377,11 +454,13 @@ class ResilientExecutor {
     }
 
     for (let attempt = 1; attempt <= this.#options.maxAttempts; attempt += 1) {
-      await this.#reserveRateLimitSlot();
+      throwIfAborted(signal);
+      await this.#reserveRateLimitSlot(signal);
       this.#attempts += 1;
       this.#lastAttemptAt = this.#now();
       try {
         const result = await operation();
+        throwIfAborted(signal);
         this.#successes += 1;
         this.#lastSuccessAt = this.#now();
         this.#consecutiveFailures = 0;
@@ -391,9 +470,18 @@ class ResilientExecutor {
       } catch (error) {
         const providerError = toProviderError(error);
         this.#lastFailureAt = this.#now();
+        if (signal?.aborted === true) {
+          throw new ProviderError('TIMEOUT', 'Provider request was aborted.', {
+            retryable: false,
+            cause: providerError,
+          });
+        }
         if (providerError.retryable && attempt < this.#options.maxAttempts) {
           this.#retries += 1;
-          await this.#sleep(this.#retryDelay(attempt, providerError.retryAfterMs));
+          await waitWithSignal(
+            this.#sleep(this.#retryDelay(attempt, providerError.retryAfterMs)),
+            signal,
+          );
           continue;
         }
 
@@ -464,7 +552,7 @@ class ResilientExecutor {
     return 'HALF_OPEN';
   }
 
-  async #reserveRateLimitSlot(): Promise<void> {
+  async #reserveRateLimitSlot(signal?: AbortSignal): Promise<void> {
     if (this.#options.requestsPerSecond === 0) return;
     const interval = 1_000 / this.#options.requestsPerSecond;
     const now = this.#now();
@@ -473,7 +561,7 @@ class ResilientExecutor {
     const delay = Math.ceil(reservedAt - now);
     if (delay > 0) {
       this.#rateLimitDelays += 1;
-      await this.#sleep(delay);
+      await waitWithSignal(this.#sleep(delay), signal);
     }
   }
 
@@ -537,11 +625,16 @@ export class SafeJsonRpcTransport implements JsonRpcTransport {
       rpcCacheKey(method, params),
       async () => {
         const id = ++this.#requestId;
-        const body = await fetchSafely(this.#options, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
-        });
+        const body = await fetchSafely(
+          this.#options,
+          {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
+          },
+          undefined,
+          options.signal,
+        );
         let parsed: unknown;
         try {
           parsed = parseProviderJson(body);
@@ -624,7 +717,7 @@ export class SafeRestTransport implements RestTransport {
   ): Promise<TransportObservation<string>> {
     const value = await this.#executor.execute(
       `rest:text:${path}`,
-      () => fetchSafely(this.#options, { method: 'GET' }, path),
+      () => fetchSafely(this.#options, { method: 'GET' }, path, options.signal),
       options,
     );
     return { value, endpointId: this.endpointId };
@@ -773,6 +866,113 @@ export class FailoverJsonRpcTransport implements JsonRpcTransport {
       this.endpointId,
       this.#lastEndpointId,
       this.#failovers,
+      this.#transports,
+      this.#logicalRequests,
+      this.#successes,
+      this.#failures,
+    );
+  }
+}
+
+/**
+ * Reads the same JSON-RPC request from every configured endpoint and only returns a value when
+ * every endpoint succeeds with the same canonical JSON payload. This is intentionally separate
+ * from FailoverJsonRpcTransport: failover provides availability, while quorum provides evidence
+ * that independent providers agreed. A partial response or disagreement is therefore a hard
+ * failure and must not be silently converted into a successful observation.
+ */
+export class QuorumJsonRpcTransport implements JsonRpcTransport {
+  readonly endpointId: string;
+  readonly #transports: readonly JsonRpcTransport[];
+  readonly #sourceIds: readonly string[];
+  #lastEndpointId: string | undefined;
+  #logicalRequests = 0;
+  #successes = 0;
+  #failures = 0;
+
+  constructor(endpointId: string, transports: readonly JsonRpcTransport[]) {
+    if (transports.length < 2) {
+      throw new RangeError('Quorum transport requires at least two endpoints.');
+    }
+    const sourceIds = transports.map((transport) => transport.endpointId);
+    if (new Set(sourceIds).size !== sourceIds.length) {
+      throw new RangeError('Quorum transport endpoints must have unique endpoint IDs.');
+    }
+    this.endpointId = endpointId;
+    this.#transports = transports;
+    this.#sourceIds = Object.freeze([...sourceIds]);
+  }
+
+  get sourceIds(): readonly string[] {
+    return this.#sourceIds;
+  }
+
+  get lastEndpointId(): string | undefined {
+    return this.#lastEndpointId;
+  }
+
+  async request<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<T> {
+    return (await this.requestSourced<T>(method, params, options)).value;
+  }
+
+  async requestSourced<T>(
+    method: string,
+    params: readonly unknown[] = [],
+    options: TransportReadOptions = {},
+  ): Promise<TransportObservation<T>> {
+    this.#logicalRequests += 1;
+    const results = await Promise.allSettled(
+      this.#transports.map((transport) =>
+        requestJsonRpcSourced<T>(transport, method, params, options),
+      ),
+    );
+    const failures = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failures.length > 0) {
+      this.#failures += 1;
+      const providerError = toProviderError(failures[0]?.reason);
+      throw new ProviderError(providerError.code, 'Independent JSON-RPC quorum is incomplete.', {
+        retryable: providerError.retryable,
+        cause: providerError,
+      });
+    }
+    const observations = results.map(
+      (result) => (result as PromiseFulfilledResult<TransportObservation<T>>).value,
+    );
+    const first = observations[0];
+    if (first === undefined) {
+      this.#failures += 1;
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Independent JSON-RPC quorum returned no values.',
+      );
+    }
+    const expected = canonicalJson(first.value);
+    const disagreement = observations.some(
+      (observation) => canonicalJson(observation.value) !== expected,
+    );
+    if (disagreement) {
+      this.#failures += 1;
+      throw new ProviderError(
+        'INVALID_RESPONSE',
+        'Independent JSON-RPC providers returned different observations.',
+      );
+    }
+    this.#successes += 1;
+    this.#lastEndpointId = first.endpointId;
+    return { value: first.value, endpointId: first.endpointId, sourceIds: this.#sourceIds };
+  }
+
+  diagnostics(): TransportDiagnostics {
+    return failoverDiagnostics(
+      this.endpointId,
+      this.#lastEndpointId,
+      0,
       this.#transports,
       this.#logicalRequests,
       this.#successes,

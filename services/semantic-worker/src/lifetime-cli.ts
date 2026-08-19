@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import { loadWorkspaceEnv } from './workspace-env.js';
+
+loadWorkspaceEnv();
 
 import { publicWorkerError } from './errors.js';
 import { loadFlapLifetimeWorkerConfig } from './lifetime-config.js';
@@ -8,13 +10,16 @@ const HELP = `ZeroTrace exact finalized Flap lifetime materialization
 
 Usage:
   npm run flap:lifetime -- --token <address> [--target <finalized-block>]
+    [--origin-hint-block <finalized-block>]
     [--origin-chunk-size <blocks>] [--history-segment-size <blocks>]
     [--history-chunk-size <blocks>] [--history-max-transactions <count>]
-    [--history-max-logs <count>]
+    [--history-max-logs <count>] [--sqd-creation-request-range-size <blocks>]
 
 The worker reads the official SQD binance-mainnet dataset start, captures the current finalized
 BSC head (or proves an explicit target is not above it), finds a unique deployment origin, and
 projects every supported Flap Portal event from that origin through the same target Snapshot.
+An explicit origin hint is verified against SQD and finalized RPC but keeps lifetime coverage
+Unknown until the full dataset origin search is complete.
 
 Lifetime coverage becomes Known(true) only when both child scans are complete and Snapshot-exact.
 Otherwise it remains Unknown or the run fails closed. The worker never accepts private keys and

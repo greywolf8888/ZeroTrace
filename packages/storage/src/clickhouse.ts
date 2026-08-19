@@ -93,6 +93,15 @@ interface RawFactRow {
   observed_at_ms: string | number;
 }
 
+interface RawFactKeyRow {
+  fact_id: string;
+  fact_type: string;
+  subject: string;
+}
+
+const RAW_FACT_INSERT_BATCH_SIZE = 1_000;
+const RAW_FACT_RANGE_KEY_PAGE_SIZE = 1_000;
+
 const RAW_FACT_COLUMNS = [
   'fact_id',
   'schema_version',
@@ -128,7 +137,7 @@ const SELECT_FACT = `
     evidence_id,
     raw_artifact_ref,
     toUnixTimestamp64Milli(observed_at) AS observed_at_ms
-  FROM zerotrace.raw_chain_facts FINAL
+  FROM zerotrace.raw_chain_facts
 `;
 
 function requireInteger(value: number, field: string, minimum: number, maximum: number): number {
@@ -351,37 +360,47 @@ export class ClickHouseRawFactRepository {
   }
 
   async put(fact: RawChainFact): Promise<RawChainFact> {
-    const parsed = validateFact(fact);
+    const stored = await this.putMany([fact]);
+    const first = stored[0];
+    if (first === undefined) {
+      throw new RawFactStorageError(
+        'CLICKHOUSE_UNAVAILABLE',
+        'Raw Fact batch write returned no fact.',
+        { retryable: true },
+      );
+    }
+    return first;
+  }
+
+  async putMany(facts: readonly RawChainFact[]): Promise<RawChainFact[]> {
+    const parsed = facts.map(validateFact);
+    if (parsed.length === 0) return [];
     try {
-      const result = await this.#client.insert({
-        table: 'zerotrace.raw_chain_facts',
-        values: [toInsertRow(parsed)],
-        format: 'JSONEachRow',
-        columns: [...RAW_FACT_COLUMNS] as [string, ...string[]],
-        clickhouse_settings: { date_time_input_format: 'best_effort' },
-      });
-      if (!result.executed) {
-        throw new RawFactStorageError(
-          'CLICKHOUSE_UNAVAILABLE',
-          'Raw Fact insert was not executed.',
-          {
-            retryable: true,
-          },
-        );
-      }
-      const stored = await this.get(parsed.id);
-      if (stored === undefined) {
-        throw new RawFactStorageError('RAW_FACT_NOT_FOUND', 'Raw Fact was not stored.', {
-          retryable: true,
+      // The insert acknowledgement is the durable write boundary. A per-fact FINAL
+      // read-after-write check is intentionally avoided here: large finalized ranges
+      // must be written in bounded batches, and FINAL verification belongs to the
+      // subsequent bounded replay/read path rather than every individual insert.
+      for (let offset = 0; offset < parsed.length; offset += RAW_FACT_INSERT_BATCH_SIZE) {
+        const batch = parsed.slice(offset, offset + RAW_FACT_INSERT_BATCH_SIZE);
+        const result = await this.#client.insert({
+          table: 'zerotrace.raw_chain_facts',
+          values: batch.map(toInsertRow),
+          format: 'JSONEachRow',
+          columns: [...RAW_FACT_COLUMNS] as [string, ...string[]],
+          clickhouse_settings: { date_time_input_format: 'best_effort' },
         });
+        if (!result.executed) {
+          throw new RawFactStorageError(
+            'CLICKHOUSE_UNAVAILABLE',
+            'Raw Fact insert was not executed.',
+            { retryable: true },
+          );
+        }
       }
-      if (canonicalJson(stored) !== canonicalJson(parsed)) {
-        throw new RawFactStorageError('RAW_FACT_CONFLICT', 'Stored Raw Fact content conflicts.');
-      }
-      return stored;
+      return parsed;
     } catch (error) {
       if (error instanceof RawFactStorageError) throw error;
-      throw new RawFactStorageError('CLICKHOUSE_UNAVAILABLE', 'Raw Fact write failed.', {
+      throw new RawFactStorageError('CLICKHOUSE_UNAVAILABLE', 'Raw Fact batch write failed.', {
         retryable: true,
         cause: error,
       });
@@ -394,7 +413,10 @@ export class ClickHouseRawFactRepository {
     }
     try {
       const result = await this.#client.query({
-        query: `${SELECT_FACT} WHERE fact_id = {factId:String} LIMIT 2`,
+        query: `${SELECT_FACT}
+          WHERE fact_id = {factId:String}
+          LIMIT 1 BY fact_id
+          LIMIT 2`,
         format: 'JSONEachRow',
         query_params: { factId: id },
       });
@@ -418,6 +440,7 @@ export class ClickHouseRawFactRepository {
     fromBlock: number;
     toBlock: number;
     limit?: number;
+    offset?: number;
   }): Promise<RawChainFact[]> {
     const ledger = LedgerSchema.parse(options.ledger);
     requireInteger(options.fromBlock, 'fromBlock', 0, Number.MAX_SAFE_INTEGER);
@@ -426,24 +449,71 @@ export class ClickHouseRawFactRepository {
       throw new RangeError('toBlock must be greater than or equal to fromBlock.');
     }
     const limit = requireInteger(options.limit ?? 1_000, 'limit', 1, 10_000);
+    const offset = requireInteger(options.offset ?? 0, 'offset', 0, Number.MAX_SAFE_INTEGER);
     try {
-      const result = await this.#client.query({
-        query: `${SELECT_FACT}
-          WHERE ledger = {ledger:String}
-            AND chain_id = {chainId:String}
-            AND block_or_slot BETWEEN {fromBlock:UInt64} AND {toBlock:UInt64}
-          ORDER BY block_or_slot, fact_type, subject, fact_id
-          LIMIT {limit:UInt32}`,
-        format: 'JSONEachRow',
-        query_params: {
-          ledger,
-          chainId: options.chainId,
-          fromBlock: String(options.fromBlock),
-          toBlock: String(options.toBlock),
-          limit,
-        },
-      });
-      return (await result.json<RawFactRow>()).map(rowToFact);
+      // Keep both the deterministic key sort and the HTTP form field bounded. Sorting the full
+      // Raw Fact row carries payload strings through ClickHouse's LIMIT BY pipeline, while a
+      // 10,000-item factIds array can exceed the server's form-field limit. The public limit and
+      // offset remain unchanged; only the internal key/payload batches are capped.
+      const facts: RawChainFact[] = [];
+      let pageOffset = offset;
+      while (facts.length < limit) {
+        const pageLimit = Math.min(RAW_FACT_RANGE_KEY_PAGE_SIZE, limit - facts.length);
+        const keyResult = await this.#client.query({
+          query: `
+            SELECT fact_id
+            FROM zerotrace.raw_chain_facts
+            WHERE ledger = {ledger:String}
+              AND chain_id = {chainId:String}
+              AND block_or_slot BETWEEN {fromBlock:UInt64} AND {toBlock:UInt64}
+            ORDER BY block_or_slot, fact_type, subject, fact_id
+            LIMIT 1 BY fact_id
+            LIMIT {limit:UInt32} OFFSET {offset:UInt64}`,
+          format: 'JSONEachRow',
+          query_params: {
+            ledger,
+            chainId: options.chainId,
+            fromBlock: String(options.fromBlock),
+            toBlock: String(options.toBlock),
+            limit: pageLimit,
+            offset: String(pageOffset),
+          },
+          clickhouse_settings: {
+            max_bytes_before_external_sort: '64000000',
+            max_bytes_before_external_group_by: '64000000',
+          },
+        });
+        const keys = (await keyResult.json<{ fact_id: string }>()).map((row) => row.fact_id);
+        if (keys.length === 0) break;
+        const result = await this.#client.query({
+          query: `${SELECT_FACT}
+            WHERE ledger = {ledger:String}
+              AND chain_id = {chainId:String}
+              AND block_or_slot BETWEEN {fromBlock:UInt64} AND {toBlock:UInt64}
+              AND fact_id IN {factIds:Array(String)}
+            LIMIT 1 BY fact_id`,
+          format: 'JSONEachRow',
+          query_params: {
+            ledger,
+            chainId: options.chainId,
+            fromBlock: String(options.fromBlock),
+            toBlock: String(options.toBlock),
+            factIds: keys,
+          },
+        });
+        const rows = await result.json<RawFactRow>();
+        const rowsById = new Map(rows.map((row) => [row.fact_id, row]));
+        if (rowsById.size !== keys.length) {
+          throw new RawFactStorageError(
+            'RAW_FACT_CONFLICT',
+            'Raw Fact range page changed between key and payload reads.',
+          );
+        }
+        facts.push(...keys.map((key) => rowToFact(rowsById.get(key) as RawFactRow)));
+        if (keys.length < pageLimit) break;
+        pageOffset += keys.length;
+      }
+      return facts;
     } catch (error) {
       if (error instanceof RawFactStorageError) throw error;
       throw new RawFactStorageError('CLICKHOUSE_UNAVAILABLE', 'Raw Fact range read failed.', {
@@ -470,6 +540,7 @@ export class ClickHouseRawFactRepository {
             AND subject = {transactionId:String}
             AND provider = {provider:String}
           ORDER BY observed_at DESC, fact_id DESC
+          LIMIT 1 BY fact_id
           LIMIT 1`,
         format: 'JSONEachRow',
         query_params: { ledger, chainId, blockOrSlot, transactionId, provider },
@@ -497,8 +568,14 @@ export class ClickHouseRawFactRepository {
                 AND JSONExtractUInt(payload, 'transactionIndex') = {transactionIndex:UInt64})`
             : `(fact_type IN ('INSTRUCTION', 'LOG', 'BALANCE', 'TOKEN_BALANCE')
                 AND JSONExtractUInt(payload, 'transactionIndex') = {transactionIndex:UInt64})`;
-      const relatedResult = await this.#client.query({
-        query: `${SELECT_FACT}
+      // Keep the safety-limit and deterministic ordering query payload-free. On a reused
+      // ClickHouse volume, selecting large JSON payloads through LIMIT BY can retain every
+      // candidate row until the sort completes and exceed the container memory budget. Fetch
+      // the bounded key set first, then hydrate exactly those IDs.
+      const relatedKeyResult = await this.#client.query({
+        query: `
+          SELECT fact_id, fact_type, subject
+          FROM zerotrace.raw_chain_facts
           WHERE ledger = {ledger:String}
             AND chain_id = {chainId:String}
             AND block_or_slot = {blockOrSlot:UInt64}
@@ -506,6 +583,7 @@ export class ClickHouseRawFactRepository {
             AND raw_artifact_ref = {rawArtifactRef:String}
             AND ${relatedPredicate}
           ORDER BY fact_type, subject, fact_id
+          LIMIT 1 BY fact_id
           LIMIT {rowLimit:UInt32}`,
         format: 'JSONEachRow',
         query_params: {
@@ -518,14 +596,46 @@ export class ClickHouseRawFactRepository {
           rawArtifactRef: transaction.rawArtifactRef,
           rowLimit: limit + 1,
         },
+        clickhouse_settings: {
+          max_bytes_before_external_sort: '64000000',
+          max_bytes_before_external_group_by: '64000000',
+        },
       });
-      const related = (await relatedResult.json<RawFactRow>()).map(rowToFact);
-      if (related.length > limit) {
+      const relatedKeys = await relatedKeyResult.json<RawFactKeyRow>();
+      if (relatedKeys.length > limit) {
         throw new RawFactStorageError(
           'RAW_FACT_CONFLICT',
           'Transaction fact bundle exceeds the configured safety limit.',
         );
       }
+      const relatedResult = await this.#client.query({
+        query: `${SELECT_FACT}
+          WHERE ledger = {ledger:String}
+            AND chain_id = {chainId:String}
+            AND block_or_slot = {blockOrSlot:UInt64}
+            AND provider = {provider:String}
+            AND raw_artifact_ref = {rawArtifactRef:String}
+            AND fact_id IN {factIds:Array(String)}
+          LIMIT 1 BY fact_id`,
+        format: 'JSONEachRow',
+        query_params: {
+          ledger,
+          chainId,
+          blockOrSlot,
+          provider,
+          rawArtifactRef: transaction.rawArtifactRef,
+          factIds: relatedKeys.map((row) => row.fact_id),
+        },
+      });
+      const relatedRows = await relatedResult.json<RawFactRow>();
+      const relatedRowsById = new Map(relatedRows.map((row) => [row.fact_id, row]));
+      if (relatedRowsById.size !== relatedKeys.length) {
+        throw new RawFactStorageError(
+          'RAW_FACT_CONFLICT',
+          'Transaction fact bundle changed between key and payload reads.',
+        );
+      }
+      const related = relatedKeys.map((row) => rowToFact(relatedRowsById.get(row.fact_id)!));
       for (const fact of related) {
         if (fact.factType === 'LOG' && ledger === 'EVM') {
           const payload = fact.payload;

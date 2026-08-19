@@ -25,6 +25,7 @@ import type {
   AnalysisSnapshot,
   Evidence,
   EvidenceKind,
+  JsonValue,
   Ledger,
   RawChainFact,
 } from '@zerotrace/schemas';
@@ -35,8 +36,16 @@ import {
 } from '@zerotrace/storage';
 
 export * from './profiles.js';
+export * from './token-history.js';
 
 export const SQD_INGESTION_VERSION = 'sqd-finalized-ingestion-v4';
+
+const RAW_FACT_BLOCK_BATCH_SIZE = 250;
+
+function canonicalSourceChainId(ledger: Ledger, chainId: string): string {
+  if (ledger !== 'EVM') return chainId;
+  return chainId.startsWith('eip155:') ? chainId : `eip155:${chainId}`;
+}
 
 export type IngestionPipelineErrorCode =
   | 'INGESTION_SOURCE_MISMATCH'
@@ -99,7 +108,7 @@ export interface RawArtifactWriter {
     blockOrSlot: string;
     provider: string;
     capturedAt: string;
-    payload: SqdFinalizedBlock;
+    payload: JsonValue;
   }): Promise<RawArtifactWriteResult>;
 }
 
@@ -113,6 +122,11 @@ export interface EvidenceWriter {
 
 export interface RawFactWriter {
   put(fact: RawChainFact): Promise<RawChainFact>;
+  /**
+   * Optional batch boundary used by durable stores. The ingestion pipeline only
+   * advances a checkpoint after this batch resolves successfully.
+   */
+  putMany?(facts: readonly RawChainFact[]): Promise<readonly RawChainFact[]>;
 }
 
 export interface SqdFinalizedIngestionOptions {
@@ -121,10 +135,24 @@ export interface SqdFinalizedIngestionOptions {
   artifacts: RawArtifactWriter;
   evidence: EvidenceWriter;
   facts: RawFactWriter;
+  /** Maximum number of materialized blocks held before the durable checkpoint advances. */
+  checkpointBatchSize?: number;
   entityModelVersion?: string;
   labelSnapshot?: string;
   adapterVersion?: string;
   nowImplementation?: () => Date;
+  onBlockMaterialized?: (input: {
+    block: SqdFinalizedBlock;
+    snapshot: AnalysisSnapshot;
+    artifact: RawArtifactWriteResult;
+    facts: readonly RawChainFact[];
+    evidence: readonly Evidence[];
+  }) => void | Promise<void>;
+  onBeforeFinish?: (input: {
+    run: IngestionRun;
+    resumedFrom: number;
+    sourceSummary: SqdStreamSummary;
+  }) => void | Promise<void>;
 }
 
 export interface SqdIngestionResult {
@@ -437,7 +465,7 @@ export function sqdIngestionQuery(
     type: SQD_DATASETS[dataset].queryType,
     fromBlock: request.fromBlock,
     toBlock: request.toBlock,
-    includeAllBlocks: true,
+    includeAllBlocks: request.includeAllBlocks ?? true,
     materialize: { blocks: true, ...materialize },
     fields: request.fields ?? {},
     requests: request.requests ?? {},
@@ -450,10 +478,14 @@ export class SqdFinalizedIngestionPipeline {
   readonly #artifacts: RawArtifactWriter;
   readonly #evidence: EvidenceWriter;
   readonly #facts: RawFactWriter;
+  readonly #checkpointBatchSize: number;
   readonly #entityModelVersion: string;
   readonly #labelSnapshot: string;
   readonly #adapterVersion: string;
   readonly #now: () => Date;
+  readonly #onBlockMaterialized:
+    NonNullable<SqdFinalizedIngestionOptions['onBlockMaterialized']> | undefined;
+  readonly #onBeforeFinish: NonNullable<SqdFinalizedIngestionOptions['onBeforeFinish']> | undefined;
 
   constructor(options: SqdFinalizedIngestionOptions) {
     this.#source = options.source;
@@ -461,14 +493,26 @@ export class SqdFinalizedIngestionPipeline {
     this.#artifacts = options.artifacts;
     this.#evidence = options.evidence;
     this.#facts = options.facts;
+    const checkpointBatchSize = options.checkpointBatchSize ?? RAW_FACT_BLOCK_BATCH_SIZE;
+    if (
+      !Number.isSafeInteger(checkpointBatchSize) ||
+      checkpointBatchSize < 1 ||
+      checkpointBatchSize > 1_000
+    ) {
+      throw new RangeError('checkpointBatchSize must be an integer from 1 through 1000.');
+    }
+    this.#checkpointBatchSize = checkpointBatchSize;
     this.#entityModelVersion = options.entityModelVersion ?? 'entity-model-unapplied';
     this.#labelSnapshot = options.labelSnapshot ?? 'labels-unapplied';
     this.#adapterVersion = options.adapterVersion ?? '0.1.0';
     this.#now = options.nowImplementation ?? (() => new Date());
+    this.#onBlockMaterialized = options.onBlockMaterialized;
+    this.#onBeforeFinish = options.onBeforeFinish;
   }
 
   async run(request: SqdFinalizedRangeRequest): Promise<SqdIngestionResult> {
     const sourceId = `sqd:${this.#source.dataset}`;
+    const chainId = canonicalSourceChainId(this.#source.ledger, this.#source.chainId);
     const query = sqdIngestionQuery(this.#source.dataset, request);
     const materialize = requestedMaterialization(this.#source.dataset, request);
     const processedRecords = emptyProcessedCounts();
@@ -477,7 +521,7 @@ export class SqdFinalizedIngestionPipeline {
       source: sourceId,
       dataset: this.#source.dataset,
       ledger: this.#source.ledger,
-      chainId: this.#source.chainId,
+      chainId,
       fromBlock: request.fromBlock,
       toBlock: request.toBlock,
       query,
@@ -499,6 +543,19 @@ export class SqdFinalizedIngestionPipeline {
 
     try {
       if (run.nextBlock > run.toBlock) {
+        const sourceSummary: SqdStreamSummary = {
+          dataset: this.#source.dataset,
+          completion: 'REQUESTED_RANGE_COMPLETE',
+          requestedFrom: request.fromBlock,
+          requestedTo: request.toBlock,
+          lastBlock: run.lastBlock,
+          nextBlock: run.nextBlock,
+          finalizedHead: null,
+          blocks: 0,
+          requests: 0,
+          retries: 0,
+        };
+        await this.#onBeforeFinish?.({ run, resumedFrom, sourceSummary });
         run = await this.#checkpoints.finish(run.id, 'REQUESTED_RANGE_COMPLETE', run.toBlock + 1);
         return {
           run,
@@ -532,13 +589,60 @@ export class SqdFinalizedIngestionPipeline {
       }
 
       let processedBlocks = 0;
+      const pendingBlocks: Array<{
+        block: SqdFinalizedBlock;
+        snapshot: AnalysisSnapshot;
+        artifact: RawArtifactWriteResult;
+        facts: readonly RawChainFact[];
+        evidence: readonly Evidence[];
+        counts: ProcessedRecordCounts;
+      }> = [];
+      const commitBlock = async (input: {
+        block: SqdFinalizedBlock;
+        snapshot: AnalysisSnapshot;
+        artifact: RawArtifactWriteResult;
+        facts: readonly RawChainFact[];
+        evidence: readonly Evidence[];
+        counts: ProcessedRecordCounts;
+      }): Promise<void> => {
+        await this.#onBlockMaterialized?.(input);
+        run = await this.#checkpoints.advance(run.id, input.block.header.number);
+        processedBlocks += 1;
+        for (const table of Object.keys(input.counts) as SqdRecordTable[]) {
+          processedRecords[table] += input.counts[table];
+        }
+      };
+      const flushPendingBlocks = async (): Promise<void> => {
+        if (pendingBlocks.length === 0 || this.#facts.putMany === undefined) return;
+        const pendingFacts = pendingBlocks.flatMap((pending) => pending.facts);
+        const stored = await this.#facts.putMany(pendingFacts);
+        if (
+          stored.length !== pendingFacts.length ||
+          stored.some((fact, index) => fact.id !== pendingFacts[index]?.id)
+        ) {
+          throw new IngestionPipelineError(
+            'INGESTION_FAILED',
+            'Raw Fact batch writer returned a conflicting result.',
+          );
+        }
+        let factOffset = 0;
+        for (const pending of pendingBlocks) {
+          const factCount = pending.facts.length;
+          await commitBlock({
+            ...pending,
+            facts: stored.slice(factOffset, factOffset + factCount),
+          });
+          factOffset += factCount;
+        }
+        pendingBlocks.length = 0;
+      };
       const sourceSummary = await this.#source.readFinalizedRange(
         { ...request, fromBlock: run.nextBlock, toBlock: run.toBlock },
         async (block) => {
           const position = String(block.header.number);
           const artifact = await this.#artifacts.put({
             ledger: this.#source.ledger,
-            chainId: this.#source.chainId,
+            chainId,
             blockOrSlot: position,
             provider: sourceId,
             capturedAt: run.startedAt,
@@ -546,7 +650,7 @@ export class SqdFinalizedIngestionPipeline {
           });
           const snapshot = createSnapshot({
             ledger: this.#source.ledger,
-            chainId: this.#source.chainId,
+            chainId,
             block,
             capturedAt: run.startedAt,
             queryHash: run.queryHash,
@@ -555,9 +659,34 @@ export class SqdFinalizedIngestionPipeline {
             labelSnapshot: this.#labelSnapshot,
             adapterVersion: this.#adapterVersion,
           });
+          const blockEvidence: Evidence[] = [];
+          const blockFacts: RawChainFact[] = [];
+          const pendingFacts: RawChainFact[] = [];
+          const evidenceWriter: EvidenceWriter = {
+            put: async (candidate, sourceEvidenceIds = [], candidateSnapshot) => {
+              const stored = await this.#evidence.put(
+                candidate,
+                sourceEvidenceIds,
+                candidateSnapshot,
+              );
+              blockEvidence.push(stored.evidence);
+              return stored;
+            },
+          };
+          const factWriter: RawFactWriter = {
+            put: async (candidate) => {
+              if (this.#facts.putMany !== undefined) {
+                pendingFacts.push(candidate);
+                return candidate;
+              }
+              const stored = await this.#facts.put(candidate);
+              blockFacts.push(stored);
+              return stored;
+            },
+          };
           const evidence = createEvidence({
             ledger: this.#source.ledger,
-            chainId: this.#source.chainId,
+            chainId,
             kind: 'BLOCK',
             source: sourceId,
             locator: `block:${position}:${block.header.hash}`,
@@ -568,10 +697,10 @@ export class SqdFinalizedIngestionPipeline {
             rawArtifactRef: artifact.ref,
             summary: `SQD finalized ${this.#source.dataset} block ${position}.`,
           });
-          await this.#evidence.put(evidence, [], snapshot);
+          await evidenceWriter.put(evidence, [], snapshot);
           const fact = createRawChainFact({
             ledger: this.#source.ledger,
-            chainId: this.#source.chainId,
+            chainId,
             blockOrSlot: position,
             blockHash: block.header.hash,
             factType: 'BLOCK',
@@ -583,14 +712,14 @@ export class SqdFinalizedIngestionPipeline {
             rawArtifactRef: artifact.ref,
             observedAt: run.startedAt,
           });
-          await this.#facts.put(fact);
+          await factWriter.put(fact);
           const transactions = materialize.transactions
             ? sqdTransactionsFromBlock(this.#source.dataset, block)
             : [];
           for (const transaction of transactions) {
             const transactionEvidence = createEvidence({
               ledger: this.#source.ledger,
-              chainId: this.#source.chainId,
+              chainId,
               kind: 'TRANSACTION',
               source: sourceId,
               locator: `transaction:${transaction.identity}`,
@@ -601,11 +730,11 @@ export class SqdFinalizedIngestionPipeline {
               rawArtifactRef: artifact.ref,
               summary: `SQD finalized ${this.#source.dataset} transaction ${transaction.identity}.`,
             });
-            await this.#evidence.put(transactionEvidence, [], snapshot);
-            await this.#facts.put(
+            await evidenceWriter.put(transactionEvidence, [], snapshot);
+            await factWriter.put(
               createRawChainFact({
                 ledger: this.#source.ledger,
-                chainId: this.#source.chainId,
+                chainId,
                 blockOrSlot: position,
                 blockHash: block.header.hash,
                 factType: 'TRANSACTION',
@@ -621,7 +750,7 @@ export class SqdFinalizedIngestionPipeline {
           }
           const commonRecord = {
             ledger: this.#source.ledger,
-            chainId: this.#source.chainId,
+            chainId,
             dataset: this.#source.dataset,
             position,
             blockHash: block.header.hash,
@@ -629,8 +758,8 @@ export class SqdFinalizedIngestionPipeline {
             observedAt: run.startedAt,
             rawArtifactRef: artifact.ref,
             snapshot,
-            evidence: this.#evidence,
-            facts: this.#facts,
+            evidence: evidenceWriter,
+            facts: factWriter,
           } as const;
           const queryType = SQD_DATASETS[this.#source.dataset].queryType;
           const logs = materialize.logs
@@ -752,20 +881,43 @@ export class SqdFinalizedIngestionPipeline {
               summaryNoun: 'reward',
             });
           }
-          run = await this.#checkpoints.advance(run.id, block.header.number);
-          processedBlocks += 1;
-          processedRecords.transactions += transactions.length;
-          processedRecords.logs += logs.length;
-          processedRecords.inputs += inputs.length;
-          processedRecords.outputs += outputs.length;
-          processedRecords.instructions += instructions.length;
-          processedRecords.traces += traces.length;
-          processedRecords.stateDiffs += stateDiffs.length;
-          processedRecords.balances += balances.length;
-          processedRecords.tokenBalances += tokenBalances.length;
-          processedRecords.rewards += rewards.length;
+          const counts = emptyProcessedCounts();
+          counts.transactions = transactions.length;
+          counts.logs = logs.length;
+          counts.inputs = inputs.length;
+          counts.outputs = outputs.length;
+          counts.instructions = instructions.length;
+          counts.traces = traces.length;
+          counts.stateDiffs = stateDiffs.length;
+          counts.balances = balances.length;
+          counts.tokenBalances = tokenBalances.length;
+          counts.rewards = rewards.length;
+          if (this.#facts.putMany !== undefined) {
+            pendingBlocks.push({
+              block,
+              snapshot,
+              artifact,
+              facts: pendingFacts,
+              evidence: blockEvidence,
+              counts,
+            });
+            if (pendingBlocks.length >= this.#checkpointBatchSize) {
+              await flushPendingBlocks();
+            }
+            return;
+          }
+          await commitBlock({
+            block,
+            snapshot,
+            artifact,
+            facts: blockFacts,
+            evidence: blockEvidence,
+            counts,
+          });
         },
       );
+      await flushPendingBlocks();
+      await this.#onBeforeFinish?.({ run, resumedFrom, sourceSummary });
       run = await this.#checkpoints.finish(
         run.id,
         sourceSummary.completion,

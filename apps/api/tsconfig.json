@@ -8,14 +8,29 @@
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "references": [
     { "path": "../../packages/schemas" },
+    { "path": "../../packages/capture-scheduler" },
     { "path": "../../packages/identifiers" },
     { "path": "../../packages/evidence" },
     { "path": "../../packages/data-quality" },
     { "path": "../../packages/storage" },
     { "path": "../../packages/chain-adapters" },
+    { "path": "../../packages/campaign-engine" },
     { "path": "../../packages/claim-audit" },
     { "path": "../../packages/platform-adapters" },
     { "path": "../../packages/entity-engine" },
-    { "path": "../../packages/rv" }
+    { "path": "../../packages/forensic-evidence" },
+    { "path": "../../packages/ingestion" },
+    { "path": "../../packages/rv" },
+    { "path": "../../packages/identity-intelligence" },
+    { "path": "../../packages/supply-reality-engine" },
+    { "path": "../../packages/campaign-intelligence" },
+    { "path": "../../packages/capital-intelligence" },
+    { "path": "../../packages/market-reality-engine" },
+    { "path": "../../packages/casework" },
+    { "path": "../../packages/forensic-pipeline" },
+    { "path": "../../packages/llm-gateway" },
+    { "path": "../../packages/label-engine" },
+    { "path": "../../packages/action-semantics" },
+    { "path": "../../packages/workflow-core" }
   ]
 }

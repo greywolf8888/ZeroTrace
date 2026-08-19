@@ -904,7 +904,7 @@ export async function inspectFlapEventTransaction(options: {
             kind: 'PROVIDER_OBSERVATION',
             source: `flap-official-event-guide@${deployment.registryObservedAt.slice(0, 10)}`,
             sourceUri: FLAP_EVENT_GUIDE,
-            locator: `flap-event-defaults:${deployment.documentedVersion}@${snapshot.blockNumber}`,
+            locator: `flap-event-defaults:${deployment.documentedVersion}`,
             payload: {
               interfaceRevision: FLAP_INTERFACE_SOURCE_REVISION,
               documentedVersion: deployment.documentedVersion,
@@ -920,12 +920,10 @@ export async function inspectFlapEventTransaction(options: {
               },
             },
             observedAt: deployment.registryObservedAt,
-            blockOrSlot: snapshot.blockNumber,
-            finality: snapshot.finality,
             summary: 'Official Flap same-transaction event-default policy used for launch config.',
           }),
           [],
-          snapshot,
+          undefined,
         );
   const configuration =
     creationEvent === null || defaultEvidence === undefined

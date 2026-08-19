@@ -55,6 +55,52 @@ describe('ingest worker config', () => {
     ).toMatchObject({ dataset: 'bitcoin-mainnet', profile: 'ledger-records' });
   });
 
+  it('loads token-history with a configured BSC public RPC without exposing credentials', () => {
+    expect(
+      loadIngestWorkerConfig({ ...env, BSC_RPC_URL: 'https://bsc-dataseed.bnbchain.org' }, [
+        '--dataset',
+        'binance-mainnet',
+        '--profile',
+        'token-history',
+        '--token',
+        `0x${'a'.repeat(40)}`,
+        '--from',
+        '1',
+        '--to',
+        '2',
+      ]),
+    ).toMatchObject({
+      profile: 'token-history',
+      token: `0x${'a'.repeat(40)}`,
+      evmRpcUrl: 'https://bsc-dataseed.bnbchain.org',
+      evmChainId: 56,
+    });
+  });
+
+  it('falls back to the legacy EVM RPC variable when the preferred variable is blank', () => {
+    expect(
+      loadIngestWorkerConfig(
+        {
+          ...env,
+          BSC_RPC_URL: '',
+          EVM_BSC_RPC_URL: 'https://bsc-dataseed-public.bnbchain.org',
+        },
+        [
+          '--dataset',
+          'binance-mainnet',
+          '--profile',
+          'token-history',
+          '--token',
+          `0x${'a'.repeat(40)}`,
+          '--from',
+          '1',
+          '--to',
+          '2',
+        ],
+      ),
+    ).toMatchObject({ evmRpcUrl: 'https://bsc-dataseed-public.bnbchain.org' });
+  });
+
   it('rejects unsupported datasets, unknown arguments, unsafe ranges, and missing durable stores', () => {
     expect(() =>
       loadIngestWorkerConfig(env, ['--dataset', 'unknown-mainnet', '--from', '0', '--to', '1']),

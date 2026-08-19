@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "dist", "tsBuildInfoFile": "dist/.tsbuildinfo" },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../schemas" },
+    { "path": "../evidence" },
+    { "path": "../supply-reality-engine" },
+    { "path": "../identity-intelligence" },
+    { "path": "../casework" }
+  ]
+}

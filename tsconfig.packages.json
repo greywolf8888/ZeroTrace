@@ -4,8 +4,10 @@
     { "path": "./packages/schemas" },
     { "path": "./packages/identifiers" },
     { "path": "./packages/evidence" },
+    { "path": "./packages/funding-settlement-engine" },
     { "path": "./packages/data-quality" },
     { "path": "./packages/action-semantics" },
+    { "path": "./packages/workflow-core" },
     { "path": "./packages/storage" },
     { "path": "./packages/ingestion" },
     { "path": "./packages/chain-adapters" },
@@ -14,6 +16,21 @@
     { "path": "./packages/label-engine" },
     { "path": "./packages/entity-engine" },
     { "path": "./packages/claim-audit" },
-    { "path": "./packages/rv" }
+    { "path": "./packages/rv" },
+    { "path": "./packages/token-flow-engine" },
+    { "path": "./packages/cluster-position-engine" },
+    { "path": "./packages/candidate-discovery" },
+    { "path": "./packages/behavior-engine" },
+    { "path": "./packages/campaign-engine" },
+    { "path": "./packages/forensic-evidence" },
+    { "path": "./packages/asset-ledger" },
+    { "path": "./packages/supply-reality-engine" },
+    { "path": "./packages/identity-intelligence" },
+    { "path": "./packages/campaign-intelligence" },
+    { "path": "./packages/capital-intelligence" },
+    { "path": "./packages/market-reality-engine" },
+    { "path": "./packages/casework" },
+    { "path": "./packages/forensic-pipeline" },
+    { "path": "./packages/llm-gateway" }
   ]
 }

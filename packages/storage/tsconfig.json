@@ -12,6 +12,13 @@
     { "path": "../data-quality" },
     { "path": "../action-semantics" },
     { "path": "../capture-scheduler" },
-    { "path": "../claim-audit" }
+    { "path": "../claim-audit" },
+    { "path": "../funding-settlement-engine" },
+    { "path": "../entity-engine" },
+    { "path": "../token-flow-engine" },
+    { "path": "../cluster-position-engine" },
+    { "path": "../behavior-engine" },
+    { "path": "../campaign-engine" },
+    { "path": "../workflow-core" }
   ]
 }

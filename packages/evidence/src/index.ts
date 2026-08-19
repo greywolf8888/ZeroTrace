@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import {
   AnalysisSnapshotSchema,
   EvidenceSchema,
@@ -9,25 +7,21 @@ import {
   type Ledger,
 } from '@zerotrace/schemas';
 
-export function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== 'object') {
-    const encoded = JSON.stringify(value);
-    if (encoded === undefined) throw new TypeError('Value is not JSON serializable.');
-    return encoded;
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalJson).join(',')}]`;
-  }
-  const record = value as Record<string, unknown>;
-  return `{${Object.keys(record)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
-    .join(',')}}`;
-}
+export { canonicalJson, hashPayload } from './hash.js';
+export {
+  buildForensicFinding,
+  buildReportEnvelope,
+  contentAddressedId,
+  coverageFromRatios,
+  FORENSIC_POLICY_VERSION,
+  fuseEvidenceScore,
+  inconclusiveSourceIndependence,
+  snapshotPosition,
+  subjectKey,
+  unknownCoverageVector,
+} from './forensic.js';
 
-export function hashPayload(payload: unknown): string {
-  return createHash('sha256').update(canonicalJson(payload)).digest('hex');
-}
+import { hashPayload } from './hash.js';
 
 export interface CreateEvidenceInput {
   ledger: Ledger;

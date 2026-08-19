@@ -466,6 +466,12 @@ describe('Flap lifetime materialization', () => {
         },
       }).success,
     ).toBe(false);
+    expect(
+      FlapLifetimeMaterializationSchema.safeParse({
+        ...materialization,
+        originSearchMode: 'VERIFIED_HINT',
+      }).success,
+    ).toBe(false);
   });
 
   it('rejects a target Snapshot mismatch instead of degrading it to zero coverage', () => {

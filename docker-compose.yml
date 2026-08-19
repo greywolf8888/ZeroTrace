@@ -14,7 +14,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-8000}
       HEALTH_CACHE_TTL_MS: ${HEALTH_CACHE_TTL_MS:-15000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-eth-mainnet.g.alchemy.com,bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org,portal.sqd.dev,sourcify.dev,api.mainnet.solana.com,blockstream.info}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-eth-mainnet.g.alchemy.com,bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org,bsc.nodereal.io,portal.sqd.dev,sourcify.dev,api.mainnet.solana.com,solana-rpc.publicnode.com,blockstream.info}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-100}
@@ -33,7 +33,7 @@ services:
       EVM_ETHEREUM_REQUESTS_PER_SECOND: ${EVM_ETHEREUM_REQUESTS_PER_SECOND:-5}
       BSC_RPC_URL: ${BSC_RPC_URL:-}
       EVM_BSC_RPC_URL: ${EVM_BSC_RPC_URL:-}
-      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc.nodereal.io}
       EVM_BSC_CHAIN_ID: ${EVM_BSC_CHAIN_ID:-56}
       EVM_BSC_SNAPSHOT_TAG: ${EVM_BSC_SNAPSHOT_TAG:-finalized}
       EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
@@ -105,6 +105,11 @@ services:
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
       PROVIDER_RETRY_MAX_MS: ${PROVIDER_RETRY_MAX_MS:-10000}
+      ALCHEMY_API_KEY: ${ALCHEMY_API_KEY:-}
+      ETH_RPC_URL: ${ETH_RPC_URL:-}
+      EVM_ETHEREUM_RPC_URL: ${EVM_ETHEREUM_RPC_URL:-}
+      BSC_RPC_URL: ${BSC_RPC_URL:-https://bsc-dataseed.bnbchain.org}
+      EVM_BSC_RPC_URL: ${EVM_BSC_RPC_URL:-}
       POSTGRES_URL: postgresql://zerotrace:${POSTGRES_PASSWORD:-zerotrace}@postgres:5432/zerotrace
       CLICKHOUSE_URL: http://clickhouse:8123
       OBJECT_STORE_ENDPOINT: http://minio:9000
@@ -152,13 +157,13 @@ services:
       target: semantic-worker
     restart: unless-stopped
     environment:
-      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc.nodereal.io}
       EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
       SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
       SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc.nodereal.io}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
@@ -181,13 +186,13 @@ services:
       context: .
       target: semantic-worker
     environment:
-      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc.nodereal.io}
       EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
       SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
       SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc.nodereal.io}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
@@ -213,13 +218,13 @@ services:
       context: .
       target: semantic-worker
     environment:
-      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc.nodereal.io}
       EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
       SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
       SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc.nodereal.io}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
@@ -252,13 +257,13 @@ services:
       context: .
       target: semantic-worker
     environment:
-      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc.nodereal.io}
       EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
       SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
       SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc.nodereal.io}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
@@ -289,13 +294,13 @@ services:
       context: .
       target: semantic-worker
     environment:
-      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc.nodereal.io}
       EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
       SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
       SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc.nodereal.io}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
@@ -324,13 +329,13 @@ services:
       context: .
       target: semantic-worker
     environment:
-      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc.nodereal.io}
       EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
       SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
       SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc.nodereal.io}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}
@@ -363,13 +368,13 @@ services:
       target: semantic-worker
     restart: unless-stopped
     environment:
-      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc-dataseed-public.bnbchain.org}
+      EVM_BSC_RPC_URLS: ${EVM_BSC_RPC_URLS:-https://bsc-dataseed.bnbchain.org,https://bsc.nodereal.io}
       EVM_BSC_REQUESTS_PER_SECOND: ${EVM_BSC_REQUESTS_PER_SECOND:-10}
       SQD_PORTAL_URL: ${SQD_PORTAL_URL:-https://portal.sqd.dev}
       SQD_PROVIDER_ALLOW_HOSTS: ${SQD_PROVIDER_ALLOW_HOSTS:-portal.sqd.dev}
       SQD_REQUESTS_PER_SECOND: ${SQD_REQUESTS_PER_SECOND:-2}
       REQUEST_TIMEOUT_MS: ${REQUEST_TIMEOUT_MS:-30000}
-      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc-dataseed-public.bnbchain.org}
+      PROVIDER_ALLOW_HOSTS: ${PROVIDER_ALLOW_HOSTS:-bnb-mainnet.g.alchemy.com,bsc-dataseed.bnbchain.org,bsc.nodereal.io}
       ALLOW_PRIVATE_PROVIDER_URLS: ${ALLOW_PRIVATE_PROVIDER_URLS:-false}
       PROVIDER_MAX_ATTEMPTS: ${PROVIDER_MAX_ATTEMPTS:-3}
       PROVIDER_RETRY_BASE_MS: ${PROVIDER_RETRY_BASE_MS:-250}

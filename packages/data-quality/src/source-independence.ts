@@ -38,6 +38,15 @@ export const BSC_SOURCE_OPERATOR_REGISTRY: readonly SourceOperatorRegistryEntry[
     registryRevision: 'alchemy-bnb-chain-api@2026-08-11',
   }),
   Object.freeze({
+    operatorId: 'nodereal',
+    operatorName: 'NodeReal',
+    hostnames: Object.freeze(['bsc.nodereal.io']),
+    officialSource:
+      'https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/',
+    registryObservedAt: '2026-08-15T00:00:00.000Z',
+    registryRevision: 'bnb-chain-bsc-json-rpc-endpoints@2026-08-15',
+  }),
+  Object.freeze({
     operatorId: 'bnb-chain',
     operatorName: 'BNB Chain',
     hostnames: Object.freeze(['bsc-dataseed.bnbchain.org', 'bsc-dataseed-public.bnbchain.org']),

@@ -37,6 +37,8 @@ export interface CaptureLeaseRepository {
   claimDue(input: {
     owner: string;
     captureKinds: readonly CaptureKind[];
+    /** Optional operational selector for a single durable schedule replay. */
+    scheduleId?: string;
     now?: string;
     leaseSeconds?: number;
     limit?: number;
@@ -54,6 +56,12 @@ export interface CaptureLeaseRepository {
     detail: string;
     sourceRetryable: boolean;
     failedAt?: string;
+  }): Promise<CaptureRun>;
+  renew?(input: {
+    runId: string;
+    leaseToken: string;
+    leaseSeconds?: number;
+    renewedAt?: string;
   }): Promise<CaptureRun>;
 }
 
@@ -75,6 +83,8 @@ export interface RunCaptureCycleInput {
   repository: CaptureLeaseRepository;
   handlers: ReadonlyMap<CaptureKind, CaptureHandler>;
   owner: string;
+  /** Optional operational selector for a single durable schedule replay. */
+  scheduleId?: string;
   now?: string;
   leaseSeconds?: number;
   limit?: number;
@@ -88,6 +98,7 @@ export async function runCaptureCycle(input: RunCaptureCycleInput): Promise<Capt
   const runs = await input.repository.claimDue({
     owner: input.owner,
     captureKinds,
+    ...(input.scheduleId === undefined ? {} : { scheduleId: input.scheduleId }),
     ...(input.now === undefined ? {} : { now: input.now }),
     ...(input.leaseSeconds === undefined ? {} : { leaseSeconds: input.leaseSeconds }),
     ...(input.limit === undefined ? {} : { limit: input.limit }),
@@ -112,8 +123,45 @@ export async function runCaptureCycle(input: RunCaptureCycleInput): Promise<Capt
           ...(input.now === undefined ? {} : { failedAt: input.now }),
         });
       }
+      const controller = new AbortController();
+      const relayAbort = () => controller.abort(input.signal?.reason);
+      if (input.signal?.aborted === true) {
+        relayAbort();
+      } else {
+        input.signal?.addEventListener('abort', relayAbort, { once: true });
+      }
+      let heartbeatStopped = false;
+      let heartbeatError: unknown;
+      let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+      const renew = input.repository.renew?.bind(input.repository);
+      if (renew !== undefined && run.lease.state === 'known') {
+        const leaseSeconds = input.leaseSeconds ?? 300;
+        const heartbeatMilliseconds = Math.min(
+          30_000,
+          Math.max(1_000, Math.floor((leaseSeconds * 1_000) / 3)),
+        );
+        const heartbeat = async (): Promise<void> => {
+          if (heartbeatStopped || heartbeatError !== undefined || run.lease.state !== 'known') {
+            return;
+          }
+          try {
+            await renew({
+              runId: run.id,
+              leaseToken: run.lease.value.token,
+              ...(input.leaseSeconds === undefined ? {} : { leaseSeconds: input.leaseSeconds }),
+            });
+          } catch (error) {
+            heartbeatError = error;
+            controller.abort(error);
+          }
+        };
+        heartbeatTimer = setInterval(() => {
+          void heartbeat();
+        }, heartbeatMilliseconds);
+      }
       try {
-        const result = CaptureRunSuccessSchema.parse(await handler(run, input.signal));
+        const result = CaptureRunSuccessSchema.parse(await handler(run, controller.signal));
+        if (heartbeatError !== undefined) throw heartbeatError;
         return input.repository.complete({
           runId: run.id,
           leaseToken: run.lease.value.token,
@@ -138,6 +186,10 @@ export async function runCaptureCycle(input: RunCaptureCycleInput): Promise<Capt
           sourceRetryable: failure.sourceRetryable,
           ...(input.now === undefined ? {} : { failedAt: input.now }),
         });
+      } finally {
+        heartbeatStopped = true;
+        if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer);
+        input.signal?.removeEventListener('abort', relayAbort);
       }
     }),
   );
@@ -159,6 +211,23 @@ function normalizeTrigger(trigger: CaptureTrigger): CaptureTrigger {
         everySeconds: parsed.everySeconds,
         catchupPolicy: 'SKIP_MISSED',
       };
+}
+
+function triggerIdentity(captureKind: CaptureKind, trigger: CaptureTrigger): JsonValue {
+  // A one-shot Token History backfill is an idempotent request for one immutable range. Its
+  // enqueue time is execution metadata, not a second historical job identity. Other one-shot
+  // captures retain their explicit scheduled time in the identity.
+  if (captureKind === 'TOKEN_HISTORY_BACKFILL' && trigger.type === 'ONCE') {
+    return { type: 'ONCE' };
+  }
+  if (captureKind === 'TOKEN_LIVE_CAPTURE' && trigger.type === 'INTERVAL') {
+    return {
+      type: 'INTERVAL',
+      everySeconds: trigger.everySeconds,
+      catchupPolicy: trigger.catchupPolicy,
+    };
+  }
+  return trigger;
 }
 
 export function nextCaptureOccurrence(
@@ -187,7 +256,7 @@ export function defineCaptureSchedule(input: DefineCaptureScheduleInput): Captur
   const parameters = JsonValueSchema.parse(input.parameters);
   const trigger = normalizeTrigger(input.trigger);
   const retryPolicy = CaptureRetryPolicySchema.parse(input.retryPolicy);
-  const identity = {
+  const definitionIdentity = {
     schemaVersion: 'capture-schedule-v1' as const,
     captureKind: input.captureKind,
     operation: 'READ_ONLY_CAPTURE' as const,
@@ -196,9 +265,12 @@ export function defineCaptureSchedule(input: DefineCaptureScheduleInput): Captur
     trigger,
     retryPolicy,
   };
-  const identityHash = hashPayload(identity);
+  const identityHash = hashPayload({
+    ...definitionIdentity,
+    trigger: triggerIdentity(input.captureKind, trigger),
+  });
   const definition = CaptureScheduleDefinitionSchema.parse({
-    ...identity,
+    ...definitionIdentity,
     id: `cps_${identityHash.slice(0, 24)}`,
     identityHash,
     createdAt,
@@ -220,7 +292,10 @@ export function defineCaptureSchedule(input: DefineCaptureScheduleInput): Captur
 export function captureScheduleIdFor(
   definition: Omit<CaptureScheduleDefinition, 'id' | 'identityHash' | 'createdAt'>,
 ): string {
-  return `cps_${hashPayload(definition).slice(0, 24)}`;
+  return `cps_${hashPayload({
+    ...definition,
+    trigger: triggerIdentity(definition.captureKind, definition.trigger),
+  }).slice(0, 24)}`;
 }
 
 export function captureRunIdFor(scheduleId: string, scheduledFor: string): string {

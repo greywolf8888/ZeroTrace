@@ -5,6 +5,8 @@
     { "path": "./apps/api" },
     { "path": "./apps/web" },
     { "path": "./services/ingest-worker" },
-    { "path": "./services/semantic-worker" }
+    { "path": "./services/semantic-worker" },
+    { "path": "./services/simulation-worker" },
+    { "path": "./services/llm-worker" }
   ]
 }
