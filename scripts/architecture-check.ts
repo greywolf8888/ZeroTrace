@@ -63,6 +63,7 @@ function visit(node: string, stack: string[]): void {
 for (const name of graph.keys()) visit(name, []);
 
 const appTsx = lineCount('apps/web/src/App.tsx');
+const appShell = lineCount('apps/web/src/app/AppShell.tsx');
 const apiApp = lineCount('apps/api/src/app.ts');
 const schemaIndex = lineCount('packages/schemas/src/index.ts');
 const apiClient = readFileSync(join(root, 'apps/web/src/api.ts'), 'utf8');
@@ -76,6 +77,7 @@ const failures: string[] = [];
 if (cycles.length > 0)
   failures.push(`package_dependency_cycles=${cycles.length}\n${cycles.join('\n')}`);
 if (appTsx > 300) failures.push(`apps_web_App_tsx_lines=${appTsx} (limit 300)`);
+if (appShell > 300) failures.push(`apps_web_AppShell_tsx_lines=${appShell} (limit 300)`);
 if (apiApp > 250) failures.push(`apps_api_app_ts_lines=${apiApp} (limit 250)`);
 if (schemaIndex > 200) failures.push(`schemas_root_index_lines=${schemaIndex} (limit 200)`);
 if (handwritten) failures.push('handwritten_web_api_contracts != 0');
@@ -90,6 +92,7 @@ process.stdout.write(
     {
       package_dependency_cycles: 0,
       apps_web_App_tsx_lines: appTsx,
+      apps_web_AppShell_tsx_lines: appShell,
       apps_api_app_ts_lines: apiApp,
       schemas_root_index_lines: schemaIndex,
       handwritten_web_api_contracts: 0,
