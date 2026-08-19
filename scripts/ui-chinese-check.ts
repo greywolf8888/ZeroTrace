@@ -9,6 +9,7 @@ const files = [
   'apps/web/src/app/AppShell.tsx',
   'apps/web/src/InvestigationGraph.tsx',
   'apps/web/src/workspaces/forensic.tsx',
+  'apps/web/src/workspaces/token-analyze.tsx',
   'apps/web/src/i18n/zh-CN.ts',
 ];
 

@@ -1,4 +1,5 @@
-/** Migrated API client. Source of truth: Fastify OpenAPI + @zerotrace/schemas. Do not add parallel handwritten contracts in apps/web/src/api.ts. */
+// GENERATED: bound to apps/web/src/generated-api/openapi.json. Do not hand-edit parallel contracts in apps/web/src/api.ts.
+/** Source of truth: Fastify route dump + @zerotrace/schemas. */
 
 const configuredBase = import.meta.env.VITE_API_URL as string | undefined;
 const API_BASE = (configuredBase ?? '').replace(/\/$/, '');
@@ -2479,6 +2480,38 @@ export interface LaunchpadRegistryEntry {
   integrationBoundary: string;
 }
 
+export interface TokenAnalyzeResponse {
+  status:
+    | 'IDLE'
+    | 'QUEUED'
+    | 'RUNNING'
+    | 'PARTIAL'
+    | 'COMPLETE'
+    | 'STALE'
+    | 'SOURCE_CONFLICT'
+    | 'FAILED'
+    | 'CANCELLED'
+    | 'OFFLINE'
+    | 'UNSUPPORTED';
+  job?: { id: string; status: string; resultRef?: string; lastError?: string };
+  investigationId?: string;
+  limitations: string[];
+  reason?: string;
+  supply?: {
+    conservation?: {
+      protocolSupplyAtomic?: string;
+      explainedSupplyAtomic?: string;
+      unknownDifferenceAtomic?: string;
+      identityHolds?: boolean;
+    };
+    executable?: { sellableNowAtomic?: string };
+    originCoverageComplete?: boolean;
+  };
+  roles?: { assessments?: Array<{ role: string; subject: { identifier: string } }> };
+  envelopes?: unknown[];
+  casePackage?: { manifest?: unknown };
+}
+
 export interface Capability {
   id: string;
   status: string;
@@ -3106,6 +3139,17 @@ export const api = {
     requestJson<EvidenceDrilldownResponse>(
       `/api/v1/evidence/${encodeURIComponent(evidenceId)}/drilldown`,
     ),
+  analyzeToken: (
+    ledger: string,
+    chainId: string,
+    token: string,
+    body: { snapshotPolicy: 'FINALIZED'; analysisMode: 'FULL_LIFETIME' | 'BOUNDED_WINDOW' },
+  ) =>
+    requestJson<TokenAnalyzeResponse>(
+      `/api/v2/tokens/${encodeURIComponent(ledger)}/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}/analyze`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  forensicJob: (jobId: string) => requestJson<TokenAnalyzeResponse['job']>(`/api/v2/jobs/${encodeURIComponent(jobId)}`),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',

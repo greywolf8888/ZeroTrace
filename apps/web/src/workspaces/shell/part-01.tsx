@@ -12,6 +12,7 @@ import type {
 } from './chain-views.js';
 
 export type View =
+  | 'analyze'
   | 'overview'
   | 'search'
   | 'entities'
@@ -28,6 +29,7 @@ export type View =
 export type Theme = 'dark' | 'light';
 
 export const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
+  { id: 'analyze', label: 'Token 盘面分析', marker: '分析' },
   { id: 'search', label: '案件与调查', marker: '调查' },
   { id: 'overview', label: '盘面总览', marker: '总览' },
   { id: 'campaigns', label: '坐庄时间线', marker: '活动' },

@@ -27,8 +27,10 @@
     { "path": "../../packages/capital-intelligence" },
     { "path": "../../packages/market-reality-engine" },
     { "path": "../../packages/casework" },
+    { "path": "../../packages/forensic-pipeline" },
     { "path": "../../packages/llm-gateway" },
     { "path": "../../packages/label-engine" },
-    { "path": "../../packages/action-semantics" }
+    { "path": "../../packages/action-semantics" },
+    { "path": "../../packages/workflow-core" }
   ]
 }

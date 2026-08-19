@@ -17,6 +17,7 @@ import {
   ProfitWorkspace,
   SupplyRealityWorkspace,
 } from '../workspaces/forensic.js';
+import { TokenAnalyzeWorkspace } from '../workspaces/token-analyze.js';
 import {
   ClaimAuditWorkspace,
   ControlCampaignWorkspace,
@@ -36,7 +37,7 @@ export function App() {
   const [theme, setTheme] = useState<Theme>(() =>
     window.localStorage.getItem('zerotrace-theme') === 'light' ? 'light' : 'dark',
   );
-  const [view, setView] = useState<View>('overview');
+  const [view, setView] = useState<View>('analyze');
   const [health, setHealth] = useState<HealthResponse>();
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [platforms, setPlatforms] = useState<PlatformDescriptor[]>([]);
@@ -138,6 +139,7 @@ export function App() {
   }, []);
 
   const content = useMemo(() => {
+    if (view === 'analyze') return <TokenAnalyzeWorkspace />;
     if (view === 'search') {
       return (
         <SearchWorkspace

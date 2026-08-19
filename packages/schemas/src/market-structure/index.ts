@@ -45,6 +45,7 @@ export {
   type DecimalRange,
   type ScenarioDistribution,
 } from './foundation.js';
+export * from './analyze.js';
 export * from './identity.js';
 export * from './supply.js';
 export * from './campaign.js';

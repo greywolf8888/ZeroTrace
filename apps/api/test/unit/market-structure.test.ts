@@ -324,4 +324,44 @@ describe('market-structure v2 API', { timeout: 60_000 }, () => {
       recomputedResultHash: envelope.resultHash,
     });
   });
+
+  it('analyzes a token from the formal entry without JSON paste and stays offline without a provider', async () => {
+    const app = await createApp({ config: baseConfig(), logger: false });
+    apps.push(app);
+    const analyzed = await app.inject({
+      method: 'POST',
+      url: '/api/v2/tokens/EVM/eip155:56/0xAeCBD0E461047d6B7Cfc82e637AD197097407777/analyze',
+      payload: { snapshotPolicy: 'FINALIZED', analysisMode: 'FULL_LIFETIME' },
+    });
+    expect(analyzed.statusCode).toBe(200);
+    expect(analyzed.json()).toMatchObject({
+      status: 'OFFLINE',
+      reason: 'PROVIDER_UNCONFIGURED',
+    });
+    const unsupported = await app.inject({
+      method: 'POST',
+      url: '/api/v2/tokens/SOLANA/solana-mainnet/So11111111111111111111111111111111111111112/analyze',
+      payload: { snapshotPolicy: 'FINALIZED', analysisMode: 'FULL_LIFETIME' },
+    });
+    expect(unsupported.statusCode).toBe(200);
+    expect(unsupported.json()).toMatchObject({ status: 'UNSUPPORTED' });
+  });
+
+  it('refuses forensic token analyze without a durable job queue', async () => {
+    const app = await createApp({ config: baseConfig(), logger: false });
+    apps.push(app);
+    const analyzed = await app.inject({
+      method: 'POST',
+      url: '/api/v2/tokens/EVM/eip155:56/0xAeCBD0E461047d6B7Cfc82e637AD197097407777/analyze',
+      payload: {
+        snapshotPolicy: 'FINALIZED',
+        analysisMode: 'FULL_LIFETIME',
+        forensicMode: 'FORENSIC',
+      },
+    });
+    expect(analyzed.statusCode).toBe(503);
+    expect(analyzed.json()).toMatchObject({
+      error: { code: 'JOB_QUEUE_UNAVAILABLE' },
+    });
+  });
 });

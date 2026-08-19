@@ -34,6 +34,7 @@ import {
   PostgresControlCampaignReportRepository,
   PostgresForensicCampaignAlertRepository,
   PostgresForensicReportRepository,
+  PostgresJobQueue,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaDealerCampaignReportRepository,
@@ -65,6 +66,7 @@ import {
 import { SourcifyV2Adapter, type EvmSourceVerificationAdapter } from '@zerotrace/platform-adapters';
 
 import type { AppConfig } from './config.js';
+import { createDurableStores } from './runtime-stores.js';
 
 export interface AppRuntime {
   providerRegistry: ProviderRegistry;
@@ -99,6 +101,7 @@ export interface AppRuntime {
   entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
   controlCampaignReports?: PostgresControlCampaignReportRepository;
   forensicReports?: PostgresForensicReportRepository;
+  jobQueue?: PostgresJobQueue;
   forensicCampaignAlerts?: PostgresForensicCampaignAlertRepository;
   fundingSettlementReports?: PostgresFundingSettlementReportRepository;
   intelligenceSearch?: PostgresIntelligenceSearchRepository;
@@ -480,321 +483,15 @@ export function createRuntime(config: AppConfig): AppRuntime {
     requiredSources: config.dataQualityMinSources,
   });
 
-  const rawFacts =
-    config.clickhouseUrl === undefined
-      ? undefined
-      : new ClickHouseRawFactRepository({
-          url: config.clickhouseUrl,
-          requestTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-          ...(config.clickhouseUsername === undefined
-            ? {}
-            : { username: config.clickhouseUsername }),
-          ...(config.clickhousePassword === undefined
-            ? {}
-            : { password: config.clickhousePassword.reveal() }),
-        });
-  const checkpoints =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresIngestionCheckpointRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const semanticCheckpoints =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresSemanticScanCheckpointRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const flapHistoryProjection =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresFlapHistoryProjectionRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const flapLifetimeHeads =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresFlapLifetimeHeadRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const claimReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresClaimReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const claimDeclarationReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresClaimDeclarationReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const claimRuleReviewReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresClaimRuleReviewReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const claimVerificationReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresClaimVerificationReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const controlSurfaces =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresEvmControlSurfaceRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const solanaControlSurfaces =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresSolanaControlSurfaceRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const solanaTransactionReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresSolanaTransactionReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const actionSemanticsReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresActionSemanticsReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const pensionCandidateReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresPensionCandidateReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const pensionEntryReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresFlapPensionEntryReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const entityRelationshipReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresEntityRelationshipReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const entityRelationshipTimelines =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresEntityRelationshipTimelineRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const entityInvestigationGraphs =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresEntityInvestigationGraphRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const entityInvestigationGraphTimelines =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresEntityInvestigationGraphTimelineRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const controlCampaignReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresControlCampaignReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const forensicReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresForensicReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const forensicCampaignAlerts =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresForensicCampaignAlertRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const solanaDealerReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresSolanaDealerCampaignReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const bitcoinForensicGraphReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresBitcoinForensicGraphReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const fundingSettlementReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresFundingSettlementReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const intelligenceSearch =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresIntelligenceSearchRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const labelIntelligenceReports =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresLabelIntelligenceReportRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const captureSchedules =
-    config.postgresUrl === undefined
-      ? undefined
-      : new PostgresCaptureScheduleRepository({
-          connectionString: config.postgresUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 4,
-        });
-  const ageInvestigationGraphProjection =
-    config.ageUrl === undefined
-      ? undefined
-      : new AgeInvestigationGraphProjectionRepository({
-          connectionString: config.ageUrl,
-          connectionTimeoutMs: Math.min(config.requestTimeoutMs, 5_000),
-          statementTimeoutMs: config.requestTimeoutMs,
-          maxConnections: 2,
-        });
-  const artifacts =
-    config.objectStoreEndpoint === undefined ||
-    config.objectStoreAccessKey === undefined ||
-    config.objectStoreSecretKey === undefined
-      ? undefined
-      : new RawArtifactStore({
-          endpoint: config.objectStoreEndpoint,
-          accessKey: config.objectStoreAccessKey,
-          secretKey: config.objectStoreSecretKey.reveal(),
-          ...(config.objectStoreBucket === undefined ? {} : { bucket: config.objectStoreBucket }),
-        });
-
+  const stores = createDurableStores(config);
+  const { closeStores, ...durable } = stores;
   const close = async () => {
-    await Promise.all([
-      evidenceRepository?.close(),
+    await closeStores(
+      evidenceRepository,
       dataQualityRepository instanceof PostgresDataQualityRepository
-        ? dataQualityRepository.close()
+        ? dataQualityRepository
         : undefined,
-      checkpoints?.close(),
-      semanticCheckpoints?.close(),
-      flapHistoryProjection?.close(),
-      flapLifetimeHeads?.close(),
-      claimReports?.close(),
-      claimDeclarationReports?.close(),
-      claimRuleReviewReports?.close(),
-      claimVerificationReports?.close(),
-      controlSurfaces?.close(),
-      solanaControlSurfaces?.close(),
-      solanaTransactionReports?.close(),
-      solanaDealerReports?.close(),
-      bitcoinForensicGraphReports?.close(),
-      actionSemanticsReports?.close(),
-      pensionCandidateReports?.close(),
-      pensionEntryReports?.close(),
-      entityRelationshipReports?.close(),
-      entityRelationshipTimelines?.close(),
-      entityInvestigationGraphs?.close(),
-      entityInvestigationGraphTimelines?.close(),
-      controlCampaignReports?.close(),
-      forensicReports?.close(),
-      forensicCampaignAlerts?.close(),
-      fundingSettlementReports?.close(),
-      intelligenceSearch?.close(),
-      labelIntelligenceReports?.close(),
-      captureSchedules?.close(),
-      ageInvestigationGraphProjection?.close(),
-      rawFacts?.close(),
-      artifacts?.close(),
-    ]);
+    );
   };
 
   return {
@@ -811,41 +508,13 @@ export function createRuntime(config: AppConfig): AppRuntime {
     evidenceLedger,
     dataQuality,
     ingestionStorage: {
-      ...(rawFacts === undefined ? {} : { rawFacts }),
-      ...(checkpoints === undefined ? {} : { checkpoints }),
-      ...(artifacts === undefined ? {} : { artifacts }),
+      ...(durable.rawFacts === undefined ? {} : { rawFacts: durable.rawFacts }),
+      ...(durable.checkpoints === undefined ? {} : { checkpoints: durable.checkpoints }),
+      ...(durable.artifacts === undefined ? {} : { artifacts: durable.artifacts }),
     },
     close,
     ...(evidenceRepository === undefined ? {} : { evidenceRepository }),
-    ...(semanticCheckpoints === undefined ? {} : { semanticCheckpoints }),
-    ...(flapHistoryProjection === undefined ? {} : { flapHistoryProjection }),
-    ...(flapLifetimeHeads === undefined ? {} : { flapLifetimeHeads }),
-    ...(claimReports === undefined ? {} : { claimReports }),
-    ...(claimDeclarationReports === undefined ? {} : { claimDeclarationReports }),
-    ...(claimRuleReviewReports === undefined ? {} : { claimRuleReviewReports }),
-    ...(claimVerificationReports === undefined ? {} : { claimVerificationReports }),
-    ...(controlSurfaces === undefined ? {} : { controlSurfaces }),
-    ...(solanaControlSurfaces === undefined ? {} : { solanaControlSurfaces }),
-    ...(solanaTransactionReports === undefined ? {} : { solanaTransactionReports }),
-    ...(solanaDealerReports === undefined ? {} : { solanaDealerReports }),
-    ...(bitcoinForensicGraphReports === undefined ? {} : { bitcoinForensicGraphReports }),
-    ...(actionSemanticsReports === undefined ? {} : { actionSemanticsReports }),
-    ...(pensionCandidateReports === undefined ? {} : { pensionCandidateReports }),
-    ...(pensionEntryReports === undefined ? {} : { pensionEntryReports }),
-    ...(entityRelationshipReports === undefined ? {} : { entityRelationshipReports }),
-    ...(entityRelationshipTimelines === undefined ? {} : { entityRelationshipTimelines }),
-    ...(entityInvestigationGraphs === undefined ? {} : { entityInvestigationGraphs }),
-    ...(entityInvestigationGraphTimelines === undefined
-      ? {}
-      : { entityInvestigationGraphTimelines }),
-    ...(controlCampaignReports === undefined ? {} : { controlCampaignReports }),
-    ...(forensicReports === undefined ? {} : { forensicReports }),
-    ...(forensicCampaignAlerts === undefined ? {} : { forensicCampaignAlerts }),
-    ...(fundingSettlementReports === undefined ? {} : { fundingSettlementReports }),
-    ...(intelligenceSearch === undefined ? {} : { intelligenceSearch }),
-    ...(labelIntelligenceReports === undefined ? {} : { labelIntelligenceReports }),
-    ...(captureSchedules === undefined ? {} : { captureSchedules }),
-    ...(ageInvestigationGraphProjection === undefined ? {} : { ageInvestigationGraphProjection }),
+    ...Object.fromEntries(Object.entries(durable).filter((entry) => entry[1] !== undefined)),
     ...(dataQualityRepository instanceof PostgresDataQualityRepository
       ? { dataQualityStorage: dataQualityRepository }
       : {}),

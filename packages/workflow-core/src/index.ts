@@ -15,14 +15,34 @@ export interface DurableJob {
   leaseOwner?: string;
   leaseExpiresAt?: string;
   checkpoint?: string;
+  payload?: string;
   resultRef?: string;
   lastError?: string;
 }
 
-export class InMemoryJobQueue {
+export interface JobQueue {
+  enqueue(input: {
+    type: string;
+    idempotencyKey: string;
+    maxAttempts?: number;
+    payload?: string;
+  }): DurableJob | Promise<DurableJob>;
+  claim(workerId: string, now?: Date, leaseMs?: number): DurableJob | undefined | Promise<DurableJob | undefined>;
+  succeed(id: string, resultRef: string): DurableJob | Promise<DurableJob>;
+  fail(id: string, error: string): DurableJob | Promise<DurableJob>;
+  checkpoint(id: string, checkpoint: string): DurableJob | Promise<DurableJob>;
+  get(id: string): DurableJob | undefined | Promise<DurableJob | undefined>;
+}
+
+export class InMemoryJobQueue implements JobQueue {
   readonly #jobs = new Map<string, DurableJob>();
 
-  enqueue(input: { type: string; idempotencyKey: string; maxAttempts?: number }): DurableJob {
+  enqueue(input: {
+    type: string;
+    idempotencyKey: string;
+    maxAttempts?: number;
+    payload?: string;
+  }): DurableJob {
     const existing = [...this.#jobs.values()].find(
       (job) => job.idempotencyKey === input.idempotencyKey,
     );
@@ -34,6 +54,7 @@ export class InMemoryJobQueue {
       status: 'PENDING',
       attempt: 0,
       maxAttempts: input.maxAttempts ?? 5,
+      ...(input.payload === undefined ? {} : { payload: input.payload }),
     };
     this.#jobs.set(job.id, job);
     return job;

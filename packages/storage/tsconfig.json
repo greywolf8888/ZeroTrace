@@ -18,6 +18,7 @@
     { "path": "../token-flow-engine" },
     { "path": "../cluster-position-engine" },
     { "path": "../behavior-engine" },
-    { "path": "../campaign-engine" }
+    { "path": "../campaign-engine" },
+    { "path": "../workflow-core" }
   ]
 }

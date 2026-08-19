@@ -7,6 +7,7 @@
     { "path": "./packages/funding-settlement-engine" },
     { "path": "./packages/data-quality" },
     { "path": "./packages/action-semantics" },
+    { "path": "./packages/workflow-core" },
     { "path": "./packages/storage" },
     { "path": "./packages/ingestion" },
     { "path": "./packages/chain-adapters" },
@@ -29,7 +30,7 @@
     { "path": "./packages/capital-intelligence" },
     { "path": "./packages/market-reality-engine" },
     { "path": "./packages/casework" },
-    { "path": "./packages/workflow-core" },
+    { "path": "./packages/forensic-pipeline" },
     { "path": "./packages/llm-gateway" }
   ]
 }

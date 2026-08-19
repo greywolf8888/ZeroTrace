@@ -49,6 +49,7 @@
       "@zerotrace/capital-intelligence": ["./packages/capital-intelligence/src/index.ts"],
       "@zerotrace/market-reality-engine": ["./packages/market-reality-engine/src/index.ts"],
       "@zerotrace/casework": ["./packages/casework/src/index.ts"],
+      "@zerotrace/forensic-pipeline": ["./packages/forensic-pipeline/src/index.ts"],
       "@zerotrace/workflow-core": ["./packages/workflow-core/src/index.ts"],
       "@zerotrace/llm-gateway": ["./packages/llm-gateway/src/index.ts"]
     }

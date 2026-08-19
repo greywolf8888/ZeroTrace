@@ -33,8 +33,10 @@ import {
   type VenueSnapshot,
 } from '@zerotrace/schemas';
 import { materializeSupplyReality } from '@zerotrace/supply-reality-engine';
+import type { JobQueue } from '@zerotrace/workflow-core';
 
 import type { AppRuntime } from '../runtime.js';
+import { registerTokenAnalyze } from './token-analyze.js';
 
 export interface ForensicReportStore {
   put(envelope: ReportEnvelope): Promise<ReportEnvelope>;
@@ -44,6 +46,7 @@ export interface ForensicReportStore {
 export interface MarketStructurePluginOptions {
   runtime: AppRuntime;
   forensicReports?: ForensicReportStore;
+  jobQueue?: JobQueue;
 }
 
 function errorBody(code: string, message: string) {
@@ -404,11 +407,7 @@ export async function registerMarketStructureV2(
     { schema: { tags: ['analysis'] } },
     async (request) => {
       const params = request.params as { campaignId: string };
-      const body = request.body as {
-        lots: Parameters<typeof buildCapitalReport>[0]['lots'];
-        entries: Parameters<typeof buildCapitalReport>[0]['entries'];
-        swapLinks?: Parameters<typeof buildCapitalReport>[0]['swapLinks'];
-      };
+      const body = request.body as Parameters<typeof buildCapitalReport>[0];
       return buildCapitalReport({
         lots: [...body.lots],
         entries: [...body.entries],
@@ -535,4 +534,12 @@ export async function registerMarketStructureV2(
       return ReportEnvelopeSchema.parse(stored);
     },
   );
+
+  await registerTokenAnalyze(app, {
+    runtime: options.runtime,
+    rememberEnvelope,
+    isAdmissibleMode,
+    analysisModeOf,
+    ...(options.jobQueue === undefined ? {} : { jobQueue: options.jobQueue }),
+  });
 }

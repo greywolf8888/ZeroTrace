@@ -40,6 +40,7 @@ export * from './age-investigation-graph.js';
 export * from './control-campaign-reports.js';
 export * from './forensic-campaign-alerts.js';
 export * from './forensic-reports.js';
+export * from './durable-jobs.js';
 
 type DatabaseRow = Record<string, unknown>;
 
