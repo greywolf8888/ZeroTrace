@@ -15,15 +15,12 @@ export function DataHealth({
     <>
       <div className="page-heading page-heading-row">
         <div>
-          <span className="eyebrow">Source coverage and freshness</span>
+          <span className="eyebrow">来源覆盖与新鲜度</span>
           <h1>数据健康</h1>
-          <p>
-            A failed or unconfigured provider becomes an availability state—never a business value
-            of zero.
-          </p>
+          <p>故障或未配置的数据源只会成为可用性状态，绝不会被折算成业务数值 0。</p>
         </div>
         <button className="secondary-button" type="button" onClick={refresh} disabled={busy}>
-          {busy ? 'Checking…' : 'Refresh providers'}
+          {busy ? '检查中…' : '刷新数据源'}
         </button>
       </div>
       <section className="panel">
@@ -32,19 +29,18 @@ export function DataHealth({
       <section className="panel anchor-quality-panel">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">Common-position verification</span>
+            <span className="eyebrow">共同位置核验</span>
             <h3>锚点对账与连续性</h3>
           </div>
           <StatusPill status={health?.dataQuality.status ?? 'CHECKING'} />
         </div>
         <p className="panel-copy">
-          Provider heads are lowered to a shared block or slot before comparison. Endpoint operator
-          independence remains Unknown until explicitly configured and verified.
+          对照前会将各数据源链头降低到共同区块或 slot。端点运营方独立性在明确配置并核验前 保持未知。
         </p>
         {(health?.dataQuality.results.length ?? 0) === 0 ? (
           <div className="inline-empty">
             {health?.dataQuality.errorCode === undefined
-              ? 'No anchor observations are available.'
+              ? '暂无锚点观测。'
               : titleCase(health.dataQuality.errorCode)}
           </div>
         ) : (
@@ -70,20 +66,20 @@ export function DataHealth({
                   </div>
                   <dl>
                     <div>
-                      <dt>Sources</dt>
+                      <dt>来源</dt>
                       <dd>
-                        {result.observedSources}/{result.configuredSources} observed ·{' '}
-                        {result.requiredSources} required
+                        已观测 {result.observedSources}/{result.configuredSources} · 需要{' '}
+                        {result.requiredSources}
                       </dd>
                     </div>
                     <div>
-                      <dt>Common position</dt>
+                      <dt>共同位置</dt>
                       <dd>
                         <KnowledgeDisplay data={result.comparisonPosition} />
                       </dd>
                     </div>
                     <div>
-                      <dt>Canonical hash</dt>
+                      <dt>规范哈希</dt>
                       <dd>
                         {canonicalHash === undefined ? (
                           <KnowledgeDisplay data={result.canonicalAnchor} />
@@ -93,19 +89,19 @@ export function DataHealth({
                       </dd>
                     </div>
                     <div>
-                      <dt>Continuity</dt>
+                      <dt>连续性</dt>
                       <dd>
-                        {continuityKnown}/{result.sources.length} source checks known
+                        {continuityKnown}/{result.sources.length} 个来源检查已知
                       </dd>
                     </div>
                     <div>
-                      <dt>Independence</dt>
+                      <dt>独立性</dt>
                       <dd>
                         <KnowledgeDisplay data={result.sourceIndependence} />
                       </dd>
                     </div>
                     <div>
-                      <dt>Evidence</dt>
+                      <dt>Evidence 数</dt>
                       <dd>{result.metadata.evidenceIds.length}</dd>
                     </div>
                   </dl>
@@ -121,15 +117,15 @@ export function DataHealth({
         )}
         <div className="snapshot-strip anchor-quality-footer">
           <span>
-            <b>Storage</b>{' '}
+            <b>存储</b>{' '}
             {health === undefined
               ? '不可用'
               : `${titleCase(health.dataQuality.storage.backend)} · ${
-                  health.dataQuality.durable ? 'durable' : 'process-local'
+                  health.dataQuality.durable ? '持久化' : '进程内'
                 }`}
           </span>
           <span>
-            <b>Checked</b> {formatTime(health?.dataQuality.checkedAt)}
+            <b>检查时间</b> {formatTime(health?.dataQuality.checkedAt)}
           </span>
         </div>
       </section>
@@ -137,7 +133,7 @@ export function DataHealth({
         <article className="panel provider-card storage-card">
           <div className="provider-card-top">
             <div>
-              <span className="chain-tag storage-tag">DISK</span>
+              <span className="chain-tag storage-tag">磁盘</span>
               <h3>低成本存储配额</h3>
             </div>
             <StatusPill status={health?.storageQuota?.level ?? 'CHECKING'} />
@@ -176,14 +172,14 @@ export function DataHealth({
         <article className="panel provider-card storage-card">
           <div className="provider-card-top">
             <div>
-              <span className="chain-tag storage-tag">PROVENANCE</span>
+              <span className="chain-tag storage-tag">溯源</span>
               <h3>证据存储</h3>
             </div>
             <StatusPill status={health?.storage.status ?? 'CHECKING'} />
           </div>
           <dl>
             <div>
-              <dt>Backend</dt>
+              <dt>后端</dt>
               <dd>
                 {health?.storage.backend === undefined
                   ? '不可用'
@@ -191,17 +187,13 @@ export function DataHealth({
               </dd>
             </div>
             <div>
-              <dt>Durability</dt>
+              <dt>持久性</dt>
               <dd>
-                {health === undefined
-                  ? '不可用'
-                  : health.storage.durable
-                    ? 'Durable'
-                    : 'Process-local'}
+                {health === undefined ? '不可用' : health.storage.durable ? '持久化' : '进程内'}
               </dd>
             </div>
             <div>
-              <dt>Checked</dt>
+              <dt>检查时间</dt>
               <dd>{formatTime(health?.storage.checkedAt)}</dd>
             </div>
           </dl>
@@ -212,26 +204,26 @@ export function DataHealth({
         <article className="panel provider-card storage-card">
           <div className="provider-card-top">
             <div>
-              <span className="chain-tag storage-tag">HISTORY</span>
+              <span className="chain-tag storage-tag">历史</span>
               <h3>终局摄入存储</h3>
             </div>
             <StatusPill status={health?.ingestionStorage.status ?? 'CHECKING'} />
           </div>
           <dl>
             <div>
-              <dt>Raw facts</dt>
+              <dt>原始事实</dt>
               <dd>{titleCase(health?.ingestionStorage.rawFacts.status ?? 'checking')}</dd>
             </div>
             <div>
-              <dt>Checkpoints</dt>
+              <dt>检查点</dt>
               <dd>{titleCase(health?.ingestionStorage.checkpoints.status ?? 'checking')}</dd>
             </div>
             <div>
-              <dt>Raw artifacts</dt>
+              <dt>原始工件</dt>
               <dd>{titleCase(health?.ingestionStorage.artifacts.status ?? 'checking')}</dd>
             </div>
             <div>
-              <dt>Configured</dt>
+              <dt>已配置</dt>
               <dd>
                 {health === undefined
                   ? '不可用'
@@ -254,26 +246,26 @@ export function DataHealth({
         <article className="panel provider-card storage-card">
           <div className="provider-card-top">
             <div>
-              <span className="chain-tag storage-tag">GRAPH</span>
+              <span className="chain-tag storage-tag">图谱</span>
               <h3>调查投影</h3>
             </div>
             <StatusPill status={health?.graphProjection?.status ?? 'UNCONFIGURED'} />
           </div>
           <dl>
             <div>
-              <dt>Backend</dt>
+              <dt>后端</dt>
               <dd>{titleCase(health?.graphProjection?.backend ?? 'APACHE_AGE')}</dd>
             </div>
             <div>
-              <dt>Authority</dt>
-              <dd>PostgreSQL report</dd>
+              <dt>事实权威</dt>
+              <dd>PostgreSQL 报告</dd>
             </div>
             <div>
-              <dt>Graph</dt>
-              <dd>{health?.graphProjection?.graphName ?? 'Not configured'}</dd>
+              <dt>图谱</dt>
+              <dd>{health?.graphProjection?.graphName ?? '未配置'}</dd>
             </div>
             <div>
-              <dt>Checked</dt>
+              <dt>检查时间</dt>
               <dd>{formatTime(health?.graphProjection?.checkedAt)}</dd>
             </div>
           </dl>
@@ -294,11 +286,11 @@ export function DataHealth({
             </div>
             <dl>
               <div>
-                <dt>Checked</dt>
+                <dt>检查时间</dt>
                 <dd>{formatTime(provider.checkedAt)}</dd>
               </div>
               <div>
-                <dt>Head</dt>
+                <dt>链头</dt>
                 <dd>
                   {provider.head.state === 'known'
                     ? provider.head.value
@@ -306,38 +298,38 @@ export function DataHealth({
                 </dd>
               </div>
               <div>
-                <dt>Latency</dt>
-                <dd>{provider.latencyMs === null ? 'Unavailable' : provider.latencyMs + ' ms'}</dd>
+                <dt>延迟</dt>
+                <dd>{provider.latencyMs === null ? '不可用' : provider.latencyMs + ' ms'}</dd>
               </div>
               <div>
-                <dt>Capabilities</dt>
+                <dt>能力数</dt>
                 <dd>{provider.capabilities.length}</dd>
               </div>
               <div>
-                <dt>Active endpoint</dt>
+                <dt>当前端点</dt>
                 <dd>
                   {provider.transport?.activeEndpointId ??
                     provider.transport?.endpointId ??
-                    'Unavailable'}
+                    '不可用'}
                 </dd>
               </div>
               <div>
-                <dt>Circuit</dt>
-                <dd>{provider.transport?.circuitState ?? 'Unavailable'}</dd>
+                <dt>熔断状态</dt>
+                <dd>{provider.transport?.circuitState ?? '不可用'}</dd>
               </div>
               <div>
-                <dt>Retries / failovers</dt>
+                <dt>重试 / 故障转移</dt>
                 <dd>
                   {provider.transport === undefined
-                    ? 'Unavailable'
+                    ? '不可用'
                     : `${provider.transport.retries} / ${provider.transport.failovers}`}
                 </dd>
               </div>
               <div>
-                <dt>Cache hits / bypasses</dt>
+                <dt>缓存命中 / 绕过</dt>
                 <dd>
                   {provider.transport === undefined
-                    ? 'Unavailable'
+                    ? '不可用'
                     : `${provider.transport.cacheHits} / ${provider.transport.cacheBypasses}`}
                 </dd>
               </div>

@@ -15,6 +15,7 @@ export {
   knownText,
   BitcoinIntelligencePanel,
   NAVIGATION,
+  DEVELOPER_NAVIGATION,
   FUTURE_DOMAINS,
   CAMPAIGN_GRAPH_LAYERS,
 } from './part-01.js';

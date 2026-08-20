@@ -57,11 +57,11 @@ export function ControlCampaignWorkspace() {
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">Control Campaign · 证据线 · replayable Snapshot</span>
+          <span className="eyebrow">控制活动 · 证据线 · 可回放 Snapshot</span>
           <h1>坐庄时间线</h1>
           <p>
-            Follow token flow, cluster positions, behavior events, and forensic Evidence without
-            silently turning labels into ownership or attribution into certainty.
+            沿 Token 流向、集群仓位、行为事件和取证 Evidence 复盘；标签不会被静默转换为
+            所有权，归因也不会被包装成确定事实。
           </p>
         </div>
         <StatusPill status="READ_ONLY" />
@@ -69,10 +69,10 @@ export function ControlCampaignWorkspace() {
       <section className="panel subject-panel quote-panel" data-testid="control-campaign-query">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">Durable Postgres reports only</span>
+            <span className="eyebrow">仅限持久化 PostgreSQL 报告</span>
             <h3>加载 Token 活动历史</h3>
           </div>
-          <span className="snapshot-badge">Provider-free forensic export available</span>
+          <span className="snapshot-badge">支持脱离数据源导出取证包</span>
         </div>
         <form
           className="quote-form control-campaign-form"
@@ -89,7 +89,7 @@ export function ControlCampaignWorkspace() {
             placeholder="eip155:56"
             spellCheck={false}
           />
-          <label htmlFor="campaign-token">Token</label>
+          <label htmlFor="campaign-token">Token 地址</label>
           <input
             id="campaign-token"
             value={token}
@@ -103,7 +103,7 @@ export function ControlCampaignWorkspace() {
               type="submit"
               disabled={busy || token.trim().length === 0}
             >
-              {busy ? '加载中…' : 'Load campaigns'}
+              {busy ? '加载中…' : '加载活动'}
             </button>
             <button
               className="secondary-button"
@@ -111,13 +111,13 @@ export function ControlCampaignWorkspace() {
               disabled={busy || selected === undefined}
               onClick={() => void replay()}
             >
-              Replay stored Snapshot
+              回放已存 Snapshot
             </button>
           </div>
         </form>
         <p className="quote-note">
-          Unknown, unavailable, stale, and provider-down remain distinct. An uncalibrated Evidence
-          score is displayed as a score, never as a probability or ownership conclusion.
+          未知、不可用、过期和数据源故障保持为不同状态。未经校准的 Evidence 分数只显示为
+          分数，绝不解释为概率或所有权结论。
         </p>
         {error === undefined ? null : <p className="inline-error">{error}</p>}
       </section>
@@ -136,8 +136,8 @@ export function ControlCampaignWorkspace() {
 
       {loaded && records.length === 0 && error === undefined ? (
         <section className="panel empty-state" data-testid="control-campaign-empty">
-          <strong>No durable Control Campaign report was found.</strong>
-          <span>The token may not have been materialized, or storage is not configured.</span>
+          <strong>未找到持久化控制活动报告。</strong>
+          <span>该 Token 可能尚未物化，或持久化存储尚未配置。</span>
         </section>
       ) : null}
 
@@ -149,10 +149,10 @@ export function ControlCampaignWorkspace() {
           <div className="panel">
             <div className="panel-header">
               <div>
-                <span className="eyebrow">Immutable campaign reports</span>
+                <span className="eyebrow">不可变活动报告</span>
                 <h3>活动索引</h3>
               </div>
-              <span className="panel-note">{records.length} report(s)</span>
+              <span className="panel-note">{records.length} 份报告</span>
             </div>
             <div className="campaign-index-list">
               {records.map((record) => (
@@ -170,7 +170,7 @@ export function ControlCampaignWorkspace() {
                   </span>
                   <span>
                     <StatusPill status={record.campaign.status} />
-                    <small>block {record.campaign.startBlock}</small>
+                    <small>区块 {record.campaign.startBlock}</small>
                   </span>
                 </button>
               ))}
@@ -205,93 +205,93 @@ export function ControlCampaignWorkspace() {
                 </div>
                 <div className="metric-grid compact-grid">
                   <MetricTile
-                    label="Campaign score"
+                    label="活动分数"
                     value={campaign.evidenceScore.toFixed(3)}
-                    detail="Uncalibrated Evidence score"
+                    detail="未经校准的 Evidence 分数"
                     state="known"
                   />
                   <MetricTile
-                    label="Controlled supply"
+                    label="受控供应量"
                     value={
                       campaign.controlledSupply.state === 'known'
-                        ? (campaign.controlledSupply.value ?? 'Unknown')
-                        : 'Unknown'
+                        ? (campaign.controlledSupply.value ?? '未知')
+                        : '未知'
                     }
-                    detail="Cluster position aggregate"
+                    detail="集群仓位汇总"
                     state={campaign.controlledSupply.state === 'known' ? 'known' : 'unknown'}
                   />
                   <MetricTile
-                    label="Data coverage"
+                    label="数据覆盖率"
                     value={`${Math.round(campaign.evidenceCoverage * 100)}%`}
-                    detail="已观测 campaign Evidence"
+                    detail="已观测活动 Evidence"
                     state={campaign.evidenceCoverage === 1 ? 'known' : 'unknown'}
                   />
                   <MetricTile
-                    label="Source coverage"
+                    label="来源覆盖率"
                     value={`${Math.round(campaign.sourceCoverage * 100)}%`}
-                    detail="Provider/source completeness"
+                    detail="数据源完整度"
                     state={campaign.sourceCoverage === 1 ? 'known' : 'unknown'}
                   />
                   <MetricTile
-                    label="History coverage"
+                    label="历史覆盖率"
                     value={`${Math.round(campaign.historyCoverage * 100)}%`}
-                    detail="Range completeness"
+                    detail="区间完整度"
                     state={campaign.historyCoverage === 1 ? 'known' : 'unknown'}
                   />
                   <MetricTile
-                    label="Wallets"
+                    label="钱包数"
                     value={String(
                       campaign.coreWalletIds.length + campaign.satelliteWalletIds.length,
                     )}
-                    detail="Core + satellite candidates"
+                    detail="核心与卫星候选"
                     state="known"
                   />
                 </div>
                 <div className="fact-grid">
                   <div className="fact-row">
-                    <span>Campaign ID</span>
+                    <span>活动 ID</span>
                     <code>{campaign.id}</code>
                   </div>
                   <div className="fact-row">
-                    <span>Block range</span>
+                    <span>区块范围</span>
                     <span>
                       {campaign.startBlock} → <KnowledgeDisplay data={campaign.endBlock} />
                     </span>
                   </div>
                   <div className="fact-row">
-                    <span>Snapshot position</span>
+                    <span>Snapshot 位置</span>
                     <code>{snapshotPosition}</code>
                   </div>
                   <div className="fact-row">
-                    <span>Calibration</span>
+                    <span>校准状态</span>
                     <StatusPill status={campaign.calibrationStatus} />
                   </div>
                   <div className="fact-row">
-                    <span>Campaign confidence</span>
+                    <span>活动置信度</span>
                     <KnowledgeDisplay data={campaign.campaignConfidence} />
                   </div>
                   <div className="fact-row">
-                    <span>Entity mutation</span>
+                    <span>实体变更</span>
                     <strong className="knowledge-unknown">已阻止</strong>
                   </div>
                   <div className="fact-row">
-                    <span>Sources</span>
+                    <span>来源集</span>
                     <span>{campaign.metadata.sourceSet.join(' · ')}</span>
                   </div>
                   <div className="fact-row">
-                    <span>Result hash</span>
+                    <span>结果哈希</span>
                     <code>{shortId(selected.resultHash, 18)}</code>
                   </div>
                 </div>
                 <div className="case-export-bar" data-testid="control-campaign-export">
                   <div>
-                    <span className="eyebrow">Forensic Case Bundle</span>
-                    <strong>Evidence closure · manifest hash · offline replay</strong>
+                    <span className="eyebrow">取证案件包</span>
+                    <strong>Evidence 闭包 · 清单哈希 · 离线回放</strong>
                     {forensicCase === undefined ? null : (
                       <small>
-                        {forensicCase.case.caseId} · {forensicCase.case.manifest.evidenceCount}{' '}
-                        Evidence · {forensicCase.case.manifest.snapshotCount} Snapshots ·{' '}
-                        {forensicCase.case.manifest.rawArtifactCount} raw artifacts
+                        {forensicCase.case.caseId} · {forensicCase.case.manifest.evidenceCount} 条
+                        Evidence · {forensicCase.case.manifest.snapshotCount} 个 Snapshot ·{' '}
+                        {forensicCase.case.manifest.rawArtifactCount} 个原始工件
                       </small>
                     )}
                     {forensicCaseError === undefined ? null : (
@@ -304,21 +304,20 @@ export function ControlCampaignWorkspace() {
                     disabled={busy}
                     onClick={() => void exportCase()}
                   >
-                    {busy ? 'Exporting…' : 'Export Case Bundle'}
+                    {busy ? '导出中…' : '导出案件包'}
                   </button>
                 </div>
                 <div className="case-export-bar monitor-bar" data-testid="control-campaign-monitor">
                   <div>
-                    <span className="eyebrow">Incremental finalized monitor</span>
-                    <strong>链上只读 schedule · reorg-aware cursor · no automatic action</strong>
+                    <span className="eyebrow">终局区块增量监控</span>
+                    <strong>链上只读调度 · 重组感知游标 · 无自动操作</strong>
                     {monitor === undefined ? (
                       <small>
-                        Starts after Snapshot {snapshotPosition}; the worker captures only newly
-                        finalized blocks.
+                        从 Snapshot {snapshotPosition} 之后开始；工作进程只捕获新终局区块。
                       </small>
                     ) : (
                       <small>
-                        {monitor.monitor.monitorId} · {titleCase(monitor.monitor.status)} · next{' '}
+                        {monitor.monitor.monitorId} · {titleCase(monitor.monitor.status)} · 下次{' '}
                         <KnowledgeDisplay data={monitor.monitor.nextRunAt} />
                       </small>
                     )}
@@ -333,15 +332,11 @@ export function ControlCampaignWorkspace() {
                     onClick={() => void startMonitor()}
                     title={
                       monitorStartBlock === undefined
-                        ? 'A known safe Snapshot block is required to start a monitor.'
+                        ? '启动监控需要一个已知且安全的 Snapshot 区块。'
                         : undefined
                     }
                   >
-                    {busy
-                      ? 'Starting…'
-                      : monitor === undefined
-                        ? 'Start monitor'
-                        : 'Replay monitor'}
+                    {busy ? '启动中…' : monitor === undefined ? '启动监控' : '回放监控'}
                   </button>
                 </div>
               </section>
@@ -350,73 +345,69 @@ export function ControlCampaignWorkspace() {
                 <section className="panel campaign-comparison" data-testid="campaign-comparison">
                   <div className="panel-header">
                     <div>
-                      <span className="eyebrow">
-                        Immutable report comparison · descriptive only
-                      </span>
+                      <span className="eyebrow">不可变报告对照 · 仅作描述</span>
                       <h3>活动对照</h3>
                     </div>
                     <StatusPill status="READ_ONLY" />
                   </div>
                   <p className="panel-copy">
-                    This compares two stored Snapshot-bound reports. It does not infer ownership,
-                    merge entities, or convert an uncalibrated score into probability.
+                    此处对照两份绑定 Snapshot 的持久化报告，不推断所有权、不合并实体，也不把
+                    未校准分数转换为概率。
                   </p>
                   <div className="metric-grid compact-grid">
                     <MetricTile
-                      label="Wallet overlap"
+                      label="钱包重合度"
                       value={
                         comparisonWalletOverlap === undefined
-                          ? 'Unknown'
+                          ? '未知'
                           : `${comparisonWalletOverlap}%`
                       }
-                      detail="Jaccard over observed core + satellite IDs"
+                      detail="基于已观测核心与卫星 ID 的 Jaccard"
                       state={comparisonWalletOverlap === undefined ? 'unknown' : 'known'}
                     />
                     <MetricTile
-                      label="Wallet count Δ"
+                      label="钱包数量差值"
                       value={
-                        comparisonWalletDelta === undefined
-                          ? 'Unknown'
-                          : String(comparisonWalletDelta)
+                        comparisonWalletDelta === undefined ? '未知' : String(comparisonWalletDelta)
                       }
-                      detail="Selected minus reference report"
+                      detail="所选报告减去参考报告"
                       state={comparisonWalletDelta === undefined ? 'unknown' : 'known'}
                     />
                     <MetricTile
-                      label="Evidence item Δ"
+                      label="Evidence 条目差值"
                       value={
                         comparisonEvidenceDelta === undefined
-                          ? 'Unknown'
+                          ? '未知'
                           : String(comparisonEvidenceDelta)
                       }
-                      detail="Selected minus reference report"
+                      detail="所选报告减去参考报告"
                       state={comparisonEvidenceDelta === undefined ? 'unknown' : 'known'}
                     />
                     <MetricTile
-                      label="Coverage"
+                      label="覆盖率"
                       value={`${Math.round(campaign.evidenceCoverage * 100)}% → ${Math.round(comparisonReference.campaign.evidenceCoverage * 100)}%`}
-                      detail="Selected → reference Evidence coverage"
+                      detail="所选 → 参考 Evidence 覆盖率"
                       state="known"
                     />
                   </div>
                   <div className="fact-grid">
                     <div className="fact-row">
-                      <span>Selected report</span>
+                      <span>所选报告</span>
                       <code>{selected.campaign.id}</code>
                     </div>
                     <div className="fact-row">
-                      <span>Reference report</span>
+                      <span>参考报告</span>
                       <code>{comparisonReference.campaign.id}</code>
                     </div>
                     <div className="fact-row">
-                      <span>Snapshot positions</span>
+                      <span>Snapshot 位置</span>
                       <span>
                         {campaignSnapshotPosition(selected.campaign.snapshotEnd)} →{' '}
                         {campaignSnapshotPosition(comparisonReference.campaign.snapshotEnd)}
                       </span>
                     </div>
                     <div className="fact-row">
-                      <span>Result hashes</span>
+                      <span>结果哈希</span>
                       <code title={`${selected.resultHash} → ${comparisonReference.resultHash}`}>
                         {shortId(selected.resultHash, 8)} →{' '}
                         {shortId(comparisonReference.resultHash, 8)}
@@ -429,21 +420,19 @@ export function ControlCampaignWorkspace() {
               <section className="panel" data-testid="control-campaign-alerts">
                 <div className="panel-header">
                   <div>
-                    <span className="eyebrow">Forensic Alert Stream · Evidence-bound</span>
+                    <span className="eyebrow">取证告警流 · Evidence 绑定</span>
                     <h3>活动告警</h3>
                   </div>
                   <span className="panel-note">
-                    {visibleAlertsLoaded ? `${visibleAlerts.length} alert(s)` : '加载中…'}
+                    {visibleAlertsLoaded ? `${visibleAlerts.length} 条告警` : '加载中…'}
                   </span>
                 </div>
                 {visibleAlertsError !== undefined ? (
                   <p className="inline-error alert-state-message">{visibleAlertsError}</p>
                 ) : !visibleAlertsLoaded ? (
-                  <p className="empty-cell alert-state-message">Replaying durable alerts…</p>
+                  <p className="empty-cell alert-state-message">正在回放持久化告警…</p>
                 ) : visibleAlerts.length === 0 ? (
-                  <p className="empty-cell alert-state-message">
-                    No durable alert was materialized for this campaign.
-                  </p>
+                  <p className="empty-cell alert-state-message">此活动没有已物化的持久化告警。</p>
                 ) : (
                   <div className="alert-list">
                     {visibleAlerts.map((alert) => (
@@ -459,14 +448,14 @@ export function ControlCampaignWorkspace() {
                           <StatusPill status={alert.severity} />
                         </div>
                         <p>
-                          {alert.evidenceIds.length} Evidence node(s) · confidence{' '}
+                          {alert.evidenceIds.length} 个 Evidence 节点 · 置信度{' '}
                           <KnowledgeDisplay data={alert.confidence} /> ·{' '}
                           {formatTime(alert.createdAt)}
                         </p>
                         <small>
                           {alert.suppressionApplied.length === 0
-                            ? 'No suppression applied.'
-                            : `Suppression: ${alert.suppressionApplied.join(' · ')}`}
+                            ? '未应用抑制规则。'
+                            : `抑制规则：${alert.suppressionApplied.join(' · ')}`}
                         </small>
                       </article>
                     ))}
@@ -478,23 +467,23 @@ export function ControlCampaignWorkspace() {
                 <section className="panel" data-testid="control-campaign-positions">
                   <div className="panel-header">
                     <div>
-                      <span className="eyebrow">Conserved Cluster Position snapshots</span>
+                      <span className="eyebrow">守恒的集群仓位 Snapshot</span>
                       <h3>仓位时间线</h3>
                     </div>
-                    <span className="panel-note">{selected.positions.length} snapshot(s)</span>
+                    <span className="panel-note">{selected.positions.length} 个 Snapshot</span>
                   </div>
                   {selected.positions.length === 0 ? (
-                    <p className="empty-cell">No conserved position snapshot was materialized.</p>
+                    <p className="empty-cell">未物化守恒仓位 Snapshot。</p>
                   ) : (
                     <div className="table-scroll">
                       <table>
                         <thead>
                           <tr>
-                            <th>Block</th>
-                            <th>Token balance</th>
-                            <th>External in / out</th>
-                            <th>Wallets</th>
-                            <th>Sell-ready</th>
+                            <th>区块</th>
+                            <th>Token 余额</th>
+                            <th>外部流入 / 流出</th>
+                            <th>钱包数</th>
+                            <th>可卖出量</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -526,13 +515,13 @@ export function ControlCampaignWorkspace() {
                 <section className="panel" data-testid="control-campaign-timeline">
                   <div className="panel-header">
                     <div>
-                      <span className="eyebrow">Behavior Events · ordered by observed range</span>
+                      <span className="eyebrow">行为事件 · 按观测区间排序</span>
                       <h3>活动时间线</h3>
                     </div>
-                    <span className="panel-note">{selected.behaviorEvents.length} event(s)</span>
+                    <span className="panel-note">{selected.behaviorEvents.length} 个事件</span>
                   </div>
                   {selected.behaviorEvents.length === 0 ? (
-                    <p className="empty-cell">No behavior event was materialized.</p>
+                    <p className="empty-cell">未物化行为事件。</p>
                   ) : (
                     <div className="timeline-list">
                       {selected.behaviorEvents.map((event) => (
@@ -548,7 +537,7 @@ export function ControlCampaignWorkspace() {
                             </span>
                             <p>{event.explanation}</p>
                             <small>
-                              {event.supportingEvidenceIds.length} supporting Evidence · confidence{' '}
+                              {event.supportingEvidenceIds.length} 条支持 Evidence · 置信度{' '}
                               <KnowledgeDisplay data={event.confidence} />
                             </small>
                           </div>
@@ -562,7 +551,7 @@ export function ControlCampaignWorkspace() {
               <section className="panel" data-testid="control-campaign-evidence-line">
                 <div className="panel-header">
                   <div>
-                    <span className="eyebrow">Forensic 证据线 · no direct entity merge</span>
+                    <span className="eyebrow">取证证据线 · 不直接合并实体</span>
                     <h3>证据线</h3>
                   </div>
                   <StatusPill status={evidenceLine.terminalBoundary} />
@@ -572,13 +561,13 @@ export function ControlCampaignWorkspace() {
                     <div className="evidence-line-phase" key={phase.phase}>
                       <div>
                         <strong>{titleCase(phase.phase)}</strong>
-                        <span>{phase.itemIds.length} item(s)</span>
+                        <span>{phase.itemIds.length} 个条目</span>
                       </div>
                       <div className="coverage-bar">
                         <span style={{ width: `${Math.round(phase.coverage * 100)}%` }} />
                       </div>
                       {phase.attributionStopped ? (
-                        <small className="knowledge-unknown">Attribution stopped at boundary</small>
+                        <small className="knowledge-unknown">归因已在边界停止</small>
                       ) : null}
                     </div>
                   ))}
@@ -588,17 +577,17 @@ export function ControlCampaignWorkspace() {
                     <thead>
                       <tr>
                         <th>Evidence</th>
-                        <th>Phase</th>
-                        <th>Block</th>
+                        <th>阶段</th>
+                        <th>区块</th>
                         <th>主体</th>
-                        <th>Review</th>
+                        <th>审阅</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selected.evidenceItems.length === 0 ? (
                         <tr>
                           <td className="empty-cell" colSpan={5}>
-                            No campaign Evidence item was materialized.
+                            未物化活动 Evidence 条目。
                           </td>
                         </tr>
                       ) : (
@@ -617,8 +606,8 @@ export function ControlCampaignWorkspace() {
                             <td>{item.blockNumber}</td>
                             <td>
                               {item.subjectA === undefined && item.subjectB === undefined
-                                ? 'Not specified'
-                                : `${shortId(item.subjectA ?? 'Unknown', 7)} → ${shortId(item.subjectB ?? 'Unknown', 7)}`}
+                                ? '未指定'
+                                : `${shortId(item.subjectA ?? '未知', 7)} → ${shortId(item.subjectB ?? '未知', 7)}`}
                             </td>
                             <td>
                               <StatusPill status={item.reviewState} />

@@ -19,6 +19,8 @@ apps/desktop/bin/*.exe
 apps/desktop/bin/*.sha256
 apps/desktop/bin/*.txt
 apps/desktop/bin/ZeroTrace.workspace.json
+apps/desktop/src-tauri/binaries/
+apps/desktop/src-tauri/gen/
 data/local-index/
 data/provider-plane/
 data/storage-plane/

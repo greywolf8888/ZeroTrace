@@ -32,6 +32,16 @@ export const STATUS_LABELS: Record<string, string> = {
   CHECKSUM_VALID: '校验和有效',
   STRUCTURALLY_VALID: '结构有效',
   AMBIGUOUS: '歧义',
+  UNCONFIGURED: '未配置',
+  NOT_RUN: '未运行',
+  READ_ONLY: '只读',
+  AGREEMENT: '一致',
+  PARTIAL: '部分',
+  ACTIVE: '活跃',
+  FINAL: '终局',
+  HIGH: '高',
+  NONE_OBSERVED: '未观测',
+  UNCALIBRATED: '未校准',
 };
 
 export const REASON_LABELS: Record<string, string> = {
@@ -191,6 +201,10 @@ export const ENUM_LABELS: Record<string, string> = {
   PERMANENT_EVIDENCE: '不可删除证据',
   NORMALIZED_FACT: '规范化事实',
   EPHEMERAL: '可重建缓存',
+  ACCUMULATION: '吸筹',
+  DIRECT: '直接',
+  SUPPORT: '支持',
+  UNREVIEWED: '未审阅',
 };
 
 function titleCaseFallback(value: string): string {
