@@ -50,7 +50,7 @@ export interface IdentityAssessmentInput {
   protocolSupplyAtomic: string;
   executableSellableAtomic: string;
   nonServiceNonPoolAtomic: string;
-  marketWideExitU: string;
+  marketWideExitU?: string;
 }
 
 const CONTROLLER_GROUP = 'controller-like';
@@ -264,12 +264,15 @@ export function assessRoles(input: IdentityAssessmentInput): IdentityRolesReport
       upper: '0',
       unknown: input.nonServiceNonPoolAtomic,
     },
-    ofMarketWideExitU: {
-      lower: '0',
-      scenario: '0',
-      upper: '0',
-      unknown: input.marketWideExitU,
-    },
+    ofMarketWideExitU:
+      input.marketWideExitU === undefined
+        ? unknownValue('NOT_QUERIED', '全盘可兑现 U 尚未完成，不能用字符串 0 代替。')
+        : knownValue({
+            lower: '0',
+            scenario: '0',
+            upper: '0',
+            unknown: input.marketWideExitU,
+          }),
   };
 
   const retail: RetailMetrics = {
