@@ -1,30 +1,314 @@
 {
   "schemaVersion": "zerotrace-live-corpus-v1",
-  "capturedAt": "2026-08-20T06:10:00.000Z",
+  "capturedAt": "2026-08-20T00:23:12.064Z",
+  "head": "0x6f86ab6",
+  "window": {
+    "fromBlock": 116935542,
+    "toBlock": 116943542
+  },
   "reviewed": false,
-  "note": "Pancake PairCreated 全量扫描在公开 RPC 上超时/限流。此处只登记 P0 固定 Token，不是 50 Token 核验 Corpus，不得记 G12 PASS。",
+  "queryPlan": {
+    "steps": [
+      {
+        "id": "local-index",
+        "source": "LOCAL_INDEX",
+        "method": "index.scan",
+        "estimatedRpcCost": 0,
+        "loadBearing": false
+      },
+      {
+        "id": "cache",
+        "source": "CONTENT_CACHE",
+        "method": "cache.get",
+        "estimatedRpcCost": 0,
+        "loadBearing": false
+      },
+      {
+        "id": "bulk-dataset",
+        "source": "BULK_DATASET",
+        "method": "dataset.scan",
+        "estimatedRpcCost": 1,
+        "loadBearing": false
+      },
+      {
+        "id": "rpc-state",
+        "source": "RPC_GAP",
+        "method": "dataset.scan",
+        "estimatedRpcCost": 2,
+        "loadBearing": true
+      },
+      {
+        "id": "independent-verify",
+        "source": "INDEPENDENT_VERIFY",
+        "method": "eth_getBlockByHash",
+        "estimatedRpcCost": 2,
+        "loadBearing": true
+      },
+      {
+        "id": "multi-token-coalesce",
+        "source": "BULK_DATASET",
+        "method": "tokens:50",
+        "estimatedRpcCost": 1,
+        "loadBearing": false
+      }
+    ],
+    "estimatedRpcCost": 5,
+    "localIndexFirst": true,
+    "forbidPerTokenPublicLogs": true,
+    "cursorAdvanceRequiresPersist": true,
+    "strategy": "BULK_THEN_RPC_VERIFY",
+    "traceQueue": "trace_pending"
+  },
+  "source": "BULK_DATASET",
+  "note": "Token 候选来自 SQD bulk PairCreated，再用两个独立公共 Operator 复核 bytecode。未经分析员核验，不得记 G12 PASS。禁止对公共节点逐 Token 扫描 eth_getLogs。",
   "tokens": [
     {
-      "token": "0xaecbd0e461047d6b7cfc82e637ad197097407777",
-      "caseId": "BSC_FLAP_TAX_V6_ORIGIN",
+      "token": "0xc0c97be59029282f8fa55d4b166c191e1e98ea3c",
       "codeAgree": true,
       "empty": false
     },
     {
-      "token": "0x13aa2c5bbfd15b65b15ef1129ff3dcddf8c17777",
-      "caseId": "BSC_FLAP_TAX_V3_LIFETIME",
+      "token": "0x214ad204e80fefd73b02d02caca91fbb80585cc1",
       "codeAgree": true,
       "empty": false
     },
     {
-      "token": "0x711770df85f79c4aebba1f1d8db263110d3d7777",
-      "caseId": "BSC_FLAP_NEW_TOKEN_V2",
+      "token": "0x940a766e3c49d81f7974b27ab1e3160f865f7997",
       "codeAgree": true,
       "empty": false
     },
     {
-      "token": "0xdcfb441a1f38802820a4e7b4cc8aab37833c7777",
-      "caseId": "BSC_FFT_REFERENCE",
+      "token": "0xbbcffe890dc832fe02500720d4c700f01ac2d5fa",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x2889220cfab1221bbef4d1ee70a038308e8ada3b",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xb493ab52bff2e997cf9df59cd75f2356302d521d",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x9310b7ace4110a8a05609f02ecb96a53c2a145ba",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x3dbd47e67154f15c270914ac1a61fefd2b6e10fc",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x47406bf4f331037c4cfb2cb8047710a4e17d8e5f",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x9ea1b9453ecc55af84d35429a78390db5d4e9276",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xfe1e535d04928f2fdf92153fb3974c3f47e644b7",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xaa62d7583c0251b98d9e73206ca583db82067777",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xf5086d3f803ab3d88fb08276d7d537b50a0e2c5a",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x484375d4c7f287735c2b96a47436f79788d05226",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xd328254c48c85e18afb7131e76ef1a61966f0ca1",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xa4b829316f8a3bec36cc4e802361255fb0a38a2c",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xf98b97e465c398792629fa6f2b7444db8ea81f3a",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x2590cbe7dc44cb1cc995b8999db7206a9d09245a",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xd0a58bc9d88d3ff48c0294cb7e45937d0e41a928",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xd4f7c971da7ecbd7e2b3c1e6403d23b457f08f5f",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xc2d0dd8014858d5f89698132d1abdeb1eccaa310",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x7b46a9e7dd59237f73e7da500a97c60a703f3148",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xbcdbb60b42c20cfc12bac5d8fec98ede8f4a99a0",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xc268c729a6ec338a85320c3d20d81add133f05bd",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xde40a68e4c05fc65159748954265d034ebb35dc2",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x02fca66c1d1afb4e2a7884261eb00f63598a7436",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x943a7e41e6a9881b1ee2b9242d8bec6621547777",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xb1971d4fa8f104906b68d713a54ac8993d4f5573",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xafe6eefb30c46dd487dc10ea0bc754155a6443cd",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x84bc99fbd32b1c51faed2ba4a57a8631776e3574",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xde94be58a54d613f079b123f42e8fdd62e61f829",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xea522b8f0be1c9567039d709bc72acab298ba988",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x55e5771365cb49e99e6f2e78d2557b4d0aba6fdb",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x3742f2e88b375536eca9ca6ccff455d9d844871b",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xf9201bc3e1c3145e6fd14303638dadd5a685741a",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x92cda730b1232d19b0b084c60c86d8f37dd168ee",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x13ab28a60c5c639e8c10d31b5cf9e46e8d2e7777",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x5a1fbe3790be29d26a4ef711e800f370d9bbcb70",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xed3d1d492ba7ba3aed5b219da609e03d738fe196",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xb95b17d402281131757194a27de348ff0edc4ca9",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0xb33686e3f0cb7c400b31cf020f13e641d9a600a8",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x503184a82a36241c43f54f56039e5932b2ff4e3f",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x2fd354edac8b9fd3ec17de198e884ebef5eaff3a",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x923dcff441e0426d9f591767da87685d846f42b6",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x9b41fa833097d7815ea4cb9c68527a1ab5155a82",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x5d2e60b5ee0166a7edbc3739a78c6f3eb24e7777",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x2478ab32b2cc78c509f539f0d4be38e236059553",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x7723823b2a8e1fb9be00e66bc445cdd2a9b05668",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x8e1bb8c0682032fcf331d296de9b067451c6ab0d",
+      "codeAgree": true,
+      "empty": false
+    },
+    {
+      "token": "0x4fcfe340c5a676ca4e774374843a9d3ab153903d",
       "codeAgree": true,
       "empty": false
     }

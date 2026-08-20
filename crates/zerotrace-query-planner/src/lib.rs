@@ -21,6 +21,7 @@ pub enum SourceKind {
     ContentCache,
     ArchiveNode,
     IndependentOperator,
+    BulkDataset,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -82,6 +83,81 @@ pub fn plan_token_scan(has_local_index: bool, needs_quorum: bool) -> QueryPlan {
         steps,
         estimated_rpc_cost,
         local_index_first: has_local_index,
+    }
+}
+
+pub fn plan_corpus_discovery(bulk_available: bool, token_count: u32) -> QueryPlan {
+    let mut steps = vec![
+        PlanStep {
+            id: "local-index".into(),
+            source: SourceKind::LocalIndex,
+            method: "index.scan".into(),
+            estimated_rpc_cost: 0.0,
+            load_bearing: false,
+        },
+        PlanStep {
+            id: "cache".into(),
+            source: SourceKind::ContentCache,
+            method: "cache.get".into(),
+            estimated_rpc_cost: 0.0,
+            load_bearing: false,
+        },
+    ];
+    if bulk_available {
+        steps.push(PlanStep {
+            id: "bulk-dataset".into(),
+            source: SourceKind::BulkDataset,
+            method: format!("dataset.scan:{token_count}"),
+            estimated_rpc_cost: 1.0,
+            load_bearing: false,
+        });
+    }
+    steps.push(PlanStep {
+        id: "rpc-code-verify".into(),
+        source: SourceKind::IndependentOperator,
+        method: "eth_getCode".into(),
+        estimated_rpc_cost: 2.0,
+        load_bearing: true,
+    });
+    let estimated_rpc_cost = steps.iter().map(|step| step.estimated_rpc_cost).sum();
+    QueryPlan {
+        steps,
+        estimated_rpc_cost,
+        local_index_first: true,
+    }
+}
+
+pub fn plan_lifetime_history(coverage_complete: bool, bulk_available: bool) -> QueryPlan {
+    let mut steps = vec![
+        PlanStep {
+            id: "local-index".into(),
+            source: SourceKind::LocalIndex,
+            method: "index.scan".into(),
+            estimated_rpc_cost: 0.0,
+            load_bearing: false,
+        },
+        PlanStep {
+            id: "cache".into(),
+            source: SourceKind::ContentCache,
+            method: "cache.get".into(),
+            estimated_rpc_cost: 0.0,
+            load_bearing: false,
+        },
+    ];
+    if !coverage_complete && bulk_available {
+        steps.push(PlanStep {
+            id: "bulk-dataset".into(),
+            source: SourceKind::BulkDataset,
+            method: "dataset.scan".into(),
+            estimated_rpc_cost: 1.0,
+            load_bearing: false,
+        });
+    }
+    let estimated_rpc_cost = steps.iter().map(|step| step.estimated_rpc_cost).sum();
+    QueryPlan {
+        steps,
+        estimated_rpc_cost,
+        local_index_first: true,
     }
 }
 
@@ -197,6 +273,19 @@ mod tests {
     use zerotrace_provider_scheduler::ProviderRecord;
 
     #[test]
+    fn lifetime_history_is_local_when_coverage_complete() {
+        let plan = plan_lifetime_history(true, true);
+        assert_eq!(plan.estimated_rpc_cost, 0.0);
+        assert!(!plan.steps.iter().any(|step| step.method == "eth_getLogs"));
+        let gap = plan_lifetime_history(false, true);
+        assert!(gap
+            .steps
+            .iter()
+            .any(|step| step.source == SourceKind::BulkDataset));
+        assert!(!gap.steps.iter().any(|step| step.method == "eth_getLogs"));
+    }
+
+    #[test]
     fn local_index_avoids_genesis_rpc() {
         let plan = plan_token_scan(true, true);
         assert!(plan.local_index_first);
@@ -205,6 +294,25 @@ mod tests {
             .iter()
             .any(|step| step.source == SourceKind::LocalIndex));
         assert!(!plan.steps.iter().any(|step| step.id == "archive-gap"));
+    }
+
+    #[test]
+    fn corpus_discovery_uses_bulk_dataset_not_public_logs() {
+        let with_bulk = plan_corpus_discovery(true, 50);
+        assert!(with_bulk
+            .steps
+            .iter()
+            .any(|step| step.source == SourceKind::BulkDataset));
+        assert!(!with_bulk
+            .steps
+            .iter()
+            .any(|step| step.method == "eth_getLogs"));
+        let without_bulk = plan_corpus_discovery(false, 50);
+        assert!(!without_bulk
+            .steps
+            .iter()
+            .any(|step| step.method == "eth_getLogs"));
+        assert!(without_bulk.local_index_first);
     }
 
     #[test]

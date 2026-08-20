@@ -45,6 +45,18 @@ function baseConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     duneConfigured: false,
     nansenConfigured: false,
     arkhamConfigured: false,
+    providerSlotStatus: {
+      NODEREAL_API_KEY: 'UNCONFIGURED',
+      ANKR_API_KEY: 'UNCONFIGURED',
+      CHAINSTACK_BSC_RPC_URL: 'UNCONFIGURED',
+      DRPC_API_KEY: 'UNCONFIGURED',
+      HELIUS_API_KEY: 'UNCONFIGURED',
+      BSC_TRACE_RPC_URL: 'UNCONFIGURED',
+    },
+    bscTraceRpcAuthType: 'none',
+    bscTraceOperatorId: 'bsc-trace-slot',
+    storageProfile: 'LOW_COST_CASE',
+    storageRoot: '/tmp/zerotrace-storage-plane-test',
     localDevAuth: false,
     ...overrides,
   };

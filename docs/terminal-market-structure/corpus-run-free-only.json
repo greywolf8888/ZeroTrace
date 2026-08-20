@@ -1,0 +1,1006 @@
+{
+  "schemaVersion": "zerotrace-corpus-run-v1",
+  "capturedAt": "2026-08-20T10:36:35.833Z",
+  "tokenCount": 50,
+  "reviewed": false,
+  "modes": {
+    "FREE_ONLY": {
+      "completionRate": 0,
+      "originComplete": 0,
+      "historyComplete": 0,
+      "note": "公共 Operator + SQD/本地索引。无 Trace 时起源不得 COMPLETE。不是 G12 PASS。"
+    },
+    "FREE_KEYED": {
+      "completionRate": 0,
+      "status": "RAN_WITH_FREE_SLOTS",
+      "slots": {
+        "NODEREAL_API_KEY": "CONFIGURED",
+        "ANKR_API_KEY": "CONFIGURED",
+        "CHAINSTACK_BSC_RPC_URL": "UNCONFIGURED",
+        "DRPC_API_KEY": "UNCONFIGURED",
+        "HELIUS_API_KEY": "UNCONFIGURED",
+        "BSC_TRACE_RPC_URL": "UNCONFIGURED"
+      },
+      "note": "已配置免费 Key 插槽；未关闭的能力仍保持 PARTIAL。"
+    },
+    "TRACE_ENABLED": {
+      "completionRate": null,
+      "status": "UNCONFIGURED",
+      "tracePending": [],
+      "note": "通用 BSC_TRACE_RPC_URL 探测失败。P0 已知创建交易的内部 CREATE 见 corpus-run-trace-pending.json（SQD CREATE traces）。不得用 receipt.contractAddress 或 Explorer 替代。"
+    }
+  },
+  "cost": {
+    "FREE_ONLY": {
+      "rpcClass": "public-no-sla",
+      "estimatedCu": 0,
+      "note": "无已知单价，只记请求分层，不编造 CU。"
+    },
+    "FREE_KEYED": {
+      "configured": true,
+      "estimatedCu": null
+    },
+    "TRACE_ENABLED": {
+      "configured": false,
+      "estimatedCu": null
+    }
+  },
+  "perToken": [
+    {
+      "token": "0xc0c97be59029282f8fa55d4b166c191e1e98ea3c",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x214ad204e80fefd73b02d02caca91fbb80585cc1",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x940a766e3c49d81f7974b27ab1e3160f865f7997",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xbbcffe890dc832fe02500720d4c700f01ac2d5fa",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x2889220cfab1221bbef4d1ee70a038308e8ada3b",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xb493ab52bff2e997cf9df59cd75f2356302d521d",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x9310b7ace4110a8a05609f02ecb96a53c2a145ba",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x3dbd47e67154f15c270914ac1a61fefd2b6e10fc",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x47406bf4f331037c4cfb2cb8047710a4e17d8e5f",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x9ea1b9453ecc55af84d35429a78390db5d4e9276",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xfe1e535d04928f2fdf92153fb3974c3f47e644b7",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xaa62d7583c0251b98d9e73206ca583db82067777",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xf5086d3f803ab3d88fb08276d7d537b50a0e2c5a",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x484375d4c7f287735c2b96a47436f79788d05226",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xd328254c48c85e18afb7131e76ef1a61966f0ca1",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xa4b829316f8a3bec36cc4e802361255fb0a38a2c",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xf98b97e465c398792629fa6f2b7444db8ea81f3a",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x2590cbe7dc44cb1cc995b8999db7206a9d09245a",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xd0a58bc9d88d3ff48c0294cb7e45937d0e41a928",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xd4f7c971da7ecbd7e2b3c1e6403d23b457f08f5f",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xc2d0dd8014858d5f89698132d1abdeb1eccaa310",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x7b46a9e7dd59237f73e7da500a97c60a703f3148",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xbcdbb60b42c20cfc12bac5d8fec98ede8f4a99a0",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xc268c729a6ec338a85320c3d20d81add133f05bd",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xde40a68e4c05fc65159748954265d034ebb35dc2",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x02fca66c1d1afb4e2a7884261eb00f63598a7436",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x943a7e41e6a9881b1ee2b9242d8bec6621547777",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xb1971d4fa8f104906b68d713a54ac8993d4f5573",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xafe6eefb30c46dd487dc10ea0bc754155a6443cd",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x84bc99fbd32b1c51faed2ba4a57a8631776e3574",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xde94be58a54d613f079b123f42e8fdd62e61f829",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xea522b8f0be1c9567039d709bc72acab298ba988",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x55e5771365cb49e99e6f2e78d2557b4d0aba6fdb",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x3742f2e88b375536eca9ca6ccff455d9d844871b",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xf9201bc3e1c3145e6fd14303638dadd5a685741a",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x92cda730b1232d19b0b084c60c86d8f37dd168ee",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x13ab28a60c5c639e8c10d31b5cf9e46e8d2e7777",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x5a1fbe3790be29d26a4ef711e800f370d9bbcb70",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xed3d1d492ba7ba3aed5b219da609e03d738fe196",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xb95b17d402281131757194a27de348ff0edc4ca9",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0xb33686e3f0cb7c400b31cf020f13e641d9a600a8",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x503184a82a36241c43f54f56039e5932b2ff4e3f",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x2fd354edac8b9fd3ec17de198e884ebef5eaff3a",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x923dcff441e0426d9f591767da87685d846f42b6",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x9b41fa833097d7815ea4cb9c68527a1ab5155a82",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x5d2e60b5ee0166a7edbc3739a78c6f3eb24e7777",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x2478ab32b2cc78c509f539f0d4be38e236059553",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x7723823b2a8e1fb9be00e66bc445cdd2a9b05668",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x8e1bb8c0682032fcf331d296de9b067451c6ab0d",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    },
+    {
+      "token": "0x4fcfe340c5a676ca4e774374843a9d3ab153903d",
+      "origin": "PARTIAL",
+      "history": "PARTIAL",
+      "coverageLogs": 0,
+      "openReasons": [
+        "缺少起源交易，拒绝用空部署者或首笔 mint 冒充唯一创建。",
+        "起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。",
+        "SNAPSHOT:PARTIAL",
+        "ORIGIN:PARTIAL",
+        "HISTORY:PARTIAL",
+        "SUPPLY:PARTIAL",
+        "ENTITY:PARTIAL",
+        "CAMPAIGN:PARTIAL",
+        "CAPITAL:PARTIAL",
+        "RV:UNSUPPORTED",
+        "REPLAY:PARTIAL"
+      ]
+    }
+  ],
+  "shadowGate": {
+    "promote": false,
+    "reasons": [
+      "THRESHOLD_NOT_MET"
+    ]
+  }
+}

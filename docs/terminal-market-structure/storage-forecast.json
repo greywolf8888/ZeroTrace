@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "zerotrace-storage-forecast-v1",
+  "capturedAt": "2026-08-20T11:39:10.057Z",
+  "source": "low-disk-bench.json",
+  "bytesPerEvent": 558.3,
+  "bytesPerToken": 16749,
+  "bytesPerCase": 20738,
+  "compressionRatio": 0.2006269592476489,
+  "dailyGrowth": 25520,
+  "30d": 765600,
+  "90d": 2296800,
+  "365d": 9314800,
+  "capacity": {
+    "500GB_usable_70pct_tokens": 22437735,
+    "1TB_usable_70pct_tokens": 45952483,
+    "2TB_usable_70pct_tokens": 91904966
+  },
+  "note": "容量按 ZeroTrace 不超过可用空间 70% 估算。样本来自 PARTIAL 生命周期窗口，不是完整 BSC Archive，也不是闭合全历史；完整生命周期的 bytes/token 会显著更大，Token 容量是上限而非承诺。"
+}

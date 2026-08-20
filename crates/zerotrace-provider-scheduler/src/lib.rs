@@ -75,6 +75,16 @@ pub struct Aimd {
 }
 
 impl Aimd {
+    pub fn low_cost() -> Self {
+        Self {
+            concurrency: 1,
+            min: 1,
+            max: 1,
+            additive: 1,
+            multiplicative: 0.5,
+        }
+    }
+
     pub fn new() -> Self {
         Self {
             concurrency: 1,
@@ -215,8 +225,8 @@ impl ProviderScheduler {
         }
         let bucket = self
             .buckets
-            .entry(key.method.clone())
-            .or_insert_with(|| TokenBucket::new(10.0, 10.0));
+            .entry(format!("{}|{}|{}", key.chain, key.method, "unknown-public"))
+            .or_insert_with(|| TokenBucket::new(8.0, 4.0));
         if !bucket.try_take(now_ms, cost) {
             return Err(SchedulerError::RateLimited);
         }
@@ -295,5 +305,15 @@ mod tests {
         assert_eq!(aimd.concurrency, 4);
         aimd.on_success();
         assert_eq!(aimd.concurrency, 5);
+    }
+
+    #[test]
+    fn low_cost_aimd_never_exceeds_one() {
+        let mut aimd = Aimd::low_cost();
+        for _ in 0..8 {
+            aimd.on_success();
+        }
+        assert_eq!(aimd.concurrency, 1);
+        assert_eq!(aimd.max, 1);
     }
 }

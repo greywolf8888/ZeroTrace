@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   assertLoadBearingQuorum,
+  endpointRefFromUrl,
   independentOperatorCount,
   operatorFromEndpoint,
   sameGroupIsNotIndependent,
@@ -56,5 +57,26 @@ describe('source operator registry', () => {
     expect(left.independenceGroup).toBe('bnbchain');
     expect(right.independenceGroup).toBe('nodereal');
     expect(independentOperatorCount([left, right])).toBe(2);
+  });
+
+  it('denies eth_getLogs on official BNB public dataseed and the default public pool', () => {
+    const dataseed = operatorFromEndpoint({
+      endpointId: 'https://bsc-dataseed.bnbchain.org',
+      chainId: 'eip155:56',
+    });
+    const ankr = operatorFromEndpoint({
+      endpointId: 'https://rpc.ankr.com/bsc',
+      chainId: 'eip155:56',
+    });
+    expect(dataseed.deniedMethods).toContain('eth_getLogs');
+    expect(ankr.logsCapability).toBe('denied');
+    expect(dataseed.forensicGrade).toBe('PUBLIC_NO_SLA');
+  });
+
+  it('keeps static RPC paths in endpoint refs but strips secret-length segments', () => {
+    expect(endpointRefFromUrl('https://rpc.ankr.com/bsc')).toBe('https://rpc.ankr.com/bsc');
+    expect(endpointRefFromUrl('https://bsc-mainnet.nodereal.io/v1/super-secret-key-value')).toBe(
+      'https://bsc-mainnet.nodereal.io/v1',
+    );
   });
 });

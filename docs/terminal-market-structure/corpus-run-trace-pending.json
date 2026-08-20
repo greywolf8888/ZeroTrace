@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "zerotrace-corpus-run-trace-pending-v1",
+  "capturedAt": "2026-08-20T10:36:11.622Z",
+  "reviewed": false,
+  "traceSlot": "UNCONFIGURED",
+  "keyedSlots": {
+    "NODEREAL_API_KEY": "CONFIGURED",
+    "ANKR_API_KEY": "CONFIGURED"
+  },
+  "creationTraceSource": true,
+  "note": "只对已知创建交易做 Trace。起源 COMPLETE 需要双 Operator 交易/回执/字节码一致，且 traces 匹配 CREATE/CREATE2。不是 G12 PASS。",
+  "tokenCount": 3,
+  "originComplete": 3,
+  "historyComplete": 0,
+  "perToken": [
+    {
+      "id": "BSC_FLAP_TAX_V6_ORIGIN",
+      "token": "0xaecbd0e461047d6b7cfc82e637ad197097407777",
+      "origin": "COMPLETE",
+      "history": "PARTIAL",
+      "historyLimitation": "日志窗口失败：fetch failed。未覆盖区间不得记为空持有人。",
+      "createdBlock": "100460764",
+      "deployer": "0xecd294436485a1d8e7fddb8d79725b59a136b7d7",
+      "coverageLogs": 0,
+      "artifactCount": 11,
+      "rawHashesValid": true,
+      "elapsedMs": 12380
+    },
+    {
+      "id": "BSC_FLAP_TAX_V3_LIFETIME",
+      "token": "0x13aa2c5bbfd15b65b15ef1129ff3dcddf8c17777",
+      "origin": "COMPLETE",
+      "history": "PARTIAL",
+      "historyLimitation": "日志窗口未覆盖起源到当前头，持有人集合保持部分观察。",
+      "createdBlock": "92983208",
+      "deployer": "0x6db1f6a7f3bafd25b038b6ad4394cd6377cb19dd",
+      "coverageLogs": 1715,
+      "artifactCount": 17,
+      "rawHashesValid": true,
+      "elapsedMs": 4857
+    },
+    {
+      "id": "BSC_FLAP_NEW_TOKEN_V2",
+      "token": "0x711770df85f79c4aebba1f1d8db263110d3d7777",
+      "origin": "COMPLETE",
+      "history": "PARTIAL",
+      "historyLimitation": "日志窗口未覆盖起源到当前头，持有人集合保持部分观察。",
+      "createdBlock": "102628537",
+      "deployer": "0x9b0af47afbe35e87ea4ff0da58c610f798345b2f",
+      "coverageLogs": 2,
+      "artifactCount": 17,
+      "rawHashesValid": true,
+      "elapsedMs": 2351
+    }
+  ]
+}

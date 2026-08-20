@@ -135,6 +135,7 @@ const ALLOWED_EVM_METHODS = new Set([
   'trace_transaction',
   'trace_block',
   'debug_traceTransaction',
+  'debug_jsTraceTransaction',
   'debug_traceBlockByHash',
   'debug_traceBlockByNumber',
 ]);

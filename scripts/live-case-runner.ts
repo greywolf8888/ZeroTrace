@@ -4,6 +4,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { defaultBscPublicCatalog, selectProviders } from '@zerotrace/provider-plane';
+import { endpointRefFromUrl } from '@zerotrace/source-registry';
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 interface LiveCase {
@@ -92,19 +95,6 @@ const CASES: LiveCase[] = [
   },
 ];
 
-const OPERATORS = [
-  {
-    operatorId: 'bnbchain-public',
-    independenceGroup: 'bnbchain',
-    url: 'https://bsc-dataseed.bnbchain.org',
-  },
-  {
-    operatorId: 'nodereal-public',
-    independenceGroup: 'nodereal',
-    url: 'https://bsc.nodereal.io',
-  },
-] as const;
-
 function gitSha(): string {
   try {
     return execSync('git rev-parse HEAD', { cwd: root, encoding: 'utf8' }).trim();
@@ -117,17 +107,37 @@ function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function configuredUrls(): string[] {
-  const fromEnv = [
-    process.env.EVM_BSC_RPC_URLS,
-    process.env.EVM_BSC_RPC_URL,
-    process.env.BSC_RPC_URL,
-  ]
-    .flatMap((value) => (value ?? '').split(','))
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0);
-  if (fromEnv.length >= 2) return [...new Set(fromEnv)].slice(0, 2);
-  return OPERATORS.map((item) => item.url);
+async function configuredUrls(): Promise<string[]> {
+  const catalog = defaultBscPublicCatalog();
+  const snapshots = [];
+  for (const record of catalog) {
+    const probe = await jsonRpc(record.endpointRef, 'eth_chainId', []);
+    snapshots.push({
+      providerId: record.providerId,
+      operatorId: record.operatorId,
+      endpointRef: record.endpointRef,
+      probedAt: new Date().toISOString(),
+      chainIdOk: probe.ok && probe.result === '0x38',
+      finalizedOk: false,
+      historicalCodeOk: false,
+      historicalCallOk: false,
+      smallLogsOk: 'POLICY_DENIED' as const,
+      traceOk: 'UNCONFIGURED' as const,
+      batchOk: false,
+      maxResponseBytes: record.maxResponseBytes,
+    });
+  }
+  const selection = selectProviders(
+    catalog,
+    {
+      chainId: 'eip155:56',
+      method: 'eth_getCode',
+      params: ['0x0000000000000000000000000000000000000000', 'latest'],
+      loadBearing: true,
+    },
+    snapshots,
+  );
+  return selection.selected.map((item) => item.endpointRef);
 }
 
 async function jsonRpc(
@@ -322,7 +332,7 @@ async function runCase(
 }
 
 const sha = gitSha();
-const urls = configuredUrls();
+const urls = await configuredUrls();
 const outRoot = join(root, 'output', 'zero-trust-validation', sha);
 mkdirSync(outRoot, { recursive: true });
 
@@ -337,7 +347,7 @@ for (const item of CASES) {
     gate: result.status,
     chainId: item.chainId,
     subject: item.address ?? item.txHash ?? null,
-    providers: urls,
+    providers: urls.map((url) => endpointRefFromUrl(url)),
     independenceGroups: result.independenceGroups,
     rawHashes: result.rawHashes,
     replay: { offline: true, resultHashMatch: result.replay },

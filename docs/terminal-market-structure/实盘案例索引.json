@@ -1,10 +1,10 @@
 {
   "schemaVersion": "zerotrace-live-case-index-v1",
-  "repositorySha": "58b3ca2c55fab41fe66453fed2f1833735e7ee30",
-  "capturedAt": "2026-08-20T06:02:00.000Z",
-  "operators": ["bnbchain-public", "nodereal-public"],
-  "independenceGroups": ["bnbchain", "nodereal"],
-  "note": "PASS 仅表示双 Operator 只读捕获一致，不是完整盘面 COMPLETE。Flap 起源回执不是 Token 地址。",
+  "repositorySha": "ac14d7b712d4f749888a0bbb2b3dad1fc3c0e5e3",
+  "capturedAt": "2026-08-20T00:21:50.000Z",
+  "operators": ["probed-public-pool"],
+  "independenceGroups": ["selected-by-capability"],
+  "note": "PASS 仅表示双 Operator 只读捕获一致，不是完整盘面 COMPLETE。选择前先探测 eth_chainId。Ankr 公共端点 chainIdOk=false，未进入 quorum。Flap 起源回执不是 Token 地址。",
   "cases": {
     "BSC_FLAP_PORTAL_IDENTITY": "PASS",
     "BSC_FLAP_TAX_V6_ORIGIN": "PASS",

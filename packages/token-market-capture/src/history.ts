@@ -5,7 +5,7 @@ import {
   type IndexedTransfer,
   type LocalIndexStore,
 } from '@zerotrace/local-index';
-import type { SourceOperator } from '@zerotrace/source-registry';
+import { allowsLogs, type SourceOperator } from '@zerotrace/source-registry';
 
 import {
   callBoth,
@@ -22,7 +22,9 @@ import {
   type CaptureArtifact,
   type HistoryObservation,
   type HolderBalance,
+  type RpcResult,
   type RpcTransport,
+  type BulkLogSource,
 } from './types.js';
 
 interface LogShape {
@@ -65,6 +67,15 @@ function toTransfer(chainId: string, token: string, item: LogShape): IndexedTran
   };
 }
 
+function bulkPair(
+  source: BulkLogSource,
+  params: unknown[],
+): Promise<{ left: RpcResult; right: RpcResult; agree: boolean }> {
+  return source
+    .getLogs(params)
+    .then((result) => ({ left: result, right: result, agree: result.ok }));
+}
+
 export async function captureHistory(input: {
   transport: RpcTransport;
   operators: readonly SourceOperator[];
@@ -74,16 +85,17 @@ export async function captureHistory(input: {
   index: LocalIndexStore;
   logBudgetChunks: number;
   chunkBlocks: bigint;
+  bulkLogSource?: BulkLogSource;
 }): Promise<{
   history: HistoryObservation;
   transfers: IndexedTransfer[];
   artifacts: CaptureArtifact[];
 }> {
   const artifacts: CaptureArtifact[] = [];
-  const endpoints = input.operators.map((item) => item.endpointId);
+  const headEndpoints = input.operators.map((item) => item.endpointId);
   const token = normalizeAddress(input.token);
   const key = tokenKey(input.chainId, token);
-  const headCall = await callBoth(input.transport, endpoints, 'eth_blockNumber', []);
+  const headCall = await callBoth(input.transport, headEndpoints, 'eth_blockNumber', []);
   artifacts.push(
     { path: 'rpc/head-left.json', sha256: sha256Hex(headCall.left.raw) },
     { path: 'rpc/head-right.json', sha256: sha256Hex(headCall.right.raw) },
@@ -100,7 +112,40 @@ export async function captureHistory(input: {
     };
   }
   const head = fromHex(headCall.left.result);
-  const origin = input.originBlock ?? 0n;
+  const origin = input.originBlock;
+  const logOperators = input.operators.filter(allowsLogs);
+  const useDualLogs = logOperators.length >= 2;
+  const useBulk = input.bulkLogSource !== undefined;
+  if (origin === undefined) {
+    return {
+      history: {
+        status: 'PARTIAL',
+        headBlock: head.toString(10),
+        logCount: input.index.transfers(key).length,
+        limitation:
+          '起源区块未知，拒绝从创世扫描日志。历史覆盖无法闭合，不得把未索引区间记为空持有人。',
+      },
+      transfers: input.index.transfers(key),
+      artifacts,
+    };
+  }
+  if (!useDualLogs && !useBulk) {
+    return {
+      history: {
+        status: 'PARTIAL',
+        fromBlock: origin.toString(10),
+        headBlock: head.toString(10),
+        logCount: input.index.transfers(key).length,
+        limitation:
+          'LOGS_REQUIRE_BULK_OR_KEYED：公共无 SLA 节点不得扫描 eth_getLogs。历史覆盖保持部分观察，不得把未索引区间记为空持有人。',
+      },
+      transfers: input.index.transfers(key),
+      artifacts,
+    };
+  }
+  const logEndpoints = (useDualLogs ? logOperators : input.operators).map(
+    (item) => item.endpointId,
+  );
   let chunks = 0;
   let cursor = origin;
   while (cursor <= head && chunks < input.logBudgetChunks) {
@@ -121,7 +166,9 @@ export async function captureHistory(input: {
           topics: [TRANSFER_TOPIC],
         },
       ];
-      const logs = await callBoth(input.transport, endpoints, 'eth_getLogs', params);
+      const logs = useDualLogs
+        ? await callBoth(input.transport, logEndpoints, 'eth_getLogs', params)
+        : await bulkPair(input.bulkLogSource!, params);
       artifacts.push(
         {
           path: `rpc/logs-${from.toString(10)}-left.json`,
@@ -181,7 +228,8 @@ export async function captureHistory(input: {
   }
 
   const transfers = input.index.transfers(key);
-  const complete = origin > 0n && coverageComplete(input.index.coverage(key), origin, head);
+  const indexed = origin > 0n && coverageComplete(input.index.coverage(key), origin, head);
+  const complete = indexed && useDualLogs;
   return {
     history: {
       status: complete ? 'COMPLETE' : 'PARTIAL',
@@ -195,7 +243,9 @@ export async function captureHistory(input: {
             limitation:
               origin === 0n
                 ? '起源区块未知，历史覆盖无法闭合。'
-                : '公开 RPC 窗口未覆盖起源到当前头，持有人集合保持部分观察。',
+                : useBulk && !useDualLogs
+                  ? 'BULK_INDEX_UNVERIFIED：本地索引来自单一 bulk dataset，尚未被第二独立 Operator 复核，不得记为完整历史。'
+                  : '日志窗口未覆盖起源到当前头，持有人集合保持部分观察。',
           }),
     },
     transfers,

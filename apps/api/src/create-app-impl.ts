@@ -12,6 +12,7 @@ import type { AppHttpContext } from './http/context.js';
 import type { ForensicReportStore } from './plugins/market-structure.js';
 import { registerMarketStructureV2 } from './plugins/market-structure.js';
 import { registerSystemRoutes } from './plugins/system.js';
+import { registerStoragePlaneRoutes } from './plugins/storage-quota.js';
 import { registerSearchAndLabelRoutes } from './plugins/search-labels.js';
 import { registerSolanaBitcoinLedgerRoutes } from './plugins/solana-bitcoin.js';
 import { registerEvidenceAndLaunchRoutes } from './plugins/evidence-launches.js';
@@ -105,6 +106,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   registerApiErrorHandler(app);
   await registerPlatformSecurity(app, options.config);
   await registerSystemRoutes(app, ctx);
+  await registerStoragePlaneRoutes(app, ctx);
   await registerSearchAndLabelRoutes(app, ctx);
   await registerSolanaBitcoinLedgerRoutes(app, ctx);
   await registerEvidenceAndLaunchRoutes(app, ctx);

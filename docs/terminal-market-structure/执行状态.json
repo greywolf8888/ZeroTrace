@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-agent-state-v1",
-  "repositorySha": "58b3ca2c55fab41fe66453fed2f1833735e7ee30",
+  "repositorySha": "ac14d7b712d4f749888a0bbb2b3dad1fc3c0e5e3",
   "branch": "agent/terminal-market-structure-v1",
   "currentStage": "S3",
   "currentGate": "G3_ARBITRARY_TOKEN",
@@ -21,14 +21,25 @@
     "G13_STABILITY_SPEED": "NOT_RUN",
     "G14_RELEASE": "NOT_RUN"
   },
-  "activeFailures": [],
+  "activeFailures": [
+    "BSC_TRACE_RPC_URL UNCONFIGURED: NodeReal/Ankr/dRPC public debug-trace are plan-locked",
+    "50-token corpus has no creationTx; originComplete=0; reviewed=false",
+    "Flap V6 keyed eth_getLogs window fetch failed; history remains PARTIAL so second-pass historical RPC is not 0",
+    "No pinned archive fork / Exact VM; G7 cannot PASS",
+    "ClickHouse ResultHash live comparison NOT_RUN under LOW_COST_CASE"
+  ],
   "liveCases": {
     "P0_dual_operator_capture": "8 PASS / 1 UNSUPPORTED / 0 FAIL",
-    "origin_receipt": "Flap 起源为内部 CREATE，ORIGIN 保持 PARTIAL"
+    "origin_receipt": "Flap 工厂/内部 CREATE：双 Operator 交易/回执/字节码一致后，用 SQD bulk CREATE traces 匹配到 Token；P0 三枚起源 COMPLETE",
+    "corpus_bulk": "SQD PairCreated 收集 50 Token，bytecode 双 Operator 一致，reviewed=false",
+    "FREE_ONLY": "originComplete=0 historyComplete=0",
+    "FREE_KEYED": "CONFIGURED and probed: chainId/archive/smallLogs OK on two operators; 50-token origin still 0 without creationTx",
+    "TRACE_ENABLED": "RPC TRACE slot UNCONFIGURED; P0 origin closed via SQD CREATE traces instead",
+    "LOW_COST_STORAGE": "P0 Flap V6 二次分析 origin COMPLETE、Coverage 重启仍在、案件 Evidence 保留；历史仍 PARTIAL 故 historical RPC≠0；ClickHouse NOT_RUN；Corpus 续跑 1→2"
   },
-  "lastCommand": "npx tsx scripts/live-case-runner.ts",
-  "lastResult": "pass=8 fail=0 blockedExternal=0 unsupported=1",
-  "nextAction": "creation traces、Archive fork、Exact VM、50 Token 人工核验 Corpus、OIDC 真接线",
-  "updatedAt": "2026-08-20T06:02:00.000Z",
+  "lastCommand": "npx tsc -b tsconfig.packages.json && npx tsx scripts/bench-low-disk.ts && npx tsx scripts/storage-profile.ts && npx tsx scripts/storage-forecast.ts && CORPUS_MAX_TOKENS=1 npx tsx scripts/corpus-resume.ts (twice)",
+  "lastResult": "LOW_COST_CASE wired; P0 origin COMPLETE; second-pass historical RPC still 8 (gaps remain); evidence kept; CH ResultHash NOT_RUN; corpus resume 1 then 2",
+  "nextAction": "闭合 Transfer 覆盖后再验证 historical RPC=0；配置 ClickHouse 后对照 ResultHash；Corpus 补 creationTx 后串行续跑；不得把未覆盖当空、不得因空间把 Gate 写成 PASS",
+  "updatedAt": "2026-08-20T11:39:00.000Z",
   "originMainSha": "58b3ca2c55fab41fe66453fed2f1833735e7ee30"
 }

@@ -24,6 +24,20 @@ export interface TokenCaptureRequest {
   creationTx?: string;
   logBudgetChunks?: number;
   chunkBlocks?: bigint;
+  stopAfter?:
+    | 'CURRENT_SNAPSHOT'
+    | 'ORIGIN'
+    | 'LIFETIME_HISTORY'
+    | 'ENTITY_AND_CAMPAIGN'
+    | 'CAPITAL_AND_RV'
+    | 'CASE_AND_REPLAY';
+}
+
+export interface RpcCallStats {
+  current: number;
+  historical: number;
+  trace: number;
+  byMethod: Record<string, number>;
 }
 
 export interface TokenCaptureRuntime {
@@ -32,11 +46,26 @@ export interface TokenCaptureRuntime {
   index: LocalIndexStore;
   logBudgetChunks: number;
   pinnedFork?: { blockHash: string; vm: 'revm' };
+  traceAvailable?: boolean;
+  traceEndpointId?: string;
+  bulkLogSource?: BulkLogSource;
+  creationTraceSource?: CreationTraceSource;
+  cachedOrigins?: Map<string, OriginObservation>;
+  hydrate?: (request: TokenCaptureRequest) => Promise<void>;
+  persist?: (request: TokenCaptureRequest, report: CaptureReport) => Promise<void>;
 }
 
 export interface CaptureArtifact {
   path: string;
   sha256: string;
+}
+
+export interface BulkLogSource {
+  getLogs(params: unknown[]): Promise<RpcResult>;
+}
+
+export interface CreationTraceSource {
+  getCreations(query: { address: string; fromBlock: string; toBlock: string }): Promise<RpcResult>;
 }
 
 export interface OriginObservation {
@@ -46,6 +75,7 @@ export interface OriginObservation {
   createdBlock?: string;
   codeHash?: string;
   limitation?: string;
+  limitationCode?: string;
 }
 
 export interface HistoryObservation {
@@ -82,6 +112,7 @@ export interface CaptureReport {
   capitalLimitation?: string;
   artifacts: CaptureArtifact[];
   rawHashesValid: boolean;
+  rpcStats: RpcCallStats;
 }
 
 export function stageOf(

@@ -2,8 +2,10 @@ import { hashPayload } from '@zerotrace/evidence';
 import { assertLoadBearingQuorum, type SourceOperator } from '@zerotrace/source-registry';
 
 import { callBoth, fromHex, normalizeAddress, sha256Hex } from './rpc.js';
+import { traceInternalCreate } from './trace.js';
 import type {
   CaptureArtifact,
+  CreationTraceSource,
   OriginObservation,
   RpcTransport,
   TokenCaptureRequest,
@@ -23,12 +25,43 @@ interface ReceiptShape {
   transactionHash?: string;
 }
 
+function creationMatchesToken(value: unknown, token: string, creationTx: string): boolean {
+  if (value === null || typeof value !== 'object') return false;
+  const record = value as { address?: unknown; transactionHash?: unknown };
+  if (typeof record.address !== 'string' || typeof record.transactionHash !== 'string') {
+    return false;
+  }
+  return (
+    normalizeAddress(record.address) === token &&
+    record.transactionHash.toLowerCase() === creationTx
+  );
+}
+
+function originFields(input: {
+  creationTx: string;
+  txBody: TxShape;
+  createdBlock?: string;
+}): Pick<OriginObservation, 'creationTx' | 'deployer' | 'createdBlock'> {
+  return {
+    creationTx: input.creationTx,
+    ...(input.txBody.from === undefined ? {} : { deployer: normalizeAddress(input.txBody.from) }),
+    ...(input.createdBlock === undefined ? {} : { createdBlock: input.createdBlock }),
+  };
+}
+
 export async function captureOrigin(input: {
   transport: RpcTransport;
   operators: readonly SourceOperator[];
   request: TokenCaptureRequest;
+  traceAvailable?: boolean;
+  traceEndpointId?: string;
+  creationTraceSource?: CreationTraceSource;
+  cachedOrigin?: OriginObservation;
 }): Promise<{ origin: OriginObservation; artifacts: CaptureArtifact[] }> {
   const artifacts: CaptureArtifact[] = [];
+  if (input.cachedOrigin?.status === 'COMPLETE') {
+    return { origin: input.cachedOrigin, artifacts };
+  }
   try {
     assertLoadBearingQuorum(input.operators);
   } catch (error) {
@@ -116,36 +149,119 @@ export async function captureOrigin(input: {
     receiptBody.blockNumber === undefined
       ? undefined
       : fromHex(receiptBody.blockNumber).toString(10);
-  if (created !== token) {
-    return {
-      origin: {
-        status: 'PARTIAL',
-        creationTx,
-        ...(txBody.from === undefined ? {} : { deployer: normalizeAddress(txBody.from) }),
-        ...(createdBlock === undefined ? {} : { createdBlock }),
-        limitation:
-          '回执 contractAddress 不是该 Token。工厂/内部 CREATE 需要 traces 才能唯一闭合起源，不得把回执地址记为 Token。',
-      },
-      artifacts,
-    };
-  }
+  const fields = originFields({
+    creationTx,
+    txBody,
+    ...(createdBlock === undefined ? {} : { createdBlock }),
+  });
   if (receiptBody.status !== '0x1') {
     return {
       origin: {
         status: 'FAILED',
-        creationTx,
+        ...fields,
         limitation: '创建交易未成功，不得把失败回执当起源闭合。',
       },
       artifacts,
     };
   }
+  if (created === token) {
+    return {
+      origin: {
+        status: 'COMPLETE',
+        ...fields,
+        codeHash: hashPayload(code.left.result),
+      },
+      artifacts,
+    };
+  }
+
+  const traceReady = input.traceAvailable === true && input.traceEndpointId !== undefined;
+  let rpcTraceOk = false;
+  if (traceReady) {
+    const traced = await traceInternalCreate({
+      transport: input.transport,
+      endpointId: input.traceEndpointId!,
+      txHash: creationTx,
+      token,
+    });
+    artifacts.push({
+      path: `rpc/trace-${traced.method ?? 'unavailable'}.json`,
+      sha256: sha256Hex(traced.result.raw),
+    });
+    rpcTraceOk = traced.result.ok;
+    if (traced.matched) {
+      return {
+        origin: {
+          status: 'COMPLETE',
+          ...fields,
+          codeHash: hashPayload(code.left.result),
+        },
+        artifacts,
+      };
+    }
+  }
+
+  if (input.creationTraceSource !== undefined && createdBlock !== undefined) {
+    const bulk = await input.creationTraceSource.getCreations({
+      address: token,
+      fromBlock: createdBlock,
+      toBlock: createdBlock,
+    });
+    artifacts.push({ path: 'rpc/bulk-creation-traces.json', sha256: sha256Hex(bulk.raw) });
+    if (bulk.ok && Array.isArray(bulk.result)) {
+      if (bulk.result.some((item) => creationMatchesToken(item, token, creationTx))) {
+        return {
+          origin: {
+            status: 'COMPLETE',
+            ...fields,
+            codeHash: hashPayload(code.left.result),
+          },
+          artifacts,
+        };
+      }
+      return {
+        origin: {
+          status: 'PARTIAL',
+          ...fields,
+          limitationCode: 'TRACE_NO_MATCH',
+          limitation:
+            'TRACE_NO_MATCH：bulk CREATE traces 未出现对该 Token 与该交易的匹配。不得把工厂地址或回执 contractAddress 记为 Token。',
+        },
+        artifacts,
+      };
+    }
+    return {
+      origin: {
+        status: 'PARTIAL',
+        ...fields,
+        limitationCode: 'TRACE_UNAVAILABLE',
+        limitation: `TRACE_UNAVAILABLE：bulk CREATE traces 读取失败（${bulk.error ?? 'unknown'}）。不得用回执地址或 Explorer 替代。`,
+      },
+      artifacts,
+    };
+  }
+
+  if (rpcTraceOk) {
+    return {
+      origin: {
+        status: 'PARTIAL',
+        ...fields,
+        limitationCode: 'TRACE_NO_MATCH',
+        limitation:
+          'TRACE_NO_MATCH：traces 未出现对该 Token 的 CREATE/CREATE2。不得把工厂地址或回执 contractAddress 记为 Token。',
+      },
+      artifacts,
+    };
+  }
+
   return {
     origin: {
-      status: 'COMPLETE',
-      creationTx,
-      ...(txBody.from === undefined ? {} : { deployer: normalizeAddress(txBody.from) }),
-      ...(createdBlock === undefined ? {} : { createdBlock }),
-      codeHash: hashPayload(code.left.result),
+      status: 'PARTIAL',
+      ...fields,
+      limitationCode: 'TRACE_UNAVAILABLE',
+      limitation: traceReady
+        ? 'TRACE_UNAVAILABLE：通用 Trace RPC 与 bulk CREATE traces 均未能闭合该内部创建。不得用回执地址或 Explorer 替代。'
+        : 'TRACE_UNAVAILABLE：回执 contractAddress 不是该 Token。工厂/内部 CREATE 需要 traces 才能唯一闭合起源，不得把回执地址或浏览器结果记为 Token。',
     },
     artifacts,
   };

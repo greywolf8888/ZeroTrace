@@ -16,5 +16,7 @@ Thumbs.db
 *.log
 target/
 data/local-index/
+data/provider-plane/
+data/storage-plane/
 ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包/
 ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包.zip
