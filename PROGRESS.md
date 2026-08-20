@@ -1,6 +1,14 @@
 # ZeroTrace Progress Ledger
 
-Last updated: 2026-08-19
+## 2026-08-21 工程原型到盘面分析工作站执行结果
+
+实现候选 `a0262f08adec9b9017e859b361b539204ac09999` 已完成 P0 语义纠偏、正式 `202 QUEUED` 持久任务入口、fenced worker heartbeat/cancel/retry、四个普通用户一级入口，以及真实 Tauri production Web + API sidecar。桌面 sidecar 仅绑定动态 loopback，使用每会话随机 token，关闭生产 Swagger；NSIS 在本机隔离目录安装、启动、原生四路检查和卸载通过。工作站仍严格只读，不包含私钥、签名、广播、swap 或资金移动。
+
+当前本地门禁：Chromium desktop/mobile `42/42`；coverage `1015 passed / 40 skipped`，Statements `83.04%`、Branches `75.02%`、Functions `91.30%`、Lines `84.61%`；Rust workspace fmt/clippy/tests、57 个 property、30 个 forensic golden、fault、offline replay、market replay、连续两轮 Rust/TS formula differential、format/lint/typecheck/build/license/SBOM 和生产依赖审计通过。当前 SHA 的公开 BSC 双 Operator 只读捕获为 `8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`；UNSUPPORTED 是无 pinned fork 的 V3 exact，不能改写为 PASS。
+
+生产验收仍为 **No**。任意 Token creation→finalized 完整 `ReportEnvelope`、当前外部 PostgreSQL/ClickHouse/MinIO 的 40 项集成、50 Token 人工语料、概率校准、pinned archive fork、共享流动性 exact、固定硬件性能、24h soak、完整视觉黄金集、签名清洁机与升级/回滚均未闭合。`test:performance` 与 `test:soak` 按设计返回 `NOT_RUN`；NSIS 为 `NotSigned`。因此 G0–G14 未全部 PASS，分支不得合并到 `main`，也不得声明 `BSC V1 PRODUCT_READY`。
+
+Last updated: 2026-08-21
 
 ## 2026-08-19 监管取证级盘面结构升级
 

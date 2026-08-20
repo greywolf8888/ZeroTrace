@@ -1,16 +1,16 @@
 capability,user_entry,api_or_worker,domain_implementation,durable_store,evidence_or_replay,current_state,real_gate,notes
-统一 Token 查询,工作台查询,POST /api/v2/tokens/:ledger/:chainId/:token/analyze,forensic-pipeline + platform-adapters,PostgreSQL queue/report 可选,ReportEnvelope + CasePackage,API_ONLY,任意 BSC Token 当前 SHA 实盘,正式模式无队列会 fail closed 但 handler 仍同步执行
-案件状态机,案件,GET /api/v2/jobs/:jobId,workflow-core + forensic-jobs,PostgresJobQueue,checkpoint 字段,PARTIAL,重启恢复与只补缺区间,缺完整 stage 元数据 heartbeat cancel retry API
-起源发现,案件时间线,forensic worker/token capture,token-market-capture + SQD reader,本地索引/检查点,Snapshot + Evidence,PARTIAL,任意 Token creation 到 finalized,SQD/Archive 配置与完整覆盖未闭合
-供应守恒,案件供应与头寸,Token materializer,supply-reality-engine,forensic report,ReportEnvelope,PARTIAL,真实生命周期 exact block 复核,当前观察面不足
-候选与实体,案件钱包与实体,materializer/identity APIs,identity-intelligence + zerotrace-graph,报告仓储,Evidence score + partitions,PARTIAL,标注语料与真实反例,Cannot-Link 传递安全已修复
-Campaign,案件时间线,campaign APIs,campaign-intelligence + zerotrace-campaign,报告仓储,feature windows/evidence,PARTIAL,真实持有人时间线,PELT 和 BOCPD 反例已修复
-Capital/Profit,案件资金利润,capital/funding APIs,capital-intelligence,报告仓储,lots/coverage,PARTIAL,真实 Lot 与边界复核,未接唯一 Token 主链
-V2 RV,案件 RV,scenario APIs,market-reality-engine + evm executor,报告仓储,scenario evidence,PARTIAL,钉住 fork 回放,单池模型存在但实盘门禁未过
-V3 RV,案件 RV,scenario APIs,zerotrace-evm-executor,无,Capability 标记,UNSUPPORTED,pinned VM 或跨 tick 精确执行,虚拟储备已明确为研究近似
-多路共享流动性,案件 RV,scenario APIs,zerotrace-route-optimizer,无,quality 字段,UNSUPPORTED,共享状态全局优化反例,多场所贪心已明确为研究近似
-Evidence/Replay,案件证据与回放,replay/case package APIs,evidence + casework,PostgreSQL/object store 可选,result hash,PARTIAL,离线 bundle hash replay,正式模式存储缺失会 fail closed
-持续监控,监控与告警,capture schedules/alerts APIs,capture-scheduler + terminal pipeline,PostgreSQL repositories,alert evidence,PARTIAL,24h cursor/reorg/恢复,未接案件一键创建闭环
-四入口导航,全局 AppShell,Web routes,React workspaces,无,Playwright UI,UI_ONLY,工作台/案件/监控/系统黄金截图,当前仍有十四个一级技术入口
-真实桌面,Windows 应用,workspace launcher,Rust std::process launcher,无,desktop tests,FIXTURE_ONLY,清洁机安装与签名,依赖源码 Node npm 固定端口
-数据源健康,数据源与系统,/health/capabilities/providers,provider-plane + source-registry,可选 durable stores,health report,PARTIAL,wrong-chain/429/timeout/恢复,UI 已保留最后有效快照
+统一 Token 查询,工作台/查询,POST /api/v2/tokens/:ledger/:chainId/:token/analyze,forensic-pipeline + platform-adapters,PostgreSQL queue/report,ReportEnvelope + CasePackage,PARTIAL,任意 BSC Token creation→finalized,正式模式返回 202 QUEUED 并 fail closed；完整 envelope 未闭合
+案件状态机,案件,GET /api/v2/jobs/:jobId + cancel/retry,workflow-core + forensic-jobs,PostgresJobQueue,checkpoint/fencing/partial refs,PARTIAL,外部 Postgres 重启恢复,heartbeat/cancel/retry 已接；缺当前 SHA 外部恢复证据
+起源发现,案件时间线,forensic worker/token capture,token-market-capture + SQD reader,本地索引/检查点,Snapshot + Evidence,PARTIAL,任意 Token creation 到 finalized,SQD/Archive 完整覆盖未闭合
+供应守恒,案件供应与头寸,Token materializer,supply-reality-engine,forensic report,ReportEnvelope,PARTIAL,真实生命周期 exact block 复核,Unknown 不再补 0
+候选与实体,案件钱包与实体,materializer/identity APIs,identity-intelligence + zerotrace-graph,报告仓储,Evidence score + partitions,PARTIAL,标注语料与服务 hub 反例,Cannot-Link 传递安全已修复
+Campaign,案件时间线,campaign APIs,campaign-intelligence + zerotrace-campaign,报告仓储,feature windows/evidence,PARTIAL,真实持有人全时间线,PELT 和 BOCPD 反例已修复
+Capital/Profit,案件资金利润,capital/funding APIs,capital-intelligence,报告仓储,lots/coverage,PARTIAL,真实 Lot 与边界复核,未接完整唯一 Token 主链
+V2 RV,案件 RV,scenario APIs,market-reality-engine + evm executor,报告仓储,scenario evidence,PARTIAL,pinned fork 实盘回放,单 V2 venue 可 exact；生产门禁未过
+V3 RV,案件 RV,scenario APIs,zerotrace-evm-executor,无,Capability 标记,UNSUPPORTED,pinned VM + bytecode + replay hash,虚拟储备仅研究近似
+多路共享流动性,案件 RV,scenario APIs,zerotrace-route-optimizer,无,quality 字段,UNSUPPORTED,共享状态全局优化,多 venue 贪心仅研究近似
+Evidence/Replay,案件证据与回放,replay/case package APIs,evidence + casework,PostgreSQL/object store,result hash,PARTIAL,完整 bundle 离线 replay,局部 replay 通过；完整任意案件未闭合
+持续监控,监控与告警,capture schedules/alerts APIs,capture-scheduler + terminal pipeline,PostgreSQL repositories,alert evidence,PARTIAL,24h cursor/reorg/恢复,短 probe 不计 24h
+四入口导航,全局 AppShell,Web routes,React workspaces,无,Playwright UI,CONNECTED,工作台/案件/监控/系统视觉集,普通入口正好四个；Developer 能力在独立折叠区
+真实桌面,Windows 应用,Tauri + packaged API sidecar,Rust Tauri + Node sidecar,AppData storage root,desktop tests + installer,PARTIAL,签名清洁机/升级回滚,本机 NSIS 安装启动卸载通过；动态 loopback + 会话 token
+数据源健康,数据源与系统,/health/capabilities/providers,provider-plane + source-registry,可选 durable stores,health report,PARTIAL,wrong-chain/429/timeout/恢复,UI 保留 Unknown/DEGRADED 与最后有效快照
