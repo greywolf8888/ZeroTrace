@@ -83,7 +83,9 @@ const EnvironmentSchema = z.object({
   ZEROTRACE_STORAGE_ROOT: optionalString,
   OIDC_ISSUER: optionalString,
   OIDC_AUDIENCE: optionalString,
+  ZEROTRACE_DESKTOP_AUTH_TOKEN: optionalString,
   LOCAL_DEV_AUTH: z.enum(['0', '1']).default('0'),
+  ZEROTRACE_SWAGGER_UI: z.enum(['true', 'false']).default('true'),
 });
 
 export interface ProviderResilienceConfig {
@@ -162,7 +164,9 @@ export interface AppConfig {
   storageRoot: string;
   oidcIssuer?: string;
   oidcAudience?: string;
+  desktopAuthToken?: ConfigSecret;
   localDevAuth: boolean;
+  swaggerUi?: boolean;
 }
 
 function splitUrls(value: string | undefined): string[] {
@@ -382,8 +386,12 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
       ? {}
       : { bscTraceRpcSecret: secret(parsed.BSC_TRACE_RPC_SECRET) }),
     localDevAuth: parsed.LOCAL_DEV_AUTH === '1',
+    swaggerUi: parsed.ZEROTRACE_SWAGGER_UI === 'true',
     ...(parsed.OIDC_ISSUER === undefined ? {} : { oidcIssuer: parsed.OIDC_ISSUER }),
     ...(parsed.OIDC_AUDIENCE === undefined ? {} : { oidcAudience: parsed.OIDC_AUDIENCE }),
+    ...(parsed.ZEROTRACE_DESKTOP_AUTH_TOKEN === undefined
+      ? {}
+      : { desktopAuthToken: secret(parsed.ZEROTRACE_DESKTOP_AUTH_TOKEN) }),
     ...(ethereumPrimary === undefined ? {} : { ethereumRpcUrl: ethereumPrimary }),
     ...(bscPrimary === undefined ? {} : { bscRpcUrl: bscPrimary }),
     ...(bitcoinPrimary === undefined ? {} : { bitcoinEsploraUrl: bitcoinPrimary }),

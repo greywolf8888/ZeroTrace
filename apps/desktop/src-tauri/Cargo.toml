@@ -4,9 +4,16 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
-description = "Workspace-linked read-only workstation launcher. Not a frozen app image."
+description = "ZeroTrace read-only Tauri workstation with embedded production web assets."
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+tauri = { version = "2.11.5", features = [] }
+tauri-plugin-shell = "2.3.5"
+tauri-plugin-single-instance = "2.4.3"
+uuid = { version = "1.24.1", features = ["v4"] }
 zerotrace-desktop-core = { path = "../../../crates/zerotrace-desktop-core" }

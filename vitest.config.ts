@@ -42,6 +42,13 @@ const workspacePackages = [
   'token-market-capture',
 ];
 
+// The differential suite launches the Rust authority and is intentionally kept
+// out of broad JavaScript-only runs. Its dedicated gate must still be able to
+// select the suite; a permanent exclude made `test:formula:diff` a dead script.
+const runsTerminalFormulaGate = process.argv.some((argument) =>
+  argument.replaceAll('\\', '/').includes('evals/terminal-formulas'),
+);
+
 export default defineConfig({
   resolve: {
     alias: Object.fromEntries(
@@ -59,7 +66,7 @@ export default defineConfig({
       '**/dist/**',
       '**/coverage/**',
       '**/tests/e2e/**',
-      'evals/terminal-formulas/**',
+      ...(runsTerminalFormulaGate ? [] : ['evals/terminal-formulas/**']),
     ],
     coverage: {
       provider: 'v8',
