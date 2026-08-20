@@ -5,7 +5,6 @@ import { join } from 'node:path';
 import { MemoryLocalIndex } from '@zerotrace/local-index';
 import { describe, expect, it } from 'vitest';
 
-import { LocalFsArtifactStore } from './artifacts.js';
 import { hydrateLocalIndex, openStoragePlane, persistLocalIndex } from './compose.js';
 import { FileCoverageRegistry, missingRanges } from './coverage.js';
 import { ClickHouseFactStore, DuckDbParquetFactStore } from './facts.js';

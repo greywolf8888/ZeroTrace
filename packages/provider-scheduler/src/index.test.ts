@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   aimdOnSuccess,
-  aimdOnThrottle,
   coalesceKey,
-  createAimd,
   createLowCostAimd,
   HierarchicalBudget,
   parseRetryAfterMs,

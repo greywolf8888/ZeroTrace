@@ -93,7 +93,7 @@ export class LocalFsArtifactStore implements ArtifactStore {
     const dir = join(this.rootDir, 'artifacts', 'meta');
     const out: ArtifactRecord[] = [];
     const walk = (current: string): void => {
-      let names: string[] = [];
+      let names: string[];
       try {
         names = readdirSync(current);
       } catch {

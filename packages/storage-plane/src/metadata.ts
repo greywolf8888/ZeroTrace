@@ -34,7 +34,7 @@ export class JsonFileMetadataStore implements MetadataStore {
     const root = join(this.rootDir, 'control');
     const out: string[] = [];
     const walk = (dir: string, rel: string): void => {
-      let entries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }> = [];
+      let entries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
       try {
         entries = readdirSync(dir, { withFileTypes: true, encoding: 'utf8' });
       } catch {
