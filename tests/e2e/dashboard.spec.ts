@@ -4474,7 +4474,7 @@ test('keeps scenario execution gated and exposes provider availability', async (
   });
   await expect(evidenceStorageCard).toContainText('Memory');
   await expect(evidenceStorageCard).toContainText('Process-local');
-  await expect(evidenceStorageCard).toContainText('Ephemeral');
+  await expect(evidenceStorageCard).toContainText('可重建缓存');
   const ingestionStorageCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: '终局摄入存储' }),
   });

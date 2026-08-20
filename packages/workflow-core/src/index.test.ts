@@ -17,6 +17,18 @@ describe('workflow-core', () => {
     expect(last.status).toBe('DEAD_LETTER');
   });
 
+  it('increments fencing tokens so a stale worker cannot overwrite a newer lease', () => {
+    const queue = new InMemoryJobQueue();
+    queue.enqueue({ type: 'token', idempotencyKey: 'fence', maxAttempts: 3 });
+    const first = queue.claim('worker-old');
+    const firstToken = first?.fencingToken;
+    queue.fail(first!.id, 'killed');
+    const second = queue.claim('worker-new');
+    expect(firstToken).toBe(1);
+    expect(second?.fencingToken).toBe(2);
+    expect(second?.fencingToken).toBeGreaterThan(firstToken ?? 0);
+  });
+
   it('stores payload, expires stale leases, and fail-closes missing ids', () => {
     const queue = new InMemoryJobQueue();
     expect(queue.claim('worker-1')).toBeUndefined();

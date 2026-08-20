@@ -179,6 +179,26 @@ code {
   font-size: 0.78rem;
 }
 
+.presentation-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.presentation-switch select {
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+html[data-presentation='novice'] .expert-only {
+  display: none;
+}
+
 .read-only-badge {
   gap: 7px;
   padding: 7px 10px;

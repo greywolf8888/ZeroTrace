@@ -45,6 +45,19 @@ function baseConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     duneConfigured: false,
     nansenConfigured: false,
     arkhamConfigured: false,
+    providerSlotStatus: {
+      NODEREAL_API_KEY: 'UNCONFIGURED',
+      ANKR_API_KEY: 'UNCONFIGURED',
+      CHAINSTACK_BSC_RPC_URL: 'UNCONFIGURED',
+      DRPC_API_KEY: 'UNCONFIGURED',
+      HELIUS_API_KEY: 'UNCONFIGURED',
+      BSC_TRACE_RPC_URL: 'UNCONFIGURED',
+    },
+    bscTraceRpcAuthType: 'none',
+    bscTraceOperatorId: 'bsc-trace-slot',
+    storageProfile: 'LOW_COST_CASE',
+    storageRoot: '/tmp/zerotrace-storage-plane-test',
+    localDevAuth: false,
     ...overrides,
   };
 }
@@ -63,6 +76,9 @@ describe('application runtime wiring', () => {
       'bitcoin-mainnet': 0,
       'solana-mainnet': 0,
     });
+    const quota = await runtime.storagePlane?.inspectQuota();
+    expect(quota?.labels.used).toContain('当前使用');
+    expect(quota?.labels.permanent).toContain('不可删除证据');
 
     const health = await runtime.providerRegistry.health();
     expect(health.map((provider) => [provider.id, provider.status])).toEqual([

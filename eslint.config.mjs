@@ -19,6 +19,10 @@ export default tseslint.config(
       'scripts/trim-api-imports.mjs',
       'scripts/fix-api-split.mjs',
       'scripts/patch-runtime-stores.mjs',
+      'target/**',
+      'crates/**',
+      'apps/desktop/src-tauri/**',
+      'ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包/**',
     ],
   },
   {

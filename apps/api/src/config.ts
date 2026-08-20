@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { z } from 'zod';
 
 const optionalString = z.preprocess(
@@ -66,6 +68,22 @@ const EnvironmentSchema = z.object({
   DUNE_API_KEY: optionalString,
   NANSEN_API_KEY: optionalString,
   ARKHAM_API_KEY: optionalString,
+  NODEREAL_API_KEY: optionalString,
+  ANKR_API_KEY: optionalString,
+  CHAINSTACK_BSC_RPC_URL: optionalString,
+  DRPC_API_KEY: optionalString,
+  HELIUS_API_KEY: optionalString,
+  BSC_TRACE_RPC_URL: optionalString,
+  BSC_TRACE_RPC_AUTH_TYPE: z.enum(['none', 'bearer', 'header', 'query']).default('none'),
+  BSC_TRACE_RPC_SECRET: optionalString,
+  BSC_TRACE_OPERATOR_ID: z.string().default('bsc-trace-slot'),
+  ZEROTRACE_STORAGE_PROFILE: z
+    .enum(['LOW_COST_CASE', 'SELECTIVE_MARKET_INDEX', 'REMOTE_ARCHIVE_HYBRID'])
+    .default('LOW_COST_CASE'),
+  ZEROTRACE_STORAGE_ROOT: optionalString,
+  OIDC_ISSUER: optionalString,
+  OIDC_AUDIENCE: optionalString,
+  LOCAL_DEV_AUTH: z.enum(['0', '1']).default('0'),
 });
 
 export interface ProviderResilienceConfig {
@@ -130,6 +148,21 @@ export interface AppConfig {
   duneConfigured: boolean;
   nansenConfigured: boolean;
   arkhamConfigured: boolean;
+  providerSlotStatus: Record<string, 'CONFIGURED' | 'UNCONFIGURED'>;
+  noderealApiKey?: ConfigSecret;
+  ankrApiKey?: ConfigSecret;
+  chainstackBscRpcUrl?: ConfigSecret;
+  drpcApiKey?: ConfigSecret;
+  heliusApiKey?: ConfigSecret;
+  bscTraceRpcUrl?: ConfigSecret;
+  bscTraceRpcAuthType: 'none' | 'bearer' | 'header' | 'query';
+  bscTraceRpcSecret?: ConfigSecret;
+  bscTraceOperatorId: string;
+  storageProfile: 'LOW_COST_CASE' | 'SELECTIVE_MARKET_INDEX' | 'REMOTE_ARCHIVE_HYBRID';
+  storageRoot: string;
+  oidcIssuer?: string;
+  oidcAudience?: string;
+  localDevAuth: boolean;
 }
 
 function splitUrls(value: string | undefined): string[] {
@@ -312,6 +345,45 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     duneConfigured: parsed.DUNE_API_KEY !== undefined,
     nansenConfigured: parsed.NANSEN_API_KEY !== undefined,
     arkhamConfigured: parsed.ARKHAM_API_KEY !== undefined,
+    providerSlotStatus: {
+      NODEREAL_API_KEY: parsed.NODEREAL_API_KEY === undefined ? 'UNCONFIGURED' : 'CONFIGURED',
+      ANKR_API_KEY: parsed.ANKR_API_KEY === undefined ? 'UNCONFIGURED' : 'CONFIGURED',
+      CHAINSTACK_BSC_RPC_URL:
+        parsed.CHAINSTACK_BSC_RPC_URL === undefined ? 'UNCONFIGURED' : 'CONFIGURED',
+      DRPC_API_KEY: parsed.DRPC_API_KEY === undefined ? 'UNCONFIGURED' : 'CONFIGURED',
+      HELIUS_API_KEY: parsed.HELIUS_API_KEY === undefined ? 'UNCONFIGURED' : 'CONFIGURED',
+      BSC_TRACE_RPC_URL: parsed.BSC_TRACE_RPC_URL === undefined ? 'UNCONFIGURED' : 'CONFIGURED',
+    },
+    bscTraceRpcAuthType: parsed.BSC_TRACE_RPC_AUTH_TYPE,
+    bscTraceOperatorId: parsed.BSC_TRACE_OPERATOR_ID,
+    storageProfile: parsed.ZEROTRACE_STORAGE_PROFILE,
+    storageRoot:
+      parsed.ZEROTRACE_STORAGE_ROOT ??
+      (parsed.NODE_ENV === 'test'
+        ? join(tmpdir(), 'zerotrace-storage-plane-test')
+        : join('data', 'storage-plane')),
+    ...(parsed.NODEREAL_API_KEY === undefined
+      ? {}
+      : { noderealApiKey: secret(parsed.NODEREAL_API_KEY) }),
+    ...(parsed.ANKR_API_KEY === undefined ? {} : { ankrApiKey: secret(parsed.ANKR_API_KEY) }),
+    ...(parsed.CHAINSTACK_BSC_RPC_URL === undefined
+      ? {}
+      : {
+          chainstackBscRpcUrl: secret(
+            validateUrl(parsed.CHAINSTACK_BSC_RPC_URL, 'CHAINSTACK_BSC_RPC_URL'),
+          ),
+        }),
+    ...(parsed.DRPC_API_KEY === undefined ? {} : { drpcApiKey: secret(parsed.DRPC_API_KEY) }),
+    ...(parsed.HELIUS_API_KEY === undefined ? {} : { heliusApiKey: secret(parsed.HELIUS_API_KEY) }),
+    ...(parsed.BSC_TRACE_RPC_URL === undefined
+      ? {}
+      : { bscTraceRpcUrl: secret(validateUrl(parsed.BSC_TRACE_RPC_URL, 'BSC_TRACE_RPC_URL')) }),
+    ...(parsed.BSC_TRACE_RPC_SECRET === undefined
+      ? {}
+      : { bscTraceRpcSecret: secret(parsed.BSC_TRACE_RPC_SECRET) }),
+    localDevAuth: parsed.LOCAL_DEV_AUTH === '1',
+    ...(parsed.OIDC_ISSUER === undefined ? {} : { oidcIssuer: parsed.OIDC_ISSUER }),
+    ...(parsed.OIDC_AUDIENCE === undefined ? {} : { oidcAudience: parsed.OIDC_AUDIENCE }),
     ...(ethereumPrimary === undefined ? {} : { ethereumRpcUrl: ethereumPrimary }),
     ...(bscPrimary === undefined ? {} : { bscRpcUrl: bscPrimary }),
     ...(bitcoinPrimary === undefined ? {} : { bitcoinEsploraUrl: bitcoinPrimary }),

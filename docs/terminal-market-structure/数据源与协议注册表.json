@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "zerotrace-source-protocol-registry-v1",
+  "operators": [
+    {
+      "operatorId": "bnbchain-public",
+      "independenceGroup": "bnbchain",
+      "endpoints": [
+        "https://bsc-dataseed.bnbchain.org",
+        "https://bsc-dataseed-public.bnbchain.org"
+      ],
+      "archiveCapability": "unknown",
+      "logsCapability": "denied",
+      "finalitySemantics": "finalized",
+      "forensicGrade": "PUBLIC_NO_SLA",
+      "startRps": 4,
+      "termsReference": "https://docs.bnbchain.org/",
+      "notes": "官方公共端点禁止 eth_getLogs。两个 URL 同一 Operator。"
+    },
+    {
+      "operatorId": "nodereal-public",
+      "independenceGroup": "nodereal",
+      "endpoints": ["https://bsc.nodereal.io"],
+      "archiveCapability": "unknown",
+      "logsCapability": "denied",
+      "finalitySemantics": "finalized",
+      "forensicGrade": "PUBLIC_NO_SLA",
+      "startRps": 4,
+      "termsReference": "https://docs.nodereal.io/"
+    },
+    {
+      "operatorId": "ankr-public",
+      "independenceGroup": "ankr",
+      "endpoints": ["https://rpc.ankr.com/bsc"],
+      "archiveCapability": "unknown",
+      "logsCapability": "denied",
+      "finalitySemantics": "finalized",
+      "forensicGrade": "PUBLIC_NO_SLA",
+      "startRps": 4,
+      "termsReference": "https://www.ankr.com/"
+    },
+    {
+      "operatorId": "publicnode-public",
+      "independenceGroup": "publicnode",
+      "endpoints": ["https://bsc-rpc.publicnode.com"],
+      "archiveCapability": "unknown",
+      "logsCapability": "denied",
+      "finalitySemantics": "finalized",
+      "forensicGrade": "PUBLIC_NO_SLA",
+      "startRps": 4,
+      "termsReference": "https://publicnode.com/"
+    },
+    {
+      "operatorId": "sqd-portal",
+      "independenceGroup": "sqd-portal",
+      "endpoints": ["https://portal.sqd.dev"],
+      "archiveCapability": "history-gateway",
+      "logsCapability": "bulk-dataset",
+      "traceCapability": "create-traces",
+      "finalitySemantics": "finalized-stream",
+      "forensicGrade": "BULK_INDEX",
+      "termsReference": "https://docs.sqd.ai/",
+      "notes": "已知创建交易可在创建区块用 CREATE traces 匹配内部部署；不能替代独立 debug RPC 或 pinned fork。"
+    }
+  ],
+  "slots": {
+    "NODEREAL_API_KEY": "CONFIGURED locally; archive+logs probed OK; debug/trace plan-locked",
+    "ANKR_API_KEY": "CONFIGURED locally; archive+logs probed OK; debug/trace plan-locked",
+    "CHAINSTACK_BSC_RPC_URL": "UNCONFIGURED unless env is set",
+    "DRPC_API_KEY": "UNCONFIGURED unless env is set",
+    "HELIUS_API_KEY": "UNCONFIGURED unless env is set; Solana fallback",
+    "BSC_TRACE_RPC_URL": "UNCONFIGURED after probe; NodeReal/Ankr/dRPC public/1rpc lack debug-trace at this plan"
+  },
+  "note": "两个 URL 不等于两个独立 Operator。同组多 URL 只能故障转移。公共无 SLA 节点只承担 Anchor/Receipt/Code/Current State/抽样复核。禁止 IP 轮换或多账户规避限流。选择按能力与策略，不按厂商名硬编码。"
+}

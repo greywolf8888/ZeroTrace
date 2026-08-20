@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "zerotrace-low-disk-bench-v1",
+  "capturedAt": "2026-08-20T11:38:20.749Z",
+  "profile": "LOW_COST_CASE",
+  "token": "0xAeCBD0E461047d6B7Cfc82e637AD197097407777",
+  "pass1": {
+    "origin": "COMPLETE",
+    "history": "PARTIAL",
+    "historicalRpc": 8,
+    "limitation": "日志窗口未覆盖起源到当前头，持有人集合保持部分观察。",
+    "metrics": {
+      "token": "0xAeCBD0E461047d6B7Cfc82e637AD197097407777",
+      "eventCount": 30,
+      "rawBytes": 2560,
+      "parquetBytes": 12760,
+      "evidenceBytes": 3989,
+      "traceBytes": 0,
+      "rpcCalls": 10,
+      "historicalRpcCalls": 8,
+      "traceCalls": 0,
+      "durationMs": 3077,
+      "coverage": "PARTIAL",
+      "originStatus": "COMPLETE",
+      "resultHash": "100460764",
+      "updatedAt": "2026-08-20T11:38:18.313Z"
+    }
+  },
+  "pass2": {
+    "origin": "COMPLETE",
+    "history": "PARTIAL",
+    "historicalRpc": 8,
+    "methods": {
+      "eth_blockNumber": 2,
+      "eth_getLogs": 8
+    },
+    "limitation": "日志窗口未覆盖起源到当前头，持有人集合保持部分观察。",
+    "metrics": {
+      "token": "0xAeCBD0E461047d6B7Cfc82e637AD197097407777",
+      "eventCount": 30,
+      "rawBytes": 2560,
+      "parquetBytes": 12760,
+      "evidenceBytes": 3989,
+      "traceBytes": 0,
+      "rpcCalls": 10,
+      "historicalRpcCalls": 8,
+      "traceCalls": 0,
+      "durationMs": 2432,
+      "coverage": "PARTIAL",
+      "originStatus": "COMPLETE",
+      "resultHash": "100460764",
+      "updatedAt": "2026-08-20T11:38:20.746Z"
+    }
+  },
+  "secondPassHistoricalRpcZero": false,
+  "coverageSurvivedRestart": true,
+  "clickhouseResultHash": {
+    "status": "NOT_RUN",
+    "detail": "CLICKHOUSE_URL 未配置或 LOW_COST_CASE 不启用热层，不得记 PASS。"
+  },
+  "quota": {
+    "profile": "LOW_COST_CASE",
+    "level": "OK",
+    "usedBytes": 34803,
+    "budgetBytes": 154885414288,
+    "freeBytes": 221264842752,
+    "rebuildableBytes": 0,
+    "permanentEvidenceBytes": 3989,
+    "dailyGrowthBytes": 12760,
+    "estimatedFullAt": "+035260-04-25T02:37:13.037Z",
+    "evictingClass": null,
+    "labels": {
+      "used": "当前使用 33.99 KB / 预算 144.25 GB",
+      "rebuildable": "可重建数据 0 B",
+      "permanent": "不可删除证据 3.90 KB",
+      "dailyGrowth": "每日增长 12.46 KB",
+      "fullAt": "预计满盘日期 +035260-04-25T02:37:13.037Z",
+      "evicting": "正在清理的类别 无",
+      "level": "正常"
+    }
+  },
+  "watermarkProbe": {
+    "warn": "WARN",
+    "stopPrefetch": "STOP_PREFETCH",
+    "compact": "COMPACT_AND_EVICT",
+    "stopLifetime": "STOP_NEW_FULL_LIFETIME",
+    "evidenceOnly": "EVIDENCE_ONLY"
+  },
+  "evidenceNotDeleted": true,
+  "notes": [
+    "第二次分析的历史 RPC 仅在本地 Coverage 已覆盖起源到头时为 0。",
+    "eth_blockNumber 计为当前快照，不计历史 RPC。",
+    "未覆盖区间保持 PARTIAL，不得记为空持有人。"
+  ]
+}

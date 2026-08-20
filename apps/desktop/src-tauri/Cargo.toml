@@ -1,0 +1,12 @@
+[package]
+name = "zerotrace-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Workspace-linked read-only workstation launcher. Not a frozen app image."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+zerotrace-desktop-core = { path = "../../../crates/zerotrace-desktop-core" }

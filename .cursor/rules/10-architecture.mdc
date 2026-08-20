@@ -1,0 +1,7 @@
+---
+description: ZeroTrace 架构边界
+globs: ["apps/**", "packages/**", "services/**", "crates/**"]
+alwaysApply: false
+---
+
+TypeScript 保留产品与控制面；Rust 成为 Ledger、图、活动、资本和 RV 重计算的唯一权威；React 由 Web 与 Tauri Desktop 共享；PostgreSQL 管案件、任务、证据元数据与审计；ClickHouse 管高容量事实；对象存储管原始资料；DuckDB/Parquet 管桌面离线案件。禁止跨语言重复维护核心公式，必须进行差分一致性测试。

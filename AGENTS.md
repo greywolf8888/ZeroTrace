@@ -15,4 +15,21 @@ The repository's `ARCHITECTURE.md` and the ZeroTrace Master Prompt are authorita
 
 ## Required checks
 
-Run the smallest relevant test after each module change. Before handing off, run formatting, lint, typecheck, unit, integration, build, license, and every executable E2E check. Record unavailable external validation honestly in `PROGRESS.md` and `docs/testing/FINAL_ACCEPTANCE.md`.
+Run the smallest relevant test after each module change. Before handing off, run formatting, lint, typecheck, unit, integration, build, license, Rust workspace tests, and every executable E2E check. Record unavailable external validation honestly in `PROGRESS.md`, `docs/testing/FINAL_ACCEPTANCE.md`, and `docs/terminal-market-structure/`.
+
+## Terminal market-structure overlay
+
+Read and obey the terminal market-structure prompt package. The repository, current chain data, tests and evidence are authoritative; chat history is not.
+
+Working language: all user-facing UI, reports, analyst logs, documentation and final delivery use Simplified Chinese. Protocol names, addresses, hashes and standard acronyms may retain original form, but require Chinese labels or tooltips. Code identifiers may remain English.
+
+Additional invariants:
+
+1. Evidence score is not calibrated probability.
+2. CEX/Bridge/Privacy boundary is not confirmed realization.
+3. Current state is not historical state.
+4. A route, schema, fixture, UI card or passing unit test is not a completed capability.
+5. Formal forensic mode fails closed if durable storage, raw artifacts, source verification or replay is unavailable.
+6. No capability is complete until its named real-chain gate passes.
+
+Git: start from current protected `main`; use one short-lived branch `agent/terminal-market-structure-v1`; commit by coherent gate; do not force-push or alter old evidence; do not merge until all terminal gates pass.

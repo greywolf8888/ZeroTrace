@@ -14,3 +14,13 @@ reports/*.json
 .DS_Store
 Thumbs.db
 *.log
+target/
+apps/desktop/bin/*.exe
+apps/desktop/bin/*.sha256
+apps/desktop/bin/*.txt
+apps/desktop/bin/ZeroTrace.workspace.json
+data/local-index/
+data/provider-plane/
+data/storage-plane/
+ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包/
+ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包.zip

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "zerotrace-storage-profile-v1",
+  "capturedAt": "2026-08-20T11:38:22.496Z",
+  "storageProfile": "LOW_COST_CASE",
+  "quota": {
+    "profile": "LOW_COST_CASE",
+    "level": "OK",
+    "usedBytes": 34803,
+    "budgetBytes": 154885414288,
+    "freeBytes": 221264842752,
+    "rebuildableBytes": 0,
+    "permanentEvidenceBytes": 3989,
+    "dailyGrowthBytes": 0,
+    "estimatedFullAt": null,
+    "evictingClass": null,
+    "labels": {
+      "used": "当前使用 33.99 KB / 预算 144.25 GB",
+      "rebuildable": "可重建数据 0 B",
+      "permanent": "不可删除证据 3.90 KB",
+      "dailyGrowth": "每日增长 0 B",
+      "fullAt": "预计满盘日期 未知（增长为 0 或样本不足）",
+      "evicting": "正在清理的类别 无",
+      "level": "正常"
+    }
+  },
+  "bytesPerEvent": 84.16582914572864,
+  "bytesPerToken": 16749,
+  "bytesPerCase": 20738,
+  "compressionRatio": 4,
+  "dailyGrowth": 12760,
+  "forecast30": 382800,
+  "forecast90": 1148400,
+  "forecast365": 4657400,
+  "sampleTokens": 1,
+  "sampleEvents": 199,
+  "source": "storage-plane-bytes",
+  "note": "尚无 Corpus Checkpoint；字节率来自当前存储平面。跑 npm run bench:low-disk 或 corpus:resume 后会替换为真实案件样本。"
+}

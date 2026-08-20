@@ -181,6 +181,16 @@ export const ENUM_LABELS: Record<string, string> = {
   TRANSACTION_LOCAL: '交易局部',
   FIRST_FUNDER: '首个出资人',
   HISTORICAL_MATCH: '历史匹配',
+  LOW_COST_CASE: '低成本案件',
+  SELECTIVE_MARKET_INDEX: '选择性市场索引',
+  REMOTE_ARCHIVE_HYBRID: '远程归档混合',
+  STOP_PREFETCH: '停止预取',
+  COMPACT_AND_EVICT: '压缩并驱逐',
+  STOP_NEW_FULL_LIFETIME: '停止新的全生命周期',
+  EVIDENCE_ONLY: '仅保留案件证据',
+  PERMANENT_EVIDENCE: '不可删除证据',
+  NORMALIZED_FACT: '规范化事实',
+  EPHEMERAL: '可重建缓存',
 };
 
 function titleCaseFallback(value: string): string {

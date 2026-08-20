@@ -1,0 +1,28 @@
+[package]
+name = "zerotrace-compute"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "JSON compute plane entrypoint for control-plane callers."
+
+[[bin]]
+name = "zerotrace-compute"
+path = "src/main.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+zerotrace-campaign = { path = "../zerotrace-campaign" }
+zerotrace-capital = { path = "../zerotrace-capital" }
+zerotrace-desktop-core = { path = "../zerotrace-desktop-core" }
+zerotrace-entity = { path = "../zerotrace-entity" }
+zerotrace-evm-executor = { path = "../zerotrace-evm-executor" }
+zerotrace-graph = { path = "../zerotrace-graph" }
+zerotrace-ledger = { path = "../zerotrace-ledger" }
+zerotrace-protocol-sdk = { path = "../zerotrace-protocol-sdk" }
+zerotrace-provider-scheduler = { path = "../zerotrace-provider-scheduler" }
+zerotrace-query-planner = { path = "../zerotrace-query-planner" }
+zerotrace-replay = { path = "../zerotrace-replay" }
+zerotrace-route-optimizer = { path = "../zerotrace-route-optimizer" }
+zerotrace-types = { path = "../zerotrace-types" }

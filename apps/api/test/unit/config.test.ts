@@ -24,6 +24,8 @@ describe('API configuration', () => {
       'http://localhost:4173',
       'http://127.0.0.1:4173',
     ]);
+    expect(config.storageProfile).toBe('LOW_COST_CASE');
+    expect(config.storageRoot.length).toBeGreaterThan(0);
   });
 
   it('allows an explicit EVM snapshot finality without accepting pending state', () => {
@@ -41,6 +43,24 @@ describe('API configuration', () => {
     const config = loadConfig({ NODE_ENV: 'test', GMGN_API_KEY: 'secret-value' });
     expect(config.gmgnConfigured).toBe(true);
     expect(JSON.stringify(config)).not.toContain('secret-value');
+  });
+
+  it('starts with unconfigured key slots and redacts keyed secrets', () => {
+    const absent = loadConfig({ NODE_ENV: 'test' });
+    expect(absent.providerSlotStatus.NODEREAL_API_KEY).toBe('UNCONFIGURED');
+    expect(absent.providerSlotStatus.ANKR_API_KEY).toBe('UNCONFIGURED');
+    expect(absent.providerSlotStatus.BSC_TRACE_RPC_URL).toBe('UNCONFIGURED');
+    const keyed = loadConfig({
+      NODE_ENV: 'test',
+      NODEREAL_API_KEY: 'nodereal-secret-key',
+      BSC_TRACE_RPC_URL: 'https://trace.example/rpc',
+      BSC_TRACE_RPC_SECRET: 'trace-secret-value',
+    });
+    expect(keyed.providerSlotStatus.NODEREAL_API_KEY).toBe('CONFIGURED');
+    expect(keyed.providerSlotStatus.BSC_TRACE_RPC_URL).toBe('CONFIGURED');
+    expect(keyed.noderealApiKey?.reveal()).toBe('nodereal-secret-key');
+    expect(JSON.stringify(keyed)).not.toContain('nodereal-secret-key');
+    expect(JSON.stringify(keyed)).not.toContain('trace-secret-value');
   });
 
   it('derives the official Ethereum endpoint from an Alchemy key', () => {

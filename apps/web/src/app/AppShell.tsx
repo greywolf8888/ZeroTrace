@@ -37,6 +37,9 @@ export function App() {
   const [theme, setTheme] = useState<Theme>(() =>
     window.localStorage.getItem('zerotrace-theme') === 'light' ? 'light' : 'dark',
   );
+  const [presentation, setPresentation] = useState<'novice' | 'expert'>(() =>
+    window.localStorage.getItem('zerotrace-presentation') === 'expert' ? 'expert' : 'novice',
+  );
   const [view, setView] = useState<View>('overview');
   const [health, setHealth] = useState<HealthResponse>();
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
@@ -55,6 +58,11 @@ export function App() {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem('zerotrace-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.dataset.presentation = presentation;
+    window.localStorage.setItem('zerotrace-presentation', presentation);
+  }, [presentation]);
 
   const refreshCore = useCallback(async () => {
     setLoadingCore(true);
@@ -103,7 +111,7 @@ export function App() {
     try {
       setSearchResult(await api.search(query, selection.ledger, selection.chainId));
     } catch (error) {
-      setSearchError(error instanceof Error ? error.message : 'Search failed.');
+      setSearchError(error instanceof Error ? error.message : '检索失败。');
     } finally {
       setSearchBusy(false);
     }
@@ -132,7 +140,7 @@ export function App() {
         }
       }
     } catch (error) {
-      setSearchError(error instanceof Error ? error.message : 'Subject inspection failed.');
+      setSearchError(error instanceof Error ? error.message : '主体检查失败。');
     } finally {
       setSearchBusy(false);
     }
@@ -197,7 +205,13 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <Header theme={theme} setTheme={setTheme} health={health} />
+      <Header
+        theme={theme}
+        setTheme={setTheme}
+        presentation={presentation}
+        setPresentation={setPresentation}
+        health={health}
+      />
       <Sidebar view={view} setView={setView} />
       <main className="main-content">
         {coreError === undefined ? null : (
@@ -205,14 +219,14 @@ export function App() {
             <strong>接口不可用</strong>
             <span>{coreError}</span>
             <button className="text-button" type="button" onClick={() => void refreshCore()}>
-              Retry
+              重试
             </button>
           </div>
         )}
         {content}
         <footer>
           <span>ZeroTrace v0.1.0</span>
-          <span>链上只读 multi-chain intelligence</span>
+          <span>链上只读 · 多链取证</span>
           <a href="https://github.com/greywolf8888/ZeroTrace" target="_blank" rel="noreferrer">
             GitHub
           </a>

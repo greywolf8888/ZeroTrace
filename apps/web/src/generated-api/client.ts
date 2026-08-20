@@ -552,7 +552,36 @@ export interface HealthResponse {
     graphName: 'zerotrace_investigation';
     errorCode?: string;
   };
+  storageQuota?: StorageQuotaView;
   checkedAt: string;
+}
+
+export interface StorageQuotaView {
+  profile: 'LOW_COST_CASE' | 'SELECTIVE_MARKET_INDEX' | 'REMOTE_ARCHIVE_HYBRID';
+  level:
+    | 'OK'
+    | 'WARN'
+    | 'STOP_PREFETCH'
+    | 'COMPACT_AND_EVICT'
+    | 'STOP_NEW_FULL_LIFETIME'
+    | 'EVIDENCE_ONLY';
+  usedBytes: number;
+  budgetBytes: number;
+  freeBytes: number;
+  rebuildableBytes: number;
+  permanentEvidenceBytes: number;
+  dailyGrowthBytes: number;
+  estimatedFullAt: string | null;
+  evictingClass: 'PERMANENT_EVIDENCE' | 'NORMALIZED_FACT' | 'EPHEMERAL' | null;
+  labels: {
+    used: string;
+    rebuildable: string;
+    permanent: string;
+    dailyGrowth: string;
+    fullAt: string;
+    evicting: string;
+    level: string;
+  };
 }
 
 export interface ChainAnchorObservation {
@@ -2543,6 +2572,16 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: (signal?: AbortSignal) =>
     requestJson<HealthResponse>('/health', signal === undefined ? {} : { signal }),
+  storageQuota: (signal?: AbortSignal) =>
+    requestJson<StorageQuotaView>('/api/v1/storage/quota', signal === undefined ? {} : { signal }),
+  storageProfile: (signal?: AbortSignal) =>
+    requestJson<{
+      profile: StorageQuotaView['profile'];
+      root: string;
+      optional: Array<{ id: string; status: string; note: string }>;
+      quota?: StorageQuotaView;
+      note: string;
+    }>('/api/v1/storage/profile', signal === undefined ? {} : { signal }),
   capabilities: (signal?: AbortSignal) =>
     requestJson<{ core: Capability[]; boundaries: Record<string, string> }>(
       '/api/v1/capabilities',

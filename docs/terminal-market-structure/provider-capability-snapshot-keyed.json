@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "zerotrace-provider-capability-keyed-v1",
+  "probedAt": "2026-08-20T10:32:17.832Z",
+  "note": "配置声明不能代替探测。密钥已脱敏。TRACE 仅在探测成功后写入通用 BSC_TRACE_RPC_URL。",
+  "slots": {
+    "NODEREAL_API_KEY": "CONFIGURED",
+    "ANKR_API_KEY": "CONFIGURED",
+    "CHAINSTACK_BSC_RPC_URL": "UNCONFIGURED",
+    "DRPC_API_KEY": "UNCONFIGURED",
+    "HELIUS_API_KEY": "UNCONFIGURED",
+    "BSC_TRACE_RPC_URL": "UNCONFIGURED"
+  },
+  "boundTrace": {
+    "status": "UNCONFIGURED"
+  },
+  "snapshots": [
+    {
+      "providerId": "slot-nodereal-free",
+      "operatorId": "slot-nodereal-free",
+      "endpointRef": "https://bsc-mainnet.nodereal.io/v1",
+      "forensicGrade": "FREE_KEYED",
+      "probedAt": "2026-08-20T10:32:14.635Z",
+      "chainIdOk": true,
+      "historicalCodeOk": true,
+      "smallLogsOk": true,
+      "traceOk": false,
+      "traceAttempts": [
+        {
+          "method": "debug_traceTransaction",
+          "ok": false,
+          "error": "the method debug_traceTransaction does not exist/is not available at your level, please refer to Pricing Plan to decide whether to upgrade "
+        },
+        {
+          "method": "debug_jsTraceTransaction",
+          "ok": false,
+          "error": "The method debug_jsTraceTransaction does not exist/is not available"
+        },
+        {
+          "method": "trace_transaction",
+          "ok": false,
+          "error": "the method trace_transaction does not exist/is not available at your level, please refer to Pricing Plan to decide whether to upgrade "
+        }
+      ]
+    },
+    {
+      "providerId": "slot-ankr-freemium",
+      "operatorId": "slot-ankr-freemium",
+      "endpointRef": "https://rpc.ankr.com/bsc",
+      "forensicGrade": "FREE_KEYED",
+      "probedAt": "2026-08-20T10:32:15.976Z",
+      "chainIdOk": true,
+      "historicalCodeOk": true,
+      "smallLogsOk": true,
+      "traceOk": false,
+      "traceAttempts": [
+        {
+          "method": "debug_traceTransaction",
+          "ok": false,
+          "error": "API key is not allowed to access method"
+        },
+        {
+          "method": "debug_jsTraceTransaction",
+          "ok": false,
+          "error": "API key is not allowed to access method"
+        },
+        {
+          "method": "trace_transaction",
+          "ok": false,
+          "error": "API key is not allowed to access method"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "zerotrace-provider-capability-v1",
+  "probedAt": "2026-08-20T00:22:27.644Z",
+  "note": "配置声明不能代替探测。公共池 getLogs 按策略记 POLICY_DENIED，不是探测成功。",
+  "snapshots": [
+    {
+      "providerId": "public-bnbchain-0",
+      "operatorId": "bnbchain-public",
+      "endpointRef": "https://bsc-dataseed.bnbchain.org",
+      "probedAt": "2026-08-20T00:22:23.869Z",
+      "chainIdOk": true,
+      "finalizedOk": true,
+      "historicalCodeOk": false,
+      "historicalCallOk": false,
+      "smallLogsOk": "POLICY_DENIED",
+      "traceOk": "UNCONFIGURED",
+      "batchOk": true,
+      "maxResponseBytes": 2000000,
+      "timeoutMsObserved": 8000
+    },
+    {
+      "providerId": "public-bnbchain-1",
+      "operatorId": "bnbchain-public",
+      "endpointRef": "https://bsc-dataseed-public.bnbchain.org",
+      "probedAt": "2026-08-20T00:22:24.641Z",
+      "chainIdOk": true,
+      "finalizedOk": true,
+      "historicalCodeOk": false,
+      "historicalCallOk": false,
+      "smallLogsOk": "POLICY_DENIED",
+      "traceOk": "UNCONFIGURED",
+      "batchOk": true,
+      "maxResponseBytes": 2000000,
+      "timeoutMsObserved": 8000
+    },
+    {
+      "providerId": "public-nodereal-2",
+      "operatorId": "nodereal-public",
+      "endpointRef": "https://bsc.nodereal.io",
+      "probedAt": "2026-08-20T00:22:25.328Z",
+      "chainIdOk": true,
+      "finalizedOk": true,
+      "historicalCodeOk": false,
+      "historicalCallOk": false,
+      "smallLogsOk": "POLICY_DENIED",
+      "traceOk": "UNCONFIGURED",
+      "batchOk": true,
+      "maxResponseBytes": 2000000,
+      "timeoutMsObserved": 8000
+    },
+    {
+      "providerId": "public-ankr-3",
+      "operatorId": "ankr-public",
+      "endpointRef": "https://rpc.ankr.com/bsc",
+      "probedAt": "2026-08-20T00:22:26.006Z",
+      "chainIdOk": false,
+      "finalizedOk": false,
+      "historicalCodeOk": false,
+      "historicalCallOk": false,
+      "smallLogsOk": "POLICY_DENIED",
+      "traceOk": "UNCONFIGURED",
+      "batchOk": false,
+      "maxResponseBytes": 2000000,
+      "timeoutMsObserved": 8000
+    },
+    {
+      "providerId": "public-publicnode-4",
+      "operatorId": "publicnode-public",
+      "endpointRef": "https://bsc-rpc.publicnode.com",
+      "probedAt": "2026-08-20T00:22:26.711Z",
+      "chainIdOk": true,
+      "finalizedOk": true,
+      "historicalCodeOk": false,
+      "historicalCallOk": false,
+      "smallLogsOk": "POLICY_DENIED",
+      "traceOk": "UNCONFIGURED",
+      "batchOk": true,
+      "maxResponseBytes": 2000000,
+      "timeoutMsObserved": 8000
+    }
+  ]
+}

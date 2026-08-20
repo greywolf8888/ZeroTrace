@@ -24,9 +24,13 @@ export function Header({
   theme,
   setTheme,
   health,
+  presentation,
+  setPresentation,
 }: {
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  presentation: 'novice' | 'expert';
+  setPresentation: (mode: 'novice' | 'expert') => void;
   health?: HealthResponse | undefined;
 }) {
   return (
@@ -43,6 +47,19 @@ export function Header({
           <span className="pulse-dot" />
           链上只读
         </div>
+        <label className="presentation-switch" htmlFor="presentation-mode">
+          工作站层级
+          <select
+            id="presentation-mode"
+            value={presentation}
+            onChange={(event) =>
+              setPresentation(event.target.value === 'expert' ? 'expert' : 'novice')
+            }
+          >
+            <option value="novice">简明</option>
+            <option value="expert">专家</option>
+          </select>
+        </label>
         <div
           className="api-state"
           title={health?.checkedAt}

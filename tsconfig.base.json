@@ -27,6 +27,7 @@
       "@zerotrace/evidence": ["./packages/evidence/src/index.ts"],
       "@zerotrace/data-quality": ["./packages/data-quality/src/index.ts"],
       "@zerotrace/storage": ["./packages/storage/src/index.ts"],
+      "@zerotrace/storage-plane": ["./packages/storage-plane/src/index.ts"],
       "@zerotrace/ingestion": ["./packages/ingestion/src/index.ts"],
       "@zerotrace/chain-adapters": ["./packages/chain-adapters/src/index.ts"],
       "@zerotrace/platform-adapters": ["./packages/platform-adapters/src/index.ts"],
@@ -50,6 +51,13 @@
       "@zerotrace/market-reality-engine": ["./packages/market-reality-engine/src/index.ts"],
       "@zerotrace/casework": ["./packages/casework/src/index.ts"],
       "@zerotrace/forensic-pipeline": ["./packages/forensic-pipeline/src/index.ts"],
+      "@zerotrace/source-registry": ["./packages/source-registry/src/index.ts"],
+      "@zerotrace/provider-scheduler": ["./packages/provider-scheduler/src/index.ts"],
+      "@zerotrace/provider-plane": ["./packages/provider-plane/src/index.ts"],
+      "@zerotrace/platform-auth": ["./packages/platform-auth/src/index.ts"],
+      "@zerotrace/terminal-pipeline": ["./packages/terminal-pipeline/src/index.ts"],
+      "@zerotrace/local-index": ["./packages/local-index/src/index.ts"],
+      "@zerotrace/token-market-capture": ["./packages/token-market-capture/src/index.ts"],
       "@zerotrace/workflow-core": ["./packages/workflow-core/src/index.ts"],
       "@zerotrace/llm-gateway": ["./packages/llm-gateway/src/index.ts"]
     }

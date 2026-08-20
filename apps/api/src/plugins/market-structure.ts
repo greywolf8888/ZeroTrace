@@ -64,6 +64,8 @@ function isAdmissibleMode(mode: unknown): boolean {
 function analysisModeOf(request: FastifyRequest): unknown {
   const body = request.body as { analysisMode?: unknown } | undefined;
   const query = request.query as { analysisMode?: unknown } | undefined;
+  const header = request.headers['x-zerotrace-forensic'];
+  if (header === '1' || header === 'true') return 'FORENSIC';
   return body?.analysisMode ?? query?.analysisMode;
 }
 
@@ -329,6 +331,16 @@ export async function registerMarketStructureV2(
         nonServiceNonPoolAtomic: string;
         marketWideExitU: string;
       };
+      if (isAdmissibleMode(analysisModeOf(request))) {
+        return reply
+          .code(400)
+          .send(
+            errorBody(
+              'CALLER_SUPPLIED_INTERNAL_FORBIDDEN',
+              '正式取证主链禁止提交角色分、活动窗口或批次成本。',
+            ),
+          );
+      }
       const payload = assessRoles(body);
       const persisted = await rememberEnvelope(
         buildReportEnvelope({

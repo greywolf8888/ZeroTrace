@@ -1,0 +1,5 @@
+{
+  "schemaVersion": "zerotrace-performance-baseline-v1",
+  "hardware": "unmeasured",
+  "notes": "尚未在固定硬件上对真实主网案件测量。不得用空表冒充达标。"
+}

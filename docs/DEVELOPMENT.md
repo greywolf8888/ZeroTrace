@@ -70,7 +70,14 @@ npm run test:mcp
 
 ## Start the application
 
-For API and web watch mode:
+Windows 免安装入口（工作区指针，不是安装包）：
+
+1. 首次（或启动器源码变更后）在仓库根目录执行 `npm run desktop:sync`。它只在 `apps/desktop` / `zerotrace-desktop-core` 启动器源码变化时才重编 exe，并刷新桌面快捷方式「ZeroTrace 只读工作站」。
+2. 之后双击该快捷方式，或双击 `apps/desktop/start-workstation.cmd`，或执行 `npm run desktop:start`。
+3. 启动器读取 `apps/desktop/dev-link.json` 与当前 checkout，附加到已运行的 `npm run dev`，或按与开发端相同的命令拉起 API + Vite。
+4. 改业务源码走 Vite 热更新，**不必重新生成 exe**。把 exe 拷到其它目录时，同目录的 `ZeroTrace.workspace.json` 指向本仓库即可。
+
+For API and web watch mode from a terminal:
 
 ```bash
 npm run dev

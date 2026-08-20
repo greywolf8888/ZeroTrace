@@ -68,6 +68,8 @@ export async function registerSystemRoutes(
       ingestionStorage,
       dataQuality,
       graphProjection,
+      storageQuota:
+        runtime.storagePlane === undefined ? undefined : await runtime.storagePlane.inspectQuota(),
       checkedAt: new Date().toISOString(),
     };
   });
@@ -455,5 +457,12 @@ export async function registerSystemRoutes(
     platforms: PLATFORM_REGISTRY,
     launchpadRegistry: LAUNCHPAD_PROTOCOL_REGISTRY,
     gmgnConfigured: config.gmgnConfigured,
+  }));
+
+  app.get('/api/v1/provider-slots', { schema: { tags: ['system'] } }, async () => ({
+    slots: config.providerSlotStatus,
+    traceAuthType: config.bscTraceRpcAuthType,
+    traceOperatorId: config.bscTraceOperatorId,
+    note: 'UNCONFIGURED 插槽不得把依赖 Case 记为 PASS；缺 Key 不得阻止进程启动。',
   }));
 }

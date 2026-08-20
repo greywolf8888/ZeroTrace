@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "zerotrace-corpus-resume-v1",
+  "capturedAt": "2026-08-20T11:38:50.429Z",
+  "total": 50,
+  "completed": 2,
+  "remaining": 48,
+  "interrupted": false,
+  "originComplete": 0,
+  "historyComplete": 0,
+  "reviewed": false,
+  "note": "串行、可中断。失败后从 Checkpoint 继续，不得从头重跑。reviewed=false。"
+}

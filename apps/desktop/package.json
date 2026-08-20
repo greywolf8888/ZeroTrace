@@ -1,0 +1,7 @@
+{
+  "name": "@zerotrace/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only workspace-linked workstation launcher. Does not freeze the web/API image."
+}

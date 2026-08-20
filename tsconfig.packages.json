@@ -4,6 +4,7 @@
     { "path": "./packages/schemas" },
     { "path": "./packages/identifiers" },
     { "path": "./packages/evidence" },
+    { "path": "./packages/storage-plane" },
     { "path": "./packages/funding-settlement-engine" },
     { "path": "./packages/data-quality" },
     { "path": "./packages/action-semantics" },
@@ -31,6 +32,13 @@
     { "path": "./packages/market-reality-engine" },
     { "path": "./packages/casework" },
     { "path": "./packages/forensic-pipeline" },
+    { "path": "./packages/source-registry" },
+    { "path": "./packages/provider-scheduler" },
+    { "path": "./packages/provider-plane" },
+    { "path": "./packages/platform-auth" },
+    { "path": "./packages/terminal-pipeline" },
+    { "path": "./packages/local-index" },
+    { "path": "./packages/token-market-capture" },
     { "path": "./packages/llm-gateway" }
   ]
 }

@@ -74,6 +74,9 @@ function asJob(row: Record<string, unknown>): DurableJob {
     ...(row.last_error === null || row.last_error === undefined
       ? {}
       : { lastError: String(row.last_error) }),
+    ...(row.fencing_token === null || row.fencing_token === undefined
+      ? {}
+      : { fencingToken: Number(row.fencing_token) }),
   };
 }
 
@@ -145,6 +148,7 @@ export class PostgresJobQueue implements JobQueue {
         `UPDATE durable_jobs
          SET status = 'RUNNING',
              attempt = attempt + 1,
+             fencing_token = fencing_token + 1,
              lease_owner = $2,
              lease_expires_at = $3,
              updated_at = $4

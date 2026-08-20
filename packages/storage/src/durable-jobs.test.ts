@@ -30,6 +30,7 @@ function memoryPool(seed: JobRow[] = []) {
       if (job === undefined) return { rows: [] };
       job.status = 'RUNNING';
       job.attempt = Number(job.attempt) + 1;
+      job.fencing_token = Number(job.fencing_token ?? 0) + 1;
       job.lease_owner = values[1];
       job.lease_expires_at = values[2];
       return { rows: [job] };
@@ -56,6 +57,7 @@ function memoryPool(seed: JobRow[] = []) {
           payload: JSON.parse(String(values[4])),
           result_ref: null,
           last_error: null,
+          fencing_token: 0,
         };
         jobs.push(row);
         return { rows: [row] };
@@ -114,6 +116,7 @@ describe('PostgresJobQueue', () => {
     const claimed = await queue.claim('worker-1');
     expect(claimed?.status).toBe('RUNNING');
     expect(claimed?.leaseOwner).toBe('worker-1');
+    expect(claimed?.fencingToken).toBe(1);
     const marked = await queue.checkpoint(first.id, 'block:100');
     expect(marked.checkpoint).toBe('block:100');
     const done = await queue.succeed(first.id, 'env_1');

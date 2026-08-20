@@ -8,6 +8,7 @@
   "include": ["src/**/*.ts"],
   "references": [
     { "path": "../schemas" },
+    { "path": "../storage-plane" },
     { "path": "../evidence" },
     { "path": "../data-quality" },
     { "path": "../action-semantics" },

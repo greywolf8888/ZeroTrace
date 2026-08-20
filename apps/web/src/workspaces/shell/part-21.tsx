@@ -137,6 +137,45 @@ export function DataHealth({
         <article className="panel provider-card storage-card">
           <div className="provider-card-top">
             <div>
+              <span className="chain-tag storage-tag">DISK</span>
+              <h3>低成本存储配额</h3>
+            </div>
+            <StatusPill status={health?.storageQuota?.level ?? 'CHECKING'} />
+          </div>
+          <p className="panel-copy">
+            ZeroTrace 默认不超过当前可用空间的
+            70%。案件证据永不自动删除；未覆盖区间保持未知，不会变成 0。
+          </p>
+          <dl>
+            <div>
+              <dt>当前使用</dt>
+              <dd>{health?.storageQuota?.labels.used ?? '未知'}</dd>
+            </div>
+            <div>
+              <dt>可重建数据</dt>
+              <dd>{health?.storageQuota?.labels.rebuildable ?? '未知'}</dd>
+            </div>
+            <div>
+              <dt>不可删除证据</dt>
+              <dd>{health?.storageQuota?.labels.permanent ?? '未知'}</dd>
+            </div>
+            <div>
+              <dt>每日增长</dt>
+              <dd>{health?.storageQuota?.labels.dailyGrowth ?? '未知'}</dd>
+            </div>
+            <div>
+              <dt>预计满盘日期</dt>
+              <dd>{health?.storageQuota?.labels.fullAt ?? '未知'}</dd>
+            </div>
+            <div>
+              <dt>正在清理的类别</dt>
+              <dd>{health?.storageQuota?.labels.evicting ?? '无'}</dd>
+            </div>
+          </dl>
+        </article>
+        <article className="panel provider-card storage-card">
+          <div className="provider-card-top">
+            <div>
               <span className="chain-tag storage-tag">PROVENANCE</span>
               <h3>证据存储</h3>
             </div>
