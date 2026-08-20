@@ -1,5 +1,7 @@
 //! Desktop case core. No simplified formulas; replay uses the same hashes as web.
 
+pub mod launcher;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use zerotrace_replay::{replay, RawArtifact, ReplayError, ReplayReport};

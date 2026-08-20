@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "zerotrace-desktop-dev-link-v1",
+  "readOnly": true,
+  "web": {
+    "host": "127.0.0.1",
+    "port": 5173,
+    "path": "/"
+  },
+  "api": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "path": "/health"
+  },
+  "spawn": {
+    "program": "npm",
+    "args": ["run", "dev"]
+  },
+  "waitTimeoutMs": 300000,
+  "pollIntervalMs": 500
+}
