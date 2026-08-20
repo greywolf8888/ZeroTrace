@@ -76,6 +76,9 @@ describe('application runtime wiring', () => {
       'bitcoin-mainnet': 0,
       'solana-mainnet': 0,
     });
+    const quota = await runtime.storagePlane?.inspectQuota();
+    expect(quota?.labels.used).toContain('当前使用');
+    expect(quota?.labels.permanent).toContain('不可删除证据');
 
     const health = await runtime.providerRegistry.health();
     expect(health.map((provider) => [provider.id, provider.status])).toEqual([

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { operatorFromEndpoint } from '@zerotrace/source-registry';
 
-import { captureTokenMarket } from './capture.js';
+import { campaignWindowsFromTransfers, captureTokenMarket } from './capture.js';
 import { extractAddressFeatures } from './features.js';
 import { traceCreatesToken } from './trace.js';
 import { TRANSFER_TOPIC, ZERO_ADDRESS, type RpcResult, type RpcTransport } from './types.js';
@@ -417,5 +417,30 @@ describe('token market capture', () => {
     expect(report.origin.status).toBe('COMPLETE');
     expect(report.rpcStats.historical).toBe(0);
     expect(report.history.status).toBe('COMPLETE');
+  });
+
+  it('returns no campaign windows until four transfers exist, then splits on volume change points', () => {
+    const transfer = (block: bigint, value: string) => ({
+      chainId: 'eip155:56',
+      token: TOKEN,
+      blockNumber: block,
+      logIndex: 0,
+      transactionHash: TX,
+      from: ZERO_ADDRESS,
+      to: BUYER,
+      valueAtomic: value,
+    });
+    expect(campaignWindowsFromTransfers([transfer(10n, '1'), transfer(11n, '1')])).toEqual([]);
+    const windows = campaignWindowsFromTransfers([
+      transfer(10n, '1'),
+      transfer(20n, '1'),
+      transfer(30n, '1000000000'),
+      transfer(40n, '1'),
+      transfer(50n, '1'),
+      transfer(60n, '1'),
+    ]);
+    expect(windows.length).toBeGreaterThan(0);
+    expect(windows[0]?.start).toBe(10);
+    expect(windows.at(-1)?.end).toBe(60);
   });
 });
