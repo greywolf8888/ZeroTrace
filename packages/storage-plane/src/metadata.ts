@@ -7,9 +7,10 @@ export class JsonFileMetadataStore implements MetadataStore {
   constructor(private readonly rootDir: string) {}
 
   #path(key: string): string {
-    const parts = key.split('/').filter((part) => part.length > 0).map((part) =>
-      part.replaceAll(':', '_').replaceAll('?', '_').replaceAll('*', '_'),
-    );
+    const parts = key
+      .split('/')
+      .filter((part) => part.length > 0)
+      .map((part) => part.replaceAll(':', '_').replaceAll('?', '_').replaceAll('*', '_'));
     return join(this.rootDir, 'control', ...parts) + '.json';
   }
 

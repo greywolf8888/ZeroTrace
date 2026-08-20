@@ -558,7 +558,13 @@ export interface HealthResponse {
 
 export interface StorageQuotaView {
   profile: 'LOW_COST_CASE' | 'SELECTIVE_MARKET_INDEX' | 'REMOTE_ARCHIVE_HYBRID';
-  level: 'OK' | 'WARN' | 'STOP_PREFETCH' | 'COMPACT_AND_EVICT' | 'STOP_NEW_FULL_LIFETIME' | 'EVIDENCE_ONLY';
+  level:
+    | 'OK'
+    | 'WARN'
+    | 'STOP_PREFETCH'
+    | 'COMPACT_AND_EVICT'
+    | 'STOP_NEW_FULL_LIFETIME'
+    | 'EVIDENCE_ONLY';
   usedBytes: number;
   budgetBytes: number;
   freeBytes: number;
@@ -2567,10 +2573,7 @@ export const api = {
   health: (signal?: AbortSignal) =>
     requestJson<HealthResponse>('/health', signal === undefined ? {} : { signal }),
   storageQuota: (signal?: AbortSignal) =>
-    requestJson<StorageQuotaView>(
-      '/api/v1/storage/quota',
-      signal === undefined ? {} : { signal },
-    ),
+    requestJson<StorageQuotaView>('/api/v1/storage/quota', signal === undefined ? {} : { signal }),
   storageProfile: (signal?: AbortSignal) =>
     requestJson<{
       profile: StorageQuotaView['profile'];

@@ -143,7 +143,8 @@ export function DataHealth({
             <StatusPill status={health?.storageQuota?.level ?? 'CHECKING'} />
           </div>
           <p className="panel-copy">
-            ZeroTrace 默认不超过当前可用空间的 70%。案件证据永不自动删除；未覆盖区间保持未知，不会变成 0。
+            ZeroTrace 默认不超过当前可用空间的
+            70%。案件证据永不自动删除；未覆盖区间保持未知，不会变成 0。
           </p>
           <dl>
             <div>

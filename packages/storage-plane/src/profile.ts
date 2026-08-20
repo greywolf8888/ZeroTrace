@@ -1,8 +1,4 @@
-import {
-  STORAGE_PROFILES,
-  type OptionalComponentStatus,
-  type StorageProfile,
-} from './types.js';
+import { STORAGE_PROFILES, type OptionalComponentStatus, type StorageProfile } from './types.js';
 
 export const DEFAULT_STORAGE_PROFILE: StorageProfile = 'LOW_COST_CASE';
 

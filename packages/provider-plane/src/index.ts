@@ -24,7 +24,13 @@ export {
 } from './catalog.js';
 export { ProviderRegistry, SourceOperatorRegistry } from './registry.js';
 export { recordAllows, selectProviders } from './select.js';
-export { nextWindow, planCorpusIngestion, planLifetimeHistory, planQuery, splitRange } from './plan.js';
+export {
+  nextWindow,
+  planCorpusIngestion,
+  planLifetimeHistory,
+  planQuery,
+  splitRange,
+} from './plan.js';
 export { probeProvider, snapshotMeets } from './probe.js';
 export { evaluateShadowPromotion } from './shadow.js';
 export { createJsonRpcTransport, ProviderScheduler } from './gateway.js';

@@ -59,7 +59,12 @@ const pass2 = await runOnce('second-after-restart');
 
 const parquet = new DuckDbParquetFactStore(config.storageRoot);
 const clickhouseUrl = config.clickhouseUrl;
-let clickhouse: { status: 'PASS' | 'NOT_RUN' | 'FAIL'; detail: string; left?: string; right?: string } = {
+let clickhouse: {
+  status: 'PASS' | 'NOT_RUN' | 'FAIL';
+  detail: string;
+  left?: string;
+  right?: string;
+} = {
   status: 'NOT_RUN',
   detail: 'CLICKHOUSE_URL 未配置或 LOW_COST_CASE 不启用热层，不得记 PASS。',
 };

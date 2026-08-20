@@ -6,7 +6,12 @@ import { coverageGaps, mergeSpans, type CoverageSpan } from '@zerotrace/local-in
 import type { CoverageRecord, CoverageRegistry } from './types.js';
 
 function coveragePath(rootDir: string, chainId: string, token: string, factType: string): string {
-  return join(rootDir, 'coverage', chainId.replaceAll(':', '_'), `${token.toLowerCase()}.${factType}.json`);
+  return join(
+    rootDir,
+    'coverage',
+    chainId.replaceAll(':', '_'),
+    `${token.toLowerCase()}.${factType}.json`,
+  );
 }
 
 function toSpans(records: readonly CoverageRecord[]): CoverageSpan[] {
@@ -31,9 +36,7 @@ export class FileCoverageRegistry implements CoverageRegistry {
 
   async commit(record: CoverageRecord): Promise<void> {
     const existing = await this.read(record.chainId, record.token, record.factType);
-    const merged = mergeSpans(
-      toSpans([...existing, record]),
-    );
+    const merged = mergeSpans(toSpans([...existing, record]));
     const next: CoverageRecord[] = merged.map((span) => ({
       chainId: record.chainId,
       token: record.token.toLowerCase(),

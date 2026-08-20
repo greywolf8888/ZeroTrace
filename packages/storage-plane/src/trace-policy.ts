@@ -12,10 +12,7 @@ export const TRACE_REASONS = [
 
 export type TraceReason = (typeof TRACE_REASONS)[number];
 
-export function classifyTrace(input: {
-  reason: TraceReason;
-  inActiveCase: boolean;
-}): TraceClass {
+export function classifyTrace(input: { reason: TraceReason; inActiveCase: boolean }): TraceClass {
   if (input.inActiveCase) return 'CASE_TRACE';
   if (
     input.reason === 'Creation/Internal CREATE' ||

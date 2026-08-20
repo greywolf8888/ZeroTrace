@@ -50,7 +50,10 @@ export class DuckDbParquetFactStore implements FactStore {
     private readonly chain = 'eip155-56',
   ) {}
 
-  async append(facts: readonly NormalizedFact[], observedAt = new Date().toISOString()): Promise<{ bytes: number }> {
+  async append(
+    facts: readonly NormalizedFact[],
+    observedAt = new Date().toISOString(),
+  ): Promise<{ bytes: number }> {
     if (facts.length === 0) return { bytes: 0 };
     this.#seq += 1;
     const first = facts[0]!;
@@ -86,7 +89,10 @@ export class DuckDbParquetFactStore implements FactStore {
   }
 
   async byteSize(): Promise<number> {
-    return walkParquet(join(this.rootDir, 'facts')).reduce((sum, file) => sum + statSync(file).size, 0);
+    return walkParquet(join(this.rootDir, 'facts')).reduce(
+      (sum, file) => sum + statSync(file).size,
+      0,
+    );
   }
 
   async compact(): Promise<{ filesBefore: number; filesAfter: number; bytesAfter: number }> {
@@ -133,7 +139,8 @@ export class MemoryFactStore implements FactStore {
     const wanted = token.toLowerCase();
     return this.#rows.filter(
       (item) =>
-        item.token.toLowerCase() === wanted && (factType === undefined || item.eventType === factType),
+        item.token.toLowerCase() === wanted &&
+        (factType === undefined || item.eventType === factType),
     );
   }
 
@@ -170,7 +177,8 @@ export class ClickHouseFactStore implements FactStore {
     const wanted = token.toLowerCase();
     return this.#rows.filter(
       (item) =>
-        item.token.toLowerCase() === wanted && (factType === undefined || item.eventType === factType),
+        item.token.toLowerCase() === wanted &&
+        (factType === undefined || item.eventType === factType),
     );
   }
 

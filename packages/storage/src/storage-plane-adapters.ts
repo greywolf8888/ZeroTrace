@@ -1,7 +1,12 @@
 import { Pool } from 'pg';
 import { Client as MinioClient } from 'minio';
 
-import type { ArtifactRecord, ArtifactStore, DataClass, MetadataStore } from '@zerotrace/storage-plane';
+import type {
+  ArtifactRecord,
+  ArtifactStore,
+  DataClass,
+  MetadataStore,
+} from '@zerotrace/storage-plane';
 
 export class PostgresMetadataStore implements MetadataStore {
   readonly #pool: Pool;
@@ -27,7 +32,9 @@ export class PostgresMetadataStore implements MetadataStore {
 
   async get(key: string): Promise<string | undefined> {
     await this.#ensure();
-    const result = await this.#pool.query('SELECT value FROM storage_plane_kv WHERE key = $1', [key]);
+    const result = await this.#pool.query('SELECT value FROM storage_plane_kv WHERE key = $1', [
+      key,
+    ]);
     const value = result.rows[0]?.value;
     return typeof value === 'string' ? value : undefined;
   }
@@ -104,7 +111,11 @@ export class ObjectStoreArtifactStore implements ArtifactStore {
       permanent: meta.permanent === true || meta.dataClass === 'PERMANENT_EVIDENCE',
     };
     await this.#client.putObject(this.#bucket, this.#key(id), Buffer.from(bytes));
-    await this.#client.putObject(this.#bucket, this.#metaKey(id), Buffer.from(JSON.stringify(record)));
+    await this.#client.putObject(
+      this.#bucket,
+      this.#metaKey(id),
+      Buffer.from(JSON.stringify(record)),
+    );
     return record;
   }
 

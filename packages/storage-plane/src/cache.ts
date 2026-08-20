@@ -39,7 +39,10 @@ export class MemoryCacheStore implements CacheStore {
     for (const [key, entry] of this.#entries) {
       const ttlClass = entry.dataClass === 'EPHEMERAL' ? 'EPHEMERAL' : entry.dataClass;
       if (ttlClass === 'PERMANENT_EVIDENCE') continue;
-      if (nowMs - Date.parse(entry.createdAt) > CACHE_TTL_MS || expired(entry.createdAt, nowMs, ttlClass)) {
+      if (
+        nowMs - Date.parse(entry.createdAt) > CACHE_TTL_MS ||
+        expired(entry.createdAt, nowMs, ttlClass)
+      ) {
         this.#entries.delete(key);
         removed += 1;
       }

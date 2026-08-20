@@ -24,7 +24,10 @@ export async function writeCorpusCheckpoint(
   await metadata.put(CORPUS_CHECKPOINT_KEY, JSON.stringify(checkpoint));
 }
 
-export function resumeTokens(all: readonly string[], checkpoint: CorpusCheckpoint | undefined): string[] {
+export function resumeTokens(
+  all: readonly string[],
+  checkpoint: CorpusCheckpoint | undefined,
+): string[] {
   if (checkpoint === undefined) return [...all];
   const done = new Set(checkpoint.completed.map((item) => item.toLowerCase()));
   return all.filter((token) => !done.has(token.toLowerCase()));

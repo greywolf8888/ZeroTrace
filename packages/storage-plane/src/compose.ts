@@ -51,7 +51,11 @@ export interface StoragePlane {
   cache: CacheStore;
   optional: OptionalComponentStatus[];
   inspectQuota(dailyGrowthBytes?: number): Promise<StorageQuotaView>;
-  applyWatermarks(): Promise<{ compacted: boolean; evicted: number; level: StorageQuotaView['level'] }>;
+  applyWatermarks(): Promise<{
+    compacted: boolean;
+    evicted: number;
+    level: StorageQuotaView['level'];
+  }>;
 }
 
 function directoryBytes(dir: string): number {
@@ -118,12 +122,17 @@ export function openStoragePlane(options: StoragePlaneOptions): StoragePlane {
       const view = await inspectQuota();
       let compacted = false;
       let evicted = 0;
-      if (view.level === 'COMPACT_AND_EVICT' || view.level === 'STOP_NEW_FULL_LIFETIME' || view.level === 'EVIDENCE_ONLY') {
+      if (
+        view.level === 'COMPACT_AND_EVICT' ||
+        view.level === 'STOP_NEW_FULL_LIFETIME' ||
+        view.level === 'EVIDENCE_ONLY'
+      ) {
         await facts.compact();
         compacted = true;
         evicted += await cache.evictExpired(Date.now());
         evicted += await cache.evictLru(Math.floor(view.budgetBytes * 0.2));
-        if (artifacts.evictExpired !== undefined) evicted += await artifacts.evictExpired(Date.now());
+        if (artifacts.evictExpired !== undefined)
+          evicted += await artifacts.evictExpired(Date.now());
         if (artifacts.evictLru !== undefined) {
           evicted += await artifacts.evictLru(Math.floor(view.budgetBytes * 0.5));
         }
@@ -184,7 +193,9 @@ export async function hydrateLocalIndex(input: {
     key,
     facts.map((fact) => factToTransfer(input.chainId, fact)),
   );
-  const raw = await input.plane.metadata.get(`origin/${input.chainId}/${input.token.toLowerCase()}`);
+  const raw = await input.plane.metadata.get(
+    `origin/${input.chainId}/${input.token.toLowerCase()}`,
+  );
   return {
     records,
     ...(raw === undefined ? {} : { origin: JSON.parse(raw) as OriginCheckpoint }),

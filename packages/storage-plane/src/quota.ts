@@ -22,10 +22,7 @@ export function allowsPrefetch(level: QuotaLevel): boolean {
 
 export function allowsFullLifetime(level: QuotaLevel): boolean {
   return (
-    level === 'OK' ||
-    level === 'WARN' ||
-    level === 'STOP_PREFETCH' ||
-    level === 'COMPACT_AND_EVICT'
+    level === 'OK' || level === 'WARN' || level === 'STOP_PREFETCH' || level === 'COMPACT_AND_EVICT'
   );
 }
 
@@ -106,7 +103,9 @@ export function buildQuotaView(input: {
       permanent: `不可删除证据 ${formatBytes(input.permanentEvidenceBytes)}`,
       dailyGrowth: `每日增长 ${formatBytes(input.dailyGrowthBytes)}`,
       fullAt:
-        estimatedFullAt === null ? '预计满盘日期 未知（增长为 0 或样本不足）' : `预计满盘日期 ${estimatedFullAt}`,
+        estimatedFullAt === null
+          ? '预计满盘日期 未知（增长为 0 或样本不足）'
+          : `预计满盘日期 ${estimatedFullAt}`,
       evicting:
         input.evictingClass === undefined
           ? '正在清理的类别 无'

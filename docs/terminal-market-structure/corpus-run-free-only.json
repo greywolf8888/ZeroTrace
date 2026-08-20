@@ -999,8 +999,6 @@
   ],
   "shadowGate": {
     "promote": false,
-    "reasons": [
-      "THRESHOLD_NOT_MET"
-    ]
+    "reasons": ["THRESHOLD_NOT_MET"]
   }
 }

@@ -2,7 +2,11 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { forecastFromMetrics, uncompressedFactBytes, type CorpusTokenMetrics } from '@zerotrace/storage-plane';
+import {
+  forecastFromMetrics,
+  uncompressedFactBytes,
+  type CorpusTokenMetrics,
+} from '@zerotrace/storage-plane';
 
 import { loadConfig } from '../apps/api/src/config.js';
 import { createStoragePlane } from '../apps/api/src/storage-plane-bind.js';
@@ -40,7 +44,10 @@ const sample: CorpusTokenMetrics[] =
         },
       ];
 
-const forecast = forecastFromMetrics(sample, metrics.length > 0 ? 'corpus-checkpoint' : 'storage-plane-bytes');
+const forecast = forecastFromMetrics(
+  sample,
+  metrics.length > 0 ? 'corpus-checkpoint' : 'storage-plane-bytes',
+);
 const facts = await plane.facts.queryByToken(sample[0]?.token ?? '');
 const uncompressed = facts.length === 0 ? 0 : uncompressedFactBytes(facts);
 const profile = {
@@ -52,7 +59,9 @@ const profile = {
   bytesPerToken: forecast.bytesPerToken,
   bytesPerCase: forecast.bytesPerCase,
   compressionRatio:
-    uncompressed === 0 ? forecast.compressionRatio : uncompressed / Math.max(1, await plane.facts.byteSize()),
+    uncompressed === 0
+      ? forecast.compressionRatio
+      : uncompressed / Math.max(1, await plane.facts.byteSize()),
   dailyGrowth: forecast.dailyGrowthBytes,
   forecast30: forecast.forecast30,
   forecast90: forecast.forecast90,

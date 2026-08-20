@@ -44,7 +44,10 @@ describe('storage plane', () => {
   });
 
   it('writes real Parquet and keeps DuckDB/ClickHouse ResultHash identical', async () => {
-    const facts = [sampleFact(), { ...sampleFact(), logOrInstructionIndex: '1', amountAtomic: '50' }];
+    const facts = [
+      sampleFact(),
+      { ...sampleFact(), logOrInstructionIndex: '1', amountAtomic: '50' },
+    ];
     const bytes = encodeParquet(facts);
     expect(bytes.subarray(0, 4).toString('ascii')).toBe('PAR1');
     expect(bytes.subarray(bytes.length - 4).toString('ascii')).toBe('PAR1');
@@ -56,7 +59,9 @@ describe('storage plane', () => {
       const clickhouse = new ClickHouseFactStore('http://clickhouse.test');
       await parquet.append(facts);
       await clickhouse.append(facts);
-      expect(await parquet.resultHash(facts[0]!.token)).toBe(await clickhouse.resultHash(facts[0]!.token));
+      expect(await parquet.resultHash(facts[0]!.token)).toBe(
+        await clickhouse.resultHash(facts[0]!.token),
+      );
       expect(await parquet.resultHash(facts[0]!.token)).toBe(factsResultHash(facts));
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -120,7 +125,9 @@ describe('storage plane', () => {
       });
       expect(hydrated.origin?.status).toBe('COMPLETE');
       expect(hydrated.records[0]?.startBlock).toBe('16');
-      expect(restored.transfers('eip155:56:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toHaveLength(1);
+      expect(
+        restored.transfers('eip155:56:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
+      ).toHaveLength(1);
       expect(await restarted.artifacts.stat('case-evidence')).toMatchObject({
         dataClass: 'PERMANENT_EVIDENCE',
       });
@@ -150,7 +157,10 @@ describe('storage plane', () => {
         endBlock: '20',
         updatedAt: new Date().toISOString(),
       });
-      const records = await coverage.read('eip155:56', '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+      const records = await coverage.read(
+        'eip155:56',
+        '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      );
       expect(missingRanges(records, 10n, 40n)).toEqual([{ startBlock: 21n, endBlock: 40n }]);
     } finally {
       rmSync(dir, { recursive: true, force: true });

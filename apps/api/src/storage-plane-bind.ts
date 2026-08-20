@@ -88,13 +88,17 @@ export function bindStoragePlane(
         origin: {
           status: report.origin.status,
           updatedAt: new Date().toISOString(),
-          ...(report.origin.creationTx === undefined ? {} : { creationTx: report.origin.creationTx }),
+          ...(report.origin.creationTx === undefined
+            ? {}
+            : { creationTx: report.origin.creationTx }),
           ...(report.origin.deployer === undefined ? {} : { deployer: report.origin.deployer }),
           ...(report.origin.createdBlock === undefined
             ? {}
             : { createdBlock: report.origin.createdBlock }),
           ...(report.origin.codeHash === undefined ? {} : { codeHash: report.origin.codeHash }),
-          ...(report.origin.limitation === undefined ? {} : { limitation: report.origin.limitation }),
+          ...(report.origin.limitation === undefined
+            ? {}
+            : { limitation: report.origin.limitation }),
           ...(report.origin.limitationCode === undefined
             ? {}
             : { limitationCode: report.origin.limitationCode }),
@@ -115,9 +119,7 @@ export function bindStoragePlane(
                       ? 'CAPITAL_AND_RV'
                       : 'CASE_AND_REPLAY',
           status:
-            stage.status === 'PENDING' || stage.status === 'RUNNING'
-              ? 'NOT_RUN'
-              : stage.status,
+            stage.status === 'PENDING' || stage.status === 'RUNNING' ? 'NOT_RUN' : stage.status,
           updatedAt: new Date().toISOString(),
           ...(stage.limitation === undefined ? {} : { limitation: stage.limitation }),
         })),
