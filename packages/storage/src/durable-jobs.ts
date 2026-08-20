@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 
 import { contentAddressedId } from '@zerotrace/evidence';
-import type { DurableJob, JobQueue, JobStatus } from '@zerotrace/workflow-core';
+import type { DurableJob, JobLeaseGuard, JobQueue, JobStatus } from '@zerotrace/workflow-core';
 
 export interface PostgresJobQueueOptions {
   connectionString: string;
@@ -166,42 +166,97 @@ export class PostgresJobQueue implements JobQueue {
     }
   }
 
-  async succeed(id: string, resultRef: string): Promise<DurableJob> {
+  async heartbeat(
+    id: string,
+    guard: JobLeaseGuard,
+    now = new Date(),
+    leaseMs = 30_000,
+  ): Promise<DurableJob> {
     const result = await this.#pool.query(
       `UPDATE durable_jobs
-       SET status = 'SUCCEEDED', result_ref = $2, updated_at = now()
-       WHERE id = $1
+       SET lease_expires_at = $4, updated_at = $3
+       WHERE id = $1 AND status = 'RUNNING' AND lease_owner = $2 AND fencing_token = $5
        RETURNING *`,
-      [id, resultRef],
+      [
+        id,
+        guard.workerId,
+        now.toISOString(),
+        new Date(now.getTime() + leaseMs).toISOString(),
+        guard.fencingToken,
+      ],
     );
-    const row = result.rows[0];
-    if (row === undefined) throw new Error(`Job ${id} was not found.`);
-    return asJob(row as Record<string, unknown>);
+    return this.requireMutation(result, id, 'lease is stale');
   }
 
-  async fail(id: string, error: string): Promise<DurableJob> {
+  async succeed(id: string, resultRef: string, guard?: JobLeaseGuard): Promise<DurableJob> {
+    const result = await this.#pool.query(
+      `UPDATE durable_jobs
+       SET status = 'SUCCEEDED', result_ref = $2,
+           lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+       WHERE id = $1${this.guardSql(guard, 3)}
+       RETURNING *`,
+      [id, resultRef, ...(guard === undefined ? [] : [guard.workerId, guard.fencingToken])],
+    );
+    return this.requireMutation(
+      result,
+      id,
+      guard === undefined ? 'was not found' : 'lease is stale',
+    );
+  }
+
+  async fail(id: string, error: string, guard?: JobLeaseGuard): Promise<DurableJob> {
     const result = await this.#pool.query(
       `UPDATE durable_jobs
        SET last_error = $2,
            status = CASE WHEN attempt >= max_attempts THEN 'DEAD_LETTER' ELSE 'PENDING' END,
+           lease_owner = NULL,
+           lease_expires_at = NULL,
            updated_at = now()
-       WHERE id = $1
+       WHERE id = $1${this.guardSql(guard, 3)}
        RETURNING *`,
-      [id, error],
+      [id, error, ...(guard === undefined ? [] : [guard.workerId, guard.fencingToken])],
     );
-    const row = result.rows[0];
-    if (row === undefined) throw new Error(`Job ${id} was not found.`);
-    return asJob(row as Record<string, unknown>);
+    return this.requireMutation(
+      result,
+      id,
+      guard === undefined ? 'was not found' : 'lease is stale',
+    );
   }
 
-  async checkpoint(id: string, checkpoint: string): Promise<DurableJob> {
+  async checkpoint(id: string, checkpoint: string, guard?: JobLeaseGuard): Promise<DurableJob> {
     const result = await this.#pool.query(
-      `UPDATE durable_jobs SET checkpoint = $2, updated_at = now() WHERE id = $1 RETURNING *`,
-      [id, checkpoint],
+      `UPDATE durable_jobs SET checkpoint = $2, updated_at = now()
+       WHERE id = $1${this.guardSql(guard, 3)} RETURNING *`,
+      [id, checkpoint, ...(guard === undefined ? [] : [guard.workerId, guard.fencingToken])],
     );
-    const row = result.rows[0];
-    if (row === undefined) throw new Error(`Job ${id} was not found.`);
-    return asJob(row as Record<string, unknown>);
+    return this.requireMutation(
+      result,
+      id,
+      guard === undefined ? 'was not found' : 'lease is stale',
+    );
+  }
+
+  async cancel(id: string): Promise<DurableJob> {
+    const result = await this.#pool.query(
+      `UPDATE durable_jobs
+       SET status = 'CANCELLED', lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+       WHERE id = $1 AND status IN ('PENDING', 'RUNNING')
+       RETURNING *`,
+      [id],
+    );
+    return this.requireMutation(result, id, 'cannot be cancelled');
+  }
+
+  async retry(id: string): Promise<DurableJob> {
+    const result = await this.#pool.query(
+      `UPDATE durable_jobs
+       SET status = 'PENDING', attempt = 0, last_error = NULL, result_ref = NULL,
+           lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+       WHERE id = $1 AND status IN ('FAILED', 'CANCELLED', 'DEAD_LETTER')
+       RETURNING *`,
+      [id],
+    );
+    return this.requireMutation(result, id, 'cannot be retried');
   }
 
   async get(id: string): Promise<DurableJob | undefined> {
@@ -212,5 +267,17 @@ export class PostgresJobQueue implements JobQueue {
 
   async close(): Promise<void> {
     await this.#pool.end();
+  }
+
+  private guardSql(guard: JobLeaseGuard | undefined, firstParameter: number): string {
+    return guard === undefined
+      ? ''
+      : ` AND status = 'RUNNING' AND lease_owner = $${firstParameter} AND fencing_token = $${firstParameter + 1}`;
+  }
+
+  private requireMutation(result: JobQueryResult, id: string, reason: string): DurableJob {
+    const row = result.rows[0];
+    if (row === undefined) throw new Error(`Job ${id} ${reason}.`);
+    return asJob(row as Record<string, unknown>);
   }
 }

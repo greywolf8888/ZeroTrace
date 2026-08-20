@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/app.js';
 import type { AppConfig } from '../../src/config.js';
 import { createRuntime } from '../../src/runtime.js';
+import { InMemoryJobQueue } from '@zerotrace/workflow-core';
 
 function baseConfig(): AppConfig {
   return {
@@ -377,6 +378,41 @@ describe('market-structure v2 API', { timeout: 60_000 }, () => {
     expect(analyzed.json()).toMatchObject({
       error: { code: 'JOB_QUEUE_UNAVAILABLE' },
     });
+  });
+
+  it('queues forensic analysis without running provider work in the HTTP handler', async () => {
+    const runtime = createRuntime(baseConfig());
+    const queue = new InMemoryJobQueue();
+    runtime.jobQueue = queue;
+    const app = await createApp({ config: baseConfig(), runtime, logger: false });
+    apps.push(app);
+    const analyzed = await app.inject({
+      method: 'POST',
+      url: '/api/v2/tokens/EVM/eip155:56/0xAeCBD0E461047d6B7Cfc82e637AD197097407777/analyze',
+      payload: {
+        snapshotPolicy: 'FINALIZED',
+        analysisMode: 'FULL_LIFETIME',
+        forensicMode: 'FORENSIC',
+      },
+    });
+    expect(analyzed.statusCode).toBe(202);
+    const body = analyzed.json() as { status: string; job: { id: string; status: string } };
+    expect(body).toMatchObject({ status: 'QUEUED', job: { status: 'PENDING' } });
+    expect(queue.get(body.job.id)?.attempt).toBe(0);
+
+    const cancelled = await app.inject({
+      method: 'POST',
+      url: `/api/v2/jobs/${body.job.id}/cancel`,
+    });
+    expect(cancelled.statusCode).toBe(200);
+    expect(cancelled.json()).toMatchObject({ status: 'CANCELLED' });
+    const retried = await app.inject({
+      method: 'POST',
+      url: `/api/v2/jobs/${body.job.id}/retry`,
+    });
+    expect(retried.statusCode).toBe(200);
+    expect(retried.json()).toMatchObject({ status: 'PENDING', attempt: 0 });
+    await runtime.close?.();
   });
 
   it('returns 404 for unknown jobs and serves the analyze job after offline materialize', async () => {

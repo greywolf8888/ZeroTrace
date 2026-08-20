@@ -20,14 +20,18 @@ function readInput(): LlmGatewayRequest {
 }
 
 const job = queue.enqueue({ type: 'LLM_VALIDATE', idempotencyKey: 'stdin' });
-queue.claim('llm-worker');
+const claimed = queue.claim('llm-worker');
+if (claimed === undefined || claimed.fencingToken === undefined) {
+  throw new Error('llm-worker failed to acquire a fenced job lease.');
+}
+const guard = { workerId: 'llm-worker', fencingToken: claimed.fencingToken };
 try {
   const request = readInput();
   const output = validateLlmOutput(request);
-  queue.succeed(job.id, output.narrative);
+  queue.succeed(job.id, output.narrative, guard);
   process.stdout.write(`${JSON.stringify({ systemPrompt: LLM_SYSTEM_PROMPT, output }, null, 2)}\n`);
 } catch (error) {
-  queue.fail(job.id, error instanceof Error ? error.message : 'llm validation failed');
+  queue.fail(job.id, error instanceof Error ? error.message : 'llm validation failed', guard);
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
 }

@@ -7,18 +7,9 @@ import {
   type StageState,
 } from '@zerotrace/terminal-pipeline';
 import { captureTokenMarket, type CaptureReport } from '@zerotrace/token-market-capture';
-import type { JobQueue } from '@zerotrace/workflow-core';
+import type { DurableJob, JobLeaseGuard, JobQueue } from '@zerotrace/workflow-core';
 
 import type { AppRuntime } from '../runtime.js';
-
-const KNOWN_CREATION_TX: Record<string, string> = {
-  '0xaecbd0e461047d6b7cfc82e637ad197097407777':
-    '0xa56f5e359cae2723f957043b5fd953342440907981d1e751f7182f1a0f8d80b3',
-  '0x13aa2c5bbfd15b65b15ef1129ff3dcddf8c17777':
-    '0xb7a9c3c6d7168ba5901ca30f6c9711f7ac485add4dbac25e856616befce1faef',
-  '0x711770df85f79c4aebba1f1d8db263110d3d7777':
-    '0xff42119993f03ea6d5df1d024d4b8e4a53b9f3d21e47abd91c616c1abdb8ff26',
-};
 
 interface TokenPayload {
   chainId: string;
@@ -69,18 +60,20 @@ async function runCapture(
   payload: TokenPayload,
 ): Promise<CaptureReport | undefined> {
   if (runtime.tokenCapture === undefined) return undefined;
-  const creationTx = payload.creationTx ?? KNOWN_CREATION_TX[payload.token.toLowerCase()];
   return captureTokenMarket(runtime.tokenCapture, {
     chainId: payload.chainId,
     token: payload.token,
-    ...(creationTx === undefined ? {} : { creationTx }),
+    ...(payload.creationTx === undefined ? {} : { creationTx: payload.creationTx }),
     logBudgetChunks: 4,
   });
 }
 
-export async function processOneForensicJob(queue: JobQueue, runtime: AppRuntime) {
-  const job = await queue.claim('forensic-worker');
-  if (job === undefined) return undefined;
+async function processClaimedJob(
+  queue: JobQueue,
+  runtime: AppRuntime,
+  job: DurableJob,
+  guard: JobLeaseGuard,
+) {
   if (job.type === 'TOKEN_ORIGIN_HISTORY') {
     const payload = parseTokenPayload(job.payload);
     const capture = payload === undefined ? undefined : await runCapture(runtime, payload);
@@ -88,13 +81,14 @@ export async function processOneForensicJob(queue: JobQueue, runtime: AppRuntime
       await queue.checkpoint(
         job.id,
         JSON.stringify({ stages: capture.stages, capture } satisfies Checkpoint),
+        guard,
       );
-      return queue.succeed(job.id, capture.origin.status);
+      return queue.succeed(job.id, capture.origin.status, guard);
     }
     if (runtime.sqdBscCreationReader === undefined) {
-      return queue.succeed(job.id, originHistoryWithoutReader().status);
+      return queue.succeed(job.id, originHistoryWithoutReader().status, guard);
     }
-    return queue.succeed(job.id, 'ORIGIN_CAPTURE_NOT_STARTED');
+    return queue.succeed(job.id, 'ORIGIN_CAPTURE_NOT_STARTED', guard);
   }
   if (job.type === MARKET_STRUCTURE_JOB_TYPE) {
     let { stages } = parseStages(job.checkpoint);
@@ -103,6 +97,7 @@ export async function processOneForensicJob(queue: JobQueue, runtime: AppRuntime
       return queue.fail(
         job.id,
         'TOKEN_MARKET_STRUCTURE requires a token-only payload; refusing empty materialization.',
+        guard,
       );
     }
     const capture = await runCapture(runtime, payload);
@@ -110,9 +105,10 @@ export async function processOneForensicJob(queue: JobQueue, runtime: AppRuntime
       await queue.checkpoint(
         job.id,
         JSON.stringify({ stages: capture.stages, capture } satisfies Checkpoint),
+        guard,
       );
       const status = coverageComplete(capture.stages) ? 'COMPLETE' : 'PARTIAL';
-      return queue.succeed(job.id, status);
+      return queue.succeed(job.id, status, guard);
     }
     stages = markStage(stages, 'CAPABILITY', 'COMPLETE');
     stages = markStage(stages, 'SNAPSHOT', 'PARTIAL', '当前快照检查不是完整历史。');
@@ -135,9 +131,43 @@ export async function processOneForensicJob(queue: JobQueue, runtime: AppRuntime
     stages = markStage(stages, 'CAPITAL', 'PARTIAL', '无自动 Lot，不得手填成本。');
     stages = markStage(stages, 'RV', 'UNSUPPORTED', '物质性场所未做 pinned VM 执行。');
     stages = markStage(stages, 'REPLAY', 'PARTIAL', '案件包哈希尚未与完整 Decoder 对齐。');
-    await queue.checkpoint(job.id, JSON.stringify({ stages } satisfies Checkpoint));
+    await queue.checkpoint(job.id, JSON.stringify({ stages } satisfies Checkpoint), guard);
     const status = coverageComplete(stages) ? 'COMPLETE' : 'PARTIAL';
-    return queue.succeed(job.id, status);
+    return queue.succeed(job.id, status, guard);
   }
-  return queue.fail(job.id, `Unsupported forensic job type ${job.type}`);
+  return queue.fail(job.id, `Unsupported forensic job type ${job.type}`, guard);
+}
+
+export async function processOneForensicJob(
+  queue: JobQueue,
+  runtime: AppRuntime,
+  options: { workerId?: string; leaseMs?: number; heartbeatMs?: number } = {},
+) {
+  const workerId = options.workerId ?? 'forensic-worker';
+  const leaseMs = options.leaseMs ?? 30_000;
+  const job = await queue.claim(workerId, new Date(), leaseMs);
+  if (job === undefined) return undefined;
+  if (job.fencingToken === undefined) {
+    return queue.fail(job.id, 'Claimed job is missing a fencing token.');
+  }
+  const guard = { workerId, fencingToken: job.fencingToken };
+  let heartbeatFailure: unknown;
+  const heartbeat = setInterval(
+    () => {
+      void Promise.resolve(queue.heartbeat(job.id, guard, new Date(), leaseMs)).catch((error) => {
+        heartbeatFailure = error;
+      });
+    },
+    options.heartbeatMs ?? Math.max(1_000, Math.floor(leaseMs / 3)),
+  );
+  heartbeat.unref();
+  try {
+    const result = await processClaimedJob(queue, runtime, job, guard);
+    if (heartbeatFailure !== undefined) throw heartbeatFailure;
+    return result;
+  } catch (error) {
+    return queue.fail(job.id, error instanceof Error ? error.message : '取证任务执行失败。', guard);
+  } finally {
+    clearInterval(heartbeat);
+  }
 }

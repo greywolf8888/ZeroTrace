@@ -1,16 +1,74 @@
-import { useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
-import { api, type TokenAnalyzeResponse } from '../generated-api/client.js';
+import {
+  api,
+  type DurableJobResponse,
+  type TokenAnalyzeResponse,
+} from '../generated-api/client.js';
 import { VirtualTable } from './virtual-table.js';
 import { WorkstationStatusBanner } from './workstation-status.js';
 
 export function TokenAnalyzeWorkspace() {
   const [chainId, setChainId] = useState('eip155:56');
-  const [token, setToken] = useState('0xAeCBD0E461047d6B7Cfc82e637AD197097407777');
+  const [token, setToken] = useState('');
   const [mode, setMode] = useState<'FULL_LIFETIME' | 'BOUNDED_WINDOW'>('FULL_LIFETIME');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<TokenAnalyzeResponse>();
+
+  const updateFromJob = useCallback((job: DurableJobResponse) => {
+    const status: TokenAnalyzeResponse['status'] =
+      job.status === 'PENDING'
+        ? 'QUEUED'
+        : job.status === 'RUNNING'
+          ? 'RUNNING'
+          : job.status === 'CANCELLED'
+            ? 'CANCELLED'
+            : job.status === 'FAILED' || job.status === 'DEAD_LETTER'
+              ? 'FAILED'
+              : job.resultRef === 'COMPLETE'
+                ? 'COMPLETE'
+                : 'PARTIAL';
+    setResult((current) =>
+      current === undefined
+        ? { status, job, limitations: ['任务状态已刷新。'] }
+        : {
+            ...current,
+            status,
+            job,
+            ...(job.lastError === undefined ? {} : { reason: job.lastError }),
+          },
+    );
+  }, []);
+
+  useEffect(() => {
+    const job = result?.job;
+    if (job === undefined || !['PENDING', 'RUNNING'].includes(job.status)) return undefined;
+    let disposed = false;
+    const timer = window.setInterval(() => {
+      void api
+        .forensicJob(job.id)
+        .then((next) => {
+          if (!disposed) updateFromJob(next);
+        })
+        .catch((cause: unknown) => {
+          if (!disposed) {
+            const message =
+              cause instanceof Error ? cause.message : '任务状态刷新失败，已保留最后结果。';
+            setError(message);
+            setResult((current) =>
+              current === undefined
+                ? current
+                : { ...current, status: 'STALE', reason: `REFRESH_FAILED: ${message}` },
+            );
+          }
+        });
+    }, 1_500);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [result?.job, updateFromJob]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -22,9 +80,6 @@ export function TokenAnalyzeWorkspace() {
           snapshotPolicy: 'FINALIZED',
           analysisMode: mode,
           forensicMode: 'FORENSIC',
-        } as {
-          snapshotPolicy: 'FINALIZED';
-          analysisMode: 'FULL_LIFETIME' | 'BOUNDED_WINDOW';
         }),
       );
     } catch (cause) {
@@ -68,6 +123,7 @@ export function TokenAnalyzeWorkspace() {
               id="analyze-token"
               value={token}
               onChange={(event) => setToken(event.target.value)}
+              placeholder="粘贴任意受支持的 BSC Token 地址"
               autoComplete="off"
               spellCheck={false}
             />
@@ -94,6 +150,28 @@ export function TokenAnalyzeWorkspace() {
           status={result?.status ?? 'IDLE'}
           {...(result?.reason === undefined ? {} : { reason: result.reason })}
         />
+        {result?.job === undefined ? null : (
+          <div className="button-row">
+            {['PENDING', 'RUNNING'].includes(result.job.status) ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void api.cancelForensicJob(result.job!.id).then(updateFromJob)}
+              >
+                取消任务
+              </button>
+            ) : null}
+            {['FAILED', 'CANCELLED', 'DEAD_LETTER'].includes(result.job.status) ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void api.retryForensicJob(result.job!.id).then(updateFromJob)}
+              >
+                重试任务
+              </button>
+            ) : null}
+          </div>
+        )}
         {result === undefined ? null : (
           <>
             <dl className="forensic-metrics">

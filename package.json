@@ -26,6 +26,7 @@
     "flap:history": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:history -w @zerotrace/semantic-worker --",
     "flap:lifetime": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:lifetime -w @zerotrace/semantic-worker --",
     "flap:lifetime:heads": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:lifetime:heads -w @zerotrace/semantic-worker --",
+    "forensic:worker": "npm run build:packages && npm run build -w @zerotrace/api && npm run worker:forensic -w @zerotrace/api --",
     "claims:burn:promote": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:burn:promote -w @zerotrace/semantic-worker --",
     "claims:supply:scan": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:supply:scan -w @zerotrace/semantic-worker --",
     "actions:capture": "npm run build:packages && npm run build -w @zerotrace/semantic-worker && npm run start:actions:capture -w @zerotrace/semantic-worker --",
