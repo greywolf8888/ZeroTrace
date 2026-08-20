@@ -167,4 +167,21 @@ describe('identity intelligence', () => {
     expect(report.hiddenAffiliate.ofProtocolSupply.scenario).toBe('40');
     expect(report.retail.effectiveRetailCount).toBe(1);
   });
+
+  it('preserves an uncomputed market-wide exit value as typed Unknown', () => {
+    const report = assessRoles({
+      snapshot,
+      registryEvidenceId: `ev_${'2'.repeat(24)}`,
+      terminalEvidenceId: `ev_${'3'.repeat(24)}`,
+      protocolSupplyAtomic: '100',
+      executableSellableAtomic: '100',
+      nonServiceNonPoolAtomic: '100',
+      candidates: [candidate({ subject: subject('0xunknown-rv'), proposedRole: 'UNKNOWN' })],
+    });
+    expect(report.hiddenAffiliate.ofMarketWideExitU).toEqual({
+      state: 'unknown',
+      reason: 'NOT_QUERIED',
+      detail: '全盘可兑现 U 尚未完成，不能用字符串 0 代替。',
+    });
+  });
 });

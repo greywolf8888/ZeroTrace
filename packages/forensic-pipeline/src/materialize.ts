@@ -290,7 +290,6 @@ export function materializeTokenMarketStructure(input: {
       protocolSupplyAtomic: supply.conservation.protocolSupplyAtomic,
       executableSellableAtomic: supply.executable.sellableNowAtomic,
       nonServiceNonPoolAtomic: supply.conservation.unknownDifferenceAtomic,
-      marketWideExitU: '0',
     });
     envelopes.push(
       envelopeFor(

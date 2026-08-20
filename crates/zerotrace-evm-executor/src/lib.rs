@@ -25,6 +25,22 @@ pub struct SwapResult {
     pub quote_reserve: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct V3Approximation {
+    pub amount_out: String,
+    pub next_sqrt_price_x96: String,
+    pub capability: Capability,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExactExecutionEvidence {
+    pub pinned_archive_fork: bool,
+    pub bytecode_verified: bool,
+    pub replay_hash_match: bool,
+}
+
 pub fn execute_constant_product(
     base_reserve: u128,
     quote_reserve: u128,
@@ -48,15 +64,23 @@ pub fn execute_constant_product(
     }
 }
 
-pub fn execute_concentrated_v3(
+/// Research-only virtual-reserve estimate.
+///
+/// This does not traverse the Tick bitmap or apply `liquidityNet`, so it must never be exposed as
+/// exact concentrated-liquidity execution or participate in a COMPLETE realizable-value result.
+pub fn estimate_concentrated_v3_virtual_reserves(
     liquidity: u128,
     sqrt_price_x96: u128,
     amount_in: u128,
     fee_bps: u128,
-) -> Result<(u128, u128), ExecutorError> {
+) -> Result<V3Approximation, ExecutorError> {
     let fee_adj = (amount_in * (10_000 - fee_bps)) / 10_000;
     if liquidity == 0 || fee_adj == 0 {
-        return Ok((0, sqrt_price_x96));
+        return Ok(V3Approximation {
+            amount_out: "0".into(),
+            next_sqrt_price_x96: sqrt_price_x96.to_string(),
+            capability: Capability::ApproximationResearchOnly,
+        });
     }
     let virtual_base = (liquidity * Q96) / sqrt_price_x96;
     let virtual_quote = (liquidity * sqrt_price_x96) / Q96;
@@ -66,7 +90,11 @@ pub fn execute_concentrated_v3(
     let next_sqrt = (liquidity * Q96)
         .checked_div(next_base)
         .unwrap_or(sqrt_price_x96);
-    Ok((out, next_sqrt))
+    Ok(V3Approximation {
+        amount_out: out.to_string(),
+        next_sqrt_price_x96: next_sqrt.to_string(),
+        capability: Capability::ApproximationResearchOnly,
+    })
 }
 
 pub fn execute_stableswap(
@@ -119,8 +147,8 @@ pub fn reject_isolated_rv_sum(values: &[u128]) -> Result<(), ExecutorError> {
     }
 }
 
-pub fn exact_vm_capability(has_pinned_fork: bool) -> Result<Capability, ExecutorError> {
-    if has_pinned_fork {
+pub fn exact_vm_capability(evidence: &ExactExecutionEvidence) -> Result<Capability, ExecutorError> {
+    if evidence.pinned_archive_fork && evidence.bytecode_verified && evidence.replay_hash_match {
         Ok(Capability::ReadyExact)
     } else {
         Err(ExecutorError::MissingArchiveFork)
@@ -146,6 +174,36 @@ mod tests {
 
     #[test]
     fn exact_vm_fails_closed_without_fork() {
-        assert!(exact_vm_capability(false).is_err());
+        assert!(exact_vm_capability(&ExactExecutionEvidence {
+            pinned_archive_fork: false,
+            bytecode_verified: true,
+            replay_hash_match: true,
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn virtual_reserve_v3_is_never_exact() {
+        let result = estimate_concentrated_v3_virtual_reserves(1_000_000, Q96, 100, 30).unwrap();
+        assert_eq!(result.capability, Capability::ApproximationResearchOnly);
+    }
+
+    #[test]
+    fn exact_vm_requires_the_full_evidence_triplet() {
+        assert_eq!(
+            exact_vm_capability(&ExactExecutionEvidence {
+                pinned_archive_fork: true,
+                bytecode_verified: true,
+                replay_hash_match: true,
+            })
+            .unwrap(),
+            Capability::ReadyExact
+        );
+        assert!(exact_vm_capability(&ExactExecutionEvidence {
+            pinned_archive_fork: true,
+            bytecode_verified: false,
+            replay_hash_match: true,
+        })
+        .is_err());
     }
 }

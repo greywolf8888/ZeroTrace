@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const inCi = process.env.CI === 'true';
+const configuredWorkers = Number.parseInt(process.env.ZEROTRACE_E2E_WORKERS ?? '', 10);
+const e2eWorkers =
+  Number.isInteger(configuredWorkers) && configuredWorkers > 0
+    ? configuredWorkers
+    : inCi || process.platform === 'win32'
+      ? 2
+      : undefined;
 const e2eApiUrl = 'http://127.0.0.1:18081';
 const inheritedEnv = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
@@ -37,7 +44,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: inCi,
   retries: inCi ? 1 : 0,
-  workers: inCi ? 2 : undefined,
+  // Chromium context teardown becomes unreliable when Playwright expands to the host CPU count on
+  // Windows (24 logical CPUs produced 12 concurrent browsers and widespread timeout-only failures).
+  // Keep local Windows runs aligned with CI while allowing an explicit, evidence-backed override.
+  workers: e2eWorkers,
   timeout: 30_000,
   expect: { timeout: 8_000 },
   reporter: [['list'], ['html', { outputFolder: './output/playwright/report', open: 'never' }]],

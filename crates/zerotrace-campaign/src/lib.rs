@@ -33,14 +33,17 @@ pub fn detect_change_points(values: &[f64], penalty: f64) -> Vec<usize> {
     let mut f = vec![f64::INFINITY; n + 1];
     let mut prev = vec![0usize; n + 1];
     f[0] = -penalty;
+    let mut candidates = vec![0usize];
     for end in 1..=n {
-        for start in 0..end {
+        for &start in &candidates {
             let candidate = f[start] + cost(start, end) + penalty;
             if candidate < f[end] {
                 f[end] = candidate;
                 prev[end] = start;
             }
         }
+        candidates.retain(|&start| f[start] + cost(start, end) <= f[end] + f64::EPSILON);
+        candidates.push(end);
     }
     let mut points = Vec::new();
     let mut cursor = n;
@@ -55,24 +58,105 @@ pub fn detect_change_points(values: &[f64], penalty: f64) -> Vec<usize> {
     points
 }
 
-/// Online BOCPD hazard using a simple Gaussian residual run-length posterior.
-pub fn bocpd_change_probs(values: &[f64], hazard: f64) -> Vec<f64> {
+fn gaussian_log_pdf(value: f64, mean: f64, variance: f64) -> f64 {
+    let safe_variance = variance.max(f64::EPSILON);
+    -0.5 * ((2.0 * std::f64::consts::PI * safe_variance).ln()
+        + (value - mean).powi(2) / safe_variance)
+}
+
+fn update_gaussian_mean(
+    prior_mean: f64,
+    prior_variance: f64,
+    value: f64,
+    observation_variance: f64,
+) -> (f64, f64) {
+    let precision = prior_variance.recip() + observation_variance.recip();
+    let posterior_variance = precision.recip();
+    let posterior_mean =
+        posterior_variance * (prior_mean / prior_variance + value / observation_variance);
+    (posterior_mean, posterior_variance)
+}
+
+/// Bayesian online change-point detection with an explicit run-length posterior.
+///
+/// The observation model is Gaussian with known variance and a Gaussian prior over the segment
+/// mean. A change-point transition starts a new segment from that prior; growth transitions update
+/// each existing run independently. The returned row at time `t` contains `P(r_t = r | x_1:t)`.
+pub fn bocpd_run_length_posterior(values: &[f64], hazard: f64) -> Vec<Vec<f64>> {
     if values.is_empty() {
         return Vec::new();
     }
-    let mut probs = Vec::with_capacity(values.len());
-    let mut run = 1.0;
-    let mut mean = values[0];
-    probs.push(0.0);
-    for &value in values.iter().skip(1) {
-        let residual = (value - mean).abs();
-        let growth = (1.0 - hazard) * (-residual).exp();
-        let cp = hazard / (hazard + growth);
-        probs.push(cp);
-        run = 1.0 + run * (1.0 - cp);
-        mean = (mean * (run - 1.0) + value) / run;
+    let bounded_hazard = hazard.clamp(1e-9, 1.0 - 1e-9);
+    let prior_mean = values[0];
+    let scale = (values[0].abs() * 0.1).max(1.0);
+    let observation_variance = scale * scale;
+    let prior_variance = observation_variance * 100.0;
+    let mut run_probabilities = vec![1.0f64];
+    let mut means = vec![prior_mean];
+    let mut mean_variances = vec![prior_variance];
+    let mut posterior_rows = Vec::with_capacity(values.len());
+
+    for &value in values {
+        if !value.is_finite() {
+            posterior_rows.push(vec![1.0]);
+            run_probabilities = vec![1.0];
+            means = vec![prior_mean];
+            mean_variances = vec![prior_variance];
+            continue;
+        }
+
+        let mut log_joint = Vec::with_capacity(run_probabilities.len() + 1);
+        log_joint.push(
+            bounded_hazard.ln()
+                + gaussian_log_pdf(value, prior_mean, observation_variance + prior_variance),
+        );
+        for ((probability, mean), mean_variance) in run_probabilities
+            .iter()
+            .zip(means.iter())
+            .zip(mean_variances.iter())
+        {
+            log_joint.push(
+                probability.max(f64::MIN_POSITIVE).ln()
+                    + (1.0 - bounded_hazard).ln()
+                    + gaussian_log_pdf(value, *mean, observation_variance + *mean_variance),
+            );
+        }
+        let max_log = log_joint.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let mut next_probabilities = log_joint
+            .iter()
+            .map(|joint| (*joint - max_log).exp())
+            .collect::<Vec<_>>();
+        let normalizer = next_probabilities.iter().sum::<f64>();
+        for probability in &mut next_probabilities {
+            *probability /= normalizer;
+        }
+
+        let mut next_means = Vec::with_capacity(means.len() + 1);
+        let mut next_variances = Vec::with_capacity(mean_variances.len() + 1);
+        let (change_mean, change_variance) =
+            update_gaussian_mean(prior_mean, prior_variance, value, observation_variance);
+        next_means.push(change_mean);
+        next_variances.push(change_variance);
+        for (&mean, &variance) in means.iter().zip(mean_variances.iter()) {
+            let (updated_mean, updated_variance) =
+                update_gaussian_mean(mean, variance, value, observation_variance);
+            next_means.push(updated_mean);
+            next_variances.push(updated_variance);
+        }
+
+        posterior_rows.push(next_probabilities.clone());
+        run_probabilities = next_probabilities;
+        means = next_means;
+        mean_variances = next_variances;
     }
-    probs
+    posterior_rows
+}
+
+pub fn bocpd_change_probs(values: &[f64], hazard: f64) -> Vec<f64> {
+    bocpd_run_length_posterior(values, hazard)
+        .into_iter()
+        .map(|row| row[0])
+        .collect()
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -115,6 +199,25 @@ mod tests {
         values.extend(std::iter::repeat(10.0).take(20));
         let points = detect_change_points(&values, 3.0);
         assert!(points.iter().any(|index| (15..=25).contains(index)));
+    }
+
+    #[test]
+    fn pelt_matches_the_standard_multi_change_reference() {
+        let values = [0.0, 0.1, -0.1, 8.0, 8.1, 7.9, -4.0, -4.1, -3.9];
+        assert_eq!(detect_change_points(&values, 2.0), vec![3, 6]);
+    }
+
+    #[test]
+    fn bocpd_returns_normalized_run_length_rows_and_resets_on_a_shift() {
+        let mut values = vec![0.0; 20];
+        values.extend(std::iter::repeat(10.0).take(10));
+        let posterior = bocpd_run_length_posterior(&values, 0.02);
+        assert_eq!(posterior.len(), values.len());
+        for row in &posterior {
+            assert!((row.iter().sum::<f64>() - 1.0).abs() < 1e-9);
+        }
+        assert!(posterior[20][0] > 0.5);
+        assert!(bocpd_change_probs(&values, 0.02)[20] > 0.5);
     }
 
     #[test]
