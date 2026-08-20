@@ -1,5 +1,29 @@
 # Final Acceptance Checklist
 
+## 2026-08-21 当前实现候选验收
+
+- [x] 实现 SHA `a0262f08adec9b9017e859b361b539204ac09999`：P0 算法/Unknown/fail-closed 语义与 durable worker 基础完成
+- [x] 四个普通用户一级入口：工作台/查询、案件、监控与告警、数据源与系统；Developer 能力独立折叠
+- [x] Tauri production Web + 打包 API sidecar；动态 loopback、每会话 token、AppData 存储、单实例和受限 capability
+- [x] 本机 NSIS build、隔离安装、启动、四入口原生窗口检查和卸载通过
+- [x] Chromium desktop/mobile `42/42`；coverage `1015 passed / 40 skipped`，分支 `75.02%`
+- [x] Rust workspace fmt/clippy/tests、property `57/57`、forensic golden `30/30`、fault `11/11`、replay 与连续两轮 formula differential 通过
+- [x] 当前 SHA 公开 BSC 双 Operator 捕获：`8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`
+- [x] format、lint、typecheck、build、license、CycloneDX SBOM、生产依赖审计（0 vulnerabilities）通过
+- [ ] 外部 PostgreSQL/ClickHouse/MinIO 当前 SHA 集成：40 tests skipped，不得计 PASS
+- [ ] 任意 BSC Token creation→finalized 完整 envelope 与 provider-free bundle replay
+- [ ] 50 Token 人工复核、正常协议负对照、概率校准和独立签字
+- [ ] pinned archive fork V3 exact 与多 venue 共享状态全局 exact
+- [ ] 固定硬件性能：`NOT_RUN`
+- [ ] 24h monitor soak：`NOT_RUN`
+- [ ] 完整 SHA-bound 黄金视觉状态集
+- [ ] Authenticode 签名、独立清洁机、Provider Setup/vault、升级/回滚
+- [ ] G14 Final Acceptance：`BLOCKED`
+
+结论：本地工程候选成立；Combined PASS、Production Acceptance、Release 和合并条件均不成立。
+
+最终本机 NSIS SHA-256：`CE8AB8DC8AB91D6F18443C6889CEDF0EA9D42D5F75793F7B02AC5BD1C02CC03C`；Authenticode：`NotSigned`。
+
 ## 2026-08-19 监管取证升级门禁
 
 - [x] G01 架构边界：App.tsx / app.ts / schemas index 行数门禁与手写 web API 合同拆除
