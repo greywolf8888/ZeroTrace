@@ -15,7 +15,11 @@ function readInput(): unknown {
 }
 
 const job = queue.enqueue({ type: 'MARKET_WIDE_EXIT', idempotencyKey: 'stdin' });
-queue.claim('simulation-worker');
+const claimed = queue.claim('simulation-worker');
+if (claimed === undefined || claimed.fencingToken === undefined) {
+  throw new Error('simulation-worker failed to acquire a fenced job lease.');
+}
+const guard = { workerId: 'simulation-worker', fencingToken: claimed.fencingToken };
 try {
   const input = readInput() as Parameters<typeof simulateMarketWideExit>[0] & {
     isolatedQuotes?: string[];
@@ -24,12 +28,12 @@ try {
     isolatedRvSumIsIllegal(input.isolatedQuotes.map((item) => BigInt(item)));
   }
   const scenario = simulateMarketWideExit(input);
-  queue.succeed(job.id, scenario.id);
+  queue.succeed(job.id, scenario.id, guard);
   process.stdout.write(
     `${JSON.stringify(MarketWideExitScenarioSchema.parse(scenario), null, 2)}\n`,
   );
 } catch (error) {
-  queue.fail(job.id, error instanceof Error ? error.message : 'simulation failed');
+  queue.fail(job.id, error instanceof Error ? error.message : 'simulation failed', guard);
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
 }
