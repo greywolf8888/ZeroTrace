@@ -9,6 +9,7 @@ import {
   EntityInvestigationGraphReportSchema,
   knownValue,
   unknownValue,
+  type EntityInvestigationGraphReport,
   type EntityRelationshipTimelineObservation,
 } from '@zerotrace/schemas';
 
@@ -240,8 +241,9 @@ describe('PostgreSQL entity investigation graph writes', () => {
     await expect(repository.get(stored.id)).resolves.toMatchObject({
       resultHash: stored.resultHash,
     });
+    const subjectId = stored.subjectIds[0] ?? 'wallet-a';
     await expect(
-      repository.latest({ ledger: 'EVM', chainId: 'eip155:56', subjectId: stored.subjectIds[0] }),
+      repository.latest({ ledger: 'EVM', chainId: 'eip155:56', subjectId }),
     ).resolves.toMatchObject({ id: stored.id });
     await repository.close();
   });

@@ -80,7 +80,10 @@ describe('fail-closed durable routes', { timeout: 60_000 }, () => {
     const app = await createApp({ config, runtime: createRuntime(config), logger: false });
     apps.push(app);
 
-    const requests: Array<{ method: 'GET' | 'POST'; url: string; payload?: unknown }> = [
+    const requests: Array<
+      | { method: 'GET'; url: string }
+      | { method: 'POST'; url: string; payload: Record<string, unknown> }
+    > = [
       { method: 'POST', url: '/api/v1/forensics/cases', payload: { campaignId: CAMPAIGN } },
       { method: 'GET', url: `/api/v1/forensics/cases/fcb_${CAMPAIGN}` },
       { method: 'GET', url: `/api/v1/forensics/cases/fcb_${CAMPAIGN}/export` },
@@ -91,8 +94,8 @@ describe('fail-closed durable routes', { timeout: 60_000 }, () => {
       { method: 'GET', url: `/api/v1/control/campaigns/${CAMPAIGN}/wallets` },
       { method: 'GET', url: `/api/v1/control/campaigns/${CAMPAIGN}/graph?layer=funding` },
       { method: 'GET', url: `/api/v1/control/evidence/cei_${HEX24}` },
-      { method: 'POST', url: `/api/v1/control/campaigns/${CAMPAIGN}/replay` },
-      { method: 'POST', url: `/api/v1/control/campaigns/${CAMPAIGN}/export` },
+      { method: 'POST', url: `/api/v1/control/campaigns/${CAMPAIGN}/replay`, payload: {} },
+      { method: 'POST', url: `/api/v1/control/campaigns/${CAMPAIGN}/export`, payload: {} },
       { method: 'GET', url: `/api/v1/control/campaigns/${CAMPAIGN}/export` },
       {
         method: 'GET',
@@ -222,11 +225,10 @@ describe('fail-closed durable routes', { timeout: 60_000 }, () => {
     ];
 
     for (const request of requests) {
-      const response = await app.inject({
-        method: request.method,
-        url: request.url,
-        ...(request.payload === undefined ? {} : { payload: request.payload }),
-      });
+      const response =
+        request.method === 'GET'
+          ? await app.inject({ method: 'GET', url: request.url })
+          : await app.inject({ method: 'POST', url: request.url, payload: request.payload });
       expect(response.statusCode, `${request.method} ${request.url}`).toBe(503);
     }
 

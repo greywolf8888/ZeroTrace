@@ -80,9 +80,11 @@ describe('storage quota HTTP', () => {
     dirs.push(dir);
     const config = baseConfig({ storageRoot: dir });
     const runtime = createRuntime(config);
+    const runtimeWithoutPlane = { ...runtime };
+    delete runtimeWithoutPlane.storagePlane;
     const app = await createApp({
       config,
-      runtime: { ...runtime, storagePlane: undefined },
+      runtime: runtimeWithoutPlane,
       logger: false,
     });
     apps.push(app);

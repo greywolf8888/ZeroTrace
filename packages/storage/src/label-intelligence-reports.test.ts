@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createEvidence } from '@zerotrace/evidence';
-import { buildLabelIntelligenceCore } from '@zerotrace/label-engine';
+import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import {
   LabelIntelligenceReportSchema,
+  knownValue,
+  unknownValue,
   type LabelIntelligenceReport,
   type LabelIntelligenceSubject,
   type LabelObservation,
@@ -155,14 +156,14 @@ function storedLabelReport() {
     normalizedIdentifier: subject.normalizedIdentifier,
     source: source.source,
     sourceClass: 'CURATED',
-    label: 'Example Exchange',
-    category: 'CEX',
-    actorCandidate: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+    label: 'Example Protocol',
+    category: 'identity',
+    actorCandidate: unknownValue('INSUFFICIENT_DATA'),
     sourceConfidence: 0.9,
     evidenceIds: [source.id],
     observedAt: '2026-08-11T12:00:00.000Z',
-    validFrom: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
-    validTo: { state: 'unknown', reason: 'INSUFFICIENT_DATA' },
+    validFrom: unknownValue('INSUFFICIENT_DATA'),
+    validTo: unknownValue('INSUFFICIENT_DATA'),
     deterministic: false,
     licensePolicy: 'official registry attribution only',
     rawPayloadHash: '1'.repeat(64),
@@ -175,7 +176,73 @@ function storedLabelReport() {
     asOf: '2026-08-12T00:00:00.000Z',
     staleAfterSeconds: 86_400,
   };
-  const result = buildLabelIntelligenceCore({ subject, observations: [observation], request });
+  const observationSetHash = hashPayload({
+    schema: 'zerotrace-label-observation-set-v1',
+    subject,
+    request,
+    observations: [observation],
+  });
+  const snapshot = {
+    id: `lss_${hashPayload({ schema: 'zerotrace-label-snapshot-v1', observationSetHash }).slice(0, 24)}`,
+    asOf: request.asOf,
+    observationIds: [observation.id],
+    observationSetHash,
+  };
+  const result = {
+    subject,
+    request,
+    snapshot,
+    observations: [
+      {
+        observation,
+        temporalStatus: 'ACTIVE' as const,
+        sourcePriority: 4,
+        serviceHubCandidate: false,
+        riskLabel: false,
+        inferenceLabel: false,
+      },
+    ],
+    rankedObservationIds: [observation.id],
+    conflicts: [],
+    serviceHubSuppression: {
+      applied: false,
+      evidenceIds: [],
+      reason: unknownValue(
+        'NOT_QUERIED',
+        'The requested observation set contains no current Service Hub observation; absence is not proof of non-service status.',
+      ),
+    },
+    summary: {
+      observationCount: 1,
+      activeCount: 1,
+      staleCount: 0,
+      expiredCount: 0,
+      futureCount: 0,
+      deterministicCount: 0,
+      inferenceCount: 0,
+      conflictCount: 0,
+      sourceClassCount: 1,
+    },
+    metadata: {
+      modelVersion: 'label-intelligence-v0.1.0' as const,
+      freshness: knownValue(observation.observedAt),
+      conclusionConfidence: knownValue(0.9),
+      requestedObservationSetCoverage: knownValue(1 as const),
+      globalSourceCoverage: unknownValue(
+        'NOT_QUERIED',
+        'This report covers the complete requested durable observation set, not every external Label source.',
+      ),
+      historyCoverage: unknownValue(
+        'NOT_QUERIED',
+        'Append-only observations do not prove complete historical label coverage.',
+      ),
+      sourceSet: [observation.source],
+      evidenceIds: [source.id],
+    },
+    automaticEntityMergeAllowed: false as const,
+    riskLabelOwnershipInferenceAllowed: false as const,
+    crossChainSameLabelMergeAllowed: false as const,
+  };
   const terminal = createEvidence({
     ledger: result.subject.ledger,
     chainId: result.subject.chainId,
