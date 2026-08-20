@@ -66,12 +66,14 @@ export const HiddenAffiliateBoundsSchema = z.object({
     upper: z.string(),
     unknown: z.string(),
   }),
-  ofMarketWideExitU: z.object({
-    lower: z.string(),
-    scenario: z.string(),
-    upper: z.string(),
-    unknown: z.string(),
-  }),
+  ofMarketWideExitU: knowledgeValueSchema(
+    z.object({
+      lower: z.string(),
+      scenario: z.string(),
+      upper: z.string(),
+      unknown: z.string(),
+    }),
+  ),
 });
 export type HiddenAffiliateBounds = z.infer<typeof HiddenAffiliateBoundsSchema>;
 
