@@ -21,6 +21,11 @@ export interface DurableJob {
   fencingToken?: number;
 }
 
+export interface JobLeaseGuard {
+  workerId: string;
+  fencingToken: number;
+}
+
 export interface JobQueue {
   enqueue(input: {
     type: string;
@@ -33,9 +38,21 @@ export interface JobQueue {
     now?: Date,
     leaseMs?: number,
   ): DurableJob | undefined | Promise<DurableJob | undefined>;
-  succeed(id: string, resultRef: string): DurableJob | Promise<DurableJob>;
-  fail(id: string, error: string): DurableJob | Promise<DurableJob>;
-  checkpoint(id: string, checkpoint: string): DurableJob | Promise<DurableJob>;
+  heartbeat(
+    id: string,
+    guard: JobLeaseGuard,
+    now?: Date,
+    leaseMs?: number,
+  ): DurableJob | Promise<DurableJob>;
+  succeed(id: string, resultRef: string, guard?: JobLeaseGuard): DurableJob | Promise<DurableJob>;
+  fail(id: string, error: string, guard?: JobLeaseGuard): DurableJob | Promise<DurableJob>;
+  checkpoint(
+    id: string,
+    checkpoint: string,
+    guard?: JobLeaseGuard,
+  ): DurableJob | Promise<DurableJob>;
+  cancel(id: string): DurableJob | Promise<DurableJob>;
+  retry(id: string): DurableJob | Promise<DurableJob>;
   get(id: string): DurableJob | undefined | Promise<DurableJob | undefined>;
 }
 
@@ -83,23 +100,58 @@ export class InMemoryJobQueue implements JobQueue {
     return undefined;
   }
 
-  succeed(id: string, resultRef: string): DurableJob {
-    const job = this.require(id);
+  heartbeat(id: string, guard: JobLeaseGuard, now = new Date(), leaseMs = 30_000): DurableJob {
+    const job = this.requireGuarded(id, guard);
+    job.leaseExpiresAt = new Date(now.getTime() + leaseMs).toISOString();
+    return job;
+  }
+
+  succeed(id: string, resultRef: string, guard?: JobLeaseGuard): DurableJob {
+    const job = guard === undefined ? this.require(id) : this.requireGuarded(id, guard);
     job.status = 'SUCCEEDED';
     job.resultRef = resultRef;
+    delete job.leaseOwner;
+    delete job.leaseExpiresAt;
     return job;
   }
 
-  fail(id: string, error: string): DurableJob {
-    const job = this.require(id);
+  fail(id: string, error: string, guard?: JobLeaseGuard): DurableJob {
+    const job = guard === undefined ? this.require(id) : this.requireGuarded(id, guard);
     job.lastError = error;
     job.status = job.attempt >= job.maxAttempts ? 'DEAD_LETTER' : 'PENDING';
+    delete job.leaseOwner;
+    delete job.leaseExpiresAt;
     return job;
   }
 
-  checkpoint(id: string, checkpoint: string): DurableJob {
-    const job = this.require(id);
+  checkpoint(id: string, checkpoint: string, guard?: JobLeaseGuard): DurableJob {
+    const job = guard === undefined ? this.require(id) : this.requireGuarded(id, guard);
     job.checkpoint = checkpoint;
+    return job;
+  }
+
+  cancel(id: string): DurableJob {
+    const job = this.require(id);
+    if (!['PENDING', 'RUNNING'].includes(job.status)) {
+      throw new Error(`Job ${id} cannot be cancelled from ${job.status}.`);
+    }
+    job.status = 'CANCELLED';
+    delete job.leaseOwner;
+    delete job.leaseExpiresAt;
+    return job;
+  }
+
+  retry(id: string): DurableJob {
+    const job = this.require(id);
+    if (!['FAILED', 'CANCELLED', 'DEAD_LETTER'].includes(job.status)) {
+      throw new Error(`Job ${id} cannot be retried from ${job.status}.`);
+    }
+    job.status = 'PENDING';
+    job.attempt = 0;
+    delete job.lastError;
+    delete job.resultRef;
+    delete job.leaseOwner;
+    delete job.leaseExpiresAt;
     return job;
   }
 
@@ -110,6 +162,18 @@ export class InMemoryJobQueue implements JobQueue {
   private require(id: string): DurableJob {
     const job = this.#jobs.get(id);
     if (job === undefined) throw new Error(`Job ${id} was not found.`);
+    return job;
+  }
+
+  private requireGuarded(id: string, guard: JobLeaseGuard): DurableJob {
+    const job = this.require(id);
+    if (
+      job.status !== 'RUNNING' ||
+      job.leaseOwner !== guard.workerId ||
+      job.fencingToken !== guard.fencingToken
+    ) {
+      throw new Error(`Job ${id} lease is stale.`);
+    }
     return job;
   }
 }

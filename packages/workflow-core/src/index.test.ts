@@ -27,6 +27,20 @@ describe('workflow-core', () => {
     expect(firstToken).toBe(1);
     expect(second?.fencingToken).toBe(2);
     expect(second?.fencingToken).toBeGreaterThan(firstToken ?? 0);
+    expect(() =>
+      queue.checkpoint(first!.id, 'stale', {
+        workerId: 'worker-old',
+        fencingToken: firstToken!,
+      }),
+    ).toThrow('lease is stale');
+    expect(
+      queue.heartbeat(
+        second!.id,
+        { workerId: 'worker-new', fencingToken: second!.fencingToken! },
+        new Date('2026-08-19T00:00:00.000Z'),
+        60_000,
+      ).leaseExpiresAt,
+    ).toBe('2026-08-19T00:01:00.000Z');
   });
 
   it('stores payload, expires stale leases, and fail-closes missing ids', () => {
@@ -53,5 +67,17 @@ describe('workflow-core', () => {
     expect(queue.get(live.id)?.status).toBe('SUCCEEDED');
     expect(claimed?.id).toBe(live.id);
     expect(() => queue.succeed('missing', 'x')).toThrow('was not found');
+  });
+
+  it('supports audited cancellation and explicit retry without reviving successful work', () => {
+    const queue = new InMemoryJobQueue();
+    const job = queue.enqueue({ type: 'token', idempotencyKey: 'cancel-retry' });
+    expect(queue.cancel(job.id).status).toBe('CANCELLED');
+    expect(queue.retry(job.id)).toMatchObject({ status: 'PENDING', attempt: 0 });
+    const running = queue.claim('worker');
+    const guard = { workerId: 'worker', fencingToken: running!.fencingToken! };
+    expect(queue.succeed(job.id, 'done', guard).status).toBe('SUCCEEDED');
+    expect(() => queue.cancel(job.id)).toThrow('cannot be cancelled');
+    expect(() => queue.retry(job.id)).toThrow('cannot be retried');
   });
 });

@@ -27,6 +27,16 @@ function errorBody(code: string, message: string) {
   return { error: { code, message, retryable: false } };
 }
 
+function workstationStatus(job: { status: string; resultRef?: string }) {
+  if (job.status === 'PENDING') return 'QUEUED';
+  if (job.status === 'RUNNING') return 'RUNNING';
+  if (job.status === 'CANCELLED') return 'CANCELLED';
+  if (job.status === 'FAILED' || job.status === 'DEAD_LETTER') return 'FAILED';
+  if (job.status === 'SUCCEEDED' && job.resultRef === 'COMPLETE') return 'COMPLETE';
+  if (job.status === 'SUCCEEDED') return 'PARTIAL';
+  return 'FAILED';
+}
+
 export async function registerTokenAnalyze(
   app: FastifyInstance,
   options: TokenAnalyzePluginOptions,
@@ -69,6 +79,13 @@ export async function registerTokenAnalyze(
         idempotencyKey: `${parsed.ledger}:${parsed.chainId}:${parsed.token}:${parsed.snapshotPolicy}:${parsed.analysisMode}`,
         payload: JSON.stringify(parsed),
       });
+      if (admissible) {
+        return reply.code(job.status === 'PENDING' ? 202 : 200).send({
+          status: workstationStatus(job),
+          job,
+          limitations: ['正式取证请求已进入持久任务队列；阶段结果落盘后可通过任务接口查询。'],
+        });
+      }
       const adapter =
         parsed.ledger === 'EVM' && parsed.chainId === 'eip155:56'
           ? options.runtime.evmAdapters.get(56)
@@ -168,4 +185,52 @@ export async function registerTokenAnalyze(
     }
     return job;
   });
+
+  app.post(
+    '/api/v2/jobs/:jobId/cancel',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = request.params as { jobId: string };
+      try {
+        return await researchQueue.cancel(params.jobId);
+      } catch (error) {
+        const existing = await researchQueue.get(params.jobId);
+        if (existing === undefined) {
+          return reply.code(404).send(errorBody('NOT_FOUND', '任务不存在。'));
+        }
+        return reply
+          .code(409)
+          .send(
+            errorBody(
+              'INVALID_JOB_TRANSITION',
+              error instanceof Error ? error.message : '任务当前状态不能取消。',
+            ),
+          );
+      }
+    },
+  );
+
+  app.post(
+    '/api/v2/jobs/:jobId/retry',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const params = request.params as { jobId: string };
+      try {
+        return await researchQueue.retry(params.jobId);
+      } catch (error) {
+        const existing = await researchQueue.get(params.jobId);
+        if (existing === undefined) {
+          return reply.code(404).send(errorBody('NOT_FOUND', '任务不存在。'));
+        }
+        return reply
+          .code(409)
+          .send(
+            errorBody(
+              'INVALID_JOB_TRANSITION',
+              error instanceof Error ? error.message : '任务当前状态不能重试。',
+            ),
+          );
+      }
+    },
+  );
 }

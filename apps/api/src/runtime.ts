@@ -33,7 +33,6 @@ import type {
   PostgresControlCampaignReportRepository,
   PostgresForensicCampaignAlertRepository,
   PostgresForensicReportRepository,
-  PostgresJobQueue,
   PostgresEvmControlSurfaceRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaDealerCampaignReportRepository,
@@ -53,6 +52,7 @@ import type {
   PostgresPensionCandidateReportRepository,
   PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
+import type { JobQueue } from '@zerotrace/workflow-core';
 import {
   DataQualityStorageError,
   PostgresDataQualityRepository,
@@ -108,7 +108,7 @@ export interface AppRuntime {
   entityInvestigationGraphTimelines?: PostgresEntityInvestigationGraphTimelineRepository;
   controlCampaignReports?: PostgresControlCampaignReportRepository;
   forensicReports?: PostgresForensicReportRepository;
-  jobQueue?: PostgresJobQueue;
+  jobQueue?: JobQueue;
   forensicCampaignAlerts?: PostgresForensicCampaignAlertRepository;
   fundingSettlementReports?: PostgresFundingSettlementReportRepository;
   intelligenceSearch?: PostgresIntelligenceSearchRepository;

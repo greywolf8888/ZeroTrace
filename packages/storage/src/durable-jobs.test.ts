@@ -65,8 +65,18 @@ function memoryPool(seed: JobRow[] = []) {
       if (text.includes("status = 'SUCCEEDED'")) {
         const job = jobs.find((item) => item.id === values[0]);
         if (job === undefined) return { rows: [] };
+        if (
+          values.length > 2 &&
+          (job.status !== 'RUNNING' ||
+            job.lease_owner !== values[2] ||
+            job.fencing_token !== values[3])
+        ) {
+          return { rows: [] };
+        }
         job.status = 'SUCCEEDED';
         job.result_ref = values[1];
+        job.lease_owner = null;
+        job.lease_expires_at = null;
         return { rows: [job] };
       }
       if (text.includes('last_error = $2')) {
@@ -79,7 +89,52 @@ function memoryPool(seed: JobRow[] = []) {
       if (text.includes('SET checkpoint = $2')) {
         const job = jobs.find((item) => item.id === values[0]);
         if (job === undefined) return { rows: [] };
+        if (
+          values.length > 2 &&
+          (job.status !== 'RUNNING' ||
+            job.lease_owner !== values[2] ||
+            job.fencing_token !== values[3])
+        ) {
+          return { rows: [] };
+        }
         job.checkpoint = values[1];
+        return { rows: [job] };
+      }
+      if (text.includes('SET lease_expires_at = $4')) {
+        const job = jobs.find((item) => item.id === values[0]);
+        if (
+          job === undefined ||
+          job.status !== 'RUNNING' ||
+          job.lease_owner !== values[1] ||
+          job.fencing_token !== values[4]
+        ) {
+          return { rows: [] };
+        }
+        job.lease_expires_at = values[3];
+        return { rows: [job] };
+      }
+      if (text.includes("SET status = 'CANCELLED'")) {
+        const job = jobs.find((item) => item.id === values[0]);
+        if (job === undefined || !['PENDING', 'RUNNING'].includes(String(job.status))) {
+          return { rows: [] };
+        }
+        job.status = 'CANCELLED';
+        job.lease_owner = null;
+        job.lease_expires_at = null;
+        return { rows: [job] };
+      }
+      if (text.includes("SET status = 'PENDING', attempt = 0")) {
+        const job = jobs.find((item) => item.id === values[0]);
+        if (
+          job === undefined ||
+          !['FAILED', 'CANCELLED', 'DEAD_LETTER'].includes(String(job.status))
+        ) {
+          return { rows: [] };
+        }
+        job.status = 'PENDING';
+        job.attempt = 0;
+        job.last_error = null;
+        job.result_ref = null;
         return { rows: [job] };
       }
       if (text.includes('SELECT * FROM durable_jobs WHERE id = $1')) {
@@ -217,6 +272,26 @@ describe('PostgresJobQueue', () => {
     const queue = PostgresJobQueue.fromPool(pool);
     await expect(queue.claim('worker-4')).rejects.toThrow('lease update failed');
     expect(clientQuery).toHaveBeenCalledWith('ROLLBACK');
+  });
+
+  it('heartbeats with fencing and supports cancel/retry transitions', async () => {
+    const { pool } = memoryPool();
+    const queue = PostgresJobQueue.fromPool(pool);
+    const job = await queue.enqueue({ type: 'TOKEN_MARKET_STRUCTURE', idempotencyKey: 'guarded' });
+    const claimed = await queue.claim('worker-guarded');
+    const guard = {
+      workerId: 'worker-guarded',
+      fencingToken: claimed!.fencingToken!,
+    };
+    await expect(
+      queue.heartbeat(job.id, guard, new Date('2026-08-19T00:00:00.000Z'), 60_000),
+    ).resolves.toMatchObject({ leaseExpiresAt: '2026-08-19T00:01:00.000Z' });
+    await expect(
+      queue.checkpoint(job.id, 'stale', { workerId: 'old', fencingToken: 0 }),
+    ).rejects.toThrow('lease is stale');
+    await expect(queue.cancel(job.id)).resolves.toMatchObject({ status: 'CANCELLED' });
+    await expect(queue.retry(job.id)).resolves.toMatchObject({ status: 'PENDING', attempt: 0 });
+    await expect(queue.retry(job.id)).rejects.toThrow('cannot be retried');
   });
 
   it('can construct a real pg pool without querying it', async () => {

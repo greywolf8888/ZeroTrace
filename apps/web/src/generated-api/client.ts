@@ -2509,6 +2509,16 @@ export interface LaunchpadRegistryEntry {
   integrationBoundary: string;
 }
 
+export interface DurableJobResponse {
+  id: string;
+  status: string;
+  attempt: number;
+  maxAttempts: number;
+  resultRef?: string;
+  lastError?: string;
+  checkpoint?: string;
+}
+
 export interface TokenAnalyzeResponse {
   status:
     | 'IDLE'
@@ -2522,7 +2532,7 @@ export interface TokenAnalyzeResponse {
     | 'CANCELLED'
     | 'OFFLINE'
     | 'UNSUPPORTED';
-  job?: { id: string; status: string; resultRef?: string; lastError?: string };
+  job?: DurableJobResponse;
   investigationId?: string;
   limitations: string[];
   reason?: string;
@@ -3182,14 +3192,26 @@ export const api = {
     ledger: string,
     chainId: string,
     token: string,
-    body: { snapshotPolicy: 'FINALIZED'; analysisMode: 'FULL_LIFETIME' | 'BOUNDED_WINDOW' },
+    body: {
+      snapshotPolicy: 'FINALIZED';
+      analysisMode: 'FULL_LIFETIME' | 'BOUNDED_WINDOW';
+      forensicMode?: 'RESEARCH' | 'ADMISSIBLE' | 'FORENSIC';
+    },
   ) =>
     requestJson<TokenAnalyzeResponse>(
       `/api/v2/tokens/${encodeURIComponent(ledger)}/${encodeURIComponent(chainId)}/${encodeURIComponent(token)}/analyze`,
       { method: 'POST', body: JSON.stringify(body) },
     ),
   forensicJob: (jobId: string) =>
-    requestJson<TokenAnalyzeResponse['job']>(`/api/v2/jobs/${encodeURIComponent(jobId)}`),
+    requestJson<DurableJobResponse>(`/api/v2/jobs/${encodeURIComponent(jobId)}`),
+  cancelForensicJob: (jobId: string) =>
+    requestJson<DurableJobResponse>(`/api/v2/jobs/${encodeURIComponent(jobId)}/cancel`, {
+      method: 'POST',
+    }),
+  retryForensicJob: (jobId: string) =>
+    requestJson<DurableJobResponse>(`/api/v2/jobs/${encodeURIComponent(jobId)}/retry`, {
+      method: 'POST',
+    }),
   exitRace: (payload: unknown) =>
     requestJson<Record<string, unknown>>('/api/v1/scenarios/exit-race', {
       method: 'POST',
