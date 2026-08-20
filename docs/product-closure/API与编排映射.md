@@ -1,34 +1,33 @@
 # API 与编排映射
 
-## 当前 Token 主路径
+## 当前正式 Token 主路径
 
 ```text
-POST analyze
-  -> 校验 TokenAnalyzeRequest
-  -> 正式模式检查 PostgresJobQueue
-  -> enqueue TOKEN_MARKET_STRUCTURE
-  -> HTTP handler 内 inspectFlapToken
-  -> materializeTokenMarketStructure
-  -> 保存 ReportEnvelope
-  -> queue.succeed
-  -> 同步返回报告
-```
-
-问题：入队记录存在，但 provider 调用和物化仍在 HTTP handler；`processOneForensicJob` 没有生产循环，故“durable worker 是唯一执行主链”尚不成立。
-
-## 目标主路径
-
-```text
-POST analyze -> 幂等创建/重开案件 -> durable enqueue -> 202 QUEUED
-worker claim -> lease/checkpoint -> 查询 Coverage -> 只补缺口
--> 按 Stage 落盘原始资料/事实/报告 -> READY/PARTIAL/BLOCKED
-GET job/case -> 返回持久状态和 partial result refs
+POST analyze（ADMISSIBLE/FORENSIC）
+  -> 校验请求与持久设施
+  -> durable enqueue
+  -> 202 QUEUED + jobId
+worker claim -> fencing token -> heartbeat/lease
+  -> 只读捕获与 checkpoint
+  -> PARTIAL/READY/FAILED 状态持久化
+GET job -> 轮询状态与已落盘 partial refs
 cancel/retry -> 审计化状态转换
 ```
 
-## 已确认边界
+已修复：正式 handler 不再同步冒充持久工作流；`processOneForensicJob` 有独立 worker 入口；租约 heartbeat、过期恢复、fencing、cancel、retry 与 stale-result 保留已有测试。生产硬编码 creation transaction 映射已删除。
 
-- 正式模式没有 durable queue 时返回 `JOB_QUEUE_UNAVAILABLE`，不得退回 Map。
-- 正式报告没有 PostgreSQL 时返回 `FORENSIC_STORE_UNAVAILABLE`。
-- research 模式允许本机同步降级，但不能作为生产取证证据。
-- `PostgresJobQueue` 已有幂等键、claim、lease、fencing token、checkpoint、重试上限和 dead-letter 基础；缺 heartbeat、cancel/retry 转换与阶段级结构化持久化。
+仍未闭合：worker 尚未为任意 Token 生成完整统一 `ReportEnvelope`；完整 Stage lineage、只补缺区间和外部 PostgreSQL 重启恢复没有当前 SHA 的端到端证据。因此 Stage 3 仍为 `PARTIAL`。
+
+## 桌面主路径
+
+```text
+Tauri 主窗口
+  -> 动态选择 127.0.0.1 端口
+  -> 每会话随机 desktop token
+  -> 启动打包的 production API sidecar
+  -> 注入只读 API origin/token
+  -> 加载内嵌 production Web
+  -> 退出时终止 sidecar
+```
+
+API 仅接受 loopback 且使用等长常量时间 token 比较；生产 Swagger 关闭。Tauri capability 只含 `core:default`，不授予网页任意 shell 能力。
