@@ -73,7 +73,9 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
       ],
     },
   });
-  await app.register(swaggerUi, { routePrefix: '/docs' });
+  if (options.config.swaggerUi !== false) {
+    await app.register(swaggerUi, { routePrefix: '/docs' });
+  }
 
   const metricsRegistry = new Registry();
   collectDefaultMetrics({ register: metricsRegistry, prefix: 'zerotrace_' });

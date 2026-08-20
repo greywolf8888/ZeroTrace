@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 
-const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '');
+const API_BASE = (
+  window.__ZEROTRACE_API_URL__ ??
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  ''
+).replace(/\/$/, '');
 
 type JsonRecord = Record<string, unknown>;
 
@@ -15,9 +19,14 @@ export function asString(value: unknown, fallback = '未知'): string {
 }
 
 export async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
+  const desktopToken = window.__ZEROTRACE_DESKTOP_TOKEN__;
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
+    headers: {
+      'content-type': 'application/json',
+      ...(desktopToken === undefined ? {} : { 'x-zerotrace-desktop-token': desktopToken }),
+      ...(init?.headers ?? {}),
+    },
   });
   const payload: unknown = await response.json().catch(() => undefined);
   if (!response.ok) {

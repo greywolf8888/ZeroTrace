@@ -85,4 +85,35 @@ describe('platform security', { timeout: 60_000 }, () => {
     const live = await app.inject({ method: 'GET', url: '/health/live' });
     expect(live.statusCode).toBe(503);
   });
+
+  it('accepts only the matching loopback desktop session token', async () => {
+    const token = '0123456789abcdef0123456789abcdef';
+    const config = baseConfig({
+      environment: 'production',
+      desktopAuthToken: {
+        reveal: () => token,
+        toJSON: () => '[REDACTED]' as const,
+      },
+    });
+    const app = await createApp({ config, runtime: createRuntime(config), logger: false });
+    apps.push(app);
+
+    const missing = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(missing.statusCode).toBe(401);
+    expect(missing.json().error.code).toBe('DESKTOP_AUTH_REQUIRED');
+
+    const wrong = await app.inject({
+      method: 'GET',
+      url: '/api/v1/capabilities',
+      headers: { 'x-zerotrace-desktop-token': 'fedcba9876543210fedcba9876543210' },
+    });
+    expect(wrong.statusCode).toBe(401);
+
+    const accepted = await app.inject({
+      method: 'GET',
+      url: '/api/v1/capabilities',
+      headers: { 'x-zerotrace-desktop-token': token },
+    });
+    expect(accepted.statusCode).toBe(200);
+  });
 });

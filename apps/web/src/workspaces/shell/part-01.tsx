@@ -12,6 +12,10 @@ import type {
 } from './chain-views.js';
 
 export type View =
+  | 'workbench'
+  | 'cases'
+  | 'monitoring'
+  | 'system'
   | 'analyze'
   | 'overview'
   | 'search'
@@ -29,6 +33,13 @@ export type View =
 export type Theme = 'dark' | 'light';
 
 export const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
+  { id: 'workbench', label: '工作台 / 查询', marker: '查询' },
+  { id: 'cases', label: '案件', marker: '案件' },
+  { id: 'monitoring', label: '监控与告警', marker: '监控' },
+  { id: 'system', label: '数据源与系统', marker: '系统' },
+];
+
+export const DEVELOPER_NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
   { id: 'analyze', label: 'Token 盘面分析', marker: '分析' },
   { id: 'search', label: '案件与调查', marker: '调查' },
   { id: 'overview', label: '盘面总览', marker: '总览' },
@@ -42,7 +53,7 @@ export const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
   { id: 'evidence', label: '证据账本', marker: '证据' },
   { id: 'analyst', label: '分析员工作台', marker: '认定' },
   { id: 'health', label: '数据健康', marker: '健康' },
-  { id: 'control', label: '系统管理', marker: '系统' },
+  { id: 'control', label: '系统控制（开发）', marker: '系统' },
 ];
 
 export const FUTURE_DOMAINS: string[] = [];

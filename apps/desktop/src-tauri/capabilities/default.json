@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "ZeroTrace 主窗口只读能力；禁止任意 shell 命令。",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

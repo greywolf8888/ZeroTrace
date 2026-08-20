@@ -11,11 +11,11 @@ import {
   type Theme,
   type View,
   NAVIGATION,
+  DEVELOPER_NAVIGATION,
   Icon,
   FUTURE_DOMAINS,
   StatusPill,
   titleCase,
-  MetricTile,
   formatTime,
   shortId,
 } from './part-01.js';
@@ -87,6 +87,14 @@ export function Header({
 }
 
 export function Sidebar({ view, setView }: { view: View; setView: (view: View) => void }) {
+  const primaryView: View =
+    view === 'workbench' || view === 'overview'
+      ? 'workbench'
+      : view === 'monitoring' || view === 'campaigns'
+        ? 'monitoring'
+        : view === 'system' || view === 'health' || view === 'control'
+          ? 'system'
+          : 'cases';
   return (
     <aside className="sidebar">
       <nav aria-label="主导航">
@@ -95,14 +103,28 @@ export function Sidebar({ view, setView }: { view: View; setView: (view: View) =
           <button
             key={item.id}
             type="button"
-            className={'nav-item ' + (view === item.id ? 'nav-active' : '')}
+            className={'nav-item ' + (primaryView === item.id ? 'nav-active' : '')}
             onClick={() => setView(item.id)}
           >
             <Icon>{item.marker}</Icon>
             <span>{item.label}</span>
           </button>
         ))}
-        <div className="nav-caption nav-caption-spaced">系统</div>
+        <details className="developer-navigation" open>
+          <summary>开发者能力</summary>
+          {DEVELOPER_NAVIGATION.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={'nav-item nav-item-developer ' + (view === item.id ? 'nav-active' : '')}
+              onClick={() => setView(item.id)}
+            >
+              <Icon>{item.marker}</Icon>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </details>
+        <div className="nav-caption nav-caption-spaced">架构域</div>
         {FUTURE_DOMAINS.map((domain) => (
           <div
             className="nav-item nav-disabled"
@@ -111,7 +133,7 @@ export function Sidebar({ view, setView }: { view: View; setView: (view: View) =
           >
             <Icon>·</Icon>
             <span>{domain}</span>
-            <span className="nav-lock">gate</span>
+            <span className="nav-lock">门禁</span>
           </div>
         ))}
       </nav>
@@ -259,49 +281,46 @@ export function Overview({
   const totalProviders = health?.providers.length ?? 0;
   return (
     <>
-      <section className="hero-panel">
-        <img
-          className="hero-company-icon"
-          src="/zerotrace-company-icon.png"
-          alt=""
-          aria-hidden="true"
-        />
-        <div className="eyebrow">监管取证级 · 证据优先 · 可回放</div>
-        <h1>以链上事实重建控制关系、供应现实、坐庄活动与可兑现 U 价值。</h1>
-        <p>在只读边界内查询 EVM、Bitcoin 与 Solana。每项结论绑定新鲜度、覆盖率、快照与证据。</p>
+      <section className="panel workbench-panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">只读案件工作站</span>
+            <h1>工作台 / 查询</h1>
+          </div>
+          <span className="snapshot-badge">
+            数据源 {upProviders}/{totalProviders} 在线
+          </span>
+        </div>
+        <p>
+          统一识别 Token、钱包、交易哈希和案件编号；所有结论必须绑定 Snapshot、Coverage 与
+          Evidence。
+        </p>
+        <p className="workbench-boundary">链上只读 · 3 个账本族 · 0 个写链方法</p>
         <SearchBox onSearch={onSearch} busy={searchBusy} />
-        <div className="hero-foot">
-          <span>
-            <b>
+        <div className="workbench-grid">
+          <div>
+            <span>最近案件</span>
+            <strong>尚未加载</strong>
+            <small>连接持久案件库后显示，禁止以示例数据填充。</small>
+          </div>
+          <div>
+            <span>运行中任务</span>
+            <strong>未知</strong>
+            <small>任务列表接口未闭合，不能显示假 0。</small>
+          </div>
+          <div>
+            <span>待处理告警</span>
+            <strong>未知</strong>
+            <small>仅展示绑定 Evidence 的持久告警。</small>
+          </div>
+          <div>
+            <span>数据源健康</span>
+            <strong>
               {upProviders}/{totalProviders}
-            </b>{' '}
-            个数据源在线
-          </span>
-          <span>
-            <b>3</b> 个账本族
-          </span>
-          <span>
-            <b>0</b> 个写链方法
-          </span>
+            </strong>
+            <small>{formatTime(health?.checkedAt)}</small>
+          </div>
         </div>
-      </section>
-
-      <div className="section-heading">
-        <div>
-          <span className="eyebrow">尚未选择调查对象</span>
-          <h2>盘面总览</h2>
-        </div>
-        <div className="snapshot-badge">指标需要快照</div>
-      </div>
-      <section className="metric-grid">
-        <MetricTile label="名义市值" value="—" detail="未知 · 请选择资产" />
-        <MetricTile label="稳定可兑现容量" value="—" detail="未知 · 尚未仿真路由" />
-        <MetricTile label="控制供应" value="—" detail="未知 · 缺少实体证据" />
-        <MetricTile label="独立自然交易者" value="—" detail="未知 · 持有图未建立" />
-        <MetricTile label="自然资本占比" value="—" detail="未知 · 历史未索引" />
-        <MetricTile label="有效流动性" value="—" detail="未知 · 场所未发现" />
-        <MetricTile label="价格冲击容量 EC-20" value="—" detail="未知 · 缺少可兑现曲线" />
-        <MetricTile label="支撑容量" value="—" detail="未知 · 金库未解析" />
       </section>
 
       <section className="two-column">
@@ -412,29 +431,29 @@ export function EvidencePanel({
           </summary>
           <dl>
             <div>
-              <dt>Locator</dt>
+              <dt>定位符</dt>
               <dd>
                 <code>{item.locator}</code>
               </dd>
             </div>
             <div>
-              <dt>Source</dt>
+              <dt>来源</dt>
               <dd>{item.source}</dd>
             </div>
             <div>
-              <dt>Block / slot</dt>
-              <dd>{item.blockOrSlot ?? 'Not bound'}</dd>
+              <dt>区块 / slot</dt>
+              <dd>{item.blockOrSlot ?? '未绑定'}</dd>
             </div>
             <div>
-              <dt>Finality</dt>
-              <dd>{item.finality ?? 'Not reported'}</dd>
+              <dt>终局性</dt>
+              <dd>{item.finality ?? '未报告'}</dd>
             </div>
             <div>
               <dt>已观测</dt>
               <dd>{formatTime(item.observedAt)}</dd>
             </div>
             <div>
-              <dt>Payload hash</dt>
+              <dt>载荷哈希</dt>
               <dd>
                 <code>{item.payloadHash}</code>
               </dd>

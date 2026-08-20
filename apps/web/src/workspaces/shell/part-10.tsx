@@ -33,7 +33,7 @@ export function SolanaDealerPanel() {
       BigInt(normalizedTo) < BigInt(normalizedFrom) ||
       BigInt(normalizedTo) - BigInt(normalizedFrom) + 1n > 50_000n
     ) {
-      setError('Enter a Solana mint and an ordered 终局 slot range up to 50,000 slots.');
+      setError('请输入 Solana mint 和有序的终局 slot 区间，最多 50,000 个 slot。');
       return;
     }
     setBusy(true);
@@ -45,11 +45,11 @@ export function SolanaDealerPanel() {
         toSlot: normalizedTo,
       });
       const next = response.report ?? response.record?.report;
-      if (next === undefined) throw new Error('Capture returned no Solana dealer report.');
+      if (next === undefined) throw new Error('捕获结果未返回 Solana 操盘报告。');
       setReport(next);
     } catch (cause) {
       setReport(undefined);
-      setError(cause instanceof Error ? cause.message : 'Solana dealer capture failed.');
+      setError(cause instanceof Error ? cause.message : 'Solana 操盘证据捕获失败。');
     } finally {
       setBusy(false);
     }
@@ -59,15 +59,14 @@ export function SolanaDealerPanel() {
     <section className="panel subject-panel" data-testid="solana-dealer-panel">
       <div className="panel-header">
         <div>
-          <span className="eyebrow">Solana · SQD + finalized RPC · read-only</span>
+          <span className="eyebrow">Solana · SQD + 终局 RPC · 只读</span>
           <h3>操盘证据捕获</h3>
         </div>
         <StatusPill status={report?.status ?? 'NOT_RUN'} />
       </div>
       <p className="quote-note">
-        Captures bounded token-account flows, owner separation, ALT/CPI-normalized transaction
-        semantics, same-transaction SOL funding, and possible settlement paths. Unknown opening
-        balances and venue attribution remain explicit.
+        捕获有界 Token 账户流、所有者分离、ALT/CPI 规范化交易语义、同交易 SOL 出资与可能的
+        结算路径。未知期初余额和场所归因保持显式未知。
       </p>
       <form
         className="quote-form control-campaign-form"
@@ -76,7 +75,7 @@ export function SolanaDealerPanel() {
           void capture();
         }}
       >
-        <label htmlFor="solana-dealer-mint">Mint</label>
+        <label htmlFor="solana-dealer-mint">Mint 地址</label>
         <input
           id="solana-dealer-mint"
           value={mint}
@@ -113,56 +112,53 @@ export function SolanaDealerPanel() {
         <div className="campaign-detail-stack" data-testid="solana-dealer-results">
           <div className="metric-grid">
             <MetricTile
-              label="Range"
+              label="区间"
               value={`${report.fromSlot} → ${report.toSlot}`}
-              detail="Finalized bounded range"
+              detail="有界终局区间"
               state="known"
             />
             <MetricTile
-              label="Holders"
+              label="持有者"
               value={String(report.holders.length)}
-              detail="Owner identities observed"
+              detail="已观测所有者身份"
               state="known"
             />
             <MetricTile
-              label="Token edges"
+              label="Token 边"
               value={String(report.tokenFlowEdges.length)}
-              detail="Evidence-bound flow edges"
+              detail="Evidence 绑定流向边"
               state="known"
             />
             <MetricTile
-              label="Evidence"
+              label="Evidence 数"
               value={String(report.evidenceIds.length)}
-              detail="Replayable observations"
+              detail="可回放观测"
               state="known"
             />
             <MetricTile
-              label="Launchpad signals"
+              label="发射台信号"
               value={
                 report.launchpadObservations === undefined
-                  ? 'Unknown'
+                  ? '未知'
                   : String(report.launchpadObservations.length)
               }
-              detail="已钉扎 Solana launchpad decodes"
+              detail="已钉扎 Solana 发射台解码"
               state={report.launchpadObservations === undefined ? 'unknown' : 'known'}
             />
           </div>
           <div className="two-column">
             <div className="detail-card">
-              <span className="eyebrow">Control boundary</span>
-              <strong>{report.campaign?.campaign.id ?? 'Not materialized'}</strong>
+              <span className="eyebrow">控制边界</span>
+              <strong>{report.campaign?.campaign.id ?? '未物化'}</strong>
               <span>
-                Funding {report.fundingEdges.length} · Settlement candidates{' '}
-                {report.settlementEdges.length}
+                资金边 {report.fundingEdges.length} · 结算候选 {report.settlementEdges.length}
               </span>
-              <span>
-                Opening balance Unknown for {report.openingBalanceUnknownWalletIds.length} wallet(s)
-              </span>
-              <span>PDA owners suppressed: {report.pdaSuppressedOwnerIds.length}</span>
+              <span>{report.openingBalanceUnknownWalletIds.length} 个钱包的期初余额未知</span>
+              <span>已抑制 PDA 所有者：{report.pdaSuppressedOwnerIds.length}</span>
             </div>
             <div className="detail-card">
-              <span className="eyebrow">Origin</span>
-              <strong>{report.origin.state === 'known' ? '已观测 in range' : 'Unknown'}</strong>
+              <span className="eyebrow">起源</span>
+              <strong>{report.origin.state === 'known' ? '区间内已观测' : '未知'}</strong>
               <span>
                 {report.origin.state === 'known' && report.origin.value !== undefined
                   ? `${report.origin.value.tokenProgram} · ${report.origin.value.firstObservedSlot}`
@@ -175,10 +171,10 @@ export function SolanaDealerPanel() {
             <table>
               <thead>
                 <tr>
-                  <th>Owner</th>
-                  <th>Token account(s)</th>
-                  <th>Balance raw</th>
-                  <th>Opening</th>
+                  <th>所有者</th>
+                  <th>Token 账户</th>
+                  <th>原始余额</th>
+                  <th>期初余额</th>
                 </tr>
               </thead>
               <tbody>
@@ -205,26 +201,26 @@ export function SolanaDealerPanel() {
             <div className="table-wrap" data-testid="solana-dealer-launchpad-observations">
               <div className="panel-header funding-settlement-subheader">
                 <div>
-                  <span className="eyebrow">Official read-only decoder</span>
+                  <span className="eyebrow">官方只读解码器</span>
                   <h4>发射台观测</h4>
                 </div>
-                <span className="panel-note">{report.launchpadObservations.length} signal(s)</span>
+                <span className="panel-note">{report.launchpadObservations.length} 个信号</span>
               </div>
               <table>
                 <thead>
                   <tr>
-                    <th>Platform</th>
-                    <th>Instruction</th>
-                    <th>Path</th>
-                    <th>Coverage</th>
-                    <th>Execution</th>
+                    <th>平台</th>
+                    <th>指令</th>
+                    <th>路径</th>
+                    <th>覆盖率</th>
+                    <th>执行状态</th>
                   </tr>
                 </thead>
                 <tbody>
                   {report.launchpadObservations.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="empty-cell">
-                        No pinned Solana launchpad instruction was decoded in this bounded range.
+                        此有界区间内没有解码到已钉扎的 Solana 发射台指令。
                       </td>
                     </tr>
                   ) : (
@@ -283,7 +279,7 @@ export function BitcoinForensicGraphPanel() {
 
   async function capture() {
     if (!validRequest) {
-      setError('Enter 1–100 unique canonical Bitcoin transaction IDs (64 hex characters each).');
+      setError('请输入 1–100 个唯一、规范的 Bitcoin 交易 ID（每个 64 位十六进制字符）。');
       return;
     }
     setBusy(true);
@@ -291,13 +287,13 @@ export function BitcoinForensicGraphPanel() {
     try {
       const next = await api.captureBitcoinForensicGraph(transactionIds);
       const nextReport = next.report ?? next.record?.report;
-      if (nextReport === undefined) throw new Error('Capture returned no Bitcoin forensic graph.');
+      if (nextReport === undefined) throw new Error('捕获结果未返回 Bitcoin 取证图。');
       setResponse(next);
       setReport(nextReport);
     } catch (cause) {
       setResponse(undefined);
       setReport(undefined);
-      setError(cause instanceof Error ? cause.message : 'Bitcoin forensic graph capture failed.');
+      setError(cause instanceof Error ? cause.message : 'Bitcoin 取证图捕获失败。');
     } finally {
       setBusy(false);
     }
@@ -312,15 +308,14 @@ export function BitcoinForensicGraphPanel() {
     <section className="panel subject-panel" data-testid="bitcoin-forensic-graph-panel">
       <div className="panel-header">
         <div>
-          <span className="eyebrow">Bitcoin · Esplora · best-chain · read-only</span>
+          <span className="eyebrow">Bitcoin · Esplora · 最佳链 · 只读</span>
           <h3>UTXO 取证图</h3>
         </div>
         <StatusPill status={report?.case.evidenceLine.terminalBoundary ?? 'NOT_RUN'} />
       </div>
       <p className="quote-note">
-        Captures confirmed transaction UTXO paths, common-input/change candidates, peeling, fanout,
-        consolidation, funding and settlement representations. CoinJoin, PayJoin, service
-        attribution, and ownership merges remain explicitly suppressed or Unknown.
+        捕获已确认交易的 UTXO 路径、共同输入/找零候选、剥离、扇出、归集、出资与结算表示。
+        CoinJoin、PayJoin、服务归因和所有权合并保持显式抑制或未知。
       </p>
       <form
         className="quote-form control-campaign-form"
@@ -340,9 +335,9 @@ export function BitcoinForensicGraphPanel() {
         />
         <div className="control-actions">
           <button className="primary-button" type="submit" disabled={busy || !validRequest}>
-            {busy ? 'Capturing…' : 'Capture Forensic Graph'}
+            {busy ? '捕获中…' : '捕获取证图'}
           </button>
-          <span className="panel-note">{transactionIds.length}/100 transaction IDs</span>
+          <span className="panel-note">{transactionIds.length}/100 个交易 ID</span>
         </div>
       </form>
       {error === undefined ? null : <p className="inline-error">{error}</p>}
@@ -350,58 +345,57 @@ export function BitcoinForensicGraphPanel() {
         <div className="campaign-detail-stack" data-testid="bitcoin-forensic-graph-results">
           <div className="metric-grid">
             <MetricTile
-              label="Transactions"
+              label="交易数"
               value={String(report.transactionIds.length)}
-              detail="Confirmed best-chain observations"
+              detail="已确认最佳链观测"
               state="known"
             />
             <MetricTile
-              label="Graph nodes"
+              label="图节点"
               value={String(report.nodes.length)}
-              detail="Addresses, UTXOs, transactions, Unknowns"
+              detail="地址、UTXO、交易与未知节点"
               state="known"
             />
             <MetricTile
-              label="Graph edges"
+              label="图边"
               value={String(report.edges.length)}
-              detail="已观测 and bounded candidates"
+              detail="已观测和有界候选"
               state="known"
             />
             <MetricTile
-              label="Data coverage"
+              label="数据覆盖率"
               value={`${Math.round(report.dataCoverage * 100)}%`}
-              detail={`History ${Math.round(report.historyCoverage * 100)}%`}
+              detail={`历史 ${Math.round(report.historyCoverage * 100)}%`}
               state={report.dataCoverage === 1 ? 'known' : 'unknown'}
             />
           </div>
           <div className="two-column">
             <div className="detail-card">
-              <span className="eyebrow">Snapshot boundary</span>
+              <span className="eyebrow">Snapshot 边界</span>
               <strong>
-                {report.snapshotStart.height ?? 'Unknown'} →{' '}
-                {report.snapshotEnd.height ?? 'Unknown'}
+                {report.snapshotStart.height ?? '未知'} → {report.snapshotEnd.height ?? '未知'}
               </strong>
-              <span>Sources: {report.sourceSet.join(' · ')}</span>
-              <span>Freshness: {formatTime(report.freshness)}</span>
+              <span>来源：{report.sourceSet.join(' · ')}</span>
+              <span>新鲜度：{formatTime(report.freshness)}</span>
             </div>
             <div className="detail-card">
-              <span className="eyebrow">Ownership policy</span>
+              <span className="eyebrow">所有权策略</span>
               <strong>自动合并已阻断</strong>
-              <span>Case {shortId(report.case.id, 10)}</span>
+              <span>案件 {shortId(report.case.id, 10)}</span>
               <span>
-                Graph confidence <KnowledgeDisplay data={report.confidence} />
+                图谱置信度 <KnowledgeDisplay data={report.confidence} />
               </span>
             </div>
           </div>
           {response?.durable === false ? (
             <div className="bitcoin-policy-boundary">
-              <strong>Durability boundary</strong>
-              <p>PostgreSQL is not configured; this capture is available in the response only.</p>
+              <strong>持久性边界</strong>
+              <p>未配置 PostgreSQL；本次捕获仅存在于当前响应中。</p>
             </div>
           ) : null}
           {report.suppressionReasons.length > 0 ? (
             <div className="bitcoin-policy-boundary bitcoin-suppression-ledger">
-              <strong>Suppression ledger</strong>
+              <strong>抑制账本</strong>
               <ul>
                 {report.suppressionReasons.map((reason) => (
                   <li key={reason}>{titleCase(reason)}</li>
@@ -413,11 +407,11 @@ export function BitcoinForensicGraphPanel() {
             <table>
               <thead>
                 <tr>
-                  <th>Relationship</th>
-                  <th>Class</th>
-                  <th>Amount</th>
+                  <th>关系</th>
+                  <th>类别</th>
+                  <th>金额</th>
                   <th>Evidence</th>
-                  <th>Reason</th>
+                  <th>原因</th>
                 </tr>
               </thead>
               <tbody>
@@ -443,22 +437,21 @@ export function BitcoinForensicGraphPanel() {
           </div>
           {report.edges.length > 120 ? (
             <p className="panel-note">
-              Showing 120 of {report.edges.length} edges; the durable report retains the full
-              bounded graph.
+              当前显示 {report.edges.length} 条边中的 120 条；持久化报告保留完整有界图。
             </p>
           ) : null}
           <div className="snapshot-strip">
             <span>
-              <b>Evidence</b> {report.evidenceIds.length}
+              <b>Evidence 数</b> {report.evidenceIds.length}
             </span>
             <span>
-              <b>Source coverage</b> {Math.round(report.sourceCoverage * 100)}%
+              <b>来源覆盖率</b> {Math.round(report.sourceCoverage * 100)}%
             </span>
             <span>
-              <b>Evidence line</b> {report.case.evidenceLine.phases.length} phase(s)
+              <b>证据线</b> {report.case.evidenceLine.phases.length} 个阶段
             </span>
             <span>
-              <b>Result</b> <code title={report.resultHash}>{shortId(report.resultHash, 8)}</code>
+              <b>结果</b> <code title={report.resultHash}>{shortId(report.resultHash, 8)}</code>
             </span>
           </div>
         </div>

@@ -40,7 +40,7 @@ export function App() {
   const [presentation, setPresentation] = useState<'novice' | 'expert'>(() =>
     window.localStorage.getItem('zerotrace-presentation') === 'expert' ? 'expert' : 'novice',
   );
-  const [view, setView] = useState<View>('overview');
+  const [view, setView] = useState<View>('workbench');
   const [health, setHealth] = useState<HealthResponse>();
   const [capabilities, setCapabilities] = useState<Capability[]>([]);
   const [platforms, setPlatforms] = useState<PlatformDescriptor[]>([]);
@@ -147,6 +147,56 @@ export function App() {
   }, []);
 
   const content = useMemo(() => {
+    if (view === 'cases') {
+      return (
+        <>
+          <div className="page-heading case-heading">
+            <div>
+              <span className="eyebrow">持久案件 · Snapshot · Coverage · Evidence</span>
+              <h1>案件</h1>
+              <p>创建或重开 Token 案件；运行中可查看已落盘的 PARTIAL 结果。</p>
+            </div>
+          </div>
+          <TokenAnalyzeWorkspace />
+        </>
+      );
+    }
+    if (view === 'monitoring') {
+      return (
+        <>
+          <div className="page-heading">
+            <div>
+              <span className="eyebrow">终局游标 · 重组 · 去重 · 撤回</span>
+              <h1>监控与告警</h1>
+              <p>当前仅展示已有持久 Campaign 监控能力；未完成的 24h 与重启恢复门禁保持阻断。</p>
+            </div>
+          </div>
+          <ControlCampaignWorkspace />
+        </>
+      );
+    }
+    if (view === 'system') {
+      return (
+        <>
+          <div className="page-heading">
+            <div>
+              <span className="eyebrow">数据源 · 存储 · 安全 · 诊断</span>
+              <h1>数据源与系统</h1>
+              <p>检查真实数据源与持久设施；未配置、故障和来源冲突不会折算为业务数值 0。</p>
+            </div>
+            <div className="system-subnav">
+              <button className="secondary-button" type="button" onClick={() => setView('health')}>
+                数据健康
+              </button>
+              <button className="secondary-button" type="button" onClick={() => setView('control')}>
+                系统管理
+              </button>
+            </div>
+          </div>
+          <DataHealth health={health} refresh={() => void refreshCore()} busy={loadingCore} />
+        </>
+      );
+    }
     if (view === 'analyze') return <TokenAnalyzeWorkspace />;
     if (view === 'search') {
       return (

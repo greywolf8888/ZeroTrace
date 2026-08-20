@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const checksummedEvmAddress = '0x52908400098527886E0F7030069857D2E4169EE7';
 const solanaSignature =
@@ -11,6 +11,18 @@ const bscFlapLifetimeScan = '00000000-0000-4000-8000-000000000003';
 const bitcoinAddress = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
 const bitcoinTransactionId = 'c'.repeat(64);
 
+async function openDeveloperView(page: Page, name: string): Promise<void> {
+  await page.locator('details.developer-navigation').evaluate((details, label) => {
+    const button = [...details.querySelectorAll('button')].find((candidate) =>
+      candidate.textContent?.trim().includes(label),
+    );
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error(`未找到开发者能力入口：${label}`);
+    }
+    button.click();
+  }, name);
+}
+
 test('renders capability truth and unknown values without fake market data', async ({ page }) => {
   const browserErrors: string[] = [];
   page.on('pageerror', (error) => browserErrors.push(error.message));
@@ -20,12 +32,14 @@ test('renders capability truth and unknown values without fake market data', asy
   await expect(page.getByAltText('ZeroTrace 图标')).toBeVisible();
   await expect(
     page.getByRole('heading', {
-      name: '以链上事实重建控制关系、供应现实、坐庄活动与可兑现 U 价值。',
+      name: '工作台 / 查询',
     }),
   ).toBeVisible();
   await expect(page.getByText('链上只读', { exact: true })).toBeVisible();
   await expect(page.getByText('0 个写链方法')).toBeVisible();
-  await expect(page.getByText('未知 · 请选择资产')).toBeVisible();
+  await expect(page.getByText('最近案件', { exact: true })).toBeVisible();
+  await expect(page.getByText('运行中任务', { exact: true })).toBeVisible();
+  await expect(page.getByText('待处理告警', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: '能力账本' })).toBeVisible();
   await expect(page.getByText(/基于同一快照的证据对照要求精确状态零偏差/)).toBeVisible();
   await expect(page.getByText('已实现 EVM 日志')).toBeVisible();
@@ -50,8 +64,8 @@ test('renders capability truth and unknown values without fake market data', asy
   ).toBe(true);
   expect(browserErrors).toEqual([]);
 
-  await page.getByText('名义市值').click();
-  await expect(page.getByText(/证据钻取：当前状态为未知/).first()).toBeVisible();
+  await page.getByRole('button', { name: '案件', exact: true }).click();
+  await expect(page.getByLabel('Token')).toHaveValue('');
 });
 
 test('keeps every primary view reachable from the narrow-screen navigation', async ({ page }) => {
@@ -59,22 +73,8 @@ test('keeps every primary view reachable from the narrow-screen navigation', asy
   await page.goto('/');
 
   const primaryNav = page.getByRole('navigation', { name: '主导航' });
-  for (const label of [
-    '盘面总览',
-    '案件与调查',
-    '实体与角色',
-    '系统管理',
-    '坐庄时间线',
-    '声明核验',
-    '可兑现价值',
-    '数据健康',
-    '供应现实',
-    '资金回流',
-    '活动损益',
-    '证据账本',
-    '分析员工作台',
-  ]) {
-    await expect(primaryNav.getByRole('button', { name: label })).toBeVisible();
+  for (const label of ['工作台 / 查询', '案件', '监控与告警', '数据源与系统']) {
+    await expect(primaryNav.getByRole('button', { name: label, exact: true })).toBeVisible();
   }
   await expect(page.getByLabel(/接口状态/)).toBeVisible();
 
@@ -87,7 +87,7 @@ test('keeps every primary view reachable from the narrow-screen navigation', asy
       rootClientWidth: document.documentElement.clientWidth,
     };
   });
-  expect(layout.scrollWidth).toBeGreaterThan(layout.clientWidth);
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
   expect(layout.rootScrollWidth).toBeLessThanOrEqual(layout.rootClientWidth);
 });
 
@@ -95,14 +95,13 @@ test('forensic workstation surfaces Chinese supply, capital and analyst views', 
   page,
 }) => {
   await page.goto('/');
-  const nav = page.getByRole('navigation', { name: '主导航' });
-  await nav.getByRole('button', { name: '供应现实' }).click();
+  await openDeveloperView(page, '供应现实');
   await expect(page.getByRole('heading', { name: '供应现实' })).toBeVisible();
   await expect(page.getByText(/销毁若已反映在协议供应中，不再次扣除/)).toBeVisible();
   await expect(page.getByText('计算与证据检查器')).toBeVisible();
-  await nav.getByRole('button', { name: '资金回流' }).click();
+  await openDeveloperView(page, '资金回流');
   await expect(page.getByRole('heading', { name: '资金回流', exact: true })).toBeVisible();
-  await nav.getByRole('button', { name: '分析员工作台' }).click();
+  await openDeveloperView(page, '分析员工作台');
   await expect(page.getByRole('heading', { name: '分析员工作台' })).toBeVisible();
   await expect(page.getByText(/法律结论必须由分析员明确写出/)).toBeVisible();
 });
@@ -703,7 +702,7 @@ test('replays an immutable Entity relationship hypothesis without enabling owner
   );
 
   await page.goto('/');
-  await page.getByRole('button', { name: '实体与角色' }).click();
+  await openDeveloperView(page, '实体与角色');
   await page.getByLabel('主体 A').fill(subjectB);
   await page.getByLabel('主体 B').fill(subjectA);
   await page.getByTestId('entity-report-replay').getByRole('button', { name: '加载最新' }).click();
@@ -3865,7 +3864,7 @@ test('compiles a public pension statement as a human-review draft without invent
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: '声明核验' }).click();
+  await openDeveloperView(page, '声明核验');
   await expect(page.getByRole('heading', { name: '声明核验' })).toBeVisible();
   await page.getByLabel('BSC token address').fill(bscTokenAddress);
   await page
@@ -4001,7 +4000,7 @@ test('shows durable pension behavior candidates on mobile without inventing soci
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '声明核验' }).click();
+  await openDeveloperView(page, '声明核验');
   const panel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: '养老金金库候选' }),
   });
@@ -4101,7 +4100,7 @@ test('shows a supply-conserved burn action without treating the zero address as 
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '声明核验' }).click();
+  await openDeveloperView(page, '声明核验');
   const panel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: '销毁供应守恒' }),
   });
@@ -4170,7 +4169,7 @@ test('keeps a complete burn-event range distinct from silent supply-change cover
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '声明核验' }).click();
+  await openDeveloperView(page, '声明核验');
   const panel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: '销毁候选区间' }),
   });
@@ -4280,7 +4279,7 @@ test('replays a durable burn promotion without converting scoped coverage into s
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '声明核验' }).click();
+  await openDeveloperView(page, '声明核验');
   const panel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: '销毁晋升证书' }),
   });
@@ -4410,7 +4409,7 @@ test('replays independently verified all-block supply continuity without extendi
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '声明核验' }).click();
+  await openDeveloperView(page, '声明核验');
   const panel = page.locator('.quote-panel').filter({
     has: page.getByRole('heading', { name: '全区块供应连续性' }),
   });
@@ -4438,55 +4437,51 @@ test('replays independently verified all-block supply continuity without extendi
 
 test('keeps scenario execution gated and exposes provider availability', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: '可兑现价值' }).click();
+  await openDeveloperView(page, '可兑现价值');
   await expect(page.getByRole('heading', { name: '共享流动性退出竞赛' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '分析门已关闭' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run scenario' })).toBeDisabled();
 
-  await page.getByRole('button', { name: '数据健康' }).click();
+  await openDeveloperView(page, '数据健康');
   await expect(page.getByRole('heading', { name: '数据健康' })).toBeVisible();
   await expect(
-    page.getByText(
-      'A failed or unconfigured provider becomes an availability state—never a business value of zero.',
-    ),
+    page.getByText('故障或未配置的数据源只会成为可用性状态，绝不会被折算成业务数值 0。'),
   ).toBeVisible();
   const anchorPanel = page.locator('.anchor-quality-panel');
   await expect(anchorPanel.getByRole('heading', { name: '锚点对账与连续性' })).toBeVisible();
-  await expect(anchorPanel).toContainText(
-    'Endpoint operator independence remains Unknown until explicitly configured and verified.',
-  );
+  await expect(anchorPanel).toContainText('端点运营方独立性在明确配置并核验前 保持未知。');
   await expect(anchorPanel.locator('.anchor-quality-card')).toHaveCount(4);
   const sourceCoverage = await anchorPanel.locator('.anchor-quality-card').evaluateAll((cards) =>
     cards.map((card) => {
       const sourceTerm = [...card.querySelectorAll('dt')].find(
-        (term) => term.textContent?.trim() === 'Sources',
+        (term) => term.textContent?.trim() === '来源',
       );
       return sourceTerm?.parentElement?.querySelector('dd')?.textContent?.trim();
     }),
   );
   expect(sourceCoverage).toHaveLength(4);
-  expect(
-    sourceCoverage.every((value) => /^\d+\/\d+ observed · 2 required$/.test(value ?? '')),
-  ).toBe(true);
-  await expect(anchorPanel).toContainText('Memory · process-local');
+  expect(sourceCoverage.every((value) => /^已观测 \d+\/\d+ · 需要 2$/.test(value ?? ''))).toBe(
+    true,
+  );
+  await expect(anchorPanel).toContainText('Memory · 进程内');
   const evidenceStorageCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: '证据存储' }),
   });
   await expect(evidenceStorageCard).toContainText('Memory');
-  await expect(evidenceStorageCard).toContainText('Process-local');
+  await expect(evidenceStorageCard).toContainText('进程内');
   await expect(evidenceStorageCard).toContainText('可重建缓存');
   const ingestionStorageCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: '终局摄入存储' }),
   });
-  await expect(ingestionStorageCard).toContainText('Unconfigured');
+  await expect(ingestionStorageCard).toContainText('未配置');
   await expect(ingestionStorageCard).toContainText('0/3');
   const graphProjectionCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: '调查投影' }),
   });
   await expect(graphProjectionCard).toContainText('Apache AGE');
-  await expect(graphProjectionCard).toContainText('PostgreSQL report');
-  await expect(graphProjectionCard).toContainText('Unconfigured');
-  await expect(page.getByRole('button', { name: 'Refresh providers' })).toBeEnabled();
+  await expect(graphProjectionCard).toContainText('PostgreSQL 报告');
+  await expect(graphProjectionCard).toContainText('未配置');
+  await expect(page.getByRole('button', { name: '刷新数据源' })).toBeEnabled();
 });
 
 test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unknown roles', async ({
@@ -4656,7 +4651,8 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '系统管理' }).click();
+  await page.getByRole('button', { name: '数据源与系统' }).click();
+  await page.getByRole('main').getByRole('button', { name: '系统管理' }).click();
   await expect(page.getByRole('heading', { name: 'EVM 系统管理' })).toBeVisible();
   await page.getByLabel('Contract address').fill(subject);
   await page.getByRole('button', { name: '检查并持久化' }).click();
@@ -4814,7 +4810,8 @@ test('renders finalized Solana Token-2022 authority and explicit pending domains
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '系统管理' }).click();
+  await page.getByRole('button', { name: '数据源与系统' }).click();
+  await page.getByRole('main').getByRole('button', { name: '系统管理' }).click();
   await page.getByLabel('Ledger').selectOption('SOLANA');
   await expect(page.getByRole('heading', { name: 'Solana 系统管理' })).toBeVisible();
   await page.getByRole('button', { name: '检查并持久化' }).click();
@@ -5166,15 +5163,15 @@ test('renders a Control 活动时间线 and 证据线 without merging entities',
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: '坐庄时间线' }).click();
+  await page.getByRole('button', { name: '监控与告警' }).click();
   await expect(page.getByRole('heading', { name: '坐庄时间线' })).toBeVisible();
   await page.getByLabel('Token').fill(`0x${'b'.repeat(40)}`);
-  await page.getByRole('button', { name: 'Load campaigns' }).click();
+  await page.getByRole('button', { name: '加载活动' }).click();
 
   await expect(page.getByTestId('control-campaign-timeline')).toContainText('活动时间线');
-  await expect(page.getByTestId('control-campaign-timeline')).toContainText('Accumulation');
+  await expect(page.getByTestId('control-campaign-timeline')).toContainText('吸筹');
   await expect(page.getByTestId('control-campaign-alerts')).toContainText('协同卖出');
-  await expect(page.getByTestId('control-campaign-alerts')).toContainText('High');
+  await expect(page.getByTestId('control-campaign-alerts')).toContainText('高');
   await expect(page.getByTestId('control-campaign-positions')).toContainText('仓位时间线');
   await expect(page.getByTestId('control-campaign-positions')).toContainText('420');
   await expect(page.getByTestId('control-campaign-evidence-line')).toContainText('证据线');
@@ -5183,7 +5180,7 @@ test('renders a Control 活动时间线 and 证据线 without merging entities',
   );
   await expect(page.getByText('已阻止')).toBeVisible();
   await expect(
-    page.getByTestId('control-campaign-results').getByText('Uncalibrated Evidence score'),
+    page.getByTestId('control-campaign-results').getByText('未经校准的 Evidence 分数'),
   ).toBeVisible();
   await expect(page.getByTestId('funding-settlement-report')).toContainText(
     '交易证据，不是所有权证明',
@@ -5197,9 +5194,9 @@ test('renders a Control 活动时间线 and 证据线 without merging entities',
   await page.getByRole('tab', { name: '合并', exact: true }).click();
   await expect(page.getByTestId('control-campaign-positions')).toBeVisible();
   await expect(page.getByTestId('funding-settlement-report')).toBeVisible();
-  await page.getByRole('button', { name: 'Export Case Bundle' }).click();
+  await page.getByRole('button', { name: '导出案件包' }).click();
   await expect(page.getByTestId('control-campaign-export')).toContainText(`fcb_${campaignId}`);
-  await expect(page.getByTestId('control-campaign-export')).toContainText('1 Evidence');
-  await page.getByRole('button', { name: 'Start monitor' }).click();
+  await expect(page.getByTestId('control-campaign-export')).toContainText('1 条 Evidence');
+  await page.getByRole('button', { name: '启动监控' }).click();
   await expect(page.getByTestId('control-campaign-monitor')).toContainText(`cps_${'7'.repeat(24)}`);
 });

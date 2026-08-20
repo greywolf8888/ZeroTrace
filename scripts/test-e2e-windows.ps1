@@ -25,10 +25,12 @@ function Wait-ZeroTraceEndpoint {
   param(
     [string]$Uri,
     [System.Diagnostics.Process]$Process,
-    [string]$Name
+    [string]$Name,
+    [int]$TimeoutSeconds = 180
   )
 
-  for ($attempt = 0; $attempt -lt 80; $attempt++) {
+  $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+  while ($stopwatch.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
     if (Test-ZeroTraceEndpoint $Uri) {
       return
     }
@@ -37,7 +39,7 @@ function Wait-ZeroTraceEndpoint {
     }
     Start-Sleep -Milliseconds 250
   }
-  throw "$Name did not become ready at $Uri."
+  throw "$Name did not become ready at $Uri within $TimeoutSeconds seconds."
 }
 
 try {

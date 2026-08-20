@@ -1,7 +1,15 @@
 // GENERATED: bound to apps/web/src/generated-api/openapi.json. Do not hand-edit parallel contracts in apps/web/src/api.ts.
 /** Source of truth: Fastify route dump + @zerotrace/schemas. */
 
-const configuredBase = import.meta.env.VITE_API_URL as string | undefined;
+declare global {
+  interface Window {
+    __ZEROTRACE_API_URL__?: string;
+    __ZEROTRACE_DESKTOP_TOKEN__?: string;
+  }
+}
+
+const configuredBase =
+  window.__ZEROTRACE_API_URL__ ?? (import.meta.env.VITE_API_URL as string | undefined);
 const API_BASE = (configuredBase ?? '').replace(/\/$/, '');
 
 export interface KnowledgeValue<T> {
@@ -2558,9 +2566,15 @@ export interface Capability {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const desktopToken = window.__ZEROTRACE_DESKTOP_TOKEN__;
   const response = await fetch(API_BASE + path, {
     ...init,
-    headers: { accept: 'application/json', 'content-type': 'application/json', ...init?.headers },
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      ...(desktopToken === undefined ? {} : { 'x-zerotrace-desktop-token': desktopToken }),
+      ...init?.headers,
+    },
   });
   const payload = (await response.json()) as unknown;
   if (!response.ok) {

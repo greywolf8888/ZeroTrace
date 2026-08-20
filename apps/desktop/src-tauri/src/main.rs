@@ -1,222 +1,104 @@
-//! Read-only desktop host. Signing, broadcasting, and private keys are forbidden.
-//!
-//! This binary is a workspace pointer: it starts or attaches to `npm run dev` in the
-//! live checkout. Web/API source changes hot-reload; the EXE is rebuilt only when
-//! launcher sources change.
+//! ZeroTrace production desktop host.
+//! Read-only invariants are preserved: no private keys, signing, broadcasting, or fund movement.
 
-use std::env;
-use std::fs;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::io;
+use std::net::{TcpListener, TcpStream};
+use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
-use zerotrace_desktop_core::launcher::{
-    endpoint_url, load_dev_link, parse_workspace_pointer, plan_launch, require_node_modules,
-    resolve_workspace, tcp_open, DevLink, LaunchAction, ResolveInputs, WorkspacePointer,
-    SIDECAR_FILE_NAME,
-};
+
+use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_shell::process::CommandChild;
+use tauri_plugin_shell::ShellExt;
+use uuid::Uuid;
+
+struct ApiSidecar(Mutex<Option<CommandChild>>);
+
+fn reserve_loopback_port() -> io::Result<u16> {
+    let listener = TcpListener::bind(("127.0.0.1", 0))?;
+    let port = listener.local_addr()?.port();
+    drop(listener);
+    Ok(port)
+}
+
+fn wait_for_loopback(port: u16, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        if TcpStream::connect_timeout(
+            &format!("127.0.0.1:{port}")
+                .parse()
+                .expect("valid loopback address"),
+            Duration::from_millis(150),
+        )
+        .is_ok()
+        {
+            return true;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+    false
+}
 
 fn main() {
-    if let Err(err) = run() {
-        eprintln!("{err}");
-        std::process::exit(1);
-    }
-}
-
-fn run() -> Result<(), Box<dyn std::error::Error>> {
-    configure_console();
-    println!("ZeroTrace 只读工作站启动器");
-    println!("本程序不打包前端或 API；始终联动当前工作区源码。");
-
-    let exe = env::current_exe()?;
-    let exe_dir = exe
-        .parent()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "无法解析启动器目录"))?;
-    let cwd = env::current_dir()?;
-    let env_root = env::var_os("ZEROTRACE_ROOT").map(PathBuf::from);
-    let pointer = load_sidecar(exe_dir)?;
-
-    let root = resolve_workspace(ResolveInputs {
-        env_root: env_root.as_deref(),
-        pointer: pointer.as_ref(),
-        exe_dir: Some(exe_dir),
-        cwd: Some(&cwd),
-    })?;
-    let link = load_dev_link(&root)?;
-    let probe = Duration::from_millis(300);
-    let web_up = tcp_open(&link.web, probe);
-    let api_up = tcp_open(&link.api, probe);
-    let plan = plan_launch(root, web_up, api_up)?;
-
-    println!("工作区: {}", plan.workspace_root.display());
-    println!("工作站: {}", plan.web_url);
-    println!("API 探活: {}", endpoint_url(&plan.link.api));
-
-    match plan.action {
-        LaunchAction::AttachExisting => {
-            println!("已检测到开发服务，附加到现有进程（不重复启动）。");
-            open_browser(&plan.web_url);
-            println!("源码变更由 Vite 热更新，无需重新生成本启动器。");
-        }
-        LaunchAction::SpawnDev => {
-            require_node_modules(&plan.workspace_root)?;
-            warn_if_env_missing(&plan.workspace_root);
-            println!(
-                "正在启动 `{} {}`（与开发端同一命令，热更新生效）。",
-                plan.link.spawn.program,
-                plan.link.spawn.args.join(" ")
-            );
-            spawn_and_wait(&plan.workspace_root, &plan.link, &plan.web_url)?;
-        }
-    }
-    Ok(())
-}
-
-fn load_sidecar(exe_dir: &Path) -> Result<Option<WorkspacePointer>, Box<dyn std::error::Error>> {
-    let path = exe_dir.join(SIDECAR_FILE_NAME);
-    if !path.is_file() {
-        return Ok(None);
-    }
-    let text = fs::read_to_string(&path)?;
-    match parse_workspace_pointer(&text) {
-        Ok(pointer) => Ok(Some(pointer)),
-        Err(err) => {
-            eprintln!("工作区指针无法使用（{err}），改为扫描启动器目录。");
-            Ok(None)
-        }
-    }
-}
-
-fn warn_if_env_missing(root: &Path) {
-    if !root.join(".env").is_file() {
-        println!("未找到 .env，API 将按缺省配置启动；提供方可保持未配置，Unknown 不得当作 0。");
-    }
-}
-
-fn spawn_and_wait(
-    root: &Path,
-    link: &DevLink,
-    web_url: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut child = spawn_dev(root, link)?;
-    let timeout = Duration::from_millis(link.wait_timeout_ms.max(1_000));
-    let poll = Duration::from_millis(link.poll_interval_ms.max(100));
-    let deadline = Instant::now() + timeout;
-    let mut opened = false;
-    loop {
-        if !opened
-            && tcp_open(&link.web, Duration::from_millis(200))
-            && tcp_open(&link.api, Duration::from_millis(200))
-        {
-            println!("开发服务已就绪，打开工作站。关闭本窗口会结束本次 npm run dev。");
-            open_browser(web_url);
-            opened = true;
-        }
-        if let Some(status) = child.try_wait()? {
-            if !opened {
-                return Err(format!("开发服务在工作站就绪前退出，状态 {status}").into());
+    let app = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
             }
-            println!("开发服务已退出，状态 {status}");
-            return Ok(());
-        }
-        if !opened && Instant::now() > deadline {
-            kill_child_tree(&mut child);
-            return Err(
-                "等待 API/Web 超时。请在本窗口查看 npm 输出，或手动运行 npm run dev。".into(),
+        }))
+        .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            let port = reserve_loopback_port()?;
+            let desktop_token = Uuid::new_v4().simple().to_string();
+            let data_root = app.path().app_data_dir()?.join("storage-plane");
+            std::fs::create_dir_all(&data_root)?;
+            let sidecar = app
+                .shell()
+                .sidecar("zerotrace-api")?
+                .env("NODE_ENV", "production")
+                .env("HOST", "127.0.0.1")
+                .env("API_PORT", port.to_string())
+                .env("ZEROTRACE_DESKTOP_AUTH_TOKEN", &desktop_token)
+                .env("ZEROTRACE_SWAGGER_UI", "false")
+                .env("ZEROTRACE_STORAGE_ROOT", data_root.as_os_str())
+                .env(
+                    "CORS_ORIGIN",
+                    "http://tauri.localhost,https://tauri.localhost,tauri://localhost",
+                );
+            let (mut events, child) = sidecar.spawn()?;
+            tauri::async_runtime::spawn(async move {
+                while events.recv().await.is_some() {}
+            });
+            app.manage(ApiSidecar(Mutex::new(Some(child))));
+
+            if !wait_for_loopback(port, Duration::from_secs(60)) {
+                return Err(format!("只读 API sidecar 未能在本机动态端口 {port} 就绪").into());
+            }
+
+            let initialization_script = format!(
+                "Object.defineProperty(window, '__ZEROTRACE_API_URL__', {{ value: 'http://127.0.0.1:{port}', writable: false, configurable: false }}); Object.defineProperty(window, '__ZEROTRACE_DESKTOP_TOKEN__', {{ value: '{desktop_token}', writable: false, configurable: false }});"
             );
+            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                .title("ZeroTrace 只读工作站")
+                .inner_size(1440.0, 920.0)
+                .min_inner_size(960.0, 640.0)
+                .initialization_script(&initialization_script)
+                .build()?;
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("ZeroTrace Tauri 初始化失败");
+
+    app.run(|handle, event| {
+        if let RunEvent::Exit = event {
+            if let Some(state) = handle.try_state::<ApiSidecar>() {
+                if let Ok(mut child) = state.0.lock() {
+                    if let Some(sidecar) = child.take() {
+                        let _ = sidecar.kill();
+                    }
+                }
+            }
         }
-        thread::sleep(poll);
-    }
-}
-
-fn spawn_dev(root: &Path, link: &DevLink) -> io::Result<Child> {
-    let mut command = if cfg!(windows) {
-        let mut cmdline = windows_spawn_program(&link.spawn.program);
-        for arg in &link.spawn.args {
-            cmdline.push(' ');
-            cmdline.push_str(arg);
-        }
-        let mut cmd = Command::new("cmd");
-        cmd.args(["/D", "/S", "/C", &cmdline]);
-        cmd
-    } else {
-        let mut cmd = Command::new(&link.spawn.program);
-        cmd.args(&link.spawn.args);
-        cmd
-    };
-    command
-        .current_dir(root)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .spawn()
-}
-
-fn windows_spawn_program(program: &str) -> String {
-    if program.eq_ignore_ascii_case("npm") {
-        "npm.cmd".to_string()
-    } else {
-        program.to_string()
-    }
-}
-
-fn kill_child_tree(child: &mut Child) {
-    #[cfg(windows)]
-    {
-        let pid = child.id();
-        let _ = Command::new("taskkill")
-            .args(["/F", "/T", "/PID", &pid.to_string()])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-    }
-    #[cfg(not(windows))]
-    {
-        let _ = child.kill();
-    }
-    let _ = child.wait();
-}
-
-fn open_browser(url: &str) {
-    let result = if cfg!(windows) {
-        Command::new("cmd")
-            .args(["/C", "start", "", url])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-    } else if cfg!(target_os = "macos") {
-        Command::new("open").arg(url).status()
-    } else {
-        Command::new("xdg-open").arg(url).status()
-    };
-    match result {
-        Ok(status) if status.success() => {}
-        Ok(status) => eprintln!("浏览器启动返回 {status}，请手动打开 {url}"),
-        Err(err) => eprintln!("无法打开浏览器（{err}），请手动打开 {url}"),
-    }
-}
-
-fn configure_console() {
-    #[cfg(windows)]
-    win_console::enable_utf8();
-    let _ = io::stdout().flush();
-}
-
-#[cfg(windows)]
-mod win_console {
-    #[link(name = "kernel32")]
-    extern "system" {
-        fn SetConsoleOutputCP(code: u32) -> i32;
-        fn SetConsoleCP(code: u32) -> i32;
-    }
-
-    pub fn enable_utf8() {
-        unsafe {
-            SetConsoleOutputCP(65001);
-            SetConsoleCP(65001);
-        }
-    }
+    });
 }
