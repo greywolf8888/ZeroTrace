@@ -11,6 +11,7 @@
 - [x] Chromium 桌面端/移动端回归 `42/42`，默认 DOM 无接口文档和开发者诊断入口
 - [x] `npm run verify`：单元 `927/927`、可运行集成 `88/88`、评估 `2/2`、只读 MCP `5/5`；format/lint/typecheck/build/license/architecture/audit 全部通过，生产依赖漏洞 `0`
 - [x] Rust workspace fmt、clippy `-D warnings` 与全部测试通过
+- [x] 基于界面实现提交 `5f77ae24bd9a966ffb076210a0638b4e6dccfc30` 重建桌面主程序与 NSIS；主程序启动后窗口响应、动态 loopback sidecar 监听和 WebView 连接通过
 - [ ] 外部 PostgreSQL/ClickHouse/MinIO 相关 40 项集成仍为 `skipped`，不得计为通过
 - [ ] 本轮未重新执行实盘 Provider、固定硬件性能、24 小时 soak、签名清洁机与升级/回滚，既有未闭合状态不变
 
@@ -36,7 +37,7 @@
 
 结论：本地工程候选成立；Combined PASS、Production Acceptance、Release 和合并条件均不成立。
 
-最终本机 NSIS SHA-256：`CE8AB8DC8AB91D6F18443C6889CEDF0EA9D42D5F75793F7B02AC5BD1C02CC03C`；Authenticode：`NotSigned`。
+当前中文界面本机主程序 SHA-256：`44C0ED0EE50A9BC2F6CEC65B083A5282B92FFE98D3492B2AA4B153CBC7E0A0D0`；NSIS SHA-256：`6B37EB2D29B8707D9CE06AC031F646C662BF8DEC03825C7361F3B14B35848492`；两者 Authenticode：`NotSigned`。
 
 ## 2026-08-19 监管取证升级门禁
 
