@@ -5,6 +5,7 @@ import {
   type DurableJobResponse,
   type TokenAnalyzeResponse,
 } from '../generated-api/client.js';
+import { zhLabel, zhUserMessage } from '../i18n/zh-CN.js';
 import { VirtualTable } from './virtual-table.js';
 import { WorkstationStatusBanner } from './workstation-status.js';
 
@@ -36,7 +37,9 @@ export function TokenAnalyzeWorkspace() {
             ...current,
             status,
             job,
-            ...(job.lastError === undefined ? {} : { reason: job.lastError }),
+            ...(job.lastError === undefined
+              ? {}
+              : { reason: zhUserMessage(job.lastError, '任务未完成，请查看数据源状态后重试。') }),
           },
     );
   }, []);
@@ -53,13 +56,13 @@ export function TokenAnalyzeWorkspace() {
         })
         .catch((cause: unknown) => {
           if (!disposed) {
-            const message =
-              cause instanceof Error ? cause.message : '任务状态刷新失败，已保留最后结果。';
+            const message = zhUserMessage(
+              cause instanceof Error ? cause.message : cause,
+              '任务状态刷新失败，已保留最后结果。',
+            );
             setError(message);
             setResult((current) =>
-              current === undefined
-                ? current
-                : { ...current, status: 'STALE', reason: `REFRESH_FAILED: ${message}` },
+              current === undefined ? current : { ...current, status: 'STALE', reason: message },
             );
           }
         });
@@ -83,7 +86,9 @@ export function TokenAnalyzeWorkspace() {
         }),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '盘面分析失败。');
+      setError(
+        zhUserMessage(cause instanceof Error ? cause.message : cause, '盘面分析失败，请稍后重试。'),
+      );
     } finally {
       setBusy(false);
     }
@@ -98,13 +103,13 @@ export function TokenAnalyzeWorkspace() {
         <div className="panel-header">
           <div>
             <span className="eyebrow">正式入口</span>
-            <h3>Token 盘面分析</h3>
+            <h3>代币盘面分析</h3>
           </div>
-          <span className="snapshot-badge">只需链与 Token</span>
+          <span className="snapshot-badge">只需选择链并填写代币地址</span>
         </div>
         <p>
-          普通分析员只提交账本、链标识和 Token。系统自动检查能力矩阵、钉住 FINALIZED
-          快照并物化供应与角色。不要粘贴供应单元格或分录 JSON。
+          选择账本并粘贴代币地址后，系统会自动核对可用能力、固定终局快照，并重建供应与角色。
+          无需填写任何内部数据。
         </p>
         <form onSubmit={submit} className="forensic-form">
           <label htmlFor="analyze-chain">
@@ -118,12 +123,12 @@ export function TokenAnalyzeWorkspace() {
             />
           </label>
           <label htmlFor="analyze-token">
-            Token
+            代币地址
             <input
               id="analyze-token"
               value={token}
               onChange={(event) => setToken(event.target.value)}
-              placeholder="粘贴任意受支持的 BSC Token 地址"
+              placeholder="粘贴任意受支持的 BSC 代币地址"
               autoComplete="off"
               spellCheck={false}
             />
@@ -188,7 +193,7 @@ export function TokenAnalyzeWorkspace() {
                 <dd>{conservation?.unknownDifferenceAtomic ?? '未知 · 未物化'}</dd>
               </div>
               <div>
-                <dt>当前可执行卖出</dt>
+                <dt>当前可卖出量估计</dt>
                 <dd>{executable?.sellableNowAtomic ?? '未知 · 未物化'}</dd>
               </div>
             </dl>
@@ -200,14 +205,14 @@ export function TokenAnalyzeWorkspace() {
                 { key: 'subject', header: '主体' },
               ]}
               rows={(result.roles?.assessments ?? []).map((item) => ({
-                role: item.role,
+                role: zhLabel(item.role),
                 subject: item.subject.identifier,
               }))}
             />
             <h4>限制</h4>
             <ul>
               {result.limitations.map((item) => (
-                <li key={item}>{item}</li>
+                <li key={item}>{zhUserMessage(item, '该限制尚未完成中文说明。')}</li>
               ))}
             </ul>
           </>
@@ -220,8 +225,8 @@ export function TokenAnalyzeWorkspace() {
             <h3>自动物化主链</h3>
           </div>
         </div>
-        <p>入口不得要求粘贴 SupplyCell、Role 或分录 JSON。</p>
-        <p>快照策略固定为 FINALIZED。未知、不可用、过期与 Provider 中断不得记为 0。</p>
+        <p>入口不会要求填写供应单元格、角色或内部数据。</p>
+        <p>快照策略固定为终局状态。未知、不可用、过期与数据源中断不得记为 0。</p>
         <div className="expert-only">
           <p>专家视图：角色分数是证据分，不是校准概率。服务路由与工厂不得标为控制实体或散户。</p>
         </div>
@@ -233,7 +238,7 @@ export function TokenAnalyzeWorkspace() {
           任务：
           {result?.job?.id ?? '未知 · 尚未入队'}
         </p>
-        <p>坐庄时间线与全盘退出 U 在历史任务完成前保持未知。</p>
+        <p>坐庄时间线与以稳定币计价的全盘退出价值，在历史任务完成前保持未知。</p>
       </aside>
     </section>
   );

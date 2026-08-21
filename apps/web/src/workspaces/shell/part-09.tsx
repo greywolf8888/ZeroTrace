@@ -2,6 +2,7 @@ import {
   type FundingSettlementReport,
   type FundingSettlementReportResponse,
 } from '../../generated-api/client.js';
+import { zhUserMessage } from '../../i18n/zh-CN.js';
 import {
   StatusPill,
   titleCase,
@@ -41,7 +42,9 @@ export function FundingSettlementPanel({
           </div>
           <StatusPill status="UNAVAILABLE" />
         </div>
-        <p className="panel-copy funding-settlement-copy">{error}</p>
+        <p className="panel-copy funding-settlement-copy">
+          {zhUserMessage(error, '资金与结算报告暂不可用。')}
+        </p>
       </section>
     );
   }
@@ -58,7 +61,7 @@ export function FundingSettlementPanel({
           <StatusPill status="NOT_QUERIED" />
         </div>
         <p className="panel-copy funding-settlement-copy">
-          此 Token 尚未物化资金与结算推断。缺少报告不会被推导为数值覆盖率或所有权结论。
+          此代币尚未物化资金与结算推断。缺少报告不会被推导为数值覆盖率或所有权结论。
         </p>
       </section>
     );
@@ -74,7 +77,7 @@ export function FundingSettlementPanel({
       <div className="panel-header">
         <div>
           <span className="eyebrow">
-            {layer === 'combined' ? '资金与结算图' : `${titleCase(layer)}图`} · 可回放 Snapshot
+            {layer === 'combined' ? '资金与结算图' : `${titleCase(layer)}图`} · 可回放快照
           </span>
           <h3>交易证据，不是所有权证明</h3>
         </div>
@@ -112,7 +115,7 @@ export function FundingSettlementPanel({
       </div>
       <div className="fact-grid funding-settlement-facts">
         <div className="fact-row">
-          <span>报告 ID</span>
+          <span>报告编号</span>
           <code>{report.id}</code>
         </div>
         <div className="fact-row">
@@ -126,7 +129,7 @@ export function FundingSettlementPanel({
           <StatusPill status={report.coverageScope} />
         </div>
         <div className="fact-row">
-          <span>Snapshot</span>
+          <span>快照</span>
           <code>{report.snapshot.blockNumber}</code>
         </div>
         <div className="fact-row">
@@ -134,7 +137,7 @@ export function FundingSettlementPanel({
           <KnowledgeDisplay data={report.confidence} />
         </div>
         <div className="fact-row">
-          <span>Evidence / 下钻</span>
+          <span>证据 / 下钻</span>
           <span>
             {report.evidenceIds.length} / {report.drilldown.length} 笔交易
           </span>
@@ -220,7 +223,7 @@ export function FundingSettlementPanel({
                   <th>原因</th>
                   <th>路径</th>
                   <th>交易</th>
-                  <th>Evidence</th>
+                  <th>证据</th>
                 </tr>
               </thead>
               <tbody>

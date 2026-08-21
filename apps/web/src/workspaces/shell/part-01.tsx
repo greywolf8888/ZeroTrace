@@ -3,7 +3,7 @@ import {
   type KnowledgeValue,
   type SubjectResponse,
 } from '../../generated-api/client.js';
-import { STATUS_LABELS, zhLabel, zhReason } from '../../i18n/zh-CN.js';
+import { STATUS_LABELS, zhLabel, zhReason, zhUserMessage } from '../../i18n/zh-CN.js';
 import { type ReactNode } from 'react';
 import type {
   BitcoinUtxoSetView,
@@ -40,7 +40,7 @@ export const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
 ];
 
 export const DEVELOPER_NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
-  { id: 'analyze', label: 'Token 盘面分析', marker: '分析' },
+  { id: 'analyze', label: '代币盘面分析', marker: '分析' },
   { id: 'search', label: '案件与调查', marker: '调查' },
   { id: 'overview', label: '盘面总览', marker: '总览' },
   { id: 'campaigns', label: '坐庄时间线', marker: '活动' },
@@ -90,7 +90,7 @@ export type CampaignGraphLayer = 'combined' | 'token' | 'funding' | 'settlement'
 
 export const CAMPAIGN_GRAPH_LAYERS: ReadonlyArray<{ id: CampaignGraphLayer; label: string }> = [
   { id: 'combined', label: '合并' },
-  { id: 'token', label: 'Token' },
+  { id: 'token', label: '代币' },
   { id: 'funding', label: '资金' },
   { id: 'settlement', label: '结算' },
   { id: 'behavior', label: '行为' },
@@ -155,7 +155,7 @@ export function MetricTile({
         </summary>
         <p className="metric-evidence-drill">
           证据钻取：当前状态为{stateLabel}
-          。未知、不可用、过期与数据源故障不得记为数字 0。完整结论必须绑定 Snapshot、Evidence
+          。未知、不可用、过期与数据源故障不得记为数字 0。完整结论必须绑定快照、证据
           闭包、覆盖率、来源集、模型/策略版本与回放入口。
         </p>
       </details>
@@ -165,12 +165,18 @@ export function MetricTile({
 
 export function KnowledgeDisplay({ data }: { data: KnowledgeValue<unknown> }) {
   if (data.state === 'known') {
-    const display =
-      typeof data.value === 'object' ? JSON.stringify(data.value) : String(data.value ?? 'null');
+    const display = typeof data.value === 'object' ? '已知' : String(data.value ?? '无值');
     return <span className="knowledge-known">{display}</span>;
   }
   return (
-    <span className={'knowledge-' + data.state} title={data.detail}>
+    <span
+      className={'knowledge-' + data.state}
+      title={
+        data.detail === undefined
+          ? undefined
+          : zhUserMessage(data.detail, '详细原因尚未完成中文说明。')
+      }
+    >
       {zhReason(data.reason ?? data.state)}
     </span>
   );
@@ -183,8 +189,8 @@ export function knownObject<T>(value: KnowledgeValue<unknown> | undefined): T | 
 }
 
 export function knownText(value: KnowledgeValue<unknown> | undefined): string {
-  if (value?.state !== 'known') return 'Unknown';
-  return String(value.value ?? 'null');
+  if (value?.state !== 'known') return '未知';
+  return String(value.value ?? '无值');
 }
 
 export function BitcoinIntelligencePanel({ response }: { response: SubjectResponse }) {
