@@ -1,11 +1,5 @@
-import {
-  type Capability,
-  type EvidenceRecord,
-  type HealthResponse,
-  type LaunchpadRegistryEntry,
-  type PlatformDescriptor,
-} from '../../generated-api/client.js';
-import { zhCapabilityTitle, zhDetail } from '../../i18n/zh-CN.js';
+import { type EvidenceRecord, type HealthResponse } from '../../generated-api/client.js';
+import { zhStatus } from '../../i18n/zh-CN.js';
 import { useState, type FormEvent } from 'react';
 import {
   type Theme,
@@ -13,12 +7,17 @@ import {
   NAVIGATION,
   DEVELOPER_NAVIGATION,
   Icon,
-  FUTURE_DOMAINS,
   StatusPill,
   titleCase,
   formatTime,
   shortId,
 } from './part-01.js';
+
+export function ledgerLabel(ledger: string): string {
+  if (ledger === 'BITCOIN') return 'Bitcoin';
+  if (ledger === 'SOLANA') return 'Solana';
+  return ledger;
+}
 
 export function Header({
   theme,
@@ -33,6 +32,7 @@ export function Header({
   setPresentation: (mode: 'novice' | 'expert') => void;
   health?: HealthResponse | undefined;
 }) {
+  const healthLabel = health === undefined ? '检查中' : zhStatus(health.status);
   return (
     <header className="topbar">
       <div className="brand">
@@ -63,12 +63,12 @@ export function Header({
         <div
           className="api-state"
           title={health?.checkedAt}
-          aria-label={'接口状态 ' + (health?.status ?? '检查中')}
+          aria-label={'数据服务状态 ' + healthLabel}
         >
           <span
             className={'state-light ' + (health?.status === 'UP' ? 'state-up' : 'state-warn')}
           />
-          接口 {health?.status ?? '检查中'}
+          数据服务 {healthLabel}
         </div>
         <button
           className="icon-button"
@@ -78,15 +78,13 @@ export function Header({
         >
           {theme === 'dark' ? '☼' : '◐'}
         </button>
-        <a className="docs-link" href="/docs" target="_blank" rel="noreferrer">
-          接口文档
-        </a>
       </div>
     </header>
   );
 }
 
 export function Sidebar({ view, setView }: { view: View; setView: (view: View) => void }) {
+  const diagnosticsEnabled = window.localStorage.getItem('zerotrace-diagnostics') === 'enabled';
   const primaryView: View =
     view === 'workbench' || view === 'overview'
       ? 'workbench'
@@ -110,32 +108,22 @@ export function Sidebar({ view, setView }: { view: View; setView: (view: View) =
             <span>{item.label}</span>
           </button>
         ))}
-        <details className="developer-navigation" open>
-          <summary>开发者能力</summary>
-          {DEVELOPER_NAVIGATION.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={'nav-item nav-item-developer ' + (view === item.id ? 'nav-active' : '')}
-              onClick={() => setView(item.id)}
-            >
-              <Icon>{item.marker}</Icon>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </details>
-        <div className="nav-caption nav-caption-spaced">架构域</div>
-        {FUTURE_DOMAINS.map((domain) => (
-          <div
-            className="nav-item nav-disabled"
-            key={domain}
-            title="契约保留；实现已接入取证工作站"
-          >
-            <Icon>·</Icon>
-            <span>{domain}</span>
-            <span className="nav-lock">门禁</span>
-          </div>
-        ))}
+        {diagnosticsEnabled ? (
+          <details className="developer-navigation">
+            <summary>诊断视图</summary>
+            {DEVELOPER_NAVIGATION.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={'nav-item nav-item-developer ' + (view === item.id ? 'nav-active' : '')}
+                onClick={() => setView(item.id)}
+              >
+                <Icon>{item.marker}</Icon>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </details>
+        ) : null}
       </nav>
       <div className="sidebar-note">
         <span>安全不变量</span>
@@ -174,7 +162,7 @@ export function SearchBox({
           id="global-query"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="地址、交易哈希、outpoint、Solana 公钥…"
+          placeholder="地址、交易哈希、Bitcoin 交易输出点、Solana 公钥…"
           autoComplete="off"
           spellCheck={false}
         />
@@ -188,8 +176,8 @@ export function SearchBox({
         onChange={(event) => setNetwork(event.target.value)}
       >
         <option value="auto">自动识别</option>
-        <option value="ethereum">Ethereum</option>
-        <option value="bsc">BNB Smart Chain</option>
+        <option value="ethereum">以太坊</option>
+        <option value="bsc">BNB 智能链</option>
         <option value="bitcoin">Bitcoin</option>
         <option value="solana">Solana</option>
       </select>
@@ -210,8 +198,6 @@ export function ProviderTable({ health }: { health?: HealthResponse | undefined 
             <th>数据源</th>
             <th>账本</th>
             <th>状态</th>
-            <th>端点</th>
-            <th>熔断</th>
             <th>链头</th>
             <th>延迟</th>
           </tr>
@@ -219,30 +205,26 @@ export function ProviderTable({ health }: { health?: HealthResponse | undefined 
         <tbody>
           {providers.length === 0 ? (
             <tr>
-              <td colSpan={7} className="empty-cell">
+              <td colSpan={5} className="empty-cell">
                 数据源健康尚未加载。
               </td>
             </tr>
           ) : (
-            providers.map((provider) => (
+            providers.map((provider, index) => (
               <tr key={provider.id}>
                 <td>
-                  <strong>{provider.id}</strong>
+                  <strong>
+                    {ledgerLabel(provider.ledger)} 数据源 {index + 1}
+                  </strong>
                 </td>
                 <td>
                   <span className={'chain-tag chain-' + provider.ledger.toLowerCase()}>
-                    {provider.ledger}
+                    {ledgerLabel(provider.ledger)}
                   </span>
                 </td>
                 <td>
                   <StatusPill status={provider.status} />
                 </td>
-                <td>
-                  <code>
-                    {provider.transport?.activeEndpointId ?? provider.transport?.endpointId ?? '—'}
-                  </code>
-                </td>
-                <td>{provider.transport?.circuitState ?? '—'}</td>
                 <td>
                   {provider.head.state === 'known' ? (
                     <code>{provider.head.value}</code>
@@ -264,16 +246,10 @@ export function ProviderTable({ health }: { health?: HealthResponse | undefined 
 
 export function Overview({
   health,
-  capabilities,
-  platforms,
-  launchpadRegistry,
   onSearch,
   searchBusy,
 }: {
   health?: HealthResponse | undefined;
-  capabilities: Capability[];
-  platforms: PlatformDescriptor[];
-  launchpadRegistry: LaunchpadRegistryEntry[];
   onSearch: (query: string, network: string) => Promise<void>;
   searchBusy: boolean;
 }) {
@@ -291,10 +267,7 @@ export function Overview({
             数据源 {upProviders}/{totalProviders} 在线
           </span>
         </div>
-        <p>
-          统一识别 Token、钱包、交易哈希和案件编号；所有结论必须绑定 Snapshot、Coverage 与
-          Evidence。
-        </p>
+        <p>统一识别代币、钱包、交易哈希和案件编号；所有结论必须绑定快照、覆盖率与证据。</p>
         <p className="workbench-boundary">链上只读 · 3 个账本族 · 0 个写链方法</p>
         <SearchBox onSearch={onSearch} busy={searchBusy} />
         <div className="workbench-grid">
@@ -311,7 +284,7 @@ export function Overview({
           <div>
             <span>待处理告警</span>
             <strong>未知</strong>
-            <small>仅展示绑定 Evidence 的持久告警。</small>
+            <small>仅展示绑定证据的持久化告警。</small>
           </div>
           <div>
             <span>数据源健康</span>
@@ -320,84 +293,6 @@ export function Overview({
             </strong>
             <small>{formatTime(health?.checkedAt)}</small>
           </div>
-        </div>
-      </section>
-
-      <section className="two-column">
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <span className="eyebrow">运行时事实</span>
-              <h3>数据源健康</h3>
-            </div>
-            <span className="freshness">{formatTime(health?.checkedAt)}</span>
-          </div>
-          <ProviderTable health={health} />
-        </article>
-        <article className="panel">
-          <div className="panel-header">
-            <div>
-              <span className="eyebrow">交付门禁</span>
-              <h3>能力账本</h3>
-            </div>
-          </div>
-          <div className="capability-list">
-            {capabilities.map((capability) => (
-              <div className="capability-row" key={capability.id}>
-                <div>
-                  <strong>{zhCapabilityTitle(capability.id)}</strong>
-                  {capability.detail === undefined ? null : (
-                    <small>{zhDetail(capability.detail)}</small>
-                  )}
-                </div>
-                <StatusPill status={capability.status} />
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
-
-      <section className="panel platform-panel">
-        <div className="panel-header">
-          <div>
-            <span className="eyebrow">机制感知架构</span>
-            <h3>平台适配边界</h3>
-          </div>
-          <span className="panel-note">状态表示实现事实，不是产品宣传。</span>
-        </div>
-        <div className="platform-grid">
-          {platforms.map((platform) => (
-            <article className="platform-card" key={platform.id}>
-              <div className="platform-card-top">
-                <strong>{platform.name}</strong>
-                <StatusPill status={platform.implementationStatus} />
-              </div>
-              <div className="platform-ledgers">
-                {platform.ledgers.map((ledger) => (
-                  <span key={ledger}>{ledger}</span>
-                ))}
-                {platform.roles.map((role) => (
-                  <span className="role-tag" key={role}>
-                    {titleCase(role)}
-                  </span>
-                ))}
-              </div>
-              {(() => {
-                const registry = launchpadRegistry.find((entry) => entry.platform === platform.id);
-                return registry === undefined ? null : (
-                  <div className="platform-provenance">
-                    <StatusPill status={registry.provenanceStatus} />
-                    <span>
-                      {registry.versions.length > 0
-                        ? `${registry.versions.length} 个钉扎版本`
-                        : '无钉扎版本'}
-                    </span>
-                  </div>
-                );
-              })()}
-              <p>{zhDetail(platform.integrationBoundary)}</p>
-            </article>
-          ))}
         </div>
       </section>
     </>

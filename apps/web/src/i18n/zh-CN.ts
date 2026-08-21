@@ -1,4 +1,20 @@
 export const STATUS_LABELS: Record<string, string> = {
+  IDLE: '尚未开始',
+  QUEUED: '已排队',
+  PENDING: '已排队',
+  RUNNING: '正在分析',
+  COMPLETE: '可使用',
+  COMPLETED: '可使用',
+  DEGRADED: '部分可用',
+  CHECKING: '检查中',
+  STALE: '结果已过期',
+  SOURCE_CONFLICT: '来源冲突',
+  FAILED: '失败',
+  DEAD_LETTER: '失败',
+  CANCELLED: '已取消',
+  PAUSED: '已暂停',
+  OFFLINE: '数据源不可用',
+  UNSUPPORTED: '暂不支持',
   PINNED: '已钉扎',
   Pinned: '已钉扎',
   PROVENANCE_PENDING: '来源待确认',
@@ -36,12 +52,18 @@ export const STATUS_LABELS: Record<string, string> = {
   NOT_RUN: '未运行',
   READ_ONLY: '只读',
   AGREEMENT: '一致',
-  PARTIAL: '部分',
+  PARTIAL: '已有部分结果',
   ACTIVE: '活跃',
   FINAL: '终局',
   HIGH: '高',
   NONE_OBSERVED: '未观测',
   UNCALIBRATED: '未校准',
+  WATCH: '需关注',
+  SOURCE_HEAD_REACHED: '已到达数据源链头',
+  RANGE_COMPLETE: '区间完整',
+  BOUNDED_RANGE: '有界区间',
+  OK: '正常',
+  WARN: '需关注',
 };
 
 export const REASON_LABELS: Record<string, string> = {
@@ -110,7 +132,7 @@ const DETAIL_FRAGMENTS: Array<readonly [string, string]> = [
   ],
   [
     'EVM logs/traces/state diffs, Bitcoin inputs/outputs, and Solana instructions/logs/balances/token balances/rewards are implemented',
-    '已实现 EVM 日志/追踪/状态差、Bitcoin 输入/输出，以及 Solana 指令/日志/余额/Token 余额/奖励',
+    '已实现 EVM 日志/追踪/状态差、Bitcoin 输入/输出，以及 Solana 指令/日志/余额/代币余额/奖励',
   ],
   [
     'POSTGRES_URL is absent; Evidence is process-local.',
@@ -123,11 +145,11 @@ const DETAIL_FRAGMENTS: Array<readonly [string, string]> = [
 ];
 
 export function zhReason(reason: string): string {
-  return REASON_LABELS[reason] ?? reason;
+  return REASON_LABELS[reason] ?? (/\p{Script=Han}/u.test(reason) ? reason : '原因待解释');
 }
 
 export function zhCapabilityTitle(id: string): string {
-  return CAPABILITY_TITLES[id] ?? id;
+  return CAPABILITY_TITLES[id] ?? '未命名能力';
 }
 
 export function zhDetail(text: string): string {
@@ -137,7 +159,8 @@ export function zhDetail(text: string): string {
   )) {
     if (out.includes(english)) out = out.split(english).join(chinese);
   }
-  return out;
+  if (/\p{Script=Han}/u.test(out)) return out;
+  return '该说明尚未完成中文映射。';
 }
 
 export const ENUM_LABELS: Record<string, string> = {
@@ -205,9 +228,71 @@ export const ENUM_LABELS: Record<string, string> = {
   DIRECT: '直接',
   SUPPORT: '支持',
   UNREVIEWED: '未审阅',
+  DISCOVERY: '发现',
+  DISPERSION: '分散',
+  COORDINATED_TRADING: '协同交易',
+  CONSOLIDATION: '归集',
+  PRE_EXIT_DISPERSION: '退出前分散',
+  SELLING: '卖出',
+  LIQUIDITY_EXIT: '流动性退出',
+  CEX_BOUNDARY: '中心化交易所边界',
+  REACCUMULATION: '再次吸筹',
+  DORMANT: '静默',
+  CORE: '核心钱包',
+  SATELLITE: '卫星钱包',
+  FUNDER: '出资钱包',
+  SERVICE_HUB: '服务枢纽',
+  CEX_PATH_BREAK: '中心化交易所路径边界',
+  DEX_ROUTER_COMMON_INFRA: '去中心化交易所路由公共设施',
+  BRIDGE_PATH_BREAK: '跨链桥路径边界',
+  RADIAL: '放射式',
+  SEQUENTIAL: '连续式',
+  SWEEP: '归集',
+  SETTLEMENT_CONVERGENCE: '结算汇聚',
+  BOUNDED_RANGE: '有界区间',
+  RANGE_COMPLETE: '区间完整',
+  WATCH: '需关注',
+  POSITIVE: '支持',
+  NEGATIVE: '反对',
+  NEUTRAL: '中性',
 };
 
-function titleCaseFallback(value: string): string {
+const SAFE_WEB3_TERMS = new Set([
+  'ZeroTrace',
+  'Web3',
+  'EVM',
+  'BSC',
+  'Bitcoin',
+  'Solana',
+  'Ethereum',
+  'AMM',
+  'DEX',
+  'CEX',
+  'Bridge',
+  'Router',
+  'Pool',
+  'Swap',
+  'Mint',
+  'Burn',
+  'LP',
+  'V2',
+  'V3',
+  'Safe',
+  'Multisig',
+  'DAO',
+  'Timelock',
+  'Gas',
+  'Hash',
+  'RPC',
+  'Trace',
+  'UTXO',
+  'Token',
+]);
+
+const INTERNAL_TEXT_PATTERN =
+  /(?:\b(?:GET|POST|PUT|PATCH|DELETE|HTTP|TypeError|ReferenceError|ECONN\w*|ENOTFOUND|JSON)\b|\/api\/|[A-Z][A-Z0-9]+_[A-Z0-9_]+)/;
+
+function diagnosticLabelFallback(value: string): string {
   return value
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .toLowerCase()
@@ -216,8 +301,15 @@ function titleCaseFallback(value: string): string {
     .join(' ');
 }
 
+export function zhUserMessage(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback;
+  const text = value.trim();
+  if (text.length === 0 || INTERNAL_TEXT_PATTERN.test(text)) return fallback;
+  return /\p{Script=Han}/u.test(text) ? text : fallback;
+}
+
 export function zhStatus(status: string): string {
-  return STATUS_LABELS[status] ?? ENUM_LABELS[status] ?? status;
+  return STATUS_LABELS[status] ?? ENUM_LABELS[status] ?? '未识别状态';
 }
 
 export function zhLabel(value: string): string {
@@ -229,6 +321,6 @@ export function zhLabel(value: string): string {
   if (ENUM_LABELS[snake] !== undefined) return ENUM_LABELS[snake];
   if (STATUS_LABELS[snake] !== undefined) return STATUS_LABELS[snake];
   if (REASON_LABELS[snake] !== undefined) return REASON_LABELS[snake];
-  const titled = titleCaseFallback(value);
-  return ENUM_LABELS[titled] ?? STATUS_LABELS[titled] ?? titled;
+  if (/\p{Script=Han}/u.test(value) || SAFE_WEB3_TERMS.has(value)) return value;
+  return diagnosticLabelFallback(value);
 }

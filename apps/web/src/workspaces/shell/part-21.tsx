@@ -1,5 +1,6 @@
 import { type HealthResponse } from '../../generated-api/client.js';
-import { ProviderTable } from './part-03.js';
+import { zhUserMessage } from '../../i18n/zh-CN.js';
+import { ledgerLabel, ProviderTable } from './part-03.js';
 import { StatusPill, titleCase, KnowledgeDisplay, shortId, formatTime } from './part-01.js';
 
 export function DataHealth({
@@ -11,6 +12,13 @@ export function DataHealth({
   refresh: () => void;
   busy: boolean;
 }) {
+  const chainName = (ledger: string, chainId: string): string => {
+    if (chainId === 'eip155:1') return '以太坊主网';
+    if (chainId === 'eip155:56') return 'BNB 智能链主网';
+    if (chainId === 'bitcoin-mainnet') return 'Bitcoin 主网';
+    if (chainId === 'solana-mainnet') return 'Solana 主网';
+    return `${ledgerLabel(ledger)} 网络`;
+  };
   return (
     <>
       <div className="page-heading page-heading-row">
@@ -35,7 +43,7 @@ export function DataHealth({
           <StatusPill status={health?.dataQuality.status ?? 'CHECKING'} />
         </div>
         <p className="panel-copy">
-          对照前会将各数据源链头降低到共同区块或 slot。端点运营方独立性在明确配置并核验前 保持未知。
+          对照前会将各数据源链头降低到共同区块或时隙。端点运营方独立性在明确配置并核验前保持未知。
         </p>
         {(health?.dataQuality.results.length ?? 0) === 0 ? (
           <div className="inline-empty">
@@ -58,9 +66,9 @@ export function DataHealth({
                   <div className="provider-card-top">
                     <div>
                       <span className={'chain-tag chain-' + result.ledger.toLowerCase()}>
-                        {result.ledger}
+                        {ledgerLabel(result.ledger)}
                       </span>
-                      <h3>{result.chainId}</h3>
+                      <h3>{chainName(result.ledger, result.chainId)}</h3>
                     </div>
                     <StatusPill status={result.status} />
                   </div>
@@ -101,13 +109,14 @@ export function DataHealth({
                       </dd>
                     </div>
                     <div>
-                      <dt>Evidence 数</dt>
+                      <dt>证据数</dt>
                       <dd>{result.metadata.evidenceIds.length}</dd>
                     </div>
                   </dl>
                   {result.alerts.map((alert) => (
                     <div className="provider-error" key={alert.id}>
-                      {titleCase(alert.severity)} · {alert.summary}
+                      {titleCase(alert.severity)} ·{' '}
+                      {zhUserMessage(alert.summary, '检测到跨源数据质量告警。')}
                     </div>
                   ))}
                 </article>
@@ -118,11 +127,7 @@ export function DataHealth({
         <div className="snapshot-strip anchor-quality-footer">
           <span>
             <b>存储</b>{' '}
-            {health === undefined
-              ? '不可用'
-              : `${titleCase(health.dataQuality.storage.backend)} · ${
-                  health.dataQuality.durable ? '持久化' : '进程内'
-                }`}
+            {health === undefined ? '不可用' : health.dataQuality.durable ? '持久化' : '仅当前会话'}
           </span>
           <span>
             <b>检查时间</b> {formatTime(health?.dataQuality.checkedAt)}
@@ -179,14 +184,6 @@ export function DataHealth({
           </div>
           <dl>
             <div>
-              <dt>后端</dt>
-              <dd>
-                {health?.storage.backend === undefined
-                  ? '不可用'
-                  : titleCase(health.storage.backend)}
-              </dd>
-            </div>
-            <div>
               <dt>持久性</dt>
               <dd>
                 {health === undefined ? '不可用' : health.storage.durable ? '持久化' : '进程内'}
@@ -238,7 +235,7 @@ export function DataHealth({
           ].map((component, index) =>
             component?.errorCode === undefined ? null : (
               <div className="provider-error" key={`${component.backend}-${index}`}>
-                {titleCase(component.backend)}: {titleCase(component.errorCode)}
+                {['原始事实', '检查点', '原始资料'][index]}：{titleCase(component.errorCode)}
               </div>
             ),
           )}
@@ -253,16 +250,16 @@ export function DataHealth({
           </div>
           <dl>
             <div>
-              <dt>后端</dt>
-              <dd>{titleCase(health?.graphProjection?.backend ?? 'APACHE_AGE')}</dd>
+              <dt>运行方式</dt>
+              <dd>{health?.graphProjection?.status === 'UP' ? '持久化图谱' : '尚未可用'}</dd>
             </div>
             <div>
-              <dt>事实权威</dt>
-              <dd>PostgreSQL 报告</dd>
+              <dt>事实来源</dt>
+              <dd>已持久化案件报告</dd>
             </div>
             <div>
-              <dt>图谱</dt>
-              <dd>{health?.graphProjection?.graphName ?? '未配置'}</dd>
+              <dt>图谱状态</dt>
+              <dd>{titleCase(health?.graphProjection?.status ?? 'UNCONFIGURED')}</dd>
             </div>
             <div>
               <dt>检查时间</dt>
@@ -273,14 +270,16 @@ export function DataHealth({
             <div className="provider-error">{titleCase(health.graphProjection.errorCode)}</div>
           )}
         </article>
-        {(health?.providers ?? []).map((provider) => (
+        {(health?.providers ?? []).map((provider, index) => (
           <article className="panel provider-card" key={provider.id}>
             <div className="provider-card-top">
               <div>
                 <span className={'chain-tag chain-' + provider.ledger.toLowerCase()}>
-                  {provider.ledger}
+                  {ledgerLabel(provider.ledger)}
                 </span>
-                <h3>{provider.id}</h3>
+                <h3>
+                  {ledgerLabel(provider.ledger)} 数据源 {index + 1}
+                </h3>
               </div>
               <StatusPill status={provider.status} />
             </div>
@@ -305,37 +304,11 @@ export function DataHealth({
                 <dt>能力数</dt>
                 <dd>{provider.capabilities.length}</dd>
               </div>
-              <div>
-                <dt>当前端点</dt>
-                <dd>
-                  {provider.transport?.activeEndpointId ??
-                    provider.transport?.endpointId ??
-                    '不可用'}
-                </dd>
-              </div>
-              <div>
-                <dt>熔断状态</dt>
-                <dd>{provider.transport?.circuitState ?? '不可用'}</dd>
-              </div>
-              <div>
-                <dt>重试 / 故障转移</dt>
-                <dd>
-                  {provider.transport === undefined
-                    ? '不可用'
-                    : `${provider.transport.retries} / ${provider.transport.failovers}`}
-                </dd>
-              </div>
-              <div>
-                <dt>缓存命中 / 绕过</dt>
-                <dd>
-                  {provider.transport === undefined
-                    ? '不可用'
-                    : `${provider.transport.cacheHits} / ${provider.transport.cacheBypasses}`}
-                </dd>
-              </div>
             </dl>
             {provider.errorDetail === undefined ? null : (
-              <div className="provider-error">{provider.errorDetail}</div>
+              <div className="provider-error">
+                {zhUserMessage(provider.errorDetail, '数据源暂不可用，请稍后重试。')}
+              </div>
             )}
           </article>
         ))}

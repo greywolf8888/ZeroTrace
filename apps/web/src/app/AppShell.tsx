@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   api,
-  type Capability,
   type FlapInspectionResponse,
   type HealthResponse,
-  type LaunchpadRegistryEntry,
-  type PlatformDescriptor,
   type SearchResponse,
   type SubjectCandidate,
   type SubjectResponse,
 } from '../generated-api/client.js';
+import { zhUserMessage } from '../i18n/zh-CN.js';
 import {
   AnalystWorkspace,
   CapitalWorkspace,
@@ -42,9 +40,6 @@ export function App() {
   );
   const [view, setView] = useState<View>('workbench');
   const [health, setHealth] = useState<HealthResponse>();
-  const [capabilities, setCapabilities] = useState<Capability[]>([]);
-  const [platforms, setPlatforms] = useState<PlatformDescriptor[]>([]);
-  const [launchpadRegistry, setLaunchpadRegistry] = useState<LaunchpadRegistryEntry[]>([]);
   const [loadingCore, setLoadingCore] = useState(true);
   const [coreError, setCoreError] = useState<string>();
   const [searchBusy, setSearchBusy] = useState(false);
@@ -67,18 +62,13 @@ export function App() {
   const refreshCore = useCallback(async () => {
     setLoadingCore(true);
     try {
-      const [nextHealth, nextCapabilities, nextPlatforms] = await Promise.all([
-        api.health(),
-        api.capabilities(),
-        api.platforms(),
-      ]);
+      const nextHealth = await api.health();
       setHealth(nextHealth);
-      setCapabilities(nextCapabilities.core);
-      setPlatforms(nextPlatforms.platforms);
-      setLaunchpadRegistry(nextPlatforms.launchpadRegistry);
       setCoreError(undefined);
     } catch (error) {
-      setCoreError(error instanceof Error ? error.message : '无法连接接口。');
+      setCoreError(
+        zhUserMessage(error instanceof Error ? error.message : error, '暂时无法连接数据服务。'),
+      );
     } finally {
       setLoadingCore(false);
     }
@@ -111,7 +101,9 @@ export function App() {
     try {
       setSearchResult(await api.search(query, selection.ledger, selection.chainId));
     } catch (error) {
-      setSearchError(error instanceof Error ? error.message : '检索失败。');
+      setSearchError(
+        zhUserMessage(error instanceof Error ? error.message : error, '检索失败，请稍后重试。'),
+      );
     } finally {
       setSearchBusy(false);
     }
@@ -136,11 +128,15 @@ export function App() {
         try {
           setLaunchInspection(await api.flapLaunch(candidate));
         } catch (error) {
-          setLaunchError(error instanceof Error ? error.message : 'Flap Portal 检查失败。');
+          setLaunchError(
+            zhUserMessage(error instanceof Error ? error.message : error, 'Flap Portal 检查失败。'),
+          );
         }
       }
     } catch (error) {
-      setSearchError(error instanceof Error ? error.message : '主体检查失败。');
+      setSearchError(
+        zhUserMessage(error instanceof Error ? error.message : error, '主体检查失败，请稍后重试。'),
+      );
     } finally {
       setSearchBusy(false);
     }
@@ -152,9 +148,9 @@ export function App() {
         <>
           <div className="page-heading case-heading">
             <div>
-              <span className="eyebrow">持久案件 · Snapshot · Coverage · Evidence</span>
+              <span className="eyebrow">持久案件 · 快照 · 覆盖率 · 证据</span>
               <h1>案件</h1>
-              <p>创建或重开 Token 案件；运行中可查看已落盘的 PARTIAL 结果。</p>
+              <p>创建或重开代币案件；运行中可查看已持久化的部分结果。</p>
             </div>
           </div>
           <TokenAnalyzeWorkspace />
@@ -168,7 +164,7 @@ export function App() {
             <div>
               <span className="eyebrow">终局游标 · 重组 · 去重 · 撤回</span>
               <h1>监控与告警</h1>
-              <p>当前仅展示已有持久 Campaign 监控能力；未完成的 24h 与重启恢复门禁保持阻断。</p>
+              <p>当前仅展示已有持久化盘面活动监控；二十四小时与重启恢复验证未完成前保持阻断。</p>
             </div>
           </div>
           <ControlCampaignWorkspace />
@@ -183,14 +179,6 @@ export function App() {
               <span className="eyebrow">数据源 · 存储 · 安全 · 诊断</span>
               <h1>数据源与系统</h1>
               <p>检查真实数据源与持久设施；未配置、故障和来源冲突不会折算为业务数值 0。</p>
-            </div>
-            <div className="system-subnav">
-              <button className="secondary-button" type="button" onClick={() => setView('health')}>
-                数据健康
-              </button>
-              <button className="secondary-button" type="button" onClick={() => setView('control')}>
-                系统管理
-              </button>
             </div>
           </div>
           <DataHealth health={health} refresh={() => void refreshCore()} busy={loadingCore} />
@@ -225,16 +213,7 @@ export function App() {
     if (view === 'health') {
       return <DataHealth health={health} refresh={() => void refreshCore()} busy={loadingCore} />;
     }
-    return (
-      <Overview
-        health={health}
-        capabilities={capabilities}
-        platforms={platforms}
-        launchpadRegistry={launchpadRegistry}
-        onSearch={search}
-        searchBusy={searchBusy}
-      />
-    );
+    return <Overview health={health} onSearch={search} searchBusy={searchBusy} />;
   }, [
     view,
     searchResult,
@@ -248,9 +227,6 @@ export function App() {
     health,
     loadingCore,
     refreshCore,
-    capabilities,
-    platforms,
-    launchpadRegistry,
   ]);
 
   return (
@@ -266,7 +242,7 @@ export function App() {
       <main className="main-content">
         {coreError === undefined ? null : (
           <div className="alert alert-error api-alert">
-            <strong>接口不可用</strong>
+            <strong>数据服务不可用</strong>
             <span>{coreError}</span>
             <button className="text-button" type="button" onClick={() => void refreshCore()}>
               重试
@@ -278,7 +254,7 @@ export function App() {
           <span>ZeroTrace v0.1.0</span>
           <span>链上只读 · 多链取证</span>
           <a href="https://github.com/greywolf8888/ZeroTrace" target="_blank" rel="noreferrer">
-            GitHub
+            项目源码
           </a>
         </footer>
       </main>

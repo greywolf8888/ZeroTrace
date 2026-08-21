@@ -12,6 +12,10 @@ const bitcoinAddress = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
 const bitcoinTransactionId = 'c'.repeat(64);
 
 async function openDeveloperView(page: Page, name: string): Promise<void> {
+  if ((await page.locator('details.developer-navigation').count()) === 0) {
+    await page.evaluate(() => window.localStorage.setItem('zerotrace-diagnostics', 'enabled'));
+    await page.reload();
+  }
   await page.locator('details.developer-navigation').evaluate((details, label) => {
     const button = [...details.querySelectorAll('button')].find((candidate) =>
       candidate.textContent?.trim().includes(label),
@@ -23,7 +27,9 @@ async function openDeveloperView(page: Page, name: string): Promise<void> {
   }, name);
 }
 
-test('renders capability truth and unknown values without fake market data', async ({ page }) => {
+test('renders the Chinese read-only workbench without fake market data or diagnostic navigation', async ({
+  page,
+}) => {
   const browserErrors: string[] = [];
   page.on('pageerror', (error) => browserErrors.push(error.message));
 
@@ -40,15 +46,11 @@ test('renders capability truth and unknown values without fake market data', asy
   await expect(page.getByText('最近案件', { exact: true })).toBeVisible();
   await expect(page.getByText('运行中任务', { exact: true })).toBeVisible();
   await expect(page.getByText('待处理告警', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '能力账本' })).toBeVisible();
-  await expect(page.getByText(/基于同一快照的证据对照要求精确状态零偏差/)).toBeVisible();
-  await expect(page.getByText('已实现 EVM 日志')).toBeVisible();
-  await expect(page.getByRole('heading', { name: '平台适配边界' })).toBeVisible();
-  await expect(page.getByText('无钉扎版本').first()).toBeVisible();
-  await expect(page.getByText('2 个钉扎版本', { exact: true })).toBeVisible();
-  await expect(page.getByText('已钉扎', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('来源待确认').first()).toBeVisible();
-  await expect(page.getByText('接口不可用')).toHaveCount(0);
+  await expect(page.getByText(/所有结论必须绑定快照、覆盖率与证据/)).toBeVisible();
+  await expect(page.getByText(/数据服务 (?:可用|部分可用|不可用|检查中)/)).toBeVisible();
+  await expect(page.locator('details.developer-navigation')).toHaveCount(0);
+  await expect(page.getByText('接口文档')).toHaveCount(0);
+  await expect(page.getByText('数据服务不可用')).toHaveCount(0);
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -65,7 +67,7 @@ test('renders capability truth and unknown values without fake market data', asy
   expect(browserErrors).toEqual([]);
 
   await page.getByRole('button', { name: '案件', exact: true }).click();
-  await expect(page.getByLabel('Token')).toHaveValue('');
+  await expect(page.getByLabel('代币地址')).toHaveValue('');
 });
 
 test('keeps every primary view reachable from the narrow-screen navigation', async ({ page }) => {
@@ -76,7 +78,7 @@ test('keeps every primary view reachable from the narrow-screen navigation', asy
   for (const label of ['工作台 / 查询', '案件', '监控与告警', '数据源与系统']) {
     await expect(primaryNav.getByRole('button', { name: label, exact: true })).toBeVisible();
   }
-  await expect(page.getByLabel(/接口状态/)).toBeVisible();
+  await expect(page.getByLabel(/数据服务状态/)).toBeVisible();
 
   const layout = await page.evaluate(() => {
     const nav = document.querySelector<HTMLElement>('.sidebar nav');
@@ -4449,7 +4451,7 @@ test('keeps scenario execution gated and exposes provider availability', async (
   ).toBeVisible();
   const anchorPanel = page.locator('.anchor-quality-panel');
   await expect(anchorPanel.getByRole('heading', { name: '锚点对账与连续性' })).toBeVisible();
-  await expect(anchorPanel).toContainText('端点运营方独立性在明确配置并核验前 保持未知。');
+  await expect(anchorPanel).toContainText('端点运营方独立性在明确配置并核验前保持未知。');
   await expect(anchorPanel.locator('.anchor-quality-card')).toHaveCount(4);
   const sourceCoverage = await anchorPanel.locator('.anchor-quality-card').evaluateAll((cards) =>
     cards.map((card) => {
@@ -4463,11 +4465,10 @@ test('keeps scenario execution gated and exposes provider availability', async (
   expect(sourceCoverage.every((value) => /^已观测 \d+\/\d+ · 需要 2$/.test(value ?? ''))).toBe(
     true,
   );
-  await expect(anchorPanel).toContainText('Memory · 进程内');
+  await expect(anchorPanel).toContainText('存储 仅当前会话');
   const evidenceStorageCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: '证据存储' }),
   });
-  await expect(evidenceStorageCard).toContainText('Memory');
   await expect(evidenceStorageCard).toContainText('进程内');
   await expect(evidenceStorageCard).toContainText('可重建缓存');
   const ingestionStorageCard = page.locator('.storage-card').filter({
@@ -4478,8 +4479,8 @@ test('keeps scenario execution gated and exposes provider availability', async (
   const graphProjectionCard = page.locator('.storage-card').filter({
     has: page.getByRole('heading', { name: '调查投影' }),
   });
-  await expect(graphProjectionCard).toContainText('Apache AGE');
-  await expect(graphProjectionCard).toContainText('PostgreSQL 报告');
+  await expect(graphProjectionCard).toContainText('尚未可用');
+  await expect(graphProjectionCard).toContainText('已持久化案件报告');
   await expect(graphProjectionCard).toContainText('未配置');
   await expect(page.getByRole('button', { name: '刷新数据源' })).toBeEnabled();
 });
@@ -4652,7 +4653,7 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('button', { name: '数据源与系统' }).click();
-  await page.getByRole('main').getByRole('button', { name: '系统管理' }).click();
+  await openDeveloperView(page, '系统控制（开发）');
   await expect(page.getByRole('heading', { name: 'EVM 系统管理' })).toBeVisible();
   await page.getByLabel('Contract address').fill(subject);
   await page.getByRole('button', { name: '检查并持久化' }).click();
@@ -4811,7 +4812,7 @@ test('renders finalized Solana Token-2022 authority and explicit pending domains
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('button', { name: '数据源与系统' }).click();
-  await page.getByRole('main').getByRole('button', { name: '系统管理' }).click();
+  await openDeveloperView(page, '系统控制（开发）');
   await page.getByLabel('Ledger').selectOption('SOLANA');
   await expect(page.getByRole('heading', { name: 'Solana 系统管理' })).toBeVisible();
   await page.getByRole('button', { name: '检查并持久化' }).click();
@@ -5165,7 +5166,7 @@ test('renders a Control 活动时间线 and 证据线 without merging entities',
   await page.goto('/');
   await page.getByRole('button', { name: '监控与告警' }).click();
   await expect(page.getByRole('heading', { name: '坐庄时间线' })).toBeVisible();
-  await page.getByLabel('Token').fill(`0x${'b'.repeat(40)}`);
+  await page.getByLabel('代币地址').fill(`0x${'b'.repeat(40)}`);
   await page.getByRole('button', { name: '加载活动' }).click();
 
   await expect(page.getByTestId('control-campaign-timeline')).toContainText('活动时间线');
@@ -5180,7 +5181,7 @@ test('renders a Control 活动时间线 and 证据线 without merging entities',
   );
   await expect(page.getByText('已阻止')).toBeVisible();
   await expect(
-    page.getByTestId('control-campaign-results').getByText('未经校准的 Evidence 分数'),
+    page.getByTestId('control-campaign-results').getByText('未经校准的证据分数'),
   ).toBeVisible();
   await expect(page.getByTestId('funding-settlement-report')).toContainText(
     '交易证据，不是所有权证明',
@@ -5196,7 +5197,7 @@ test('renders a Control 活动时间线 and 证据线 without merging entities',
   await expect(page.getByTestId('funding-settlement-report')).toBeVisible();
   await page.getByRole('button', { name: '导出案件包' }).click();
   await expect(page.getByTestId('control-campaign-export')).toContainText(`fcb_${campaignId}`);
-  await expect(page.getByTestId('control-campaign-export')).toContainText('1 条 Evidence');
+  await expect(page.getByTestId('control-campaign-export')).toContainText('1 条证据');
   await page.getByRole('button', { name: '启动监控' }).click();
   await expect(page.getByTestId('control-campaign-monitor')).toContainText(`cps_${'7'.repeat(24)}`);
 });

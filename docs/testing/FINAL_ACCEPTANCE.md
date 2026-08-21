@@ -2,6 +2,20 @@
 
 ## 2026-08-21 当前实现候选验收
 
+### 生产界面中文化复核
+
+- [x] 工作台、案件、监控和数据状态主路径以简体中文呈现；代币名称/符号、地址、哈希、Gas/燃料单位、协议名、链名和必要 Web3 专有名词按原义保留
+- [x] 动态状态、限制与错误采用安全中文映射；未知内部消息不会在生产主路径直接显示原始端点、存储后端、熔断器或异常文本
+- [x] 诊断导航默认不挂载；仅显式启用本地诊断开关后可见，且不计为普通用户正式能力
+- [x] 中文生产路径静态扫描覆盖 11 个入口文件，禁用词命中 `0`
+- [x] Chromium 桌面端/移动端回归 `42/42`，默认 DOM 无接口文档和开发者诊断入口
+- [x] `npm run verify`：单元 `927/927`、可运行集成 `88/88`、评估 `2/2`、只读 MCP `5/5`；format/lint/typecheck/build/license/architecture/audit 全部通过，生产依赖漏洞 `0`
+- [x] Rust workspace fmt、clippy `-D warnings` 与全部测试通过
+- [ ] 外部 PostgreSQL/ClickHouse/MinIO 相关 40 项集成仍为 `skipped`，不得计为通过
+- [ ] 本轮未重新执行实盘 Provider、固定硬件性能、24 小时 soak、签名清洁机与升级/回滚，既有未闭合状态不变
+
+本节只证明当前生产界面的中文语言约束和本地工程回归通过，不证明 23 项产品闭环全部完成，也不改变下方 `G14 Final Acceptance: BLOCKED` 结论。
+
 - [x] 实现 SHA `a0262f08adec9b9017e859b361b539204ac09999`：P0 算法/Unknown/fail-closed 语义与 durable worker 基础完成
 - [x] 四个普通用户一级入口：工作台/查询、案件、监控与告警、数据源与系统；Developer 能力独立折叠
 - [x] Tauri production Web + 打包 API sidecar；动态 loopback、每会话 token、AppData 存储、单实例和受限 capability
