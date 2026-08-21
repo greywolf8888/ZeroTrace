@@ -14,6 +14,8 @@
 
 本轮验证结果：中文生产路径静态扫描 `0` 个禁用词（覆盖 11 个语言入口文件）；Chromium 桌面端和移动端 `42/42`；`npm run verify` 中单元测试 `927/927`、可运行集成测试 `88/88`、外部存储相关 `40` 项 `skipped`、模型评估 `2/2`、只读 MCP `5/5`，格式、lint、类型、全量构建、许可证、架构与生产依赖审计全部通过且依赖漏洞为 `0`。Rust workspace 的 fmt、clippy（warnings 视为错误）与全部测试通过。未重新执行实盘外部 Provider、固定硬件性能、24 小时 soak、清洁机签名安装和升级/回滚，因此这些状态继续保持 `NOT_RUN`、`NOT_MEASURED` 或既有未闭合状态，不能据此合并 `main` 或宣称完整产品闭环。
 
+中文界面实现提交为 `5f77ae24bd9a966ffb076210a0638b4e6dccfc30`。基于该提交重新执行 `npm run desktop:prepare` 与 `npm run desktop:build` 后，桌面主程序 SHA-256 为 `44C0ED0EE50A9BC2F6CEC65B083A5282B92FFE98D3492B2AA4B153CBC7E0A0D0`，NSIS 安装包 SHA-256 为 `6B37EB2D29B8707D9CE06AC031F646C662BF8DEC03825C7361F3B14B35848492`，两者仍为 `NotSigned`。同一新主程序第二次启动在 10 秒检查时窗口响应正常，标题为“ZeroTrace 只读工作站”，只读 API sidecar 正在动态 loopback 端口监听，WebView 子进程已连接。首次冷启动没有在检查窗口内暴露可用窗口；独立 sidecar 探针和未改动二进制重启均通过，因此未将该次冷启动延迟误记为功能 PASS 或已解决的签名/清洁机门禁。
+
 Last updated: 2026-08-21
 
 ## 2026-08-19 监管取证级盘面结构升级
