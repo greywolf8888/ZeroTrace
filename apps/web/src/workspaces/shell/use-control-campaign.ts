@@ -6,6 +6,7 @@ import {
   type ForensicCampaignAlert,
   type FundingSettlementReportResponse,
 } from '../../generated-api/client.js';
+import { zhUserMessage } from '../../i18n/zh-CN.js';
 import { useEffect, useState } from 'react';
 import type { CampaignGraphLayer } from './part-01.js';
 import { nextMonitorStart, overlapPercent } from './part-01.js';
@@ -56,7 +57,9 @@ export function useControlCampaign() {
         setAlertsCampaignId(selectedCampaignId);
         setCampaignAlerts([]);
         setAlertsLoaded(true);
-        setAlertsError(cause instanceof Error ? cause.message : 'Campaign alert replay failed.');
+        setAlertsError(
+          zhUserMessage(cause instanceof Error ? cause.message : cause, '活动告警回放失败。'),
+        );
       });
     return () => {
       active = false;
@@ -121,7 +124,7 @@ export function useControlCampaign() {
         setFundingSettlement(undefined);
         setFundingSettlementKey(undefined);
         setFundingSettlementError(
-          cause instanceof Error ? cause.message : 'Funding and Settlement request failed.',
+          zhUserMessage(cause instanceof Error ? cause.message : cause, '资金与结算报告请求失败。'),
         );
         setFundingSettlementErrorKey(selectedFundingKey);
       });
@@ -160,9 +163,12 @@ export function useControlCampaign() {
       setGraphLayer('combined');
     } else {
       setError(
-        campaignResult.reason instanceof Error
-          ? campaignResult.reason.message
-          : 'Control Campaign request failed.',
+        zhUserMessage(
+          campaignResult.reason instanceof Error
+            ? campaignResult.reason.message
+            : campaignResult.reason,
+          '活动历史请求失败。',
+        ),
       );
       setRecords([]);
       setSelectedId(undefined);
@@ -183,7 +189,7 @@ export function useControlCampaign() {
       ]);
       setSelectedId(replayed.campaign.id);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Provider-free replay failed.');
+      setError(zhUserMessage(cause instanceof Error ? cause.message : cause, '离线活动回放失败。'));
     } finally {
       setBusy(false);
     }
@@ -211,7 +217,7 @@ export function useControlCampaign() {
     } catch (cause) {
       setForensicCase(undefined);
       setForensicCaseError(
-        cause instanceof Error ? cause.message : 'Forensic Case Bundle export failed.',
+        zhUserMessage(cause instanceof Error ? cause.message : cause, '取证案件包导出失败。'),
       );
     } finally {
       setBusy(false);
@@ -224,7 +230,7 @@ export function useControlCampaign() {
     campaign?.snapshotEnd.blockNumber ??
     campaign?.snapshotEnd.height ??
     campaign?.snapshotEnd.slot ??
-    'Unknown';
+    '未知';
   const monitorStartBlock = nextMonitorStart(snapshotPosition);
   const showTokenLayer = graphLayer === 'combined' || graphLayer === 'token';
   const showFundingLayer = graphLayer === 'combined' || graphLayer === 'funding';
@@ -267,7 +273,9 @@ export function useControlCampaign() {
         ),
       );
     } catch (cause) {
-      setMonitorError(cause instanceof Error ? cause.message : 'Live monitor request failed.');
+      setMonitorError(
+        zhUserMessage(cause instanceof Error ? cause.message : cause, '实时监控请求失败。'),
+      );
     } finally {
       setBusy(false);
     }

@@ -8,7 +8,7 @@ import {
   campaignSnapshotPosition,
   formatTime,
 } from './part-01.js';
-import { BitcoinForensicGraphPanel, SolanaDealerPanel } from './part-10.js';
+import { zhLabel, zhUserMessage } from '../../i18n/zh-CN.js';
 import { FundingSettlementPanel } from './part-09.js';
 import { useControlCampaign } from './use-control-campaign.js';
 
@@ -57,10 +57,10 @@ export function ControlCampaignWorkspace() {
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">控制活动 · 证据线 · 可回放 Snapshot</span>
+          <span className="eyebrow">控制活动 · 证据线 · 可回放快照</span>
           <h1>坐庄时间线</h1>
           <p>
-            沿 Token 流向、集群仓位、行为事件和取证 Evidence 复盘；标签不会被静默转换为
+            沿代币流向、集群仓位、行为事件和取证证据复盘；标签不会被静默转换为
             所有权，归因也不会被包装成确定事实。
           </p>
         </div>
@@ -69,8 +69,8 @@ export function ControlCampaignWorkspace() {
       <section className="panel subject-panel quote-panel" data-testid="control-campaign-query">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">仅限持久化 PostgreSQL 报告</span>
-            <h3>加载 Token 活动历史</h3>
+            <span className="eyebrow">仅限持久化案件报告</span>
+            <h3>加载代币活动历史</h3>
           </div>
           <span className="snapshot-badge">支持脱离数据源导出取证包</span>
         </div>
@@ -81,7 +81,7 @@ export function ControlCampaignWorkspace() {
             void load();
           }}
         >
-          <label htmlFor="campaign-chain">链 ID</label>
+          <label htmlFor="campaign-chain">链标识</label>
           <input
             id="campaign-chain"
             value={chainId}
@@ -89,7 +89,7 @@ export function ControlCampaignWorkspace() {
             placeholder="eip155:56"
             spellCheck={false}
           />
-          <label htmlFor="campaign-token">Token 地址</label>
+          <label htmlFor="campaign-token">代币地址</label>
           <input
             id="campaign-token"
             value={token}
@@ -111,20 +111,16 @@ export function ControlCampaignWorkspace() {
               disabled={busy || selected === undefined}
               onClick={() => void replay()}
             >
-              回放已存 Snapshot
+              回放已存快照
             </button>
           </div>
         </form>
         <p className="quote-note">
-          未知、不可用、过期和数据源故障保持为不同状态。未经校准的 Evidence 分数只显示为
+          未知、不可用、过期和数据源故障保持为不同状态。未经校准的证据分数只显示为
           分数，绝不解释为概率或所有权结论。
         </p>
         {error === undefined ? null : <p className="inline-error">{error}</p>}
       </section>
-
-      <BitcoinForensicGraphPanel />
-
-      <SolanaDealerPanel />
 
       {loaded && (showFundingLayer || showSettlementLayer) ? (
         <FundingSettlementPanel
@@ -137,7 +133,7 @@ export function ControlCampaignWorkspace() {
       {loaded && records.length === 0 && error === undefined ? (
         <section className="panel empty-state" data-testid="control-campaign-empty">
           <strong>未找到持久化控制活动报告。</strong>
-          <span>该 Token 可能尚未物化，或持久化存储尚未配置。</span>
+          <span>该代币可能尚未物化，或持久化存储尚未配置。</span>
         </section>
       ) : null}
 
@@ -207,7 +203,7 @@ export function ControlCampaignWorkspace() {
                   <MetricTile
                     label="活动分数"
                     value={campaign.evidenceScore.toFixed(3)}
-                    detail="未经校准的 Evidence 分数"
+                    detail="未经校准的证据分数"
                     state="known"
                   />
                   <MetricTile
@@ -223,7 +219,7 @@ export function ControlCampaignWorkspace() {
                   <MetricTile
                     label="数据覆盖率"
                     value={`${Math.round(campaign.evidenceCoverage * 100)}%`}
-                    detail="已观测活动 Evidence"
+                    detail="已观测活动证据"
                     state={campaign.evidenceCoverage === 1 ? 'known' : 'unknown'}
                   />
                   <MetricTile
@@ -249,7 +245,7 @@ export function ControlCampaignWorkspace() {
                 </div>
                 <div className="fact-grid">
                   <div className="fact-row">
-                    <span>活动 ID</span>
+                    <span>活动编号</span>
                     <code>{campaign.id}</code>
                   </div>
                   <div className="fact-row">
@@ -259,7 +255,7 @@ export function ControlCampaignWorkspace() {
                     </span>
                   </div>
                   <div className="fact-row">
-                    <span>Snapshot 位置</span>
+                    <span>快照位置</span>
                     <code>{snapshotPosition}</code>
                   </div>
                   <div className="fact-row">
@@ -275,8 +271,8 @@ export function ControlCampaignWorkspace() {
                     <strong className="knowledge-unknown">已阻止</strong>
                   </div>
                   <div className="fact-row">
-                    <span>来源集</span>
-                    <span>{campaign.metadata.sourceSet.join(' · ')}</span>
+                    <span>来源数量</span>
+                    <span>{campaign.metadata.sourceSet.length} 个数据源</span>
                   </div>
                   <div className="fact-row">
                     <span>结果哈希</span>
@@ -286,11 +282,11 @@ export function ControlCampaignWorkspace() {
                 <div className="case-export-bar" data-testid="control-campaign-export">
                   <div>
                     <span className="eyebrow">取证案件包</span>
-                    <strong>Evidence 闭包 · 清单哈希 · 离线回放</strong>
+                    <strong>证据闭包 · 清单哈希 · 离线回放</strong>
                     {forensicCase === undefined ? null : (
                       <small>
-                        {forensicCase.case.caseId} · {forensicCase.case.manifest.evidenceCount} 条
-                        Evidence · {forensicCase.case.manifest.snapshotCount} 个 Snapshot ·{' '}
+                        {forensicCase.case.caseId} · {forensicCase.case.manifest.evidenceCount}{' '}
+                        条证据 · {forensicCase.case.manifest.snapshotCount} 个快照 ·{' '}
                         {forensicCase.case.manifest.rawArtifactCount} 个原始工件
                       </small>
                     )}
@@ -312,9 +308,7 @@ export function ControlCampaignWorkspace() {
                     <span className="eyebrow">终局区块增量监控</span>
                     <strong>链上只读调度 · 重组感知游标 · 无自动操作</strong>
                     {monitor === undefined ? (
-                      <small>
-                        从 Snapshot {snapshotPosition} 之后开始；工作进程只捕获新终局区块。
-                      </small>
+                      <small>从快照 {snapshotPosition} 之后开始；工作进程只捕获新终局区块。</small>
                     ) : (
                       <small>
                         {monitor.monitor.monitorId} · {titleCase(monitor.monitor.status)} · 下次{' '}
@@ -332,7 +326,7 @@ export function ControlCampaignWorkspace() {
                     onClick={() => void startMonitor()}
                     title={
                       monitorStartBlock === undefined
-                        ? '启动监控需要一个已知且安全的 Snapshot 区块。'
+                        ? '启动监控需要一个已知且安全的快照区块。'
                         : undefined
                     }
                   >
@@ -351,7 +345,7 @@ export function ControlCampaignWorkspace() {
                     <StatusPill status="READ_ONLY" />
                   </div>
                   <p className="panel-copy">
-                    此处对照两份绑定 Snapshot 的持久化报告，不推断所有权、不合并实体，也不把
+                    此处对照两份绑定快照的持久化报告，不推断所有权、不合并实体，也不把
                     未校准分数转换为概率。
                   </p>
                   <div className="metric-grid compact-grid">
@@ -362,7 +356,7 @@ export function ControlCampaignWorkspace() {
                           ? '未知'
                           : `${comparisonWalletOverlap}%`
                       }
-                      detail="基于已观测核心与卫星 ID 的 Jaccard"
+                      detail="基于已观测核心与卫星钱包的集合重合度"
                       state={comparisonWalletOverlap === undefined ? 'unknown' : 'known'}
                     />
                     <MetricTile
@@ -374,7 +368,7 @@ export function ControlCampaignWorkspace() {
                       state={comparisonWalletDelta === undefined ? 'unknown' : 'known'}
                     />
                     <MetricTile
-                      label="Evidence 条目差值"
+                      label="证据条目差值"
                       value={
                         comparisonEvidenceDelta === undefined
                           ? '未知'
@@ -386,7 +380,7 @@ export function ControlCampaignWorkspace() {
                     <MetricTile
                       label="覆盖率"
                       value={`${Math.round(campaign.evidenceCoverage * 100)}% → ${Math.round(comparisonReference.campaign.evidenceCoverage * 100)}%`}
-                      detail="所选 → 参考 Evidence 覆盖率"
+                      detail="所选报告到参考报告的证据覆盖率"
                       state="known"
                     />
                   </div>
@@ -400,7 +394,7 @@ export function ControlCampaignWorkspace() {
                       <code>{comparisonReference.campaign.id}</code>
                     </div>
                     <div className="fact-row">
-                      <span>Snapshot 位置</span>
+                      <span>快照位置</span>
                       <span>
                         {campaignSnapshotPosition(selected.campaign.snapshotEnd)} →{' '}
                         {campaignSnapshotPosition(comparisonReference.campaign.snapshotEnd)}
@@ -420,7 +414,7 @@ export function ControlCampaignWorkspace() {
               <section className="panel" data-testid="control-campaign-alerts">
                 <div className="panel-header">
                   <div>
-                    <span className="eyebrow">取证告警流 · Evidence 绑定</span>
+                    <span className="eyebrow">取证告警流 · 证据绑定</span>
                     <h3>活动告警</h3>
                   </div>
                   <span className="panel-note">
@@ -448,14 +442,14 @@ export function ControlCampaignWorkspace() {
                           <StatusPill status={alert.severity} />
                         </div>
                         <p>
-                          {alert.evidenceIds.length} 个 Evidence 节点 · 置信度{' '}
+                          {alert.evidenceIds.length} 个证据节点 · 置信度{' '}
                           <KnowledgeDisplay data={alert.confidence} /> ·{' '}
                           {formatTime(alert.createdAt)}
                         </p>
                         <small>
                           {alert.suppressionApplied.length === 0
                             ? '未应用抑制规则。'
-                            : `抑制规则：${alert.suppressionApplied.join(' · ')}`}
+                            : `抑制规则：${alert.suppressionApplied.map(zhLabel).join(' · ')}`}
                         </small>
                       </article>
                     ))}
@@ -467,20 +461,20 @@ export function ControlCampaignWorkspace() {
                 <section className="panel" data-testid="control-campaign-positions">
                   <div className="panel-header">
                     <div>
-                      <span className="eyebrow">守恒的集群仓位 Snapshot</span>
+                      <span className="eyebrow">守恒的集群仓位快照</span>
                       <h3>仓位时间线</h3>
                     </div>
-                    <span className="panel-note">{selected.positions.length} 个 Snapshot</span>
+                    <span className="panel-note">{selected.positions.length} 个快照</span>
                   </div>
                   {selected.positions.length === 0 ? (
-                    <p className="empty-cell">未物化守恒仓位 Snapshot。</p>
+                    <p className="empty-cell">未物化守恒仓位快照。</p>
                   ) : (
                     <div className="table-scroll">
                       <table>
                         <thead>
                           <tr>
                             <th>区块</th>
-                            <th>Token 余额</th>
+                            <th>代币余额</th>
                             <th>外部流入 / 流出</th>
                             <th>钱包数</th>
                             <th>可卖出量</th>
@@ -535,9 +529,11 @@ export function ControlCampaignWorkspace() {
                             <span className="timeline-range">
                               {event.startBlock} → {event.endBlock} · {formatTime(event.startTime)}
                             </span>
-                            <p>{event.explanation}</p>
+                            <p>
+                              {zhUserMessage(event.explanation, '该事件说明尚未完成中文映射。')}
+                            </p>
                             <small>
-                              {event.supportingEvidenceIds.length} 条支持 Evidence · 置信度{' '}
+                              {event.supportingEvidenceIds.length} 条支持证据 · 置信度{' '}
                               <KnowledgeDisplay data={event.confidence} />
                             </small>
                           </div>
@@ -576,7 +572,7 @@ export function ControlCampaignWorkspace() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Evidence</th>
+                        <th>证据</th>
                         <th>阶段</th>
                         <th>区块</th>
                         <th>主体</th>
@@ -587,7 +583,7 @@ export function ControlCampaignWorkspace() {
                       {selected.evidenceItems.length === 0 ? (
                         <tr>
                           <td className="empty-cell" colSpan={5}>
-                            未物化活动 Evidence 条目。
+                            未物化活动证据条目。
                           </td>
                         </tr>
                       ) : (
@@ -596,7 +592,7 @@ export function ControlCampaignWorkspace() {
                             <td>
                               <code title={item.id}>{shortId(item.evidenceId, 9)}</code>
                               <br />
-                              <small>{item.polarity}</small>
+                              <small>{zhLabel(item.polarity)}</small>
                             </td>
                             <td>
                               {titleCase(item.phase)}
