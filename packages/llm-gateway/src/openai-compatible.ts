@@ -1,3 +1,5 @@
+import { assertProviderUrlSafe } from '@zerotrace/chain-adapters';
+
 /** Provider-neutral analysis transport. No wallet or trade execution capability. */
 export interface CompatibleAiConfig {
   baseUrl: string;
@@ -23,6 +25,14 @@ export interface CompatibleAiResult<T> {
   reportedModel: string | null;
   requestId: string | null;
   apiStyle: CompatibleAiConfig['apiStyle'];
+  modelIdentity: 'MATCHED' | 'MISMATCH' | 'UNREPORTED';
+  requiresModelConfirmation: boolean;
+  durationMs: number;
+  usage: {
+    inputTokens: number | null;
+    outputTokens: number | null;
+    totalTokens: number | null;
+  };
 }
 export function compatibleEndpoint(config: CompatibleAiConfig): URL {
   const url = new URL(config.baseUrl);
@@ -48,6 +58,10 @@ function validateConfig(c: CompatibleAiConfig): void {
   }
   if (c.timeoutMs > 600_000 || c.maxResponseBytes > 8_000_000)
     throw new Error('AI_BUDGET_TOO_LARGE');
+}
+
+function tokenUsage(value: unknown): number | null {
+  return Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : null;
 }
 async function boundedBody(response: Response, limit: number): Promise<string> {
   const announced = response.headers.get('content-length');
@@ -121,7 +135,17 @@ export async function analyzeCompatible<T>(
   }
   if (c.storeFalse) body.store = false;
   // No tools or transaction endpoints are exposed. Suggested queries are validated elsewhere.
-  const response = await transport(compatibleEndpoint(config), {
+  const endpoint = compatibleEndpoint(config);
+  if (transport === fetch) {
+    const local = ['localhost', '127.0.0.1', '[::1]'].includes(endpoint.hostname);
+    await assertProviderUrlSafe(endpoint.toString(), {
+      allowedHosts: [endpoint.hostname],
+      allowPrivateNetworks: local && config.allowLoopbackHttp === true,
+      allowHttpForPrivateNetworks: local && config.allowLoopbackHttp === true,
+    });
+  }
+  const startedAt = performance.now();
+  const response = await transport(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + config.apiKey },
     body: JSON.stringify(body),
@@ -166,11 +190,26 @@ export async function analyzeCompatible<T>(
   if (!text.trim()) throw new Error('AI_EMPTY_ANALYSIS');
   // Schema compliance is never treated as truth: caller must also check evidence and permissions.
   const value = validate(JSON.parse(text));
+  const reportedModel = typeof d.model === 'string' ? d.model : null;
+  const modelIdentity =
+    reportedModel === null ? 'UNREPORTED' : reportedModel === config.model ? 'MATCHED' : 'MISMATCH';
+  const usage =
+    typeof d.usage === 'object' && d.usage !== null && !Array.isArray(d.usage)
+      ? (d.usage as Record<string, unknown>)
+      : {};
   return {
     value,
     requestedModel: config.model,
-    reportedModel: typeof d.model === 'string' ? d.model : null,
+    reportedModel,
     requestId: response.headers.get('x-request-id'),
     apiStyle: config.apiStyle,
+    modelIdentity,
+    requiresModelConfirmation: modelIdentity !== 'MATCHED',
+    durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+    usage: {
+      inputTokens: tokenUsage(usage.input_tokens ?? usage.prompt_tokens),
+      outputTokens: tokenUsage(usage.output_tokens ?? usage.completion_tokens),
+      totalTokens: tokenUsage(usage.total_tokens),
+    },
   };
 }

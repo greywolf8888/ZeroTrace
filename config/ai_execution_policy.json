@@ -1,0 +1,23 @@
+{
+  "version": "V11.0",
+  "analysis_model_id": "5.6sol",
+  "preserve_user_model_id": true,
+  "silent_fallback": false,
+  "capability_probe_required": true,
+  "default_effort_when_supported": "medium",
+  "escalation": ["high", "xhigh"],
+  "max_usage": "ONLY_HARD_QUALITY_FIRST_TASK_WITH_MEASURED_NEED",
+  "pro_mode_default": false,
+  "model_auto_switch": false,
+  "primary_coders": 1,
+  "max_independent_coding_lanes": 2,
+  "new_orchestration_framework_required": false,
+  "initial_read": [
+    "01_GPT5.6_唯一Goal_V11.md",
+    "docs/01_范围与复用裁决.md",
+    "config/development_batches.json"
+  ],
+  "private_external_ai_default": false,
+  "high_frequency_numeric_llm_dependency": false,
+  "provider_specific_parameters_after_probe_only": true
+}
