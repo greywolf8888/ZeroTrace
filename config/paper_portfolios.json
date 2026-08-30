@@ -1,0 +1,56 @@
+{
+  "version": "V11.0",
+  "budget_meaning": "每条链各自的总模拟本金，不是每笔金额。只在新建实验时初始化。",
+  "accounts": [
+    {
+      "id": "paper-sol-main",
+      "chain": "SOLANA",
+      "native_symbol": "SOL",
+      "native_decimals": 9,
+      "initial_native": "1",
+      "initial_atomic": "1000000000"
+    },
+    {
+      "id": "paper-bsc-main",
+      "chain": "BSC",
+      "native_symbol": "BNB",
+      "native_decimals": 18,
+      "initial_native": "1",
+      "initial_atomic": "1000000000000000000"
+    }
+  ],
+  "position_policy": {
+    "target_position_bps": 500,
+    "max_single_position_bps": 1000,
+    "max_controller_group_bps": 1500,
+    "max_narrative_group_bps": 2500,
+    "max_total_invested_bps": 6000,
+    "min_uncommitted_cash_bps": 1500,
+    "min_gas_reserve_bps": 500,
+    "idea_worst_case_risk_bps": 500,
+    "opaque_token_stress_loss_bps": 10000,
+    "risk_base": "INITIAL_PLUS_REALIZED_PNL",
+    "sizing": "MIN_TARGET_RISK_CAPACITY_GROUP_HEADROOM_AVAILABLE_CASH",
+    "trade_count_limit": null
+  },
+  "cost_policy": {
+    "buy_amount_excludes_fees": true,
+    "fees_reserved_separately": true,
+    "all_costs_in_net_pnl": true,
+    "rent_deposit_separate_from_expense": true,
+    "refund_only_after_verified_close": true,
+    "minimum_economic_size": "DYNAMIC_COST_AND_CAPACITY_CHECK",
+    "fee_budget": "QUOTE_SPECIFIC_BOUNDED_AND_RECHECKED"
+  },
+  "wallet_link": {
+    "default": "PAPER_ONLY",
+    "real_addresses_optional": true,
+    "permissions": ["READ_PUBLIC_BALANCES", "READ_PUBLIC_TRANSACTIONS"],
+    "auto_select": "EXPLICIT_PRIMARY_WATCH_ADDRESS_FOR_CHAIN_OR_PAPER_ACCOUNT",
+    "ambiguous_address_selection": "REQUIRE_PRIMARY_SELECTION_NOT_FIRST_FOUND",
+    "linking_never_changes_capital": true,
+    "clone_real_balance_requires_new_named_paper_experiment": true,
+    "no_automatic_chain_bridging": true
+  },
+  "warning": "全部比例仅为保守模拟起点，非已验证最优仓位或真实投资建议。"
+}
