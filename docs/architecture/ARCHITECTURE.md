@@ -804,6 +804,19 @@ Unavailable、Stale 和 Provider Down 是不同状态，均不转成零。输出
 API 当前只公开定义目录，不接受远程指标求值。持久 Observation 仓库、租户授权、Cohort、指标物化、
 完整 Maps/Profiler 接线与命名实链回放验收完成前，X70 保持 `PARTIAL`。
 
+## 跨账本消息与终端边界
+
+通用资产账本不再按金额或代币文本相同自动配对 Bridge 事件。跨账本配对必须同时绑定协议与版本、
+协议消息标识和源/目标消息引用、发送方/接收方及两侧 Bridge 端点、版本化资产映射与 decimals、
+显式费用守恒、两侧固定 Snapshot、官方来源 URI、源/目标 Evidence 和模型版本。不同链上的原生/包装
+资产可以不同；金额先无损提升到共同精度，再校验“源金额 = 目标释放 + 明示费用”。任何缺失或冲突
+均失败关闭。匹配结果只是跨账本转移，不是市场成交或已实现价值。
+
+CEX 充值、未配对 Bridge 和 Privacy Tool 路径只能记录为“最后可观察边界”。边界强制停止所有权
+传播，并把实现状态保持为 Unknown；标签或到达服务地址既不能确认到账、成交、提现，也不能确认
+共同控制。当前已实现安全核心和测试，具体 Bridge 消息解码、官方资产映射注册表、CEX/Privacy 来源、
+持续跨链索引及命名实链回放仍未完成，因此 X71 保持 `PARTIAL`。
+
 ## Storage ownership
 
 | Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                                                                  |
