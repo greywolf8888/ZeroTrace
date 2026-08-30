@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { createPaperExperiment, type PaperCommand } from '@zerotrace/asset-ledger';
+import {
+  buildPaperReview,
+  createPaperExperiment,
+  type PaperCommand,
+} from '@zerotrace/asset-ledger';
 
 import {
   PaperSimulationStorageError,
@@ -48,6 +52,7 @@ class MemoryPool {
   commands: Array<Record<string, unknown>> = [];
   events: Array<Record<string, unknown>> = [];
   outbox: Array<Record<string, unknown>> = [];
+  reviews: Array<Record<string, unknown>> = [];
   statements: string[] = [];
 
   async query(text: string, values: readonly unknown[] = []) {
@@ -69,6 +74,26 @@ class MemoryPool {
     }
     if (text.includes('FROM paper_experiments')) {
       return { rows: this.row === undefined ? [] : [this.row], rowCount: this.row ? 1 : 0 };
+    }
+    if (text.includes('FROM paper_experiment_commands')) {
+      return { rows: this.commands, rowCount: this.commands.length };
+    }
+    if (text.includes('INSERT INTO paper_review_reports')) {
+      if (!this.reviews.some((row) => row.id === values[0])) {
+        this.reviews.push({
+          id: values[0],
+          experiment_id: values[1],
+          snapshot_id: values[2],
+          report_hash: values[3],
+          report: values[4],
+          as_of: values[5],
+        });
+      }
+      return { rows: [], rowCount: 1 };
+    }
+    if (text.includes('FROM paper_review_reports')) {
+      const rows = this.reviews.filter((row) => row.id === values[0]);
+      return { rows, rowCount: rows.length };
     }
     if (text.includes('SELECT id, created_at FROM paper_notification_outbox')) {
       const found = this.outbox.find((row) => row.id === values[1]);
@@ -103,7 +128,9 @@ class MemoryPool {
             command_table: 'paper_experiment_commands',
             event_table: 'paper_experiment_events',
             outbox_table: 'paper_notification_outbox',
-            migration_applied: true,
+            review_table: 'paper_review_reports',
+            ledger_migration_applied: true,
+            review_migration_applied: true,
           },
         ],
         rowCount: 1,
@@ -123,7 +150,11 @@ class MemoryPool {
           return { rows: this.row === undefined ? [] : [this.row], rowCount: this.row ? 1 : 0 };
         }
         if (text.includes('INSERT INTO paper_experiment_commands')) {
-          this.commands.push({ payload: values[4], command_id: values[1] });
+          this.commands.push({
+            payload: values[4],
+            command_id: values[1],
+            command_hash: values[3],
+          });
           return { rows: [], rowCount: 1 };
         }
         if (text.includes('INSERT INTO paper_experiment_events')) {
@@ -247,5 +278,27 @@ describe('PostgreSQL 模拟账本与发件箱', () => {
     await expect(repository.listOutbox({ experimentId: created.id })).rejects.toMatchObject({
       code: 'PAPER_STORAGE_CONFLICT',
     });
+  });
+
+  it('完整读取命令日志并幂等保存可重放复盘', async () => {
+    const pool = new MemoryPool();
+    const repository = PostgresPaperSimulationRepository.fromPool(pool as never);
+    const created = await repository.create(initial());
+    const state = await repository.apply({
+      experimentId: created.id,
+      command: command('candidate-1'),
+    });
+    const journal = await repository.getCommandJournal(created.id);
+    const report = buildPaperReview({
+      experiment: state,
+      commands: journal,
+      rejectedCandidates: [],
+      asOf: at,
+    });
+
+    await expect(repository.saveReview(report)).resolves.toEqual(report);
+    await expect(repository.saveReview(report)).resolves.toEqual(report);
+    expect(pool.reviews).toHaveLength(1);
+    await expect(repository.getReview(report.id)).resolves.toEqual(report);
   });
 });

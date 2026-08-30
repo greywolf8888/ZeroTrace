@@ -2,8 +2,10 @@ import type { FastifyInstance } from 'fastify';
 
 import {
   createPaperExperiment,
+  buildPaperReview,
   type PaperCommand,
   type PaperExperiment,
+  type RejectedCandidateReviewInput,
 } from '@zerotrace/asset-ledger';
 import {
   PaperSimulationStorageError,
@@ -16,6 +18,8 @@ import {
   PaperExperimentCreateSchema,
   PaperExperimentParamsSchema,
   PaperOutboxQuerySchema,
+  PaperReviewCreateSchema,
+  PaperReviewParamsSchema,
 } from '../paper-simulation-schemas.js';
 
 const WARNING = '仅为可重放的模拟研究，不是投资建议；不会签名、广播交易或移动真实资金。';
@@ -110,6 +114,60 @@ export async function registerPaperSimulationRoutes(
         warning: WARNING,
         ...page,
       };
+    },
+  );
+
+  app.post(
+    '/api/v1/paper/experiments/:experimentId/reviews',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const { experimentId } = PaperExperimentParamsSchema.parse(request.params);
+      const input = PaperReviewCreateSchema.parse(request.body);
+      const store = repository(context);
+      const experiment = await store.get(experimentId);
+      if (experiment === undefined) {
+        throw new PaperSimulationStorageError(
+          'PAPER_STORAGE_NOT_FOUND',
+          'Paper experiment not found.',
+        );
+      }
+      const commands = await store.getCommandJournal(experimentId);
+      let report;
+      try {
+        report = buildPaperReview({
+          experiment,
+          commands,
+          rejectedCandidates: input.rejectedCandidates as RejectedCandidateReviewInput[],
+          asOf: input.asOf,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith('PAPER_REVIEW_')) {
+          throw new PaperSimulationStorageError('PAPER_STORAGE_INVALID', error.message, {
+            cause: error,
+          });
+        }
+        throw error;
+      }
+      const stored = await store.saveReview(report);
+      return reply.code(201).send({
+        mode: 'PAPER' as const,
+        historicalState: true,
+        warning: WARNING,
+        report: stored,
+      });
+    },
+  );
+
+  app.get(
+    '/api/v1/paper/reviews/:reviewId',
+    { schema: { tags: ['analysis'] } },
+    async (request) => {
+      const { reviewId } = PaperReviewParamsSchema.parse(request.params);
+      const report = await repository(context).getReview(reviewId);
+      if (report === undefined) {
+        throw new PaperSimulationStorageError('PAPER_STORAGE_NOT_FOUND', 'Paper review not found.');
+      }
+      return { mode: 'PAPER' as const, historicalState: true, warning: WARNING, report };
     },
   );
 }
