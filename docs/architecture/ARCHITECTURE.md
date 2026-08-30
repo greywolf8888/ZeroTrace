@@ -773,6 +773,21 @@ EVM rejects `eth_sendRawTransaction` and related write methods. Solana rejects
 `sendTransaction`. Bitcoin uses only Esplora GET resources in the current adapter. These are
 security boundaries and have regression tests.
 
+## Query Lab 只读计划边界
+
+`@zerotrace/query-security` 使用 PostgreSQL 类型化 AST，而不是正则表达式，生成 Query Lab
+准入计划。当前只接受单条 `SELECT`，并强制静态正整数 `LIMIT`、连续位置参数、Curated/Research
+关系白名单、确定性函数白名单、关系/子查询/扫描字节/超时上限。DDL、DML、事务与会话语句、
+`FOR UPDATE/SHARE`、系统关系、表值函数、LATERAL、文件/网络读取、当前身份/时间关键字及动态
+LIMIT 均失败关闭。计划明确要求数据库事务 `READ ONLY`，并声明文件与网络访问为 false。
+
+迁移 `044_readonly_query_views` 只建立 `curated.evidence_index` 与
+`curated.analysis_snapshot_index` 两个 security-barrier 脱敏索引视图，排除 locator、source URI、
+raw artifact、Snapshot payload 与 Provider/Adapter 细节，并且不向 `PUBLIC` 授权。API 当前只公开
+版本化目录与 AST 计划，不执行 SQL，也不返回查询结果。独立只读数据库角色、租户 RLS、扫描成本
+执行器、取消、物化、结果 Evidence/Snapshot 和真实 PostgreSQL 门禁完成前，不能把此能力称为完整
+Query Lab。
+
 ## Storage ownership
 
 | Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                                                                  |

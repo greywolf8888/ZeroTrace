@@ -670,6 +670,22 @@
         ]
       }
     },
+    "/api/v1/query/catalog": {
+      "get": {
+        "operationId": "GET__api_v1_query_catalog",
+        "tags": [
+          "intelligence"
+        ]
+      }
+    },
+    "/api/v1/query/plan": {
+      "post": {
+        "operationId": "POST__api_v1_query_plan",
+        "tags": [
+          "intelligence"
+        ]
+      }
+    },
     "/api/v1/settings/research-sources": {
       "get": {
         "operationId": "GET__api_v1_settings_research_sources",
