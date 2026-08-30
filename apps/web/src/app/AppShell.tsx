@@ -17,6 +17,7 @@ import {
   SupplyRealityWorkspace,
 } from '../workspaces/forensic.js';
 import { TokenAnalyzeWorkspace } from '../workspaces/token-analyze.js';
+import { GlobalModeStrip, primaryPaperView } from './paper-sections.js';
 import {
   ClaimAuditWorkspace,
   ControlCampaignWorkspace,
@@ -149,6 +150,8 @@ export function App() {
   }, []);
 
   const content = useMemo(() => {
+    const primary = primaryPaperView(view);
+    if (primary !== undefined) return primary;
     if (view === 'cases') {
       return (
         <>
@@ -257,6 +260,7 @@ export function App() {
         setPresentation={setPresentation}
         health={health}
       />
+      <GlobalModeStrip health={health} />
       <Sidebar view={view} setView={setView} />
       <main className="main-content">
         {coreError === undefined ? null : (

@@ -85,14 +85,6 @@ export function Header({
 
 export function Sidebar({ view, setView }: { view: View; setView: (view: View) => void }) {
   const diagnosticsEnabled = window.localStorage.getItem('zerotrace-diagnostics') === 'enabled';
-  const primaryView: View =
-    view === 'workbench' || view === 'overview'
-      ? 'workbench'
-      : view === 'monitoring' || view === 'campaigns'
-        ? 'monitoring'
-        : view === 'system' || view === 'health' || view === 'control'
-          ? 'system'
-          : 'cases';
   return (
     <aside className="sidebar">
       <nav aria-label="主导航">
@@ -101,7 +93,7 @@ export function Sidebar({ view, setView }: { view: View; setView: (view: View) =
           <button
             key={item.id}
             type="button"
-            className={'nav-item ' + (primaryView === item.id ? 'nav-active' : '')}
+            className={'nav-item ' + (view === item.id ? 'nav-active' : '')}
             onClick={() => setView(item.id)}
           >
             <Icon>{item.marker}</Icon>

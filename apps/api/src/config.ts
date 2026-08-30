@@ -81,6 +81,7 @@ const EnvironmentSchema = z.object({
     .enum(['LOW_COST_CASE', 'SELECTIVE_MARKET_INDEX', 'REMOTE_ARCHIVE_HYBRID'])
     .default('LOW_COST_CASE'),
   ZEROTRACE_STORAGE_ROOT: optionalString,
+  ZEROTRACE_PAPER_PORTFOLIO_CONFIG: optionalString,
   OIDC_ISSUER: optionalString,
   OIDC_AUDIENCE: optionalString,
   ZEROTRACE_DESKTOP_AUTH_TOKEN: optionalString,
@@ -162,6 +163,7 @@ export interface AppConfig {
   bscTraceOperatorId: string;
   storageProfile: 'LOW_COST_CASE' | 'SELECTIVE_MARKET_INDEX' | 'REMOTE_ARCHIVE_HYBRID';
   storageRoot: string;
+  paperPortfolioConfigPath?: string;
   oidcIssuer?: string;
   oidcAudience?: string;
   desktopAuthToken?: ConfigSecret;
@@ -366,6 +368,9 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
       (parsed.NODE_ENV === 'test'
         ? join(tmpdir(), 'zerotrace-storage-plane-test')
         : join('data', 'storage-plane')),
+    ...(parsed.ZEROTRACE_PAPER_PORTFOLIO_CONFIG === undefined
+      ? {}
+      : { paperPortfolioConfigPath: parsed.ZEROTRACE_PAPER_PORTFOLIO_CONFIG }),
     ...(parsed.NODEREAL_API_KEY === undefined
       ? {}
       : { noderealApiKey: secret(parsed.NODEREAL_API_KEY) }),

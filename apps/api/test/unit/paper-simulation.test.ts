@@ -159,6 +159,20 @@ describe('模拟实验 HTTP', () => {
     const app = await createApp({ config: baseConfig(), runtime, logger: false });
     apps.push(app);
 
+    const settings = await app.inject({
+      method: 'GET',
+      url: '/api/v1/settings/paper-simulation',
+    });
+    expect(settings.statusCode).toBe(200);
+    expect(settings.json()).toMatchObject({
+      version: 'V11.0',
+      walletMode: 'PAPER_ONLY',
+      automaticChainBridging: false,
+      source: { kind: 'VERSIONED_LOCAL_CONFIG', reference: 'paper_portfolios.json' },
+      policy: { targetPositionBps: 500, opaqueTokenStressLossBps: 10_000 },
+    });
+    expect(JSON.stringify(settings.json())).not.toContain('F:\\ZeroTrace');
+
     const created = await app.inject({
       method: 'POST',
       url: '/api/v1/paper/experiments',

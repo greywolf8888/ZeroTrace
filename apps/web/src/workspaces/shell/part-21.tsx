@@ -104,7 +104,7 @@ export function DataHealth({
                 </dl>
                 {source.providerId === 'xapid' && !source.identityVerified ? (
                   <div className="provider-error">
-                    需要准确服务域名、官方接口文档、授权范围和计费证据；系统不会猜测。
+                    需要准确服务域名、官方服务说明、授权范围和计费证据；系统不会猜测。
                   </div>
                 ) : null}
               </article>
