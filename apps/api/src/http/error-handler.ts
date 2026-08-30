@@ -24,6 +24,7 @@ import {
   ForensicCampaignAlertStorageError,
   LabelIntelligenceStorageError,
   PensionCandidateReportStorageError,
+  PaperSimulationStorageError,
   SemanticCheckpointError,
   SolanaTransactionReportStorageError,
   SolanaDealerCampaignReportStorageError,
@@ -85,6 +86,19 @@ export function registerApiErrorHandler(app: FastifyInstance): void {
     if (error instanceof StorageError) {
       return reply
         .code(503)
+        .send(errorResponse(request, error.code, error.message, error.retryable));
+    }
+    if (error instanceof PaperSimulationStorageError) {
+      const status =
+        error.code === 'PAPER_STORAGE_INVALID'
+          ? 400
+          : error.code === 'PAPER_STORAGE_CONFLICT'
+            ? 409
+            : error.code === 'PAPER_STORAGE_NOT_FOUND'
+              ? 404
+              : 503;
+      return reply
+        .code(status)
         .send(errorResponse(request, error.code, error.message, error.retryable));
     }
     if (error instanceof CaptureScheduleStorageError) {

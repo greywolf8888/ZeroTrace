@@ -51,6 +51,7 @@ import type {
   PostgresIntelligenceSearchRepository,
   PostgresLabelIntelligenceReportRepository,
   PostgresPensionCandidateReportRepository,
+  PostgresPaperSimulationRepository,
   PostgresSemanticScanCheckpointRepository,
 } from '@zerotrace/storage';
 import type { JobQueue } from '@zerotrace/workflow-core';
@@ -121,6 +122,7 @@ export interface AppRuntime {
   labelIntelligenceReports?: PostgresLabelIntelligenceReportRepository;
   captureSchedules?: PostgresCaptureScheduleRepository;
   dataProcurement?: PostgresDataProcurementRepository;
+  paperSimulation?: PostgresPaperSimulationRepository;
   socialSources?: readonly SocialSourceConfig[];
   ageInvestigationGraphProjection?: AgeInvestigationGraphProjectionRepository;
   dataQuality: AnchorDataQualityService;
