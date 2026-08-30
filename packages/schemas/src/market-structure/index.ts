@@ -52,3 +52,4 @@ export * from './campaign.js';
 export * from './capital.js';
 export * from './exit.js';
 export * from './casework.js';
+export * from './ai-analysis.js';
