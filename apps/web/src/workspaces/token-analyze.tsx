@@ -12,6 +12,7 @@ import { WorkstationStatusBanner } from './workstation-status.js';
 export function TokenAnalyzeWorkspace() {
   const [chainId, setChainId] = useState('eip155:56');
   const [token, setToken] = useState('');
+  const [creationTx, setCreationTx] = useState('');
   const [mode, setMode] = useState<'FULL_LIFETIME' | 'BOUNDED_WINDOW'>('FULL_LIFETIME');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -83,6 +84,7 @@ export function TokenAnalyzeWorkspace() {
           snapshotPolicy: 'FINALIZED',
           analysisMode: mode,
           forensicMode: 'FORENSIC',
+          ...(creationTx.trim().length === 0 ? {} : { creationTx: creationTx.trim() }),
         }),
       );
     } catch (cause) {
@@ -146,6 +148,20 @@ export function TokenAnalyzeWorkspace() {
               <option value="BOUNDED_WINDOW">有界窗口</option>
             </select>
           </label>
+          <label htmlFor="analyze-creation-tx">
+            创建交易哈希（可选）
+            <input
+              id="analyze-creation-tx"
+              value={creationTx}
+              onChange={(event) => setCreationTx(event.target.value)}
+              placeholder="已核验时填写 0x 开头的交易哈希"
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
+          <p className="form-hint">
+            提供已核验的创建交易可从起点重放完整生命周期；留空时系统保持起点未知，不会猜测。
+          </p>
           <button type="submit" disabled={busy || token.length === 0}>
             {busy ? '分析中' : '开始取证分析'}
           </button>

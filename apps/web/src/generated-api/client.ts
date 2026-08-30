@@ -3258,6 +3258,7 @@ export const api = {
       snapshotPolicy: 'FINALIZED';
       analysisMode: 'FULL_LIFETIME' | 'BOUNDED_WINDOW';
       forensicMode?: 'RESEARCH' | 'ADMISSIBLE' | 'FORENSIC';
+      creationTx?: string;
     },
   ) =>
     requestJson<TokenAnalyzeResponse>(
