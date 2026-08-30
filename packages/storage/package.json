@@ -14,6 +14,7 @@
   "dependencies": {
     "@clickhouse/client": "1.23.1",
     "@zerotrace/action-semantics": "*",
+    "@zerotrace/asset-ledger": "*",
     "@zerotrace/capture-scheduler": "*",
     "@zerotrace/claim-audit": "*",
     "@zerotrace/data-quality": "*",

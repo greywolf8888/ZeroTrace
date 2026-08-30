@@ -12,6 +12,7 @@
     { "path": "../evidence" },
     { "path": "../data-quality" },
     { "path": "../action-semantics" },
+    { "path": "../asset-ledger" },
     { "path": "../capture-scheduler" },
     { "path": "../claim-audit" },
     { "path": "../funding-settlement-engine" },
