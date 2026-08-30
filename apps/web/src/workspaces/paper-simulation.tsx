@@ -3,12 +3,12 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import {
   api,
   type PaperExperimentView,
-  type PaperOutboxView,
   type PaperPortfolioSettingsResponse,
 } from '../generated-api/client.js';
 import { zhUserMessage } from '../i18n/zh-CN.js';
-import { formatTime, shortId, StatusPill } from './shell/index.js';
-import { PaperEmptyState, PaperEventTable, PaperReviewExplorer } from './paper-review-view.js';
+import { PaperNotificationCenter } from './paper-notification-center.js';
+import { PaperEventTable, PaperReviewExplorer } from './paper-review-view.js';
+import { shortId, StatusPill } from './shell/index.js';
 
 export type PaperWorkspaceSection =
   | 'radar'
@@ -54,7 +54,6 @@ export function PaperSimulationWorkspace({ section }: { section: PaperWorkspaceS
   const [experimentId, setExperimentId] = useState(initialExperimentId);
   const [chain, setChain] = useState<'BSC' | 'SOLANA'>('SOLANA');
   const [name, setName] = useState('主模拟实验');
-  const [outbox, setOutbox] = useState<PaperOutboxView[]>([]);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
 
@@ -93,18 +92,6 @@ export function PaperSimulationWorkspace({ section }: { section: PaperWorkspaceS
       if (experimentTimer !== undefined) window.clearTimeout(experimentTimer);
     };
   }, [initialExperimentId, loadExperiment]);
-
-  useEffect(() => {
-    if (section !== 'alerts' || experiment === undefined) return;
-    void api
-      .paperOutbox(experiment.id, undefined, 200)
-      .then((page) => setOutbox(page.records))
-      .catch((cause: unknown) =>
-        setError(
-          zhUserMessage(cause instanceof Error ? cause.message : cause, '提醒记录读取失败。'),
-        ),
-      );
-  }, [experiment, section]);
 
   const account = settings?.accounts.find((item) => item.chain === chain);
   const create = async (event: FormEvent) => {
@@ -219,30 +206,7 @@ export function PaperSimulationWorkspace({ section }: { section: PaperWorkspaceS
       );
     }
     if (section === 'alerts') {
-      return (
-        <section className="panel">
-          <div className="paper-boundary-note">
-            这里显示应用内已落盘记录；待投递不代表桌面、Webhook（网络回调）、Telegram（消息机器人）或邮件已经送达。
-          </div>
-          <div className="paper-alert-list">
-            {outbox.length === 0 ? (
-              <PaperEmptyState>尚无提醒记录，或持久发件箱当前不可用。</PaperEmptyState>
-            ) : (
-              outbox.map((record) => (
-                <article key={record.id}>
-                  <div>
-                    <strong>{record.title}</strong>
-                    <span>{formatTime(record.createdAt)}</span>
-                  </div>
-                  <StatusPill status={record.urgency} />
-                  <span>应用内：已记录</span>
-                  <span>外部通道：未验证</span>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
-      );
+      return <PaperNotificationCenter experiment={experiment} />;
     }
     return (
       <section className="paper-settings-grid">
