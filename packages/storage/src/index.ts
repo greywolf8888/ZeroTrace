@@ -43,6 +43,7 @@ export * from './forensic-reports.js';
 export * from './durable-jobs.js';
 export * from './storage-plane-adapters.js';
 export * from './data-procurement.js';
+export * from './paper-simulation.js';
 
 type DatabaseRow = Record<string, unknown>;
 
