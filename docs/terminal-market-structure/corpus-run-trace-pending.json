@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-corpus-run-trace-pending-v1",
-  "capturedAt": "2026-08-20T10:36:11.622Z",
+  "capturedAt": "2026-08-30T19:11:38.568Z",
   "reviewed": false,
   "traceSlot": "UNCONFIGURED",
   "keyedSlots": {
@@ -10,7 +10,7 @@
   "creationTraceSource": true,
   "note": "只对已知创建交易做 Trace。起源 COMPLETE 需要双 Operator 交易/回执/字节码一致，且 traces 匹配 CREATE/CREATE2。不是 G12 PASS。",
   "tokenCount": 3,
-  "originComplete": 3,
+  "originComplete": 1,
   "historyComplete": 0,
   "perToken": [
     {
@@ -18,39 +18,43 @@
       "token": "0xaecbd0e461047d6b7cfc82e637ad197097407777",
       "origin": "COMPLETE",
       "history": "PARTIAL",
-      "historyLimitation": "日志窗口失败：fetch failed。未覆盖区间不得记为空持有人。",
+      "historyLimitation": "日志窗口未覆盖起源到当前头，持有人集合保持部分观察。",
       "createdBlock": "100460764",
       "deployer": "0xecd294436485a1d8e7fddb8d79725b59a136b7d7",
-      "coverageLogs": 0,
-      "artifactCount": 11,
+      "coverageLogs": 30,
+      "artifactCount": 10,
       "rawHashesValid": true,
-      "elapsedMs": 12380
+      "elapsedMs": 4691
     },
     {
       "id": "BSC_FLAP_TAX_V3_LIFETIME",
       "token": "0x13aa2c5bbfd15b65b15ef1129ff3dcddf8c17777",
-      "origin": "COMPLETE",
+      "origin": "PARTIAL",
       "history": "PARTIAL",
+      "limitationCode": "TRACE_UNAVAILABLE",
+      "originLimitation": "TRACE_UNAVAILABLE：bulk CREATE traces 读取失败（Provider hostname resolved to a private or reserved address.）。不得用回执地址或 Explorer 替代。",
       "historyLimitation": "日志窗口未覆盖起源到当前头，持有人集合保持部分观察。",
       "createdBlock": "92983208",
       "deployer": "0x6db1f6a7f3bafd25b038b6ad4394cd6377cb19dd",
       "coverageLogs": 1715,
       "artifactCount": 17,
       "rawHashesValid": true,
-      "elapsedMs": 4857
+      "elapsedMs": 4377
     },
     {
       "id": "BSC_FLAP_NEW_TOKEN_V2",
       "token": "0x711770df85f79c4aebba1f1d8db263110d3d7777",
-      "origin": "COMPLETE",
+      "origin": "PARTIAL",
       "history": "PARTIAL",
+      "limitationCode": "TRACE_UNAVAILABLE",
+      "originLimitation": "TRACE_UNAVAILABLE：bulk CREATE traces 读取失败（Provider hostname resolved to a private or reserved address.）。不得用回执地址或 Explorer 替代。",
       "historyLimitation": "日志窗口未覆盖起源到当前头，持有人集合保持部分观察。",
       "createdBlock": "102628537",
       "deployer": "0x9b0af47afbe35e87ea4ff0da58c610f798345b2f",
       "coverageLogs": 2,
       "artifactCount": 17,
       "rawHashesValid": true,
-      "elapsedMs": 2351
+      "elapsedMs": 1885
     }
   ]
 }

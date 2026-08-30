@@ -5,7 +5,13 @@ export interface QueryIdentity {
   aliases?: readonly string[];
 }
 function phrase(s: string): string {
-  if (!s.trim() || s.length > 160 || /["\\\r\n\u0000-\u001f]/u.test(s))
+  if (
+    !s.trim() ||
+    s.length > 160 ||
+    [...s].some(
+      (character) => character === '"' || character === '\\' || character.charCodeAt(0) <= 31,
+    )
+  )
     throw new Error('UNSAFE_QUERY_TERM');
   return `"${s.trim()}"`;
 }
@@ -43,7 +49,9 @@ export function compileApprovedQuery(q: string, maxChars: number, approvedVersio
     !Number.isSafeInteger(maxChars) ||
     maxChars <= 0 ||
     q.length > maxChars ||
-    /[\r\n\u0000]/u.test(q)
+    [...q].some(
+      (character) => character === '\r' || character === '\n' || character.charCodeAt(0) === 0,
+    )
   )
     throw new Error('QUERY_NOT_APPROVED_OR_TOO_LONG');
   return q; // Provider syntax/capability probing remains mandatory, not silently rewritten.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-storage-forecast-v1",
-  "capturedAt": "2026-08-20T11:39:10.057Z",
+  "capturedAt": "2026-08-30T18:50:39.177Z",
   "source": "low-disk-bench.json",
   "bytesPerEvent": 558.3,
   "bytesPerToken": 16749,

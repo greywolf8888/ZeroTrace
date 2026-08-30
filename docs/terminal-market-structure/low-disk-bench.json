@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-low-disk-bench-v1",
-  "capturedAt": "2026-08-20T11:38:20.749Z",
+  "capturedAt": "2026-08-30T18:50:49.501Z",
   "profile": "LOW_COST_CASE",
   "token": "0xAeCBD0E461047d6B7Cfc82e637AD197097407777",
   "pass1": {
@@ -13,16 +13,16 @@
       "eventCount": 30,
       "rawBytes": 2560,
       "parquetBytes": 12760,
-      "evidenceBytes": 3989,
+      "evidenceBytes": 7829,
       "traceBytes": 0,
       "rpcCalls": 10,
       "historicalRpcCalls": 8,
       "traceCalls": 0,
-      "durationMs": 3077,
+      "durationMs": 4309,
       "coverage": "PARTIAL",
       "originStatus": "COMPLETE",
       "resultHash": "100460764",
-      "updatedAt": "2026-08-20T11:38:18.313Z"
+      "updatedAt": "2026-08-30T18:50:46.924Z"
     }
   },
   "pass2": {
@@ -39,16 +39,16 @@
       "eventCount": 30,
       "rawBytes": 2560,
       "parquetBytes": 12760,
-      "evidenceBytes": 3989,
+      "evidenceBytes": 7829,
       "traceBytes": 0,
       "rpcCalls": 10,
       "historicalRpcCalls": 8,
       "traceCalls": 0,
-      "durationMs": 2432,
+      "durationMs": 2572,
       "coverage": "PARTIAL",
       "originStatus": "COMPLETE",
       "resultHash": "100460764",
-      "updatedAt": "2026-08-20T11:38:20.746Z"
+      "updatedAt": "2026-08-30T18:50:49.497Z"
     }
   },
   "secondPassHistoricalRpcZero": false,
@@ -60,20 +60,20 @@
   "quota": {
     "profile": "LOW_COST_CASE",
     "level": "OK",
-    "usedBytes": 34803,
-    "budgetBytes": 154885414288,
-    "freeBytes": 221264842752,
+    "usedBytes": 51031,
+    "budgetBytes": 113501399126,
+    "freeBytes": 162144804864,
     "rebuildableBytes": 0,
-    "permanentEvidenceBytes": 3989,
+    "permanentEvidenceBytes": 7829,
     "dailyGrowthBytes": 12760,
-    "estimatedFullAt": "+035260-04-25T02:37:13.037Z",
+    "estimatedFullAt": "+026380-08-04T18:16:24.297Z",
     "evictingClass": null,
     "labels": {
-      "used": "当前使用 33.99 KB / 预算 144.25 GB",
+      "used": "当前使用 49.83 KB / 预算 105.71 GB",
       "rebuildable": "可重建数据 0 B",
-      "permanent": "不可删除证据 3.90 KB",
+      "permanent": "不可删除证据 7.65 KB",
       "dailyGrowth": "每日增长 12.46 KB",
-      "fullAt": "预计满盘日期 +035260-04-25T02:37:13.037Z",
+      "fullAt": "预计满盘日期 +026380-08-04T18:16:24.297Z",
       "evicting": "正在清理的类别 无",
       "level": "正常"
     }
