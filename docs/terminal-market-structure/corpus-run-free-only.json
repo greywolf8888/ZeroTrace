@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-corpus-run-v1",
-  "capturedAt": "2026-08-20T10:36:35.833Z",
+  "capturedAt": "2026-08-30T19:10:39.211Z",
   "tokenCount": 50,
   "reviewed": false,
   "modes": {
@@ -27,7 +27,7 @@
       "completionRate": null,
       "status": "UNCONFIGURED",
       "tracePending": [],
-      "note": "通用 BSC_TRACE_RPC_URL 探测失败。P0 已知创建交易的内部 CREATE 见 corpus-run-trace-pending.json（SQD CREATE traces）。不得用 receipt.contractAddress 或 Explorer 替代。"
+      "note": "TRACE_UNAVAILABLE。不得用 receipt.contractAddress 或 Explorer 替代。"
     }
   },
   "cost": {

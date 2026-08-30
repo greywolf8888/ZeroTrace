@@ -177,7 +177,10 @@ function outboxFromRow(row: Record<string, unknown>): PaperOutboxRecord {
     throw storageError('PAPER_STORAGE_CONFLICT', 'Stored paper outbox payload is invalid.');
   }
   const record = payload as PaperOutboxRecord;
-  const { id: _id, payloadHash, ...hashablePayload } = record;
+  const { payloadHash } = record;
+  const hashablePayload: Partial<PaperOutboxRecord> = { ...record };
+  delete hashablePayload.id;
+  delete hashablePayload.payloadHash;
   if (
     record.id !== stringValue(row.id, 'outbox ID') ||
     record.businessKey !== stringValue(row.business_key, 'outbox business key') ||

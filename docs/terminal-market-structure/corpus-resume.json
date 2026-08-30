@@ -1,9 +1,9 @@
 {
   "schemaVersion": "zerotrace-corpus-resume-v1",
-  "capturedAt": "2026-08-20T11:38:50.429Z",
+  "capturedAt": "2026-08-30T19:11:22.213Z",
   "total": 50,
-  "completed": 2,
-  "remaining": 48,
+  "completed": 50,
+  "remaining": 0,
   "interrupted": false,
   "originComplete": 0,
   "historyComplete": 0,
