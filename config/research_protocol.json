@@ -1,0 +1,75 @@
+{
+  "version": "V11.0",
+  "historical_discovery": [
+    "CHAIN_CREATION_COHORT",
+    "LAUNCHPAD_EVENTS",
+    "AUTHORIZED_TREND_AND_ARCHIVE",
+    "PUBLIC_CASE_REPORT",
+    "NEW_LIVE_CASE_SETTLEMENT"
+  ],
+  "history_never_blocks_live_discovery": true,
+  "winner_label": "NET_EXECUTABLE_RETURN_FROM_FROZEN_EARLY_SNAPSHOT_AT_DECLARED_SIZE_AND_EXIT_POLICY",
+  "winner_thresholds": "CONFIGURED_BEFORE_EVALUATION_NEVER_ATH_ONLY",
+  "required_controls": [
+    "SAME_CHAIN",
+    "SAME_PLATFORM_VERSION",
+    "SAME_LAUNCH_COHORT",
+    "SIMILAR_INITIAL_DEPTH",
+    "FAILED_AND_FLAT",
+    "REJECTED_AND_MISSED",
+    "PUBLIC_SERVICE_AND_PROTOCOL_AGENTS"
+  ],
+  "time_fields": [
+    "event_time",
+    "observed_at",
+    "available_at",
+    "decision_at",
+    "label_available_at",
+    "revision_at"
+  ],
+  "feature_guard": "available_at <= decision_at",
+  "historical_case_eligibility": "case_outcome_known_at <= live_decision_at",
+  "similarity_is_probability": false,
+  "entity_similarity_is_identity": false,
+  "splits": [
+    "PURGED_TIME",
+    "CONTROLLER_GROUP_HOLDOUT",
+    "CAMPAIGN_GROUP_HOLDOUT",
+    "REGIME_HOLDOUT",
+    "PLATFORM_VERSION_HOLDOUT"
+  ],
+  "checks": [
+    "ALL_CANDIDATE_DENOMINATOR",
+    "DELISTED_RETENTION",
+    "SURVIVORSHIP",
+    "LOOK_AHEAD",
+    "BATCH_CORRELATION",
+    "TOP_WINNER_DEPENDENCE",
+    "COST_CAPACITY",
+    "REJECTION_COUNTERFACTUAL",
+    "MULTIPLE_TRIALS"
+  ],
+  "economic_promotion": {
+    "fixed_days_required": null,
+    "daily_count_required": null,
+    "entry_blocked_until_promotion": false,
+    "criterion": "PREDECLARED_STATISTICAL_EVIDENCE_AND_ROBUSTNESS",
+    "continuous_monitoring": "DESCRIPTIVE_ONLY_UNLESS_ANYTIME_VALID_TEST_IS_SPECIFIED",
+    "checkpoint_protocol": "EVENT_COUNT_CHECKPOINTS_WITH_ALPHA_SPENDING_OR_FRESH_HOLDOUT",
+    "no_profit_guarantee": true
+  },
+  "regime": {
+    "states": ["UNKNOWN", "QUIET", "LOCAL_HOTSPOT", "BROAD_EXPANSION", "OVERHEATED", "CONTRACTION"],
+    "inputs": [
+      "INDEPENDENT_DEMAND",
+      "COHORT_NET_WIN_RATE",
+      "EXECUTABLE_EXIT_DEPTH",
+      "MARKET_BREADTH",
+      "CAPITAL_RETENTION",
+      "HOLDER_CONCENTRATION",
+      "CONGESTION_COST",
+      "RUG_LIKE_HAZARD"
+    ],
+    "august_2026_season_status": "NOT_VERIFIED_IN_THIS_PACKAGE"
+  }
+}

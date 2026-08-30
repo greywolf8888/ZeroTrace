@@ -1,0 +1,72 @@
+{
+  "version": "V11.0",
+  "mandatory_events": [
+    "CANDIDATE_ENTERED",
+    "PREPARE_BUY",
+    "PAPER_BUY_STARTED",
+    "PAPER_BUY_PARTIAL",
+    "PAPER_BUY_PARTIAL_CLOSED",
+    "PAPER_BUY_FILLED",
+    "PAPER_BUY_FAILED",
+    "PREPARE_SELL",
+    "PAPER_SELL_STARTED",
+    "PAPER_SELL_PARTIAL",
+    "PAPER_SELL_PARTIAL_CLOSED",
+    "PAPER_SELL_FILLED",
+    "PAPER_SELL_FAILED",
+    "SIGNAL_INVALIDATED",
+    "RISK_EXIT_REQUIRED",
+    "DATA_DEGRADED"
+  ],
+  "channels": {
+    "in_app": { "enabled": true },
+    "desktop": { "enabled": true, "permission_required": true },
+    "webhook": { "enabled": false, "url_env": "ZEROTRACE_ALERT_WEBHOOK_URL" },
+    "telegram": {
+      "enabled": false,
+      "token_env": "ZEROTRACE_TELEGRAM_BOT_TOKEN",
+      "chat_id_env": "ZEROTRACE_TELEGRAM_CHAT_ID"
+    },
+    "email": { "enabled": false, "sender_config_required": true }
+  },
+  "delivery": "AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP",
+  "atomic_outbox_required": true,
+  "event_key_fields": [
+    "portfolio_id",
+    "chain",
+    "asset_id",
+    "strategy_version",
+    "intent_id_or_candidate_epoch",
+    "transition",
+    "fill_id_if_any"
+  ],
+  "prepare_hysteresis": "ENTER_AND_EXIT_BANDS_VERSIONED_PER_CONDITION",
+  "direct_candidate_to_buy_allowed": true,
+  "emergency_sell_may_skip_prepare": true,
+  "silent_hours_apply_to": ["NONURGENT_RESEARCH_DIGEST"],
+  "urgent_bypasses_silent_hours": true,
+  "notification_success_is_not_trade_success": true,
+  "required_fields": [
+    "mode",
+    "chain",
+    "asset_id",
+    "display_name",
+    "event",
+    "reasons",
+    "current_values",
+    "target_conditions",
+    "unmet_conditions",
+    "native_budget_or_quantity",
+    "price_source_time",
+    "risk_summary",
+    "invalidations",
+    "details_link",
+    "event_time"
+  ],
+  "safe_titles": {
+    "PAPER_BUY_STARTED": "开始模拟买入",
+    "PAPER_BUY_FILLED": "模拟买入已成交",
+    "PAPER_SELL_STARTED": "开始模拟卖出",
+    "PAPER_SELL_FILLED": "模拟卖出已成交"
+  }
+}
