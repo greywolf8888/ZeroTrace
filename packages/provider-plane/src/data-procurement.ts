@@ -56,6 +56,118 @@ function copy(s: ProcurementState): ProcurementState {
 function bump(s: ProcurementState): void {
   s.revision += 1;
 }
+
+function record(value: unknown, code: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(code);
+  return value as Record<string, unknown>;
+}
+
+export function parseSpendPolicy(value: unknown): SpendPolicy {
+  const input = record(value, 'INVALID_SPEND_POLICY');
+  if (
+    typeof input.version !== 'string' ||
+    input.version.length === 0 ||
+    typeof input.paidAllowed !== 'boolean' ||
+    !Array.isArray(input.approvedProviderIds) ||
+    input.approvedProviderIds.some((item) => typeof item !== 'string')
+  ) {
+    throw new Error('INVALID_SPEND_POLICY');
+  }
+  const approvedProviderIds = [...new Set(input.approvedProviderIds as string[])];
+  approvedProviderIds.forEach(safeKey);
+  if (!input.paidAllowed && approvedProviderIds.length > 0) {
+    throw new Error('PAID_PROVIDER_WITHOUT_CONSENT');
+  }
+  return { version: input.version, paidAllowed: input.paidAllowed, approvedProviderIds };
+}
+
+export function parseProcurementState(value: unknown): ProcurementState {
+  const input = record(value, 'INVALID_PROCUREMENT_STATE');
+  if (
+    !Number.isSafeInteger(input.revision) ||
+    (input.revision as number) < 0 ||
+    typeof input.remainingMicrousd !== 'string' ||
+    typeof input.blocked !== 'boolean'
+  ) {
+    throw new Error('INVALID_PROCUREMENT_STATE');
+  }
+  n(input.remainingMicrousd);
+  const rawAccounts = record(input.accounts, 'INVALID_PROCUREMENT_ACCOUNTS');
+  const accounts: Record<string, AccountBudget> = Object.create(null) as Record<
+    string,
+    AccountBudget
+  >;
+  for (const [accountId, raw] of Object.entries(rawAccounts)) {
+    safeKey(accountId);
+    const account = record(raw, 'INVALID_PROCUREMENT_ACCOUNT');
+    if (
+      !Array.isArray(account.providerIds) ||
+      account.providerIds.some((item) => typeof item !== 'string') ||
+      !['FREE_ONLY', 'PAID_MAXIMUM'].includes(String(account.allowedCostKind)) ||
+      typeof account.quotaRemaining !== 'string' ||
+      typeof account.costEvidence !== 'string' ||
+      account.costEvidence.length === 0 ||
+      typeof account.enabled !== 'boolean' ||
+      typeof account.rightsApproved !== 'boolean'
+    ) {
+      throw new Error('INVALID_PROCUREMENT_ACCOUNT');
+    }
+    n(account.quotaRemaining);
+    const providerIds = [...new Set(account.providerIds as string[])];
+    providerIds.forEach(safeKey);
+    accounts[accountId] = {
+      providerIds,
+      allowedCostKind: account.allowedCostKind as AccountBudget['allowedCostKind'],
+      quotaRemaining: account.quotaRemaining,
+      costEvidence: account.costEvidence,
+      enabled: account.enabled,
+      rightsApproved: account.rightsApproved,
+    };
+  }
+  const rawTickets = record(input.tickets, 'INVALID_PROCUREMENT_TICKETS');
+  const tickets: Record<string, Ticket> = Object.create(null) as Record<string, Ticket>;
+  for (const [requestId, raw] of Object.entries(rawTickets)) {
+    safeKey(requestId);
+    const ticket = record(raw, 'INVALID_PROCUREMENT_TICKET');
+    if (
+      ticket.requestId !== requestId ||
+      typeof ticket.fingerprint !== 'string' ||
+      typeof ticket.providerId !== 'string' ||
+      typeof ticket.accountId !== 'string' ||
+      !['VERIFIED_FREE', 'PAID_MAXIMUM', 'UNKNOWN'].includes(String(ticket.costKind)) ||
+      typeof ticket.maxUnits !== 'string' ||
+      typeof ticket.maxMicrousd !== 'string' ||
+      typeof ticket.evidence !== 'string' ||
+      !Number.isFinite(ticket.expiresAt) ||
+      typeof ticket.policyVersion !== 'string' ||
+      !['RESERVED', 'DISPATCHED', 'UNCERTAIN', 'SETTLED', 'CANCELLED'].includes(
+        String(ticket.state),
+      )
+    ) {
+      throw new Error('INVALID_PROCUREMENT_TICKET');
+    }
+    safeKey(ticket.providerId);
+    safeKey(ticket.accountId);
+    n(ticket.maxUnits);
+    n(ticket.maxMicrousd);
+    if (ticket.actualUnits !== undefined) {
+      if (typeof ticket.actualUnits !== 'string') throw new Error('INVALID_PROCUREMENT_TICKET');
+      n(ticket.actualUnits);
+    }
+    if (ticket.actualMicrousd !== undefined) {
+      if (typeof ticket.actualMicrousd !== 'string') throw new Error('INVALID_PROCUREMENT_TICKET');
+      n(ticket.actualMicrousd);
+    }
+    tickets[requestId] = ticket as unknown as Ticket;
+  }
+  return {
+    revision: input.revision as number,
+    remainingMicrousd: input.remainingMicrousd,
+    accounts,
+    tickets,
+    blocked: input.blocked,
+  };
+}
 export function reserveRequest(
   s: ProcurementState,
   p: SpendPolicy,

@@ -3,6 +3,7 @@ import {
   api,
   type FlapInspectionResponse,
   type HealthResponse,
+  type ResearchSourceSettingsResponse,
   type SearchResponse,
   type SubjectCandidate,
   type SubjectResponse,
@@ -40,6 +41,7 @@ export function App() {
   );
   const [view, setView] = useState<View>('workbench');
   const [health, setHealth] = useState<HealthResponse>();
+  const [researchSources, setResearchSources] = useState<ResearchSourceSettingsResponse>();
   const [loadingCore, setLoadingCore] = useState(true);
   const [coreError, setCoreError] = useState<string>();
   const [searchBusy, setSearchBusy] = useState(false);
@@ -62,8 +64,12 @@ export function App() {
   const refreshCore = useCallback(async () => {
     setLoadingCore(true);
     try {
-      const nextHealth = await api.health();
+      const [nextHealth, nextResearchSources] = await Promise.all([
+        api.health(),
+        api.researchSourceSettings(),
+      ]);
       setHealth(nextHealth);
+      setResearchSources(nextResearchSources);
       setCoreError(undefined);
     } catch (error) {
       setCoreError(
@@ -181,7 +187,12 @@ export function App() {
               <p>检查真实数据源与持久设施；未配置、故障和来源冲突不会折算为业务数值 0。</p>
             </div>
           </div>
-          <DataHealth health={health} refresh={() => void refreshCore()} busy={loadingCore} />
+          <DataHealth
+            health={health}
+            researchSources={researchSources}
+            refresh={() => void refreshCore()}
+            busy={loadingCore}
+          />
         </>
       );
     }
@@ -211,7 +222,14 @@ export function App() {
     if (view === 'scenario') return <ScenarioLab />;
     if (view === 'claims') return <ClaimAuditWorkspace />;
     if (view === 'health') {
-      return <DataHealth health={health} refresh={() => void refreshCore()} busy={loadingCore} />;
+      return (
+        <DataHealth
+          health={health}
+          researchSources={researchSources}
+          refresh={() => void refreshCore()}
+          busy={loadingCore}
+        />
+      );
     }
     return <Overview health={health} onSearch={search} searchBusy={searchBusy} />;
   }, [
@@ -225,6 +243,7 @@ export function App() {
     search,
     inspect,
     health,
+    researchSources,
     loadingCore,
     refreshCore,
   ]);

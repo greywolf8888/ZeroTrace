@@ -127,6 +127,34 @@ describe('system routes', { timeout: 60_000 }, () => {
     expect(platforms.statusCode).toBe(200);
     expect(platforms.json().gmgnConfigured).toBe(false);
 
+    const researchSources = await app.inject({
+      method: 'GET',
+      url: '/api/v1/settings/research-sources',
+    });
+    expect(researchSources.statusCode).toBe(200);
+    expect(researchSources.json()).toMatchObject({
+      procurementBudgetMicrousd: '0',
+      paidEnabledByDefault: false,
+      credentialsAreSpendConsent: false,
+      procurement: {
+        status: 'UNAVAILABLE',
+        remainingMicrousd: null,
+        paidEnabled: false,
+      },
+      xUpstreamEvidenceRule: 'ALL_X_TOOLS_ONE_UPSTREAM_GROUP',
+    });
+    expect(researchSources.json().sources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          providerId: 'xapid',
+          status: 'UNVERIFIED_IDENTITY',
+          enabled: false,
+          endpointConfigured: false,
+          dispatchAllowed: false,
+        }),
+      ]),
+    );
+
     const slots = await app.inject({ method: 'GET', url: '/api/v1/provider-slots' });
     expect(slots.statusCode).toBe(200);
     expect(slots.json().slots.NODEREAL_API_KEY).toBe('UNCONFIGURED');

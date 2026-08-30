@@ -82,6 +82,20 @@ const HOST_GROUPS: Array<{ match: string; group: string; operatorId: string; ter
   { match: 'helius.dev', group: 'helius', operatorId: 'helius', terms: 'helius-terms' },
 ];
 
+export const X_UPSTREAM_SOURCE_IDS = new Set([
+  'fxembed',
+  'xapid',
+  'x_official',
+  'twscrape',
+  'twikit',
+]);
+
+export function upstreamGroupForSource(sourceId: string): string {
+  const normalized = sourceId.trim().toLocaleLowerCase('en-US');
+  if (normalized.length === 0) throw new Error('Source ID is required.');
+  return X_UPSTREAM_SOURCE_IDS.has(normalized) ? 'X' : normalized;
+}
+
 export function independentOperatorCount(operators: readonly SourceOperator[]): number {
   return new Set(operators.map((item) => item.independenceGroup)).size;
 }
