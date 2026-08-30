@@ -1,7 +1,15 @@
+export {
+  analyzeCompatible,
+  compatibleEndpoint,
+  type CompatibleAiConfig,
+  type CompatibleAiResult,
+} from './openai-compatible.js';
+import { assertReadonlySuggestions } from './permissions.js';
+export { READONLY_LLM_TOOLS } from './permissions.js';
 import { LlmStructuredOutputSchema, type LlmStructuredOutput } from '@zerotrace/schemas';
 import { hashPayload } from '@zerotrace/evidence';
 
-export const LLM_GATEWAY_MODEL_VERSION = 'llm-gateway-v1.0.0';
+export const LLM_GATEWAY_MODEL_VERSION = 'llm-gateway-v1.1.0-safety-repair';
 
 const LEGAL_PATTERNS = /诈骗已成立|犯罪团伙|洗钱既遂|操纵市场已成立|非法老鼠仓|庄家本人(?!候选)/u;
 
@@ -29,6 +37,7 @@ export function validateLlmOutput(request: LlmGatewayRequest): LlmStructuredOutp
     throw new Error('LLM output or untrusted text contains an unaudited legal conclusion.');
   }
   const parsed = LlmStructuredOutputSchema.parse(request.output);
+  assertReadonlySuggestions(parsed.suggestedQueries);
   for (const id of parsed.evidenceIds) {
     if (!request.knownEvidenceIds.includes(id)) {
       throw new Error(`LLM cited unknown Evidence ID ${id}.`);
@@ -44,16 +53,3 @@ export function validateLlmOutput(request: LlmGatewayRequest): LlmStructuredOutp
 export function llmAuditHash(output: LlmStructuredOutput): string {
   return hashPayload(output);
 }
-
-export const READONLY_LLM_TOOLS = [
-  'search_subject',
-  'get_snapshot',
-  'query_raw_fact',
-  'get_evidence',
-  'traverse_entity_graph',
-  'get_supply_report',
-  'get_campaign',
-  'get_capital_ledger',
-  'run_exit_scenario',
-  'replay_finding',
-] as const;
