@@ -18,6 +18,7 @@ COPY packages/data-quality/package.json packages/data-quality/package.json
 COPY packages/platform-adapters/package.json packages/platform-adapters/package.json
 COPY packages/entity-engine/package.json packages/entity-engine/package.json
 COPY packages/rv/package.json packages/rv/package.json
+COPY config ./config
 
 RUN npm ci --no-audit --no-fund
 
@@ -35,6 +36,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/packages ./packages
+COPY --from=build /app/config ./config
 USER node
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=4s --start-period=10s --retries=4 \

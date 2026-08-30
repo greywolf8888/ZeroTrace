@@ -28,6 +28,16 @@ describe('API configuration', () => {
     expect(config.storageRoot.length).toBeGreaterThan(0);
     expect(config.tenantId).toBeUndefined();
     expect(config.oidcTenantClaim).toBeUndefined();
+    expect(config.socialSourceConfigPath).toBeUndefined();
+  });
+
+  it('仅从显式环境变量接收X来源合同文件路径', () => {
+    expect(
+      loadConfig({
+        NODE_ENV: 'test',
+        ZEROTRACE_SOCIAL_SOURCE_CONFIG: 'config/xapid.example.json',
+      }).socialSourceConfigPath,
+    ).toBe('config/xapid.example.json');
   });
 
   it('loads tenant and OIDC authorization claim paths only from explicit configuration', () => {

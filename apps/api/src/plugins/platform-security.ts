@@ -20,6 +20,7 @@ export type PlatformRouteAction = 'ANALYSIS_READ' | 'INVESTIGATION_WRITE' | 'ADM
 
 const readOnlyPostRoutes = [
   /^\/api\/v1\/query\/plan$/,
+  /^\/api\/v1\/research\/social-query-plans$/,
   /^\/api\/v1\/rv\/constant-product$/,
   /^\/api\/v1\/rv\/flap-sell$/,
   /^\/api\/v1\/scenarios\/exit-race$/,

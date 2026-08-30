@@ -182,6 +182,9 @@ describe('platform security', { timeout: 60_000 }, () => {
   it('classifies read, investigation write and MFA-gated admin routes fail closed', () => {
     expect(classifyPlatformRoute('GET', '/api/v1/forensics/cases/case-1')).toBe('ANALYSIS_READ');
     expect(classifyPlatformRoute('POST', '/api/v1/query/plan')).toBe('ANALYSIS_READ');
+    expect(classifyPlatformRoute('POST', '/api/v1/research/social-query-plans')).toBe(
+      'ANALYSIS_READ',
+    );
     expect(classifyPlatformRoute('POST', '/api/v1/paper/experiments/exp-1/commands')).toBe(
       'INVESTIGATION_WRITE',
     );

@@ -81,6 +81,7 @@ import {
   wrapSqdBulkSource,
   wrapSqdCreationSource,
 } from './token-capture-runtime.js';
+import { loadSocialSourceSettings } from './social-source-settings.js';
 
 export interface AppRuntime {
   providerRegistry: ProviderRegistry;
@@ -512,6 +513,10 @@ export function createRuntime(config: AppConfig): AppRuntime {
       ? {}
       : { creationTraces: wrapSqdCreationSource(sqdBscCreationReader) }),
   });
+  const socialSources = loadSocialSourceSettings(config) ?? [
+    structuredClone(FXEMBED_TEMPLATE),
+    structuredClone(XAPID_TEMPLATE),
+  ];
   const close = async () => {
     await closeStores(
       evidenceRepository,
@@ -526,7 +531,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       providers,
       unconfigured.map((item) => ({ ...item, capabilities: [...item.capabilities] })),
     ),
-    socialSources: [structuredClone(FXEMBED_TEMPLATE), structuredClone(XAPID_TEMPLATE)],
+    socialSources,
     evmAdapters,
     evmSourceAdapters,
     ...(evmSourceVerification === undefined ? {} : { evmSourceVerification }),

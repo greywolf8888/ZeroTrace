@@ -1,13 +1,51 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 
 import {
   externalContentPolicyStatus,
   FXEMBED_TEMPLATE,
+  makeSearchPlan,
   XAPID_TEMPLATE,
   type SocialSourceConfig,
 } from '@zerotrace/provider-plane';
+import { buildIdentityQueries, compileApprovedQuery } from '@zerotrace/workflow-core';
 
 import type { AppHttpContext } from '../http/context.js';
+
+const QueryVersionSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z0-9_.:-]{1,128}$/);
+const QueryIdentityBase = {
+  verifiedHandle: z
+    .string()
+    .regex(/^[A-Za-z0-9_]{1,15}$/)
+    .optional(),
+  aliases: z.array(z.string().trim().min(1).max(160)).max(8).optional(),
+};
+const SocialQueryPlanSchema = z
+  .object({
+    providerId: z.string().regex(/^[a-z0-9][a-z0-9_.-]{0,63}$/),
+    queryVersion: QueryVersionSchema,
+    pageSize: z.number().int().min(1).max(1_000).default(30),
+    identity: z.discriminatedUnion('chain', [
+      z
+        .object({
+          chain: z.literal('BSC'),
+          address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+          ...QueryIdentityBase,
+        })
+        .strict(),
+      z
+        .object({
+          chain: z.literal('SOLANA'),
+          address: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/),
+          ...QueryIdentityBase,
+        })
+        .strict(),
+    ]),
+  })
+  .strict();
 
 function sourceStatus(
   source: SocialSourceConfig,
@@ -139,4 +177,97 @@ export async function registerResearchSourceRoutes(
       xUpstreamEvidenceRule: 'ALL_X_TOOLS_ONE_UPSTREAM_GROUP',
     };
   });
+
+  app.post(
+    '/api/v1/research/social-query-plans',
+    { schema: { tags: ['analysis'] } },
+    async (request, reply) => {
+      const input = SocialQueryPlanSchema.parse(request.body);
+      const configured = context.runtime.socialSources ?? [FXEMBED_TEMPLATE, XAPID_TEMPLATE];
+      const source = configured.find((candidate) => candidate.id === input.providerId);
+      if (source === undefined) {
+        return reply.code(404).send({
+          error: {
+            code: 'RESEARCH_SOURCE_NOT_FOUND',
+            message: '未找到指定的研究来源合同。',
+            retryable: false,
+          },
+        });
+      }
+      const status = sourceStatus(source);
+      if (status !== 'READY' || source.search === null || source.contentPolicy === null) {
+        return reply.code(409).send({
+          error: {
+            code: 'RESEARCH_SOURCE_NOT_READY',
+            message: '研究来源身份、权益、内容规则或端点合同尚未全部核验。',
+            retryable: false,
+            sourceStatus: status,
+          },
+        });
+      }
+      if (context.runtime.evidenceRepository === undefined) {
+        return reply.code(503).send({
+          error: {
+            code: 'RESEARCH_RIGHTS_EVIDENCE_UNAVAILABLE',
+            message: '未配置持久证据仓库，不能核验来源权益合同。',
+            retryable: false,
+          },
+        });
+      }
+      const rightsEvidence = await Promise.all(
+        source.contentPolicy.rightsEvidenceIds.map((id) =>
+          context.runtime.evidenceRepository?.get(id),
+        ),
+      );
+      if (rightsEvidence.some((node) => node === undefined)) {
+        return reply.code(409).send({
+          error: {
+            code: 'RESEARCH_RIGHTS_EVIDENCE_INCOMPLETE',
+            message: '来源权益合同引用的持久证据不完整。',
+            retryable: false,
+          },
+        });
+      }
+      const compiled = buildIdentityQueries(
+        {
+          chain: input.identity.chain,
+          address: input.identity.address,
+          ...(input.identity.verifiedHandle === undefined
+            ? {}
+            : { verifiedHandle: input.identity.verifiedHandle }),
+          ...(input.identity.aliases === undefined ? {} : { aliases: input.identity.aliases }),
+        },
+        input.queryVersion,
+      );
+      const plans = compiled.queries.map(({ role, query }) => {
+        const approvedQuery = compileApprovedQuery(
+          query,
+          source.search!.maxQueryChars,
+          input.queryVersion,
+        );
+        const plan = makeSearchPlan(
+          source,
+          approvedQuery,
+          input.queryVersion,
+          null,
+          input.pageSize,
+        );
+        return { role, approvedQuery, plan };
+      });
+      return {
+        mode: 'READ_ONLY_RESEARCH_PLAN' as const,
+        sourceId: source.id,
+        assetKey: compiled.assetKey,
+        queryVersion: compiled.version,
+        contractVersion: source.contractVersion,
+        contentPolicyVersion: source.contentPolicy.policyVersion,
+        rightsEvidenceIds: [...source.contentPolicy.rightsEvidenceIds].sort(),
+        upstreamEvidenceGroup: 'X' as const,
+        plans,
+        networkRequestPerformed: false,
+        dispatchState: 'NOT_RESERVED' as const,
+        warning: '该入口只生成固定合同的读取计划；未预留额度、未发出网络请求。',
+      };
+    },
+  );
 }
