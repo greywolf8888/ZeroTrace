@@ -14,6 +14,8 @@ export default tseslint.config(
       'test-results/**',
       'reports/**',
       'output/**',
+      '.zerotrace-backups/**',
+      'docs/ZeroTrace_GPT5.6_最终开发整合包_V11_20260831/**',
       'ZeroTrace_监管取证级盘面结构分析_全量升级提示词包/**',
       'scripts/split-*.mjs',
       'scripts/trim-api-imports.mjs',

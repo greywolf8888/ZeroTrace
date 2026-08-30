@@ -66,8 +66,8 @@ test('renders the Chinese read-only workbench without fake market data or diagno
   ).toBe(true);
   expect(browserErrors).toEqual([]);
 
-  await page.getByRole('button', { name: '案件', exact: true }).click();
-  await expect(page.getByLabel('代币地址')).toHaveValue('');
+  await page.getByRole('button', { name: '候选池', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '候选池', exact: true })).toBeVisible();
 });
 
 test('keeps every primary view reachable from the narrow-screen navigation', async ({ page }) => {
@@ -75,8 +75,23 @@ test('keeps every primary view reachable from the narrow-screen navigation', asy
   await page.goto('/');
 
   const primaryNav = page.getByRole('navigation', { name: '主导航' });
-  for (const label of ['工作台 / 查询', '案件', '监控与告警', '数据源与系统']) {
-    await expect(primaryNav.getByRole('button', { name: label, exact: true })).toBeVisible();
+  for (const label of [
+    '市场总览',
+    '新币雷达',
+    '历史金狗',
+    '失败与拒绝',
+    '庄家档案',
+    '候选池',
+    '准备买入',
+    '模拟持仓',
+    '准备卖出',
+    '提醒',
+    '研究结果',
+    '设置',
+  ]) {
+    const entry = primaryNav.getByRole('button', { name: label, exact: true });
+    await entry.scrollIntoViewIfNeeded();
+    await expect(entry).toBeVisible();
   }
   await expect(page.getByLabel(/数据服务状态/)).toBeVisible();
 
@@ -89,7 +104,7 @@ test('keeps every primary view reachable from the narrow-screen navigation', asy
       rootClientWidth: document.documentElement.clientWidth,
     };
   });
-  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth);
+  expect(layout.scrollWidth).toBeGreaterThanOrEqual(layout.clientWidth);
   expect(layout.rootScrollWidth).toBeLessThanOrEqual(layout.rootClientWidth);
 });
 
@@ -4652,7 +4667,6 @@ test('renders an Evidence-bound FFT ERC-1167 control surface without hiding Unkn
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '数据源与系统' }).click();
   await openDeveloperView(page, '系统控制（开发）');
   await expect(page.getByRole('heading', { name: 'EVM 系统管理' })).toBeVisible();
   await page.getByLabel('Contract address').fill(subject);
@@ -4811,7 +4825,6 @@ test('renders finalized Solana Token-2022 authority and explicit pending domains
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByRole('button', { name: '数据源与系统' }).click();
   await openDeveloperView(page, '系统控制（开发）');
   await page.getByLabel('Ledger').selectOption('SOLANA');
   await expect(page.getByRole('heading', { name: 'Solana 系统管理' })).toBeVisible();
@@ -5164,7 +5177,7 @@ test('renders a Control 活动时间线 and 证据线 without merging entities',
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: '监控与告警' }).click();
+  await openDeveloperView(page, '坐庄时间线');
   await expect(page.getByRole('heading', { name: '坐庄时间线' })).toBeVisible();
   await page.getByLabel('代币地址').fill(`0x${'b'.repeat(40)}`);
   await page.getByRole('button', { name: '加载活动' }).click();

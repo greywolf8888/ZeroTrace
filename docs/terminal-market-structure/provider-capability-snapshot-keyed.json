@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-provider-capability-keyed-v1",
-  "probedAt": "2026-08-20T10:32:17.832Z",
+  "probedAt": "2026-08-30T19:09:35.186Z",
   "note": "配置声明不能代替探测。密钥已脱敏。TRACE 仅在探测成功后写入通用 BSC_TRACE_RPC_URL。",
   "slots": {
     "NODEREAL_API_KEY": "CONFIGURED",
@@ -19,7 +19,7 @@
       "operatorId": "slot-nodereal-free",
       "endpointRef": "https://bsc-mainnet.nodereal.io/v1",
       "forensicGrade": "FREE_KEYED",
-      "probedAt": "2026-08-20T10:32:14.635Z",
+      "probedAt": "2026-08-30T19:09:31.062Z",
       "chainIdOk": true,
       "historicalCodeOk": true,
       "smallLogsOk": true,
@@ -47,7 +47,7 @@
       "operatorId": "slot-ankr-freemium",
       "endpointRef": "https://rpc.ankr.com/bsc",
       "forensicGrade": "FREE_KEYED",
-      "probedAt": "2026-08-20T10:32:15.976Z",
+      "probedAt": "2026-08-30T19:09:33.239Z",
       "chainIdOk": true,
       "historicalCodeOk": true,
       "smallLogsOk": true,

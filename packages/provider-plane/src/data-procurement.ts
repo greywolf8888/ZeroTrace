@@ -44,7 +44,7 @@ function n(v: string): bigint {
 }
 function safeKey(v: string): void {
   if (
-    !/^[A-Za-z0-9_:.\-]{1,180}$/.test(v) ||
+    !/^[A-Za-z0-9_:.-]{1,180}$/.test(v) ||
     ['__proto__', 'constructor', 'prototype'].includes(v)
   ) {
     throw new Error('INVALID_IDENTIFIER');
