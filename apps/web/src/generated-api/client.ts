@@ -2608,6 +2608,148 @@ export interface Capability {
   detail?: string;
 }
 
+export interface PaperPortfolioSettingsResponse {
+  version: string;
+  budgetMeaning: string;
+  accounts: Array<{
+    id: string;
+    chain: 'BSC' | 'SOLANA';
+    nativeSymbol: 'BNB' | 'SOL';
+    nativeDecimals: 18 | 9;
+    initialNative: string;
+    initialAtomic: string;
+  }>;
+  policy: {
+    version: string;
+    targetPositionBps: number;
+    maxSinglePositionBps: number;
+    maxControllerGroupBps: number;
+    maxNarrativeGroupBps: number;
+    maxTotalInvestedBps: number;
+    minimumUncommittedCashBps: number;
+    minimumFeeReserveBps: number;
+    opaqueTokenStressLossBps: 10000;
+  };
+  walletMode: 'PAPER_ONLY';
+  linkingNeverChangesCapital: true;
+  automaticChainBridging: false;
+  warning: string;
+  source: { kind: 'VERSIONED_LOCAL_CONFIG'; reference: string };
+}
+
+export interface PaperPositionView {
+  assetId: string;
+  controllerGroupId: string;
+  narrativeGroupId: string;
+  quantityAtomic: string;
+  reservedQuantityAtomic: string;
+  costBasisAtomic: string;
+}
+
+export interface PaperIntentView {
+  id: string;
+  side: 'BUY' | 'SELL';
+  assetId: string;
+  status: 'STARTED' | 'PARTIAL' | 'FILLED' | 'FAILED' | 'CANCELLED';
+  requestedAtomic: string;
+  remainingAtomic: string;
+  reservedCashAtomic: string;
+  maximumFeeAtomic: string;
+  evidenceIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaperEventView {
+  id: string;
+  type: string;
+  assetId: string;
+  eventAt: string;
+  reasons: string[];
+  evidenceIds: string[];
+  intentId: string | null;
+  fillId: string | null;
+}
+
+export interface PaperOutboxView {
+  id: string;
+  businessKey: string;
+  eventId: string;
+  eventType: string;
+  title: string;
+  urgency: 'NORMAL' | 'URGENT';
+  deliveryState: 'PENDING';
+  createdAt: string;
+}
+
+export interface PaperExperimentView {
+  id: string;
+  name: string;
+  chain: 'BSC' | 'SOLANA';
+  baseAsset: 'BNB' | 'SOL';
+  baseDecimals: 18 | 9;
+  initialPrincipalAtomic: string;
+  realizedPnlAtomic: string;
+  availableCashAtomic: string;
+  reservedCashAtomic: string;
+  positions: PaperPositionView[];
+  intents: PaperIntentView[];
+  events: PaperEventView[];
+  outbox: PaperOutboxView[];
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+  modelVersion: string;
+  policy: PaperPortfolioSettingsResponse['policy'];
+}
+
+export interface PaperExperimentResponse {
+  mode: 'PAPER';
+  chainAccess: 'READ_ONLY';
+  warning: string;
+  experiment: PaperExperimentView;
+}
+
+export interface PaperReviewResponse {
+  mode: 'PAPER';
+  historicalState: true;
+  warning: string;
+  report: {
+    id: string;
+    experimentId: string;
+    chain: 'BSC' | 'SOLANA';
+    asOf: string;
+    historicalState: true;
+    snapshot: { id: string; sourceSet: string[]; replayHash: string };
+    trades: Array<{
+      intentId: string;
+      side: 'BUY' | 'SELL';
+      assetId: string;
+      status: string;
+      fillCount: number;
+      feeAtomic: string;
+      remainingAtomic: string;
+    }>;
+    rejectedCandidates: Array<{
+      candidateId: string;
+      assetId: string;
+      outcome: string;
+      netCounterfactualPnlAtomic: string | null;
+      netCounterfactualReturnBps: string | null;
+      missingStates: string[];
+      confidence: { value: number | null; meaning: string };
+    }>;
+    coverage: {
+      tradeIntents: { eligible: number; covered: number; ratio: number | null };
+      rejectedCounterfactuals: { eligible: number; covered: number; ratio: number | null };
+    };
+    freshness: { state: 'HISTORICAL_AS_OF'; asOf: string };
+    evidenceIds: string[];
+    modelVersion: string;
+    limitations: string[];
+  };
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const desktopToken = window.__ZEROTRACE_DESKTOP_TOKEN__;
   const response = await fetch(API_BASE + path, {
@@ -2644,6 +2786,40 @@ export const api = {
       '/api/v1/settings/research-sources',
       signal === undefined ? {} : { signal },
     ),
+  paperPortfolioSettings: (signal?: AbortSignal) =>
+    requestJson<PaperPortfolioSettingsResponse>(
+      '/api/v1/settings/paper-simulation',
+      signal === undefined ? {} : { signal },
+    ),
+  createPaperExperiment: (input: {
+    name: string;
+    chain: 'BSC' | 'SOLANA';
+    initialPrincipalAtomic: string;
+    policy: PaperPortfolioSettingsResponse['policy'];
+  }) =>
+    requestJson<PaperExperimentResponse>('/api/v1/paper/experiments', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  paperExperiment: (experimentId: string) =>
+    requestJson<PaperExperimentResponse>(
+      `/api/v1/paper/experiments/${encodeURIComponent(experimentId)}`,
+    ),
+  paperOutbox: (experimentId: string, after?: string, limit = 50) => {
+    const parameters = new URLSearchParams({ limit: String(limit) });
+    if (after !== undefined) parameters.set('after', after);
+    return requestJson<{
+      mode: 'PAPER';
+      deliverySemantics: 'AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP';
+      warning: string;
+      records: PaperOutboxView[];
+      nextCursor: string | null;
+    }>(
+      `/api/v1/paper/experiments/${encodeURIComponent(experimentId)}/outbox?${parameters.toString()}`,
+    );
+  },
+  paperReview: (reviewId: string) =>
+    requestJson<PaperReviewResponse>(`/api/v1/paper/reviews/${encodeURIComponent(reviewId)}`),
   storageQuota: (signal?: AbortSignal) =>
     requestJson<StorageQuotaView>('/api/v1/storage/quota', signal === undefined ? {} : { signal }),
   storageProfile: (signal?: AbortSignal) =>
