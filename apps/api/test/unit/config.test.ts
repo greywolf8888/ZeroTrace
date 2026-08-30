@@ -26,6 +26,25 @@ describe('API configuration', () => {
     ]);
     expect(config.storageProfile).toBe('LOW_COST_CASE');
     expect(config.storageRoot.length).toBeGreaterThan(0);
+    expect(config.tenantId).toBeUndefined();
+    expect(config.oidcTenantClaim).toBeUndefined();
+  });
+
+  it('loads tenant and OIDC authorization claim paths only from explicit configuration', () => {
+    expect(
+      loadConfig({
+        NODE_ENV: 'test',
+        ZEROTRACE_TENANT_ID: 'tenant-1',
+        OIDC_TENANT_CLAIM: 'zerotrace.tenant',
+        OIDC_ROLES_CLAIM: 'zerotrace.roles',
+        OIDC_MFA_CLAIM: 'zerotrace.mfa',
+      }),
+    ).toMatchObject({
+      tenantId: 'tenant-1',
+      oidcTenantClaim: 'zerotrace.tenant',
+      oidcRolesClaim: 'zerotrace.roles',
+      oidcMfaClaim: 'zerotrace.mfa',
+    });
   });
 
   it('allows an explicit EVM snapshot finality without accepting pending state', () => {

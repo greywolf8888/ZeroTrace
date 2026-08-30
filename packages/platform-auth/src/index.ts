@@ -17,7 +17,12 @@ export type SensitiveAction =
 export function authorize(principal: Principal, action: string, tenantId: string): boolean {
   if (principal.tenantId !== tenantId) return false;
   if (action.startsWith('admin.') && !principal.roles.includes('admin')) return false;
-  if (principal.roles.includes('readonly') && action !== 'case.read') return false;
+  if (action === 'case.read') {
+    return principal.roles.some((role) =>
+      (['readonly', 'investigator', 'admin'] as const).includes(role),
+    );
+  }
+  if (principal.roles.includes('readonly')) return false;
   return principal.roles.includes('investigator') || principal.roles.includes('admin');
 }
 
@@ -31,6 +36,14 @@ export function requireFourEyes(
   }
   if (reviewer.tenantId !== actor.tenantId) {
     throw new Error('四眼复核不得跨租户。');
+  }
+  if (
+    !actor.mfaSatisfied ||
+    !reviewer.mfaSatisfied ||
+    !actor.roles.some((role) => role === 'investigator' || role === 'admin') ||
+    !reviewer.roles.some((role) => role === 'investigator' || role === 'admin')
+  ) {
+    throw new Error('四眼复核双方必须具备调查权限并完成 MFA。');
   }
 }
 
@@ -58,4 +71,24 @@ export function productionAuthConfigured(env: {
     return Boolean(env.OIDC_ISSUER && env.OIDC_AUDIENCE && env.OIDC_JWKS_URI);
   }
   return env.LOCAL_DEV_AUTH === '1' || Boolean(env.OIDC_ISSUER);
+}
+
+export function productionResourceAuthConfigured(env: {
+  OIDC_ISSUER?: string;
+  OIDC_AUDIENCE?: string;
+  OIDC_JWKS_URI?: string;
+  OIDC_TENANT_CLAIM?: string;
+  OIDC_ROLES_CLAIM?: string;
+  ZEROTRACE_TENANT_ID?: string;
+  NODE_ENV?: string;
+}): boolean {
+  if (env.NODE_ENV !== 'production') return true;
+  return Boolean(
+    env.OIDC_ISSUER &&
+    env.OIDC_AUDIENCE &&
+    env.OIDC_JWKS_URI &&
+    env.OIDC_TENANT_CLAIM &&
+    env.OIDC_ROLES_CLAIM &&
+    env.ZEROTRACE_TENANT_ID,
+  );
 }
