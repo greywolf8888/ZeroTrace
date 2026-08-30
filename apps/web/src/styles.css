@@ -3064,9 +3064,19 @@ footer a {
   margin-top: 12px;
 }
 
+.paper-notification-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
 .paper-alert-list article {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto auto;
+  grid-template-columns: minmax(220px, 1fr) auto auto auto auto;
   align-items: center;
   gap: 12px;
   padding: 11px 13px;

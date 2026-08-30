@@ -169,6 +169,45 @@ export const PaperOutboxQuerySchema = z
   })
   .strict();
 
+export const PaperNotificationParamsSchema = z
+  .object({
+    experimentId: z.string().regex(/^pex_[0-9a-f]{24}$/),
+    outboxId: z.string().regex(/^pob_[0-9a-f]{24}$/),
+  })
+  .strict();
+
+export const PaperNotificationClaimSchema = z
+  .object({ limit: z.number().int().min(1).max(50).default(20) })
+  .strict();
+
+export const PaperNotificationSettlementSchema = z
+  .object({
+    leaseToken: z.string().regex(/^[0-9a-f]{64}$/),
+    outcome: z.enum(['DISPATCHED', 'FAILED']),
+    errorCode: z
+      .string()
+      .trim()
+      .regex(/^[A-Z][A-Z0-9_]{0,127}$/)
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.outcome === 'FAILED' && value.errorCode === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['errorCode'],
+        message: 'FAILED settlement requires errorCode.',
+      });
+    }
+    if (value.outcome === 'DISPATCHED' && value.errorCode !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['errorCode'],
+        message: 'DISPATCHED settlement cannot carry errorCode.',
+      });
+    }
+  });
+
 const AtomicObservationSchema = z.discriminatedUnion('state', [
   z
     .object({

@@ -2728,6 +2728,34 @@ export interface PaperOutboxView {
   createdAt: string;
 }
 
+export interface PaperNotificationDeliveryView {
+  outboxId: string;
+  experimentId: string;
+  channel: 'IN_APP' | 'DESKTOP';
+  state: 'PENDING' | 'LEASED' | 'DELIVERED' | 'DISPATCHED';
+  attemptCount: number;
+  nextAttemptAt: string;
+  leaseExpiresAt: string | null;
+  deliveredAt: string | null;
+  dispatchedAt: string | null;
+  readAt: string | null;
+  lastErrorCode: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaperNotificationView {
+  record: PaperOutboxView;
+  channels: PaperNotificationDeliveryView[];
+}
+
+export interface PaperDesktopClaimView {
+  record: PaperOutboxView;
+  event: PaperEventView & { chain: 'BSC' | 'SOLANA' };
+  delivery: PaperNotificationDeliveryView;
+  leaseToken: string;
+}
+
 export interface PaperExperimentView {
   id: string;
   name: string;
@@ -2864,6 +2892,59 @@ export const api = {
       `/api/v1/paper/experiments/${encodeURIComponent(experimentId)}/outbox?${parameters.toString()}`,
     );
   },
+  paperNotifications: (experimentId: string, after?: string, limit = 50) => {
+    const parameters = new URLSearchParams({ limit: String(limit) });
+    if (after !== undefined) parameters.set('after', after);
+    return requestJson<{
+      mode: 'PAPER';
+      deliverySemantics: 'AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP';
+      desktopStateMeaning: string;
+      warning: string;
+      records: PaperNotificationView[];
+      nextCursor: string | null;
+    }>(
+      `/api/v1/paper/experiments/${encodeURIComponent(experimentId)}/notifications?${parameters.toString()}`,
+    );
+  },
+  claimPaperDesktopNotifications: (experimentId: string, limit = 20) =>
+    requestJson<{
+      mode: 'PAPER';
+      channel: 'DESKTOP';
+      deliverySemantics: 'AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP';
+      leaseRequired: true;
+      records: PaperDesktopClaimView[];
+      warning: string;
+    }>(
+      `/api/v1/paper/experiments/${encodeURIComponent(experimentId)}/notifications/desktop/claims`,
+      { method: 'POST', body: JSON.stringify({ limit }) },
+    ),
+  settlePaperDesktopNotification: (
+    experimentId: string,
+    outboxId: string,
+    input:
+      | { leaseToken: string; outcome: 'DISPATCHED' }
+      | { leaseToken: string; outcome: 'FAILED'; errorCode: string },
+  ) =>
+    requestJson<{
+      mode: 'PAPER';
+      channel: 'DESKTOP';
+      dispatchConfirmation: 'HANDED_TO_DESKTOP_NOTIFICATION_API_NOT_USER_READ_CONFIRMATION';
+      delivery: PaperNotificationDeliveryView;
+      warning: string;
+    }>(
+      `/api/v1/paper/experiments/${encodeURIComponent(experimentId)}/notifications/${encodeURIComponent(outboxId)}/desktop/settlement`,
+      { method: 'POST', body: JSON.stringify(input) },
+    ),
+  markPaperNotificationRead: (experimentId: string, outboxId: string) =>
+    requestJson<{
+      mode: 'PAPER';
+      channel: 'IN_APP';
+      delivery: PaperNotificationDeliveryView;
+      warning: string;
+    }>(
+      `/api/v1/paper/experiments/${encodeURIComponent(experimentId)}/notifications/${encodeURIComponent(outboxId)}/read`,
+      { method: 'POST', body: '{}' },
+    ),
   paperReview: (reviewId: string) =>
     requestJson<PaperReviewResponse>(`/api/v1/paper/reviews/${encodeURIComponent(reviewId)}`),
   storageQuota: (signal?: AbortSignal) =>
