@@ -1,3 +1,8 @@
+import {
+  assertExternalContentPolicy,
+  type ExternalContentRightsPolicy,
+} from './external-content.js';
+
 /** Read-only HTTP observation adapter. Defaults cannot authorize any network or spend.
  * Credentials, durable quota reservation, DNS/egress policy and dispatch leases are injected by
  * the existing provider-plane. No source is treated as independent of its upstream platform. */
@@ -11,6 +16,7 @@ export interface SocialSourceConfig {
   contractVersion: string;
   upstreamGroup: 'X';
   documentation: string | null;
+  contentPolicy: ExternalContentRightsPolicy | null;
   authentication: {
     kind: 'NONE' | 'BEARER' | 'HEADER';
     secretRef: string | null;
@@ -42,6 +48,8 @@ export interface SearchPlan {
   origin: string;
   url: string;
   contractVersion: string;
+  contentPolicyVersion: string;
+  rightsEvidenceIds: readonly string[];
   queryVersion: string;
   cursor: string | null;
 }
@@ -113,9 +121,11 @@ function ready(c: SocialSourceConfig): NonNullable<SocialSourceConfig['search']>
     !c.rightsApproved ||
     !c.documentation ||
     !c.contractVersion ||
-    !c.search
+    !c.search ||
+    !c.contentPolicy
   )
     throw new Error('SOURCE_NOT_READY');
+  assertExternalContentPolicy(c, c.contentPolicy, new Date().toISOString());
   if (
     !Number.isSafeInteger(c.search.maxCount) ||
     c.search.maxCount < 1 ||
@@ -136,7 +146,12 @@ export function makeSearchPlan(
 ): SearchPlan {
   const e = ready(c),
     origin = validateOrigin(c.origin);
-  if (!version || !query.trim() || /[\u0000-\u001f]/u.test(query) || query.length > e.maxQueryChars)
+  if (
+    !version ||
+    !query.trim() ||
+    [...query].some((character) => character.charCodeAt(0) <= 31) ||
+    query.length > e.maxQueryChars
+  )
     throw new Error('INVALID_QUERY');
   if (!Number.isSafeInteger(count) || count < 1 || count > e.maxCount)
     throw new Error('INVALID_PAGE_SIZE');
@@ -170,6 +185,8 @@ export function makeSearchPlan(
     origin,
     url: url.toString(),
     contractVersion: c.contractVersion,
+    contentPolicyVersion: c.contentPolicy!.policyVersion,
+    rightsEvidenceIds: [...c.contentPolicy!.rightsEvidenceIds].sort(),
     queryVersion: version,
     cursor,
   };
@@ -243,6 +260,11 @@ export async function fetchSearchPage(
   if (
     plan.sourceId !== c.id ||
     plan.contractVersion !== c.contractVersion ||
+    plan.contentPolicyVersion !== c.contentPolicy!.policyVersion ||
+    plan.rightsEvidenceIds.length !== c.contentPolicy!.rightsEvidenceIds.length ||
+    plan.rightsEvidenceIds.some(
+      (id, index) => id !== [...c.contentPolicy!.rightsEvidenceIds].sort()[index],
+    ) ||
     plan.origin !== origin ||
     new URL(plan.url).origin !== origin
   )
@@ -328,6 +350,7 @@ export const FXEMBED_TEMPLATE: SocialSourceConfig = {
   rightsApproved: false,
   enabled: false,
   documentation: 'https://docs.fxembed.com/api/twitter/operations/2search/',
+  contentPolicy: null,
   contractVersion: 'fxembed-docs-2026-08-30',
   upstreamGroup: 'X',
   authentication: { kind: 'NONE', secretRef: null, headerName: null },
@@ -359,6 +382,7 @@ export const XAPID_TEMPLATE: SocialSourceConfig = {
   rightsApproved: false,
   enabled: false,
   documentation: null,
+  contentPolicy: null,
   contractVersion: 'UNVERIFIED',
   upstreamGroup: 'X',
   authentication: { kind: 'NONE', secretRef: null, headerName: null },

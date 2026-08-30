@@ -249,6 +249,18 @@ archive retention, outage, load, or forced-reorg acceptance.
 隔离。案件、私人标签、模拟实验等持久记录尚未逐行绑定 tenant/owner；四眼状态机、不可变授权审计、
 脱敏公开分享与真实 IdP 互操作也未完成。完成前不得把 X72/U51 标记为完整或部署匿名公开入口。
 
+## 外部内容与 AI 数据边界
+
+`config/ai_provider.example.json` 默认 `enabled=false`、能力 `UNTESTED` 且
+`external_content_mode=PROHIBITED`。只有实际 Provider 探测为 `VERIFIED`、服务端密钥存在时才允许分析。
+每个请求必须声明资料类别；包含外部平台内容时还必须把模式改为 `RIGHTS_GATED`，并由已验证来源政策
+签发包含权利 Evidence、政策版本与新鲜删除检查的授权。不能仅凭接口 Key、`store=false` 或服务可访问
+推断训练权、留存承诺或外发权。结果中的 `thirdPartyRetention=NOT_GUARANTEED` 必须保留到审计日志。
+
+Social Source 的身份、合同和访问权之外，还需配置内容留存/删除/AI 政策。搜索计划绑定政策版本与权利
+Evidence；政策缺失、过期、撤销或删除支持未核验均不发网。当前 xapid 身份未验证，域名、鉴权头、
+价格与分页合同仍为空，禁止猜测或调度。
+
 ## Production requirements not supplied by Compose
 
 Before internet-facing deployment, add and verify:

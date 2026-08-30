@@ -88,6 +88,19 @@ export function parseAiProviderDocument(
   if (apiKey === undefined || apiKey.trim().length === 0)
     throw new Error('AI_PROVIDER_SECRET_MISSING');
   const budgets = record(root.budgets, 'budgets');
+  const rules = record(root.rules, 'rules');
+  const externalContentMode = text(rules.external_content_mode, 'external_content_mode');
+  if (externalContentMode !== 'PROHIBITED' && externalContentMode !== 'RIGHTS_GATED') {
+    throw new Error('AI_CONFIG_EXTERNAL_CONTENT_MODE_INVALID');
+  }
+  if (
+    boolean(
+      rules.third_party_retention_not_guaranteed_by_store_false,
+      'third_party_retention_not_guaranteed_by_store_false',
+    ) !== true
+  ) {
+    throw new Error('AI_CONFIG_RETENTION_DISCLOSURE_REQUIRED');
+  }
   const reasoning = capabilities.reasoning_effort;
   if (
     reasoning !== null &&
@@ -106,6 +119,11 @@ export function parseAiProviderDocument(
     maxInputChars: positiveInteger(budgets.max_input_chars, 'max_input_chars'),
     maxResponseBytes: positiveInteger(budgets.max_response_bytes, 'max_response_bytes'),
     allowLoopbackHttp: boolean(root.allow_loopback_http, 'allow_loopback_http'),
+    externalContentMode,
+    externalContentDeletionCheckMaxAgeSeconds: positiveInteger(
+      rules.external_content_deletion_check_max_age_seconds,
+      'external_content_deletion_check_max_age_seconds',
+    ),
     capabilities: {
       strictJsonSchema: boolean(capabilities.strict_json_schema, 'strict_json_schema'),
       jsonObject: boolean(capabilities.json_object, 'json_object'),

@@ -1,4 +1,5 @@
 import { assertProviderUrlSafe } from '@zerotrace/chain-adapters';
+import type { ExternalAiAuthorization } from '@zerotrace/provider-plane';
 
 /** Provider-neutral analysis transport. No wallet or trade execution capability. */
 export interface CompatibleAiConfig {
@@ -11,6 +12,8 @@ export interface CompatibleAiConfig {
   maxInputChars: number;
   maxResponseBytes: number;
   allowLoopbackHttp?: boolean;
+  externalContentMode: 'PROHIBITED' | 'RIGHTS_GATED';
+  externalContentDeletionCheckMaxAgeSeconds: number;
   capabilities: {
     strictJsonSchema: boolean;
     jsonObject: boolean;
@@ -33,6 +36,12 @@ export interface CompatibleAiResult<T> {
     outputTokens: number | null;
     totalTokens: number | null;
   };
+  dataBoundary: {
+    externalContentIncluded: boolean;
+    authorizationPolicyVersion: string | null;
+    storeFalseRequested: boolean;
+    thirdPartyRetention: 'NOT_GUARANTEED';
+  };
 }
 export function compatibleEndpoint(config: CompatibleAiConfig): URL {
   const url = new URL(config.baseUrl);
@@ -53,8 +62,18 @@ function validateConfig(c: CompatibleAiConfig): void {
   )
     throw new Error('AI_UNSUPPORTED_REASONING_VALUE');
   if (!c.model.trim() || !c.apiKey.trim()) throw new Error('AI_MODEL_AND_SECRET_REQUIRED');
+  if (!['PROHIBITED', 'RIGHTS_GATED'].includes(c.externalContentMode)) {
+    throw new Error('AI_EXTERNAL_CONTENT_MODE_INVALID');
+  }
   for (const x of [c.timeoutMs, c.maxOutputTokens, c.maxInputChars, c.maxResponseBytes]) {
     if (!Number.isSafeInteger(x) || x <= 0) throw new Error('AI_INVALID_BUDGET');
+  }
+  if (
+    !Number.isSafeInteger(c.externalContentDeletionCheckMaxAgeSeconds) ||
+    c.externalContentDeletionCheckMaxAgeSeconds < 60 ||
+    c.externalContentDeletionCheckMaxAgeSeconds > 86_400
+  ) {
+    throw new Error('AI_EXTERNAL_CONTENT_DELETION_WINDOW_INVALID');
   }
   if (c.timeoutMs > 600_000 || c.maxResponseBytes > 8_000_000)
     throw new Error('AI_BUDGET_TOO_LARGE');
@@ -99,11 +118,49 @@ export async function analyzeCompatible<T>(
     untrustedInput: string;
     schemaName: string;
     schema: Record<string, unknown>;
+    dataClasses: readonly ('CHAIN_EVIDENCE' | 'ANALYST_TEXT' | 'EXTERNAL_PLATFORM_CONTENT')[];
+    externalContentAuthorization?: ExternalAiAuthorization;
   },
   validate: (value: unknown) => T,
   transport: typeof fetch = fetch,
 ): Promise<CompatibleAiResult<T>> {
   validateConfig(config);
+  const allowedDataClasses = new Set([
+    'CHAIN_EVIDENCE',
+    'ANALYST_TEXT',
+    'EXTERNAL_PLATFORM_CONTENT',
+  ]);
+  if (
+    !Array.isArray(task.dataClasses) ||
+    task.dataClasses.length === 0 ||
+    new Set(task.dataClasses).size !== task.dataClasses.length ||
+    task.dataClasses.some((dataClass) => !allowedDataClasses.has(dataClass))
+  ) {
+    throw new Error('AI_DATA_CLASSIFICATION_INVALID');
+  }
+  const externalContentIncluded = task.dataClasses.includes('EXTERNAL_PLATFORM_CONTENT');
+  if (task.externalContentAuthorization !== undefined && !externalContentIncluded) {
+    throw new Error('AI_EXTERNAL_CONTENT_AUTHORIZATION_WITHOUT_DATA_CLASS');
+  }
+  if (externalContentIncluded) {
+    const authorization = task.externalContentAuthorization;
+    const checkedAt = Date.parse(authorization?.deletionCheckedAt ?? '');
+    const ageMs = Date.now() - checkedAt;
+    if (
+      config.externalContentMode !== 'RIGHTS_GATED' ||
+      authorization?.externalAiApproved !== true ||
+      authorization.sourceId.trim().length === 0 ||
+      authorization.postId.trim().length === 0 ||
+      authorization.policyVersion.trim().length === 0 ||
+      authorization.rightsEvidenceIds.length === 0 ||
+      authorization.rightsEvidenceIds.some((id) => !/^ev_[0-9a-f]{24}$/.test(id)) ||
+      !Number.isFinite(checkedAt) ||
+      ageMs < 0 ||
+      ageMs > config.externalContentDeletionCheckMaxAgeSeconds * 1_000
+    ) {
+      throw new Error('AI_EXTERNAL_CONTENT_NOT_AUTHORIZED');
+    }
+  }
   if (task.system.length + task.untrustedInput.length > config.maxInputChars)
     throw new Error('AI_INPUT_BUDGET_EXCEEDED');
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(task.schemaName)) throw new Error('AI_INVALID_SCHEMA_NAME');
@@ -159,7 +216,7 @@ export async function analyzeCompatible<T>(
   const data: unknown = JSON.parse(await boundedBody(response, config.maxResponseBytes));
   if (data === null || typeof data !== 'object') throw new Error('AI_INVALID_ENVELOPE');
   const d = data as Record<string, unknown>;
-  let text = '';
+  let text: string;
   if (config.apiStyle === 'chat_completions') {
     const choices = d.choices;
     if (!Array.isArray(choices) || choices.length !== 1) throw new Error('AI_INVALID_CHOICES');
@@ -210,6 +267,12 @@ export async function analyzeCompatible<T>(
       inputTokens: tokenUsage(usage.input_tokens ?? usage.prompt_tokens),
       outputTokens: tokenUsage(usage.output_tokens ?? usage.completion_tokens),
       totalTokens: tokenUsage(usage.total_tokens),
+    },
+    dataBoundary: {
+      externalContentIncluded,
+      authorizationPolicyVersion: task.externalContentAuthorization?.policyVersion ?? null,
+      storeFalseRequested: c.storeFalse === true,
+      thirdPartyRetention: 'NOT_GUARANTEED',
     },
   };
 }

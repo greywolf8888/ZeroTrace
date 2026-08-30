@@ -832,6 +832,23 @@ investigator/admin 可执行调查写入；任务取消/重试和 Analyst Decisi
 tenant/owner，四眼批准也未持久化成不可变状态机。真实 IdP 互操作、记录级拒绝用例、持久授权审计和
 脱敏分享门禁完成前，X72/U51 保持 `PARTIAL`。
 
+## 外部内容权利、删除与 AI 外发边界
+
+外部平台的“可访问”不等于“可保存、再分发或发送给第三方 AI”。每个 Social Source 除身份、访问权、
+合同版本和零预算调度外，还必须绑定版本化内容政策：权利 Evidence、文本留存级别和期限、删除检查
+方式与最大时效、AI 外发策略、验证/到期时间。政策缺失、过期、撤销或删除支持未核验时，搜索计划
+在网络请求前失败关闭。计划同时绑定合同版本、内容政策版本和权利 Evidence，不能在政策变更后复用。
+
+观察记录按政策保存 metadata 或限时 text，并保留内容哈希。上游删除、权利撤销、留存到期或分析员
+请求会生成无正文 Tombstone，保留删除与权利 Evidence 以便审计，不能以 Evidence 不可变为由继续公开
+受限正文。Tombstone 和 metadata-only 记录不得发送给外部 AI。
+
+AI 请求必须逐次声明资料类别。含 `EXTERNAL_PLATFORM_CONTENT` 时，配置必须是 `RIGHTS_GATED`，并
+携带来源/内容/政策标识、权利 Evidence 和未过期的删除检查；否则在发网前拒绝。`store=false` 只记录为
+请求偏好，结果始终声明第三方留存“不保证”。当前 worker 默认只分类链上 Evidence 与分析员文本，
+示例配置默认禁止外部内容；真实来源权利核验、删除轮询/事件、持久 Tombstone 传播和 Provider 送达
+尚未验收，因此 X73 保持 `PARTIAL`，xapid 继续保持身份未知且禁用。
+
 ## Storage ownership
 
 | Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                                                                  |

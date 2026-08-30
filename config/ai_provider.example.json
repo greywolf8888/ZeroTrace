@@ -39,7 +39,9 @@
     "critical_exit_waits_for_ai": false,
     "endpoint_change_requires_explicit_user_action": true,
     "secrets_in_logs": false,
-    "third_party_retention_not_guaranteed_by_store_false": true
+    "third_party_retention_not_guaranteed_by_store_false": true,
+    "external_content_mode": "PROHIBITED",
+    "external_content_deletion_check_max_age_seconds": 3600
   },
   "outputs": [
     "FACT_SUMMARY",
