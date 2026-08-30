@@ -18,6 +18,8 @@ import {
   type TacticType,
 } from '@zerotrace/schemas';
 
+export * from './historical-research.js';
+
 export const CAMPAIGN_INTELLIGENCE_MODEL_VERSION = 'campaign-intelligence-v1.0.0';
 
 export interface FeatureSeriesPoint {

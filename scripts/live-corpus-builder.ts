@@ -1,5 +1,5 @@
-import { writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { SqdEvmLogReader, SqdPortalClient } from '@zerotrace/chain-adapters';
@@ -8,9 +8,12 @@ import {
   selectProviders,
   defaultBscPublicCatalog,
 } from '@zerotrace/provider-plane';
+import { PANCAKE_V2_BSC_DEPLOYMENT } from '@zerotrace/platform-adapters';
+
+import { buildCorpusCandidateRecords, type CorpusCodeObservation } from './corpus-records.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const FACTORY = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73';
+const FACTORY = PANCAKE_V2_BSC_DEPLOYMENT.factory;
 const PAIR_CREATED = '0x0d3648bd0f6ba80134a33ba9275ac585d9d315f0ad8355cddefde31afa28d0e9';
 const SKIP = new Set([
   '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c',
@@ -23,6 +26,14 @@ const SKIP = new Set([
 
 function topicAddress(topic: string): string {
   return `0x${topic.slice(-40).toLowerCase()}`;
+}
+
+function argument(name: string): string | undefined {
+  const index = process.argv.indexOf(name);
+  if (index === -1) return undefined;
+  const value = process.argv[index + 1];
+  if (value === undefined || value.startsWith('--')) throw new Error(`${name} requires a value.`);
+  return value;
 }
 
 const plan = planCorpusIngestion({
@@ -132,38 +143,25 @@ try {
   bulkError = error instanceof Error ? error.message : 'sqd bulk failed';
 }
 
-if (tokens.length === 0) {
-  tokens.push(
-    '0xaecbd0e461047d6b7cfc82e637ad197097407777',
-    '0x13aa2c5bbfd15b65b15ef1129ff3dcddf8c17777',
-    '0x711770df85f79c4aebba1f1d8db263110d3d7777',
-    '0xdcfb441a1f38802820a4e7b4cc8aab37833c7777',
-  );
-}
-
-const verified: Array<{ token: string; codeAgree: boolean; empty: boolean }> = [];
-if (urls.length >= 2) {
-  for (const token of tokens) {
+const observations = new Map<string, CorpusCodeObservation[]>();
+for (const token of tokens) {
+  const values: CorpusCodeObservation[] = [];
+  for (const [index, url] of urls.slice(0, 2).entries()) {
+    const providerId = selection.selected[index]?.providerId ?? `operator-${index + 1}`;
     try {
-      const [left, right] = await Promise.all([
-        rpc(urls[0]!, 'eth_getCode', [token, 'latest']),
-        rpc(urls[1]!, 'eth_getCode', [token, 'latest']),
-      ]);
-      verified.push({
-        token,
-        codeAgree: left === right,
-        empty: left === '0x',
-      });
-    } catch (error) {
-      verified.push({
-        token,
-        codeAgree: false,
-        empty: false,
-      });
-      void error;
+      const code = await rpc(url, 'eth_getCode', [token, 'latest']);
+      values.push(
+        typeof code === 'string'
+          ? { providerId, state: 'KNOWN', code }
+          : { providerId, state: 'UNAVAILABLE', errorCode: 'INVALID_RESPONSE' },
+      );
+    } catch {
+      values.push({ providerId, state: 'UNAVAILABLE', errorCode: 'PROVIDER_DOWN' });
     }
   }
+  observations.set(token, values);
 }
+const records = buildCorpusCandidateRecords(tokens, observations);
 
 const document = {
   schemaVersion: 'zerotrace-live-corpus-v1',
@@ -171,6 +169,12 @@ const document = {
   head: head === 0 ? null : `0x${head.toString(16)}`,
   window: { fromBlock: windowFrom, toBlock: head },
   reviewed: false,
+  deployment: {
+    chainId: PANCAKE_V2_BSC_DEPLOYMENT.chainId,
+    factory: PANCAKE_V2_BSC_DEPLOYMENT.factory,
+    sourceRevision: PANCAKE_V2_BSC_DEPLOYMENT.sourceRevision,
+    registryObservedAt: PANCAKE_V2_BSC_DEPLOYMENT.registryObservedAt,
+  },
   queryPlan: plan,
   source: bulkError === undefined ? 'BULK_DATASET' : 'BLOCKED_NO_BULK',
   bulkError,
@@ -178,21 +182,36 @@ const document = {
     bulkError === undefined
       ? 'Token 候选来自 SQD bulk PairCreated，再用两个独立公共 Operator 复核 bytecode。未经分析员核验，不得记 G12 PASS。禁止对公共节点逐 Token 扫描 eth_getLogs。'
       : `SQD bulk 不可用：${bulkError}。拒绝回退到公共 RPC 全量 getLogs。Corpus 保持未完成，不得记 G12 PASS。`,
-  tokens: verified,
+  candidatesDiscovered: tokens.length,
+  candidatesRecorded: records.length,
+  records,
+  // Backward-compatible token list for the existing resume tools. The records above are
+  // authoritative and preserve unavailable, empty-code, rejected and undetermined states.
+  tokens: records.map((record) => ({ token: record.token })),
 };
 
-writeFileSync(
-  join(root, 'docs/terminal-market-structure/token-corpus.json'),
-  `${JSON.stringify(document, null, 2)}\n`,
+const defaultOutput = join(
+  root,
+  'output',
+  'corpus-runs',
+  `token-corpus-${document.capturedAt.replaceAll(':', '-').replaceAll('.', '-')}.json`,
 );
+const outputPath = resolve(root, argument('--output') ?? defaultOutput);
+if (existsSync(outputPath)) {
+  throw new Error(`Corpus output already exists and will not be overwritten: ${outputPath}`);
+}
+mkdirSync(dirname(outputPath), { recursive: true });
+writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`, { flag: 'wx' });
 process.stdout.write(
   `${JSON.stringify(
     {
-      collected: verified.length,
-      agreed: verified.filter((item) => item.codeAgree).length,
+      collected: records.length,
+      agreed: records.filter((item) => item.verification === 'AGREED_CONTRACT').length,
+      unavailable: records.filter((item) => item.verification === 'UNAVAILABLE').length,
       reviewed: false,
       source: document.source,
       bulkError,
+      outputPath,
     },
     null,
     2,
