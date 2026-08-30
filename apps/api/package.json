@@ -30,6 +30,7 @@
     "@zerotrace/label-engine": "*",
     "@zerotrace/llm-gateway": "*",
     "@zerotrace/market-reality-engine": "*",
+    "@zerotrace/metric-registry": "*",
     "@zerotrace/platform-adapters": "*",
     "@zerotrace/rv": "*",
     "@zerotrace/schemas": "*",

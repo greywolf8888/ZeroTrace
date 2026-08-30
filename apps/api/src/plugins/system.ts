@@ -180,6 +180,12 @@ export async function registerSystemRoutes(
           'PostgreSQL SQL 先解析为类型化 AST，再只接受单条、静态 LIMIT、Curated/Research 关系白名单与确定性函数白名单的 SELECT。DDL/DML、锁、表值函数、系统关系、文件/网络表面、当前会话状态、动态 LIMIT、参数缺口和过量扫描计划均失败关闭。迁移 044 提供两个最小脱敏安全视图，但独立只读角色、租户 RLS、取消/成本执行器与真实 PostgreSQL 验收完成前只返回计划，不执行 SQL。',
       },
       {
+        id: 'metrics-lab-registry',
+        status: 'IMPLEMENTED_CATALOG_AND_PIT_CORE_REMOTE_EXECUTION_DISABLED',
+        detail:
+          '版本化指标定义使用受控公式 AST、依赖 DAG 与单位维度校验；本地确定性求值只读取 asOf 前可见的同 Snapshot Observation，并输出覆盖率、新鲜度、来源集、模型版本、Evidence、非概率证据分、重放输入和结果哈希。Unknown、Unavailable、Stale、Provider Down 与除零保持不同状态。持久 Observation、租户授权、Cohort、物化和命名实链回放完成前，API 只公开目录，不开放远程求值。',
+      },
+      {
         id: 'flap-bsc-inspection',
         status: runtime.evmAdapters.has(56)
           ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
@@ -442,10 +448,11 @@ export async function registerSystemRoutes(
           '仓位、资金、结算、权限、Evidence 下钻与取证报告',
           '三账本类型化只读查询',
           'AST 级只读查询计划与最小脱敏目录',
+          '版本化指标注册表、单位安全公式 AST 与 PIT 防穿越求值核心',
         ],
         blockers: [
           'Query 执行角色、租户 RLS、取消与物化未验收',
-          '版本化 Metrics Registry、Cohort 和 Point-in-Time 指标执行器未接线',
+          'Metrics 持久 Observation、租户授权、Cohort、物化与命名实链回放未接线',
           '完整 Maps Time Travel/Profiler 资产与 PnL 实链覆盖未通过',
         ],
         realMainnetAcceptance: 'NOT_PASSED',

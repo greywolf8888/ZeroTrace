@@ -614,6 +614,14 @@
         ]
       }
     },
+    "/api/v1/metrics-lab/catalog": {
+      "get": {
+        "operationId": "GET__api_v1_metrics_lab_catalog",
+        "tags": [
+          "intelligence"
+        ]
+      }
+    },
     "/api/v1/settings/paper-simulation": {
       "get": {
         "operationId": "GET__api_v1_settings_paper_simulation",
