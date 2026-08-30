@@ -28,6 +28,7 @@ import { registerPlatformSecurity } from './plugins/platform-security.js';
 import { registerResearchSourceRoutes } from './plugins/research-sources.js';
 import { registerPaperSimulationRoutes } from './plugins/paper-simulation.js';
 import { registerQueryLabRoutes } from './plugins/query-lab.js';
+import { registerMetricsLabRoutes } from './plugins/metrics-lab.js';
 
 export interface CreateAppOptions {
   config: AppConfig;
@@ -114,6 +115,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   await registerResearchSourceRoutes(app, ctx);
   await registerPaperSimulationRoutes(app, ctx);
   await registerQueryLabRoutes(app);
+  await registerMetricsLabRoutes(app);
   await registerStoragePlaneRoutes(app, ctx);
   await registerSearchAndLabelRoutes(app, ctx);
   await registerSolanaBitcoinLedgerRoutes(app, ctx);
