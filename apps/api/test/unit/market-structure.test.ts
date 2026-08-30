@@ -393,12 +393,14 @@ describe('market-structure v2 API', { timeout: 60_000 }, () => {
         snapshotPolicy: 'FINALIZED',
         analysisMode: 'FULL_LIFETIME',
         forensicMode: 'FORENSIC',
+        creationTx: `0x${'a'.repeat(64)}`,
       },
     });
     expect(analyzed.statusCode).toBe(202);
     const body = analyzed.json() as { status: string; job: { id: string; status: string } };
     expect(body).toMatchObject({ status: 'QUEUED', job: { status: 'PENDING' } });
     expect(queue.get(body.job.id)?.attempt).toBe(0);
+    expect(queue.get(body.job.id)?.payload).toContain(`0x${'a'.repeat(64)}`);
 
     const cancelled = await app.inject({
       method: 'POST',
@@ -413,6 +415,21 @@ describe('market-structure v2 API', { timeout: 60_000 }, () => {
     expect(retried.statusCode).toBe(200);
     expect(retried.json()).toMatchObject({ status: 'PENDING', attempt: 0 });
     await runtime.close?.();
+  });
+
+  it('rejects EVM creation transaction hints on non-EVM analysis', async () => {
+    const app = await createApp({ config: baseConfig(), logger: false });
+    apps.push(app);
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v2/tokens/SOLANA/solana-mainnet/So11111111111111111111111111111111111111112/analyze',
+      payload: {
+        snapshotPolicy: 'FINALIZED',
+        analysisMode: 'FULL_LIFETIME',
+        creationTx: `0x${'b'.repeat(64)}`,
+      },
+    });
+    expect(response.statusCode).toBe(400);
   });
 
   it('returns 404 for unknown jobs and serves the analyze job after offline materialize', async () => {
