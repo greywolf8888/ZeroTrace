@@ -1,5 +1,7 @@
 import { hashPayload } from '@zerotrace/evidence';
 
+export * from './oidc.js';
+
 export type PlatformRole = 'investigator' | 'admin' | 'readonly';
 
 export interface Principal {
@@ -48,11 +50,12 @@ export function appendAudit(previousHash: string, event: Omit<AuditEvent, 'previ
 export function productionAuthConfigured(env: {
   OIDC_ISSUER?: string;
   OIDC_AUDIENCE?: string;
+  OIDC_JWKS_URI?: string;
   NODE_ENV?: string;
   LOCAL_DEV_AUTH?: string;
 }): boolean {
   if (env.NODE_ENV === 'production') {
-    return Boolean(env.OIDC_ISSUER && env.OIDC_AUDIENCE);
+    return Boolean(env.OIDC_ISSUER && env.OIDC_AUDIENCE && env.OIDC_JWKS_URI);
   }
   return env.LOCAL_DEV_AUTH === '1' || Boolean(env.OIDC_ISSUER);
 }

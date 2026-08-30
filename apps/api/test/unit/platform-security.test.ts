@@ -116,4 +116,27 @@ describe('platform security', { timeout: 60_000 }, () => {
     });
     expect(accepted.statusCode).toBe(200);
   });
+
+  it('does not treat OIDC configuration as authentication', async () => {
+    const config = baseConfig({
+      environment: 'production',
+      oidcIssuer: 'https://idp.example',
+      oidcAudience: 'zerotrace',
+      oidcJwksUri: 'https://idp.example/.well-known/jwks.json',
+    });
+    const app = await createApp({ config, runtime: createRuntime(config), logger: false });
+    apps.push(app);
+
+    const missing = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(missing.statusCode).toBe(401);
+    expect(missing.json().error.code).toBe('OIDC_AUTHORIZATION_REQUIRED');
+
+    const malformed = await app.inject({
+      method: 'GET',
+      url: '/api/v1/capabilities',
+      headers: { authorization: 'Basic not-a-bearer-token' },
+    });
+    expect(malformed.statusCode).toBe(401);
+    expect(malformed.json().error.code).toBe('OIDC_TOKEN_INVALID');
+  });
 });
