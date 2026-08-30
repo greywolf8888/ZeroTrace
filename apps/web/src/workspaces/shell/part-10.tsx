@@ -2,6 +2,7 @@ import {
   api,
   type BitcoinForensicGraphReport,
   type BitcoinForensicGraphResponse,
+  type SolanaDealerCampaignResponse,
   type SolanaDealerCampaignReport,
 } from '../../generated-api/client.js';
 import { useMemo, useState } from 'react';
@@ -18,6 +19,7 @@ export function SolanaDealerPanel() {
   const [mint, setMint] = useState('');
   const [fromSlot, setFromSlot] = useState('');
   const [toSlot, setToSlot] = useState('');
+  const [response, setResponse] = useState<SolanaDealerCampaignResponse>();
   const [report, setReport] = useState<SolanaDealerCampaignReport>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -46,8 +48,10 @@ export function SolanaDealerPanel() {
       });
       const next = response.report ?? response.record?.report;
       if (next === undefined) throw new Error('捕获结果未返回 Solana 操盘报告。');
+      setResponse(response);
       setReport(next);
     } catch (cause) {
+      setResponse(undefined);
       setReport(undefined);
       setError(cause instanceof Error ? cause.message : 'Solana 操盘证据捕获失败。');
     } finally {
@@ -110,6 +114,14 @@ export function SolanaDealerPanel() {
       {error === undefined ? null : <p className="inline-error">{error}</p>}
       {report === undefined ? null : (
         <div className="campaign-detail-stack" data-testid="solana-dealer-results">
+          {response?.durable === false ? (
+            <div className="bitcoin-policy-boundary">
+              <strong>非持久研究结果</strong>
+              <p>
+                PostgreSQL 报告存储不可用；本次响应不能作为正式取证交付，服务退出后也不能保证回放。
+              </p>
+            </div>
+          ) : null}
           <div className="metric-grid">
             <MetricTile
               label="区间"
@@ -136,6 +148,18 @@ export function SolanaDealerPanel() {
               state="known"
             />
             <MetricTile
+              label="数据覆盖率"
+              value={`${Math.round(report.dataCoverage * 100)}%`}
+              detail={`历史 ${Math.round(report.historyCoverage * 100)}%`}
+              state={report.dataCoverage === 1 ? 'known' : 'unknown'}
+            />
+            <MetricTile
+              label="来源覆盖率"
+              value={`${Math.round(report.sourceCoverage * 100)}%`}
+              detail={`${report.sourceSet.length} 个已记录来源`}
+              state={report.sourceCoverage === 1 ? 'known' : 'unknown'}
+            />
+            <MetricTile
               label="发射台信号"
               value={
                 report.launchpadObservations === undefined
@@ -145,6 +169,28 @@ export function SolanaDealerPanel() {
               detail="已钉扎 Solana 发射台解码"
               state={report.launchpadObservations === undefined ? 'unknown' : 'known'}
             />
+          </div>
+          <div className="snapshot-strip">
+            <span>
+              <b>快照 slot</b> {report.snapshot.slot ?? '未知'}
+            </span>
+            <span>
+              <b>快照哈希</b>{' '}
+              <code title={report.snapshot.blockhash ?? '未知'}>
+                {report.snapshot.blockhash === undefined
+                  ? '未知'
+                  : shortId(report.snapshot.blockhash, 8)}
+              </code>
+            </span>
+            <span>
+              <b>新鲜度</b> {formatTime(report.freshness)}
+            </span>
+            <span>
+              <b>模型版本</b> {report.modelVersion}
+            </span>
+            <span>
+              <b>策略版本</b> {report.policyVersion}
+            </span>
           </div>
           <div className="two-column">
             <div className="detail-card">
