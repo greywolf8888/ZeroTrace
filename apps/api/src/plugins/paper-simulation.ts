@@ -13,6 +13,7 @@ import {
 } from '@zerotrace/storage';
 
 import type { AppHttpContext } from '../http/context.js';
+import { loadPaperPortfolioSettings } from '../paper-portfolio-settings.js';
 import {
   PaperCommandRequestSchema,
   PaperExperimentCreateSchema,
@@ -83,6 +84,10 @@ export async function registerPaperSimulationRoutes(
   app: FastifyInstance,
   context: AppHttpContext,
 ): Promise<void> {
+  app.get('/api/v1/settings/paper-simulation', { schema: { tags: ['system'] } }, async () =>
+    loadPaperPortfolioSettings(context.config),
+  );
+
   app.post(
     '/api/v1/paper/experiments',
     { schema: { tags: ['analysis'] } },

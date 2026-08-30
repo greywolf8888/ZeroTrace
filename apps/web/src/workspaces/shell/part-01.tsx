@@ -29,17 +29,39 @@ export type View =
   | 'capital'
   | 'profit'
   | 'evidence'
-  | 'analyst';
+  | 'analyst'
+  | 'radar'
+  | 'history'
+  | 'rejected'
+  | 'profiles'
+  | 'candidates'
+  | 'prepareBuy'
+  | 'paperPositions'
+  | 'prepareSell'
+  | 'alerts'
+  | 'research'
+  | 'settings';
 export type Theme = 'dark' | 'light';
 
 export const NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
-  { id: 'workbench', label: '工作台 / 查询', marker: '查询' },
-  { id: 'cases', label: '案件', marker: '案件' },
-  { id: 'monitoring', label: '监控与告警', marker: '监控' },
-  { id: 'system', label: '数据源与系统', marker: '系统' },
+  { id: 'workbench', label: '市场总览', marker: '总览' },
+  { id: 'radar', label: '新币雷达', marker: '雷达' },
+  { id: 'history', label: '历史金狗', marker: '历史' },
+  { id: 'rejected', label: '失败与拒绝', marker: '拒绝' },
+  { id: 'profiles', label: '庄家档案', marker: '档案' },
+  { id: 'candidates', label: '候选池', marker: '候选' },
+  { id: 'prepareBuy', label: '准备买入', marker: '备买' },
+  { id: 'paperPositions', label: '模拟持仓', marker: '持仓' },
+  { id: 'prepareSell', label: '准备卖出', marker: '备卖' },
+  { id: 'alerts', label: '提醒', marker: '提醒' },
+  { id: 'research', label: '研究结果', marker: '研究' },
+  { id: 'settings', label: '设置', marker: '设置' },
 ];
 
 export const DEVELOPER_NAVIGATION: Array<{ id: View; label: string; marker: string }> = [
+  { id: 'cases', label: '案件', marker: '案件' },
+  { id: 'monitoring', label: '监控与告警', marker: '监控' },
+  { id: 'system', label: '数据源与系统', marker: '系统' },
   { id: 'analyze', label: '代币盘面分析', marker: '分析' },
   { id: 'search', label: '案件与调查', marker: '调查' },
   { id: 'overview', label: '盘面总览', marker: '总览' },
