@@ -35,6 +35,11 @@ function provider(overrides: Record<string, unknown> = {}) {
       max_input_chars: 100_000,
       max_response_bytes: 2_000_000,
     },
+    rules: {
+      third_party_retention_not_guaranteed_by_store_false: true,
+      external_content_mode: 'PROHIBITED',
+      external_content_deletion_check_max_age_seconds: 3_600,
+    },
     ...overrides,
   };
 }
@@ -75,6 +80,18 @@ describe('V11 AI 接入与引用边界', () => {
       { purpose: 'PROBE', secret: () => 'secret' },
     );
     expect(probe.config?.model).toBe('5.6sol');
+    expect(() =>
+      parseAiProviderDocument(
+        provider({
+          rules: {
+            third_party_retention_not_guaranteed_by_store_false: false,
+            external_content_mode: 'PROHIBITED',
+            external_content_deletion_check_max_age_seconds: 3_600,
+          },
+        }),
+        { purpose: 'PROBE', secret: () => 'secret' },
+      ),
+    ).toThrow('AI_CONFIG_RETENTION_DISCLOSURE_REQUIRED');
   });
 
   it('逐条核对 Evidence/特征/时点并显式标记旧结构映射损失', () => {
@@ -126,6 +143,7 @@ describe('V11 AI 接入与引用边界', () => {
         untrustedInput: '资料',
         schemaName: 'analysis',
         schema: { type: 'object' },
+        dataClasses: ['CHAIN_EVIDENCE', 'ANALYST_TEXT'],
       },
       (value) => value as { ok: boolean },
       async (_url, init) => {
@@ -159,6 +177,7 @@ describe('V11 AI 接入与引用边界', () => {
         untrustedInput: '资料',
         schemaName: 'analysis',
         schema: { type: 'object' },
+        dataClasses: ['CHAIN_EVIDENCE', 'ANALYST_TEXT'],
       },
       (value) => value as { ok: boolean },
       async (_url, init) => {
@@ -178,5 +197,78 @@ describe('V11 AI 接入与引用边界', () => {
     expect(responseBodies[0]).not.toHaveProperty('messages');
     expect(response.modelIdentity).toBe('MATCHED');
     expect(response.requiresModelConfirmation).toBe(false);
+  });
+
+  it('外部平台内容必须在发网前绑定权利 Evidence 与新鲜删除检查', async () => {
+    const authorization = {
+      externalAiApproved: true as const,
+      sourceId: 'fxembed',
+      postId: '123456789',
+      policyVersion: 'fxembed-rights-v1',
+      rightsEvidenceIds: [evidence],
+      deletionCheckedAt: new Date().toISOString(),
+    };
+    const prohibited = parseAiProviderDocument(provider(), {
+      purpose: 'ANALYZE',
+      secret: () => 'secret',
+    });
+    await expect(
+      analyzeCompatible(
+        prohibited.config!,
+        {
+          system: '系统',
+          untrustedInput: '外部内容',
+          schemaName: 'analysis',
+          schema: { type: 'object' },
+          dataClasses: ['EXTERNAL_PLATFORM_CONTENT'],
+          externalContentAuthorization: authorization,
+        },
+        (value) => value,
+        async () => {
+          throw new Error('transport must not run');
+        },
+      ),
+    ).rejects.toThrow('AI_EXTERNAL_CONTENT_NOT_AUTHORIZED');
+
+    const rightsGated = parseAiProviderDocument(
+      provider({
+        rules: {
+          third_party_retention_not_guaranteed_by_store_false: true,
+          external_content_mode: 'RIGHTS_GATED',
+          external_content_deletion_check_max_age_seconds: 3_600,
+        },
+      }),
+      { purpose: 'ANALYZE', secret: () => 'secret' },
+    );
+    let calls = 0;
+    const result = await analyzeCompatible(
+      rightsGated.config!,
+      {
+        system: '系统',
+        untrustedInput: '外部内容',
+        schemaName: 'analysis',
+        schema: { type: 'object' },
+        dataClasses: ['EXTERNAL_PLATFORM_CONTENT'],
+        externalContentAuthorization: authorization,
+      },
+      (value) => value as { ok: boolean },
+      async () => {
+        calls += 1;
+        return new Response(
+          JSON.stringify({
+            model: '5.6sol',
+            choices: [{ finish_reason: 'stop', message: { content: '{"ok":true}' } }],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      },
+    );
+    expect(calls).toBe(1);
+    expect(result.dataBoundary).toEqual({
+      externalContentIncluded: true,
+      authorizationPolicyVersion: 'fxembed-rights-v1',
+      storeFalseRequested: false,
+      thirdPartyRetention: 'NOT_GUARANTEED',
+    });
   });
 });

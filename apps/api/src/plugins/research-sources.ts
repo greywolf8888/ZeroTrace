@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 
 import {
+  externalContentPolicyStatus,
   FXEMBED_TEMPLATE,
   XAPID_TEMPLATE,
   type SocialSourceConfig,
@@ -10,12 +11,22 @@ import type { AppHttpContext } from '../http/context.js';
 
 function sourceStatus(
   source: SocialSourceConfig,
-): 'READY' | 'DISABLED' | 'UNVERIFIED_IDENTITY' | 'RIGHTS_NOT_APPROVED' | 'CONTRACT_INCOMPLETE' {
+):
+  | 'READY'
+  | 'DISABLED'
+  | 'UNVERIFIED_IDENTITY'
+  | 'RIGHTS_NOT_APPROVED'
+  | 'CONTRACT_INCOMPLETE'
+  | 'CONTENT_POLICY_UNCONFIGURED'
+  | 'CONTENT_POLICY_INACTIVE' {
   if (!source.identityVerified) return 'UNVERIFIED_IDENTITY';
   if (!source.rightsApproved) return 'RIGHTS_NOT_APPROVED';
   if (source.origin === null || source.documentation === null || source.search === null) {
     return 'CONTRACT_INCOMPLETE';
   }
+  const contentPolicy = externalContentPolicyStatus(source);
+  if (contentPolicy === 'UNCONFIGURED') return 'CONTENT_POLICY_UNCONFIGURED';
+  if (contentPolicy === 'INACTIVE') return 'CONTENT_POLICY_INACTIVE';
   return source.enabled ? 'READY' : 'DISABLED';
 }
 
@@ -30,6 +41,23 @@ function publicSource(source: SocialSourceConfig, durableDispatchAvailable: bool
     endpointConfigured: source.origin !== null && source.search !== null,
     documentation: source.documentation,
     contractVersion: source.contractVersion,
+    contentPolicy:
+      source.contentPolicy === null
+        ? {
+            status: 'UNCONFIGURED',
+            retention: null,
+            deletionMode: null,
+            externalAi: 'PROHIBITED',
+          }
+        : {
+            status: externalContentPolicyStatus(source),
+            policyVersion: source.contentPolicy.policyVersion,
+            rightsStatus: source.contentPolicy.rightsStatus,
+            retention: source.contentPolicy.retention,
+            deletionMode: source.contentPolicy.deletionMode,
+            externalAi: source.contentPolicy.externalAi,
+            expiresAt: source.contentPolicy.expiresAt,
+          },
     authenticationConfigured:
       source.authentication.kind === 'NONE' || source.authentication.secretRef !== null,
     upstreamGroup: source.upstreamGroup,
