@@ -19,12 +19,38 @@ async function fixture() {
   return { privateKey, verifier };
 }
 
+async function authorizedFixture() {
+  const { privateKey, publicKey } = await generateKeyPair('RS256');
+  const publicJwk = await exportJWK(publicKey);
+  publicJwk.kid = 'zerotrace-test';
+  const verifier = createOidcBearerVerifier(
+    {
+      issuer: 'https://idp.example',
+      audience: 'zerotrace',
+      jwksUri: 'https://idp.example/.well-known/jwks.json',
+      authorization: {
+        expectedTenantId: 'tenant-1',
+        tenantClaim: 'zerotrace.tenant',
+        rolesClaim: 'zerotrace.roles',
+        mfaClaim: 'zerotrace.mfa',
+      },
+    },
+    { keyResolver: createLocalJWKSet({ keys: [publicJwk] }) },
+  );
+  return { privateKey, verifier };
+}
+
 async function token(
   privateKey: CryptoKey,
-  overrides: { audience?: string; expiresAt?: number; omitExpiration?: boolean } = {},
+  overrides: {
+    audience?: string;
+    expiresAt?: number;
+    omitExpiration?: boolean;
+    claims?: Record<string, unknown>;
+  } = {},
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1_000);
-  let builder = new SignJWT({ purpose: 'read-only-research' })
+  let builder = new SignJWT({ purpose: 'read-only-research', ...overrides.claims })
     .setProtectedHeader({ alg: 'RS256', kid: 'zerotrace-test' })
     .setIssuer('https://idp.example')
     .setAudience(overrides.audience ?? 'zerotrace')
@@ -61,5 +87,48 @@ describe('OIDC bearer verifier', () => {
     await expect(
       verifier.verifyAuthorization(`Bearer ${await token(privateKey, { omitExpiration: true })}`),
     ).rejects.toMatchObject({ code: 'OIDC_TOKEN_INVALID' });
+  });
+
+  it('extracts only explicitly configured tenant, canonical roles, and MFA claims', async () => {
+    const { privateKey, verifier } = await authorizedFixture();
+    const principal = await verifier.verifyAuthorization(
+      `Bearer ${await token(privateKey, {
+        claims: {
+          zerotrace: { tenant: 'tenant-1', roles: ['investigator'], mfa: true },
+        },
+      })}`,
+    );
+    expect(principal.authorization).toEqual({
+      tenantId: 'tenant-1',
+      roles: ['investigator'],
+      mfaSatisfied: true,
+    });
+  });
+
+  it('rejects cross-tenant, unknown-role, and malformed authorization claims', async () => {
+    const { privateKey, verifier } = await authorizedFixture();
+    for (const zerotrace of [
+      { tenant: 'tenant-2', roles: ['investigator'], mfa: true },
+      { tenant: 'tenant-1', roles: ['owner'], mfa: true },
+      { tenant: 'tenant-1', roles: ['admin'], mfa: 'yes' },
+    ]) {
+      await expect(
+        verifier.verifyAuthorization(
+          `Bearer ${await token(privateKey, { claims: { zerotrace } })}`,
+        ),
+      ).rejects.toMatchObject({ code: 'OIDC_TOKEN_INVALID' });
+    }
+    expect(() =>
+      createOidcBearerVerifier({
+        issuer: 'https://idp.example',
+        audience: 'zerotrace',
+        jwksUri: 'https://idp.example/.well-known/jwks.json',
+        authorization: {
+          expectedTenantId: 'tenant-1',
+          tenantClaim: '__proto__.tenant',
+          rolesClaim: 'zerotrace.roles',
+        },
+      }),
+    ).toThrow(/安全的点分隔 claim 路径/);
   });
 });

@@ -476,12 +476,16 @@ export async function registerSystemRoutes(
       {
         id: 'X72',
         title: '案件、取证、团队权限与报告全范围',
-        status: 'PARTIAL_RESOURCE_AUTH_REQUIRED',
+        status: 'PARTIAL_SINGLE_TENANT_ROUTE_RBAC',
         implemented: [
           '不可变案件包、中文摘要、哈希清单与回放脚本',
           'OIDC JWT 身份验证与桌面会话认证',
+          '显式租户/角色/MFA claim 映射、固定部署租户与失败关闭的路由级 RBAC',
         ],
-        blockers: ['租户资源绑定、角色/作用域映射、四眼流程持久化、脱敏公开报告未闭合'],
+        blockers: [
+          '案件等持久记录尚未逐行绑定租户/所有者，不能声明多租户隔离',
+          '四眼流程、不可变授权审计、脱敏公开报告与真实 IdP 互操作未闭合',
+        ],
         realMainnetAcceptance: 'NOT_PASSED',
       },
       {

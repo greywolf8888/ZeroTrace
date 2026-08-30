@@ -817,6 +817,21 @@ CEX 充值、未配对 Bridge 和 Privacy Tool 路径只能记录为“最后可
 共同控制。当前已实现安全核心和测试，具体 Bridge 消息解码、官方资产映射注册表、CEX/Privacy 来源、
 持续跨链索引及命名实链回放仍未完成，因此 X71 保持 `PARTIAL`。
 
+## 固定租户与路由级授权边界
+
+生产远程入口将 JWT 身份验证与授权分开。除 Issuer、Audience、显式 JWKS URI 外，部署者必须提供
+固定 `ZEROTRACE_TENANT_ID` 以及 IdP 的租户和角色 claim 路径；ZeroTrace 不猜 claim 名。claim 读取
+限制为安全点路径，拒绝 prototype 路径、跨租户值、未知角色和 `readonly` 与提升权限混用。可选 MFA
+claim 必须为布尔值。
+
+路由分为分析读取、调查写入、管理操作三类。`readonly` 只允许 GET 和明确列出的纯确定性 POST；
+investigator/admin 可执行调查写入；任务取消/重试和 Analyst Decision 要求 admin + MFA。未识别方法和
+授权配置缺失均失败关闭。本机桌面 token 仍只接受 loopback，并映射到本地受信会话。
+
+这是单部署租户的外围授权，不是逐记录多租户隔离。现有案件、标签、实验和报告表尚未全部携带
+tenant/owner，四眼批准也未持久化成不可变状态机。真实 IdP 互操作、记录级拒绝用例、持久授权审计和
+脱敏分享门禁完成前，X72/U51 保持 `PARTIAL`。
+
 ## Storage ownership
 
 | Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                                                                  |

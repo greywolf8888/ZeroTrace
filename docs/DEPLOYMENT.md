@@ -238,15 +238,23 @@ archive retention, outage, load, or forced-reorg acceptance.
 携带 Bearer JWT，并校验签名、issuer、audience、subject、expiry 与非对称签名算法白名单。令牌无效
 返回 401，JWKS 服务超时或不可用返回 503；配置存在本身不再视为认证成功。
 
-这只闭合身份真实性，不等于资源级授权已经完成。案件、团队、私人标签和分享仍需租户资源绑定、
-角色/作用域映射、逐资源策略、持久审计以及真实 IdP 互操作验收；完成前不得部署匿名公开入口。
+远程生产入口还必须显式设置 `ZEROTRACE_TENANT_ID`、`OIDC_TENANT_CLAIM` 与
+`OIDC_ROLES_CLAIM`。claim 路径为点分隔字段名，由部署者按真实 IdP 配置；系统不默认猜测 `tenant`、
+`groups` 或 `roles`。角色 claim 只接受 ZeroTrace 合同中的 `readonly`、`investigator`、`admin`；
+`readonly` 不得与提升权限角色混用。可选 `OIDC_MFA_CLAIM` 必须指向布尔 claim；未配置或值为 false 时，
+取消/重试任务和 Analyst Decision 等管理路由保持拒绝。令牌租户必须等于固定部署租户。
+
+当前边界是固定单租户部署的路由级 RBAC：GET 和少量纯确定性 POST 可供只读角色使用，一般 POST
+需要 investigator/admin，管理 POST 需要 admin + MFA，未知方法失败关闭。这仍不等于记录级多租户
+隔离。案件、私人标签、模拟实验等持久记录尚未逐行绑定 tenant/owner；四眼状态机、不可变授权审计、
+脱敏公开分享与真实 IdP 互操作也未完成。完成前不得把 X72/U51 标记为完整或部署匿名公开入口。
 
 ## Production requirements not supplied by Compose
 
 Before internet-facing deployment, add and verify:
 
 - TLS and strict ingress policy;
-- OIDC IdP 互操作、role/scope 映射、资源级授权、租户隔离和持久审计；
+- OIDC IdP 互操作、逐记录 tenant/owner 授权、四眼状态机和持久授权审计；
 - a managed secret store and credential rotation;
 - provider egress allowlists and per-provider quotas;
 - redundant, independently operated archive-grade providers with common-position consistency checks;
