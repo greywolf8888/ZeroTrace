@@ -2,13 +2,19 @@
 
 ## 2026-08-31 V11 唯一 Goal 本地交付结果
 
-本轮从受保护 `main` 的既定短分支 `agent/terminal-market-structure-v1` 连续完成 V11 批次，当前实现证据提交为 `91c6a0c2289fb7a4659fa705f23d00b556aba94b`。实现覆盖可信基础修复、零预算数据源策略、BSC 起源、Solana 取证边界、无偏历史语料、可探测 AI worker、持久模拟交易与复盘、OIDC/RBAC、只读 Query Lab、point-in-time 指标注册表、跨链边界、外部内容权利/删除/AI 门禁，以及中文模拟研究工作站。所有写链、签名、私钥、授权、swap、广播和自动资金移动仍被排除。
+本轮从受保护 `main` 的既定短分支 `agent/terminal-market-structure-v1` 连续完成 V11 批次，基础实现证据提交为 `91c6a0c2289fb7a4659fa705f23d00b556aba94b`，持久提醒投递提交为 `424a4c533c10b1240bc70996ce247c556c36a943`，经核验社交查询计划提交为 `a4371e669d25d6e5596ce32ddbef3af708c97a61`。实现覆盖可信基础修复、零预算数据源策略、BSC 起源、Solana 取证边界、无偏历史语料、可探测 AI worker、持久模拟交易与复盘、OIDC/RBAC、只读 Query Lab、point-in-time 指标注册表、跨链边界、外部内容权利/删除/AI 门禁，以及中文模拟研究工作站。所有写链、签名、私钥、授权、swap、广播和自动资金移动仍被排除。
 
-本地可重复工程门禁：`npm run verify` 通过；单元测试 `1020/1020`，可运行集成 `88/88`，外部设施集成 `40 skipped`，eval `2/2`，只读 MCP `5/5`。覆盖率执行 `1108 passed / 40 skipped`，Statements `82.77%`、Branches `75.03%`、Functions `91.35%`、Lines `84.62%`。Chromium desktop/mobile 全量 `42/42` 通过，独立 Windows E2E 启动脚本再次 `42/42` 通过。格式、ESLint、TypeScript、全量构建、许可证、架构、中文路径、schema drift、CycloneDX SBOM、普通与 production npm audit 均通过，漏洞为 `0`。property `70/70`、fault `15/15`、replay `36/36`、forensic golden `41/41`、market-exit golden `15/15` 和 offline Rust replay `1/1` 通过。
+V11 安装器先以预检模式确认无冲突，随后才执行 `--apply`；失败关闭安装器的 journal 位于 `.zerotrace-backups/20260831-004448-h94i67i1/journal.json`，记录 13/13 个文件写入及被替换文件的备份。后续按当前仓库架构接线和修复使这些源码继续演进，因此没有再次用安装器强制覆盖当前实现；本包目录、ZIP、备份和用户辅助脚本均保持未跟踪且未纳入提交。包完整性脚本在显式 `PYTHONUTF8=1` 下通过（13 个 manifest 源文件、43 项保留能力、8 个批次、27 个 JSON）；不设 UTF-8 模式时被 Windows 默认 GBK 解码阻塞。包内隔离 TypeScript 与 Node 合同检查通过，Python planner/installer 测试 15 项中 13 项通过、2 项因当前进程无符号链接权限报 WinError 1314；这些没有被改写成 PASS。
+
+本地可重复工程门禁：`npm run verify` 通过；单元测试 `1026/1026`，可运行集成 `88/88`，外部设施集成 `41 skipped`，eval `2/2`，只读 MCP `5/5`。覆盖率执行 `1114 passed / 41 skipped`，Statements `82.76%`（22570/27269）、Branches `75.05%`（17799/23714）、Functions `91.30%`（4850/5312）、Lines `84.61%`（21197/25051）。Chromium desktop/mobile 全量 `42/42` 通过，独立 Windows E2E 启动脚本再次 `42/42` 通过。格式、ESLint、TypeScript、全量构建、许可证、架构、中文路径、schema drift、CycloneDX SBOM、普通与 production npm audit 均通过，漏洞为 `0`。property `70/70`、fault `15/15`、replay `36/36`、forensic golden `41/41`、market-exit golden `15/15` 和 offline Rust replay `1/1` 通过。
+
+P42 本地持久提醒投递已形成真实生产路径：migration `045_paper_notification_delivery` 为应用内与桌面通道建立状态和只追加事件；应用内“已投递”与“已读”分离；桌面通道使用有界租约、`SKIP LOCKED`、过期回收、指数重试和同 token 幂等结算。API 与中文提醒中心只把 `DISPATCHED` 表达为“已交给桌面 Notification API”，不声称用户已读或外部渠道送达。单元、路由、权限及故障恢复测试通过，但 `TEST_POSTGRES_URL` 未提供使新增真实 PostgreSQL 集成被跳过，当前 OS 桌面投递也没有签名清洁机证据；因此 P42 的命名 real-replay gate 仍未通过。
+
+F04 社交来源生产路径已接入显式 `ZEROTRACE_SOCIAL_SOURCE_CONFIG`：只接受固定只读合同、精确 HTTPS origin、限定 secret 引用、有效权利政策和可追溯 Evidence；查询编译端点仅生成版本化计划，明确 `networkRequestPerformed=false`、`dispatchState=NOT_RESERVED`。默认 xapid 模板继续保持身份未知、端点为空和停用，调用返回 `UNVERIFIED_IDENTITY`。这证明失败关闭的计划编译，不证明真实 X/xapid 抓取、分页、持久原始 artifact、删除传播或费用权益已验收。
 
 当前实时数据结果不等于完整产品闭环：5 个公共 BSC Provider 中 4 个通过 chain ID/finalized 探测；2 个已配置免费 Key 插槽通过 chain ID、历史代码和小范围日志，但 trace 均被套餐拒绝，`BSC_TRACE_RPC_URL` 保持 `UNCONFIGURED`。当前 live case 为 `8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`。免费语料路径处理 50 个 checkpoint，但 `originComplete=0`、`historyComplete=0`、`reviewed=false`；trace-pending 仅 1/3 起源 COMPLETE，另外 2 个保持 `PARTIAL(TRACE_UNAVAILABLE)`。低磁盘第二轮仍有 8 次历史 RPC，ClickHouse 对照 `NOT_RUN`，不能声称缓存完全命中或全历史覆盖。
 
-发布仍为 **BLOCKED**。本机 `cargo fmt --check` 通过，但 workspace clippy/test、公式差分和当前源码 Tauri build 被缺失的 MSVC `link.exe` 阻塞；`desktop:prepare` 与既有二进制 smoke 通过，不可替代当前源码链接。固定硬件 performance 与 24h soak 按设计为 `NOT_RUN`。`docker compose config --quiet` 通过，但 Docker Engine 不可连接，真实 PostgreSQL/ClickHouse/MinIO/Apache AGE、专用 Bitcoin/Solana/launchpad real-chain smoke、真实 IdP、逐记录租户隔离、四眼/WORM、签名清洁机、升级/回滚、xapid 服务身份与第三方 AI 权利送达均未闭合。因此不得合并 `main`，不得声明 Combined PASS、Production Acceptance 或 terminal-complete。
+发布仍为 **BLOCKED**。本机 `cargo fmt --check` 通过，但 workspace clippy/test、公式差分和当前源码 Tauri build 被缺失的 MSVC `link.exe` 阻塞；`desktop:prepare` 与既有二进制 smoke 通过，不可替代当前源码链接。`npm run test:performance` 与 `npm run test:soak` 已实际执行并按失败关闭设计以非零退出返回 `NOT_RUN`。`docker compose config --quiet` 通过，但 Docker Engine 不可连接，真实 PostgreSQL/ClickHouse/MinIO/Apache AGE、migration `044`/`045`、专用 Bitcoin/Solana/launchpad real-chain smoke、真实 IdP、逐记录租户隔离、四眼/WORM、签名清洁机、升级/回滚、xapid 服务身份与第三方 AI 权利送达均未闭合。因此不得合并 `main`，不得声明 Combined PASS、Production Acceptance 或 terminal-complete。
 
 ## 2026-08-21 工程原型到盘面分析工作站执行结果
 

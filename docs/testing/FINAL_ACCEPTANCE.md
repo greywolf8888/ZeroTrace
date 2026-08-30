@@ -2,19 +2,26 @@
 
 ## 2026-08-31 V11 唯一 Goal 当前候选验收
 
-- [x] 实现证据提交 `91c6a0c2289fb7a4659fa705f23d00b556aba94b`；分支仍为 `agent/terminal-market-structure-v1`，未合并 `main`
-- [x] `npm run verify`：单元 `1020/1020`、可运行集成 `88/88`、eval `2/2`、只读 MCP `5/5`；format、lint、typecheck、build、license、audit、architecture、中文和 schema drift 通过
-- [x] `npm run test:coverage`：`1108 passed / 40 skipped`；Statements `82.77%`、Branches `75.03%`、Functions `91.35%`、Lines `84.62%`
+- [x] 基础实现 `91c6a0c2289fb7a4659fa705f23d00b556aba94b`、持久提醒 `424a4c533c10b1240bc70996ce247c556c36a943`、社交查询计划 `a4371e669d25d6e5596ce32ddbef3af708c97a61`；分支仍为 `agent/terminal-market-structure-v1`，未合并 `main`
+- [x] V11 安装器先预检无冲突再 `--apply`；`.zerotrace-backups/20260831-004448-h94i67i1/journal.json` 记录 13/13 写入，后续集成未强制覆盖当前源码
+- [x] `PYTHONUTF8=1 python scripts/verify_package.py`：13 个 manifest 源文件、43 项保留能力、8 个批次、27 个 JSON 均通过；该结果仅证明包完整性
+- [ ] 包内隔离 TypeScript/Node 检查通过，但 Python planner/installer 为 13/15；2 项符号链接安全测试被当前 Windows 进程缺少 symlink 权限（WinError 1314）阻塞
+- [x] `npm run verify`：单元 `1026/1026`、可运行集成 `88/88`、eval `2/2`、只读 MCP `5/5`；format、lint、typecheck、build、license、audit、architecture、中文和 schema drift 通过
+- [x] `npm run test:coverage`：`1114 passed / 41 skipped`；Statements `82.76%`、Branches `75.05%`、Functions `91.30%`、Lines `84.61%`
 - [x] Chromium desktop/mobile `42/42`；Windows 独立启动脚本再次 `42/42`；12 个一级模拟研究入口在 390×844 下可达且根页面无横向溢出
 - [x] property `70/70`、fault `15/15`、replay `36/36`、forensic golden `41/41`、market-exit golden `15/15`、offline Rust replay `1/1`
 - [x] CycloneDX SBOM 生成；普通与 production npm audit 均为 `0 vulnerabilities`
 - [x] 5 个公共 BSC Provider 中 4 个通过 chain ID/finalized 探测；2 个免费 Key 插槽通过 chain ID、历史代码和小范围日志
 - [x] 当前 live case：`8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`；PASS 只证明双 Operator 只读捕获，不代表完整盘面
-- [ ] `docker compose config --quiet` 通过，但 Docker Engine 不可连接；外部 PostgreSQL/ClickHouse/MinIO 相关 40 项集成为 `skipped`，真实迁移未运行
+- [x] P42 本地提醒路径：migration `045`、应用内已读、桌面 lease/重试/幂等结算、权限与中文 UI 已接通；`DISPATCHED` 不等于用户已读或模拟成交
+- [x] F04 查询计划路径：显式来源合同、权利 Evidence 与只读计划编译已接入；默认 xapid 在发网前以 `UNVERIFIED_IDENTITY` 失败关闭
+- [ ] `docker compose config --quiet` 通过，但 Docker Engine 不可连接；外部 PostgreSQL/ClickHouse/MinIO 相关 41 项集成为 `skipped`，migration `044`/`045` 未在真实 PostgreSQL 运行
+- [ ] P42 真实 PostgreSQL 重启恢复、当前源码桌面 OS 通知、签名清洁机及任何外部提醒渠道没有验收，命名 real-replay gate 未通过
+- [ ] F04/X73 真实来源抓取、分页、raw artifact、删除传播和 AI 外发未运行；计划生成不能替代数据获取
 - [ ] 免费语料 50 个 checkpoint 虽已处理，但 `originComplete=0`、`historyComplete=0`、`reviewed=false`，不得计为 50 Token corpus gate
 - [ ] trace-pending 仅 1/3 起源 COMPLETE；另外 2 个为 `PARTIAL(TRACE_UNAVAILABLE)`，通用 trace 插槽未配置
 - [ ] `cargo clippy --workspace -j 2 -- -D warnings`、`cargo test --workspace -j 2`、公式差分和当前源码 Tauri build 被本机缺失 MSVC `link.exe` 阻塞
-- [ ] 固定硬件 performance、24h soak、当前源码签名桌面包、清洁机、升级/回滚均为 `NOT_RUN` 或 `BLOCKED`
+- [ ] `npm run test:performance` 与 `npm run test:soak` 已实际执行并以非零退出返回 `NOT_RUN`；当前源码签名桌面包、清洁机、升级/回滚仍为 `NOT_RUN` 或 `BLOCKED`
 - [ ] Bitcoin Core/Esplora、Solana 独立 archive RPC、Pump/Raydium、Apache AGE 的本轮 named real-chain gate 未闭合
 - [ ] 真实 IdP、逐记录租户/owner 隔离、持久四眼/WORM、xapid 服务身份和第三方 AI 权利/删除送达未验证
 - [ ] G14 Final Acceptance：`BLOCKED`
