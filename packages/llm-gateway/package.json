@@ -12,6 +12,7 @@
     }
   },
   "dependencies": {
+    "@zerotrace/chain-adapters": "*",
     "@zerotrace/evidence": "*",
     "@zerotrace/schemas": "*"
   }

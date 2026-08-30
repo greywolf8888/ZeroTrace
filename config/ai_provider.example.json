@@ -1,0 +1,60 @@
+{
+  "provider_id": "analysis-ai",
+  "display_name": "分析助手",
+  "enabled": false,
+  "base_url": "",
+  "api_key_env": "ZEROTRACE_ANALYSIS_API_KEY",
+  "model": "5.6sol",
+  "api_style": "chat_completions",
+  "supported_api_styles": ["chat_completions", "responses"],
+  "allow_loopback_http": false,
+  "capabilities": {
+    "state": "UNTESTED",
+    "strict_json_schema": false,
+    "json_object": false,
+    "chat_token_field": "max_completion_tokens",
+    "reasoning_effort": null,
+    "store_false": false,
+    "native_web_search": false,
+    "models_endpoint": null
+  },
+  "budgets": {
+    "timeout_ms": 90000,
+    "max_output_tokens": 6000,
+    "max_input_chars": 100000,
+    "max_response_bytes": 2000000,
+    "concurrent_live_analyses": 2,
+    "concurrent_historical_analyses": 1,
+    "max_attempts_per_transport_failure": 3,
+    "max_tool_rounds": 4,
+    "max_tool_calls": 12
+  },
+  "rules": {
+    "probe_required": true,
+    "model_mismatch_behavior": "SHOW_REPORTED_MODEL_AND_REQUIRE_RECONFIRMATION",
+    "silent_fallback": false,
+    "evidence_validation_required": true,
+    "numbers_computed_outside_llm": true,
+    "live_quote_after_ai_required": true,
+    "critical_exit_waits_for_ai": false,
+    "endpoint_change_requires_explicit_user_action": true,
+    "secrets_in_logs": false,
+    "third_party_retention_not_guaranteed_by_store_false": true
+  },
+  "outputs": [
+    "FACT_SUMMARY",
+    "HYPOTHESIS",
+    "COUNTEREVIDENCE",
+    "RESEARCH_QUESTION",
+    "SIMILAR_CASES",
+    "EXPLANATION"
+  ],
+  "denied_outputs": [
+    "AUTHORITATIVE_WIN_PROBABILITY",
+    "OVERRIDE_HARD_RULE",
+    "EDIT_BALANCE",
+    "MERGE_ENTITY",
+    "LIVE_ORDER",
+    "SET_PRIVATE_KEY"
+  ]
+}
