@@ -788,6 +788,22 @@ raw artifact、Snapshot payload 与 Provider/Adapter 细节，并且不向 `PUBL
 执行器、取消、物化、结果 Evidence/Snapshot 和真实 PostgreSQL 门禁完成前，不能把此能力称为完整
 Query Lab。
 
+## Metrics Lab 版本与 Point-in-Time 边界
+
+`@zerotrace/metric-registry` 将指标定义固定为版本化目录。每个定义必须声明中文名称与解释、
+`RAW`/`ENTITY_ADJUSTED`/`ESTIMATED` 口径、账本/资产/协议/粒度范围、单位维度、依赖、模型版本、
+过期上限与限制。派生公式是受控 AST；注册时拒绝缺失依赖、重复版本、依赖环和不兼容单位，
+不执行 JavaScript、SQL 或任意表达式。
+
+确定性求值以调用方给定的 Snapshot 和 `asOf` 为边界，只选择 `eventTime` 与 `knownAt` 均不晚于
+`asOf` 的同 Snapshot Observation，并按当时可见修订计算，防止未来修订泄漏到历史回放。算术使用
+BigInt 有理数保留精确值；无限十进制保留精确分数而不静默舍入，除零返回 Unknown。Unknown、
+Unavailable、Stale 和 Provider Down 是不同状态，均不转成零。输出绑定 Snapshot、覆盖率、新鲜度、
+来源集、模型版本、Evidence ID、明确标注“不是校准概率”的证据分、重放输入和结果哈希。
+
+API 当前只公开定义目录，不接受远程指标求值。持久 Observation 仓库、租户授权、Cohort、指标物化、
+完整 Maps/Profiler 接线与命名实链回放验收完成前，X70 保持 `PARTIAL`。
+
 ## Storage ownership
 
 | Store            | Intended authority                                                                                                           | Current state                                                                                                                                                                                                                                                                                                  |
