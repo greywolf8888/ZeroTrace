@@ -564,6 +564,49 @@ export interface HealthResponse {
   checkedAt: string;
 }
 
+export interface ResearchSourceSettingsResponse {
+  policyVersion: string;
+  procurementBudgetMicrousd: string;
+  paidEnabledByDefault: false;
+  credentialsAreSpendConsent: false;
+  unknownPrice: 'BLOCK';
+  autoFailoverToPaid: false;
+  procurement:
+    | {
+        status: 'DURABLE';
+        remainingMicrousd: string;
+        paidEnabled: boolean;
+        blocked: boolean;
+        revision: number;
+        updatedAt: string;
+      }
+    | {
+        status: 'UNAVAILABLE' | 'NOT_INITIALIZED';
+        remainingMicrousd: null;
+        paidEnabled: false;
+        blocked: null;
+        revision: null;
+        updatedAt: null;
+        reason: string;
+      };
+  sources: Array<{
+    providerId: string;
+    displayName: string;
+    status:
+      'READY' | 'DISABLED' | 'UNVERIFIED_IDENTITY' | 'RIGHTS_NOT_APPROVED' | 'CONTRACT_INCOMPLETE';
+    enabled: boolean;
+    identityVerified: boolean;
+    rightsApproved: boolean;
+    endpointConfigured: boolean;
+    documentation: string | null;
+    contractVersion: string;
+    authenticationConfigured: boolean;
+    upstreamGroup: 'X';
+    dispatchAllowed: boolean;
+  }>;
+  xUpstreamEvidenceRule: 'ALL_X_TOOLS_ONE_UPSTREAM_GROUP';
+}
+
 export interface StorageQuotaView {
   profile: 'LOW_COST_CASE' | 'SELECTIVE_MARKET_INDEX' | 'REMOTE_ARCHIVE_HYBRID';
   level:
@@ -2596,6 +2639,11 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: (signal?: AbortSignal) =>
     requestJson<HealthResponse>('/health', signal === undefined ? {} : { signal }),
+  researchSourceSettings: (signal?: AbortSignal) =>
+    requestJson<ResearchSourceSettingsResponse>(
+      '/api/v1/settings/research-sources',
+      signal === undefined ? {} : { signal },
+    ),
   storageQuota: (signal?: AbortSignal) =>
     requestJson<StorageQuotaView>('/api/v1/storage/quota', signal === undefined ? {} : { signal }),
   storageProfile: (signal?: AbortSignal) =>

@@ -20,6 +20,7 @@
     { "path": "../cluster-position-engine" },
     { "path": "../behavior-engine" },
     { "path": "../campaign-engine" },
-    { "path": "../workflow-core" }
+    { "path": "../workflow-core" },
+    { "path": "../provider-plane" }
   ]
 }

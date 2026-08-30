@@ -1,0 +1,27 @@
+{
+  "version": "V11.0",
+  "procurement_budget_microusd": "0",
+  "paid_enabled": false,
+  "auto_topup": false,
+  "auto_upgrade": false,
+  "auto_overage_purchase": false,
+  "credentials_are_not_spend_consent": true,
+  "unknown_price": "BLOCK",
+  "unknown_rights": "BLOCK",
+  "quota_safety_fraction": 0.8,
+  "quota_value_source": "ACCOUNT_VERIFIED_NOT_MARKETING_ASSUMPTION",
+  "limit_scope": "DATA_CALLS_NOT_PAPER_TRADES",
+  "ai_budget_separate": true,
+  "chain_isolation": true,
+  "priority": [
+    "OPEN_POSITION_RISK",
+    "NEAR_CONDITION_CANDIDATE",
+    "NEW_CANDIDATE",
+    "HISTORICAL_LABEL_BACKFILL"
+  ],
+  "all_x_tools_same_upstream_group": "X",
+  "auto_failover_to_paid": false,
+  "account_budget_atomic": true,
+  "unknown_network_charge": "HOLD_MAXIMUM_RESERVATION",
+  "source_prices_last_verified": null
+}

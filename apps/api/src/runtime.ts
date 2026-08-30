@@ -26,6 +26,7 @@ import { EvidenceLedger, hashPayload } from '@zerotrace/evidence';
 import type {
   PostgresActionSemanticsReportRepository,
   PostgresCaptureScheduleRepository,
+  PostgresDataProcurementRepository,
   PostgresClaimDeclarationReportRepository,
   PostgresClaimRuleReviewReportRepository,
   PostgresClaimReportRepository,
@@ -65,6 +66,11 @@ import {
 import { SourcifyV2Adapter, type EvmSourceVerificationAdapter } from '@zerotrace/platform-adapters';
 import type { TokenCaptureRuntime } from '@zerotrace/token-market-capture';
 import type { StoragePlane } from '@zerotrace/storage-plane';
+import {
+  FXEMBED_TEMPLATE,
+  XAPID_TEMPLATE,
+  type SocialSourceConfig,
+} from '@zerotrace/provider-plane';
 
 import type { AppConfig } from './config.js';
 import { createDurableStores } from './runtime-stores.js';
@@ -114,6 +120,8 @@ export interface AppRuntime {
   intelligenceSearch?: PostgresIntelligenceSearchRepository;
   labelIntelligenceReports?: PostgresLabelIntelligenceReportRepository;
   captureSchedules?: PostgresCaptureScheduleRepository;
+  dataProcurement?: PostgresDataProcurementRepository;
+  socialSources?: readonly SocialSourceConfig[];
   ageInvestigationGraphProjection?: AgeInvestigationGraphProjectionRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
@@ -516,6 +524,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       providers,
       unconfigured.map((item) => ({ ...item, capabilities: [...item.capabilities] })),
     ),
+    socialSources: [structuredClone(FXEMBED_TEMPLATE), structuredClone(XAPID_TEMPLATE)],
     evmAdapters,
     evmSourceAdapters,
     ...(evmSourceVerification === undefined ? {} : { evmSourceVerification }),
