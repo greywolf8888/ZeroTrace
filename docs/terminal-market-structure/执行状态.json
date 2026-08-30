@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-agent-state-v1",
-  "implementationSha": "91c6a0c2289fb7a4659fa705f23d00b556aba94b",
+  "implementationSha": "a4371e669d25d6e5596ce32ddbef3af708c97a61",
   "branch": "agent/terminal-market-structure-v1",
   "currentStage": "X74_RELEASE_VERIFICATION",
   "currentGate": "G14_RELEASE",
@@ -22,17 +22,21 @@
     "G14_RELEASE": "BLOCKED"
   },
   "localTechnicalEvidence": {
-    "coverage": "1108 PASS / 40 SKIPPED; branches 75.03%",
+    "coverage": "1114 PASS / 41 SKIPPED; branches 75.05%",
+    "package": "UTF-8 integrity PASS; isolated TypeScript/Node PASS; Python installer/planner 13/15 with 2 BLOCKED_NO_SYMLINK_PRIVILEGE",
     "e2e": "42/42 Chromium desktop/mobile; Windows wrapper 42/42",
     "terminal": "Rust fmt + offline replay + 70 property + 41 forensic golden PASS; workspace clippy/test BLOCKED_NO_LINKER",
     "live": "8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL",
     "desktop": "prepare and existing-binary smoke PASS; current-source Tauri build BLOCKED_NO_LINKER; Authenticode NotSigned",
+    "notifications": "migration 045 + in-app read + desktop lease/retry/idempotent settlement PASS locally; real PostgreSQL/OS delivery gate open",
+    "socialPlans": "verified explicit contracts compile versioned no-network plans; xapid remains UNVERIFIED_IDENTITY and disabled",
     "security": "OIDC signature/tenant/role/MFA claim mapping and route RBAC fail closed; real IdP and record tenancy open",
     "audit": "production npm audit 0 vulnerabilities; license and SBOM PASS"
   },
   "activeFailures": [
     "arbitrary-token creation-to-finalized ReportEnvelope is incomplete",
-    "external PostgreSQL/ClickHouse/MinIO integration has 40 skipped tests and migration 044 was not run against real PostgreSQL",
+    "external PostgreSQL/ClickHouse/MinIO integration has 41 skipped tests and migrations 044/045 were not run against real PostgreSQL",
+    "P42 real PostgreSQL restart recovery, current-source desktop OS delivery, and signed clean-machine notification acceptance are open",
     "50-token checkpoints have originComplete=0/historyComplete=0/reviewed=false and calibrated entity labels are not available",
     "no pinned archive fork for material V3 exact execution",
     "multi-venue shared-liquidity exact optimization is unsupported",
@@ -41,7 +45,7 @@
     "MSVC link.exe is absent, blocking current-source workspace clippy/test, formula differential, and Tauri build",
     "installer is unsigned and clean-machine acceptance is NOT_RUN",
     "complete SHA-bound visual golden-state set is NOT_RUN",
-    "xapid service identity and real third-party content deletion/AI delivery are unverified"
+    "xapid service identity, real social fetch/pagination/raw artifacts, and third-party content deletion/AI delivery are unverified"
   ],
   "lastCommands": [
     "npm run verify",
@@ -52,11 +56,12 @@
     "npm run test:live",
     "npm run test:performance",
     "npm run test:soak",
+    "npm run desktop:prepare",
     "npm run desktop:build",
     "npm run corpus:free-only",
     "npm run corpus:trace-pending"
   ],
   "nextAction": "Close external and long-duration gates; do not merge while any gate is PARTIAL, UNSUPPORTED, NOT_RUN, or BLOCKED.",
-  "updatedAt": "2026-08-31T03:15:00+08:00",
+  "updatedAt": "2026-08-31T03:49:23+08:00",
   "originMainSha": "68ebfd9ae92305dd47bbc3175af07bda1a172c61"
 }
