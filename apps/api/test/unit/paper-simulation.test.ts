@@ -139,9 +139,23 @@ describe('模拟实验 HTTP', () => {
   });
 
   it('创建、幂等执行命令并读取稳定发件箱，始终声明只读链访问', async () => {
+    const validEvidence = new Set([`ev_${'1'.repeat(24)}`, `ev_${'2'.repeat(24)}`]);
     const runtime = createRuntime(baseConfig());
     runtimes.push(runtime);
     runtime.paperSimulation = memoryRepository();
+    runtime.evidenceRepository = {
+      async get(id: string) {
+        if (!validEvidence.has(id)) return undefined;
+        return {
+          evidence: {
+            id,
+            ledger: 'SOLANA',
+            chainId: 'solana-mainnet',
+            observedAt: '2026-08-31T00:00:00.000Z',
+          },
+        };
+      },
+    } as unknown as NonNullable<AppRuntime['evidenceRepository']>;
     const app = await createApp({ config: baseConfig(), runtime, logger: false });
     apps.push(app);
 
@@ -194,6 +208,23 @@ describe('模拟实验 HTTP', () => {
     expect(replay.statusCode).toBe(200);
     expect(replay.json().experiment).toMatchObject({ revision: 1 });
     expect(replay.json().experiment.outbox).toHaveLength(1);
+
+    const forgedEvidence = await app.inject({
+      method: 'POST',
+      url: `/api/v1/paper/experiments/${experimentId}/commands`,
+      payload: {
+        ...payload,
+        expectedRevision: 1,
+        command: {
+          ...payload.command,
+          commandId: 'candidate-forged',
+          candidateEpoch: 'epoch-forged',
+          evidenceIds: [`ev_${'f'.repeat(24)}`],
+        },
+      },
+    });
+    expect(forgedEvidence.statusCode).toBe(400);
+    expect(forgedEvidence.json().error.code).toBe('PAPER_STORAGE_INVALID');
 
     const outbox = await app.inject({
       method: 'GET',

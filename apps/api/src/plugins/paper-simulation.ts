@@ -43,6 +43,42 @@ function response(experiment: PaperExperiment) {
   };
 }
 
+async function requireEvidence(
+  context: AppHttpContext,
+  evidenceIds: readonly string[],
+  chain: PaperExperiment['chain'],
+  availableBy: string,
+): Promise<void> {
+  const evidence = context.runtime.evidenceRepository;
+  if (evidence === undefined) {
+    throw new PaperSimulationStorageError(
+      'PAPER_STORAGE_NOT_INITIALIZED',
+      'Durable Evidence storage is required for paper state changes.',
+    );
+  }
+  const expected =
+    chain === 'BSC'
+      ? { ledger: 'EVM', chainId: 'eip155:56' }
+      : { ledger: 'SOLANA', chainId: 'solana-mainnet' };
+  const cutoff = new Date(availableBy).getTime();
+  const nodes = await Promise.all(evidenceIds.map((id) => evidence.get(id)));
+  if (
+    nodes.some(
+      (node, index) =>
+        node === undefined ||
+        node.evidence.id !== evidenceIds[index] ||
+        node.evidence.ledger !== expected.ledger ||
+        node.evidence.chainId !== expected.chainId ||
+        new Date(node.evidence.observedAt).getTime() > cutoff,
+    )
+  ) {
+    throw new PaperSimulationStorageError(
+      'PAPER_STORAGE_INVALID',
+      'Paper state change Evidence is missing, cross-chain, or not decision-time visible.',
+    );
+  }
+}
+
 export async function registerPaperSimulationRoutes(
   app: FastifyInstance,
   context: AppHttpContext,
@@ -86,7 +122,21 @@ export async function registerPaperSimulationRoutes(
     async (request) => {
       const { experimentId } = PaperExperimentParamsSchema.parse(request.params);
       const input = PaperCommandRequestSchema.parse(request.body);
-      const experiment = await repository(context).apply({
+      const store = repository(context);
+      const current = await store.get(experimentId);
+      if (current === undefined) {
+        throw new PaperSimulationStorageError(
+          'PAPER_STORAGE_NOT_FOUND',
+          'Paper experiment not found.',
+        );
+      }
+      await requireEvidence(
+        context,
+        input.command.evidenceIds,
+        current.chain,
+        input.command.eventAt,
+      );
+      const experiment = await store.apply({
         experimentId,
         command: input.command as PaperCommand,
         ...(input.expectedRevision === undefined
@@ -132,6 +182,12 @@ export async function registerPaperSimulationRoutes(
         );
       }
       const commands = await store.getCommandJournal(experimentId);
+      await requireEvidence(
+        context,
+        input.rejectedCandidates.flatMap((candidate) => candidate.evidenceIds),
+        experiment.chain,
+        input.asOf,
+      );
       let report;
       try {
         report = buildPaperReview({
