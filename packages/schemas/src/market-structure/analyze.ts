@@ -34,6 +34,19 @@ export const TokenAnalyzeRequestSchema = z
     snapshotPolicy: SnapshotPolicySchema,
     analysisMode: TokenAnalysisModeSchema,
     forensicMode: ForensicAnalysisModeSchema.optional(),
+    creationTx: z
+      .string()
+      .regex(/^0x[0-9a-fA-F]{64}$/)
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (value.creationTx !== undefined && value.ledger !== 'EVM') {
+      context.addIssue({
+        code: 'custom',
+        path: ['creationTx'],
+        message: 'creationTx is only valid for EVM token analysis.',
+      });
+    }
+  });
 export type TokenAnalyzeRequest = z.infer<typeof TokenAnalyzeRequestSchema>;

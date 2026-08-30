@@ -53,6 +53,7 @@ export async function registerTokenAnalyze(
         snapshotPolicy?: unknown;
         analysisMode?: unknown;
         forensicMode?: unknown;
+        creationTx?: unknown;
       };
       const parsed = TokenAnalyzeRequestSchema.parse({
         ledger: params.ledger,
@@ -61,6 +62,7 @@ export async function registerTokenAnalyze(
         snapshotPolicy: body.snapshotPolicy ?? 'FINALIZED',
         analysisMode: body.analysisMode ?? 'FULL_LIFETIME',
         ...(body.forensicMode === undefined ? {} : { forensicMode: body.forensicMode }),
+        ...(body.creationTx === undefined ? {} : { creationTx: body.creationTx }),
       });
       const admissible = options.isAdmissibleMode(
         parsed.forensicMode ?? options.analysisModeOf(request),
@@ -76,7 +78,7 @@ export async function registerTokenAnalyze(
       }
       const job = await queue.enqueue({
         type: 'TOKEN_MARKET_STRUCTURE',
-        idempotencyKey: `${parsed.ledger}:${parsed.chainId}:${parsed.token}:${parsed.snapshotPolicy}:${parsed.analysisMode}`,
+        idempotencyKey: `${parsed.ledger}:${parsed.chainId}:${parsed.token}:${parsed.snapshotPolicy}:${parsed.analysisMode}:${parsed.creationTx ?? 'ORIGIN_UNKNOWN'}`,
         payload: JSON.stringify(parsed),
       });
       if (admissible) {
