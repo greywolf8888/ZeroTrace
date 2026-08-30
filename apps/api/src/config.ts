@@ -82,6 +82,7 @@ const EnvironmentSchema = z.object({
     .default('LOW_COST_CASE'),
   ZEROTRACE_STORAGE_ROOT: optionalString,
   ZEROTRACE_PAPER_PORTFOLIO_CONFIG: optionalString,
+  ZEROTRACE_SOCIAL_SOURCE_CONFIG: optionalString,
   OIDC_ISSUER: optionalString,
   OIDC_AUDIENCE: optionalString,
   OIDC_JWKS_URI: optionalString,
@@ -169,6 +170,7 @@ export interface AppConfig {
   storageProfile: 'LOW_COST_CASE' | 'SELECTIVE_MARKET_INDEX' | 'REMOTE_ARCHIVE_HYBRID';
   storageRoot: string;
   paperPortfolioConfigPath?: string;
+  socialSourceConfigPath?: string;
   oidcIssuer?: string;
   oidcAudience?: string;
   oidcJwksUri?: string;
@@ -381,6 +383,9 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     ...(parsed.ZEROTRACE_PAPER_PORTFOLIO_CONFIG === undefined
       ? {}
       : { paperPortfolioConfigPath: parsed.ZEROTRACE_PAPER_PORTFOLIO_CONFIG }),
+    ...(parsed.ZEROTRACE_SOCIAL_SOURCE_CONFIG === undefined
+      ? {}
+      : { socialSourceConfigPath: parsed.ZEROTRACE_SOCIAL_SOURCE_CONFIG }),
     ...(parsed.NODEREAL_API_KEY === undefined
       ? {}
       : { noderealApiKey: secret(parsed.NODEREAL_API_KEY) }),

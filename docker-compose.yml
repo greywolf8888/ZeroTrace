@@ -65,6 +65,7 @@ services:
       DUNE_API_KEY: ${DUNE_API_KEY:-}
       NANSEN_API_KEY: ${NANSEN_API_KEY:-}
       ARKHAM_API_KEY: ${ARKHAM_API_KEY:-}
+      ZEROTRACE_SOCIAL_SOURCE_CONFIG: ${ZEROTRACE_SOCIAL_SOURCE_CONFIG:-}
     ports:
       - '${API_PORT:-8080}:8080'
     depends_on:
