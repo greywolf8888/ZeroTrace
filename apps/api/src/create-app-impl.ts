@@ -25,6 +25,7 @@ import { registerControlRightsRoutes } from './plugins/control-rights.js';
 import { registerFundingAndCampaignRoutes } from './plugins/funding-campaigns.js';
 import { registerForensicCaseRoutes } from './plugins/forensics.js';
 import { registerPlatformSecurity } from './plugins/platform-security.js';
+import { registerResearchSourceRoutes } from './plugins/research-sources.js';
 
 export interface CreateAppOptions {
   config: AppConfig;
@@ -108,6 +109,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   registerApiErrorHandler(app);
   await registerPlatformSecurity(app, options.config);
   await registerSystemRoutes(app, ctx);
+  await registerResearchSourceRoutes(app, ctx);
   await registerStoragePlaneRoutes(app, ctx);
   await registerSearchAndLabelRoutes(app, ctx);
   await registerSolanaBitcoinLedgerRoutes(app, ctx);

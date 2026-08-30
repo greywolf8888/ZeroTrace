@@ -1,0 +1,33 @@
+{
+  "provider_id": "xapid",
+  "display_name": "xapid（待确认具体服务）",
+  "enabled": false,
+  "identity_verified": false,
+  "rights_approved": false,
+  "origin": null,
+  "documentation_url": null,
+  "contract_version": null,
+  "authentication": {
+    "type": null,
+    "header_name": null,
+    "secret_ref": null
+  },
+  "search": null,
+  "lookup": null,
+  "timeline": null,
+  "stream": null,
+  "quota": null,
+  "pricing": null,
+  "operator_identity": null,
+  "upstream_group": "X",
+  "prohibited_substitution": ["X官方API", "RapidAPI", "TwitterAPI.io", "TwitterAPIs"],
+  "activation_checks": [
+    "确切域名和运营方",
+    "实际授权与保存/外发规则",
+    "官方或用户提供端点文档",
+    "参数/响应/分页映射",
+    "成本单位和最坏费用",
+    "真实只读请求与错误对账"
+  ],
+  "note": "并非声称该名称对应上述任何服务；未知不填猜测值。"
+}

@@ -6,6 +6,7 @@ import {
   independentOperatorCount,
   operatorFromEndpoint,
   sameGroupIsNotIndependent,
+  upstreamGroupForSource,
 } from './index.js';
 
 const bnb = {
@@ -78,5 +79,20 @@ describe('source operator registry', () => {
     expect(endpointRefFromUrl('https://bsc-mainnet.nodereal.io/v1/super-secret-key-value')).toBe(
       'https://bsc-mainnet.nodereal.io/v1',
     );
+  });
+});
+
+describe('social upstream identity', () => {
+  it('counts all X reading tools as the same upstream', () => {
+    expect(upstreamGroupForSource('fxembed')).toBe('X');
+    expect(upstreamGroupForSource('xapid')).toBe('X');
+    expect(upstreamGroupForSource('X_OFFICIAL')).toBe('X');
+    expect(upstreamGroupForSource('twscrape')).toBe('X');
+    expect(upstreamGroupForSource('twikit')).toBe('X');
+  });
+
+  it('preserves unrelated source identities', () => {
+    expect(upstreamGroupForSource('official_rss')).toBe('official_rss');
+    expect(() => upstreamGroupForSource('  ')).toThrow('Source ID is required');
   });
 });

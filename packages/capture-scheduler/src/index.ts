@@ -337,3 +337,11 @@ export type {
   CaptureTarget,
   CaptureTrigger,
 };
+
+export {
+  commitSearchPage,
+  comparePostIds,
+  newSearchWindow,
+  type PageReceipt,
+  type SearchWindow,
+} from './observation-checkpoint.js';

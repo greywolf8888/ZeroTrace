@@ -19,6 +19,7 @@
     "@zerotrace/data-quality": "*",
     "@zerotrace/evidence": "*",
     "@zerotrace/funding-settlement-engine": "*",
+    "@zerotrace/provider-plane": "*",
     "@zerotrace/schemas": "*",
     "@zerotrace/storage-plane": "*",
     "@zerotrace/workflow-core": "*",

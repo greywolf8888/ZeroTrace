@@ -1,4 +1,11 @@
 import { hashPayload } from '@zerotrace/evidence';
+
+export {
+  independentSourceCount,
+  selectLabelsForAi,
+  visibleLabelAt,
+  type ObservationLabel,
+} from './observation-policy.js';
 import {
   LabelIntelligenceCoreSchema,
   LabelIntelligenceRequestSchema,

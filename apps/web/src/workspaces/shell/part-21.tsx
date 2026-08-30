@@ -1,14 +1,19 @@
-import { type HealthResponse } from '../../generated-api/client.js';
+import {
+  type HealthResponse,
+  type ResearchSourceSettingsResponse,
+} from '../../generated-api/client.js';
 import { zhUserMessage } from '../../i18n/zh-CN.js';
 import { ledgerLabel, ProviderTable } from './part-03.js';
 import { StatusPill, titleCase, KnowledgeDisplay, shortId, formatTime } from './part-01.js';
 
 export function DataHealth({
   health,
+  researchSources,
   refresh,
   busy,
 }: {
   health?: HealthResponse | undefined;
+  researchSources?: ResearchSourceSettingsResponse | undefined;
   refresh: () => void;
   busy: boolean;
 }) {
@@ -33,6 +38,78 @@ export function DataHealth({
       </div>
       <section className="panel">
         <ProviderTable health={health} />
+      </section>
+      <section className="panel source-settings-panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">零预算采购与来源授权</span>
+            <h3>X / xapid 设置</h3>
+          </div>
+          <StatusPill status={researchSources?.procurement.status ?? 'UNAVAILABLE'} />
+        </div>
+        <p className="panel-copy">
+          数据采购预算默认 0，密钥不代表付费同意。所有 X
+          读取工具属于同一上游来源组，不增加证据权重。
+        </p>
+        <div className="health-grid">
+          <article className="provider-card storage-card">
+            <h3>持久预算</h3>
+            <dl>
+              <div>
+                <dt>采购预算</dt>
+                <dd>{researchSources?.procurementBudgetMicrousd ?? '未知'} 微美元</dd>
+              </div>
+              <div>
+                <dt>付费来源</dt>
+                <dd>{researchSources?.procurement.paidEnabled === true ? '已明确启用' : '关闭'}</dd>
+              </div>
+              <div>
+                <dt>持久状态</dt>
+                <dd>{researchSources?.procurement.status ?? '不可用'}</dd>
+              </div>
+              <div>
+                <dt>剩余额度</dt>
+                <dd>{researchSources?.procurement.remainingMicrousd ?? '未知'}</dd>
+              </div>
+            </dl>
+          </article>
+          {(researchSources?.sources ?? [])
+            .filter((source) => source.providerId === 'xapid' || source.providerId === 'fxembed')
+            .map((source) => (
+              <article className="provider-card" key={source.providerId}>
+                <div className="provider-card-top">
+                  <div>
+                    <span className="chain-tag">X</span>
+                    <h3>{source.displayName}</h3>
+                  </div>
+                  <StatusPill status={source.status} />
+                </div>
+                <dl>
+                  <div>
+                    <dt>服务身份</dt>
+                    <dd>{source.identityVerified ? '已核验' : '待确认'}</dd>
+                  </div>
+                  <div>
+                    <dt>使用权</dt>
+                    <dd>{source.rightsApproved ? '已批准' : '未批准'}</dd>
+                  </div>
+                  <div>
+                    <dt>端点合同</dt>
+                    <dd>{source.endpointConfigured ? '已配置' : '未知'}</dd>
+                  </div>
+                  <div>
+                    <dt>网络调用</dt>
+                    <dd>{source.dispatchAllowed ? '允许' : '禁止'}</dd>
+                  </div>
+                </dl>
+                {source.providerId === 'xapid' && !source.identityVerified ? (
+                  <div className="provider-error">
+                    需要准确服务域名、官方接口文档、授权范围和计费证据；系统不会猜测。
+                  </div>
+                ) : null}
+              </article>
+            ))}
+        </div>
       </section>
       <section className="panel anchor-quality-panel">
         <div className="panel-header">

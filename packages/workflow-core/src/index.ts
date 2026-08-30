@@ -1,5 +1,7 @@
 import { contentAddressedId } from '@zerotrace/evidence';
 
+export { buildIdentityQueries, compileApprovedQuery, type QueryIdentity } from './social-query.js';
+
 export const WORKFLOW_CORE_MODEL_VERSION = 'workflow-core-v1.0.0';
 
 export type JobStatus =

@@ -1,0 +1,237 @@
+{
+  "version": "V11.0",
+  "activation_rule": "ENABLE_ONLY_AFTER_RIGHTS_COST_CAPABILITY_CHECKS",
+  "sources": [
+    {
+      "id": "dexscreener",
+      "purpose": "MARKET",
+      "entitlement": "PUBLIC_FREE_CANDIDATE",
+      "documentation": "https://docs.dexscreener.com/api/reference",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "dexscreener",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "geckoterminal",
+      "purpose": "MARKET",
+      "entitlement": "PUBLIC_FREE_CANDIDATE",
+      "documentation": "https://apiguide.geckoterminal.com/faq",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "geckoterminal",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "okx",
+      "purpose": "MARKET_ENRICHMENT",
+      "entitlement": "FREE_TIER_REQUIRES_ACCOUNT",
+      "documentation": "https://web3.okx.com/zh-hans/onchainos/dev-docs/market/market-api-fee",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "okx",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "ave",
+      "purpose": "MARKET_ENRICHMENT",
+      "entitlement": "FREE_TIER_REQUIRES_ACCOUNT",
+      "documentation": "https://github.com/AveCloud/ave-cloud-skill",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "ave",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "gmgn",
+      "purpose": "MARKET_ENRICHMENT",
+      "entitlement": "ACCOUNT_ENTITLEMENT_UNKNOWN",
+      "documentation": "https://docs.gmgn.ai/index/gmgn-agent-api",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "gmgn",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "chainstack_bsc",
+      "purpose": "BSC_RPC",
+      "entitlement": "FREE_TIER_REQUIRES_ACCOUNT",
+      "documentation": "https://chainstack.com/pricing/",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "chainstack_bsc",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "helius_solana",
+      "purpose": "SOLANA_RPC",
+      "entitlement": "FREE_TIER_REQUIRES_ACCOUNT",
+      "documentation": "https://www.helius.dev/pricing",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "helius_solana",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "jupiter",
+      "purpose": "SOLANA_QUOTE",
+      "entitlement": "FREE_TIER_REQUIRES_PROBE",
+      "documentation": "https://developers.jup.ag/docs/portal/plans",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "jupiter",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "pumpportal_free",
+      "purpose": "DISCOVERY_ONLY",
+      "entitlement": "FREE_CREATION_MIGRATION_ONLY",
+      "documentation": "https://pumpportal.fun/data-api/real-time/",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "pumpportal_free",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "goplus",
+      "purpose": "RISK_SUPPLEMENT",
+      "entitlement": "FREE_TIER_REQUIRES_PROBE",
+      "documentation": "https://docs.gopluslabs.io/reference/support",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "goplus",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "fxembed",
+      "purpose": "X",
+      "entitlement": "PUBLIC_INSTANCE_REQUIRES_RIGHTS_REVIEW",
+      "documentation": "https://docs.fxembed.com/api/twitter/operations/2search/",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "X",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "xapid",
+      "purpose": "X",
+      "entitlement": "UNVERIFIED_IDENTITY",
+      "documentation": null,
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "X",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "x_official",
+      "purpose": "X",
+      "entitlement": "PAID_OFF",
+      "documentation": "https://docs.x.com/x-api/getting-started/pricing",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "X",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "twscrape",
+      "purpose": "X",
+      "entitlement": "AUTHORIZED_OPTIONAL_NOT_DEFAULT",
+      "documentation": "https://github.com/vladkens/twscrape",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "X",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "twikit",
+      "purpose": "X",
+      "entitlement": "AUTHORIZED_OPTIONAL_NOT_DEFAULT",
+      "documentation": "https://github.com/d60/twikit",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "X",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "official_rss",
+      "purpose": "ANNOUNCEMENT",
+      "entitlement": "FEED_SPECIFIC_RIGHTS",
+      "documentation": null,
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "official_rss",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "rsshub",
+      "purpose": "ANNOUNCEMENT",
+      "entitlement": "OPTIONAL_LICENSE_REVIEW",
+      "documentation": "https://github.com/DIYgod/RSSHub",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "rsshub",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "community_notes",
+      "purpose": "HISTORICAL_DISPUTE",
+      "entitlement": "LAGGED_PUBLIC_DATA",
+      "documentation": "https://communitynotes.x.com/guide/en/under-the-hood/download-data",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "community_notes",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "oli",
+      "purpose": "LABEL",
+      "entitlement": "COMMUNITY_UNTRUSTED",
+      "documentation": "https://github.com/openlabelsinitiative/oli-sdk",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "oli",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "graphsense",
+      "purpose": "LABEL",
+      "entitlement": "PER_PACK_LICENSE",
+      "documentation": "https://github.com/graphsense/graphsense-tagpacks",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "graphsense",
+      "quota": null,
+      "max_charge_microusd": null
+    },
+    {
+      "id": "sqd",
+      "purpose": "HISTORICAL",
+      "entitlement": "EVALUATION_NOT_PERMANENT_FREE_PROMISE",
+      "documentation": "https://sqd.dev/portal/",
+      "default_enabled": false,
+      "status": "NOT_PROBED",
+      "upstream_group": "sqd",
+      "quota": null,
+      "max_charge_microusd": null
+    }
+  ]
+}
