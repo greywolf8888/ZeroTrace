@@ -39,6 +39,7 @@ export function createHealthProbes(runtime: AppRuntime, config: AppConfig) {
     | Awaited<ReturnType<NonNullable<AppRuntime['intelligenceSearch']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['labelIntelligenceReports']>['health']>>
     | Awaited<ReturnType<NonNullable<AppRuntime['captureSchedules']>['health']>>
+    | Awaited<ReturnType<NonNullable<AppRuntime['paperSimulation']>['health']>>
     | {
         status: 'EPHEMERAL';
         backend: 'MEMORY';
@@ -86,6 +87,7 @@ export function createHealthProbes(runtime: AppRuntime, config: AppConfig) {
         intelligenceSearch,
         labelIntelligenceReports,
         captureSchedules,
+        paperSimulation,
       ] = await Promise.all([
         runtime.evidenceRepository.health(),
         runtime.semanticCheckpoints?.health(),
@@ -113,6 +115,7 @@ export function createHealthProbes(runtime: AppRuntime, config: AppConfig) {
         runtime.intelligenceSearch?.health(),
         runtime.labelIntelligenceReports?.health(),
         runtime.captureSchedules?.health(),
+        runtime.paperSimulation?.health(),
       ]);
       value =
         [
@@ -142,6 +145,7 @@ export function createHealthProbes(runtime: AppRuntime, config: AppConfig) {
           intelligenceSearch,
           labelIntelligenceReports,
           captureSchedules,
+          paperSimulation,
         ].find((component) => component?.status === 'DOWN') ?? evidence;
     }
     storageCache = { expiresAt: Date.now() + config.healthCacheTtlMs, value };

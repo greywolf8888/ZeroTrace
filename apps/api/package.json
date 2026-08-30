@@ -15,6 +15,7 @@
     "@fastify/swagger": "9.8.1",
     "@fastify/swagger-ui": "6.1.1",
     "@zerotrace/capture-scheduler": "*",
+    "@zerotrace/asset-ledger": "*",
     "@zerotrace/chain-adapters": "*",
     "@zerotrace/campaign-engine": "*",
     "@zerotrace/claim-audit": "*",

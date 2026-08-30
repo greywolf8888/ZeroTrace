@@ -9,6 +9,7 @@
   "references": [
     { "path": "../../packages/schemas" },
     { "path": "../../packages/capture-scheduler" },
+    { "path": "../../packages/asset-ledger" },
     { "path": "../../packages/identifiers" },
     { "path": "../../packages/evidence" },
     { "path": "../../packages/data-quality" },
