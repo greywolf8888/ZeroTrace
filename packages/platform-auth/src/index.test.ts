@@ -47,7 +47,15 @@ describe('platform auth', () => {
         NODE_ENV: 'production',
         OIDC_ISSUER: 'https://idp.example',
         OIDC_AUDIENCE: 'zerotrace',
+        OIDC_JWKS_URI: 'https://idp.example/.well-known/jwks.json',
       }),
     ).toBe(true);
+    expect(
+      productionAuthConfigured({
+        NODE_ENV: 'production',
+        OIDC_ISSUER: 'https://idp.example',
+        OIDC_AUDIENCE: 'zerotrace',
+      }),
+    ).toBe(false);
   });
 });

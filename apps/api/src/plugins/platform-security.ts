@@ -1,4 +1,8 @@
-import { productionAuthConfigured } from '@zerotrace/platform-auth';
+import {
+  createOidcBearerVerifier,
+  OidcAuthenticationError,
+  productionAuthConfigured,
+} from '@zerotrace/platform-auth';
 import { timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 
@@ -8,6 +12,24 @@ export async function registerPlatformSecurity(
   app: FastifyInstance,
   config: AppConfig,
 ): Promise<void> {
+  const oidcConfigured = productionAuthConfigured({
+    NODE_ENV: 'production',
+    ...(config.oidcIssuer === undefined ? {} : { OIDC_ISSUER: config.oidcIssuer }),
+    ...(config.oidcAudience === undefined ? {} : { OIDC_AUDIENCE: config.oidcAudience }),
+    ...(config.oidcJwksUri === undefined ? {} : { OIDC_JWKS_URI: config.oidcJwksUri }),
+  });
+  const oidcVerifier =
+    oidcConfigured &&
+    config.oidcIssuer !== undefined &&
+    config.oidcAudience !== undefined &&
+    config.oidcJwksUri !== undefined
+      ? createOidcBearerVerifier({
+          issuer: config.oidcIssuer,
+          audience: config.oidcAudience,
+          jwksUri: config.oidcJwksUri,
+        })
+      : undefined;
+
   app.addHook('onRequest', async (request, reply) => {
     if (config.environment !== 'production') return;
     if (config.desktopAuthToken !== undefined) {
@@ -38,18 +60,25 @@ export async function registerPlatformSecurity(
     if (path === '/health' || path === '/live' || path === '/ready' || path === '/metrics') {
       return;
     }
-    if (
-      !productionAuthConfigured({
-        NODE_ENV: 'production',
-        ...(config.oidcIssuer === undefined ? {} : { OIDC_ISSUER: config.oidcIssuer }),
-        ...(config.oidcAudience === undefined ? {} : { OIDC_AUDIENCE: config.oidcAudience }),
-      })
-    ) {
+    if (oidcVerifier === undefined) {
       return reply.code(503).send({
         error: {
           code: 'AUTH_NOT_CONFIGURED',
-          message: '生产环境必须配置 OIDC Issuer 与 Audience，禁止开放匿名写。',
+          message: '生产环境必须配置 OIDC Issuer、Audience 与 JWKS URI，禁止开放匿名访问。',
           retryable: false,
+        },
+      });
+    }
+    try {
+      await oidcVerifier.verifyAuthorization(request.headers.authorization);
+    } catch (error) {
+      const known = error instanceof OidcAuthenticationError;
+      const unavailable = known && error.code === 'OIDC_VERIFIER_UNAVAILABLE';
+      return reply.code(unavailable ? 503 : 401).send({
+        error: {
+          code: known ? error.code : 'OIDC_TOKEN_INVALID',
+          message: unavailable ? 'OIDC 密钥服务当前不可用。' : 'OIDC 访问令牌无效。',
+          retryable: unavailable,
         },
       });
     }

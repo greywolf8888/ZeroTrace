@@ -12,6 +12,7 @@
     }
   },
   "dependencies": {
-    "@zerotrace/evidence": "*"
+    "@zerotrace/evidence": "*",
+    "jose": "6.2.10"
   }
 }

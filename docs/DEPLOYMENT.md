@@ -4,8 +4,9 @@
 
 The repository supports a reproducible local/staging topology. It is **not production-approved**:
 Evidence/Snapshot persistence, bounded finalized raw-ledger ingestion, restart-safe bounded Flap
-history projection, and incremental finalized Flap lifetime heads are wired; authentication/
-authorization, remaining durable repositories, general continuous semantic history,
+history projection, incremental finalized Flap lifetime heads, desktop loopback authentication and
+OIDC Bearer signature verification are wired; resource authorization, remaining durable
+repositories, general continuous semantic history,
 archive-grade independent-operator and forced real-reorg acceptance, backup recovery, load testing,
 and terminal real-chain acceptance remain incomplete. Common-position endpoint reconciliation,
 parent-history continuity detection, append-only Flap rollback/replay, Evidence-linked Data Quality
@@ -230,12 +231,22 @@ Chain-operated and intentionally yield `SAME_OPERATOR`/`INCONCLUSIVE`. A local A
 a BNB Chain endpoint can satisfy the scoped independence gate, but does not by itself satisfy
 archive retention, outage, load, or forced-reorg acceptance.
 
+## 生产 OIDC 认证
+
+互联网入口只有同时设置 `OIDC_ISSUER`、`OIDC_AUDIENCE` 与 `OIDC_JWKS_URI` 才会启用。JWKS URI
+必须是无内嵌凭据、无 URL fragment 的 HTTPS 地址；系统不会猜测发现地址。每个非探活请求都必须
+携带 Bearer JWT，并校验签名、issuer、audience、subject、expiry 与非对称签名算法白名单。令牌无效
+返回 401，JWKS 服务超时或不可用返回 503；配置存在本身不再视为认证成功。
+
+这只闭合身份真实性，不等于资源级授权已经完成。案件、团队、私人标签和分享仍需租户资源绑定、
+角色/作用域映射、逐资源策略、持久审计以及真实 IdP 互操作验收；完成前不得部署匿名公开入口。
+
 ## Production requirements not supplied by Compose
 
 Before internet-facing deployment, add and verify:
 
 - TLS and strict ingress policy;
-- SSO or equivalent authentication, role-based authorization, tenancy isolation, and audit logging;
+- OIDC IdP 互操作、role/scope 映射、资源级授权、租户隔离和持久审计；
 - a managed secret store and credential rotation;
 - provider egress allowlists and per-provider quotas;
 - redundant, independently operated archive-grade providers with common-position consistency checks;
