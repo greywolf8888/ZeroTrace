@@ -5,6 +5,8 @@ import {
   type PaperCommand,
   type PaperExperiment,
   type PaperOutboxRecord,
+  type PaperReviewReport,
+  PAPER_REVIEW_MODEL_VERSION,
 } from '@zerotrace/asset-ledger';
 import { canonicalJson, hashPayload } from '@zerotrace/evidence';
 
@@ -120,6 +122,13 @@ function outboxId(value: string): string {
   return value;
 }
 
+function reviewId(value: string): string {
+  if (!/^prv_[0-9a-f]{24}$/.test(value)) {
+    throw storageError('PAPER_STORAGE_INVALID', 'Paper review ID is invalid.');
+  }
+  return value;
+}
+
 function parseExperiment(value: unknown): PaperExperiment {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw storageError('PAPER_STORAGE_CONFLICT', 'Stored paper experiment is invalid.');
@@ -185,6 +194,55 @@ function outboxFromRow(row: Record<string, unknown>): PaperOutboxRecord {
   return record;
 }
 
+function commandFromRow(row: Record<string, unknown>): PaperCommand {
+  const payload = json(row.payload, 'paper command payload');
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw storageError('PAPER_STORAGE_CONFLICT', 'Stored paper command is invalid.');
+  }
+  const command = payload as PaperCommand;
+  if (
+    command.commandId !== stringValue(row.command_id, 'paper command ID') ||
+    hashPayload(command) !== stringValue(row.command_hash, 'paper command hash')
+  ) {
+    throw storageError('PAPER_STORAGE_CONFLICT', 'Stored paper command envelope conflicts.');
+  }
+  return structuredClone(command);
+}
+
+function parseReview(value: unknown): PaperReviewReport {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw storageError('PAPER_STORAGE_CONFLICT', 'Stored paper review is invalid.');
+  }
+  const report = value as PaperReviewReport;
+  if (
+    report.schemaVersion !== 'paper-review-v1' ||
+    !/^prv_[0-9a-f]{24}$/.test(report.id) ||
+    !/^pex_[0-9a-f]{24}$/.test(report.experimentId) ||
+    !/^psn_[0-9a-f]{24}$/.test(report.snapshot?.id) ||
+    report.modelVersion !== PAPER_REVIEW_MODEL_VERSION ||
+    !Array.isArray(report.trades) ||
+    !Array.isArray(report.rejectedCandidates) ||
+    !Array.isArray(report.evidenceIds)
+  ) {
+    throw storageError('PAPER_STORAGE_CONFLICT', 'Stored paper review integrity is invalid.');
+  }
+  return structuredClone(report);
+}
+
+function reviewFromRow(row: Record<string, unknown>): PaperReviewReport {
+  const report = parseReview(json(row.report, 'paper review report'));
+  if (
+    report.id !== stringValue(row.id, 'paper review ID') ||
+    report.experimentId !== stringValue(row.experiment_id, 'paper review experiment ID') ||
+    report.snapshot.id !== stringValue(row.snapshot_id, 'paper review snapshot ID') ||
+    hashPayload(report) !== stringValue(row.report_hash, 'paper review hash') ||
+    report.asOf !== timestamp(row.as_of, 'paper review asOf')
+  ) {
+    throw storageError('PAPER_STORAGE_CONFLICT', 'Stored paper review envelope conflicts.');
+  }
+  return report;
+}
+
 export class PostgresPaperSimulationRepository {
   readonly #pool: PaperPool;
 
@@ -234,6 +292,39 @@ export class PostgresPaperSimulationRepository {
     } catch (error) {
       if (error instanceof PaperSimulationStorageError) throw error;
       throw storageError('PAPER_STORAGE_UNAVAILABLE', 'Paper experiment read failed.', error);
+    }
+  }
+
+  async getCommandJournal(id: string): Promise<PaperCommand[]> {
+    const normalized = experimentId(id);
+    try {
+      const [experiment, result] = await Promise.all([
+        this.get(normalized),
+        this.#pool.query(
+          `SELECT command_id, command_hash, payload
+           FROM paper_experiment_commands
+           WHERE experiment_id = $1
+           ORDER BY ordinal ASC`,
+          [normalized],
+        ),
+      ]);
+      if (experiment === undefined) {
+        throw storageError('PAPER_STORAGE_NOT_FOUND', 'Paper experiment not found.');
+      }
+      const commands = result.rows.map(commandFromRow);
+      if (
+        commands.length !== experiment.processedCommands.length ||
+        commands.some((command, index) => {
+          const audit = experiment.processedCommands[index];
+          return audit?.id !== command.commandId || audit.hash !== hashPayload(command);
+        })
+      ) {
+        throw storageError('PAPER_STORAGE_CONFLICT', 'Paper command journal is incomplete.');
+      }
+      return commands;
+    } catch (error) {
+      if (error instanceof PaperSimulationStorageError) throw error;
+      throw storageError('PAPER_STORAGE_UNAVAILABLE', 'Paper command journal read failed.', error);
     }
   }
 
@@ -404,6 +495,49 @@ export class PostgresPaperSimulationRepository {
     }
   }
 
+  async saveReview(input: PaperReviewReport): Promise<PaperReviewReport> {
+    const report = parseReview(input);
+    try {
+      await this.#pool.query(
+        `INSERT INTO paper_review_reports (
+          id, experiment_id, snapshot_id, report_hash, report, as_of
+        ) VALUES ($1, $2, $3, $4, $5::jsonb, $6::timestamptz)
+        ON CONFLICT (id) DO NOTHING`,
+        [
+          report.id,
+          report.experimentId,
+          report.snapshot.id,
+          hashPayload(report),
+          canonicalJson(report),
+          report.asOf,
+        ],
+      );
+      const stored = await this.getReview(report.id);
+      if (stored === undefined || canonicalJson(stored) !== canonicalJson(report)) {
+        throw storageError('PAPER_STORAGE_CONFLICT', 'Paper review identity conflicts.');
+      }
+      return stored;
+    } catch (error) {
+      if (error instanceof PaperSimulationStorageError) throw error;
+      throw storageError('PAPER_STORAGE_UNAVAILABLE', 'Paper review persistence failed.', error);
+    }
+  }
+
+  async getReview(id: string): Promise<PaperReviewReport | undefined> {
+    const normalized = reviewId(id);
+    try {
+      const result = await this.#pool.query(
+        `SELECT id, experiment_id, snapshot_id, report_hash, report, as_of
+         FROM paper_review_reports WHERE id = $1`,
+        [normalized],
+      );
+      return result.rows[0] === undefined ? undefined : reviewFromRow(result.rows[0]);
+    } catch (error) {
+      if (error instanceof PaperSimulationStorageError) throw error;
+      throw storageError('PAPER_STORAGE_UNAVAILABLE', 'Paper review read failed.', error);
+    }
+  }
+
   async health(): Promise<{
     status: 'UP' | 'DOWN';
     backend: 'POSTGRES';
@@ -419,7 +553,9 @@ export class PostgresPaperSimulationRepository {
            to_regclass('public.paper_experiment_commands')::text AS command_table,
            to_regclass('public.paper_experiment_events')::text AS event_table,
            to_regclass('public.paper_notification_outbox')::text AS outbox_table,
-           EXISTS (SELECT 1 FROM schema_migrations WHERE version = '042_paper_simulation') AS migration_applied`,
+           to_regclass('public.paper_review_reports')::text AS review_table,
+           EXISTS (SELECT 1 FROM schema_migrations WHERE version = '042_paper_simulation') AS ledger_migration_applied,
+           EXISTS (SELECT 1 FROM schema_migrations WHERE version = '043_paper_reviews') AS review_migration_applied`,
       );
       const row = result.rows[0];
       if (
@@ -427,7 +563,9 @@ export class PostgresPaperSimulationRepository {
         row.command_table !== 'paper_experiment_commands' ||
         row.event_table !== 'paper_experiment_events' ||
         row.outbox_table !== 'paper_notification_outbox' ||
-        row.migration_applied !== true
+        row.review_table !== 'paper_review_reports' ||
+        row.ledger_migration_applied !== true ||
+        row.review_migration_applied !== true
       ) {
         return {
           status: 'DOWN',

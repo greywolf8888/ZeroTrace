@@ -33,6 +33,10 @@ export const PaperExperimentParamsSchema = z
   .object({ experimentId: z.string().regex(/^pex_[0-9a-f]{24}$/) })
   .strict();
 
+export const PaperReviewParamsSchema = z
+  .object({ reviewId: z.string().regex(/^prv_[0-9a-f]{24}$/) })
+  .strict();
+
 const CommonCommandShape = {
   commandId: IdentifierSchema,
   assetId: IdentifierSchema,
@@ -162,5 +166,50 @@ export const PaperOutboxQuerySchema = z
       .regex(/^pob_[0-9a-f]{24}$/)
       .optional(),
     limit: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
+
+const AtomicObservationSchema = z.discriminatedUnion('state', [
+  z
+    .object({
+      state: z.literal('known'),
+      valueAtomic: AtomicSchema,
+      sourceId: IdentifierSchema,
+      observedAt: IsoDateTimeSchema,
+      availableAt: IsoDateTimeSchema,
+    })
+    .strict(),
+  z
+    .object({
+      state: z.enum(['unknown', 'unavailable', 'stale']),
+      reason: IdentifierSchema,
+      sourceId: IdentifierSchema.optional(),
+      observedAt: IsoDateTimeSchema.optional(),
+      availableAt: IsoDateTimeSchema.optional(),
+    })
+    .strict(),
+]);
+
+const RejectedCandidateReviewSchema = z
+  .object({
+    candidateId: IdentifierSchema,
+    assetId: IdentifierSchema,
+    chain: z.enum(['BSC', 'SOLANA']),
+    strategyVersion: IdentifierSchema,
+    decisionAt: IsoDateTimeSchema,
+    evaluatedAt: IsoDateTimeSchema,
+    rejectionReasons: z.array(IdentifierSchema).min(1).max(128),
+    evidenceIds: z.array(EvidenceIdSchema).min(1).max(128),
+    entryCost: AtomicObservationSchema,
+    laterExitProceeds: AtomicObservationSchema,
+    estimatedCosts: AtomicObservationSchema,
+    exitCapacity: AtomicObservationSchema,
+  })
+  .strict();
+
+export const PaperReviewCreateSchema = z
+  .object({
+    asOf: IsoDateTimeSchema,
+    rejectedCandidates: z.array(RejectedCandidateReviewSchema).max(10_000),
   })
   .strict();
