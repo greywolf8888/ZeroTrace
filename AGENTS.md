@@ -1,6 +1,6 @@
 # ZeroTrace engineering rules
 
-The repository's `ARCHITECTURE.md` and the ZeroTrace Master Prompt are authoritative for product boundaries. Changes must preserve EVM, Bitcoin, Solana, Entity Resolution, Launchpad Intelligence, Realizable Value, Evidence, Scenario, and UI as first-class architecture domains even when delivery proceeds in dependency order.
+The repository's `docs/architecture/ARCHITECTURE.md` and the ZeroTrace Master Prompt are authoritative for product boundaries. Changes must preserve EVM, Bitcoin, Solana, Entity Resolution, Launchpad Intelligence, Realizable Value, Evidence, Scenario, and UI as first-class architecture domains even when delivery proceeds in dependency order.
 
 ## Non-negotiable invariants
 
@@ -33,3 +33,13 @@ Additional invariants:
 6. No capability is complete until its named real-chain gate passes.
 
 Git: start from current protected `main`; use one short-lived branch `agent/terminal-market-structure-v1`; commit by coherent gate; do not force-push or alter old evidence; do not merge until all terminal gates pass.
+
+## V11 execution overlay
+
+- Modify the existing system. Data fees, simulated capital, labels, and task status must continue to use the existing authorities; do not create parallel production systems of record.
+- After a coherent functional batch, run the smallest effective check. Money, permission, pagination, and idempotency changes require immediate focused verification. Consolidate duplicate commands without removing acceptance coverage.
+- Do not execute supervisors from retired packages or inherit their PASS results. Current source, dependencies, environment, and real run records outrank historical reports.
+- The default data-procurement budget is zero. Credentials do not imply permission to pay. Until xapid's service identity is verified, do not guess its endpoint, authentication, or price, and do not dispatch requests to it.
+- Keep hard boundaries centralized and read task-specific references only when their batch starts. A failure must change the diagnostic path; an external blocker must not stop independent work.
+- Real wallets remain read-only. Conditional simulation has no fixed pre-start waiting period or daily trade-count limit.
+- User-facing UI and documentation use Simplified Chinese. Source identifiers and standard protocol names may remain English.
