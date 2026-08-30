@@ -1,5 +1,26 @@
 # Final Acceptance Checklist
 
+## 2026-08-31 V11 唯一 Goal 当前候选验收
+
+- [x] 实现证据提交 `91c6a0c2289fb7a4659fa705f23d00b556aba94b`；分支仍为 `agent/terminal-market-structure-v1`，未合并 `main`
+- [x] `npm run verify`：单元 `1020/1020`、可运行集成 `88/88`、eval `2/2`、只读 MCP `5/5`；format、lint、typecheck、build、license、audit、architecture、中文和 schema drift 通过
+- [x] `npm run test:coverage`：`1108 passed / 40 skipped`；Statements `82.77%`、Branches `75.03%`、Functions `91.35%`、Lines `84.62%`
+- [x] Chromium desktop/mobile `42/42`；Windows 独立启动脚本再次 `42/42`；12 个一级模拟研究入口在 390×844 下可达且根页面无横向溢出
+- [x] property `70/70`、fault `15/15`、replay `36/36`、forensic golden `41/41`、market-exit golden `15/15`、offline Rust replay `1/1`
+- [x] CycloneDX SBOM 生成；普通与 production npm audit 均为 `0 vulnerabilities`
+- [x] 5 个公共 BSC Provider 中 4 个通过 chain ID/finalized 探测；2 个免费 Key 插槽通过 chain ID、历史代码和小范围日志
+- [x] 当前 live case：`8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`；PASS 只证明双 Operator 只读捕获，不代表完整盘面
+- [ ] `docker compose config --quiet` 通过，但 Docker Engine 不可连接；外部 PostgreSQL/ClickHouse/MinIO 相关 40 项集成为 `skipped`，真实迁移未运行
+- [ ] 免费语料 50 个 checkpoint 虽已处理，但 `originComplete=0`、`historyComplete=0`、`reviewed=false`，不得计为 50 Token corpus gate
+- [ ] trace-pending 仅 1/3 起源 COMPLETE；另外 2 个为 `PARTIAL(TRACE_UNAVAILABLE)`，通用 trace 插槽未配置
+- [ ] `cargo clippy --workspace -j 2 -- -D warnings`、`cargo test --workspace -j 2`、公式差分和当前源码 Tauri build 被本机缺失 MSVC `link.exe` 阻塞
+- [ ] 固定硬件 performance、24h soak、当前源码签名桌面包、清洁机、升级/回滚均为 `NOT_RUN` 或 `BLOCKED`
+- [ ] Bitcoin Core/Esplora、Solana 独立 archive RPC、Pump/Raydium、Apache AGE 的本轮 named real-chain gate 未闭合
+- [ ] 真实 IdP、逐记录租户/owner 隔离、持久四眼/WORM、xapid 服务身份和第三方 AI 权利/删除送达未验证
+- [ ] G14 Final Acceptance：`BLOCKED`
+
+结论：V11 本地可验证实现与工程回归成立；完整 real-chain、外部设施、长时稳定性和发行门禁未闭合，禁止宣称 Production Acceptance、Combined PASS 或 terminal-complete。
+
 ## 2026-08-21 当前实现候选验收
 
 ### 生产界面中文化复核

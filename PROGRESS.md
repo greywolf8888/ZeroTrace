@@ -1,5 +1,15 @@
 # ZeroTrace Progress Ledger
 
+## 2026-08-31 V11 唯一 Goal 本地交付结果
+
+本轮从受保护 `main` 的既定短分支 `agent/terminal-market-structure-v1` 连续完成 V11 批次，当前实现证据提交为 `91c6a0c2289fb7a4659fa705f23d00b556aba94b`。实现覆盖可信基础修复、零预算数据源策略、BSC 起源、Solana 取证边界、无偏历史语料、可探测 AI worker、持久模拟交易与复盘、OIDC/RBAC、只读 Query Lab、point-in-time 指标注册表、跨链边界、外部内容权利/删除/AI 门禁，以及中文模拟研究工作站。所有写链、签名、私钥、授权、swap、广播和自动资金移动仍被排除。
+
+本地可重复工程门禁：`npm run verify` 通过；单元测试 `1020/1020`，可运行集成 `88/88`，外部设施集成 `40 skipped`，eval `2/2`，只读 MCP `5/5`。覆盖率执行 `1108 passed / 40 skipped`，Statements `82.77%`、Branches `75.03%`、Functions `91.35%`、Lines `84.62%`。Chromium desktop/mobile 全量 `42/42` 通过，独立 Windows E2E 启动脚本再次 `42/42` 通过。格式、ESLint、TypeScript、全量构建、许可证、架构、中文路径、schema drift、CycloneDX SBOM、普通与 production npm audit 均通过，漏洞为 `0`。property `70/70`、fault `15/15`、replay `36/36`、forensic golden `41/41`、market-exit golden `15/15` 和 offline Rust replay `1/1` 通过。
+
+当前实时数据结果不等于完整产品闭环：5 个公共 BSC Provider 中 4 个通过 chain ID/finalized 探测；2 个已配置免费 Key 插槽通过 chain ID、历史代码和小范围日志，但 trace 均被套餐拒绝，`BSC_TRACE_RPC_URL` 保持 `UNCONFIGURED`。当前 live case 为 `8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`。免费语料路径处理 50 个 checkpoint，但 `originComplete=0`、`historyComplete=0`、`reviewed=false`；trace-pending 仅 1/3 起源 COMPLETE，另外 2 个保持 `PARTIAL(TRACE_UNAVAILABLE)`。低磁盘第二轮仍有 8 次历史 RPC，ClickHouse 对照 `NOT_RUN`，不能声称缓存完全命中或全历史覆盖。
+
+发布仍为 **BLOCKED**。本机 `cargo fmt --check` 通过，但 workspace clippy/test、公式差分和当前源码 Tauri build 被缺失的 MSVC `link.exe` 阻塞；`desktop:prepare` 与既有二进制 smoke 通过，不可替代当前源码链接。固定硬件 performance 与 24h soak 按设计为 `NOT_RUN`。`docker compose config --quiet` 通过，但 Docker Engine 不可连接，真实 PostgreSQL/ClickHouse/MinIO/Apache AGE、专用 Bitcoin/Solana/launchpad real-chain smoke、真实 IdP、逐记录租户隔离、四眼/WORM、签名清洁机、升级/回滚、xapid 服务身份与第三方 AI 权利送达均未闭合。因此不得合并 `main`，不得声明 Combined PASS、Production Acceptance 或 terminal-complete。
+
 ## 2026-08-21 工程原型到盘面分析工作站执行结果
 
 实现候选 `a0262f08adec9b9017e859b361b539204ac09999` 已完成 P0 语义纠偏、正式 `202 QUEUED` 持久任务入口、fenced worker heartbeat/cancel/retry、四个普通用户一级入口，以及真实 Tauri production Web + API sidecar。桌面 sidecar 仅绑定动态 loopback，使用每会话随机 token，关闭生产 Swagger；NSIS 在本机隔离目录安装、启动、原生四路检查和卸载通过。工作站仍严格只读，不包含私钥、签名、广播、swap 或资金移动。
