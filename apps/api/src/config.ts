@@ -84,6 +84,7 @@ const EnvironmentSchema = z.object({
   ZEROTRACE_PAPER_PORTFOLIO_CONFIG: optionalString,
   OIDC_ISSUER: optionalString,
   OIDC_AUDIENCE: optionalString,
+  OIDC_JWKS_URI: optionalString,
   ZEROTRACE_DESKTOP_AUTH_TOKEN: optionalString,
   LOCAL_DEV_AUTH: z.enum(['0', '1']).default('0'),
   ZEROTRACE_SWAGGER_UI: z.enum(['true', 'false']).default('true'),
@@ -166,6 +167,7 @@ export interface AppConfig {
   paperPortfolioConfigPath?: string;
   oidcIssuer?: string;
   oidcAudience?: string;
+  oidcJwksUri?: string;
   desktopAuthToken?: ConfigSecret;
   localDevAuth: boolean;
   swaggerUi?: boolean;
@@ -394,6 +396,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     swaggerUi: parsed.ZEROTRACE_SWAGGER_UI === 'true',
     ...(parsed.OIDC_ISSUER === undefined ? {} : { oidcIssuer: parsed.OIDC_ISSUER }),
     ...(parsed.OIDC_AUDIENCE === undefined ? {} : { oidcAudience: parsed.OIDC_AUDIENCE }),
+    ...(parsed.OIDC_JWKS_URI === undefined ? {} : { oidcJwksUri: parsed.OIDC_JWKS_URI }),
     ...(parsed.ZEROTRACE_DESKTOP_AUTH_TOKEN === undefined
       ? {}
       : { desktopAuthToken: secret(parsed.ZEROTRACE_DESKTOP_AUTH_TOKEN) }),
