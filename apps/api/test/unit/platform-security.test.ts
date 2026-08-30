@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../src/app.js';
 import type { AppConfig } from '../../src/config.js';
 import { createRuntime } from '../../src/runtime.js';
+import {
+  authorizePlatformRoute,
+  classifyPlatformRoute,
+} from '../../src/plugins/platform-security.js';
 
 function baseConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return {
@@ -117,7 +121,7 @@ describe('platform security', { timeout: 60_000 }, () => {
     expect(accepted.statusCode).toBe(200);
   });
 
-  it('does not treat OIDC configuration as authentication', async () => {
+  it('does not treat OIDC identity configuration as resource authorization', async () => {
     const config = baseConfig({
       environment: 'production',
       oidcIssuer: 'https://idp.example',
@@ -128,9 +132,35 @@ describe('platform security', { timeout: 60_000 }, () => {
     apps.push(app);
 
     const missing = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(missing.statusCode).toBe(503);
+    expect(missing.json().error.code).toBe('AUTHORIZATION_NOT_CONFIGURED');
+
+    const malformed = await app.inject({
+      method: 'GET',
+      url: '/api/v1/capabilities',
+      headers: { authorization: 'Basic not-a-bearer-token' },
+    });
+    expect(malformed.statusCode).toBe(503);
+    expect(malformed.json().error.code).toBe('AUTHORIZATION_NOT_CONFIGURED');
+  });
+
+  it('requires a bearer token after explicit tenant and role claim configuration', async () => {
+    const config = baseConfig({
+      environment: 'production',
+      oidcIssuer: 'https://idp.example',
+      oidcAudience: 'zerotrace',
+      oidcJwksUri: 'https://idp.example/.well-known/jwks.json',
+      tenantId: 'tenant-1',
+      oidcTenantClaim: 'zerotrace.tenant',
+      oidcRolesClaim: 'zerotrace.roles',
+      oidcMfaClaim: 'zerotrace.mfa',
+    });
+    const app = await createApp({ config, runtime: createRuntime(config), logger: false });
+    apps.push(app);
+
+    const missing = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
     expect(missing.statusCode).toBe(401);
     expect(missing.json().error.code).toBe('OIDC_AUTHORIZATION_REQUIRED');
-
     const malformed = await app.inject({
       method: 'GET',
       url: '/api/v1/capabilities',
@@ -138,5 +168,45 @@ describe('platform security', { timeout: 60_000 }, () => {
     });
     expect(malformed.statusCode).toBe(401);
     expect(malformed.json().error.code).toBe('OIDC_TOKEN_INVALID');
+    const preflight = await app.inject({
+      method: 'OPTIONS',
+      url: '/api/v1/capabilities',
+      headers: {
+        origin: 'http://localhost:5173',
+        'access-control-request-method': 'GET',
+      },
+    });
+    expect(preflight.statusCode).toBe(204);
+  });
+
+  it('classifies read, investigation write and MFA-gated admin routes fail closed', () => {
+    expect(classifyPlatformRoute('GET', '/api/v1/forensics/cases/case-1')).toBe('ANALYSIS_READ');
+    expect(classifyPlatformRoute('POST', '/api/v1/query/plan')).toBe('ANALYSIS_READ');
+    expect(classifyPlatformRoute('POST', '/api/v1/paper/experiments/exp-1/commands')).toBe(
+      'INVESTIGATION_WRITE',
+    );
+    expect(classifyPlatformRoute('POST', '/api/v2/jobs/job-1/cancel')).toBe('ADMIN_OPERATION');
+    expect(classifyPlatformRoute('DELETE', '/api/v1/forensics/cases/case-1')).toBeNull();
+
+    const readonly = {
+      subject: 'reader',
+      roles: ['readonly'] as const,
+      tenantId: 'tenant-1',
+      mfaSatisfied: false,
+    };
+    const investigator = {
+      ...readonly,
+      subject: 'investigator',
+      roles: ['investigator'] as const,
+    };
+    const admin = { ...readonly, subject: 'admin', roles: ['admin'] as const };
+    expect(authorizePlatformRoute(readonly, 'ANALYSIS_READ', 'tenant-1')).toBe(true);
+    expect(authorizePlatformRoute(readonly, 'INVESTIGATION_WRITE', 'tenant-1')).toBe(false);
+    expect(authorizePlatformRoute(investigator, 'INVESTIGATION_WRITE', 'tenant-1')).toBe(true);
+    expect(authorizePlatformRoute(investigator, 'ANALYSIS_READ', 'tenant-2')).toBe(false);
+    expect(authorizePlatformRoute(admin, 'ADMIN_OPERATION', 'tenant-1')).toBe(false);
+    expect(
+      authorizePlatformRoute({ ...admin, mfaSatisfied: true }, 'ADMIN_OPERATION', 'tenant-1'),
+    ).toBe(true);
   });
 });

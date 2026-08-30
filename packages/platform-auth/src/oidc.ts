@@ -32,6 +32,22 @@ export interface OidcVerifierConfig {
   jwksUri: string;
   allowedAlgorithms?: readonly string[];
   timeoutMs?: number;
+  authorization?: OidcAuthorizationConfig;
+}
+
+export type OidcPlatformRole = 'investigator' | 'admin' | 'readonly';
+
+export interface OidcAuthorizationConfig {
+  expectedTenantId: string;
+  tenantClaim: string;
+  rolesClaim: string;
+  mfaClaim?: string;
+}
+
+export interface VerifiedOidcAuthorization {
+  tenantId: string;
+  roles: readonly OidcPlatformRole[];
+  mfaSatisfied: boolean;
 }
 
 export interface VerifiedOidcPrincipal {
@@ -40,6 +56,7 @@ export interface VerifiedOidcPrincipal {
   audiences: readonly string[];
   issuedAt: number | null;
   expiresAt: number;
+  authorization: VerifiedOidcAuthorization | null;
 }
 
 export interface OidcBearerVerifier {
@@ -79,6 +96,83 @@ function bearerToken(authorization: string | undefined): string {
   return match[1];
 }
 
+function claimPath(value: string, field: string): string[] {
+  const parts = value.split('.');
+  if (
+    parts.length === 0 ||
+    parts.length > 8 ||
+    parts.some(
+      (part) =>
+        !/^[A-Za-z0-9_-]{1,64}$/.test(part) ||
+        part === '__proto__' ||
+        part === 'prototype' ||
+        part === 'constructor',
+    )
+  ) {
+    throw new Error(`${field} 必须是安全的点分隔 claim 路径。`);
+  }
+  return parts;
+}
+
+function readClaim(payload: JWTPayload, path: readonly string[]): unknown {
+  let current: unknown = payload;
+  for (const part of path) {
+    if (
+      current === null ||
+      typeof current !== 'object' ||
+      !Object.prototype.hasOwnProperty.call(current, part)
+    ) {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
+}
+
+function authorizationClaims(
+  payload: JWTPayload,
+  config: OidcAuthorizationConfig,
+): VerifiedOidcAuthorization {
+  const tenant = readClaim(payload, claimPath(config.tenantClaim, 'OIDC_TENANT_CLAIM'));
+  const roleClaim = readClaim(payload, claimPath(config.rolesClaim, 'OIDC_ROLES_CLAIM'));
+  const rolesRaw = typeof roleClaim === 'string' ? [roleClaim] : roleClaim;
+  const canonicalRoles = new Set<OidcPlatformRole>(['investigator', 'admin', 'readonly']);
+  if (
+    typeof tenant !== 'string' ||
+    tenant.length === 0 ||
+    tenant !== config.expectedTenantId ||
+    !Array.isArray(rolesRaw) ||
+    rolesRaw.length === 0 ||
+    rolesRaw.some(
+      (role) => typeof role !== 'string' || !canonicalRoles.has(role as OidcPlatformRole),
+    )
+  ) {
+    throw new OidcAuthenticationError(
+      'OIDC_TOKEN_INVALID',
+      'OIDC 租户或 ZeroTrace 角色 claim 缺失、越权或格式无效。',
+    );
+  }
+  if (rolesRaw.includes('readonly') && rolesRaw.length > 1) {
+    throw new OidcAuthenticationError(
+      'OIDC_TOKEN_INVALID',
+      'readonly 不得与提升权限角色同时出现。',
+    );
+  }
+  let mfaSatisfied = false;
+  if (config.mfaClaim !== undefined) {
+    const mfa = readClaim(payload, claimPath(config.mfaClaim, 'OIDC_MFA_CLAIM'));
+    if (typeof mfa !== 'boolean') {
+      throw new OidcAuthenticationError('OIDC_TOKEN_INVALID', 'OIDC MFA claim 必须是布尔值。');
+    }
+    mfaSatisfied = mfa;
+  }
+  return {
+    tenantId: tenant,
+    roles: [...new Set(rolesRaw as OidcPlatformRole[])].sort(),
+    mfaSatisfied,
+  };
+}
+
 export function createOidcBearerVerifier(
   config: OidcVerifierConfig,
   dependencies: OidcVerifierDependencies = {},
@@ -91,6 +185,16 @@ export function createOidcBearerVerifier(
   const algorithms = [...(config.allowedAlgorithms ?? DEFAULT_ALLOWED_ALGORITHMS)];
   if (algorithms.length === 0 || algorithms.some((algorithm) => algorithm.trim().length === 0)) {
     throw new Error('OIDC 允许算法列表不得为空。');
+  }
+  if (config.authorization !== undefined) {
+    if (config.authorization.expectedTenantId.trim().length === 0) {
+      throw new Error('ZEROTRACE_TENANT_ID 不得为空。');
+    }
+    claimPath(config.authorization.tenantClaim, 'OIDC_TENANT_CLAIM');
+    claimPath(config.authorization.rolesClaim, 'OIDC_ROLES_CLAIM');
+    if (config.authorization.mfaClaim !== undefined) {
+      claimPath(config.authorization.mfaClaim, 'OIDC_MFA_CLAIM');
+    }
   }
   const keyResolver =
     dependencies.keyResolver ??
@@ -137,6 +241,10 @@ export function createOidcBearerVerifier(
         audiences: audiences(payload),
         issuedAt: payload.iat ?? null,
         expiresAt: payload.exp,
+        authorization:
+          config.authorization === undefined
+            ? null
+            : authorizationClaims(payload, config.authorization),
       };
     },
   };

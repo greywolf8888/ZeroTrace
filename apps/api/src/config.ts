@@ -85,6 +85,10 @@ const EnvironmentSchema = z.object({
   OIDC_ISSUER: optionalString,
   OIDC_AUDIENCE: optionalString,
   OIDC_JWKS_URI: optionalString,
+  OIDC_TENANT_CLAIM: optionalString,
+  OIDC_ROLES_CLAIM: optionalString,
+  OIDC_MFA_CLAIM: optionalString,
+  ZEROTRACE_TENANT_ID: optionalString,
   ZEROTRACE_DESKTOP_AUTH_TOKEN: optionalString,
   LOCAL_DEV_AUTH: z.enum(['0', '1']).default('0'),
   ZEROTRACE_SWAGGER_UI: z.enum(['true', 'false']).default('true'),
@@ -168,6 +172,10 @@ export interface AppConfig {
   oidcIssuer?: string;
   oidcAudience?: string;
   oidcJwksUri?: string;
+  oidcTenantClaim?: string;
+  oidcRolesClaim?: string;
+  oidcMfaClaim?: string;
+  tenantId?: string;
   desktopAuthToken?: ConfigSecret;
   localDevAuth: boolean;
   swaggerUi?: boolean;
@@ -397,6 +405,12 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     ...(parsed.OIDC_ISSUER === undefined ? {} : { oidcIssuer: parsed.OIDC_ISSUER }),
     ...(parsed.OIDC_AUDIENCE === undefined ? {} : { oidcAudience: parsed.OIDC_AUDIENCE }),
     ...(parsed.OIDC_JWKS_URI === undefined ? {} : { oidcJwksUri: parsed.OIDC_JWKS_URI }),
+    ...(parsed.OIDC_TENANT_CLAIM === undefined
+      ? {}
+      : { oidcTenantClaim: parsed.OIDC_TENANT_CLAIM }),
+    ...(parsed.OIDC_ROLES_CLAIM === undefined ? {} : { oidcRolesClaim: parsed.OIDC_ROLES_CLAIM }),
+    ...(parsed.OIDC_MFA_CLAIM === undefined ? {} : { oidcMfaClaim: parsed.OIDC_MFA_CLAIM }),
+    ...(parsed.ZEROTRACE_TENANT_ID === undefined ? {} : { tenantId: parsed.ZEROTRACE_TENANT_ID }),
     ...(parsed.ZEROTRACE_DESKTOP_AUTH_TOKEN === undefined
       ? {}
       : { desktopAuthToken: secret(parsed.ZEROTRACE_DESKTOP_AUTH_TOKEN) }),

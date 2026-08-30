@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { appendAudit, authorize, productionAuthConfigured, requireFourEyes } from './index.js';
+import {
+  appendAudit,
+  authorize,
+  productionAuthConfigured,
+  productionResourceAuthConfigured,
+  requireFourEyes,
+} from './index.js';
 
 const investigator = {
   subject: 'alice',
@@ -12,6 +18,8 @@ const investigator = {
 describe('platform auth', () => {
   it('blocks cross-tenant reads', () => {
     expect(authorize(investigator, 'case.read', 't2')).toBe(false);
+    expect(authorize({ ...investigator, roles: ['readonly'] }, 'case.read', 't1')).toBe(true);
+    expect(authorize({ ...investigator, roles: ['readonly'] }, 'case.write', 't1')).toBe(false);
   });
 
   it('requires a distinct reviewer for four-eyes', () => {
@@ -19,6 +27,13 @@ describe('platform auth', () => {
     expect(() =>
       requireFourEyes('case.publish', investigator, { ...investigator, subject: 'bob' }),
     ).not.toThrow();
+    expect(() =>
+      requireFourEyes('case.publish', investigator, {
+        ...investigator,
+        subject: 'reader',
+        roles: ['readonly'],
+      }),
+    ).toThrow(/调查权限/);
   });
 
   it('chains audit hashes', () => {
@@ -57,5 +72,24 @@ describe('platform auth', () => {
         OIDC_AUDIENCE: 'zerotrace',
       }),
     ).toBe(false);
+    expect(
+      productionResourceAuthConfigured({
+        NODE_ENV: 'production',
+        OIDC_ISSUER: 'https://idp.example',
+        OIDC_AUDIENCE: 'zerotrace',
+        OIDC_JWKS_URI: 'https://idp.example/.well-known/jwks.json',
+      }),
+    ).toBe(false);
+    expect(
+      productionResourceAuthConfigured({
+        NODE_ENV: 'production',
+        OIDC_ISSUER: 'https://idp.example',
+        OIDC_AUDIENCE: 'zerotrace',
+        OIDC_JWKS_URI: 'https://idp.example/.well-known/jwks.json',
+        OIDC_TENANT_CLAIM: 'zerotrace.tenant',
+        OIDC_ROLES_CLAIM: 'zerotrace.roles',
+        ZEROTRACE_TENANT_ID: 'tenant-1',
+      }),
+    ).toBe(true);
   });
 });
