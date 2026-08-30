@@ -63,3 +63,15 @@ export {
   type SocialPost,
   type SocialSourceConfig,
 } from './social-source.js';
+export {
+  assertExternalContentPolicy,
+  authorizeExternalAiTransfer,
+  EXTERNAL_CONTENT_POLICY_VERSION,
+  externalContentPolicyStatus,
+  prepareExternalContentRecord,
+  tombstoneExternalContent,
+  type ExternalAiAuthorization,
+  type ExternalContentRecord,
+  type ExternalContentRightsPolicy,
+  type ExternalContentTombstone,
+} from './external-content.js';

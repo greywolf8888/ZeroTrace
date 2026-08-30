@@ -124,6 +124,7 @@ try {
         untrustedInput: request.userUntrustedText,
         schemaName: 'zerotrace_ai_analysis_v2',
         schema: AI_ANALYSIS_V2_JSON_SCHEMA,
+        dataClasses: ['CHAIN_EVIDENCE', 'ANALYST_TEXT'],
       },
       (output) => validateAiAnalysisOutputV2({ ...request, output }),
     );
@@ -140,6 +141,7 @@ try {
           apiStyle: result.apiStyle,
           durationMs: result.durationMs,
           usage: result.usage,
+          dataBoundary: result.dataBoundary,
           output: result.value,
         },
         null,

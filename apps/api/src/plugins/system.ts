@@ -492,11 +492,15 @@ export async function registerSystemRoutes(
         id: 'X73',
         title: '其余外部平台与 AI 观察来源补齐',
         status: 'PARTIAL_EXTERNAL_IDENTITY_AND_CREDENTIAL_GATED',
-        implemented: ['版本化来源目录、零采购预算账本、AI 兼容能力探测与失败关闭'],
+        implemented: [
+          '版本化来源目录、零采购预算账本、AI 兼容能力探测与失败关闭',
+          '外部内容权利/留存/删除政策、内容 Tombstone 与一次性调度绑定核心',
+          '外部内容发 AI 前的资料分类、权利 Evidence 与新鲜删除检查门禁',
+        ],
         blockers: [
           'xapid 服务身份/权益未核验',
           '真实 AI Provider 未配置探测',
-          '外部内容权利、删除与送达未实测',
+          '外部内容真实权利、删除同步、持久 Tombstone 与外部送达未实测',
         ],
         realMainnetAcceptance: 'NOT_PASSED',
       },

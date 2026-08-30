@@ -159,6 +159,10 @@ describe('system routes', { timeout: 60_000 }, () => {
           enabled: false,
           endpointConfigured: false,
           dispatchAllowed: false,
+          contentPolicy: expect.objectContaining({
+            status: 'UNCONFIGURED',
+            externalAi: 'PROHIBITED',
+          }),
         }),
       ]),
     );
