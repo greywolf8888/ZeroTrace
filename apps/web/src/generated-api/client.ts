@@ -2608,6 +2608,52 @@ export interface Capability {
   detail?: string;
 }
 
+export interface QueryCatalogResponse {
+  version: 'query-catalog-v1.0.0';
+  status: 'PLAN_ONLY_EXECUTION_DISABLED';
+  relations: Array<{
+    name: string;
+    chineseName: string;
+    grain: string;
+    source: string;
+    migration: string;
+    fields: string[];
+    pointInTimeColumns: string[];
+    excludedSensitiveFields: string[];
+  }>;
+  limits: {
+    maxSqlBytes: number;
+    maxRows: number;
+    maxOffset: number;
+    maxRelations: number;
+    maxSubqueries: number;
+    maxParameters: number;
+    maxScanBytes: number;
+    timeoutMs: number;
+  };
+  executionBoundary: string;
+}
+
+export interface QueryPlanResponse {
+  catalogVersion: 'query-catalog-v1.0.0';
+  executionStatus: 'DISABLED';
+  admission: {
+    guardVersion: 'query-guard-v1.0.0';
+    normalizedSql: string;
+    relations: string[];
+    functions: string[];
+    parameterCount: number;
+    rowLimit: number;
+    offset: number;
+    scanByteLimit: number;
+    timeoutMs: number;
+    readOnlyTransactionRequired: true;
+    fileAccessAllowed: false;
+    networkAccessAllowed: false;
+  };
+  limitations: string[];
+}
+
 export interface PaperPortfolioSettingsResponse {
   version: string;
   budgetMeaning: string;
@@ -2831,10 +2877,28 @@ export const api = {
       note: string;
     }>('/api/v1/storage/profile', signal === undefined ? {} : { signal }),
   capabilities: (signal?: AbortSignal) =>
-    requestJson<{ core: Capability[]; boundaries: Record<string, string> }>(
-      '/api/v1/capabilities',
+    requestJson<{
+      core: Capability[];
+      extended: Array<
+        Capability & {
+          title: string;
+          implemented?: string[];
+          blockers: string[];
+          realMainnetAcceptance: 'NOT_PASSED';
+        }
+      >;
+      boundaries: Record<string, string>;
+    }>('/api/v1/capabilities', signal === undefined ? {} : { signal }),
+  queryCatalog: (signal?: AbortSignal) =>
+    requestJson<QueryCatalogResponse>(
+      '/api/v1/query/catalog',
       signal === undefined ? {} : { signal },
     ),
+  planQuery: (sql: string) =>
+    requestJson<QueryPlanResponse>('/api/v1/query/plan', {
+      method: 'POST',
+      body: JSON.stringify({ sql }),
+    }),
   platforms: (signal?: AbortSignal) =>
     requestJson<{
       platforms: PlatformDescriptor[];

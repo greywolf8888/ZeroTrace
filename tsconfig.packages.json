@@ -39,6 +39,7 @@
     { "path": "./packages/terminal-pipeline" },
     { "path": "./packages/local-index" },
     { "path": "./packages/token-market-capture" },
-    { "path": "./packages/llm-gateway" }
+    { "path": "./packages/llm-gateway" },
+    { "path": "./packages/query-security" }
   ]
 }
