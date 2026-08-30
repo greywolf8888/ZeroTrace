@@ -461,10 +461,15 @@ export async function registerSystemRoutes(
         id: 'X71',
         title: '其他既有链与跨账本范围恢复验收',
         status: 'PARTIAL_PROVIDER_AND_REAL_CHAIN_GATED',
-        implemented: ['EVM、Bitcoin、Solana 一级账本适配', '链中立 Action Semantics 与 Evidence'],
+        implemented: [
+          'EVM、Bitcoin、Solana 一级账本适配',
+          '链中立 Action Semantics 与 Evidence',
+          '强制协议消息、端点、资产映射、费用、双 Snapshot 与双 Evidence 的跨链配对核心',
+          'CEX、未配对 Bridge 与 Privacy 最后可观察边界的停止传播语义',
+        ],
         blockers: [
           'BSC/Solana 命名实链门禁未全部通过',
-          'Bridge 消息匹配、CEX/Privacy 最后边界与其他链连续索引未完成实链验收',
+          '具体 Bridge 协议消息适配、CEX/Privacy 来源与其他链连续索引未完成实链验收',
         ],
         realMainnetAcceptance: 'NOT_PASSED',
       },
