@@ -104,6 +104,15 @@ export async function registerSystemRoutes(
     core: [
       { id: 'canonical-schemas', status: 'IMPLEMENTED' },
       {
+        id: 'paper-simulation',
+        status:
+          runtime.paperSimulation === undefined
+            ? 'DURABLE_STORAGE_REQUIRED'
+            : 'IMPLEMENTED_DURABLE_PENDING_DUAL_CHAIN_LIVE_ACCEPTANCE',
+        detail:
+          'BSC/Solana 模拟实验使用版本化本金与仓位策略、原子命令/事件/发件箱、revision 围栏、业务键去重和稳定游标；只修改本地模拟账本，不签名、不广播、不移动真实资金。真实双链行情、成本与退出容量验收仍受各自实链门禁约束。',
+      },
+      {
         id: 'evidence-ledger',
         status:
           runtime.evidenceRepository === undefined

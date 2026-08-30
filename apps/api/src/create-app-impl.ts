@@ -26,6 +26,7 @@ import { registerFundingAndCampaignRoutes } from './plugins/funding-campaigns.js
 import { registerForensicCaseRoutes } from './plugins/forensics.js';
 import { registerPlatformSecurity } from './plugins/platform-security.js';
 import { registerResearchSourceRoutes } from './plugins/research-sources.js';
+import { registerPaperSimulationRoutes } from './plugins/paper-simulation.js';
 
 export interface CreateAppOptions {
   config: AppConfig;
@@ -110,6 +111,7 @@ export async function createApp(options: CreateAppOptions): Promise<FastifyInsta
   await registerPlatformSecurity(app, options.config);
   await registerSystemRoutes(app, ctx);
   await registerResearchSourceRoutes(app, ctx);
+  await registerPaperSimulationRoutes(app, ctx);
   await registerStoragePlaneRoutes(app, ctx);
   await registerSearchAndLabelRoutes(app, ctx);
   await registerSolanaBitcoinLedgerRoutes(app, ctx);
