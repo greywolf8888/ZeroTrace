@@ -99,6 +99,7 @@ describe('system routes', { timeout: 60_000 }, () => {
     const body = capabilities.json() as {
       readOnly: boolean;
       core: Array<{ id: string; status: string }>;
+      extended: Array<{ id: string; status: string; realMainnetAcceptance: string }>;
       boundaries: { transactionSigning: string; transactionBroadcasting: string };
     };
     expect(body.readOnly).toBe(true);
@@ -113,6 +114,13 @@ describe('system routes', { timeout: 60_000 }, () => {
     expect(body.core.find((item) => item.id === 'flap-bsc-inspection')?.status).toBe(
       'BSC_PROVIDER_REQUIRED',
     );
+    expect(body.core.find((item) => item.id === 'query-lab-ast-guard')?.status).toBe(
+      'IMPLEMENTED_PLAN_ONLY_EXECUTION_DISABLED',
+    );
+    expect(body.extended.find((item) => item.id === 'Z90')).toMatchObject({
+      status: 'BLOCKED_BY_NAMED_GATES',
+      realMainnetAcceptance: 'NOT_PASSED',
+    });
 
     const chains = await app.inject({ method: 'GET', url: '/api/v1/chains' });
     expect(chains.statusCode).toBe(200);

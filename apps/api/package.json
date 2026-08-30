@@ -41,6 +41,7 @@
     "@zerotrace/local-index": "*",
     "@zerotrace/source-registry": "*",
     "@zerotrace/provider-plane": "*",
+    "@zerotrace/query-security": "*",
     "@zerotrace/platform-auth": "*",
     "@zerotrace/workflow-core": "*",
     "@zerotrace/campaign-intelligence": "*",

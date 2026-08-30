@@ -35,6 +35,7 @@
     { "path": "../../packages/local-index" },
     { "path": "../../packages/source-registry" },
     { "path": "../../packages/provider-plane" },
+    { "path": "../../packages/query-security" },
     { "path": "../../packages/platform-auth" },
     { "path": "../../packages/llm-gateway" },
     { "path": "../../packages/label-engine" },

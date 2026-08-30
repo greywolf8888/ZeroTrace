@@ -174,6 +174,12 @@ export async function registerSystemRoutes(
           'Read-only EVM transaction/block, Bitcoin address/transaction/block/outpoint, and Solana transaction/slot queries use strict provider-response validation and bind observations to Evidence plus replayable Snapshots. Bitcoin transactions add conservative common-input/change candidates with CoinJoin/Payjoin/service suppression and no automatic entity merge. Solana transactions normalize legacy/v0 messages, loaded ALT accounts, signer/writable flags, outer/CPI instructions, official System/SPL/Token-2022 core asset-flow semantics and recorded SOL/SPL balance effects while preserving missing owners, extension state and metadata as Unknown. Null, pending, mempool, and provider failures remain distinct.',
       },
       {
+        id: 'query-lab-ast-guard',
+        status: 'IMPLEMENTED_PLAN_ONLY_EXECUTION_DISABLED',
+        detail:
+          'PostgreSQL SQL 先解析为类型化 AST，再只接受单条、静态 LIMIT、Curated/Research 关系白名单与确定性函数白名单的 SELECT。DDL/DML、锁、表值函数、系统关系、文件/网络表面、当前会话状态、动态 LIMIT、参数缺口和过量扫描计划均失败关闭。迁移 044 提供两个最小脱敏安全视图，但独立只读角色、租户 RLS、取消/成本执行器与真实 PostgreSQL 验收完成前只返回计划，不执行 SQL。',
+      },
+      {
         id: 'flap-bsc-inspection',
         status: runtime.evmAdapters.has(56)
           ? 'PARTIALLY_IMPLEMENTED_PENDING_REAL_CHAIN_VALIDATION'
@@ -425,6 +431,76 @@ export async function registerSystemRoutes(
       },
       { id: 'constant-product-rv', status: 'IMPLEMENTED_DETERMINISTIC' },
       { id: 'shared-liquidity-exit-race', status: 'IMPLEMENTED_DETERMINISTIC' },
+    ],
+    extended: [
+      {
+        id: 'X70',
+        title: '完整 Maps、Profiler、Tracer、查询与指标',
+        status: 'PARTIAL_EXECUTABLE_FOUNDATION',
+        implemented: [
+          '不可变 Campaign/Entity 图谱与跨快照时间线',
+          '仓位、资金、结算、权限、Evidence 下钻与取证报告',
+          '三账本类型化只读查询',
+          'AST 级只读查询计划与最小脱敏目录',
+        ],
+        blockers: [
+          'Query 执行角色、租户 RLS、取消与物化未验收',
+          '版本化 Metrics Registry、Cohort 和 Point-in-Time 指标执行器未接线',
+          '完整 Maps Time Travel/Profiler 资产与 PnL 实链覆盖未通过',
+        ],
+        realMainnetAcceptance: 'NOT_PASSED',
+      },
+      {
+        id: 'X71',
+        title: '其他既有链与跨账本范围恢复验收',
+        status: 'PARTIAL_PROVIDER_AND_REAL_CHAIN_GATED',
+        implemented: ['EVM、Bitcoin、Solana 一级账本适配', '链中立 Action Semantics 与 Evidence'],
+        blockers: [
+          'BSC/Solana 命名实链门禁未全部通过',
+          'Bridge 消息匹配、CEX/Privacy 最后边界与其他链连续索引未完成实链验收',
+        ],
+        realMainnetAcceptance: 'NOT_PASSED',
+      },
+      {
+        id: 'X72',
+        title: '案件、取证、团队权限与报告全范围',
+        status: 'PARTIAL_RESOURCE_AUTH_REQUIRED',
+        implemented: [
+          '不可变案件包、中文摘要、哈希清单与回放脚本',
+          'OIDC JWT 身份验证与桌面会话认证',
+        ],
+        blockers: ['租户资源绑定、角色/作用域映射、四眼流程持久化、脱敏公开报告未闭合'],
+        realMainnetAcceptance: 'NOT_PASSED',
+      },
+      {
+        id: 'X73',
+        title: '其余外部平台与 AI 观察来源补齐',
+        status: 'PARTIAL_EXTERNAL_IDENTITY_AND_CREDENTIAL_GATED',
+        implemented: ['版本化来源目录、零采购预算账本、AI 兼容能力探测与失败关闭'],
+        blockers: [
+          'xapid 服务身份/权益未核验',
+          '真实 AI Provider 未配置探测',
+          '外部内容权利、删除与送达未实测',
+        ],
+        realMainnetAcceptance: 'NOT_PASSED',
+      },
+      {
+        id: 'X74',
+        title: '全范围依赖许可、安全与发布验证',
+        status: 'PENDING_CONSOLIDATED_RELEASE_GATES',
+        implemented: ['许可证门禁、依赖锁、OIDC 签名验证、只读边界与 Windows/Tauri 工程'],
+        blockers: [
+          '全量发布门禁、真实 PostgreSQL 迁移、Windows 清洁机、签名更新、24h Soak 未全部通过',
+        ],
+        realMainnetAcceptance: 'NOT_PASSED',
+      },
+      {
+        id: 'Z90',
+        title: '原有范围与新增范围全部完成',
+        status: 'BLOCKED_BY_NAMED_GATES',
+        blockers: ['X70-X74 未全部通过', 'B14、S16、P44 与外部发布验收未全部通过'],
+        realMainnetAcceptance: 'NOT_PASSED',
+      },
     ],
     boundaries: {
       transactionSigning: 'FORBIDDEN',
