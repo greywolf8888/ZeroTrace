@@ -110,7 +110,7 @@ export async function registerSystemRoutes(
             ? 'DURABLE_STORAGE_REQUIRED'
             : 'IMPLEMENTED_DURABLE_PENDING_DUAL_CHAIN_LIVE_ACCEPTANCE',
         detail:
-          'BSC/Solana 模拟实验使用版本化本金与仓位策略、原子命令/事件/发件箱、revision 围栏、业务键去重和稳定游标；只修改本地模拟账本，不签名、不广播、不移动真实资金。真实双链行情、成本与退出容量验收仍受各自实链门禁约束。',
+          'BSC/Solana 模拟实验使用版本化本金与仓位策略、原子命令/事件/发件箱、revision 围栏、业务键去重和稳定游标；冻结命令日志可生成带 Snapshot、覆盖率、来源集、历史新鲜度和非概率证据分数的交易复盘与拒绝反事实报告。只修改本地模拟账本，不签名、不广播、不移动真实资金；真实双链行情、成本、退出容量与外部提醒送达仍受各自实链门禁约束。',
       },
       {
         id: 'evidence-ledger',

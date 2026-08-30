@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyPaperCommand, type PaperExperiment } from '@zerotrace/asset-ledger';
+import {
+  applyPaperCommand,
+  type PaperCommand,
+  type PaperExperiment,
+  type PaperReviewReport,
+} from '@zerotrace/asset-ledger';
 import type { PostgresPaperSimulationRepository } from '@zerotrace/storage';
 
 import { createApp } from '../../src/app.js';
@@ -78,6 +83,8 @@ const policy = {
 
 function memoryRepository(): PostgresPaperSimulationRepository {
   let state: PaperExperiment | undefined;
+  const journal: PaperCommand[] = [];
+  const reviews = new Map<string, PaperReviewReport>();
   return {
     async create(experiment: PaperExperiment) {
       state ??= structuredClone(experiment);
@@ -88,8 +95,14 @@ function memoryRepository(): PostgresPaperSimulationRepository {
     },
     async apply(input: Parameters<PostgresPaperSimulationRepository['apply']>[0]) {
       if (state === undefined || state.id !== input.experimentId) throw new Error('not found');
-      state = applyPaperCommand(state, input.command);
+      const next = applyPaperCommand(state, input.command);
+      if (next !== state) journal.push(structuredClone(input.command));
+      state = next;
       return structuredClone(state);
+    },
+    async getCommandJournal(id: string) {
+      if (state === undefined || state.id !== id) throw new Error('not found');
+      return structuredClone(journal);
     },
     async listOutbox(input: Parameters<PostgresPaperSimulationRepository['listOutbox']>[0]) {
       if (state === undefined || state.id !== input.experimentId) throw new Error('not found');
@@ -104,6 +117,14 @@ function memoryRepository(): PostgresPaperSimulationRepository {
         nextCursor:
           start + records.length < state.outbox.length ? (records.at(-1)?.id ?? null) : null,
       };
+    },
+    async saveReview(report: PaperReviewReport) {
+      reviews.set(report.id, structuredClone(report));
+      return structuredClone(report);
+    },
+    async getReview(id: string) {
+      const report = reviews.get(id);
+      return report === undefined ? undefined : structuredClone(report);
     },
   } as unknown as PostgresPaperSimulationRepository;
 }
@@ -184,6 +205,71 @@ describe('模拟实验 HTTP', () => {
       deliverySemantics: 'AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP',
     });
     expect(outbox.json().records).toHaveLength(1);
+
+    const review = await app.inject({
+      method: 'POST',
+      url: `/api/v1/paper/experiments/${experimentId}/reviews`,
+      payload: {
+        asOf: '2026-08-31T01:01:00.000Z',
+        rejectedCandidates: [
+          {
+            candidateId: 'rejected-1',
+            assetId: 'So22222222222222222222222222222222222222222',
+            chain: 'SOLANA',
+            strategyVersion: 'strategy-v1',
+            decisionAt: '2026-08-31T00:10:00.000Z',
+            evaluatedAt: '2026-08-31T01:00:00.000Z',
+            rejectionReasons: ['历史退出容量不足'],
+            evidenceIds: [`ev_${'2'.repeat(24)}`],
+            entryCost: {
+              state: 'known',
+              valueAtomic: '10',
+              sourceId: 'source-a',
+              observedAt: '2026-08-31T00:09:00.000Z',
+              availableAt: '2026-08-31T00:09:00.000Z',
+            },
+            laterExitProceeds: {
+              state: 'known',
+              valueAtomic: '30',
+              sourceId: 'source-a',
+              observedAt: '2026-08-31T01:00:00.000Z',
+              availableAt: '2026-08-31T01:00:00.000Z',
+            },
+            estimatedCosts: {
+              state: 'known',
+              valueAtomic: '2',
+              sourceId: 'source-a',
+              observedAt: '2026-08-31T01:00:00.000Z',
+              availableAt: '2026-08-31T01:00:00.000Z',
+            },
+            exitCapacity: {
+              state: 'known',
+              valueAtomic: '20',
+              sourceId: 'source-a',
+              observedAt: '2026-08-31T01:00:00.000Z',
+              availableAt: '2026-08-31T01:00:00.000Z',
+            },
+          },
+        ],
+      },
+    });
+    expect(review.statusCode).toBe(201);
+    expect(review.json()).toMatchObject({
+      mode: 'PAPER',
+      historicalState: true,
+      report: {
+        historicalState: true,
+        rejectedCandidates: [
+          { executableExitProceedsAtomic: '20', netCounterfactualPnlAtomic: '8' },
+        ],
+      },
+    });
+    const replayedReview = await app.inject({
+      method: 'GET',
+      url: `/api/v1/paper/reviews/${String(review.json().report.id)}`,
+    });
+    expect(replayedReview.statusCode).toBe(200);
+    expect(replayedReview.json().report).toEqual(review.json().report);
   });
 
   it('无持久仓库时失败关闭，并拒绝权限或签名类额外字段', async () => {
