@@ -1,9 +1,9 @@
 {
   "schemaVersion": "zerotrace-agent-state-v1",
-  "implementationSha": "a0262f08adec9b9017e859b361b539204ac09999",
+  "implementationSha": "91c6a0c2289fb7a4659fa705f23d00b556aba94b",
   "branch": "agent/terminal-market-structure-v1",
-  "currentStage": "S7",
-  "currentGate": "G13_STABILITY_SPEED",
+  "currentStage": "X74_RELEASE_VERIFICATION",
+  "currentGate": "G14_RELEASE",
   "gates": {
     "G0_TRUTH": "PASS",
     "G1_ARCHITECTURE": "PASS",
@@ -22,38 +22,41 @@
     "G14_RELEASE": "BLOCKED"
   },
   "localTechnicalEvidence": {
-    "coverage": "1015 PASS / 40 SKIPPED; branches 75.02%",
-    "e2e": "42/42 Chromium desktop/mobile; Windows wrapper sample 2/2",
-    "terminal": "Rust fmt/clippy/workspace tests + 57 property + 30 golden PASS",
+    "coverage": "1108 PASS / 40 SKIPPED; branches 75.03%",
+    "e2e": "42/42 Chromium desktop/mobile; Windows wrapper 42/42",
+    "terminal": "Rust fmt + offline replay + 70 property + 41 forensic golden PASS; workspace clippy/test BLOCKED_NO_LINKER",
     "live": "8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL",
-    "desktop": "NSIS build and isolated local install/start/uninstall PASS; Authenticode NotSigned",
-    "security": "loopback + per-session desktop token; anonymous/wrong 401; authorized 200",
+    "desktop": "prepare and existing-binary smoke PASS; current-source Tauri build BLOCKED_NO_LINKER; Authenticode NotSigned",
+    "security": "OIDC signature/tenant/role/MFA claim mapping and route RBAC fail closed; real IdP and record tenancy open",
     "audit": "production npm audit 0 vulnerabilities; license and SBOM PASS"
   },
   "activeFailures": [
     "arbitrary-token creation-to-finalized ReportEnvelope is incomplete",
-    "external PostgreSQL/ClickHouse/MinIO integration has 40 skipped tests",
-    "50-token reviewed corpus and calibrated entity labels are not available",
+    "external PostgreSQL/ClickHouse/MinIO integration has 40 skipped tests and migration 044 was not run against real PostgreSQL",
+    "50-token checkpoints have originComplete=0/historyComplete=0/reviewed=false and calibrated entity labels are not available",
     "no pinned archive fork for material V3 exact execution",
     "multi-venue shared-liquidity exact optimization is unsupported",
     "fixed-hardware performance measurement is NOT_RUN",
     "24h monitor soak is NOT_RUN",
+    "MSVC link.exe is absent, blocking current-source workspace clippy/test, formula differential, and Tauri build",
     "installer is unsigned and clean-machine acceptance is NOT_RUN",
-    "complete SHA-bound visual golden-state set is NOT_RUN"
+    "complete SHA-bound visual golden-state set is NOT_RUN",
+    "xapid service identity and real third-party content deletion/AI delivery are unverified"
   ],
   "lastCommands": [
-    "npm run verify:terminal",
+    "npm run verify",
     "npm run test:coverage",
-    "npm run test:e2e",
-    "npm run test:fault",
+    "npx playwright test",
+    "pwsh -NoProfile -File scripts/test-e2e-windows.ps1",
     "npm run test:replay:offline",
-    "npm run test:formula:diff",
     "npm run test:live",
     "npm run test:performance",
     "npm run test:soak",
-    "npm run desktop:build"
+    "npm run desktop:build",
+    "npm run corpus:free-only",
+    "npm run corpus:trace-pending"
   ],
   "nextAction": "Close external and long-duration gates; do not merge while any gate is PARTIAL, UNSUPPORTED, NOT_RUN, or BLOCKED.",
-  "updatedAt": "2026-08-21T06:15:00+08:00",
+  "updatedAt": "2026-08-31T03:15:00+08:00",
   "originMainSha": "68ebfd9ae92305dd47bbc3175af07bda1a172c61"
 }
