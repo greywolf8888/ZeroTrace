@@ -6,7 +6,10 @@ import {
   type PaperExperiment,
   type PaperReviewReport,
 } from '@zerotrace/asset-ledger';
-import type { PostgresPaperSimulationRepository } from '@zerotrace/storage';
+import type {
+  PaperNotificationDelivery,
+  PostgresPaperSimulationRepository,
+} from '@zerotrace/storage';
 
 import { createApp } from '../../src/app.js';
 import type { AppConfig } from '../../src/config.js';
@@ -85,6 +88,52 @@ function memoryRepository(): PostgresPaperSimulationRepository {
   let state: PaperExperiment | undefined;
   const journal: PaperCommand[] = [];
   const reviews = new Map<string, PaperReviewReport>();
+  const deliveries = new Map<
+    string,
+    {
+      inApp: PaperNotificationDelivery;
+      desktop: PaperNotificationDelivery;
+      leaseToken: string | null;
+    }
+  >();
+  const ensureDeliveries = () => {
+    for (const record of state?.outbox ?? []) {
+      if (deliveries.has(record.id)) continue;
+      deliveries.set(record.id, {
+        inApp: {
+          outboxId: record.id,
+          experimentId: state!.id,
+          channel: 'IN_APP',
+          state: 'DELIVERED',
+          attemptCount: 0,
+          nextAttemptAt: record.createdAt,
+          leaseExpiresAt: null,
+          deliveredAt: record.createdAt,
+          dispatchedAt: null,
+          readAt: null,
+          lastErrorCode: null,
+          createdAt: record.createdAt,
+          updatedAt: record.createdAt,
+        },
+        desktop: {
+          outboxId: record.id,
+          experimentId: state!.id,
+          channel: 'DESKTOP',
+          state: 'PENDING',
+          attemptCount: 0,
+          nextAttemptAt: record.createdAt,
+          leaseExpiresAt: null,
+          deliveredAt: null,
+          dispatchedAt: null,
+          readAt: null,
+          lastErrorCode: null,
+          createdAt: record.createdAt,
+          updatedAt: record.createdAt,
+        },
+        leaseToken: null,
+      });
+    }
+  };
   return {
     async create(experiment: PaperExperiment) {
       state ??= structuredClone(experiment);
@@ -98,6 +147,7 @@ function memoryRepository(): PostgresPaperSimulationRepository {
       const next = applyPaperCommand(state, input.command);
       if (next !== state) journal.push(structuredClone(input.command));
       state = next;
+      ensureDeliveries();
       return structuredClone(state);
     },
     async getCommandJournal(id: string) {
@@ -117,6 +167,93 @@ function memoryRepository(): PostgresPaperSimulationRepository {
         nextCursor:
           start + records.length < state.outbox.length ? (records.at(-1)?.id ?? null) : null,
       };
+    },
+    async listNotifications(
+      input: Parameters<PostgresPaperSimulationRepository['listNotifications']>[0],
+    ) {
+      if (state === undefined || state.id !== input.experimentId) throw new Error('not found');
+      ensureDeliveries();
+      const start =
+        input.after === undefined
+          ? 0
+          : state.outbox.findIndex((record) => record.id === input.after) + 1;
+      const limit = input.limit ?? 50;
+      const page = state.outbox.slice(start, start + limit);
+      return {
+        records: page.map((record) => {
+          const status = deliveries.get(record.id)!;
+          return {
+            record: structuredClone(record),
+            channels: structuredClone([status.inApp, status.desktop]),
+          };
+        }),
+        nextCursor: start + page.length < state.outbox.length ? (page.at(-1)?.id ?? null) : null,
+      };
+    },
+    async claimDesktopNotifications(
+      input: Parameters<PostgresPaperSimulationRepository['claimDesktopNotifications']>[0],
+    ) {
+      if (state === undefined || state.id !== input.experimentId) throw new Error('not found');
+      ensureDeliveries();
+      return state.outbox
+        .filter((record) => deliveries.get(record.id)?.desktop.state === 'PENDING')
+        .slice(0, input.limit ?? 20)
+        .map((record) => {
+          const status = deliveries.get(record.id)!;
+          const leaseToken = record.id.slice(4).padEnd(64, '0');
+          status.leaseToken = leaseToken;
+          status.desktop = {
+            ...status.desktop,
+            state: 'LEASED',
+            attemptCount: status.desktop.attemptCount + 1,
+            leaseExpiresAt: '2026-08-31T00:02:00.000Z',
+            updatedAt: '2026-08-31T00:01:30.000Z',
+          };
+          return {
+            record: structuredClone(record),
+            event: structuredClone(state!.events.find((event) => event.id === record.eventId)!),
+            delivery: structuredClone(status.desktop),
+            leaseToken,
+          };
+        });
+    },
+    async settleDesktopNotification(
+      input: Parameters<PostgresPaperSimulationRepository['settleDesktopNotification']>[0],
+    ) {
+      const status = deliveries.get(input.outboxId);
+      if (status === undefined || status.leaseToken !== input.leaseToken)
+        throw new Error('conflict');
+      status.desktop =
+        input.outcome === 'DISPATCHED'
+          ? {
+              ...status.desktop,
+              state: 'DISPATCHED',
+              leaseExpiresAt: null,
+              dispatchedAt: '2026-08-31T00:01:31.000Z',
+              lastErrorCode: null,
+              updatedAt: '2026-08-31T00:01:31.000Z',
+            }
+          : {
+              ...status.desktop,
+              state: 'PENDING',
+              leaseExpiresAt: null,
+              nextAttemptAt: '2026-08-31T00:01:32.000Z',
+              lastErrorCode: input.errorCode ?? 'UNKNOWN_DELIVERY_FAILURE',
+              updatedAt: '2026-08-31T00:01:31.000Z',
+            };
+      return structuredClone(status.desktop);
+    },
+    async markInAppNotificationRead(
+      input: Parameters<PostgresPaperSimulationRepository['markInAppNotificationRead']>[0],
+    ) {
+      const status = deliveries.get(input.outboxId);
+      if (status === undefined) throw new Error('not found');
+      status.inApp = {
+        ...status.inApp,
+        readAt: status.inApp.readAt ?? '2026-08-31T00:01:40.000Z',
+        updatedAt: '2026-08-31T00:01:40.000Z',
+      };
+      return structuredClone(status.inApp);
     },
     async saveReview(report: PaperReviewReport) {
       reviews.set(report.id, structuredClone(report));
@@ -250,6 +387,68 @@ describe('模拟实验 HTTP', () => {
       deliverySemantics: 'AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP',
     });
     expect(outbox.json().records).toHaveLength(1);
+
+    const notifications = await app.inject({
+      method: 'GET',
+      url: `/api/v1/paper/experiments/${experimentId}/notifications?limit=1`,
+    });
+    expect(notifications.statusCode).toBe(200);
+    expect(notifications.json()).toMatchObject({
+      deliverySemantics: 'AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP',
+      records: [
+        {
+          channels: expect.arrayContaining([
+            expect.objectContaining({ channel: 'IN_APP', state: 'DELIVERED', readAt: null }),
+            expect.objectContaining({ channel: 'DESKTOP', state: 'PENDING' }),
+          ]),
+        },
+      ],
+    });
+
+    const claimed = await app.inject({
+      method: 'POST',
+      url: `/api/v1/paper/experiments/${experimentId}/notifications/desktop/claims`,
+      payload: { limit: 1 },
+    });
+    expect(claimed.statusCode).toBe(200);
+    expect(claimed.json()).toMatchObject({
+      channel: 'DESKTOP',
+      leaseRequired: true,
+      records: [{ delivery: { state: 'LEASED', attemptCount: 1 } }],
+    });
+    const notificationId = String(claimed.json().records[0].record.id);
+    const leaseToken = String(claimed.json().records[0].leaseToken);
+    expect(leaseToken).toMatch(/^[0-9a-f]{64}$/);
+
+    const invalidSettlement = await app.inject({
+      method: 'POST',
+      url: `/api/v1/paper/experiments/${experimentId}/notifications/${notificationId}/desktop/settlement`,
+      payload: { leaseToken, outcome: 'FAILED' },
+    });
+    expect(invalidSettlement.statusCode).toBe(400);
+    expect(invalidSettlement.json().error.code).toBe('INVALID_REQUEST');
+
+    const dispatched = await app.inject({
+      method: 'POST',
+      url: `/api/v1/paper/experiments/${experimentId}/notifications/${notificationId}/desktop/settlement`,
+      payload: { leaseToken, outcome: 'DISPATCHED' },
+    });
+    expect(dispatched.statusCode).toBe(200);
+    expect(dispatched.json()).toMatchObject({
+      dispatchConfirmation: 'HANDED_TO_DESKTOP_NOTIFICATION_API_NOT_USER_READ_CONFIRMATION',
+      delivery: { channel: 'DESKTOP', state: 'DISPATCHED' },
+    });
+
+    const read = await app.inject({
+      method: 'POST',
+      url: `/api/v1/paper/experiments/${experimentId}/notifications/${notificationId}/read`,
+      payload: {},
+    });
+    expect(read.statusCode).toBe(200);
+    expect(read.json()).toMatchObject({
+      channel: 'IN_APP',
+      delivery: { state: 'DELIVERED', readAt: '2026-08-31T00:01:40.000Z' },
+    });
 
     const review = await app.inject({
       method: 'POST',

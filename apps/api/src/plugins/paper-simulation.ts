@@ -18,12 +18,20 @@ import {
   PaperCommandRequestSchema,
   PaperExperimentCreateSchema,
   PaperExperimentParamsSchema,
+  PaperNotificationClaimSchema,
+  PaperNotificationParamsSchema,
+  PaperNotificationSettlementSchema,
   PaperOutboxQuerySchema,
   PaperReviewCreateSchema,
   PaperReviewParamsSchema,
 } from '../paper-simulation-schemas.js';
 
 const WARNING = '仅为可重放的模拟研究，不是投资建议；不会签名、广播交易或移动真实资金。';
+const DELIVERY_SEMANTICS = 'AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP' as const;
+
+function deliveryActor(request: { zerotracePrincipal: { subject: string } | null }): string {
+  return request.zerotracePrincipal?.subject ?? 'non-production-local-session';
+}
 
 function repository(context: AppHttpContext): PostgresPaperSimulationRepository {
   if (context.runtime.paperSimulation === undefined) {
@@ -165,9 +173,96 @@ export async function registerPaperSimulationRoutes(
       });
       return {
         mode: 'PAPER' as const,
-        deliverySemantics: 'AT_LEAST_ONCE_WITH_BUSINESS_KEY_DEDUP' as const,
+        deliverySemantics: DELIVERY_SEMANTICS,
         warning: WARNING,
         ...page,
+      };
+    },
+  );
+
+  app.get(
+    '/api/v1/paper/experiments/:experimentId/notifications',
+    { schema: { tags: ['analysis'] } },
+    async (request) => {
+      const { experimentId } = PaperExperimentParamsSchema.parse(request.params);
+      const query = PaperOutboxQuerySchema.parse(request.query);
+      const page = await repository(context).listNotifications({
+        experimentId,
+        limit: query.limit,
+        ...(query.after === undefined ? {} : { after: query.after }),
+      });
+      return {
+        mode: 'PAPER' as const,
+        deliverySemantics: DELIVERY_SEMANTICS,
+        desktopStateMeaning: 'DISPATCHED 表示已交给桌面通知 API，不表示用户已查看。',
+        warning: WARNING,
+        ...page,
+      };
+    },
+  );
+
+  app.post(
+    '/api/v1/paper/experiments/:experimentId/notifications/desktop/claims',
+    { schema: { tags: ['analysis'] } },
+    async (request) => {
+      const { experimentId } = PaperExperimentParamsSchema.parse(request.params);
+      const input = PaperNotificationClaimSchema.parse(request.body ?? {});
+      const records = await repository(context).claimDesktopNotifications({
+        experimentId,
+        actor: deliveryActor(request),
+        limit: input.limit,
+      });
+      return {
+        mode: 'PAPER' as const,
+        channel: 'DESKTOP' as const,
+        deliverySemantics: DELIVERY_SEMANTICS,
+        leaseRequired: true,
+        records,
+        warning: WARNING,
+      };
+    },
+  );
+
+  app.post(
+    '/api/v1/paper/experiments/:experimentId/notifications/:outboxId/desktop/settlement',
+    { schema: { tags: ['analysis'] } },
+    async (request) => {
+      const { experimentId, outboxId } = PaperNotificationParamsSchema.parse(request.params);
+      const input = PaperNotificationSettlementSchema.parse(request.body);
+      const delivery = await repository(context).settleDesktopNotification({
+        experimentId,
+        outboxId,
+        actor: deliveryActor(request),
+        leaseToken: input.leaseToken,
+        outcome: input.outcome,
+        ...(input.errorCode === undefined ? {} : { errorCode: input.errorCode }),
+      });
+      return {
+        mode: 'PAPER' as const,
+        channel: 'DESKTOP' as const,
+        dispatchConfirmation:
+          'HANDED_TO_DESKTOP_NOTIFICATION_API_NOT_USER_READ_CONFIRMATION' as const,
+        delivery,
+        warning: WARNING,
+      };
+    },
+  );
+
+  app.post(
+    '/api/v1/paper/experiments/:experimentId/notifications/:outboxId/read',
+    { schema: { tags: ['analysis'] } },
+    async (request) => {
+      const { experimentId, outboxId } = PaperNotificationParamsSchema.parse(request.params);
+      const delivery = await repository(context).markInAppNotificationRead({
+        experimentId,
+        outboxId,
+        actor: deliveryActor(request),
+      });
+      return {
+        mode: 'PAPER' as const,
+        channel: 'IN_APP' as const,
+        delivery,
+        warning: WARNING,
       };
     },
   );
