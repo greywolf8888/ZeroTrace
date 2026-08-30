@@ -1,6 +1,8 @@
 import { contentAddressedId } from '@zerotrace/evidence';
 import { type AssetId, type ChainPosition, type Ledger } from '@zerotrace/schemas';
 
+export * from './paper-simulation.js';
+
 export const ASSET_LEDGER_MODEL_VERSION = 'asset-ledger-v1.0.0';
 
 export type AssetEventKind =
