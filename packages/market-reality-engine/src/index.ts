@@ -1,4 +1,11 @@
 import {
+  executeConstantProduct,
+  executeConcentratedV3,
+  executeStableSwap,
+  atomicDistribution,
+} from './math.js';
+export { executeConstantProduct, executeConcentratedV3, executeStableSwap } from './math.js';
+import {
   quoteConstantProductExit,
   simulateExitRace,
   type ConstantProductPoolSnapshot,
@@ -18,7 +25,7 @@ import {
 } from '@zerotrace/schemas';
 import { contentAddressedId } from '@zerotrace/evidence';
 
-export const MARKET_REALITY_MODEL_VERSION = 'market-reality-v1.0.0';
+export const MARKET_REALITY_MODEL_VERSION = 'market-reality-v1.1.0-safety-repair';
 
 const Q96 = 2n ** 96n;
 
@@ -26,91 +33,6 @@ export function parseAtomic(value: string, field: string): bigint {
   if (!/^(0|[1-9]\d*)$/.test(value))
     throw new Error(`${field} must be a non-negative integer string.`);
   return BigInt(value);
-}
-
-export function executeConstantProduct(input: {
-  baseReserve: bigint;
-  quoteReserve: bigint;
-  amountIn: bigint;
-  feeBps: bigint;
-}): { amountOut: bigint; baseReserve: bigint; quoteReserve: bigint } {
-  if (input.amountIn === 0n) {
-    return { amountOut: 0n, baseReserve: input.baseReserve, quoteReserve: input.quoteReserve };
-  }
-  const effective = (input.amountIn * (10_000n - input.feeBps)) / 10_000n;
-  const out = (input.quoteReserve * effective) / (input.baseReserve + effective);
-  const capped = out > input.quoteReserve ? input.quoteReserve : out;
-  return {
-    amountOut: capped,
-    baseReserve: input.baseReserve + input.amountIn,
-    quoteReserve: input.quoteReserve - capped,
-  };
-}
-
-export function executeConcentratedV3(input: {
-  liquidity: bigint;
-  sqrtPriceX96: bigint;
-  amountIn: bigint;
-  feeBps: bigint;
-  zeroForOne: boolean;
-}): { amountOut: bigint; sqrtPriceX96: bigint } {
-  const feeAdj = (input.amountIn * (10_000n - input.feeBps)) / 10_000n;
-  if (input.liquidity === 0n || feeAdj === 0n) {
-    return { amountOut: 0n, sqrtPriceX96: input.sqrtPriceX96 };
-  }
-  const virtualBase = (input.liquidity * Q96) / input.sqrtPriceX96;
-  const virtualQuote = (input.liquidity * input.sqrtPriceX96) / Q96;
-  const swapped = input.zeroForOne
-    ? executeConstantProduct({
-        baseReserve: virtualBase,
-        quoteReserve: virtualQuote,
-        amountIn: feeAdj,
-        feeBps: 0n,
-      })
-    : executeConstantProduct({
-        baseReserve: virtualQuote,
-        quoteReserve: virtualBase,
-        amountIn: feeAdj,
-        feeBps: 0n,
-      });
-  const nextSqrt =
-    swapped.baseReserve === 0n ? input.sqrtPriceX96 : (input.liquidity * Q96) / swapped.baseReserve;
-  return { amountOut: swapped.amountOut, sqrtPriceX96: nextSqrt };
-}
-
-export function executeStableSwap(input: {
-  x: bigint;
-  y: bigint;
-  amountIn: bigint;
-  amplification: bigint;
-  feeBps: bigint;
-}): { amountOut: bigint; x: bigint; y: bigint } {
-  const n = 2n;
-  const sum = input.x + input.y;
-  let d = sum;
-  const ann = input.amplification * n;
-  for (let i = 0; i < 32; i += 1) {
-    let dp = d;
-    dp = (dp * d) / (n * input.x);
-    dp = (dp * d) / (n * input.y);
-    const next = ((ann * sum + dp * n) * d) / ((ann - 1n) * d + (n + 1n) * dp);
-    if (next > d ? next - d <= 1n : d - next <= 1n) {
-      d = next;
-      break;
-    }
-    d = next;
-  }
-  const xAfter = input.x + (input.amountIn * (10_000n - input.feeBps)) / 10_000n;
-  let y = input.y;
-  for (let i = 0; i < 32; i += 1) {
-    const yPrev = y;
-    const c = (d * d * d) / (n * n * xAfter * y);
-    const b = xAfter + d / ann;
-    y = (d * d + c * y) / (2n * y + b - d);
-    if (y > yPrev ? y - yPrev <= 1n : yPrev - y <= 1n) break;
-  }
-  const out = input.y > y ? input.y - y : 0n;
-  return { amountOut: out, x: xAfter, y: input.y - out };
 }
 
 export function isolatedRvSumIsIllegal(values: readonly bigint[]): never | void {
@@ -166,26 +88,25 @@ interface VenueRuntime {
   quote: bigint;
   fee: bigint;
   blockedReason?: ExitFailure['reason'];
+  remainingMaxSell?: bigint;
 }
 
 function quoteSettlesInU(venue: VenueSnapshot): boolean {
   return venue.quoteSettlesInU === true;
 }
 
-function v3ExactReady(venue: VenueSnapshot): boolean {
-  return (
-    venue.kind !== 'CONCENTRATED_V3' ||
-    (venue.tick !== undefined &&
-      venue.tickLiquidityNet !== undefined &&
-      venue.v3RangeComplete === true)
-  );
+function venueAdapterReady(venue: VenueSnapshot): boolean {
+  // The current runtime has neither active-liquidity state nor tick crossing,
+  // and cannot certify StableSwap normalization or arbitrary bonding curves.
+  // A user-supplied v3RangeComplete flag is not execution evidence.
+  return venue.kind === 'CONSTANT_PRODUCT_V2';
 }
 
 function initVenues(venues: readonly VenueSnapshot[]): VenueRuntime[] {
   return venues.map((snapshot) => {
     const blockedReason: ExitFailure['reason'] | undefined = snapshot.blacklisted
       ? 'BLACKLIST'
-      : !v3ExactReady(snapshot)
+      : !venueAdapterReady(snapshot)
         ? 'UNKNOWN_CONSTRAINT'
         : undefined;
     return {
@@ -193,6 +114,9 @@ function initVenues(venues: readonly VenueSnapshot[]): VenueRuntime[] {
       base: parseAtomic(snapshot.reserves.baseAtomic, 'base'),
       quote: parseAtomic(snapshot.reserves.quoteAtomic, 'quote'),
       fee: parseAtomic(snapshot.feeBps, 'feeBps'),
+      ...(snapshot.maxSellAtomic === undefined
+        ? {}
+        : { remainingMaxSell: parseAtomic(snapshot.maxSellAtomic, 'maxSellAtomic') }),
       ...(blockedReason === undefined ? {} : { blockedReason }),
     };
   });
@@ -200,6 +124,7 @@ function initVenues(venues: readonly VenueSnapshot[]): VenueRuntime[] {
 
 function previewOut(runtime: VenueRuntime, amountIn: bigint): bigint {
   if (runtime.blockedReason !== undefined || amountIn === 0n) return 0n;
+  if (runtime.base <= 0n || runtime.quote <= 0n) return 0n;
   if (!runtime.snapshot.sellEnabled) return 0n;
   const taxBps = parseAtomic(runtime.snapshot.sellTaxBps ?? '0', 'sellTaxBps');
   const taxed = (amountIn * (10_000n - taxBps)) / 10_000n;
@@ -269,7 +194,7 @@ function applyOut(runtime: VenueRuntime, amountIn: bigint): bigint {
 function cappedTake(runtime: VenueRuntime, remaining: bigint): bigint {
   let take = remaining;
   if (runtime.snapshot.maxSellAtomic !== undefined) {
-    const max = parseAtomic(runtime.snapshot.maxSellAtomic, 'maxSellAtomic');
+    const max = runtime.remainingMaxSell ?? 0n;
     if (take > max) take = max;
   }
   return take;
@@ -302,6 +227,7 @@ function routeSell(
     const runtime = runtimes[bestIndex];
     if (runtime === undefined) break;
     const out = applyOut(runtime, bestTake);
+    if (runtime.remainingMaxSell !== undefined) runtime.remainingMaxSell -= bestTake;
     sold += bestTake;
     remaining -= bestTake;
     if (quoteSettlesInU(runtime.snapshot)) realizedU += out;
@@ -439,7 +365,9 @@ export function simulateMarketWideExit(input: {
   const failedAmount = remaining.reduce((acc, value) => acc + value, 0n);
   const total = realized.reduce((acc, value) => acc + value, 0n);
   const evidenceIds = [...new Set(input.venues.flatMap((item) => [...item.evidenceIds]))].sort();
-  const uVenues = runtimes.filter((item) => quoteSettlesInU(item.snapshot));
+  const uVenues = runtimes.filter(
+    (item) => item.blockedReason === undefined && quoteSettlesInU(item.snapshot),
+  );
   const quoteU = uVenues.reduce((acc, item) => acc + item.quote, 0n);
   const baseU = uVenues.reduce((acc, item) => acc + item.base, 0n);
   return {
@@ -467,7 +395,7 @@ export function simulateMarketWideExit(input: {
       {
         asset: input.venues[0]?.quoteToken ?? input.token,
         includeInU: uVenues.length > 0,
-        pegDeviationBps: uVenues.length > 0 ? knownValue('0') : unknownValue('INSUFFICIENT_DATA'),
+        pegDeviationBps: unknownValue('INSUFFICIENT_DATA'),
         liquidityAtomic: knownValue(quoteU.toString()),
         source: 'venue-snapshot',
         evidenceIds,
@@ -481,14 +409,10 @@ export function reproducibleDistribution(
   runs: readonly MarketWideExitScenario[],
   seed: number,
 ): { p10: string; p50: string; p90: string; seed: number; iterations: number } {
-  const values = runs
-    .map((run) => BigInt(run.totalRealizedU))
-    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  const at = (p: number): string => {
-    const index = Math.floor((values.length - 1) * p);
-    return (values[index] ?? 0n).toString();
-  };
-  return { p10: at(0.1), p50: at(0.5), p90: at(0.9), seed, iterations: runs.length };
+  return atomicDistribution(
+    runs.map((run) => parseAtomic(run.totalRealizedU, 'totalRealizedU')),
+    seed,
+  );
 }
 
 export function wrapLegacyExitRace(

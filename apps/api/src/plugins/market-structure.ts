@@ -472,12 +472,24 @@ export async function registerMarketStructureV2(
   app.post(
     '/api/v2/exit-scenarios/distribution',
     { schema: { tags: ['analysis'] } },
-    async (request) => {
+    async (request, reply) => {
       const body = request.body as {
-        seed: number;
-        scenarios: ReturnType<typeof simulateMarketWideExit>[];
-      };
-      return reproducibleDistribution(body.scenarios, body.seed);
+        seed?: number;
+        scenarios?: ReturnType<typeof simulateMarketWideExit>[];
+      } | null;
+      if (!body || !Array.isArray(body.scenarios) || body.scenarios.length === 0) {
+        return reply
+          .code(422)
+          .send(errorBody('INSUFFICIENT_DATA', '没有退出情景，不能生成收益分布。'));
+      }
+      if (!Number.isSafeInteger(body.seed)) {
+        return reply.code(400).send(errorBody('INVALID_SEED', '模拟种子必须是安全整数。'));
+      }
+      const scenarios = MarketWideExitScenarioSchema.array().safeParse(body.scenarios);
+      if (!scenarios.success) {
+        return reply.code(400).send(errorBody('INVALID_SCENARIOS', '退出情景不符合数据约定。'));
+      }
+      return reproducibleDistribution(scenarios.data, body.seed as number);
     },
   );
 
