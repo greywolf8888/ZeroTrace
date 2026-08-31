@@ -109,7 +109,31 @@ function sha256(value: string): string {
 }
 
 async function configuredUrls(): Promise<string[]> {
-  const catalog = defaultBscPublicCatalog();
+  const fullCatalog = defaultBscPublicCatalog();
+  const configured = process.env.ZERO_TRACE_LIVE_PROVIDER_ENDPOINT_REFS;
+  let requested: string[] | undefined;
+  if (configured !== undefined) {
+    const parsed = JSON.parse(configured) as unknown;
+    if (
+      !Array.isArray(parsed) ||
+      parsed.length !== 2 ||
+      parsed.some((item) => typeof item !== 'string') ||
+      new Set(parsed).size !== parsed.length
+    ) {
+      throw new Error('固定实链来源集合必须包含两个不重复的公开 Endpoint Ref。');
+    }
+    requested = parsed;
+  }
+  const catalog =
+    requested === undefined
+      ? fullCatalog
+      : fullCatalog.filter((record) => requested.includes(record.endpointRef));
+  if (requested !== undefined && catalog.length !== requested.length) {
+    throw new Error('固定实链来源必须全部来自版本化 BSC 公共来源目录。');
+  }
+  if (new Set(catalog.map((record) => record.independenceGroup)).size < 2) {
+    throw new Error('固定实链来源必须属于两个独立 Operator 组。');
+  }
   const snapshots = [];
   for (const record of catalog) {
     const probe = await jsonRpc(record.endpointRef, 'eth_chainId', []);
@@ -138,7 +162,14 @@ async function configuredUrls(): Promise<string[]> {
     },
     snapshots,
   );
-  return selection.selected.map((item) => item.endpointRef);
+  const urls = selection.selected.map((item) => item.endpointRef);
+  if (
+    requested !== undefined &&
+    (urls.length !== requested.length || requested.some((endpoint) => !urls.includes(endpoint)))
+  ) {
+    throw new Error('固定实链来源未能形成双 Operator 只读集合。');
+  }
+  return urls;
 }
 
 async function jsonRpc(
@@ -184,6 +215,7 @@ async function runCase(
   replay: boolean;
   forbidden: string[];
   notes: string[];
+  failureClass?: 'SOURCE_UNAVAILABLE' | 'SOURCE_CONFLICT';
 }> {
   if (item.kind === 'fault' && item.id === 'UNSUPPORTED_V3_EXACT_EXIT') {
     return {
@@ -212,6 +244,11 @@ async function runCase(
       rawHashes: [left.raw, right.raw].filter((item) => item.length > 0).map(sha256),
       replay: left.ok && right.ok ? replayMatch(left.raw, left.raw) : false,
       forbidden: ['single-provider-quorum'],
+      ...(!left.ok || !right.ok
+        ? { failureClass: 'SOURCE_UNAVAILABLE' as const }
+        : agree
+          ? {}
+          : { failureClass: 'SOURCE_CONFLICT' as const }),
       notes: agree
         ? ['两个独立 Operator 的 chainId 一致。']
         : ['chainId 不一致或一端失败，保持 SOURCE_CONFLICT/BLOCKED，不得填 0。'],
@@ -238,6 +275,7 @@ async function runCase(
       rawHashes: [],
       replay: false,
       forbidden,
+      failureClass: 'SOURCE_UNAVAILABLE',
       notes: [`两端只读 RPC 均失败：${left.error} / ${right.error}`],
     };
   }
@@ -250,6 +288,7 @@ async function runCase(
       rawHashes: [left.raw, right.raw].filter((item) => item.length > 0).map(sha256),
       replay: false,
       forbidden,
+      failureClass: 'SOURCE_UNAVAILABLE',
       notes: ['单 Operator 成功不能作为 load-bearing PASS。', ...notes],
     };
   }
@@ -269,6 +308,7 @@ async function runCase(
       rawHashes: [sha256(left.raw), sha256(right.raw)],
       replay: replayMatch(left.raw, left.raw) && replayMatch(right.raw, right.raw),
       forbidden,
+      failureClass: 'SOURCE_CONFLICT',
       notes: ['双 Operator 结果不一致，进入 SOURCE_CONFLICT。', ...notes],
     };
   }
@@ -289,6 +329,7 @@ async function runCase(
           .map(sha256),
         replay: false,
         forbidden,
+        failureClass: 'SOURCE_UNAVAILABLE',
         notes: ['起源回执需要双 Operator；单端成功不得记 PASS。', ...notes],
       };
     }
@@ -308,6 +349,7 @@ async function runCase(
         rawHashes: [sha256(receiptLeft.raw), sha256(receiptRight.raw)],
         replay: false,
         forbidden,
+        failureClass: 'SOURCE_CONFLICT',
         notes: ['起源回执不一致。', ...notes],
       };
     }
@@ -366,6 +408,7 @@ for (const item of CASES) {
     rawHashes: result.rawHashes,
     replay: { offline: true, resultHashMatch: result.replay },
     forbiddenInferences: result.forbidden,
+    failureClass: result.failureClass ?? null,
     notes: result.notes,
     status: result.status,
   };
@@ -378,6 +421,7 @@ const pass = summary.filter((item) => item.status === 'PASS').length;
 const blocked = summary.filter((item) => item.status === 'BLOCKED_EXTERNAL').length;
 const fail = summary.filter((item) => item.status === 'FAIL').length;
 const unsupported = summary.filter((item) => item.status === 'UNSUPPORTED').length;
+const sourceSet = urls.map((url) => endpointRefFromUrl(url));
 clearInterval(rssSampler);
 peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
 const completedAt = new Date().toISOString();
@@ -391,7 +435,16 @@ const measurement = {
 writeFileSync(
   join(outRoot, 'summary.json'),
   `${JSON.stringify(
-    { sha, pass, fail, blockedExternal: blocked, unsupported, cases: summary, measurement },
+    {
+      sha,
+      pass,
+      fail,
+      blockedExternal: blocked,
+      unsupported,
+      sourceSet,
+      cases: summary,
+      measurement,
+    },
     null,
     2,
   )}\n`,
@@ -405,6 +458,7 @@ process.stdout.write(
       fail,
       blockedExternal: blocked,
       unsupported,
+      sourceSet,
       measurement,
       note: 'PASS 仅表示双 Operator 只读捕获与一致性；不是完整盘面 COMPLETE。',
     },

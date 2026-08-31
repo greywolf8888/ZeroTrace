@@ -9,6 +9,7 @@ import {
   evaluateSoak,
   hardwareProfile,
   hasTrackedChanges,
+  liveSummaryHasExternalBlocker,
   policyHash,
   readJson,
   runLiveCase,
@@ -148,13 +149,23 @@ if (process.env.ZERO_TRACE_SOAK !== '1') {
           await waitUntil(scheduledAtMs, () => stopRequested);
           if (stopRequested) break;
           const startedAt = new Date().toISOString();
-          const execution = await runLiveCase(root, soakPolicy.commandTimeoutMs);
+          const execution = await runLiveCase(
+            root,
+            soakPolicy.commandTimeoutMs,
+            performancePolicy.providerEndpointRefs,
+          );
           const completedAt = new Date().toISOString();
           const liveErrors =
             execution.summary === undefined
               ? ['没有可校验的实链摘要。']
-              : validateLiveSummary(execution.summary, performancePolicy.requiredCaseStatuses);
-          const isExternal = execution.timedOut || (execution.summary?.blockedExternal ?? 0) > 0;
+              : validateLiveSummary(
+                  execution.summary,
+                  performancePolicy.requiredCaseStatuses,
+                  performancePolicy.providerEndpointRefs,
+                );
+          const isExternal =
+            execution.timedOut ||
+            (execution.summary !== undefined && liveSummaryHasExternalBlocker(execution.summary));
           const result =
             liveErrors.length === 0 && execution.exitCode === 0
               ? 'PASS'
@@ -177,6 +188,7 @@ if (process.env.ZERO_TRACE_SOAK !== '1') {
             fail: summary?.fail ?? (result === 'FAIL' ? 1 : 0),
             blockedExternal: summary?.blockedExternal ?? (isExternal ? 1 : 0),
             unsupported: summary?.unsupported ?? 0,
+            sourceSet: summary?.sourceSet ?? [],
             previousEventHash: events.at(-1)?.eventHash ?? null,
           });
           appendFileSync(eventsPath, `${JSON.stringify(event)}\n`);

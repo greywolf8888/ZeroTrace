@@ -2,7 +2,7 @@
   "schemaVersion": "zerotrace-performance-baseline-v2",
   "status": "NOT_RUN",
   "notes": [
-    "尚未用当前性能执行器在固定硬件、固定源码指纹和真实主网案件上生成至少三个样本。",
-    "只有 performance:capture 生成且通过策略、来源与硬件校验的候选记录才可提升为 MEASURED。"
+    "首轮候选暴露了自适应来源集合变化；旧样本已废弃，不能作为固定来源性能基线。",
+    "须在版本化固定来源集合、固定硬件、固定源码指纹上重新生成五个真实主网样本。"
   ]
 }
