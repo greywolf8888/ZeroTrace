@@ -189,6 +189,15 @@ describe('platform security', { timeout: 60_000 }, () => {
       'INVESTIGATION_WRITE',
     );
     expect(classifyPlatformRoute('POST', '/api/v2/jobs/job-1/cancel')).toBe('ADMIN_OPERATION');
+    expect(
+      classifyPlatformRoute(
+        'POST',
+        `/api/v1/research/social-observation-windows/sow_${'a'.repeat(24)}/fetch-next`,
+      ),
+    ).toBe('ADMIN_OPERATION');
+    expect(classifyPlatformRoute('POST', '/api/v1/research/social-observation-tombstones')).toBe(
+      'ADMIN_OPERATION',
+    );
     expect(classifyPlatformRoute('DELETE', '/api/v1/forensics/cases/case-1')).toBeNull();
 
     const readonly = {

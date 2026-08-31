@@ -20,6 +20,16 @@ function activeSource() {
     documentation_url: 'https://verified-social.example.com/docs',
     contract_version: 'verified-contract-v1',
     authentication: { type: 'NONE', header_name: null, secret_ref: null },
+    dispatch_policy: {
+      account_id: 'xapid-free-test',
+      cost_kind: 'VERIFIED_FREE',
+      max_units: '1',
+      max_microusd: '0',
+      cost_evidence: 'xapid-free-test-evidence',
+      quote_ttl_seconds: 300,
+      timeout_ms: 5000,
+      max_response_bytes: 1000000,
+    },
     content_policy: {
       policy_version: 'verified-rights-v1',
       source_id: 'xapid',
@@ -53,6 +63,13 @@ function activeSource() {
       created_at_path: ['createdAt'],
       author_id_path: ['authorId'],
       author_handle_path: ['authorHandle'],
+      temporal: {
+        since_parameter: 'from',
+        until_parameter: 'until',
+        precision: 'INSTANT',
+        until_mode: 'EXCLUSIVE',
+        overlap_seconds: 60,
+      },
     },
     upstream_group: 'X',
   };
@@ -93,10 +110,19 @@ describe('X研究来源合同文件', () => {
           policyVersion: 'verified-rights-v1',
           rightsEvidenceIds: [`ev_${'1'.repeat(24)}`],
         }),
+        dispatch: expect.objectContaining({
+          accountId: 'xapid-free-test',
+          costKind: 'VERIFIED_FREE',
+          maxMicrousd: '0',
+        }),
         search: expect.objectContaining({
           path: '/v1/search',
           queryParameter: 'query',
           cursorParameter: 'cursor',
+          temporal: expect.objectContaining({
+            precision: 'INSTANT',
+            overlapSeconds: 60,
+          }),
         }),
       }),
     ]);
@@ -120,6 +146,39 @@ describe('X研究来源合同文件', () => {
             type: 'BEARER',
             header_name: null,
             secret_ref: 'PATH_OR_INLINE_SECRET',
+          },
+        },
+        asOf,
+      ),
+    ).toThrow();
+    expect(() =>
+      parseSocialSourceSettings(
+        {
+          ...activeSource(),
+          dispatch_policy: {
+            ...activeSource().dispatch_policy,
+            cost_kind: 'UNKNOWN',
+          },
+        },
+        asOf,
+      ),
+    ).toThrow('SOURCE_PRICE_UNVERIFIED');
+    expect(() =>
+      parseSocialSourceSettings(
+        { ...activeSource(), search: { ...activeSource().search, temporal: null } },
+        asOf,
+      ),
+    ).toThrow('SOCIAL_SOURCE_ENABLED_CONTRACT_INCOMPLETE');
+    expect(() =>
+      parseSocialSourceSettings(
+        {
+          ...activeSource(),
+          search: {
+            ...activeSource().search,
+            temporal: {
+              ...activeSource().search.temporal,
+              until_parameter: activeSource().search.temporal.since_parameter,
+            },
           },
         },
         asOf,

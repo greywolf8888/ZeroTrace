@@ -215,6 +215,16 @@ describe('system routes', { timeout: 60_000 }, () => {
           expiresAt: '2027-08-01T00:00:00.000Z',
         },
         authentication: { kind: 'NONE', secretRef: null, headerName: null },
+        dispatch: {
+          accountId: 'xapid-free-test',
+          costKind: 'VERIFIED_FREE',
+          maxUnits: '1',
+          maxMicrousd: '0',
+          costEvidence: 'xapid-free-test-evidence',
+          quoteTtlSeconds: 300,
+          timeoutMs: 5_000,
+          maxResponseBytes: 1_000_000,
+        },
         search: {
           path: '/v1/search',
           queryParameter: 'query',
@@ -234,6 +244,13 @@ describe('system routes', { timeout: 60_000 }, () => {
           createdAtPath: ['createdAt'],
           authorIdPath: ['authorId'],
           authorHandlePath: ['authorHandle'],
+          temporal: {
+            sinceParameter: 'from',
+            untilParameter: 'until',
+            precision: 'INSTANT',
+            untilMode: 'EXCLUSIVE',
+            overlapSeconds: 0,
+          },
         },
       },
     ];

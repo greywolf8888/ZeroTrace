@@ -1,5 +1,6 @@
 import {
   BitcoinUtxoLedgerAdapter,
+  assertProviderUrlSafe,
   EvmLedgerAdapter,
   FailoverJsonRpcTransport,
   FailoverRestTransport,
@@ -53,6 +54,7 @@ import type {
   PostgresPensionCandidateReportRepository,
   PostgresPaperSimulationRepository,
   PostgresSemanticScanCheckpointRepository,
+  PostgresSocialObservationRepository,
 } from '@zerotrace/storage';
 import type { JobQueue } from '@zerotrace/workflow-core';
 import {
@@ -70,6 +72,7 @@ import type { StoragePlane } from '@zerotrace/storage-plane';
 import {
   FXEMBED_TEMPLATE,
   XAPID_TEMPLATE,
+  type FetchDependencies,
   type SocialSourceConfig,
 } from '@zerotrace/provider-plane';
 
@@ -124,7 +127,9 @@ export interface AppRuntime {
   captureSchedules?: PostgresCaptureScheduleRepository;
   dataProcurement?: PostgresDataProcurementRepository;
   paperSimulation?: PostgresPaperSimulationRepository;
+  socialObservations?: PostgresSocialObservationRepository;
   socialSources?: readonly SocialSourceConfig[];
+  socialFetchDependencies?: Omit<FetchDependencies, 'claimDispatch'>;
   ageInvestigationGraphProjection?: AgeInvestigationGraphProjectionRepository;
   dataQuality: AnchorDataQualityService;
   dataQualityStorage?: { health(): Promise<DataQualityStorageHealth> };
@@ -517,6 +522,23 @@ export function createRuntime(config: AppConfig): AppRuntime {
     structuredClone(FXEMBED_TEMPLATE),
     structuredClone(XAPID_TEMPLATE),
   ];
+  const socialFetchDependencies: Omit<FetchDependencies, 'claimDispatch'> = {
+    fetcher: (url, init) => fetch(url, init),
+    approvePublicOrigin: async (origin) => {
+      await assertProviderUrlSafe(origin, policyFor(origin, config));
+      return true;
+    },
+    readSecret: async (ref) => {
+      if (!/^ZEROTRACE_SOCIAL_[A-Z0-9_]{1,96}$/.test(ref)) {
+        throw new Error('SOCIAL_SOURCE_SECRET_SCOPE_INVALID');
+      }
+      const value = process.env[ref];
+      if (value === undefined || value.length === 0 || /[\r\n]/.test(value)) {
+        throw new Error('SOCIAL_SOURCE_REFERENCED_SECRET_UNAVAILABLE');
+      }
+      return value;
+    },
+  };
   const close = async () => {
     await closeStores(
       evidenceRepository,
@@ -532,6 +554,7 @@ export function createRuntime(config: AppConfig): AppRuntime {
       unconfigured.map((item) => ({ ...item, capabilities: [...item.capabilities] })),
     ),
     socialSources,
+    socialFetchDependencies,
     evmAdapters,
     evmSourceAdapters,
     ...(evmSourceVerification === undefined ? {} : { evmSourceVerification }),

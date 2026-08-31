@@ -44,6 +44,7 @@ export * from './durable-jobs.js';
 export * from './storage-plane-adapters.js';
 export * from './data-procurement.js';
 export * from './paper-simulation.js';
+export * from './social-observations.js';
 
 type DatabaseRow = Record<string, unknown>;
 

@@ -12,6 +12,7 @@
     "header_name": null,
     "secret_ref": null
   },
+  "dispatch_policy": null,
   "content_policy": null,
   "search": null,
   "lookup": null,
