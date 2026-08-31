@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true
+  },
+  "include": [
+    "scripts/live-case-runner.ts",
+    "scripts/operational-gates.ts",
+    "scripts/operational-gates.test.ts",
+    "scripts/performance-budget-check.ts",
+    "scripts/performance-capture.ts",
+    "scripts/soak-check.ts"
+  ]
+}

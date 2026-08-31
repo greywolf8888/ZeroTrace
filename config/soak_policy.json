@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "zerotrace-soak-policy-v1",
+  "policyVersion": "2026-08-31",
+  "benchmarkId": "bsc-public-dual-operator-v1",
+  "minimumDurationMs": 86400000,
+  "intervalMs": 900000,
+  "maximumStartGapMs": 1200000,
+  "commandTimeoutMs": 180000,
+  "maximumRecoveredExternalBlockedCycles": 2,
+  "maximumConsecutiveExternalBlockedCycles": 1
+}
