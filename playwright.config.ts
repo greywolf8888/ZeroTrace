@@ -50,6 +50,7 @@ export default defineConfig({
   workers: e2eWorkers,
   timeout: 30_000,
   expect: { timeout: 8_000 },
+  snapshotPathTemplate: '{testDir}/visual-golden/{arg}{ext}',
   reporter: [['list'], ['html', { outputFolder: './output/playwright/report', open: 'never' }]],
   use: {
     baseURL: 'http://127.0.0.1:4173',
@@ -76,11 +77,18 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium-desktop',
+      testIgnore: /visual-golden\.spec\.ts/u,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1000 } },
     },
     {
       name: 'chromium-mobile',
+      testIgnore: /visual-golden\.spec\.ts/u,
       use: { ...devices['Pixel 7'] },
+    },
+    {
+      name: 'chromium-visual',
+      testMatch: /visual-golden\.spec\.ts/u,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1080 } },
     },
   ],
 });
