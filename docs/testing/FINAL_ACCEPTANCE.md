@@ -2,37 +2,40 @@
 
 ## 2026-08-31 V11 唯一 Goal 当前候选验收
 
-- [x] 基础实现 `91c6a0c`、持久提醒 `424a4c5`、社交查询计划 `a4371e6`、持久社交观察 `3c074ae`、桌面当前产物验收 `64ed35e`；分支仍为 `agent/terminal-market-structure-v1`，未合并 `main`
+- [x] 当前实现冻结于 `6bbdd5e5a05ba4d22109db9e9a4af1c49cebebdb`；分支仍为 `agent/terminal-market-structure-v1`，未合并 `main`
 - [x] V11 安装器先预检无冲突再 `--apply`；`.zerotrace-backups/20260831-004448-h94i67i1/journal.json` 记录 13/13 写入，后续集成未强制覆盖当前源码
 - [x] `PYTHONUTF8=1 python scripts/verify_package.py`：13 个 manifest 源文件、43 项保留能力、8 个批次、27 个 JSON 均通过；该结果仅证明包完整性
 - [ ] 包内隔离 TypeScript/Node 检查通过，但 Python planner/installer 为 13/15；2 项符号链接安全测试被当前 Windows 进程缺少 symlink 权限（WinError 1314）阻塞
-- [x] `npm run verify`：单元 `1036/1036`、可运行集成 `88/88`、外部 `42 skipped`、eval `2/2`、只读 MCP `5/5`；format、lint、typecheck、build、license、audit、architecture、中文和 schema drift 通过
+- [x] `npm run verify`：单元 `1047/1047`、可运行集成 `88/88`、外部 `42 skipped`、eval `2/2`、只读 MCP `5/5`；format、lint、typecheck、build、license、audit、architecture、中文和 schema drift 通过
 - [x] `npm run test:coverage`：`1124 passed / 42 skipped`；Statements `82.79%`、Branches `75.23%`、Functions `91.27%`、Lines `84.64%`
-- [x] Chromium desktop/mobile `42/42`；Windows 独立启动脚本再次 `42/42`；12 个一级模拟研究入口在 390×844 下可达且根页面无横向溢出
+- [x] Chromium 全量 `49/49`；Windows 独立启动脚本再次 `49/49`；12 个一级模拟研究入口在 390×844 下可达且根页面无横向溢出
+- [x] 7 个 SHA-256 绑定视觉黄金状态覆盖浅/深主题、三档等效缩放、窄屏、ProviderDown 和长表；均经人工检查且当前截图回归通过；不替代清洁机原生 DPI 验收
 - [x] property `72/72`、fault `15/15`、replay `36/36`、forensic golden `41/41`、market-exit golden `15/15`、offline Rust replay `1/1`
-- [x] CycloneDX SBOM 生成；普通与 production npm audit 均为 `0 vulnerabilities`
+- [x] CycloneDX SBOM 生成；普通与 production npm audit 均为 `0 vulnerabilities`；Cargo 元数据无缺失许可证或 GPL/AGPL/FSL/SSPL/BUSL-only 依赖
 - [x] 5 个公共 BSC Provider 中 4 个通过 chain ID/finalized 探测；2 个免费 Key 插槽通过 chain ID、历史代码和小范围日志
 - [x] 当前 live case：`8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`；PASS 只证明双 Operator 只读捕获，不代表完整盘面
-- [x] P42 本地提醒路径：migration `045`、应用内已读、桌面 lease/重试/幂等结算、权限与中文 UI 已接通；`DISPATCHED` 不等于用户已读或模拟成交
+- [x] P42 提醒路径：migration `045`、应用内已读、桌面 lease/重试/幂等结算、权限与中文 UI 已接通；当前 Tauri release 烟测确认原生 Notification API 接受，回执明确不等于通知可见或用户已读
 - [x] F04 本地持久路径：显式来源/权利/时间/免费费用合同、不可变窗口、keyset 分页、幂等发网、既有采购权威结算、`[from, until)` 过滤、Evidence 和无正文墓碑已接通；默认 xapid 在发网前以 `UNVERIFIED_IDENTITY` 失败关闭
 - [x] 当前源码隔离 PostgreSQL/ClickHouse/MinIO：45 个 migration 成功，9 文件 `129/129` 且 `0 skipped`；三服务重启后存储健康 `3/3`
 - [x] PostgreSQL 专项集成 7 文件 `38/38`；数据库重启后 P42 通知集成 `1/1`，16 条只追加 delivery event 保持可读，本地 durable real-replay 子门禁通过
 - [x] migration `046` 独立空库：46 个迁移、社交事务集成 `1/1`；2 个窗口的时间合同快照完整，事件/墓碑正文为 0，重启前后哈希同为 `070ca3150bde1292a718fed36a0c670e`
 - [x] Apache AGE `1.7.0`：首次真实投影 `PROJECTED`、同输入 `REPLAYED`；服务重启后 result hash、节点/边数与 `projectedAt` 不变
-- [ ] 当前源码桌面 OS Notification、签名清洁机及任何外部提醒渠道没有验收；`DISPATCHED` 不能升级为用户已读或外部送达
+- [ ] 当前源码已证明 OS Notification API 接受，但未证明通知最终可见或用户已读；签名清洁机及任何外部提醒渠道仍未验收
 - [ ] F04/X73 尚未执行真实 FxEmbed/xapid 调用、持久原始响应 artifact、真实上游删除轮询/webhook 与 AI 外发；本地 mock 分页和墓碑传播不能替代这些外部门禁
 - [ ] 免费语料 50 个 checkpoint 虽已处理，但 `originComplete=0`、`historyComplete=0`、`reviewed=false`，不得计为 50 Token corpus gate
 - [ ] trace-pending 仅 1/3 起源 COMPLETE；另外 2 个为 `PARTIAL(TRACE_UNAVAILABLE)`，通用 trace 插槽未配置
-- [x] 经 Visual Studio Build Tools `VsDevCmd` 恢复 MSVC 环境，workspace clippy/test、公式差分 `2/2` 和当前源码 Tauri build 全部通过
-- [x] 当前源码桌面烟测：中文主窗口、动态 loopback sidecar、匿名 `401 DESKTOP_AUTH_REQUIRED`、WebView、单实例和 owned-process 回收通过；未读取会话 token，故不宣称认证健康探测通过
-- [ ] `npm run test:performance` 与 `npm run test:soak` 已实际执行并以非零退出返回 `NOT_RUN`；当前源码签名桌面包、清洁机、升级/回滚仍为 `NOT_RUN` 或 `BLOCKED`
-- [ ] Bitcoin Core/Esplora、Solana 独立 archive RPC、Pump/Raydium 的本轮 named real-chain gate 未闭合；本轮 AGE 只证明持久图投影与重放，不替代这些实链门禁
+- [x] 经 Visual Studio Build Tools `VsDevCmd` 恢复 MSVC 环境，workspace fmt/clippy/test（50 个 Rust 测试）、公式差分 `2/2` 和当前源码 Tauri build 全部通过
+- [x] 精确 release artifact 烟测：中文主窗口、动态 loopback sidecar、匿名 `401 DESKTOP_AUTH_REQUIRED`、WebView2、单实例、OS API 接受和 owned-process 回收通过；未读取会话 token
+- [x] 本机 current-user NSIS 安装、启动同一烟测和卸载通过，HKCU 卸载记录正常移除；该结果不等于签名清洁机、升级或回滚
+- [x] 固定硬件性能门禁已用版本化硬件/策略/源码指纹，在 BNB Chain + NodeReal 真实只读双 Operator 上完成五次基线和独立复核；具体观测与预算以 `性能基线.json` 为准
+- [ ] 24 小时 soak 尚未完成；G13 只能为 `PARTIAL`。当前源码签名桌面包、清洁机、升级/回滚仍为 `NOT_RUN` 或 `BLOCKED`
+- [ ] Pump、Raydium、Bitcoin named real-chain gate 本轮均在请求前因 Provider hostname 解析到保留地址而失败关闭；没有放宽 SSRF；AGE 与 BSC PASS 不替代这些实链门禁
 - [ ] 真实 IdP、逐记录租户/owner 隔离、持久四眼/WORM、xapid 服务身份和第三方 AI 权利/删除送达未验证
 - [ ] G14 Final Acceptance：`BLOCKED`
 
-当前源码同步烟测主程序 SHA-256：`5A971F8D32C4BE22E93F70FED3AE3AE9C05264AB5E4751D792D2C62735715810`；NSIS 打包 release EXE：`29D36C3DB7AD7055C2AA0B4585A6862AB60B511387966CA0AEFF6CBEE35AB266`；安装包：`A565A5ACA89F225C407FDDF3D8008D2F401242F7AD869D08111904232908860E`；三者 Authenticode：`NotSigned`。
+当前源码 release 主程序 SHA-256：`7AAE9A3F127F170223F8868CFAD6F7238732A3083735819876C21782612B494B`；sidecar：`B3A8F205F46ABAB593AED436239CA7950548A1AC60E4C4825EF2F37D6E38DD92`；NSIS 安装包：`BB84C19BA674CD3D4FEFAB2F04B2BF70D394AF7D353F72C6DDC63768B739B739`；三者 Authenticode：`NotSigned`。
 
-结论：V11 本地可验证实现、当前源码工具链与真实隔离存储回归成立；完整 real-chain、长时稳定性和发行门禁未闭合，禁止宣称 Production Acceptance、Combined PASS 或 terminal-complete。
+结论：V11 本地可验证实现、当前源码工具链、真实隔离存储、固定硬件性能、SHA 绑定视觉、原生通知 API 接受和本机安装/卸载回归成立；完整 real-chain、24 小时稳定性和签名发行门禁未闭合，禁止宣称 Production Acceptance、Combined PASS 或 terminal-complete。
 
 ## 2026-08-21 当前实现候选验收
 
