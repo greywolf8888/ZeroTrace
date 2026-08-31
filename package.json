@@ -49,7 +49,7 @@
     "sbom": "cyclonedx-npm --output-file reports/sbom.cdx.json --output-format JSON",
     "test": "npm run test:unit && npm run test:integration && npm run test:evals && npm run test:mcp",
     "test:evals": "vitest run evals",
-    "test:unit": "vitest run packages services apps/api/test/unit scripts/operational-gates.test.ts",
+    "test:unit": "vitest run packages services apps/api/test/unit scripts/operational-gates.test.ts tests/unit",
     "test:mcp": "vitest run scripts/readonly-mcp.test.ts",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "npm run build && playwright test",
