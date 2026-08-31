@@ -13,7 +13,12 @@
 ```powershell
 npm run desktop:prepare
 npm run desktop:build
+npm run desktop:smoke:release
 ```
+
+`desktop:smoke:release` 直接启动刚构建的 `target/release` 主程序及同目录 sidecar，检查中文
+窗口、动态 loopback、匿名访问拒绝、WebView2、单实例、系统通知 API 接收和退出无残留。
+回执只表示操作系统 API 接收，不表示用户已查看。
 
 `desktop:sync` / `start-workstation.cmd` 仅保留为旧开发入口，不得作为正式交付或安装证据。当前代码签名证书、清洁机安装和完整 Provider Setup/OS Credential Vault 验收仍是独立门禁；没有这些证据不得标记 G10 PASS。
 

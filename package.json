@@ -84,6 +84,7 @@
     "desktop:sync": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-dev-launcher.ps1",
     "desktop:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev-workstation.ps1",
     "desktop:smoke": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/desktop-launch-smoke.ps1",
+    "desktop:smoke:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/desktop-launch-smoke.ps1 -ExecutablePath target/release/zerotrace-desktop.exe -SidecarPath target/release/zerotrace-api.exe",
     "desktop:prepare": "npm run build:packages && npm run build -w @zerotrace/api && npm run build -w @zerotrace/web && node scripts/build-desktop-sidecar.mjs",
     "desktop:build": "npm run build -w @zerotrace/desktop",
     "test:ui:robust": "npm run ui:chinese:check",
