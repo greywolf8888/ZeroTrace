@@ -284,7 +284,7 @@ test('captures the long provider and storage state without clipping the evidence
     await expect(
       state.page.getByRole('heading', { name: '数据源与系统', exact: true }),
     ).toBeVisible();
-    await expect(state.page.locator('.provider-card')).toHaveCount(22);
+    await expect(state.page.locator('.provider-card')).toHaveCount(23);
     await expect(state.page.locator('.main-content')).toHaveScreenshot(
       'provider-table-dark-long.png',
       { animations: 'disabled', caret: 'hide', scale: 'css' },
