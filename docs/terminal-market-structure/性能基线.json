@@ -1,8 +1,158 @@
 {
   "schemaVersion": "zerotrace-performance-baseline-v2",
-  "status": "NOT_RUN",
+  "status": "MEASURED",
+  "benchmarkId": "bsc-public-dual-operator-v1",
+  "capturedAt": "2026-08-31T02:59:30.672Z",
+  "sourceFingerprint": "2de992fd3bc77976c0552a95d04989cd43789eeef1376166bd8e475e37961842",
+  "implementationSha": "9a7318126694d3159047eb003b050c60abb3a137",
+  "hardware": {
+    "fingerprint": "196dda3980daf6375ed9186b77d17f5770abcc52c1ee1a95814118e97c0ad371",
+    "platform": "win32",
+    "release": "10.0.26200",
+    "architecture": "x64",
+    "cpuModel": "Intel(R) Core(TM) i7-14650HX",
+    "logicalCpuCount": 24,
+    "totalMemoryBytes": 34078150656,
+    "nodeVersion": "v24.11.1"
+  },
+  "policy": {
+    "version": "2026-08-31",
+    "sha256": "75ad8e336d9be693e8a0e92b570b44e19a1862da0ddb3108e3fe022c729101dd"
+  },
+  "samples": [
+    {
+      "capturedAt": "2026-08-31T02:59:21.570Z",
+      "implementationSha": "9a7318126694d3159047eb003b050c60abb3a137",
+      "summaryHash": "4272f604f00d565f0774e2771275bf1c23db45b8bc5a04aef31ef9a289e42d64",
+      "totalDurationMs": 4228.948,
+      "maximumCaseDurationMs": 168.237,
+      "peakRssBytes": 76619776,
+      "pass": 8,
+      "fail": 0,
+      "blockedExternal": 0,
+      "unsupported": 1,
+      "sourceSet": ["https://bsc-dataseed.bnbchain.org", "https://bsc.nodereal.io"],
+      "caseStatuses": {
+        "BSC_FLAP_PORTAL_IDENTITY": "PASS",
+        "BSC_FLAP_TAX_V6_ORIGIN": "PASS",
+        "BSC_FLAP_TAX_V3_LIFETIME": "PASS",
+        "BSC_FLAP_NEW_TOKEN_V2": "PASS",
+        "BSC_FFT_REFERENCE": "PASS",
+        "BSC_PANCAKE_ROUTER_NEGATIVE": "PASS",
+        "BSC_PANCAKE_FACTORY_NEGATIVE": "PASS",
+        "PROVIDER_DISAGREEMENT_NEGATIVE_CASE": "PASS",
+        "UNSUPPORTED_V3_EXACT_EXIT": "UNSUPPORTED"
+      }
+    },
+    {
+      "capturedAt": "2026-08-31T02:59:24.214Z",
+      "implementationSha": "9a7318126694d3159047eb003b050c60abb3a137",
+      "summaryHash": "067680e83b029eb8977cb654adb330ff4cdfb5fb27f8eb2bc7bb4350e3bcd6ae",
+      "totalDurationMs": 2400.31,
+      "maximumCaseDurationMs": 153.242,
+      "peakRssBytes": 77258752,
+      "pass": 8,
+      "fail": 0,
+      "blockedExternal": 0,
+      "unsupported": 1,
+      "sourceSet": ["https://bsc-dataseed.bnbchain.org", "https://bsc.nodereal.io"],
+      "caseStatuses": {
+        "BSC_FLAP_PORTAL_IDENTITY": "PASS",
+        "BSC_FLAP_TAX_V6_ORIGIN": "PASS",
+        "BSC_FLAP_TAX_V3_LIFETIME": "PASS",
+        "BSC_FLAP_NEW_TOKEN_V2": "PASS",
+        "BSC_FFT_REFERENCE": "PASS",
+        "BSC_PANCAKE_ROUTER_NEGATIVE": "PASS",
+        "BSC_PANCAKE_FACTORY_NEGATIVE": "PASS",
+        "PROVIDER_DISAGREEMENT_NEGATIVE_CASE": "PASS",
+        "UNSUPPORTED_V3_EXACT_EXIT": "UNSUPPORTED"
+      }
+    },
+    {
+      "capturedAt": "2026-08-31T02:59:26.437Z",
+      "implementationSha": "9a7318126694d3159047eb003b050c60abb3a137",
+      "summaryHash": "c20ab230aaebe3b0682492d10c34d7ec43893f9047433682676b436a2a5e680d",
+      "totalDurationMs": 1988,
+      "maximumCaseDurationMs": 147.11,
+      "peakRssBytes": 76267520,
+      "pass": 8,
+      "fail": 0,
+      "blockedExternal": 0,
+      "unsupported": 1,
+      "sourceSet": ["https://bsc-dataseed.bnbchain.org", "https://bsc.nodereal.io"],
+      "caseStatuses": {
+        "BSC_FLAP_PORTAL_IDENTITY": "PASS",
+        "BSC_FLAP_TAX_V6_ORIGIN": "PASS",
+        "BSC_FLAP_TAX_V3_LIFETIME": "PASS",
+        "BSC_FLAP_NEW_TOKEN_V2": "PASS",
+        "BSC_FFT_REFERENCE": "PASS",
+        "BSC_PANCAKE_ROUTER_NEGATIVE": "PASS",
+        "BSC_PANCAKE_FACTORY_NEGATIVE": "PASS",
+        "PROVIDER_DISAGREEMENT_NEGATIVE_CASE": "PASS",
+        "UNSUPPORTED_V3_EXACT_EXIT": "UNSUPPORTED"
+      }
+    },
+    {
+      "capturedAt": "2026-08-31T02:59:28.605Z",
+      "implementationSha": "9a7318126694d3159047eb003b050c60abb3a137",
+      "summaryHash": "ac79385709a545b0666eefbe96218b793b610677062d7cf81d12a3b3470b367e",
+      "totalDurationMs": 1936.151,
+      "maximumCaseDurationMs": 147.294,
+      "peakRssBytes": 76775424,
+      "pass": 8,
+      "fail": 0,
+      "blockedExternal": 0,
+      "unsupported": 1,
+      "sourceSet": ["https://bsc-dataseed.bnbchain.org", "https://bsc.nodereal.io"],
+      "caseStatuses": {
+        "BSC_FLAP_PORTAL_IDENTITY": "PASS",
+        "BSC_FLAP_TAX_V6_ORIGIN": "PASS",
+        "BSC_FLAP_TAX_V3_LIFETIME": "PASS",
+        "BSC_FLAP_NEW_TOKEN_V2": "PASS",
+        "BSC_FFT_REFERENCE": "PASS",
+        "BSC_PANCAKE_ROUTER_NEGATIVE": "PASS",
+        "BSC_PANCAKE_FACTORY_NEGATIVE": "PASS",
+        "PROVIDER_DISAGREEMENT_NEGATIVE_CASE": "PASS",
+        "UNSUPPORTED_V3_EXACT_EXIT": "UNSUPPORTED"
+      }
+    },
+    {
+      "capturedAt": "2026-08-31T02:59:30.672Z",
+      "implementationSha": "9a7318126694d3159047eb003b050c60abb3a137",
+      "summaryHash": "d8e87fd17bd801fb9b5d7c35668ba6aa03e09fd6766209d413b42388d90ebb64",
+      "totalDurationMs": 1832.144,
+      "maximumCaseDurationMs": 145.141,
+      "peakRssBytes": 76460032,
+      "pass": 8,
+      "fail": 0,
+      "blockedExternal": 0,
+      "unsupported": 1,
+      "sourceSet": ["https://bsc-dataseed.bnbchain.org", "https://bsc.nodereal.io"],
+      "caseStatuses": {
+        "BSC_FLAP_PORTAL_IDENTITY": "PASS",
+        "BSC_FLAP_TAX_V6_ORIGIN": "PASS",
+        "BSC_FLAP_TAX_V3_LIFETIME": "PASS",
+        "BSC_FLAP_NEW_TOKEN_V2": "PASS",
+        "BSC_FFT_REFERENCE": "PASS",
+        "BSC_PANCAKE_ROUTER_NEGATIVE": "PASS",
+        "BSC_PANCAKE_FACTORY_NEGATIVE": "PASS",
+        "PROVIDER_DISAGREEMENT_NEGATIVE_CASE": "PASS",
+        "UNSUPPORTED_V3_EXACT_EXIT": "UNSUPPORTED"
+      }
+    }
+  ],
+  "observed": {
+    "totalDurationP95Ms": 4228.948,
+    "maximumCaseDurationMs": 168.237,
+    "maximumPeakRssBytes": 77258752
+  },
+  "budgets": {
+    "maximumTotalDurationMs": 8458,
+    "maximumCaseDurationMs": 419,
+    "maximumPeakRssBytes": 96573440
+  },
   "notes": [
-    "首轮候选暴露了自适应来源集合变化；旧样本已废弃，不能作为固定来源性能基线。",
-    "须在版本化固定来源集合、固定硬件、固定源码指纹上重新生成五个真实主网样本。"
+    "观测值来自当前固定硬件上的双独立 BSC Operator 只读真实主网案例。",
+    "预算由版本化回归余量策略推导；不得手工放宽，也不代表完整盘面能力已完成。"
   ]
 }
