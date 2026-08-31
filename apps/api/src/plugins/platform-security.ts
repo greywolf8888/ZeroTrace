@@ -29,6 +29,8 @@ const readOnlyPostRoutes = [
 const adminPostRoutes = [
   /^\/api\/v2\/jobs\/[^/]+\/(?:cancel|retry)$/,
   /^\/api\/v2\/analyst-decisions$/,
+  /^\/api\/v1\/research\/social-observation-windows\/sow_[0-9a-f]{24}\/fetch-next$/,
+  /^\/api\/v1\/research\/social-observation-tombstones$/,
 ] as const;
 
 export function classifyPlatformRoute(method: string, path: string): PlatformRouteAction | null {

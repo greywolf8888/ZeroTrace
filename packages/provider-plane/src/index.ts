@@ -60,8 +60,11 @@ export {
   type JsonPath,
   type SearchPage,
   type SearchPlan,
+  type SearchTemporalWindow,
   type SocialPost,
   type SocialSourceConfig,
+  type SocialSourceDispatchPolicy,
+  type SocialSourceTemporalContract,
 } from './social-source.js';
 export {
   assertExternalContentPolicy,

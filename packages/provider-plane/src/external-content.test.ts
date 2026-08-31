@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   authorizeExternalAiTransfer,
@@ -28,6 +28,16 @@ function configuredSource(
     ...structuredClone(FXEMBED_TEMPLATE),
     enabled: true,
     rightsApproved: true,
+    dispatch: {
+      accountId: 'fxembed-free-test',
+      costKind: 'VERIFIED_FREE',
+      maxUnits: '1',
+      maxMicrousd: '0',
+      costEvidence: 'fxembed-free-test-evidence',
+      quoteTtlSeconds: 300,
+      timeoutMs: 5_000,
+      maxResponseBytes: 1_000_000,
+    },
     contentPolicy: {
       policyVersion: 'fxembed-rights-test-v1',
       sourceId: 'fxembed',
@@ -73,6 +83,64 @@ describe('external content rights, deletion, and AI boundary', () => {
       contentPolicyVersion: 'fxembed-rights-test-v1',
       rightsEvidenceIds: [rightsEvidence],
     });
+  });
+
+  it('maps exact and UTC-date observation windows without claiming broader coverage', () => {
+    const exactSource = configuredSource();
+    exactSource.search!.temporal = {
+      sinceParameter: 'from',
+      untilParameter: 'until',
+      precision: 'INSTANT',
+      untilMode: 'EXCLUSIVE',
+      overlapSeconds: 60,
+    };
+    const exact = makeSearchPlan(exactSource, 'query', 'query-v1', null, 30, {
+      from: '2026-08-30T00:00:00.000Z',
+      until: '2026-09-01T00:00:00.000Z',
+    });
+    expect(new URL(exact.url).searchParams.get('from')).toBe('2026-08-29T23:59:00.000Z');
+    expect(new URL(exact.url).searchParams.get('until')).toBe('2026-09-01T00:00:00.000Z');
+    expect(exact.temporalWindow).toEqual({
+      requestedFrom: '2026-08-30T00:00:00.000Z',
+      requestedUntil: '2026-09-01T00:00:00.000Z',
+      queryFrom: '2026-08-29T23:59:00.000Z',
+      queryUntil: '2026-09-01T00:00:00.000Z',
+      precision: 'INSTANT',
+      untilMode: 'EXCLUSIVE',
+      overlapSeconds: 60,
+    });
+
+    const dateSource = configuredSource();
+    const datePlan = makeSearchPlan(dateSource, 'query', 'query-v1', null, 30, {
+      from: '2026-08-30T12:30:00.000Z',
+      until: '2026-09-01T00:00:00.000Z',
+    });
+    expect(new URL(datePlan.url).searchParams.get('since')).toBe('2026-08-30');
+    expect(new URL(datePlan.url).searchParams.get('until')).toBe('2026-08-31');
+    expect(datePlan.temporalWindow).toMatchObject({
+      requestedFrom: '2026-08-30T12:30:00.000Z',
+      requestedUntil: '2026-09-01T00:00:00.000Z',
+      precision: 'UTC_DATE',
+      untilMode: 'INCLUSIVE',
+    });
+
+    const withoutTemporal = configuredSource();
+    withoutTemporal.search!.temporal = null;
+    expect(() =>
+      makeSearchPlan(withoutTemporal, 'query', 'query-v1', null, 30, {
+        from: '2026-08-30T00:00:00.000Z',
+        until: '2026-09-01T00:00:00.000Z',
+      }),
+    ).toThrow('TEMPORAL_CONTRACT_UNAVAILABLE');
+
+    const invalidTemporal = configuredSource();
+    invalidTemporal.search!.temporal = {
+      ...invalidTemporal.search!.temporal!,
+      precision: 'MINUTE' as 'INSTANT',
+    };
+    expect(() => makeSearchPlan(invalidTemporal, 'query', 'query-v1')).toThrow(
+      'INVALID_TEMPORAL_CONTRACT',
+    );
   });
 
   it('creates a bounded record and a rights/evidence-preserving deletion tombstone', () => {
@@ -202,5 +270,59 @@ describe('external content rights, deletion, and AI boundary', () => {
       ),
     ).rejects.toThrow('BUDGET_OR_DISPATCH_NOT_APPROVED');
     expect(fetches).toBe(1);
+  });
+
+  it('rejects a tampered temporal plan before egress approval or dispatch', async () => {
+    const source = configuredSource();
+    const plan = makeSearchPlan(source, 'query', 'query-v1', null, 30, {
+      from: '2026-08-30T00:00:00.000Z',
+      until: '2026-09-01T00:00:00.000Z',
+    });
+    const tampered = {
+      ...plan,
+      url: plan.url.replace('until=2026-08-31', 'until=2026-09-01'),
+    };
+    const approvePublicOrigin = vi.fn(async () => true);
+    const claimDispatch = vi.fn(async () => true);
+    const fetcher = vi.fn();
+    await expect(
+      fetchSearchPage(
+        source,
+        tampered,
+        {
+          approvePublicOrigin,
+          claimDispatch,
+          fetcher,
+          readSecret: async () => '',
+        },
+        { timeoutMs: 1_000, maxBytes: 10_000 },
+        '2026-08-31T00:00:00.000Z',
+      ),
+    ).rejects.toThrow('PLAN_TEMPORAL_CONTRACT_MISMATCH');
+    expect(approvePublicOrigin).not.toHaveBeenCalled();
+    expect(claimDispatch).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+
+    await expect(
+      fetchSearchPage(
+        source,
+        {
+          ...plan,
+          temporalWindow: {
+            ...plan.temporalWindow!,
+            requestedUntil: '2026-09-02T00:00:00.000Z',
+          },
+        },
+        {
+          approvePublicOrigin,
+          claimDispatch,
+          fetcher,
+          readSecret: async () => '',
+        },
+        { timeoutMs: 1_000, maxBytes: 10_000 },
+        '2026-08-31T00:00:00.000Z',
+      ),
+    ).rejects.toThrow('PLAN_TEMPORAL_CONTRACT_MISMATCH');
+    expect(approvePublicOrigin).not.toHaveBeenCalled();
   });
 });

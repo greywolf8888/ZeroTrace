@@ -1,16 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
-import {
-  externalContentPolicyStatus,
-  FXEMBED_TEMPLATE,
-  makeSearchPlan,
-  XAPID_TEMPLATE,
-  type SocialSourceConfig,
-} from '@zerotrace/provider-plane';
+import { FXEMBED_TEMPLATE, makeSearchPlan, XAPID_TEMPLATE } from '@zerotrace/provider-plane';
 import { buildIdentityQueries, compileApprovedQuery } from '@zerotrace/workflow-core';
 
 import type { AppHttpContext } from '../http/context.js';
+import {
+  publicSource,
+  rightsEvidenceAvailable,
+  sourceStatus,
+} from './research-source-contracts.js';
+import { registerSocialDeletionRoutes } from './research-social-deletions.js';
+import { registerSocialObservationRoutes } from './research-social-observations.js';
 
 const QueryVersionSchema = z
   .string()
@@ -46,62 +47,6 @@ const SocialQueryPlanSchema = z
     ]),
   })
   .strict();
-
-function sourceStatus(
-  source: SocialSourceConfig,
-):
-  | 'READY'
-  | 'DISABLED'
-  | 'UNVERIFIED_IDENTITY'
-  | 'RIGHTS_NOT_APPROVED'
-  | 'CONTRACT_INCOMPLETE'
-  | 'CONTENT_POLICY_UNCONFIGURED'
-  | 'CONTENT_POLICY_INACTIVE' {
-  if (!source.identityVerified) return 'UNVERIFIED_IDENTITY';
-  if (!source.rightsApproved) return 'RIGHTS_NOT_APPROVED';
-  if (source.origin === null || source.documentation === null || source.search === null) {
-    return 'CONTRACT_INCOMPLETE';
-  }
-  const contentPolicy = externalContentPolicyStatus(source);
-  if (contentPolicy === 'UNCONFIGURED') return 'CONTENT_POLICY_UNCONFIGURED';
-  if (contentPolicy === 'INACTIVE') return 'CONTENT_POLICY_INACTIVE';
-  return source.enabled ? 'READY' : 'DISABLED';
-}
-
-function publicSource(source: SocialSourceConfig, durableDispatchAvailable: boolean) {
-  return {
-    providerId: source.id,
-    displayName: source.id === 'xapid' ? 'xapid（待确认具体服务）' : 'FxEmbed',
-    status: sourceStatus(source),
-    enabled: source.enabled,
-    identityVerified: source.identityVerified,
-    rightsApproved: source.rightsApproved,
-    endpointConfigured: source.origin !== null && source.search !== null,
-    documentation: source.documentation,
-    contractVersion: source.contractVersion,
-    contentPolicy:
-      source.contentPolicy === null
-        ? {
-            status: 'UNCONFIGURED',
-            retention: null,
-            deletionMode: null,
-            externalAi: 'PROHIBITED',
-          }
-        : {
-            status: externalContentPolicyStatus(source),
-            policyVersion: source.contentPolicy.policyVersion,
-            rightsStatus: source.contentPolicy.rightsStatus,
-            retention: source.contentPolicy.retention,
-            deletionMode: source.contentPolicy.deletionMode,
-            externalAi: source.contentPolicy.externalAi,
-            expiresAt: source.contentPolicy.expiresAt,
-          },
-    authenticationConfigured:
-      source.authentication.kind === 'NONE' || source.authentication.secretRef !== null,
-    upstreamGroup: source.upstreamGroup,
-    dispatchAllowed: sourceStatus(source) === 'READY' && durableDispatchAvailable,
-  };
-}
 
 export async function registerResearchSourceRoutes(
   app: FastifyInstance,
@@ -214,12 +159,7 @@ export async function registerResearchSourceRoutes(
           },
         });
       }
-      const rightsEvidence = await Promise.all(
-        source.contentPolicy.rightsEvidenceIds.map((id) =>
-          context.runtime.evidenceRepository?.get(id),
-        ),
-      );
-      if (rightsEvidence.some((node) => node === undefined)) {
+      if (!(await rightsEvidenceAvailable(context, source))) {
         return reply.code(409).send({
           error: {
             code: 'RESEARCH_RIGHTS_EVIDENCE_INCOMPLETE',
@@ -270,4 +210,7 @@ export async function registerResearchSourceRoutes(
       };
     },
   );
+
+  await registerSocialObservationRoutes(app, context);
+  await registerSocialDeletionRoutes(app, context);
 }
