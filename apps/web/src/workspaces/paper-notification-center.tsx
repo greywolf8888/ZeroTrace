@@ -8,12 +8,20 @@ import {
 import { zhUserMessage } from '../i18n/zh-CN.js';
 import { formatTime, shortId, StatusPill } from './shell/index.js';
 import { PaperEmptyState } from './paper-review-view.js';
+import {
+  desktopNotificationPermission,
+  detectDesktopNotificationRuntime,
+  dispatchDesktopNotification,
+  requestDesktopNotificationPermission,
+  type DesktopNotificationPermission,
+} from './desktop-notification-transport.js';
 
 export function PaperNotificationCenter({ experiment }: { experiment: PaperExperimentView }) {
   const [notifications, setNotifications] = useState<PaperNotificationView[]>([]);
-  const [desktopPermission, setDesktopPermission] = useState<
-    NotificationPermission | 'unsupported'
-  >(() => ('Notification' in window ? Notification.permission : 'unsupported'));
+  const [desktopPermission, setDesktopPermission] = useState<DesktopNotificationPermission>(() =>
+    desktopNotificationPermission(),
+  );
+  const desktopRuntime = detectDesktopNotificationRuntime();
   const [error, setError] = useState<string>();
 
   const refresh = useCallback(async () => {
@@ -35,18 +43,19 @@ export function PaperNotificationCenter({ experiment }: { experiment: PaperExper
   }, [refresh]);
 
   const dispatchDesktopNotifications = useCallback(async () => {
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (desktopPermission !== 'granted') return;
     for (let batch = 0; batch < 5; batch += 1) {
       const claimed = await api.claimPaperDesktopNotifications(experiment.id, 20);
       for (const item of claimed.records) {
         try {
-          new Notification(item.record.title, {
+          await dispatchDesktopNotification({
+            title: item.record.title,
             body: `模拟提醒 · ${item.event.chain} · ${shortId(item.event.assetId, 12)} · ${item.event.reasons
               .slice(0, 3)
               .map((reason) => reason.slice(0, 120))
               .join('；')}`,
-            tag: item.record.businessKey,
-            requireInteraction: item.record.urgency === 'URGENT',
+            businessKey: item.record.businessKey,
+            urgent: item.record.urgency === 'URGENT',
           });
           await api.settlePaperDesktopNotification(experiment.id, item.record.id, {
             leaseToken: item.leaseToken,
@@ -64,7 +73,7 @@ export function PaperNotificationCenter({ experiment }: { experiment: PaperExper
       }
       if (claimed.records.length < 20) break;
     }
-  }, [experiment.id]);
+  }, [desktopPermission, experiment.id]);
 
   useEffect(() => {
     if (desktopPermission !== 'granted') return;
@@ -93,11 +102,7 @@ export function PaperNotificationCenter({ experiment }: { experiment: PaperExper
   }, [desktopPermission, dispatchDesktopNotifications, refresh]);
 
   const enableDesktopNotifications = async () => {
-    if (!('Notification' in window)) {
-      setDesktopPermission('unsupported');
-      return;
-    }
-    setDesktopPermission(await Notification.requestPermission());
+    setDesktopPermission(await requestDesktopNotificationPermission());
   };
 
   const markRead = async (outboxId: string) => {
@@ -120,7 +125,9 @@ export function PaperNotificationCenter({ experiment }: { experiment: PaperExper
         <span>
           桌面权限：
           {desktopPermission === 'granted'
-            ? '已允许'
+            ? desktopRuntime === 'TAURI_NATIVE'
+              ? '系统通道已接入'
+              : '已允许'
             : desktopPermission === 'denied'
               ? '已拒绝'
               : desktopPermission === 'unsupported'
