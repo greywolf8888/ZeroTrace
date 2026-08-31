@@ -12,7 +12,7 @@
 
 P42 桌面通道已从持久 outbox 接到 Tauri 原生 Notification plugin。Rust 命令校验标题、正文与业务键，只在操作系统 Notification API 接受后返回与业务键绑定的回执；应用内已投递/已读、桌面租约/重试/幂等结算和真实 PostgreSQL 重放均保持通过。当前 release 烟测在 `ZEROTRACE_DESKTOP_NOTIFICATION_SMOKE=1` 下收到 `TAURI_NOTIFICATION_PLUGIN / HANDED_TO_OS_API_NOT_USER_READ_CONFIRMATION`，因此只证明交给 OS API，不证明通知一定可见或用户已读。浏览器 Web Notification 仍是独立降级路径，不会冒充 Tauri 原生送达。
 
-桌面当前源码 Tauri/NSIS 构建、同步和精确 release artifact 烟测通过：中文主窗口、动态 loopback sidecar、匿名 `401 DESKTOP_AUTH_REQUIRED`、WebView2、单实例、原生通知 API 接受与退出零残留均已验证。`target/release/zerotrace-desktop.exe` SHA-256 为 `7AAE9A3F127F170223F8868CFAD6F7238732A3083735819876C21782612B494B`，sidecar 为 `B3A8F205F46ABAB593AED436239CA7950548A1AC60E4C4825EF2F37D6E38DD92`，NSIS 安装包为 `BB84C19BA674CD3D4FEFAB2F04B2BF70D394AF7D353F72C6DDC63768B739B739`；三者仍为 `NotSigned`。安装包在本机隔离 current-user 目录完成安装、启动烟测与卸载，HKCU 卸载记录被正常移除；该结果不替代签名清洁机、升级或回滚验收。
+桌面当前源码 Tauri/NSIS 构建、同步和精确 release artifact 烟测通过：中文主窗口、动态 loopback sidecar、匿名 `401 DESKTOP_AUTH_REQUIRED`、WebView2、单实例、原生通知 API 接受与退出零残留均已验证。证据收口提交 `39b655f` 后的最终重建中，`target/release/zerotrace-desktop.exe` SHA-256 为 `E0541BD9BE73AE1550F14B44F3C3934A766B079FD0FB575B1C081916A213CF3A`，sidecar 为 `B3A8F205F46ABAB593AED436239CA7950548A1AC60E4C4825EF2F37D6E38DD92`，NSIS 安装包为 `8E48CC04BCD6F559A88593BB5DAA357ACE76DB08B087697088388DC5F742D6E9`；三者仍为 `NotSigned`。安装包在本机隔离 current-user 目录完成安装、启动烟测与卸载，HKCU 卸载记录被正常移除；该结果不替代签名清洁机、升级或回滚验收。
 
 视觉门禁新增 7 个经人工检查、SHA-256 绑定的 Windows Chromium/Tauri WebView 等效黄金状态，覆盖浅/深主题、1920×1080、1366×768、100%/125%/150% 等效缩放、390×844、来源故障和长数据源表；对应 49 个 E2E 均通过。它不替代签名清洁机的原生 DPI、字体和操作系统通知可见性验收。固定硬件性能门禁已落地版本化硬件/策略/源码指纹，并在同一 Intel i7-14650HX 主机上以 BNB Chain 与 NodeReal 两个公共 BSC Operator 完成五次基线和独立复核；具体观测与预算以 `docs/terminal-market-structure/性能基线.json` 为准。G13 因 24 小时 soak 尚未完成而只能是 `PARTIAL`。
 
