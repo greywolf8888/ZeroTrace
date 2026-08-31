@@ -10,6 +10,7 @@ export type LiveCaseStatus = 'PASS' | 'FAIL' | 'BLOCKED_EXTERNAL' | 'UNSUPPORTED
 export interface LiveCaseSummary {
   caseId: string;
   status: LiveCaseStatus;
+  failureClass: 'SOURCE_UNAVAILABLE' | 'SOURCE_CONFLICT' | null;
 }
 
 export interface LiveMeasurement {
@@ -26,6 +27,7 @@ export interface LiveSummary {
   fail: number;
   blockedExternal: number;
   unsupported: number;
+  sourceSet: string[];
   cases: LiveCaseSummary[];
   measurement: LiveMeasurement;
 }
@@ -34,6 +36,7 @@ export interface PerformancePolicy {
   schemaVersion: 'zerotrace-performance-budget-policy-v1';
   policyVersion: string;
   benchmarkId: string;
+  providerEndpointRefs: string[];
   minimumBaselineSamples: number;
   checkSamples: number;
   commandTimeoutMs: number;
@@ -82,6 +85,7 @@ export interface PerformanceSample {
   fail: number;
   blockedExternal: number;
   unsupported: number;
+  sourceSet: string[];
   caseStatuses: Record<string, LiveCaseStatus>;
 }
 
@@ -147,6 +151,7 @@ export interface SoakEvent {
   fail: number;
   blockedExternal: number;
   unsupported: number;
+  sourceSet: string[];
   previousEventHash: string | null;
   eventHash: string;
 }
@@ -257,6 +262,7 @@ export function policyHash(path: string): string {
 export function validateLiveSummary(
   summary: LiveSummary,
   expected: Readonly<Record<string, LiveCaseStatus>>,
+  expectedSourceSet?: readonly string[],
 ): string[] {
   const errors: string[] = [];
   if (!summary.measurement || !Number.isFinite(summary.measurement.durationMs)) {
@@ -272,6 +278,12 @@ export function validateLiveSummary(
     }
   }
   if (actual.size !== Object.keys(expected).length) errors.push('实链案例数量与固定基准不一致。');
+  if (
+    expectedSourceSet !== undefined &&
+    hashDocument([...summary.sourceSet].sort()) !== hashDocument([...expectedSourceSet].sort())
+  ) {
+    errors.push('实链来源集合与版本化性能策略不一致。');
+  }
   if (summary.fail !== 0) errors.push(`实链案例包含 ${summary.fail} 个 FAIL。`);
   if (summary.blockedExternal !== 0) {
     errors.push(`实链案例包含 ${summary.blockedExternal} 个外部阻塞。`);
@@ -279,11 +291,28 @@ export function validateLiveSummary(
   return errors;
 }
 
-export async function runLiveCase(root: string, timeoutMs: number): Promise<LiveExecution> {
+export function liveSummaryHasExternalBlocker(summary: LiveSummary): boolean {
+  return (
+    summary.blockedExternal > 0 ||
+    summary.cases.some((item) => item.failureClass === 'SOURCE_UNAVAILABLE')
+  );
+}
+
+export async function runLiveCase(
+  root: string,
+  timeoutMs: number,
+  providerEndpointRefs?: readonly string[],
+): Promise<LiveExecution> {
   return await new Promise((resolve) => {
     const child = spawn(process.execPath, ['--import', 'tsx', 'scripts/live-case-runner.ts'], {
       cwd: root,
-      env: { ...process.env, ZERO_TRACE_LIVE_GATE: 'operational' },
+      env: {
+        ...process.env,
+        ZERO_TRACE_LIVE_GATE: 'operational',
+        ...(providerEndpointRefs === undefined
+          ? {}
+          : { ZERO_TRACE_LIVE_PROVIDER_ENDPOINT_REFS: JSON.stringify(providerEndpointRefs) }),
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
@@ -353,6 +382,7 @@ export function performanceSample(execution: LiveExecution): PerformanceSample {
     fail: summary.fail,
     blockedExternal: summary.blockedExternal,
     unsupported: summary.unsupported,
+    sourceSet: summary.sourceSet,
     caseStatuses: Object.fromEntries(summary.cases.map((item) => [item.caseId, item.status])),
   };
 }
@@ -435,6 +465,12 @@ export function validatePerformanceBaseline(input: {
       if (sample.caseStatuses[caseId] !== status) {
         errors.push(`性能基线样本 ${sample.summaryHash} 的 ${caseId} 状态不合格。`);
       }
+    }
+    if (
+      hashDocument([...sample.sourceSet].sort()) !==
+      hashDocument([...policy.providerEndpointRefs].sort())
+    ) {
+      errors.push(`性能基线样本 ${sample.summaryHash} 的来源集合不匹配。`);
     }
     if (sample.fail !== 0 || sample.blockedExternal !== 0) {
       errors.push(`性能基线样本 ${sample.summaryHash} 包含失败或外部阻塞。`);
@@ -557,6 +593,7 @@ export function validateSoakChain(metadata: SoakRunMetadata, events: readonly So
       fail: event.fail,
       blockedExternal: event.blockedExternal,
       unsupported: event.unsupported,
+      sourceSet: event.sourceSet,
       previousEventHash: event.previousEventHash,
     };
     if (event.sequence !== index + 1) throw new Error('Soak 事件序号不连续。');
