@@ -15,18 +15,23 @@
 - [x] 当前 live case：`8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`；PASS 只证明双 Operator 只读捕获，不代表完整盘面
 - [x] P42 本地提醒路径：migration `045`、应用内已读、桌面 lease/重试/幂等结算、权限与中文 UI 已接通；`DISPATCHED` 不等于用户已读或模拟成交
 - [x] F04 查询计划路径：显式来源合同、权利 Evidence 与只读计划编译已接入；默认 xapid 在发网前以 `UNVERIFIED_IDENTITY` 失败关闭
-- [ ] `docker compose config --quiet` 通过，但 Docker Engine 不可连接；外部 PostgreSQL/ClickHouse/MinIO 相关 41 项集成为 `skipped`，migration `044`/`045` 未在真实 PostgreSQL 运行
-- [ ] P42 真实 PostgreSQL 重启恢复、当前源码桌面 OS 通知、签名清洁机及任何外部提醒渠道没有验收，命名 real-replay gate 未通过
+- [x] 当前源码隔离 PostgreSQL/ClickHouse/MinIO：45 个 migration 成功，9 文件 `129/129` 且 `0 skipped`；三服务重启后存储健康 `3/3`
+- [x] PostgreSQL 专项集成 7 文件 `38/38`；数据库重启后 P42 通知集成 `1/1`，16 条只追加 delivery event 保持可读，本地 durable real-replay 子门禁通过
+- [x] Apache AGE `1.7.0`：首次真实投影 `PROJECTED`、同输入 `REPLAYED`；服务重启后 result hash、节点/边数与 `projectedAt` 不变
+- [ ] 当前源码桌面 OS Notification、签名清洁机及任何外部提醒渠道没有验收；`DISPATCHED` 不能升级为用户已读或外部送达
 - [ ] F04/X73 真实来源抓取、分页、raw artifact、删除传播和 AI 外发未运行；计划生成不能替代数据获取
 - [ ] 免费语料 50 个 checkpoint 虽已处理，但 `originComplete=0`、`historyComplete=0`、`reviewed=false`，不得计为 50 Token corpus gate
 - [ ] trace-pending 仅 1/3 起源 COMPLETE；另外 2 个为 `PARTIAL(TRACE_UNAVAILABLE)`，通用 trace 插槽未配置
-- [ ] `cargo clippy --workspace -j 2 -- -D warnings`、`cargo test --workspace -j 2`、公式差分和当前源码 Tauri build 被本机缺失 MSVC `link.exe` 阻塞
+- [x] 经 Visual Studio Build Tools `VsDevCmd` 恢复 MSVC 环境，workspace clippy/test、公式差分 `2/2` 和当前源码 Tauri build 全部通过
+- [x] 当前源码桌面烟测：中文主窗口、动态 loopback sidecar、匿名 `401 DESKTOP_AUTH_REQUIRED`、WebView、单实例和 owned-process 回收通过；未读取会话 token，故不宣称认证健康探测通过
 - [ ] `npm run test:performance` 与 `npm run test:soak` 已实际执行并以非零退出返回 `NOT_RUN`；当前源码签名桌面包、清洁机、升级/回滚仍为 `NOT_RUN` 或 `BLOCKED`
-- [ ] Bitcoin Core/Esplora、Solana 独立 archive RPC、Pump/Raydium、Apache AGE 的本轮 named real-chain gate 未闭合
+- [ ] Bitcoin Core/Esplora、Solana 独立 archive RPC、Pump/Raydium 的本轮 named real-chain gate 未闭合；本轮 AGE 只证明持久图投影与重放，不替代这些实链门禁
 - [ ] 真实 IdP、逐记录租户/owner 隔离、持久四眼/WORM、xapid 服务身份和第三方 AI 权利/删除送达未验证
 - [ ] G14 Final Acceptance：`BLOCKED`
 
-结论：V11 本地可验证实现与工程回归成立；完整 real-chain、外部设施、长时稳定性和发行门禁未闭合，禁止宣称 Production Acceptance、Combined PASS 或 terminal-complete。
+当前源码桌面主程序 SHA-256：`B01318FF203EA796535560AB658D224BAC40C5CD0FEB1510449BEB73E0D3EE0D`；NSIS SHA-256：`6F246715C6576910E20731EC6AE07AD10E232D80104EA2F257F0926825CDCA95`；两者 Authenticode：`NotSigned`。
+
+结论：V11 本地可验证实现、当前源码工具链与真实隔离存储回归成立；完整 real-chain、长时稳定性和发行门禁未闭合，禁止宣称 Production Acceptance、Combined PASS 或 terminal-complete。
 
 ## 2026-08-21 当前实现候选验收
 
