@@ -1,14 +1,36 @@
 # Real current-source Tauri smoke: start the app with its packaged read-only API
 # sidecar, verify dynamic loopback/auth/window state, then reclaim owned processes.
 
+param(
+  [string]$ExecutablePath = '',
+  [string]$SidecarPath = ''
+)
+
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$binDir = Join-Path $root 'apps\desktop\bin'
-$exe = Join-Path $binDir 'ZeroTrace.exe'
-$sidecar = Join-Path $binDir 'zerotrace-api.exe'
+$explicitArtifacts = -not [string]::IsNullOrWhiteSpace($ExecutablePath) -or
+  -not [string]::IsNullOrWhiteSpace($SidecarPath)
+if ($explicitArtifacts -and (
+    [string]::IsNullOrWhiteSpace($ExecutablePath) -or
+    [string]::IsNullOrWhiteSpace($SidecarPath)
+  )) {
+  throw 'ExecutablePath and SidecarPath must be provided together.'
+}
+if ($explicitArtifacts) {
+  $exe = [System.IO.Path]::GetFullPath((Join-Path $root $ExecutablePath))
+  $sidecar = [System.IO.Path]::GetFullPath((Join-Path $root $SidecarPath))
+  $binDir = Split-Path -Parent $exe
+  if ((Split-Path -Parent $sidecar) -ne $binDir -or (Split-Path -Leaf $sidecar) -ne 'zerotrace-api.exe') {
+    throw 'The release sidecar must be zerotrace-api.exe beside the selected executable.'
+  }
+} else {
+  $binDir = Join-Path $root 'apps\desktop\bin'
+  $exe = Join-Path $binDir 'ZeroTrace.exe'
+  $sidecar = Join-Path $binDir 'zerotrace-api.exe'
+}
 foreach ($artifact in @($exe, $sidecar)) {
   if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) {
-    throw "Missing $artifact. Run npm run desktop:sync first."
+    throw "Missing desktop smoke artifact: $artifact"
   }
 }
 
@@ -62,7 +84,8 @@ function Get-AnonymousHealthStatus {
   }
 }
 
-$existing = @(Get-Process -Name 'ZeroTrace' -ErrorAction SilentlyContinue | Where-Object {
+$processName = [System.IO.Path]::GetFileNameWithoutExtension($exe)
+$existing = @(Get-Process -Name $processName -ErrorAction SilentlyContinue | Where-Object {
   try { $_.Path -eq $exe } catch { $false }
 })
 if ($existing.Count -gt 0) {
