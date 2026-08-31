@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-agent-state-v1",
-  "implementationSha": "a4371e669d25d6e5596ce32ddbef3af708c97a61",
+  "implementationSha": "64ed35e9c3cbd86c2de9419347db6aa137b1df20",
   "branch": "agent/terminal-market-structure-v1",
   "currentStage": "X74_RELEASE_VERIFICATION",
   "currentGate": "G14_RELEASE",
@@ -22,15 +22,15 @@
     "G14_RELEASE": "BLOCKED"
   },
   "localTechnicalEvidence": {
-    "coverage": "1114 PASS / 41 SKIPPED; branches 75.05%",
+    "coverage": "1124 PASS / 42 SKIPPED; statements 82.79%; branches 75.23%; functions 91.27%; lines 84.64%",
     "package": "UTF-8 integrity PASS; isolated TypeScript/Node PASS; Python installer/planner 13/15 with 2 BLOCKED_NO_SYMLINK_PRIVILEGE",
     "e2e": "42/42 Chromium desktop/mobile; Windows wrapper 42/42",
-    "terminal": "Rust fmt/clippy/workspace tests + formula differential 2/2 + offline replay + 70 property + 41 forensic golden PASS",
+    "terminal": "Rust fmt/clippy/workspace tests + formula differential 2/2 + offline replay + 72 property + 41 forensic golden PASS",
     "live": "8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL",
-    "desktop": "current-source Tauri/NSIS build and runtime smoke PASS; Authenticode NotSigned; signed clean-machine gate open",
-    "storage": "45 PostgreSQL migrations PASS; PostgreSQL/ClickHouse/MinIO integration 129/129 with 0 skipped; post-restart health 3/3; AGE projection/replay/restart PASS",
+    "desktop": "current-source sync/Tauri/NSIS build and dynamic-sidecar runtime smoke PASS; owned survivors 0; Authenticode NotSigned; signed clean-machine gate open",
+    "storage": "45-migration PostgreSQL/ClickHouse/MinIO integration 129/129 and restart health 3/3 PASS; migration 046 isolated social transaction 1/1 and restart hash PASS; AGE projection/replay/restart PASS",
     "notifications": "migration 045 + in-app read + desktop lease/retry/idempotent settlement + real PostgreSQL restart replay PASS; OS/external delivery gate open",
-    "socialPlans": "verified explicit contracts compile versioned no-network plans; xapid remains UNVERIFIED_IDENTITY and disabled",
+    "socialObservations": "durable temporal windows, keyset pagination, idempotent verified-free dispatch/settlement, Evidence and no-text tombstones PASS locally; xapid remains UNVERIFIED_IDENTITY, disabled and uncalled",
     "security": "OIDC signature/tenant/role/MFA claim mapping and route RBAC fail closed; real IdP and record tenancy open",
     "audit": "production npm audit 0 vulnerabilities; license and SBOM PASS"
   },
@@ -44,7 +44,7 @@
     "24h monitor soak is NOT_RUN",
     "installer is unsigned and clean-machine acceptance is NOT_RUN",
     "complete SHA-bound visual golden-state set is NOT_RUN",
-    "xapid service identity, real social fetch/pagination/raw artifacts, and third-party content deletion/AI delivery are unverified"
+    "xapid service identity, real FxEmbed/xapid calls, raw response artifacts, upstream deletion signals, and third-party AI delivery are unverified"
   ],
   "lastCommands": [
     "npm run verify",
@@ -57,6 +57,9 @@
     "npm run test:soak",
     "npm run desktop:prepare",
     "npm run desktop:build",
+    "npm run desktop:sync",
+    "npm run desktop:smoke",
+    "TEST_POSTGRES_URL=... npm exec vitest -- run tests/integration/social-observations-postgres.test.ts",
     "npm run corpus:free-only",
     "npm run corpus:trace-pending",
     "cargo clippy --workspace -j 2 -- -D warnings",
@@ -67,6 +70,6 @@
     "npm run graph:age:smoke -- --chain-id eip155:1"
   ],
   "nextAction": "Close external and long-duration gates; do not merge while any gate is PARTIAL, UNSUPPORTED, NOT_RUN, or BLOCKED.",
-  "updatedAt": "2026-08-31T08:38:07+08:00",
+  "updatedAt": "2026-08-31T10:40:30+08:00",
   "originMainSha": "68ebfd9ae92305dd47bbc3175af07bda1a172c61"
 }
