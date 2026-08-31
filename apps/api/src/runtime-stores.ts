@@ -28,6 +28,7 @@ import {
   PostgresPensionCandidateReportRepository,
   PostgresPaperSimulationRepository,
   PostgresSemanticScanCheckpointRepository,
+  PostgresSocialObservationRepository,
   PostgresSolanaControlSurfaceRepository,
   PostgresSolanaDealerCampaignReportRepository,
   PostgresSolanaTransactionReportRepository,
@@ -86,6 +87,7 @@ export interface DurableRuntimeStores {
   captureSchedules?: PostgresCaptureScheduleRepository | undefined;
   dataProcurement?: PostgresDataProcurementRepository | undefined;
   paperSimulation?: PostgresPaperSimulationRepository | undefined;
+  socialObservations?: PostgresSocialObservationRepository | undefined;
   ageInvestigationGraphProjection?: AgeInvestigationGraphProjectionRepository | undefined;
   artifacts?: RawArtifactStore | undefined;
   closeStores: (
@@ -203,6 +205,10 @@ export function createDurableStores(config: AppConfig): DurableRuntimeStores {
     captureSchedules: optionalStore(postgres, () => new PostgresCaptureScheduleRepository(pg())),
     dataProcurement: optionalStore(postgres, () => new PostgresDataProcurementRepository(pg())),
     paperSimulation: optionalStore(postgres, () => new PostgresPaperSimulationRepository(pg())),
+    socialObservations: optionalStore(
+      postgres,
+      () => new PostgresSocialObservationRepository(pg()),
+    ),
     ageInvestigationGraphProjection: optionalStore(config.ageUrl !== undefined, () => {
       if (config.ageUrl === undefined) throw new Error('Apache AGE URL missing.');
       return new AgeInvestigationGraphProjectionRepository({
@@ -270,6 +276,7 @@ export function createDurableStores(config: AppConfig): DurableRuntimeStores {
         stores.captureSchedules?.close(),
         stores.dataProcurement?.close(),
         stores.paperSimulation?.close(),
+        stores.socialObservations?.close(),
         stores.ageInvestigationGraphProjection?.close(),
         stores.rawFacts?.close(),
         stores.artifacts?.close(),

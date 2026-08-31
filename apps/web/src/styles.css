@@ -2201,6 +2201,47 @@ tbody tr:hover {
   border-radius: 8px;
 }
 
+.social-observation-panel {
+  margin-top: 14px;
+}
+
+.social-observation-form {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+.social-observation-form .social-address-field {
+  grid-column: span 2;
+}
+
+.social-observation-form .control-actions {
+  align-self: end;
+}
+
+.social-observation-form select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 13px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+}
+
+.social-window-message {
+  margin: 0 18px 14px;
+}
+
+.social-window-grid {
+  padding: 0 18px 18px;
+}
+
+.social-window-grid .provider-card > .secondary-button {
+  width: 100%;
+  margin-top: 14px;
+}
+
 .burn-conservation-result {
   min-width: 0;
   border-top: 1px solid var(--border);

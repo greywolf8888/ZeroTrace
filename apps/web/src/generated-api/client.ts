@@ -593,7 +593,14 @@ export interface ResearchSourceSettingsResponse {
     providerId: string;
     displayName: string;
     status:
-      'READY' | 'DISABLED' | 'UNVERIFIED_IDENTITY' | 'RIGHTS_NOT_APPROVED' | 'CONTRACT_INCOMPLETE';
+      | 'READY'
+      | 'DISABLED'
+      | 'UNVERIFIED_IDENTITY'
+      | 'RIGHTS_NOT_APPROVED'
+      | 'CONTRACT_INCOMPLETE'
+      | 'DISPATCH_POLICY_UNCONFIGURED'
+      | 'CONTENT_POLICY_UNCONFIGURED'
+      | 'CONTENT_POLICY_INACTIVE';
     enabled: boolean;
     identityVerified: boolean;
     rightsApproved: boolean;
@@ -601,10 +608,83 @@ export interface ResearchSourceSettingsResponse {
     documentation: string | null;
     contractVersion: string;
     authenticationConfigured: boolean;
+    dispatchPolicyConfigured: boolean;
+    observationWindowSupported: boolean;
     upstreamGroup: 'X';
     dispatchAllowed: boolean;
+    contentPolicy: {
+      status: 'READY' | 'UNCONFIGURED' | 'INACTIVE';
+      policyVersion?: string;
+      rightsStatus?: 'VERIFIED' | 'REVOKED' | 'UNVERIFIED';
+      retention: 'METADATA_ONLY' | 'EPHEMERAL_TEXT' | 'DURABLE_TEXT' | null;
+      deletionMode: 'POLL_OR_WEBHOOK_VERIFIED' | 'ARCHIVE_RIGHT_VERIFIED' | 'UNVERIFIED' | null;
+      externalAi: 'PROHIBITED' | 'RIGHTS_GATED';
+      expiresAt?: string;
+    };
   }>;
   xUpstreamEvidenceRule: 'ALL_X_TOOLS_ONE_UPSTREAM_GROUP';
+}
+
+export interface SocialObservationWindowView {
+  id: string;
+  ledger: 'EVM' | 'SOLANA';
+  chainId: string;
+  assetKey: string;
+  queryRole: string;
+  providerId: string;
+  queryVersion: string;
+  contractVersion: string;
+  temporalContract: {
+    sinceParameter: string;
+    untilParameter: string;
+    precision: 'INSTANT' | 'UTC_DATE';
+    untilMode: 'EXCLUSIVE' | 'INCLUSIVE';
+    overlapSeconds: number;
+  };
+  contentPolicyVersion: string;
+  from: string;
+  until: string;
+  cursor: string | null;
+  completed: boolean;
+  pages: number;
+  revision: number;
+  coverage: 'NOT_COMPLETE' | 'ACCESSIBLE_QUERY_RESULTS_PROCESSED';
+  pageSize: number;
+  rightsEvidenceIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SocialObservationWindowCreateResponse {
+  mode: 'DURABLE_READ_ONLY_SOCIAL_OBSERVATION';
+  sourceId: string;
+  assetKey: string;
+  networkRequestPerformed: false;
+  windows: SocialObservationWindowView[];
+  warning: string;
+}
+
+export interface SocialObservationWindowListResponse {
+  records: SocialObservationWindowView[];
+  nextCursor: string | null;
+}
+
+export interface SocialObservationFetchResponse {
+  replayed: boolean;
+  networkRequestPerformed: boolean;
+  receipt: {
+    receiptId: string;
+    windowId: string;
+    pageRevision: number;
+    requestedCursor: string | null;
+    nextCursor: string | null;
+    recordsPersisted: number;
+    normalizedPageHash: string;
+    evidenceIds: string[];
+    procurementRequestId: string;
+    createdAt: string;
+  };
+  window: SocialObservationWindowView;
 }
 
 export interface StorageQuotaView {
@@ -2859,6 +2939,34 @@ export const api = {
     requestJson<ResearchSourceSettingsResponse>(
       '/api/v1/settings/research-sources',
       signal === undefined ? {} : { signal },
+    ),
+  createSocialObservationWindows: (input: {
+    providerId: string;
+    queryVersion: string;
+    pageSize: number;
+    from: string;
+    until: string;
+    identity: { chain: 'BSC'; address: string } | { chain: 'SOLANA'; address: string };
+  }) =>
+    requestJson<SocialObservationWindowCreateResponse>(
+      '/api/v1/research/social-observation-windows',
+      { method: 'POST', body: JSON.stringify(input) },
+    ),
+  socialObservationWindow: (windowId: string) =>
+    requestJson<SocialObservationWindowView>(
+      `/api/v1/research/social-observation-windows/${encodeURIComponent(windowId)}`,
+    ),
+  socialObservationWindows: (after?: string, limit = 50) => {
+    const parameters = new URLSearchParams({ limit: String(limit) });
+    if (after !== undefined) parameters.set('after', after);
+    return requestJson<SocialObservationWindowListResponse>(
+      `/api/v1/research/social-observation-windows?${parameters.toString()}`,
+    );
+  },
+  fetchNextSocialObservationWindow: (windowId: string, idempotencyKey: string) =>
+    requestJson<SocialObservationFetchResponse>(
+      `/api/v1/research/social-observation-windows/${encodeURIComponent(windowId)}/fetch-next`,
+      { method: 'POST', body: JSON.stringify({ idempotencyKey }) },
     ),
   paperPortfolioSettings: (signal?: AbortSignal) =>
     requestJson<PaperPortfolioSettingsResponse>(

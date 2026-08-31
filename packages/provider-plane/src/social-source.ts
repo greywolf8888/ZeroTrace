@@ -7,6 +7,23 @@ import {
  * Credentials, durable quota reservation, DNS/egress policy and dispatch leases are injected by
  * the existing provider-plane. No source is treated as independent of its upstream platform. */
 export type JsonPath = readonly string[];
+export interface SocialSourceDispatchPolicy {
+  accountId: string;
+  costKind: 'VERIFIED_FREE' | 'PAID_MAXIMUM' | 'UNKNOWN';
+  maxUnits: string;
+  maxMicrousd: string;
+  costEvidence: string;
+  quoteTtlSeconds: number;
+  timeoutMs: number;
+  maxResponseBytes: number;
+}
+export interface SocialSourceTemporalContract {
+  sinceParameter: string;
+  untilParameter: string;
+  precision: 'INSTANT' | 'UTC_DATE';
+  untilMode: 'EXCLUSIVE' | 'INCLUSIVE';
+  overlapSeconds: number;
+}
 export interface SocialSourceConfig {
   id: string;
   origin: string | null;
@@ -22,6 +39,7 @@ export interface SocialSourceConfig {
     secretRef: string | null;
     headerName: string | null;
   };
+  dispatch: SocialSourceDispatchPolicy | null;
   search: {
     path: string;
     queryParameter: string;
@@ -41,7 +59,17 @@ export interface SocialSourceConfig {
     createdAtPath: JsonPath;
     authorIdPath: JsonPath | null;
     authorHandlePath: JsonPath | null;
+    temporal: SocialSourceTemporalContract | null;
   } | null;
+}
+export interface SearchTemporalWindow {
+  requestedFrom: string;
+  requestedUntil: string;
+  queryFrom: string;
+  queryUntil: string;
+  precision: SocialSourceTemporalContract['precision'];
+  untilMode: SocialSourceTemporalContract['untilMode'];
+  overlapSeconds: number;
 }
 export interface SearchPlan {
   sourceId: string;
@@ -52,6 +80,7 @@ export interface SearchPlan {
   rightsEvidenceIds: readonly string[];
   queryVersion: string;
   cursor: string | null;
+  temporalWindow: SearchTemporalWindow | null;
 }
 export interface SocialPost {
   id: string;
@@ -122,10 +151,34 @@ function ready(c: SocialSourceConfig): NonNullable<SocialSourceConfig['search']>
     !c.documentation ||
     !c.contractVersion ||
     !c.search ||
-    !c.contentPolicy
+    !c.contentPolicy ||
+    !c.dispatch
   )
     throw new Error('SOURCE_NOT_READY');
   assertExternalContentPolicy(c, c.contentPolicy, new Date().toISOString());
+  const dispatch = c.dispatch;
+  if (
+    !/^[A-Za-z0-9_:.-]{1,180}$/.test(dispatch.accountId) ||
+    !/^(0|[1-9][0-9]*)$/.test(dispatch.maxUnits) ||
+    !/^(0|[1-9][0-9]*)$/.test(dispatch.maxMicrousd) ||
+    dispatch.maxUnits === '0' ||
+    dispatch.costEvidence.trim().length === 0 ||
+    !Number.isSafeInteger(dispatch.quoteTtlSeconds) ||
+    dispatch.quoteTtlSeconds < 30 ||
+    dispatch.quoteTtlSeconds > 86_400 ||
+    !Number.isSafeInteger(dispatch.timeoutMs) ||
+    dispatch.timeoutMs < 1 ||
+    dispatch.timeoutMs > 120_000 ||
+    !Number.isSafeInteger(dispatch.maxResponseBytes) ||
+    dispatch.maxResponseBytes < 1 ||
+    dispatch.maxResponseBytes > 20_000_000
+  ) {
+    throw new Error('INVALID_DISPATCH_POLICY');
+  }
+  if (dispatch.costKind === 'UNKNOWN') throw new Error('SOURCE_PRICE_UNVERIFIED');
+  if (dispatch.costKind === 'VERIFIED_FREE' && dispatch.maxMicrousd !== '0') {
+    throw new Error('FREE_SOURCE_CANNOT_RESERVE_MONEY');
+  }
   if (
     !Number.isSafeInteger(c.search.maxCount) ||
     c.search.maxCount < 1 ||
@@ -135,7 +188,70 @@ function ready(c: SocialSourceConfig): NonNullable<SocialSourceConfig['search']>
     c.search.maxQueryChars > 20000
   )
     throw new Error('INVALID_SOURCE_LIMITS');
+  const temporal = c.search.temporal;
+  if (
+    temporal !== null &&
+    (!/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(temporal.sinceParameter) ||
+      !/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(temporal.untilParameter) ||
+      temporal.sinceParameter === temporal.untilParameter ||
+      !['INSTANT', 'UTC_DATE'].includes(temporal.precision) ||
+      !['EXCLUSIVE', 'INCLUSIVE'].includes(temporal.untilMode) ||
+      !Number.isSafeInteger(temporal.overlapSeconds) ||
+      temporal.overlapSeconds < 0 ||
+      temporal.overlapSeconds > 604_800)
+  ) {
+    throw new Error('INVALID_TEMPORAL_CONTRACT');
+  }
   return c.search;
+}
+
+function utcDate(milliseconds: number): string {
+  return new Date(milliseconds).toISOString().slice(0, 10);
+}
+
+function temporalWindow(
+  contract: SocialSourceTemporalContract,
+  input: { from: string; until: string },
+): SearchTemporalWindow {
+  const from = Date.parse(input.from);
+  const until = Date.parse(input.until);
+  if (!Number.isFinite(from) || !Number.isFinite(until) || from >= until) {
+    throw new Error('INVALID_TEMPORAL_WINDOW');
+  }
+  const requestedFrom = new Date(from).toISOString();
+  const requestedUntil = new Date(until).toISOString();
+  const overlappedFrom = from - contract.overlapSeconds * 1_000;
+  if (contract.precision === 'INSTANT') {
+    return {
+      requestedFrom,
+      requestedUntil,
+      queryFrom: new Date(overlappedFrom).toISOString(),
+      queryUntil: requestedUntil,
+      precision: contract.precision,
+      untilMode: contract.untilMode,
+      overlapSeconds: contract.overlapSeconds,
+    };
+  }
+  const queryUntil =
+    contract.untilMode === 'INCLUSIVE'
+      ? utcDate(until - 1)
+      : utcDate(
+          new Date(until).getUTCHours() === 0 &&
+            new Date(until).getUTCMinutes() === 0 &&
+            new Date(until).getUTCSeconds() === 0 &&
+            new Date(until).getUTCMilliseconds() === 0
+            ? until
+            : until + 86_400_000,
+        );
+  return {
+    requestedFrom,
+    requestedUntil,
+    queryFrom: utcDate(overlappedFrom),
+    queryUntil,
+    precision: contract.precision,
+    untilMode: contract.untilMode,
+    overlapSeconds: contract.overlapSeconds,
+  };
 }
 export function makeSearchPlan(
   c: SocialSourceConfig,
@@ -143,6 +259,7 @@ export function makeSearchPlan(
   version: string,
   cursor: string | null = null,
   count = 30,
+  window: { from: string; until: string } | null = null,
 ): SearchPlan {
   const e = ready(c),
     origin = validateOrigin(c.origin);
@@ -168,9 +285,17 @@ export function makeSearchPlan(
     throw new Error('UNSAFE_ENDPOINT_PATH');
   const url = new URL(e.path, origin);
   if (url.origin !== origin) throw new Error('ORIGIN_CHANGED');
-  const names = [e.queryParameter, e.cursorParameter, e.countParameter, e.latestParameter].filter(
-    (v): v is string => v !== null,
-  );
+  if (window !== null && e.temporal === null) throw new Error('TEMPORAL_CONTRACT_UNAVAILABLE');
+  const boundedWindow =
+    window === null || e.temporal === null ? null : temporalWindow(e.temporal, window);
+  const names = [
+    e.queryParameter,
+    e.cursorParameter,
+    e.countParameter,
+    e.latestParameter,
+    e.temporal?.sinceParameter ?? null,
+    e.temporal?.untilParameter ?? null,
+  ].filter((v): v is string => v !== null);
   if (
     names.some((k) => !/^[a-zA-Z][a-zA-Z0-9_]{0,63}$/.test(k)) ||
     new Set(names).size !== names.length
@@ -180,6 +305,10 @@ export function makeSearchPlan(
   if (cursor !== null) url.searchParams.set(e.cursorParameter, cursor);
   if (e.countParameter) url.searchParams.set(e.countParameter, String(count));
   if (e.latestParameter && e.latestValue) url.searchParams.set(e.latestParameter, e.latestValue);
+  if (boundedWindow !== null && e.temporal !== null) {
+    url.searchParams.set(e.temporal.sinceParameter, boundedWindow.queryFrom);
+    url.searchParams.set(e.temporal.untilParameter, boundedWindow.queryUntil);
+  }
   return {
     sourceId: c.id,
     origin,
@@ -189,6 +318,7 @@ export function makeSearchPlan(
     rightsEvidenceIds: [...c.contentPolicy!.rightsEvidenceIds].sort(),
     queryVersion: version,
     cursor,
+    temporalWindow: boundedWindow,
   };
 }
 export function normalizeSearchPage(
@@ -270,8 +400,44 @@ export async function fetchSearchPage(
   )
     throw new Error('PLAN_SOURCE_MISMATCH');
   // A persisted plan must still use the fixed approved endpoint. No arbitrary URL tool is exposed.
-  if (new URL(plan.url).pathname !== new URL(c.search!.path, origin).pathname)
+  const plannedUrl = new URL(plan.url);
+  if (plannedUrl.pathname !== new URL(c.search!.path, origin).pathname)
     throw new Error('PLAN_ENDPOINT_MISMATCH');
+  const temporal = c.search!.temporal;
+  let expectedTemporalWindow: SearchTemporalWindow | null = null;
+  if (plan.temporalWindow !== null && temporal !== null) {
+    try {
+      expectedTemporalWindow = temporalWindow(temporal, {
+        from: plan.temporalWindow.requestedFrom,
+        until: plan.temporalWindow.requestedUntil,
+      });
+    } catch {
+      throw new Error('PLAN_TEMPORAL_CONTRACT_MISMATCH');
+    }
+  }
+  if (
+    (plan.temporalWindow !== null && temporal === null) ||
+    (plan.temporalWindow === null &&
+      temporal !== null &&
+      (plannedUrl.searchParams.has(temporal.sinceParameter) ||
+        plannedUrl.searchParams.has(temporal.untilParameter))) ||
+    (plan.temporalWindow !== null &&
+      temporal !== null &&
+      (expectedTemporalWindow === null ||
+        plan.temporalWindow.requestedFrom !== expectedTemporalWindow.requestedFrom ||
+        plan.temporalWindow.requestedUntil !== expectedTemporalWindow.requestedUntil ||
+        plan.temporalWindow.queryFrom !== expectedTemporalWindow.queryFrom ||
+        plan.temporalWindow.queryUntil !== expectedTemporalWindow.queryUntil ||
+        plan.temporalWindow.precision !== temporal.precision ||
+        plan.temporalWindow.untilMode !== temporal.untilMode ||
+        plan.temporalWindow.overlapSeconds !== temporal.overlapSeconds ||
+        plannedUrl.searchParams.getAll(temporal.sinceParameter).length !== 1 ||
+        plannedUrl.searchParams.getAll(temporal.untilParameter).length !== 1 ||
+        plannedUrl.searchParams.get(temporal.sinceParameter) !== plan.temporalWindow.queryFrom ||
+        plannedUrl.searchParams.get(temporal.untilParameter) !== plan.temporalWindow.queryUntil))
+  ) {
+    throw new Error('PLAN_TEMPORAL_CONTRACT_MISMATCH');
+  }
   if (
     !Number.isSafeInteger(options.timeoutMs) ||
     options.timeoutMs < 1 ||
@@ -354,6 +520,7 @@ export const FXEMBED_TEMPLATE: SocialSourceConfig = {
   contractVersion: 'fxembed-docs-2026-08-30',
   upstreamGroup: 'X',
   authentication: { kind: 'NONE', secretRef: null, headerName: null },
+  dispatch: null,
   search: {
     path: '/2/search',
     queryParameter: 'q',
@@ -373,6 +540,13 @@ export const FXEMBED_TEMPLATE: SocialSourceConfig = {
     createdAtPath: ['created_at'],
     authorIdPath: ['author', 'id'],
     authorHandlePath: ['author', 'screen_name'],
+    temporal: {
+      sinceParameter: 'since',
+      untilParameter: 'until',
+      precision: 'UTC_DATE',
+      untilMode: 'INCLUSIVE',
+      overlapSeconds: 0,
+    },
   },
 };
 export const XAPID_TEMPLATE: SocialSourceConfig = {
@@ -386,5 +560,6 @@ export const XAPID_TEMPLATE: SocialSourceConfig = {
   contractVersion: 'UNVERIFIED',
   upstreamGroup: 'X',
   authentication: { kind: 'NONE', secretRef: null, headerName: null },
+  dispatch: null,
   search: null,
 };
