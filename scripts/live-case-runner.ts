@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 
 import { defaultBscPublicCatalog, selectProviders } from '@zerotrace/provider-plane';
@@ -332,13 +333,26 @@ async function runCase(
 }
 
 const sha = gitSha();
+const startedAt = new Date().toISOString();
+const started = performance.now();
+let peakRssBytes = process.memoryUsage().rss;
+const rssSampler = setInterval(() => {
+  peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
+}, 25);
 const urls = await configuredUrls();
 const outRoot = join(root, 'output', 'zero-trust-validation', sha);
 mkdirSync(outRoot, { recursive: true });
 
 const summary = [];
+const caseMeasurements: Array<{ caseId: string; durationMs: number }> = [];
 for (const item of CASES) {
+  const caseStarted = performance.now();
   const result = await runCase(item, urls);
+  caseMeasurements.push({
+    caseId: item.id,
+    durationMs: Number((performance.now() - caseStarted).toFixed(3)),
+  });
+  peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
   const dir = join(outRoot, item.id);
   mkdirSync(dir, { recursive: true });
   const manifest = {
@@ -363,9 +377,24 @@ for (const item of CASES) {
 const pass = summary.filter((item) => item.status === 'PASS').length;
 const blocked = summary.filter((item) => item.status === 'BLOCKED_EXTERNAL').length;
 const fail = summary.filter((item) => item.status === 'FAIL').length;
+const unsupported = summary.filter((item) => item.status === 'UNSUPPORTED').length;
+clearInterval(rssSampler);
+peakRssBytes = Math.max(peakRssBytes, process.memoryUsage().rss);
+const completedAt = new Date().toISOString();
+const measurement = {
+  startedAt,
+  completedAt,
+  durationMs: Number((performance.now() - started).toFixed(3)),
+  peakRssBytes,
+  cases: caseMeasurements,
+};
 writeFileSync(
   join(outRoot, 'summary.json'),
-  `${JSON.stringify({ sha, pass, fail, blockedExternal: blocked, cases: summary }, null, 2)}\n`,
+  `${JSON.stringify(
+    { sha, pass, fail, blockedExternal: blocked, unsupported, cases: summary, measurement },
+    null,
+    2,
+  )}\n`,
 );
 process.stdout.write(
   JSON.stringify(
@@ -375,6 +404,8 @@ process.stdout.write(
       pass,
       fail,
       blockedExternal: blocked,
+      unsupported,
+      measurement,
       note: 'PASS 仅表示双 Operator 只读捕获与一致性；不是完整盘面 COMPLETE。',
     },
     null,

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "zerotrace-performance-budget-policy-v1",
+  "policyVersion": "2026-08-31",
+  "benchmarkId": "bsc-public-dual-operator-v1",
+  "minimumBaselineSamples": 3,
+  "checkSamples": 1,
+  "commandTimeoutMs": 180000,
+  "maximumBaselineAgeDays": 30,
+  "regressionAllowance": {
+    "totalDurationMultiplier": 1.5,
+    "singleCaseDurationMultiplier": 2,
+    "peakRssMultiplier": 1.25,
+    "minimumDurationHeadroomMs": 250,
+    "minimumRssHeadroomBytes": 16777216
+  },
+  "requiredCaseStatuses": {
+    "BSC_FLAP_PORTAL_IDENTITY": "PASS",
+    "BSC_FLAP_TAX_V6_ORIGIN": "PASS",
+    "BSC_FLAP_TAX_V3_LIFETIME": "PASS",
+    "BSC_FLAP_NEW_TOKEN_V2": "PASS",
+    "BSC_FFT_REFERENCE": "PASS",
+    "BSC_PANCAKE_ROUTER_NEGATIVE": "PASS",
+    "BSC_PANCAKE_FACTORY_NEGATIVE": "PASS",
+    "PROVIDER_DISAGREEMENT_NEGATIVE_CASE": "PASS",
+    "UNSUPPORTED_V3_EXACT_EXIT": "UNSUPPORTED"
+  }
+}

@@ -1,5 +1,8 @@
 {
-  "schemaVersion": "zerotrace-performance-baseline-v1",
-  "hardware": "unmeasured",
-  "notes": "尚未在固定硬件上对真实主网案件测量。不得用空表冒充达标。"
+  "schemaVersion": "zerotrace-performance-baseline-v2",
+  "status": "NOT_RUN",
+  "notes": [
+    "尚未用当前性能执行器在固定硬件、固定源码指纹和真实主网案件上生成至少三个样本。",
+    "只有 performance:capture 生成且通过策略、来源与硬件校验的候选记录才可提升为 MEASURED。"
+  ]
 }
