@@ -32,6 +32,7 @@ const performancePolicy: PerformancePolicy = {
   schemaVersion: 'zerotrace-performance-budget-policy-v1',
   policyVersion: 'test-v1',
   benchmarkId: 'benchmark-v1',
+  providerEndpointRefs: ['https://operator-a.example', 'https://operator-b.example'],
   minimumBaselineSamples: 1,
   checkSamples: 1,
   commandTimeoutMs: 1_000,
@@ -57,6 +58,7 @@ const sample: PerformanceSample = {
   fail: 0,
   blockedExternal: 0,
   unsupported: 1,
+  sourceSet: ['https://operator-a.example', 'https://operator-b.example'],
   caseStatuses: { REAL_CASE: 'PASS', NEGATIVE_CASE: 'UNSUPPORTED' },
 };
 
@@ -132,6 +134,7 @@ function events(
         fail: result === 'FAIL' ? 1 : 0,
         blockedExternal: result === 'BLOCKED_EXTERNAL' ? 1 : 0,
         unsupported: result === 'PASS' ? 1 : 0,
+        sourceSet: performancePolicy.providerEndpointRefs,
         previousEventHash: output.at(-1)?.eventHash ?? null,
       }),
     );

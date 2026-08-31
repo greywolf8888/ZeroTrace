@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   checkPerformanceSamples,
   hardwareProfile,
+  liveSummaryHasExternalBlocker,
   performanceSample,
   policyHash,
   readJson,
@@ -48,14 +49,18 @@ if (errors.length > 0 || baseline.budgets === undefined) {
   const executionErrors: string[] = [];
   let blockedExternal = false;
   for (let index = 0; index < policy.checkSamples; index += 1) {
-    const execution = await runLiveCase(root, policy.commandTimeoutMs);
+    const execution = await runLiveCase(root, policy.commandTimeoutMs, policy.providerEndpointRefs);
     if (execution.summary === undefined || execution.summaryHash === undefined) {
       executionErrors.push(`检查样本 ${index + 1} 没有可校验摘要。${execution.stderr}`);
       blockedExternal ||= execution.timedOut;
       break;
     }
-    if (execution.summary.blockedExternal > 0) blockedExternal = true;
-    const liveErrors = validateLiveSummary(execution.summary, policy.requiredCaseStatuses);
+    if (liveSummaryHasExternalBlocker(execution.summary)) blockedExternal = true;
+    const liveErrors = validateLiveSummary(
+      execution.summary,
+      policy.requiredCaseStatuses,
+      policy.providerEndpointRefs,
+    );
     if (execution.exitCode !== 0) liveErrors.push(`实链执行退出码为 ${execution.exitCode}。`);
     if (liveErrors.length > 0) {
       executionErrors.push(...liveErrors.map((error) => `检查样本 ${index + 1}：${error}`));

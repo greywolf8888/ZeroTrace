@@ -40,12 +40,16 @@ if (hasTrackedChanges(root)) {
   const samples: PerformanceSample[] = [];
   const failures: string[] = [];
   for (let index = 0; index < policy.minimumBaselineSamples; index += 1) {
-    const execution = await runLiveCase(root, policy.commandTimeoutMs);
+    const execution = await runLiveCase(root, policy.commandTimeoutMs, policy.providerEndpointRefs);
     if (execution.summary === undefined || execution.summaryHash === undefined) {
       failures.push(`样本 ${index + 1} 未生成可校验摘要：${execution.stderr || '没有错误输出'}。`);
       break;
     }
-    const errors = validateLiveSummary(execution.summary, policy.requiredCaseStatuses);
+    const errors = validateLiveSummary(
+      execution.summary,
+      policy.requiredCaseStatuses,
+      policy.providerEndpointRefs,
+    );
     if (execution.exitCode !== 0) errors.push(`实链执行退出码为 ${execution.exitCode}。`);
     if (execution.timedOut) errors.push('实链执行超时。');
     if (errors.length > 0) {
