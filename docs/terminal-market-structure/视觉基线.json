@@ -1,9 +1,9 @@
 {
   "schemaVersion": "zerotrace-visual-golden-v1",
   "status": "MEASURED",
-  "capturedAt": "2026-08-31T03:27:32.385Z",
-  "implementationSha": "73110fb479ae9c3de797029b4f6f9cfc9bddb58d",
-  "sourceFingerprint": "89aa9ecf26a9b53178104bf19c35b2ddb397854727dcb20c3086c657bac1bed9",
+  "capturedAt": "2026-08-31T03:47:35.227Z",
+  "implementationSha": "547fda362ca34bd05caa9d4f7c925f2e7946a0bb",
+  "sourceFingerprint": "0a1172a03bbfee13569403a636919a396853193b205583684747780730df5606",
   "target": "Windows Chromium / Tauri WebView 等效 CSS 视口；不替代签名清洁机原生 DPI 验收",
   "cases": [
     {
