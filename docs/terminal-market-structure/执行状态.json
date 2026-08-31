@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-agent-state-v1",
-  "implementationSha": "64ed35e9c3cbd86c2de9419347db6aa137b1df20",
+  "implementationSha": "6bbdd5e5a05ba4d22109db9e9a4af1c49cebebdb",
   "branch": "agent/terminal-market-structure-v1",
   "currentStage": "X74_RELEASE_VERIFICATION",
   "currentGate": "G14_RELEASE",
@@ -18,32 +18,32 @@
     "G10_WEB_DESKTOP": "PARTIAL",
     "G11_UI": "PARTIAL",
     "G12_LIVE_ACCURACY": "PARTIAL",
-    "G13_STABILITY_SPEED": "NOT_RUN",
+    "G13_STABILITY_SPEED": "PARTIAL",
     "G14_RELEASE": "BLOCKED"
   },
   "localTechnicalEvidence": {
     "coverage": "1124 PASS / 42 SKIPPED; statements 82.79%; branches 75.23%; functions 91.27%; lines 84.64%",
     "package": "UTF-8 integrity PASS; isolated TypeScript/Node PASS; Python installer/planner 13/15 with 2 BLOCKED_NO_SYMLINK_PRIVILEGE",
-    "e2e": "42/42 Chromium desktop/mobile; Windows wrapper 42/42",
-    "terminal": "Rust fmt/clippy/workspace tests + formula differential 2/2 + offline replay + 72 property + 41 forensic golden PASS",
+    "e2e": "49/49 Chromium; Windows wrapper 49/49; 7 reviewed SHA-bound visual states PASS",
+    "terminal": "Rust fmt/clippy/50 workspace tests + formula differential 2/2 + offline replay + 72 property + 41 forensic golden PASS",
     "live": "8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL",
-    "desktop": "current-source sync/Tauri/NSIS build and dynamic-sidecar runtime smoke PASS; owned survivors 0; Authenticode NotSigned; signed clean-machine gate open",
+    "desktop": "exact current release EXE/sidecar smoke and local current-user NSIS install/start/uninstall PASS; dynamic sidecar, anonymous 401, WebView2, single instance, native OS API acceptance, owned survivors 0; Authenticode NotSigned; signed clean-machine/upgrade/rollback open",
     "storage": "45-migration PostgreSQL/ClickHouse/MinIO integration 129/129 and restart health 3/3 PASS; migration 046 isolated social transaction 1/1 and restart hash PASS; AGE projection/replay/restart PASS",
-    "notifications": "migration 045 + in-app read + desktop lease/retry/idempotent settlement + real PostgreSQL restart replay PASS; OS/external delivery gate open",
+    "notifications": "migration 045 + in-app read + desktop lease/retry/idempotent settlement + real PostgreSQL restart replay + Tauri OS Notification API acceptance PASS; visibility/user-read/external delivery open",
     "socialObservations": "durable temporal windows, keyset pagination, idempotent verified-free dispatch/settlement, Evidence and no-text tombstones PASS locally; xapid remains UNVERIFIED_IDENTITY, disabled and uncalled",
     "security": "OIDC signature/tenant/role/MFA claim mapping and route RBAC fail closed; real IdP and record tenancy open",
-    "audit": "production npm audit 0 vulnerabilities; license and SBOM PASS"
+    "performance": "versioned fixed-hardware/policy/source fingerprint; BNB Chain + NodeReal five-sample baseline and independent verification PASS; 24h soak incomplete",
+    "audit": "production npm audit 0 vulnerabilities; npm/Cargo license and SBOM PASS"
   },
   "activeFailures": [
     "arbitrary-token creation-to-finalized ReportEnvelope is incomplete",
-    "P42 current-source desktop OS delivery and signed clean-machine notification acceptance are open",
+    "P42 OS API acceptance is verified, but notification visibility/user-read and signed clean-machine acceptance are open",
     "50-token checkpoints have originComplete=0/historyComplete=0/reviewed=false and calibrated entity labels are not available",
     "no pinned archive fork for material V3 exact execution",
     "multi-venue shared-liquidity exact optimization is unsupported",
-    "fixed-hardware performance measurement is NOT_RUN",
-    "24h monitor soak is NOT_RUN",
-    "installer is unsigned and clean-machine acceptance is NOT_RUN",
-    "complete SHA-bound visual golden-state set is NOT_RUN",
+    "24h monitor soak has no completed run",
+    "installer is unsigned; clean-machine, upgrade, and rollback acceptance are NOT_RUN",
+    "Pump, Raydium, and Bitcoin named live smokes are blocked before request by reserved-address DNS resolution",
     "xapid service identity, real FxEmbed/xapid calls, raw response artifacts, upstream deletion signals, and third-party AI delivery are unverified"
   ],
   "lastCommands": [
@@ -59,6 +59,9 @@
     "npm run desktop:build",
     "npm run desktop:sync",
     "npm run desktop:smoke",
+    "npm run desktop:smoke:release",
+    "npm run test:visual-golden",
+    "npm run test:e2e:visual",
     "TEST_POSTGRES_URL=... npm exec vitest -- run tests/integration/social-observations-postgres.test.ts",
     "npm run corpus:free-only",
     "npm run corpus:trace-pending",
@@ -67,9 +70,12 @@
     "npm run test:formula:diff",
     "npm run desktop:build",
     "npm run test:integration (TEST_POSTGRES_URL + TEST_CLICKHOUSE_URL + TEST_OBJECT_STORE_ENDPOINT)",
-    "npm run graph:age:smoke -- --chain-id eip155:1"
+    "npm run graph:age:smoke -- --chain-id eip155:1",
+    "npx tsx scripts/pump-launchpad-live-smoke.ts",
+    "npx tsx scripts/raydium-launchpad-live-smoke.ts",
+    "npx tsx scripts/bitcoin-forensic-live-smoke.ts"
   ],
-  "nextAction": "Close external and long-duration gates; do not merge while any gate is PARTIAL, UNSUPPORTED, NOT_RUN, or BLOCKED.",
-  "updatedAt": "2026-08-31T10:40:30+08:00",
+  "nextAction": "Bind final visual/performance evidence to the frozen source, complete the 24h soak, then close external real-chain and signed-release gates; do not merge while any gate is PARTIAL, UNSUPPORTED, NOT_RUN, or BLOCKED.",
+  "updatedAt": "2026-08-31T11:43:50.972+08:00",
   "originMainSha": "68ebfd9ae92305dd47bbc3175af07bda1a172c61"
 }
