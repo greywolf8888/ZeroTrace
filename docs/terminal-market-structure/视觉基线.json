@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "zerotrace-visual-golden-v1",
+  "status": "MEASURED",
+  "capturedAt": "2026-08-31T03:27:32.385Z",
+  "implementationSha": "73110fb479ae9c3de797029b4f6f9cfc9bddb58d",
+  "sourceFingerprint": "89aa9ecf26a9b53178104bf19c35b2ddb397854727dcb20c3086c657bac1bed9",
+  "target": "Windows Chromium / Tauri WebView 等效 CSS 视口；不替代签名清洁机原生 DPI 验收",
+  "cases": [
+    {
+      "id": "provider-down-light-1366x768",
+      "path": "tests/e2e/visual-golden/provider-down-light-1366x768.png",
+      "sha256": "4cb2f805658b7a4f1923866c6980cd002b4fce3a9beacb5607c21b5570e73d0c",
+      "bytes": 141647,
+      "width": 1366,
+      "height": 768
+    },
+    {
+      "id": "provider-table-dark-long",
+      "path": "tests/e2e/visual-golden/provider-table-dark-long.png",
+      "sha256": "e076213bf7ecc69c7fc63867232d71a850c3c628c44e914612c9060826745c83",
+      "bytes": 593634,
+      "width": 1676,
+      "height": 4685
+    },
+    {
+      "id": "workbench-dark-1920x1080",
+      "path": "tests/e2e/visual-golden/workbench-dark-1920x1080.png",
+      "sha256": "96952267531a2553bdd83ffefb03be1d59ee779086a560c27aef3c9806b5853b",
+      "bytes": 155854,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "workbench-dark-narrow-390x844",
+      "path": "tests/e2e/visual-golden/workbench-dark-narrow-390x844.png",
+      "sha256": "7da47a213652db469b1c9e64ea55a193888e399a9370f532dd7b715a72d8de69",
+      "bytes": 65566,
+      "width": 390,
+      "height": 844
+    },
+    {
+      "id": "workbench-dark-scale125-physical1920x1080",
+      "path": "tests/e2e/visual-golden/workbench-dark-scale125-physical1920x1080.png",
+      "sha256": "c0e3f03abf09e1ec34366018cc7d2c256ead1b41e0e3fd609818f5ba09e1c2ca",
+      "bytes": 198464,
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "id": "workbench-light-1366x768",
+      "path": "tests/e2e/visual-golden/workbench-light-1366x768.png",
+      "sha256": "f8a4525015c7a920f4a7cc5c69ac4bee930c6401f43d67958b701b95107c5aab",
+      "bytes": 139409,
+      "width": 1366,
+      "height": 768
+    },
+    {
+      "id": "workbench-light-scale150-physical1920x1080",
+      "path": "tests/e2e/visual-golden/workbench-light-scale150-physical1920x1080.png",
+      "sha256": "32f69db95a90871452876ab2de56f03045708b565137a74081fdee8b58cf0294",
+      "bytes": 218431,
+      "width": 1920,
+      "height": 1080
+    }
+  ],
+  "notes": [
+    "覆盖浅深主题、1920×1080、1366×768、100%/125%/150% 等效像素密度、390×844 窄屏、来源故障和长数据源表。",
+    "固定响应仅存在于 E2E 测试路径，不是主网事实、收益样例或生产夹具。"
+  ]
+}
