@@ -54,6 +54,8 @@
     "test:integration": "vitest run tests/integration",
     "test:e2e": "npm run build && playwright test",
     "test:e2e:windows": "npm run build && pwsh -NoProfile -File scripts/test-e2e-windows.ps1",
+    "test:e2e:visual": "playwright test tests/e2e/visual-golden.spec.ts --project=chromium-visual",
+    "test:visual-golden": "tsx scripts/visual-golden-check.ts",
     "test:coverage": "vitest run --coverage packages services apps/api/test tests/integration --no-file-parallelism",
     "typecheck": "tsc -b --pretty false && tsc -p tsconfig.evals.json --noEmit --pretty false && tsc -p tsconfig.operational-gates.json --noEmit --pretty false",
     "architecture:check": "tsx scripts/architecture-check.ts",
@@ -91,7 +93,7 @@
     "forensic:golden": "vitest run packages/supply-reality-engine packages/identity-intelligence packages/campaign-intelligence packages/capital-intelligence packages/market-reality-engine evals/market-structure",
     "market-exit:golden": "vitest run packages/market-reality-engine",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run license:check && npm run audit && npm run architecture:check && npm run ui:chinese:check && npm run schema:drift:check",
-    "verify:full": "npm run verify && npm run test:coverage && npm run test:e2e && npm run sbom && npm run forensic:golden && npm run market-exit:golden"
+    "verify:full": "npm run verify && npm run test:coverage && npm run test:e2e && npm run test:visual-golden && npm run sbom && npm run forensic:golden && npm run market-exit:golden"
   },
   "devDependencies": {
     "@cyclonedx/cyclonedx-npm": "6.0.0",

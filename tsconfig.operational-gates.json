@@ -12,6 +12,7 @@
     "scripts/operational-gates.test.ts",
     "scripts/performance-budget-check.ts",
     "scripts/performance-capture.ts",
-    "scripts/soak-check.ts"
+    "scripts/soak-check.ts",
+    "scripts/visual-golden-check.ts"
   ]
 }
