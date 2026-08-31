@@ -71,6 +71,9 @@ if ($existing.Count -gt 0) {
 
 $proc = $null
 $ownedIds = @()
+$notificationSmokeName = 'ZEROTRACE_DESKTOP_NOTIFICATION_SMOKE'
+$priorNotificationSmoke = [Environment]::GetEnvironmentVariable($notificationSmokeName, 'Process')
+[Environment]::SetEnvironmentVariable($notificationSmokeName, '1', 'Process')
 try {
   Write-Host "Starting $exe"
   $proc = Start-Process `
@@ -130,6 +133,14 @@ try {
   if ($anonymousStatus -ne 401) {
     throw "Anonymous desktop health request must fail closed with 401; got $anonymousStatus."
   }
+  $notificationReceipt = if (Test-Path -LiteralPath $outLog) {
+    Get-Content -LiteralPath $outLog -Raw
+  } else {
+    ''
+  }
+  if ($notificationReceipt -notmatch 'ZEROTRACE_DESKTOP_NOTIFICATION_SMOKE=OS_API_ACCEPTED') {
+    throw 'Tauri notification plugin did not return an OS API acceptance receipt.'
+  }
 
   $second = Start-Process -FilePath $exe -WorkingDirectory $binDir -PassThru -WindowStyle Hidden
   try {
@@ -148,10 +159,15 @@ try {
   )
   Write-Host "window title=$expectedTitle"
   Write-Host "dynamic API port=$apiPort anonymousStatus=$anonymousStatus"
-  Write-Host 'WebView2=ready singleInstance=pass'
+  Write-Host 'WebView2=ready singleInstance=pass OSNotification=accepted'
   Write-Host 'desktop launch smoke PASS'
 }
 finally {
+  [Environment]::SetEnvironmentVariable(
+    $notificationSmokeName,
+    $priorNotificationSmoke,
+    'Process'
+  )
   if ($null -ne $proc -and -not $proc.HasExited) {
     & taskkill.exe /F /T /PID $proc.Id | Out-Null
     $null = $proc.WaitForExit(10000)
