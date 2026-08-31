@@ -2,9 +2,9 @@
   "schemaVersion": "zerotrace-performance-baseline-v2",
   "status": "MEASURED",
   "benchmarkId": "bsc-public-dual-operator-v1",
-  "capturedAt": "2026-08-31T03:16:05.983Z",
-  "sourceFingerprint": "fabebd51179c2706b7afc9362eb3968aa2e19f5369769c451c2b01bf07748d29",
-  "implementationSha": "0a7c9e8f84bafe00737aac39a5aea748b70efe9e",
+  "capturedAt": "2026-08-31T03:48:17.887Z",
+  "sourceFingerprint": "0d93db784c4082c38748dee4910f51da374f71acba2f15fe2d24a3199105c890",
+  "implementationSha": "d0779c651eee783d5a48781ee889d4c8c1e747e4",
   "hardware": {
     "fingerprint": "196dda3980daf6375ed9186b77d17f5770abcc52c1ee1a95814118e97c0ad371",
     "platform": "win32",
@@ -21,12 +21,12 @@
   },
   "samples": [
     {
-      "capturedAt": "2026-08-31T03:15:57.168Z",
-      "implementationSha": "0a7c9e8f84bafe00737aac39a5aea748b70efe9e",
-      "summaryHash": "d984227db4795b9f813dd6641242c7dfe6184c79cfcb10219b15f301e53ce66d",
-      "totalDurationMs": 4351.32,
-      "maximumCaseDurationMs": 173.644,
-      "peakRssBytes": 74649600,
+      "capturedAt": "2026-08-31T03:48:09.287Z",
+      "implementationSha": "d0779c651eee783d5a48781ee889d4c8c1e747e4",
+      "summaryHash": "b95d4592243ce306dcd54f7aad1846c74c3b98f43cfa9074131d849e7b43c404",
+      "totalDurationMs": 4256.658,
+      "maximumCaseDurationMs": 169.267,
+      "peakRssBytes": 82288640,
       "pass": 8,
       "fail": 0,
       "blockedExternal": 0,
@@ -45,12 +45,12 @@
       }
     },
     {
-      "capturedAt": "2026-08-31T03:15:59.356Z",
-      "implementationSha": "0a7c9e8f84bafe00737aac39a5aea748b70efe9e",
-      "summaryHash": "49a6137e179124a716104d49e7d3d2d5467e4385743062c98a44d4d646089654",
-      "totalDurationMs": 1918.449,
-      "maximumCaseDurationMs": 136.259,
-      "peakRssBytes": 80977920,
+      "capturedAt": "2026-08-31T03:48:11.564Z",
+      "implementationSha": "d0779c651eee783d5a48781ee889d4c8c1e747e4",
+      "summaryHash": "f221a5e72549057c7021f9af665d7423b9c7ab8eb2e2414459887e0845f6437b",
+      "totalDurationMs": 2022.703,
+      "maximumCaseDurationMs": 150.672,
+      "peakRssBytes": 74694656,
       "pass": 8,
       "fail": 0,
       "blockedExternal": 0,
@@ -69,12 +69,12 @@
       }
     },
     {
-      "capturedAt": "2026-08-31T03:16:01.495Z",
-      "implementationSha": "0a7c9e8f84bafe00737aac39a5aea748b70efe9e",
-      "summaryHash": "a8ff75ce95b576ef9637422c293f12e70961de02de895f45ea568325734b40b7",
-      "totalDurationMs": 1898.667,
-      "maximumCaseDurationMs": 139.549,
-      "peakRssBytes": 74657792,
+      "capturedAt": "2026-08-31T03:48:13.642Z",
+      "implementationSha": "d0779c651eee783d5a48781ee889d4c8c1e747e4",
+      "summaryHash": "5c34c33bbc01e8bf8d776aae7e6b62ad76eb50755791d176eb129be834a5ea00",
+      "totalDurationMs": 1851.048,
+      "maximumCaseDurationMs": 150.348,
+      "peakRssBytes": 74002432,
       "pass": 8,
       "fail": 0,
       "blockedExternal": 0,
@@ -93,12 +93,12 @@
       }
     },
     {
-      "capturedAt": "2026-08-31T03:16:03.689Z",
-      "implementationSha": "0a7c9e8f84bafe00737aac39a5aea748b70efe9e",
-      "summaryHash": "2aadd35c2f5e260b569dfdff8b1748d89fd0cc75b5712dc9d087cc1f5c5d2855",
-      "totalDurationMs": 1962.362,
-      "maximumCaseDurationMs": 144.297,
-      "peakRssBytes": 75640832,
+      "capturedAt": "2026-08-31T03:48:15.776Z",
+      "implementationSha": "d0779c651eee783d5a48781ee889d4c8c1e747e4",
+      "summaryHash": "5c2c30bbea96dd829e1fb26a5ac4f6da0b7172b5d722fab3a59e36502646ad5c",
+      "totalDurationMs": 1907.077,
+      "maximumCaseDurationMs": 147.334,
+      "peakRssBytes": 74604544,
       "pass": 8,
       "fail": 0,
       "blockedExternal": 0,
@@ -117,12 +117,12 @@
       }
     },
     {
-      "capturedAt": "2026-08-31T03:16:05.983Z",
-      "implementationSha": "0a7c9e8f84bafe00737aac39a5aea748b70efe9e",
-      "summaryHash": "f2d737ef811b3cbed436b52cdacdcafb9085bc4098ff0e2e6e487c80e18a18ec",
-      "totalDurationMs": 2067.961,
-      "maximumCaseDurationMs": 147.855,
-      "peakRssBytes": 74399744,
+      "capturedAt": "2026-08-31T03:48:17.887Z",
+      "implementationSha": "d0779c651eee783d5a48781ee889d4c8c1e747e4",
+      "summaryHash": "3ea5cefebda35f2a2ae987f6289f4f378b012b1943758454f6a13ad5e5b118ba",
+      "totalDurationMs": 1879.715,
+      "maximumCaseDurationMs": 155.257,
+      "peakRssBytes": 75587584,
       "pass": 8,
       "fail": 0,
       "blockedExternal": 0,
@@ -142,14 +142,14 @@
     }
   ],
   "observed": {
-    "totalDurationP95Ms": 4351.32,
-    "maximumCaseDurationMs": 173.644,
-    "maximumPeakRssBytes": 80977920
+    "totalDurationP95Ms": 4256.658,
+    "maximumCaseDurationMs": 169.267,
+    "maximumPeakRssBytes": 82288640
   },
   "budgets": {
-    "maximumTotalDurationMs": 8703,
-    "maximumCaseDurationMs": 424,
-    "maximumPeakRssBytes": 101222400
+    "maximumTotalDurationMs": 8514,
+    "maximumCaseDurationMs": 420,
+    "maximumPeakRssBytes": 102860800
   },
   "notes": [
     "观测值来自当前固定硬件上的双独立 BSC Operator 只读真实主网案例。",
