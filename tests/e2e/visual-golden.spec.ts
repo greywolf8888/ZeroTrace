@@ -118,6 +118,7 @@ async function openState(
     theme: 'dark' | 'light';
     reducedMotion?: 'reduce';
     providerDown?: boolean;
+    diagnostics?: boolean;
   },
 ): Promise<{ page: Page; close: () => Promise<void> }> {
   const context = await browser.newContext({
@@ -132,12 +133,14 @@ async function openState(
     reducedMotion: options.reducedMotion ?? 'no-preference',
   });
   await context.addInitScript(
-    ({ theme }) => {
+    ({ diagnostics, theme }) => {
+      if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') return;
       window.localStorage.setItem('zerotrace-theme', theme);
       window.localStorage.setItem('zerotrace-presentation', 'novice');
-      window.localStorage.removeItem('zerotrace-diagnostics');
+      if (diagnostics) window.localStorage.setItem('zerotrace-diagnostics', 'enabled');
+      else window.localStorage.removeItem('zerotrace-diagnostics');
     },
-    { theme: options.theme },
+    { diagnostics: options.diagnostics === true, theme: options.theme },
   );
   const page = await context.newPage();
   if (options.providerDown === true) {
@@ -272,9 +275,12 @@ test('captures the long provider and storage state without clipping the evidence
     height: 1080,
     deviceScaleFactor: 1,
     theme: 'dark',
+    diagnostics: true,
   });
   try {
-    await state.page.getByRole('button', { name: '数据源与系统', exact: true }).click();
+    const diagnostics = state.page.locator('details.developer-navigation');
+    await diagnostics.locator('summary').click();
+    await diagnostics.getByRole('button', { name: '数据源与系统', exact: true }).click();
     await expect(
       state.page.getByRole('heading', { name: '数据源与系统', exact: true }),
     ).toBeVisible();
