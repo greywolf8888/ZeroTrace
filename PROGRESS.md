@@ -2,7 +2,7 @@
 
 ## 2026-08-31 V11 唯一 Goal 本地交付结果
 
-本轮从受保护 `main` 的短分支 `agent/terminal-market-structure-v1` 连续执行唯一 V11 Goal；当前实现证据冻结于 `6bbdd5e5a05ba4d22109db9e9a4af1c49cebebdb`，未合并 `main`。V11 安装器先预检无冲突再执行 `--apply`，journal `.zerotrace-backups/20260831-004448-h94i67i1/journal.json` 记录 13/13 写入及替换前备份；后续改动均按当前仓库架构逐项接线，没有再次强制覆盖。本包目录、ZIP、备份、`output/` 和用户辅助脚本保持未跟踪且未纳入提交。包完整性在显式 `PYTHONUTF8=1` 下通过；包内 Python planner/installer 为 13/15，另外 2 项因当前 Windows 进程没有符号链接权限报 WinError 1314，未改写为 PASS。
+本轮从受保护 `main` 的短分支 `agent/terminal-market-structure-v1` 连续执行唯一 V11 Goal；24 小时浸泡所用实现与证据冻结于 `48a6281fade3c96de7b9c72243c7100386b4e127`，未合并 `main`。V11 安装器先预检无冲突再执行 `--apply`，journal `.zerotrace-backups/20260831-004448-h94i67i1/journal.json` 记录 13/13 写入及替换前备份；后续改动均按当前仓库架构逐项接线，没有再次强制覆盖。本包目录、ZIP、备份、`output/` 和用户辅助脚本保持未跟踪且未纳入提交。包完整性在显式 `PYTHONUTF8=1` 下通过；包内 Python planner/installer 为 13/15，另外 2 项因当前 Windows 进程没有符号链接权限报 WinError 1314，未改写为 PASS。
 
 当前实现继续保持只读：没有私钥托管、签名、授权、swap、交易广播或自动资金移动。Evidence、Snapshot、覆盖、鲜度、来源集、模型版本与置信度仍是推断合同的一部分；Unknown、Unavailable、Stale 与 ProviderDown 没有被折叠为数值零。实现覆盖可信基础、零预算数据采购、EVM/Bitcoin/Solana、Entity Resolution、Launchpad Intelligence、Realizable Value、Scenario、证据重放、持久模拟交易与复盘、OIDC/RBAC、只读 Query Lab、point-in-time 指标、跨链边界、外部内容权利/删除/AI 门禁，以及中文模拟研究工作站。
 
@@ -14,13 +14,13 @@ P42 桌面通道已从持久 outbox 接到 Tauri 原生 Notification plugin。Ru
 
 桌面当前源码 Tauri/NSIS 构建、同步和精确 release artifact 烟测通过：中文主窗口、动态 loopback sidecar、匿名 `401 DESKTOP_AUTH_REQUIRED`、WebView2、单实例、原生通知 API 接受与退出零残留均已验证。证据收口提交 `39b655f` 后的最终重建中，`target/release/zerotrace-desktop.exe` SHA-256 为 `E0541BD9BE73AE1550F14B44F3C3934A766B079FD0FB575B1C081916A213CF3A`，sidecar 为 `B3A8F205F46ABAB593AED436239CA7950548A1AC60E4C4825EF2F37D6E38DD92`，NSIS 安装包为 `8E48CC04BCD6F559A88593BB5DAA357ACE76DB08B087697088388DC5F742D6E9`；三者仍为 `NotSigned`。安装包在本机隔离 current-user 目录完成安装、启动烟测与卸载，HKCU 卸载记录被正常移除；该结果不替代签名清洁机、升级或回滚验收。
 
-视觉门禁新增 7 个经人工检查、SHA-256 绑定的 Windows Chromium/Tauri WebView 等效黄金状态，覆盖浅/深主题、1920×1080、1366×768、100%/125%/150% 等效缩放、390×844、来源故障和长数据源表；对应 49 个 E2E 均通过。它不替代签名清洁机的原生 DPI、字体和操作系统通知可见性验收。固定硬件性能门禁已落地版本化硬件/策略/源码指纹，并在同一 Intel i7-14650HX 主机上以 BNB Chain 与 NodeReal 两个公共 BSC Operator 完成五次基线和独立复核；具体观测与预算以 `docs/terminal-market-structure/性能基线.json` 为准。G13 因 24 小时 soak 尚未完成而只能是 `PARTIAL`。
+视觉门禁新增 7 个经人工检查、SHA-256 绑定的 Windows Chromium/Tauri WebView 等效黄金状态，覆盖浅/深主题、1920×1080、1366×768、100%/125%/150% 等效缩放、390×844、来源故障和长数据源表；对应 49 个 E2E 均通过。它不替代签名清洁机的原生 DPI、字体和操作系统通知可见性验收。固定硬件性能门禁已落地版本化硬件/策略/源码指纹，并在同一 Intel i7-14650HX 主机上以 BNB Chain 与 NodeReal 两个公共 BSC Operator 完成五次基线和独立复核；具体观测与预算以 `docs/terminal-market-structure/性能基线.json` 为准。冻结 SHA 的 24 小时 soak 真实经过 `86405483ms`，`97/97` 周期 PASS、哈希链有效、外部阻塞周期为 0、最大启动间隔 `900014ms`，因此 G13 为 `PASS`；机器可读证据见 `docs/terminal-market-structure/浸泡验证.json`。浸泡中 `19/97` 周期高于 `8514ms` 基线预算，最大 `41802.527ms`；顺序 Provider 预检可解释总耗时放大，但事件未保存逐 Provider 计时，不能把单轮精确归因，亦不得隐去此性能风险。
 
 F04 社交来源仍只接受显式只读合同、精确 HTTPS origin、限定 secret 引用、有效权利政策、时间参数语义、已核验免费额度和可追溯 Evidence。持久窗口保存 `[from, until)`、不可变时间合同、覆盖、游标、页回执和既有采购权威请求；删除墓碑不保留正文。xapid 身份、端点、鉴权与价格仍未知，默认模板停用且本轮零请求；没有猜测配置，也没有用它阻断其他独立任务。真实 FxEmbed/xapid、原始响应 artifact、上游删除信号与第三方 AI 送达仍未验收。
 
 当前公共 BSC live case 为 `8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL`，只证明限定只读案例。50 个免费语料 checkpoint 仍为 `originComplete=0`、`historyComplete=0`、`reviewed=false`；trace-pending 仍只有 1/3 起源 COMPLETE。当前轮次重新执行 Pump、Raydium 和 Bitcoin named real-chain smoke，三者均在发网前因 Provider hostname 解析到保留地址而失败关闭；未削弱 SSRF，也未把 AGE 或 BSC PASS 替代为这些门禁的 PASS。
 
-发布仍为 **BLOCKED**。固定硬件性能和 SHA 绑定视觉集已从 NOT_RUN 收敛为本地 PASS，当前桌面 OS API 接受与本机 NSIS 安装/启动/卸载也已验证；但 24 小时 soak、任意 Token creation→finalized 完整 Envelope、50 Token 人工复核、Bitcoin/Solana/launchpad 本轮 named gate、真实 IdP、逐记录租户隔离、四眼/WORM、签名清洁机、升级/回滚、xapid 服务身份及第三方 AI 权利送达仍未闭合。因此 G13 为 PARTIAL、G14 为 BLOCKED，不得合并 `main`，不得声明 Combined PASS、Production Acceptance 或 terminal-complete。
+发布仍为 **BLOCKED**。固定硬件性能、SHA 绑定视觉集和冻结 SHA 的 24 小时功能 soak 已收敛为本地 PASS，当前桌面 OS API 接受与本机 NSIS 安装/启动/卸载也已验证；但任意 Token creation→finalized 完整 Envelope、50 Token 人工复核、Bitcoin/Solana/launchpad 本轮 named gate、真实 IdP、逐记录租户隔离、四眼/WORM、签名清洁机、升级/回滚、xapid 服务身份及第三方 AI 权利送达仍未闭合。因此 G13 为 PASS、G14 为 BLOCKED，不得合并 `main`，不得声明 Combined PASS、Production Acceptance 或 terminal-complete。
 
 ## 2026-08-21 工程原型到盘面分析工作站执行结果
 

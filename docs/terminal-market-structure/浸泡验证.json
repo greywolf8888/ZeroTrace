@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "zerotrace-soak-evidence-v1",
+  "status": "PASS",
+  "capturedAt": "2026-09-01T11:54:55.546+08:00",
+  "runId": "v11-final-48a6281-20260831T0353Z",
+  "benchmarkId": "bsc-public-dual-operator-v1",
+  "implementationSha": "48a6281fade3c96de7b9c72243c7100386b4e127",
+  "sourceFingerprint": "0d93db784c4082c38748dee4910f51da374f71acba2f15fe2d24a3199105c890",
+  "hardwareFingerprint": "196dda3980daf6375ed9186b77d17f5770abcc52c1ee1a95814118e97c0ad371",
+  "rawEvidence": {
+    "localDirectory": "output/soak/v11-final-48a6281-20260831T0353Z",
+    "runFileSha256": "a66987f600546fc3a6d9ae18e4a4e5dc159907e1764b679ab28a4556d7d76d0c",
+    "metadataHash": "deddb862572aee3ea6200590cb9a0c9f858e0866e6fdbeea206d754bbeba6735",
+    "eventsFileSha256": "296be414d49b967b4d5e4efb8b96b7bbe8d98450923e4f9a2bbdd0193e8b5712",
+    "firstEventHash": "4657738ea5c02c837bb2bed0440c7f3020ccdeac107e8d0ed794cda5bf0a480d",
+    "lastEventHash": "d0c5e80f52c95a9eb02cbf96eeef720c3a214073b9c53dbb7b24d4fac3f9429f"
+  },
+  "policy": {
+    "version": "2026-08-31",
+    "sha256": "f3c6ad08d7f910e6ffc89a97a603fa0c971ddfea71038eedd31c4d23c0ecb1c7",
+    "minimumDurationMs": 86400000,
+    "intervalMs": 900000,
+    "maximumStartGapMs": 1200000,
+    "commandTimeoutMs": 180000,
+    "maximumRecoveredExternalBlockedCycles": 2,
+    "maximumConsecutiveExternalBlockedCycles": 1
+  },
+  "window": {
+    "scheduledStart": "2026-08-31T03:52:56.753Z",
+    "scheduledEnd": "2026-09-01T03:52:56.753Z",
+    "firstCompletedAt": "2026-08-31T03:53:00.030Z",
+    "lastCompletedAt": "2026-09-01T03:53:02.236Z",
+    "evaluatedElapsedMs": 86405483
+  },
+  "evaluation": {
+    "cycles": 97,
+    "passingCycles": 97,
+    "failedCycles": 0,
+    "externalBlockedCycles": 0,
+    "recoveredExternalBlockedCycles": 0,
+    "maximumConsecutiveExternalBlockedCycles": 0,
+    "maximumObservedStartGapMs": 900014,
+    "reason": "真实经过时间、连续性、实链状态和恢复约束均满足策略。"
+  },
+  "cycleContract": {
+    "pass": 8,
+    "fail": 0,
+    "blockedExternal": 0,
+    "unsupported": 1,
+    "sourceSet": ["https://bsc-dataseed.bnbchain.org", "https://bsc.nodereal.io"]
+  },
+  "durationObservation": {
+    "baselineBudgetMs": 8514,
+    "minimumMs": 2707.99,
+    "maximumMs": 41802.527,
+    "averageMs": 7187.221505154639,
+    "aboveBaselineBudgetCycles": 19,
+    "aboveBaselineBudgetSequences": [
+      { "sequence": 20, "totalDurationMs": 15136.106 },
+      { "sequence": 48, "totalDurationMs": 9610.86 },
+      { "sequence": 62, "totalDurationMs": 11379.022 },
+      { "sequence": 66, "totalDurationMs": 11140.704 },
+      { "sequence": 67, "totalDurationMs": 18087.652 },
+      { "sequence": 68, "totalDurationMs": 18513.827 },
+      { "sequence": 69, "totalDurationMs": 14671.651 },
+      { "sequence": 70, "totalDurationMs": 11609.28 },
+      { "sequence": 77, "totalDurationMs": 13025.68 },
+      { "sequence": 78, "totalDurationMs": 18491.412 },
+      { "sequence": 79, "totalDurationMs": 41802.527 },
+      { "sequence": 80, "totalDurationMs": 16404.966 },
+      { "sequence": 81, "totalDurationMs": 9859.274 },
+      { "sequence": 86, "totalDurationMs": 18031.889 },
+      { "sequence": 87, "totalDurationMs": 9450.155 },
+      { "sequence": 88, "totalDurationMs": 25523.229 },
+      { "sequence": 90, "totalDurationMs": 10552.142 },
+      { "sequence": 91, "totalDurationMs": 26518.64 },
+      { "sequence": 95, "totalDurationMs": 16388.066 }
+    ]
+  },
+  "diagnosticBoundary": {
+    "confirmedMechanism": "live-case-runner 在案例计时前通过 configuredUrls 顺序探测公共 BSC 目录；独立只读探针确认单个失败端点可消耗约 5 秒并叠加总耗时。",
+    "unavailableAttribution": "浸泡事件只保存总时长和 summaryHash，不保存逐端点或逐案例原始计时，因此不能把任一长尾周期精确归因到具体 Provider。",
+    "gateMeaning": "24 小时功能浸泡策略 PASS；19 个超基线周期是独立性能风险，不得解释为未发生，也不等于功能周期 FAIL。"
+  },
+  "boundaries": [
+    "8 PASS 只覆盖当前限定 BSC 双 Operator 只读案例；每轮 1 个 UNSUPPORTED 仍是无 pinned fork 的 V3 exact。",
+    "本证据不替代 Pump、Raydium、Bitcoin named real-chain gate、50 Token 人工复核或任意 Token creation-to-finalized 完整 Envelope。",
+    "本证据不替代 Authenticode 签名、独立清洁机、升级或回滚验收。"
+  ]
+}
