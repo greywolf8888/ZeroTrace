@@ -1,11 +1,14 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AppConfig } from '../../src/config.js';
-import { loadPaperPortfolioSettings } from '../../src/paper-portfolio-settings.js';
+import {
+  loadPaperPortfolioSettings,
+  resolvePaperPortfolioConfigPath,
+} from '../../src/paper-portfolio-settings.js';
 
 function document() {
   return {
@@ -84,5 +87,28 @@ describe('版本化模拟设置', () => {
     policyConflict.position_policy.target_position_bps = 2_000;
     policyConflict.position_policy.max_single_position_bps = 1_000;
     expect(() => load(policyConflict)).toThrow('PAPER_POLICY_CONSTRAINT_INVALID');
+  });
+
+  it('从开发子目录和便携发布目录回溯解析版本化配置', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'zerotrace-paper-layout-'));
+    directories.push(directory);
+    const configDirectory = join(directory, 'config');
+    const nestedWorkingDirectory = join(directory, 'apps', 'api');
+    const portableDirectory = join(directory, 'release');
+    const path = join(configDirectory, 'paper_portfolios.json');
+    mkdirSync(configDirectory, { recursive: true });
+    mkdirSync(nestedWorkingDirectory, { recursive: true });
+    mkdirSync(portableDirectory, { recursive: true });
+    writeFileSync(path, JSON.stringify(document()), 'utf8');
+
+    expect(
+      resolvePaperPortfolioConfigPath(
+        { paperPortfolioConfigPath: 'config/paper_portfolios.json' } as AppConfig,
+        {
+          workingDirectory: nestedWorkingDirectory,
+          executablePath: join(portableDirectory, 'zerotrace-api.exe'),
+        },
+      ),
+    ).toBe(path);
   });
 });
