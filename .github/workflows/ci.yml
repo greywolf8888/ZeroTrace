@@ -215,6 +215,9 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
+      - name: Provide sidecar marker for Cargo-only checks
+        run: install -D --mode=0755 /dev/null apps/desktop/src-tauri/binaries/zerotrace-api-x86_64-unknown-linux-gnu
+
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.97.1 --profile minimal -c rustfmt -c clippy && rustup default 1.97.1
 

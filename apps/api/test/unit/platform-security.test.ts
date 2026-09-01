@@ -121,6 +121,27 @@ describe('platform security', { timeout: 60_000 }, () => {
     expect(accepted.statusCode).toBe(200);
   });
 
+  it('rate limits repeated API requests with a stable retry contract', async () => {
+    const config = baseConfig({ httpRateLimitMax: 2, httpRateLimitWindowMs: 60_000 });
+    const app = await createApp({ config, runtime: createRuntime(config), logger: false });
+    apps.push(app);
+
+    for (let requestNumber = 0; requestNumber < 2; requestNumber += 1) {
+      const accepted = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+      expect(accepted.statusCode).toBe(200);
+    }
+    const limited = await app.inject({ method: 'GET', url: '/api/v1/capabilities' });
+    expect(limited.statusCode).toBe(429);
+    expect(limited.headers['retry-after']).toBe('60');
+    expect(limited.json()).toMatchObject({
+      error: {
+        code: 'RATE_LIMITED',
+        message: '请求过于频繁，请在 Retry-After 指定时间后重试。',
+        retryable: true,
+      },
+    });
+  });
+
   it('does not treat OIDC identity configuration as resource authorization', async () => {
     const config = baseConfig({
       environment: 'production',
