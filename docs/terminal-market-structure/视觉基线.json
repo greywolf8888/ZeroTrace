@@ -2,7 +2,7 @@
   "schemaVersion": "zerotrace-visual-golden-v1",
   "status": "MEASURED",
   "capturedAt": "2026-09-01T10:31:04.526Z",
-  "implementationSha": "b88a4fa138ef9756d4970ff88a3bf6f90fbc9a29",
+  "implementationSha": "2fe7d834d33bc3a1cf5047ab53b88e7d8302cc46",
   "sourceFingerprint": "dd007172604b703642b33102174b92a9faaf4fab208b81bb61bf572b69d26be8",
   "target": "Windows Chromium / Tauri WebView 等效 CSS 视口；不替代签名清洁机原生 DPI 验收",
   "cases": [
@@ -66,7 +66,7 @@
   "notes": [
     "覆盖浅深主题、1920×1080、1366×768、100%/125%/150% 等效像素密度、390×844 窄屏、来源故障和长数据源表。",
     "固定响应仅存在于 E2E 测试路径，不是主网事实、收益样例或生产夹具。",
-    "实现提交由原历史 db76fef44ddc8c276050243508af1c029f4b49f6 线性映射为 b88a4fa138ef9756d4970ff88a3bf6f90fbc9a29；内容与作者、时间和提交顺序保持一致。",
+    "原始实现 db76fef44ddc8c276050243508af1c029f4b49f6 线性映射为 b88a4fa138ef9756d4970ff88a3bf6f90fbc9a29，再由 GitHub rebase-merge 映射为 23663448b8050acedbdc426512aa6b9239f74b4a；清单绑定包含该实现与全部验收修复的 main 集成提交 2fe7d834d33bc3a1cf5047ab53b88e7d8302cc46，原始哈希由 archive 标签保留。",
     "源码指纹因 API 全局限流依赖进入根锁文件而更新；7 个已审阅截图的路径、尺寸、字节数和 SHA-256 均未变化。"
   ]
 }
