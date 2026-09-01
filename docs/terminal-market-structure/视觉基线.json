@@ -1,9 +1,9 @@
 {
   "schemaVersion": "zerotrace-visual-golden-v1",
   "status": "MEASURED",
-  "capturedAt": "2026-08-31T03:47:35.227Z",
-  "implementationSha": "547fda362ca34bd05caa9d4f7c925f2e7946a0bb",
-  "sourceFingerprint": "0a1172a03bbfee13569403a636919a396853193b205583684747780730df5606",
+  "capturedAt": "2026-09-01T10:31:04.526Z",
+  "implementationSha": "db76fef44ddc8c276050243508af1c029f4b49f6",
+  "sourceFingerprint": "f77b88f22b24a5947f619bc24c8c7a313bb338a218951317be4bf983fa6ef2cb",
   "target": "Windows Chromium / Tauri WebView 等效 CSS 视口；不替代签名清洁机原生 DPI 验收",
   "cases": [
     {
@@ -17,8 +17,8 @@
     {
       "id": "provider-table-dark-long",
       "path": "tests/e2e/visual-golden/provider-table-dark-long.png",
-      "sha256": "e076213bf7ecc69c7fc63867232d71a850c3c628c44e914612c9060826745c83",
-      "bytes": 593634,
+      "sha256": "1ea2385a73e7b4ff5ff4500e9efae0f159b6bc9faf47d9f4cec5e23c7a06f994",
+      "bytes": 593816,
       "width": 1676,
       "height": 4685
     },

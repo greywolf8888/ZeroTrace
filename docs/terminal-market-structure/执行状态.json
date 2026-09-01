@@ -1,6 +1,6 @@
 {
   "schemaVersion": "zerotrace-agent-state-v1",
-  "implementationSha": "48a6281fade3c96de7b9c72243c7100386b4e127",
+  "implementationSha": "db76fef44ddc8c276050243508af1c029f4b49f6",
   "branch": "agent/terminal-market-structure-v1",
   "currentStage": "X74_RELEASE_VERIFICATION",
   "currentGate": "G14_RELEASE",
@@ -25,15 +25,15 @@
     "coverage": "1124 PASS / 42 SKIPPED; statements 82.79%; branches 75.23%; functions 91.27%; lines 84.64%",
     "package": "UTF-8 integrity PASS; isolated TypeScript/Node PASS; Python installer/planner 13/15 with 2 BLOCKED_NO_SYMLINK_PRIVILEGE",
     "e2e": "49/49 Chromium; Windows wrapper 49/49; 7 reviewed SHA-bound visual states PASS",
-    "terminal": "Rust fmt/clippy/50 workspace tests + formula differential 2/2 + offline replay + 72 property + 41 forensic golden PASS",
+    "terminal": "Rust fmt/clippy/52 workspace tests + formula differential 2/2 + offline replay + 72 property + 41 forensic golden PASS",
     "live": "8 PASS / 1 UNSUPPORTED / 0 FAIL / 0 BLOCKED_EXTERNAL",
-    "desktop": "exact current release EXE/sidecar smoke and local current-user NSIS install/start/uninstall PASS; dynamic sidecar, anonymous 401, WebView2, single instance, native OS API acceptance, owned survivors 0; Authenticode NotSigned; signed clean-machine/upgrade/rollback open",
+    "desktop": "portable ZIP checksum/extracted clean-directory launch plus exact current installed-layout release EXE/sidecar smoke PASS; adjacent ZeroTrace-Data, dynamic sidecar, anonymous 401, authenticated health/paper settings 200, WebView2, single instance, native OS API acceptance, owned survivors 0; EXE/NSIS NotSigned; signed clean-machine/upgrade/rollback open",
     "storage": "45-migration PostgreSQL/ClickHouse/MinIO integration 129/129 and restart health 3/3 PASS; migration 046 isolated social transaction 1/1 and restart hash PASS; AGE projection/replay/restart PASS",
     "notifications": "migration 045 + in-app read + desktop lease/retry/idempotent settlement + real PostgreSQL restart replay + Tauri OS Notification API acceptance PASS; visibility/user-read/external delivery open",
     "socialObservations": "durable temporal windows, keyset pagination, idempotent verified-free dispatch/settlement, Evidence and no-text tombstones PASS locally; xapid remains UNVERIFIED_IDENTITY, disabled and uncalled",
     "security": "OIDC signature/tenant/role/MFA claim mapping and route RBAC fail closed; real IdP and record tenancy open",
     "performance": "versioned fixed-hardware/policy/source fingerprint baseline PASS; frozen-SHA 24h soak 86405483ms, 97/97 PASS, valid hash chain, 0 external blocks, maximum start gap 900014ms; 19/97 cycles above 8514ms baseline budget, maximum 41802.527ms, provider-level per-cycle attribution unavailable",
-    "audit": "production npm audit 0 vulnerabilities; npm/Cargo license and SBOM PASS"
+    "audit": "current npm audit 0 high / 3 moderate; prior production audit 0 vulnerabilities; npm/Cargo license and SBOM PASS"
   },
   "activeFailures": [
     "arbitrary-token creation-to-finalized ReportEnvelope is incomplete",
@@ -59,6 +59,9 @@
     "npm run desktop:sync",
     "npm run desktop:smoke",
     "npm run desktop:smoke:release",
+    "npm run desktop:portable",
+    "npm run desktop:portable:smoke",
+    "pwsh -NoProfile -File scripts/test-e2e-windows.ps1 (49/49)",
     "npm run test:visual-golden",
     "npm run test:e2e:visual",
     "TEST_POSTGRES_URL=... npm exec vitest -- run tests/integration/social-observations-postgres.test.ts",
@@ -75,6 +78,6 @@
     "npx tsx scripts/bitcoin-forensic-live-smoke.ts"
   ],
   "nextAction": "Close named real-chain, 50-token human review, identity/tenancy, xapid/third-party AI, and signed clean-machine release gates; address the recorded soak latency tail on a later candidate without rewriting the frozen evidence; do not merge while any gate is PARTIAL, UNSUPPORTED, NOT_RUN, or BLOCKED.",
-  "updatedAt": "2026-09-01T11:54:55.546+08:00",
+  "updatedAt": "2026-09-01T18:29:12.776+08:00",
   "originMainSha": "68ebfd9ae92305dd47bbc3175af07bda1a172c61"
 }
