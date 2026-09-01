@@ -317,4 +317,29 @@ describe('API error handler', () => {
       expect(response.json()).toMatchObject({ error: { code: item.code } });
     }
   });
+
+  it('保留 Fastify 请求解析错误的客户端状态而不伪装成 500', async () => {
+    const app = Fastify({ logger: false, bodyLimit: 32 });
+    apps.push(app);
+    registerApiErrorHandler(app);
+    app.post('/body', async (request) => request.body);
+
+    const malformed = await app.inject({
+      method: 'POST',
+      url: '/body',
+      headers: { 'content-type': 'application/json' },
+      payload: '{bad json',
+    });
+    expect(malformed.statusCode).toBe(400);
+    expect(malformed.json()).toMatchObject({ error: { code: 'INVALID_REQUEST' } });
+
+    const oversized = await app.inject({
+      method: 'POST',
+      url: '/body',
+      headers: { 'content-type': 'application/json' },
+      payload: JSON.stringify({ value: 'x'.repeat(64) }),
+    });
+    expect(oversized.statusCode).toBe(413);
+    expect(oversized.json()).toMatchObject({ error: { code: 'REQUEST_BODY_TOO_LARGE' } });
+  });
 });

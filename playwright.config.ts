@@ -8,7 +8,13 @@ const e2eWorkers =
     : inCi || process.platform === 'win32'
       ? 2
       : undefined;
+const configuredWebPort = Number.parseInt(process.env.ZEROTRACE_E2E_WEB_PORT ?? '', 10);
+const e2eWebPort =
+  Number.isInteger(configuredWebPort) && configuredWebPort >= 1024 && configuredWebPort <= 65_535
+    ? configuredWebPort
+    : 14_173;
 const e2eApiUrl = 'http://127.0.0.1:18081';
+const e2eWebUrl = `http://127.0.0.1:${e2eWebPort}`;
 const inheritedEnv = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
 );
@@ -53,7 +59,7 @@ export default defineConfig({
   snapshotPathTemplate: '{testDir}/visual-golden/{arg}{ext}',
   reporter: [['list'], ['html', { outputFolder: './output/playwright/report', open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: e2eWebUrl,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -67,8 +73,8 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: 'node node_modules/vite/bin/vite.js preview apps/web --host 127.0.0.1 --port 4173',
-      url: 'http://127.0.0.1:4173',
+      command: `node node_modules/vite/bin/vite.js preview apps/web --host 127.0.0.1 --port ${e2eWebPort}`,
+      url: e2eWebUrl,
       env: { ...inheritedEnv, ZEROTRACE_API_PROXY_TARGET: e2eApiUrl },
       reuseExistingServer: !inCi,
       timeout: 60_000,

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ZeroTrace 只读工作站",
+  "productName": "ZeroTrace 链上取证工作站",
   "version": "0.1.0",
   "identifier": "com.zerosdream.zerotrace",
   "build": {
@@ -17,6 +17,9 @@
     "active": true,
     "targets": ["nsis"],
     "externalBin": ["binaries/zerotrace-api"],
+    "resources": {
+      "../../../config/paper_portfolios.json": "config/paper_portfolios.json"
+    },
     "windows": {
       "wix": null,
       "nsis": {
