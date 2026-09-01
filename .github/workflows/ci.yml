@@ -117,7 +117,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Build and test UI
-        run: npm run test:e2e
+        run: |
+          npm run build
+          npx playwright test --project=chromium-desktop --project=chromium-mobile
+          npm run test:visual-golden
 
       - name: Upload Playwright evidence
         if: always()
