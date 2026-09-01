@@ -2,7 +2,7 @@
   "schemaVersion": "zerotrace-visual-golden-v1",
   "status": "MEASURED",
   "capturedAt": "2026-09-01T10:31:04.526Z",
-  "implementationSha": "db76fef44ddc8c276050243508af1c029f4b49f6",
+  "implementationSha": "b88a4fa138ef9756d4970ff88a3bf6f90fbc9a29",
   "sourceFingerprint": "f77b88f22b24a5947f619bc24c8c7a313bb338a218951317be4bf983fa6ef2cb",
   "target": "Windows Chromium / Tauri WebView 等效 CSS 视口；不替代签名清洁机原生 DPI 验收",
   "cases": [
@@ -65,6 +65,7 @@
   ],
   "notes": [
     "覆盖浅深主题、1920×1080、1366×768、100%/125%/150% 等效像素密度、390×844 窄屏、来源故障和长数据源表。",
-    "固定响应仅存在于 E2E 测试路径，不是主网事实、收益样例或生产夹具。"
+    "固定响应仅存在于 E2E 测试路径，不是主网事实、收益样例或生产夹具。",
+    "实现提交由原历史 db76fef44ddc8c276050243508af1c029f4b49f6 线性映射为 b88a4fa138ef9756d4970ff88a3bf6f90fbc9a29；内容与作者、时间和提交顺序保持一致。"
   ]
 }
