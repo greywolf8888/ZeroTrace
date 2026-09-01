@@ -1,5 +1,23 @@
 # Final Acceptance Checklist
 
+## 2026-09-01 Windows 便携工作站增量验收
+
+- [x] 实现提交 `db76fef44ddc8c276050243508af1c029f4b49f6`；便携标记严格校验 schema 且必须 `readOnly=true`
+- [x] 便携数据根固定为程序同目录 `ZeroTrace-Data/storage-plane`；安装布局继续使用用户应用数据目录
+- [x] 两种布局显式传入同一版本化 `paper_portfolios.json`；配置缺失失败关闭，不生成第二套模拟资金权威
+- [x] 便携 ZIP 不包含 `.env`/真实凭据；包含 `.env.example`、中文说明、LICENSE 与逐文件 `SHA256SUMS.txt`
+- [x] 便携 ZIP SHA-256 `9D7609B76D2C875E04A26C5AAC85250478E678E032BFF5FCAA4E2CB87ADA8811`，大小 `28,988,437` 字节
+- [x] 从 ZIP 解压到全新临时目录后真实启动：便携标题、WebView2、动态 sidecar、匿名 401、鉴权 200、模拟配置 200、单实例、OS API 接受、同目录数据根和退出清理通过
+- [x] 安装布局 release 重建与独立 smoke 通过；NSIS SHA-256 `DE86BB41EB1C1967539A4CA509B5FD04AE6DFAC3E3F7EFF5CC6F7C7FD7F30C4D`
+- [x] API 回归：模拟配置相对路径安全回溯，畸形 JSON 保持 400，超限请求保持 413，不伪报 500
+- [x] `npm run verify`：单元 1049、可运行集成 88、eval 2、MCP 5 通过；42 个外部环境集成按条件 skip
+- [x] Rust fmt/workspace clippy `-D warnings`/52 tests，property 72 和 forensic golden 41 通过
+- [x] Windows 服务身份检查修复后，Chromium desktop/mobile/visual `49/49` 通过；视觉测试时钟已固定，不再随日期漂移
+- [ ] 会话内置/扩展浏览器当时无可用实例；不记交互表面 PASS
+- [ ] 全部 EXE/NSIS 仍为 `NotSigned`；未完成签名清洁机、升级/回滚和通知可见/已读验收
+- [ ] 当前 npm audit 为 0 high / 3 moderate；自动修复需破坏性 MinIO 降级，未应用
+- [ ] G14 仍 `BLOCKED`；named real-chain、50 Token 人工复核、真实 IdP/租户、xapid/第三方 AI 与签名发行未闭合，未合并/推送 `main`，未创建对外 release
+
 ## 2026-08-31 V11 唯一 Goal 当前候选验收
 
 - [x] 24 小时浸泡所用实现冻结于 `48a6281fade3c96de7b9c72243c7100386b4e127`；分支仍为 `agent/terminal-market-structure-v1`，未合并 `main`
