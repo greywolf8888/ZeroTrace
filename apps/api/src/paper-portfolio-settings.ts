@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, isAbsolute, resolve } from 'node:path';
 
 import { z } from 'zod';
 
@@ -77,10 +77,44 @@ export interface PaperPortfolioSettings {
   source: { kind: 'VERSIONED_LOCAL_CONFIG'; reference: 'paper_portfolios.json' };
 }
 
+const DEFAULT_PORTFOLIO_CONFIG = 'config/paper_portfolios.json';
+
+export interface PaperPortfolioPathContext {
+  workingDirectory?: string;
+  executablePath?: string;
+}
+
+function ancestorCandidates(base: string, relativePath: string): string[] {
+  const candidates: string[] = [];
+  let current = resolve(base);
+  for (;;) {
+    candidates.push(resolve(current, relativePath));
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return candidates;
+}
+
+export function resolvePaperPortfolioConfigPath(
+  config: AppConfig,
+  context: PaperPortfolioPathContext = {},
+): string {
+  const configured = config.paperPortfolioConfigPath ?? DEFAULT_PORTFOLIO_CONFIG;
+  if (isAbsolute(configured)) return configured;
+
+  const workingDirectory = context.workingDirectory ?? process.cwd();
+  const executableDirectory = dirname(context.executablePath ?? process.execPath);
+  const candidates = [
+    ...ancestorCandidates(workingDirectory, configured),
+    ...ancestorCandidates(executableDirectory, configured),
+  ];
+  const existing = [...new Set(candidates)].find((candidate) => existsSync(candidate));
+  return existing ?? resolve(workingDirectory, configured);
+}
+
 export function loadPaperPortfolioSettings(config: AppConfig): PaperPortfolioSettings {
-  const path = resolve(
-    config.paperPortfolioConfigPath ?? resolve(process.cwd(), 'config/paper_portfolios.json'),
-  );
+  const path = resolvePaperPortfolioConfigPath(config);
   const parsed = SettingsSchema.parse(JSON.parse(readFileSync(path, 'utf8')) as unknown);
   const policy = {
     version: parsed.version,

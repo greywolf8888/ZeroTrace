@@ -121,8 +121,13 @@ async function openState(
     diagnostics?: boolean;
   },
 ): Promise<{ page: Page; close: () => Promise<void> }> {
+  const configuredWebPort = Number.parseInt(process.env.ZEROTRACE_E2E_WEB_PORT ?? '', 10);
+  const e2eWebPort =
+    Number.isInteger(configuredWebPort) && configuredWebPort >= 1024 && configuredWebPort <= 65_535
+      ? configuredWebPort
+      : 14_173;
   const context = await browser.newContext({
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: `http://127.0.0.1:${e2eWebPort}`,
     viewport: { width: options.width, height: options.height },
     screen: {
       width: Math.round(options.width * options.deviceScaleFactor),
@@ -143,6 +148,7 @@ async function openState(
     { diagnostics: options.diagnostics === true, theme: options.theme },
   );
   const page = await context.newPage();
+  await page.clock.setFixedTime(new Date(fixedAt));
   if (options.providerDown === true) {
     await page.route('**/health', async (route) => {
       await route.fulfill({

@@ -157,6 +157,7 @@ code {
 .brand,
 .topbar-actions,
 .brand > div,
+.desktop-mode-badge,
 .read-only-badge,
 .api-state {
   display: flex;
@@ -231,6 +232,16 @@ html[data-presentation='novice'] .expert-only {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.desktop-mode-badge {
+  padding: 7px 10px;
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .pulse-dot,
@@ -3266,6 +3277,10 @@ footer a {
     padding: 0;
     overflow: hidden;
     font-size: 0;
+  }
+
+  .desktop-mode-badge {
+    display: none;
   }
 
   .presentation-switch {

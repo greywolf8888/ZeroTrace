@@ -11,10 +11,14 @@ $apiProcess = $null
 $webProcess = $null
 
 function Test-ZeroTraceEndpoint {
-  param([string]$Uri)
+  param(
+    [string]$Uri,
+    [string]$ExpectedContent
+  )
 
   try {
-    return (Invoke-WebRequest $Uri -UseBasicParsing -TimeoutSec 1).StatusCode -eq 200
+    $response = Invoke-WebRequest $Uri -UseBasicParsing -TimeoutSec 1
+    return $response.StatusCode -eq 200 -and $response.Content.Contains($ExpectedContent)
   }
   catch {
     return $false
@@ -24,6 +28,7 @@ function Test-ZeroTraceEndpoint {
 function Wait-ZeroTraceEndpoint {
   param(
     [string]$Uri,
+    [string]$ExpectedContent,
     [System.Diagnostics.Process]$Process,
     [string]$Name,
     [int]$TimeoutSeconds = 180
@@ -31,7 +36,7 @@ function Wait-ZeroTraceEndpoint {
 
   $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
   while ($stopwatch.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
-    if (Test-ZeroTraceEndpoint $Uri) {
+    if (Test-ZeroTraceEndpoint -Uri $Uri -ExpectedContent $ExpectedContent) {
       return
     }
     if ($Process.HasExited) {
@@ -43,6 +48,16 @@ function Wait-ZeroTraceEndpoint {
 }
 
 try {
+  $webPort = 14173
+  if (-not [string]::IsNullOrWhiteSpace($env:ZEROTRACE_E2E_WEB_PORT)) {
+    $parsedWebPort = 0
+    if (-not [int]::TryParse($env:ZEROTRACE_E2E_WEB_PORT, [ref]$parsedWebPort) -or
+      $parsedWebPort -lt 1024 -or $parsedWebPort -gt 65535) {
+      throw 'ZEROTRACE_E2E_WEB_PORT must be an integer from 1024 through 65535.'
+    }
+    $webPort = $parsedWebPort
+  }
+  $webUri = "http://127.0.0.1:$webPort"
   $env:NODE_ENV = 'test'
   $env:LOG_LEVEL = 'silent'
   $env:API_PORT = '18081'
@@ -64,8 +79,9 @@ try {
   $env:OBJECT_STORE_ACCESS_KEY = ''
   $env:OBJECT_STORE_SECRET_KEY = ''
   $env:ZEROTRACE_API_PROXY_TARGET = 'http://127.0.0.1:18081'
+  $env:ZEROTRACE_E2E_WEB_PORT = $webPort.ToString()
 
-  if (-not (Test-ZeroTraceEndpoint 'http://127.0.0.1:18081/health/live')) {
+  if (-not (Test-ZeroTraceEndpoint -Uri 'http://127.0.0.1:18081/health/live' -ExpectedContent 'zerotrace-api')) {
     $apiProcess = Start-Process `
       -FilePath $nodeExecutable `
       -ArgumentList 'apps/api/dist/src/server.js' `
@@ -74,11 +90,12 @@ try {
       -PassThru
     Wait-ZeroTraceEndpoint `
       -Uri 'http://127.0.0.1:18081/health/live' `
+      -ExpectedContent 'zerotrace-api' `
       -Process $apiProcess `
       -Name 'ZeroTrace API'
   }
 
-  if (-not (Test-ZeroTraceEndpoint 'http://127.0.0.1:4173')) {
+  if (-not (Test-ZeroTraceEndpoint -Uri $webUri -ExpectedContent 'ZeroTrace')) {
     $webProcess = Start-Process `
       -FilePath $nodeExecutable `
       -ArgumentList @(
@@ -88,13 +105,14 @@ try {
         '--host',
         '127.0.0.1',
         '--port',
-        '4173'
+        $webPort.ToString()
       ) `
       -WorkingDirectory $projectRoot `
       -WindowStyle Hidden `
       -PassThru
     Wait-ZeroTraceEndpoint `
-      -Uri 'http://127.0.0.1:4173' `
+      -Uri $webUri `
+      -ExpectedContent 'ZeroTrace' `
       -Process $webProcess `
       -Name 'ZeroTrace web preview'
   }

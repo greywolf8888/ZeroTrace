@@ -33,6 +33,7 @@ export function Header({
   health?: HealthResponse | undefined;
 }) {
   const healthLabel = health === undefined ? '检查中' : zhStatus(health.status);
+  const desktopMode = window.__ZEROTRACE_DESKTOP_MODE__;
   return (
     <header className="topbar">
       <div className="brand">
@@ -43,6 +44,18 @@ export function Header({
         </div>
       </div>
       <div className="topbar-actions">
+        {desktopMode !== undefined ? (
+          <div
+            className="desktop-mode-badge"
+            title={
+              desktopMode === 'PORTABLE'
+                ? '数据保存在程序同目录的 ZeroTrace-Data 中'
+                : '数据保存在当前用户的 ZeroTrace 应用数据目录中'
+            }
+          >
+            {desktopMode === 'PORTABLE' ? '便携工作站' : '桌面工作站'}
+          </div>
+        ) : null}
         <div className="read-only-badge">
           <span className="pulse-dot" />
           链上只读
