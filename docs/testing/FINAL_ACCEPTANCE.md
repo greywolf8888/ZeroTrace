@@ -2,7 +2,7 @@
 
 ## 2026-08-31 V11 唯一 Goal 当前候选验收
 
-- [x] 当前实现冻结于 `6bbdd5e5a05ba4d22109db9e9a4af1c49cebebdb`；分支仍为 `agent/terminal-market-structure-v1`，未合并 `main`
+- [x] 24 小时浸泡所用实现冻结于 `48a6281fade3c96de7b9c72243c7100386b4e127`；分支仍为 `agent/terminal-market-structure-v1`，未合并 `main`
 - [x] V11 安装器先预检无冲突再 `--apply`；`.zerotrace-backups/20260831-004448-h94i67i1/journal.json` 记录 13/13 写入，后续集成未强制覆盖当前源码
 - [x] `PYTHONUTF8=1 python scripts/verify_package.py`：13 个 manifest 源文件、43 项保留能力、8 个批次、27 个 JSON 均通过；该结果仅证明包完整性
 - [ ] 包内隔离 TypeScript/Node 检查通过，但 Python planner/installer 为 13/15；2 项符号链接安全测试被当前 Windows 进程缺少 symlink 权限（WinError 1314）阻塞
@@ -28,14 +28,15 @@
 - [x] 精确 release artifact 烟测：中文主窗口、动态 loopback sidecar、匿名 `401 DESKTOP_AUTH_REQUIRED`、WebView2、单实例、OS API 接受和 owned-process 回收通过；未读取会话 token
 - [x] 本机 current-user NSIS 安装、启动同一烟测和卸载通过，HKCU 卸载记录正常移除；该结果不等于签名清洁机、升级或回滚
 - [x] 固定硬件性能门禁已用版本化硬件/策略/源码指纹，在 BNB Chain + NodeReal 真实只读双 Operator 上完成五次基线和独立复核；具体观测与预算以 `性能基线.json` 为准
-- [ ] 24 小时 soak 尚未完成；G13 只能为 `PARTIAL`。当前源码签名桌面包、清洁机、升级/回滚仍为 `NOT_RUN` 或 `BLOCKED`
+- [x] 24 小时 soak `v11-final-48a6281-20260831T0353Z`：真实经过 `86405483ms`，`97/97 PASS`、哈希链有效、0 个外部阻塞周期、最大启动间隔 `900014ms`；G13 为 `PASS`，证据见 `浸泡验证.json`
+- [x] 浸泡总时长平均 `7187.222ms`、最小 `2707.990ms`；功能策略 PASS 不等于没有性能风险：`19/97` 周期高于 `8514ms` 基线预算，最大 `41802.527ms`，已完整保留周期号与时长
 - [ ] Pump、Raydium、Bitcoin named real-chain gate 本轮均在请求前因 Provider hostname 解析到保留地址而失败关闭；没有放宽 SSRF；AGE 与 BSC PASS 不替代这些实链门禁
 - [ ] 真实 IdP、逐记录租户/owner 隔离、持久四眼/WORM、xapid 服务身份和第三方 AI 权利/删除送达未验证
 - [ ] G14 Final Acceptance：`BLOCKED`
 
 证据收口提交 `39b655f` 后最终重建的 release 主程序 SHA-256：`E0541BD9BE73AE1550F14B44F3C3934A766B079FD0FB575B1C081916A213CF3A`；sidecar：`B3A8F205F46ABAB593AED436239CA7950548A1AC60E4C4825EF2F37D6E38DD92`；NSIS 安装包：`8E48CC04BCD6F559A88593BB5DAA357ACE76DB08B087697088388DC5F742D6E9`；三者 Authenticode：`NotSigned`。
 
-结论：V11 本地可验证实现、当前源码工具链、真实隔离存储、固定硬件性能、SHA 绑定视觉、原生通知 API 接受和本机安装/卸载回归成立；完整 real-chain、24 小时稳定性和签名发行门禁未闭合，禁止宣称 Production Acceptance、Combined PASS 或 terminal-complete。
+结论：V11 本地可验证实现、当前源码工具链、真实隔离存储、固定硬件性能、SHA 绑定视觉、24 小时功能稳定性、原生通知 API 接受和本机安装/卸载回归成立；完整 named real-chain、50 Token 人工复核和签名发行门禁仍未闭合，禁止宣称 Production Acceptance、Combined PASS 或 terminal-complete。浸泡长尾是已记录的性能风险，不能因 G13 PASS 而解释为不存在。
 
 ## 2026-08-21 当前实现候选验收
 
