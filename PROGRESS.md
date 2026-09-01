@@ -1,5 +1,17 @@
 # ZeroTrace Progress Ledger
 
+## 2026-09-01 Windows 免安装便携工作站
+
+实现提交 `db76fef44ddc8c276050243508af1c029f4b49f6` 在既有 Tauri 桌面壳层上增加真实 Windows x64 免安装交付，没有建立并行数据权威。便携标记要求 `readOnly=true`，程序只从同目录加载版本化 `config/paper_portfolios.json`，把本地存储根限定在同目录 `ZeroTrace-Data/storage-plane`。安装布局继续使用 Tauri resource 与用户应用数据目录。两种布局都使用动态 loopback、每会话桌面 token、同一 API sidecar 和既有模拟资金权威；不包含私钥、签名、广播、真实 `.env` 或付费授权。
+
+`npm run desktop:portable` 生成 `output/portable/ZeroTrace-Portable-0.1.0-win-x64.zip`，当前 SHA-256 为 `9D7609B76D2C875E04A26C5AAC85250478E678E032BFF5FCAA4E2CB87ADA8811`，大小 `28,988,437` 字节。`npm run desktop:portable:smoke` 将 ZIP 解压到全新临时目录，校验每个 SHA-256 后真实启动；便携中文窗口、WebView2、动态 sidecar、匿名 `401`、鉴权健康 `200`、模拟配置 `200`、单实例、OS Notification API 接受、同目录数据根和退出无残留全部通过。当前便携 `ZeroTrace.exe` 内部 SHA-256 为 `7C5BA487A9B0100E53B7749D00B87C07C5B2300A72A37E0367D75EECF7D6D791`，sidecar 为 `02710A2578BEB01655E127B1450E9B4E441ABC701322DED0867D21A32A43F342`。
+
+既有 NSIS 也从同一当前源码重建，安装布局 release 烟测通过。新 NSIS SHA-256 为 `DE86BB41EB1C1967539A4CA509B5FD04AE6DFAC3E3F7EFF5CC6F7C7FD7F30C4D`。便携主程序、当前 release 主程序、sidecar 和 NSIS 均为 `NotSigned`；本结果不替代签名清洁机、升级/回滚或外部 Provider 验收。
+
+本轮 `npm run verify` 通过：单元 `1049/1049`、可运行集成 `88/88`、环境相关 `42 skipped`、eval `2/2`、只读 MCP `5/5`，format/lint/typecheck/build/license/architecture/中文/schema drift 均通过。当前 `npm audit --audit-level=high` 为 0 个 high、3 个 moderate；自动修复要求破坏性 MinIO 降级，未擅自执行。Rust workspace fmt/clippy `-D warnings` 和 52 个测试通过，property `72/72`、forensic golden `41/41` 通过。Windows E2E 曾发现 `4173` 被另一个仓库占用而错把 HTTP 200 当成 ZeroTrace；修复为隔离端口 `14173` 并验证 API/页面身份后，真实桌面、移动和视觉点击回归 `49/49` 通过。长 Provider 黄金图的唯一旧差异来自 `Date.now()`，现使用测试已有 `fixedAt` 固定浏览器时钟后通过。
+
+会话内置/扩展浏览器列表为空，因此未将该交互表面记为 PASS；原生 WebView2 启动与仓库 Playwright 点击门禁已独立通过。G14 仍为 `BLOCKED`：完整 named real-chain、50 Token 人工复核、真实 IdP/租户、xapid/第三方 AI 和签名清洁机门禁未闭合，所以没有合并/推送 `main`，也没有创建对外大版本 release。
+
 ## 2026-08-31 V11 唯一 Goal 本地交付结果
 
 本轮从受保护 `main` 的短分支 `agent/terminal-market-structure-v1` 连续执行唯一 V11 Goal；24 小时浸泡所用实现与证据冻结于 `48a6281fade3c96de7b9c72243c7100386b4e127`，未合并 `main`。V11 安装器先预检无冲突再执行 `--apply`，journal `.zerotrace-backups/20260831-004448-h94i67i1/journal.json` 记录 13/13 写入及替换前备份；后续改动均按当前仓库架构逐项接线，没有再次强制覆盖。本包目录、ZIP、备份、`output/` 和用户辅助脚本保持未跟踪且未纳入提交。包完整性在显式 `PYTHONUTF8=1` 下通过；包内 Python planner/installer 为 13/15，另外 2 项因当前 Windows 进程没有符号链接权限报 WinError 1314，未改写为 PASS。
