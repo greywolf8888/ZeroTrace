@@ -322,7 +322,7 @@ describe('API error handler', () => {
     const app = Fastify({ logger: false, bodyLimit: 32 });
     apps.push(app);
     registerApiErrorHandler(app);
-    app.post('/body', async (request) => request.body);
+    app.post('/body', async () => ({ accepted: true }));
 
     const malformed = await app.inject({
       method: 'POST',

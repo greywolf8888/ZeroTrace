@@ -18,6 +18,8 @@ const EnvironmentSchema = z.object({
     ),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   REQUEST_TIMEOUT_MS: z.coerce.number().int().min(100).max(120_000).default(8_000),
+  HTTP_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(1_000_000).default(600),
+  HTTP_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(60_000),
   HEALTH_CACHE_TTL_MS: z.coerce.number().int().min(0).max(300_000).default(15_000),
   PROVIDER_ALLOW_HOSTS: z.string().default(''),
   ALLOW_PRIVATE_PROVIDER_URLS: z.enum(['true', 'false']).default('false'),
@@ -117,6 +119,8 @@ export interface AppConfig {
   corsOrigins: string[];
   logLevel: string;
   requestTimeoutMs: number;
+  httpRateLimitMax?: number;
+  httpRateLimitWindowMs?: number;
   healthCacheTtlMs: number;
   providerAllowedHosts: string[];
   allowPrivateProviderUrls: boolean;
@@ -328,6 +332,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
       .filter(Boolean),
     logLevel: parsed.LOG_LEVEL,
     requestTimeoutMs: parsed.REQUEST_TIMEOUT_MS,
+    httpRateLimitMax: parsed.HTTP_RATE_LIMIT_MAX,
+    httpRateLimitWindowMs: parsed.HTTP_RATE_LIMIT_WINDOW_MS,
     healthCacheTtlMs: parsed.HEALTH_CACHE_TTL_MS,
     providerAllowedHosts: parsed.PROVIDER_ALLOW_HOSTS.split(',')
       .map((value) => value.trim().toLowerCase())

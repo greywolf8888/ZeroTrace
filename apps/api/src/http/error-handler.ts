@@ -303,16 +303,22 @@ export function registerApiErrorHandler(app: FastifyInstance): void {
       const code =
         fastifyStatus === 413
           ? 'REQUEST_BODY_TOO_LARGE'
-          : fastifyStatus === 415
-            ? 'UNSUPPORTED_MEDIA_TYPE'
-            : 'INVALID_REQUEST';
+          : fastifyStatus === 429
+            ? 'RATE_LIMITED'
+            : fastifyStatus === 415
+              ? 'UNSUPPORTED_MEDIA_TYPE'
+              : 'INVALID_REQUEST';
       const message =
         fastifyStatus === 413
           ? '请求体超过服务允许的大小。'
-          : fastifyStatus === 415
-            ? '请求媒体类型不受支持。'
-            : '请求格式无效。';
-      return reply.code(fastifyStatus).send(errorResponse(request, code, message, false));
+          : fastifyStatus === 429
+            ? '请求过于频繁，请在 Retry-After 指定时间后重试。'
+            : fastifyStatus === 415
+              ? '请求媒体类型不受支持。'
+              : '请求格式无效。';
+      return reply
+        .code(fastifyStatus)
+        .send(errorResponse(request, code, message, fastifyStatus === 429));
     }
     const internalError = error instanceof Error ? error : new Error('Unknown thrown value');
     request.log.error(
