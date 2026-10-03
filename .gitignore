@@ -26,3 +26,8 @@ data/provider-plane/
 data/storage-plane/
 ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包/
 ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包.zip
+
+# Arc Task Ledger：本地任务包、数据库、私有收据与候选导出不提交。
+arc-task-ledger-pack/
+.agent-state/
+dist-public/

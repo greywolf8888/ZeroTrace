@@ -1,0 +1,24 @@
+{
+  "name": "@zerotrace/arc-task-ledger-api",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "worker": "node dist/worker.js",
+    "migrate": "node dist/migrate.js"
+  },
+  "dependencies": {
+    "@zerotrace/arc-task-ledger": "*",
+    "@zerotrace/evidence": "*",
+    "fastify": "5.11.3",
+    "@fastify/rate-limit": "11.2.0",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.21.0"
+  }
+}

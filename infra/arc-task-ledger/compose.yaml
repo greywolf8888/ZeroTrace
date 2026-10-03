@@ -1,0 +1,80 @@
+name: arc-task-ledger
+x-env: &arc-env
+  ARC_DATABASE_URL: postgresql://arc:${ARC_DB_PASSWORD:?配置专用数据库密码}@postgres:5432/arc_task_ledger
+  ARC_CURSOR_SECRET: ${ARC_CURSOR_SECRET:?配置至少32字节分页密钥}
+  ARC_RPC_URL: https://rpc.blockdaemon.mainnet.arc.io
+  ARC_PROVIDER_ALIAS: arc-blockdaemon-public
+services:
+  postgres:
+    image: postgres:16.10-alpine
+    user: postgres
+    environment:
+      POSTGRES_DB: arc_task_ledger
+      POSTGRES_USER: arc
+      POSTGRES_PASSWORD: ${ARC_DB_PASSWORD:?配置专用数据库密码}
+    volumes: [arc-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U arc -d arc_task_ledger]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [private]
+  migrate:
+    build:
+      {
+        context: ../../dist-public/arc-task-ledger,
+        dockerfile: infra/arc-task-ledger/Dockerfile,
+        target: api,
+      }
+    environment: *arc-env
+    command: [node, apps/arc-task-ledger-api/dist/migrate.js]
+    depends_on: { postgres: { condition: service_healthy } }
+    networks: [private]
+  api:
+    build:
+      {
+        context: ../../dist-public/arc-task-ledger,
+        dockerfile: infra/arc-task-ledger/Dockerfile,
+        target: api,
+      }
+    environment: *arc-env
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:8087/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [private]
+  worker:
+    build:
+      {
+        context: ../../dist-public/arc-task-ledger,
+        dockerfile: infra/arc-task-ledger/Dockerfile,
+        target: api,
+      }
+    environment: *arc-env
+    command: [node, apps/arc-task-ledger-api/dist/worker.js, --follow]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    restart: unless-stopped
+    networks: [private, rpc-egress]
+  web:
+    build:
+      {
+        context: ../../dist-public/arc-task-ledger,
+        dockerfile: infra/arc-task-ledger/Dockerfile,
+        target: web,
+      }
+    ports: ['127.0.0.1:5177:8080']
+    depends_on: { api: { condition: service_healthy } }
+    networks: [private]
+volumes:
+  arc-data:
+networks:
+  private: { internal: true }
+  rpc-egress: {}

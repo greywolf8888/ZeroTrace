@@ -1,0 +1,44 @@
+import { hashPayload } from '@zerotrace/evidence';
+import { keccak256, type Abi } from 'viem';
+import abiJson from './abi.json' with { type: 'json' };
+import lock from './deployment.json' with { type: 'json' };
+import { LedgerError, address, decimal } from './types.js';
+
+export const ABI = abiJson as Abi;
+export const DEPLOYMENT = {
+  ...lock,
+  adapter: address(lock.adapter),
+  escrow: address(lock.escrow),
+  usdcErc20: address(lock.usdcErc20),
+  usdcSystemEmitter: address(lock.usdcSystemEmitter),
+};
+if (
+  hashPayload(abiJson) !== lock.abiHash ||
+  keccak256(lock.adapterCode as `0x${string}`) !== lock.adapterCodeHash
+)
+  throw new LedgerError('LOCK_INVALID', '协议锁文件完整性核验失败。');
+export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {
+  const rpcUrl = env.ARC_RPC_URL ?? lock.rpcCandidates[1]!.url;
+  const rpcHosts = lock.rpcCandidates.map((source) => new URL(source.url).hostname);
+  const port = Number(env.ARC_API_PORT ?? 8087);
+  if (!Number.isSafeInteger(port) || port < 1024 || port > 65535)
+    throw new LedgerError('CONFIG_INVALID', 'API 端口不合法。');
+  const databaseUrl = env.ARC_DATABASE_URL;
+  if (!databaseUrl)
+    throw new LedgerError('STORAGE_UNAVAILABLE', '请配置本组件专用 ARC_DATABASE_URL。');
+  const maxJobs = Number(env.ARC_MAX_JOBS ?? 1000);
+  if (!Number.isSafeInteger(maxJobs) || maxJobs < 1 || maxJobs > 10000)
+    throw new LedgerError('CONFIG_INVALID', '任务采集上限不合法。');
+  const scanBudget = decimal(env.ARC_SCAN_BLOCK_BUDGET ?? '20000');
+  if (BigInt(scanBudget) < 1n || BigInt(scanBudget) > 200000n)
+    throw new LedgerError('CONFIG_INVALID', '历史扫描预算不合法。');
+  return {
+    rpcUrl,
+    rpcHosts,
+    port,
+    databaseUrl,
+    maxJobs,
+    scanBudget,
+    providerAlias: env.ARC_PROVIDER_ALIAS ?? 'arc-blockdaemon-public',
+  };
+}

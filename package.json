@@ -96,7 +96,17 @@
     "forensic:golden": "vitest run packages/supply-reality-engine packages/identity-intelligence packages/campaign-intelligence packages/capital-intelligence packages/market-reality-engine evals/market-structure",
     "market-exit:golden": "vitest run packages/market-reality-engine",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build && npm run license:check && npm run audit && npm run architecture:check && npm run ui:chinese:check && npm run schema:drift:check",
-    "verify:full": "npm run verify && npm run test:coverage && npm run test:e2e && npm run test:visual-golden && npm run sbom && npm run forensic:golden && npm run market-exit:golden"
+    "verify:full": "npm run verify && npm run test:coverage && npm run test:e2e && npm run test:visual-golden && npm run sbom && npm run forensic:golden && npm run market-exit:golden",
+    "arc:build": "tsc -b apps/arc-task-ledger-api && npm run build -w @zerotrace/arc-task-ledger-web",
+    "arc:dev": "concurrently --kill-others \"tsx watch apps/arc-task-ledger-api/src/server.ts\" \"npm run dev -w @zerotrace/arc-task-ledger-web\"",
+    "arc:worker": "tsx apps/arc-task-ledger-api/src/worker.ts",
+    "arc:migrate": "tsx apps/arc-task-ledger-api/src/migrate.ts",
+    "arc:test:unit": "vitest run tests/arc-task-ledger/unit",
+    "arc:test:integration": "vitest run tests/arc-task-ledger/integration",
+    "arc:test:e2e": "playwright test --config tests/arc-task-ledger/playwright.config.ts",
+    "arc:test:live": "tsx scripts/arc-task-ledger-live.ts",
+    "arc:verify": "npm run arc:test:unit && npm run arc:test:integration && npm run arc:build && npm run arc:test:e2e",
+    "arc:export": "node scripts/arc-task-ledger-export.mjs"
   },
   "devDependencies": {
     "@cyclonedx/cyclonedx-npm": "6.0.0",

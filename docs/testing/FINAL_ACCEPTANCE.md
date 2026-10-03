@@ -1211,3 +1211,11 @@ be described as terminal-complete or production-approved.
 The unchecked historical-ingestion item is intentionally broader than the completed finalized raw
 ledger path: semantic transaction/protocol normalization, continuous operation, reorg policy,
 archive-scale backfill, and independent-provider reconciliation remain required.
+
+## 2026-10-04：独立 Arc 任务证据组件验收边界
+
+本轮本地 Arc 组件通过 38 单元、16 真实 PostgreSQL、4 桌面/手机浏览器检查，独立导出在仓库外干净安装/构建/启动并复验。金额使用精确原子字符串，业务完成与现金到账分离；pending 提现缺少任务编号时不猜测分摊。生产无 fixture 回退；正式模式在存储、覆盖、来源或回放不足时关闭。
+
+实际主网执行：PRIVATE_NETWORK_BLOCKED，官方 RPC 被本机 DNS 映射到 198.18 保留地址，未取得任务竖切片。公开部署、申请资料及上游真实采用未确认。Docker daemon 未通过；Compose 配置可解析。原有 42 个服务集成用例因外部配置缺失跳过；旧视觉证据新鲜度未通过，未改旧证据。
+
+本轮结果与可重放收据索引见 [Arc 验收](../arc-task-ledger/FINAL_ACCEPTANCE.md)。本节不继承旧 PASS，不改变原市场结构各门禁状态，不宣称完整终端或主网已通过。

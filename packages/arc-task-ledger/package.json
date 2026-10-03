@@ -1,0 +1,21 @@
+{
+  "name": "@zerotrace/arc-task-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@zerotrace/chain-adapters": "*",
+    "@zerotrace/evidence": "*",
+    "undici": "6.28.0",
+    "viem": "2.55.11"
+  }
+}

@@ -1,4 +1,5 @@
 {
+  "extends": "./tsconfig.base.json",
   "files": [],
   "references": [
     { "path": "./tsconfig.packages.json" },
@@ -7,6 +8,8 @@
     { "path": "./services/ingest-worker" },
     { "path": "./services/semantic-worker" },
     { "path": "./services/simulation-worker" },
-    { "path": "./services/llm-worker" }
+    { "path": "./services/llm-worker" },
+    { "path": "./apps/arc-task-ledger-api" },
+    { "path": "./apps/arc-task-ledger-web" }
   ]
 }

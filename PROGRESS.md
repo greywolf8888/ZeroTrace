@@ -2461,3 +2461,11 @@ The record is updated only after commands complete. Detailed commands and accept
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
 The registered FFT/Flap error budgets and automatic discrepancy rules are in
 [Flap/FFT reference acceptance case](docs/testing/FLAP_FFT_ACCEPTANCE.md).
+
+## 2026-10-04：Arc 任务证据组件 v1.0.0
+
+本轮仅新增独立只读 Arc Task Ledger，分支 `agent/arc-task-ledger-v1`。核心包、专用 PostgreSQL schema、API/Web/worker、资金腿及账户 pending、固定快照分页/回放、独立 consumer、部署与白名单导出完成本地验收。38 项单元、16 项真实数据库、4 项桌面/手机浏览器通过；仓库外干净源码包完成相同检查与实际启动。原桌面端未提交修改及既有业务数据保留。
+
+主网实际请求因官方 RPC 在本机解析到 198.18 保留网段而被安全边界拒绝；主网生产门禁未通过。公开目标、出口策略及申请身份/资格资料缺失，先按用户要求跳过。Docker daemon 查询超时，只有 Compose 配置解析证据。原有 42 项外部服务集成本次跳过；原视觉证据清单因依赖清单变化过期，未改旧记录，当前 49 项浏览器/Windows 入口通过。
+
+详见 [Arc 本轮验收](docs/arc-task-ledger/FINAL_ACCEPTANCE.md)。本地功能通过不代表主网、公开部署、奖金申请、上游采用或 ZeroTrace 全终端完成。

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const workspacePackages = [
+  'arc-task-ledger',
   'action-semantics',
   'chain-adapters',
   'capture-scheduler',
@@ -51,12 +52,20 @@ const runsTerminalFormulaGate = process.argv.some((argument) =>
 
 export default defineConfig({
   resolve: {
-    alias: Object.fromEntries(
-      workspacePackages.map((name) => [
-        `@zerotrace/${name}`,
-        fileURLToPath(new URL(`./packages/${name}/src/index.ts`, import.meta.url)),
-      ]),
-    ),
+    alias: {
+      '@zerotrace/chain-adapters/transport': fileURLToPath(
+        new URL('./packages/chain-adapters/src/transport.ts', import.meta.url),
+      ),
+      '@zerotrace/chain-adapters/security': fileURLToPath(
+        new URL('./packages/chain-adapters/src/security.ts', import.meta.url),
+      ),
+      ...Object.fromEntries(
+        workspacePackages.map((name) => [
+          `@zerotrace/${name}`,
+          fileURLToPath(new URL(`./packages/${name}/src/index.ts`, import.meta.url)),
+        ]),
+      ),
+    },
   },
   test: {
     testTimeout: 15_000,
@@ -64,6 +73,10 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      'dist-public/**',
+      'arc-task-ledger-pack/**',
+      '.agent-state/**',
+      'tests/arc-task-ledger/e2e/**',
       '**/coverage/**',
       '**/tests/e2e/**',
       ...(runsTerminalFormulaGate ? [] : ['evals/terminal-formulas/**']),

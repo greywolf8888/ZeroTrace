@@ -1,0 +1,854 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Arc Task Ledger read-only API",
+    "version": "0.1.0-design",
+    "description": "Design contract, not evidence that endpoints already exist."
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "paths": {
+    "/v1/jobs": {
+      "get": {
+        "operationId": "listJobs",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$"
+            }
+          },
+          {
+            "name": "lifecycle",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 48
+            }
+          },
+          {
+            "name": "cashState",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 48
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{chainId}/{adapter}/{jobId}": {
+      "get": {
+        "operationId": "getJob",
+        "parameters": [
+          {
+            "name": "chainId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["5042"]
+            }
+          },
+          {
+            "name": "adapter",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$"
+            }
+          },
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,78}$"
+            }
+          },
+          {
+            "name": "snapshotRunId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "timelineCursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["json"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/coverage": {
+      "get": {
+        "operationId": "getCoverage",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoverageStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Read-only typed response; completeness is in coverage, not HTTP status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Knowledge": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["state", "value", "evidenceIds"],
+            "properties": {
+              "state": {
+                "const": "known"
+              },
+              "value": {},
+              "evidenceIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "derivation": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["state", "reason"],
+            "properties": {
+              "state": {
+                "enum": ["unknown", "unavailable", "conflict", "unsupported"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "evidenceIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Amount": {
+        "type": "object",
+        "required": ["asset", "decimals", "atomic"],
+        "properties": {
+          "asset": {
+            "const": "USDC"
+          },
+          "decimals": {
+            "const": 18
+          },
+          "atomic": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          }
+        }
+      },
+      "Snapshot": {
+        "type": "object",
+        "required": ["chainId", "blockNumber", "blockHash", "observedAt", "finality"],
+        "properties": {
+          "chainId": {
+            "const": "5042"
+          },
+          "blockNumber": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "blockHash": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{64}$"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finality": {
+            "$ref": "#/components/schemas/Knowledge"
+          }
+        }
+      },
+      "Coverage": {
+        "type": "object",
+        "required": [
+          "currentState",
+          "jobEnumeration",
+          "lifecycleHistory",
+          "settlementHistory",
+          "accountPendingHistory",
+          "deploymentVerification",
+          "sourceAgreement"
+        ],
+        "properties": {
+          "currentState": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "jobEnumeration": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "lifecycleHistory": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "settlementHistory": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "accountPendingHistory": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "deploymentVerification": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "sourceAgreement": {
+            "$ref": "#/components/schemas/Knowledge"
+          }
+        }
+      },
+      "JobRow": {
+        "type": "object",
+        "required": [
+          "jobKey",
+          "jobId",
+          "adapter",
+          "snapshot",
+          "reward",
+          "lifecycle",
+          "cashState",
+          "coverage"
+        ],
+        "properties": {
+          "jobKey": {
+            "type": "string"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "adapter": {
+            "type": "string"
+          },
+          "poster": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "worker": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/Snapshot"
+          },
+          "reward": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "cashState": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          }
+        }
+      },
+      "JobsPage": {
+        "type": "object",
+        "required": ["snapshotRunId", "items", "nextCursor", "coverage"],
+        "properties": {
+          "snapshotRunId": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobRow"
+            }
+          },
+          "nextCursor": {
+            "type": ["string", "null"]
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          }
+        }
+      },
+      "SettlementLeg": {
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "kind",
+          "payee",
+          "observedAmount",
+          "parkedAmount",
+          "attribution",
+          "evidenceIds"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "enum": ["WORKER", "POSTER", "PROTOCOL", "ESCROW"]
+          },
+          "kind": {
+            "enum": [
+              "REWARD",
+              "FEE",
+              "REFUND",
+              "BOND_RETURN",
+              "BOND_FORFEIT",
+              "TIMEOUT_SHARE",
+              "ESCROW_TRANSIT",
+              "DEPOSIT"
+            ]
+          },
+          "payee": {
+            "type": "string"
+          },
+          "observedAmount": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "parkedAmount": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "attribution": {
+            "enum": [
+              "DIRECT",
+              "UNIQUE_EVENT_SEGMENT",
+              "ACCOUNT_ONLY",
+              "VERIFIED_SEQUENCE_DERIVED",
+              "AMBIGUOUS",
+              "UNKNOWN"
+            ]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TimelineEvent": {
+        "type": "object",
+        "required": ["id", "name", "transactionHash", "logIndex", "blockNumber", "evidenceIds"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "transactionHash": {
+            "type": "string"
+          },
+          "logIndex": {
+            "type": "string"
+          },
+          "blockNumber": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "JobDetail": {
+        "type": "object",
+        "required": [
+          "job",
+          "rawState",
+          "settlementLegs",
+          "timeline",
+          "nextTimelineCursor",
+          "evidence",
+          "ruleVersion"
+        ],
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/JobRow"
+          },
+          "rawState": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "settlementLegs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettlementLeg"
+            }
+          },
+          "timeline": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            }
+          },
+          "nextTimelineCursor": {
+            "type": ["string", "null"]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "payloadHash", "sourceAlias", "snapshot"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "payloadHash": {
+                  "type": "string"
+                },
+                "sourceAlias": {
+                  "type": "string"
+                },
+                "snapshot": {
+                  "$ref": "#/components/schemas/Snapshot"
+                },
+                "safePayload": {}
+              }
+            }
+          },
+          "ruleVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "CoverageStatus": {
+        "type": "object",
+        "required": [
+          "network",
+          "adapter",
+          "lastSuccessfulSync",
+          "stateHead",
+          "historyHead",
+          "coverage"
+        ],
+        "properties": {
+          "network": {
+            "const": "arc-mainnet"
+          },
+          "adapter": {
+            "type": "string"
+          },
+          "lastSuccessfulSync": {
+            "type": ["string", "null"]
+          },
+          "stateHead": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "historyHead": {
+            "$ref": "#/components/schemas/Knowledge"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "enum": ["up", "down", "degraded"]
+          },
+          "components": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

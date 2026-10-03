@@ -1,0 +1,9 @@
+node_modules
+.git
+.env*
+.agent-state
+arc-task-ledger-pack
+tests
+playwright-report
+**/dist
+**/.types

@@ -60,7 +60,8 @@
       "@zerotrace/token-market-capture": ["./packages/token-market-capture/src/index.ts"],
       "@zerotrace/workflow-core": ["./packages/workflow-core/src/index.ts"],
       "@zerotrace/llm-gateway": ["./packages/llm-gateway/src/index.ts"],
-      "@zerotrace/metric-registry": ["./packages/metric-registry/src/index.ts"]
+      "@zerotrace/metric-registry": ["./packages/metric-registry/src/index.ts"],
+      "@zerotrace/arc-task-ledger": ["./packages/arc-task-ledger/src/index.ts"]
     }
   }
 }

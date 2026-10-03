@@ -1,0 +1,345 @@
+import { hashPayload } from '@zerotrace/evidence';
+import { DEPLOYMENT } from './config.js';
+import type { ArcReader } from './reader.js';
+import type { LedgerRepository } from './storage.js';
+import { lifecycle, protocolAtoms, ruleMetadata } from './protocol.js';
+import { accountPending, settlement } from './settlement.js';
+import {
+  LedgerError,
+  RULE_VERSION,
+  ZERO_ADDRESS,
+  amount,
+  known,
+  unknown,
+  emptyCoverage,
+  type Snapshot,
+  type Receipt,
+  type StoredEvidence,
+  type SnapshotRun,
+  type RawMeta,
+  type JobDetail,
+  type PendingAccount,
+} from './types.js';
+
+export async function scanHistory(
+  reader: ArcReader,
+  store: LedgerRepository,
+  snapshot: Snapshot,
+  budget: string,
+): Promise<{ head: string; errors: string[] }> {
+  let checkpoint = await store.checkpoint(
+    DEPLOYMENT.adapter,
+    (BigInt(DEPLOYMENT.verifiedDeploymentBlock) - 1n).toString(),
+  );
+  let from = BigInt(checkpoint.head) + 1n;
+  let remaining = BigInt(budget);
+  let window = 2000n;
+  const errors: string[] = [];
+  while (from <= BigInt(snapshot.blockNumber) && remaining > 0n) {
+    const size = [window, remaining, BigInt(snapshot.blockNumber) - from + 1n].reduce((a, b) =>
+      a < b ? a : b,
+    );
+    const to = from + size - 1n;
+    const observations: StoredEvidence[] = [];
+    const receipts: { receipt: Receipt; observationId: string }[] = [];
+    try {
+      const before = await reader.block(to.toString());
+      const logs = await reader.logs(from.toString(), to.toString());
+      const segmentEvidence = reader.observe(
+        { from: from.toString(), to: to.toString(), logs, anchor: before },
+        snapshot,
+        `eth_getLogs:${from}-${to}`,
+        '受控区间完整日志请求与锚点。',
+      );
+      observations.push(segmentEvidence);
+      const hashes = [...new Set(logs.map((l) => l.transactionHash))];
+      for (const tx of hashes) {
+        const receipt = await reader.read<Receipt | null>('eth_getTransactionReceipt', [tx]);
+        if (
+          !receipt ||
+          receipt.transactionHash !== tx ||
+          receipt.status !== '0x1' ||
+          !Array.isArray(receipt.logs)
+        )
+          throw new LedgerError('RECEIPT_UNAVAILABLE', '关联回执缺失或格式无效。');
+        const log = logs.find((l) => l.transactionHash === tx)!;
+        if (
+          receipt.blockHash !== log.blockHash ||
+          BigInt(receipt.blockNumber) !== BigInt(log.blockNumber) ||
+          (await reader.block(BigInt(receipt.blockNumber).toString())).hash !== receipt.blockHash
+        )
+          throw new LedgerError('SOURCE_CONFLICT', '回执与日志/区块锚点冲突。', 409);
+        for (const observed of logs.filter((l) => l.transactionHash === tx))
+          if (
+            !receipt.logs.some(
+              (l) =>
+                BigInt(l.logIndex) === BigInt(observed.logIndex) &&
+                l.address.toLowerCase() === observed.address.toLowerCase() &&
+                l.data === observed.data &&
+                JSON.stringify(l.topics) === JSON.stringify(observed.topics),
+            )
+          )
+            throw new LedgerError('RECEIPT_CONFLICT', '回执未包含查询返回的完整协议日志。', 409);
+        const evidence = reader.observe(
+          receipt,
+          snapshot,
+          `eth_getTransactionReceipt:${tx}`,
+          '协议交易完整原始回执。',
+        );
+        observations.push(evidence);
+        receipts.push({ receipt, observationId: evidence.id });
+      }
+      if ((await reader.block(to.toString())).hash !== before.hash)
+        throw new LedgerError('SOURCE_CONFLICT', '日志窗口锚点变化。', 409);
+      checkpoint = await store.saveSegment({
+        deployment: DEPLOYMENT.adapter,
+        from: from.toString(),
+        to: to.toString(),
+        status: 'complete',
+        document: {
+          filter: { adapter: DEPLOYMENT.adapter },
+          snapshot,
+          anchor: before,
+          evidenceIds: observations.map((e) => e.id),
+          count: logs.length,
+        },
+        observations,
+        receipts,
+        expectedVersion: checkpoint.version,
+      });
+      remaining -= size;
+      from = to + 1n;
+    } catch (error) {
+      if (error instanceof LedgerError && error.status === 409) {
+        await store.saveSegment({
+          deployment: DEPLOYMENT.adapter,
+          from: from.toString(),
+          to: to.toString(),
+          status: 'conflict',
+          document: { code: error.code, snapshot },
+          observations,
+          receipts: [],
+          expectedVersion: checkpoint.version,
+        });
+        throw error;
+      }
+      const failure = error as { code?: string; statusCode?: number; message?: string };
+      const rangeLimited =
+        failure.statusCode === 413 ||
+        failure.code === 'LOG_PAGE_CAP' ||
+        (failure.code === 'RPC_ERROR' &&
+          /range|too many|limit|response size/i.test(failure.message ?? ''));
+      if (rangeLimited && window > 1n) {
+        window /= 2n;
+        continue;
+      }
+      await store.saveSegment({
+        deployment: DEPLOYMENT.adapter,
+        from: from.toString(),
+        to: to.toString(),
+        status: 'partial',
+        document: {
+          code: failure.code ?? 'SOURCE_UNAVAILABLE',
+          providerAlias: reader.transport.endpointId,
+          snapshot,
+        },
+        observations,
+        receipts: [],
+        expectedVersion: checkpoint.version,
+      });
+      errors.push(`历史区间 ${from}-${to} 无法核验，连续水位保留。`);
+      break;
+    }
+  }
+  if (BigInt(checkpoint.head) < BigInt(snapshot.blockNumber))
+    errors.push(`历史仅连续核验至 ${checkpoint.head}；未覆盖至当前状态区块。`);
+  return { head: checkpoint.head, errors };
+}
+
+export async function syncOnce(
+  reader: ArcReader,
+  store: LedgerRepository,
+  options: { maxJobs: number; scanBudget: string; currentOnly?: boolean },
+): Promise<SnapshotRun> {
+  return store.withWorkerLock(async () => {
+    const snapshot = await reader.anchor();
+    await reader.verifyDeployment(snapshot);
+    const deploymentEvidence = [...reader.evidence];
+    const previousRun = await store.getRun();
+    const enumeration = await reader.enumerate(snapshot, options.maxJobs);
+    if (
+      previousRun &&
+      BigInt(snapshot.blockNumber) >= BigInt(previousRun.snapshot.blockNumber) &&
+      BigInt(enumeration.total) < BigInt(previousRun.totalExpected)
+    )
+      throw new LedgerError('SOURCE_CONFLICT', '同部署累计任务数回退，暂停发布新投影。', 409);
+    const scan = options.currentOnly
+      ? {
+          head: (BigInt(DEPLOYMENT.verifiedDeploymentBlock) - 1n).toString(),
+          errors: ['本轮仅采集当前状态，历史尚未核验。'],
+        }
+      : await scanHistory(reader, store, snapshot, options.scanBudget);
+    const receipts = await store.receiptsThrough(snapshot.blockNumber);
+    const coverage = emptyCoverage();
+    coverage.currentState = enumeration.errors.length === 0 ? 'complete' : 'partial';
+    coverage.jobEnumeration =
+      enumeration.metas.length === Number(enumeration.total) && enumeration.errors.length === 0
+        ? 'complete'
+        : 'partial';
+    coverage.deploymentVerification = 'complete';
+    coverage.sourceAgreement = 'partial';
+    const historyComplete = BigInt(scan.head) >= BigInt(snapshot.blockNumber);
+    coverage.lifecycleHistory = historyComplete ? 'complete' : 'partial';
+    coverage.settlementHistory = historyComplete ? 'complete' : 'partial';
+    const payees = new Set(
+      enumeration.metas
+        .flatMap((m) => [m.poster, m.assignedProvider])
+        .filter((a) => a.toLowerCase() !== ZERO_ADDRESS)
+        .map((a) => a.toLowerCase()),
+    );
+    const feeRecipient = String(await reader.call('feeRecipient', [], snapshot)).toLowerCase();
+    payees.add(feeRecipient);
+    const accounts: PendingAccount[] = [];
+    for (const payee of payees) {
+      try {
+        const pending = protocolAtoms(
+          String(await reader.call('pendingWithdrawals', [payee], snapshot)),
+        );
+        accounts.push(
+          accountPending(
+            payee,
+            known(
+              pending,
+              reader.evidence.slice(-1).map((e) => e.id),
+            ),
+            receipts,
+            historyComplete,
+            historyComplete ? known('0') : unknown('未覆盖部署起始账户历史。'),
+          ),
+        );
+      } catch {
+        accounts.push(
+          accountPending(
+            payee,
+            { state: 'unavailable', reason: '固定区块账户待领取读取不可用。' },
+            receipts,
+            false,
+            unknown('开启余额未核验。'),
+          ),
+        );
+      }
+    }
+    coverage.accountPendingHistory = accounts.every((a) => a.history === 'complete')
+      ? 'complete'
+      : 'partial';
+    const jobs: JobDetail[] = enumeration.metas.map((meta: RawMeta) => {
+      const cash = settlement(meta, receipts);
+      const stateEvidence = reader.evidence.filter(
+        (e) =>
+          e.evidence.locator === 'eth_call:getBountyMeta' &&
+          (e.raw as { args?: string[] }).args?.[0] === meta.jobId,
+      );
+      const pendingAccounts = accounts.filter((a) =>
+        [meta.poster.toLowerCase(), meta.assignedProvider.toLowerCase(), feeRecipient].includes(
+          a.payee,
+        ),
+      );
+      const accountEvidenceIds = new Set(pendingAccounts.flatMap((a) => a.evidenceIds));
+      const evidence = [
+        ...new Map(
+          [
+            ...deploymentEvidence,
+            ...stateEvidence,
+            ...reader.evidence.filter(
+              (e) =>
+                e.evidence.locator === 'eth_call:pendingWithdrawals' &&
+                pendingAccounts.some((a) => (e.raw as { args?: string[] }).args?.[0] === a.payee),
+            ),
+            ...receipts
+              .filter(
+                (r) =>
+                  cash.events.some((e) => e.transactionHash === r.receipt.transactionHash) ||
+                  accountEvidenceIds.has(r.evidence.id),
+              )
+              .map((r) => r.evidence),
+          ].map((e) => [e.id, e]),
+        ).values(),
+      ];
+      const parkedLegs = cash.legs.filter(
+        (l) => l.parkedAmount.atomic.state === 'known' && BigInt(l.parkedAmount.atomic.value) > 0n,
+      );
+      const derived =
+        parkedLegs.length > 0 &&
+        cash.cashState !== 'UNKNOWN' &&
+        cash.cashState !== 'CONFLICT' &&
+        parkedLegs.every((leg) =>
+          pendingAccounts.some(
+            (a) => a.payee === leg.payee && a.sequenceDerivedJobIds.includes(meta.jobId),
+          ),
+        );
+      return {
+        job: {
+          jobKey: `5042:${DEPLOYMENT.adapter}:${meta.jobId}`,
+          jobId: meta.jobId,
+          adapter: DEPLOYMENT.adapter,
+          poster: meta.poster.toLowerCase(),
+          worker:
+            meta.assignedProvider.toLowerCase() === ZERO_ADDRESS
+              ? unknown('任务尚未指定工作者。')
+              : known(
+                  meta.assignedProvider.toLowerCase(),
+                  stateEvidence.map((e) => e.id),
+                ),
+          snapshot,
+          reward: amount(
+            known(
+              protocolAtoms(meta.reward),
+              stateEvidence.map((e) => e.id),
+            ),
+          ),
+          lifecycle: lifecycle(meta, cash.events),
+          cashState: derived ? 'VERIFIED_SEQUENCE_DERIVED' : cash.cashState,
+          coverage: { ...coverage },
+          selfTake: meta.poster.toLowerCase() === meta.assignedProvider.toLowerCase(),
+          ...ruleMetadata,
+        },
+        rawState: meta,
+        settlementLegs: cash.legs,
+        timeline: cash.events,
+        nextTimelineCursor: unknown('时间线由 API 按快照分页。'),
+        evidence,
+        ruleVersion: RULE_VERSION,
+        pendingAccounts,
+        gas: cash.gas,
+        trace: 'NOT_QUERIED',
+      };
+    });
+    if (previousRun && enumeration.errors.length > 0) {
+      const freshIds = new Set(jobs.map((d) => d.job.jobId));
+      for (const old of previousRun.jobs)
+        if (!freshIds.has(old.job.jobId))
+          jobs.push({
+            ...old,
+            job: {
+              ...old.job,
+              freshness: 'stale',
+              coverage: { ...old.job.coverage, currentState: 'partial', jobEnumeration: 'partial' },
+            },
+          });
+    }
+    if ((await reader.block(snapshot.blockNumber)).hash !== snapshot.blockHash)
+      throw new LedgerError('SOURCE_CONFLICT', '发布前固定锚点不一致。', 409);
+    const run: SnapshotRun = {
+      id: `run_${hashPayload({ snapshot, coverage, metas: enumeration.metas, receipts: receipts.map((r) => r.evidence.id) }).slice(0, 32)}`,
+      snapshot,
+      coverage,
+      expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+      jobs,
+      totalExpected: enumeration.total,
+      errors: [...enumeration.errors, ...scan.errors],
+      mode: 'stored-replay',
+    };
+    await store.publish(run, reader.evidence);
+    return run;
+  });
+}
