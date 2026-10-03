@@ -27,7 +27,7 @@
 | 旧视觉证据清单            | 未通过新源码新鲜度                          | 根依赖清单改变导致指纹过期；旧 PNG/清单未修改，当前截图断言通过不能代替旧证据重新验收                                      |
 | Docker                    | 配置通过，daemon 不可用                     | 原目录与独立导出 Compose 均解析通过；Docker server 查询有界超时，没有镜像 digest、容器启动或出口防火墙已安装声明           |
 
-工作源码指纹：`17a61e8d7a468bc5028aafa61a99714001cb9d25c8c8ad608b1b7d3dbdd84ab5`。这里的指纹包含本轮执行时的工作区源码与原有未提交源码；本次 Git 提交只包含 Arc 范围。
+工作源码指纹：`dc87e8d889c115f32cc201e3ca8a15a35c937483686b0fc8ca58ba7a2b2f9055`。这里的指纹包含本轮执行时的工作区源码与原有未提交源码；本次 Git 提交只包含 Arc 范围。
 
 本次命令原件、起止时间、退出码、源指纹和日志 SHA-256 保存于 `.agent-state/arc-task-ledger/checks` 与 `private`。最终结构化报告在同目录 `final-acceptance.json`。失败或过期收据保留，不纳入有效 PASS 收据集合。工具只验证结构与新鲜度，不等于独立安全审计。
 
@@ -57,7 +57,7 @@
 
 ## 交付与继续条件
 
-独立候选源码：`dist-public/arc-task-ledger/`。最终归档与逐文件摘要见 `dist-public/Arc_Task_Ledger_v1.0.0_20261004_final.zip` 和同目录 `arc-task-ledger-v1-final-source/release-manifest.json`；旧候选保留为过程记录，不是最终交付。归档完整性与逐文件摘要通过，不包含 Git 历史、环境文件、私有证据、研究包、node_modules 或用户业务数据，尚未对外发布。
+独立候选源码：`dist-public/arc-task-ledger/`。最终归档与逐文件摘要见 `dist-public/Arc_Task_Ledger_v1.0.0_20261004_delivery.zip` 和同目录 `arc-task-ledger-v1-release-final/release-manifest.json`；旧候选保留为过程记录，不是最终交付。归档完整性与逐文件摘要通过，不包含 Git 历史、环境文件、私有证据、研究包、node_modules 或用户业务数据，尚未对外发布。
 
 本机预览 `http://127.0.0.1:5177`，专用 API `127.0.0.1:8087`。生产入口连接 `arc_task_ledger_local`，没有测试样例；首次成功主网快照前列表明确不可用。进程与本地数据库启动配置仅保存在私有状态目录。
 
@@ -65,4 +65,14 @@
 
 本报告不能被解读为原 ZeroTrace 全平台或终端市场结构已完成验收。
 
-最终归档：102 文件，270388 字节；SHA-256 `0c1ed6041e1228f31c27c9964c75c045e7f607a3da14bf13d74d361de96980cf`。最终归档的全部非 Markdown 文件与已独立安装/构建/启动/测试的目录逐文件一致，新增说明未改变运行代码。Rust 工作区实际执行 52 项测试通过（另有不含用例的 doctest 组）。
+最终归档：102 文件，263082 字节；SHA-256 `7e5cfbf342cbf4ed3183f8cd45f18252cf51f036efb5ebe234955624d14ad746`。全部源码与已独立安装/构建/启动/测试的目录一致。Rust 工作区 52 项测试通过。
+
+## 推送后依赖告警复核与修复
+
+首批提交 5495c0f 推送时 GitHub 提示默认分支 33 项告警。当前锁文件实测此前为 25 项，独立包生产依赖为 5 项，不能沿用旧记录声称零告警。
+
+本轮将 Arc Fastify 固定为 5.12.5、Undici 固定为 6.29.0，更新兼容的 fast-uri/brace-expansion/ip-address；Vitest 与覆盖工具固定为 4.1.11。许可证检查器按 npm 审计提供的修复路径固定为 4.4.2，CLI allowlist 实际重新执行通过。独立导出按自身依赖图计算 dev 标记，不沿用全平台可达性。所有安装仍禁用生命周期脚本，未运行 audit fix --force。
+
+最终独立包完整依赖审计 0 项已知告警，包含开发依赖；生产依赖同为 0。这只是当次 npm 审计数据库的已知结果，不代替完整安全审计。原 ZeroTrace 其他模块仍有 10 项告警（6 high、4 moderate），主要涉及原 Fastify/Undici、MinIO 及其工具链；未在本任务扩展替换原产品依赖，不能宣称全仓库漏洞审计通过。当前记录在 G6-delivery-audit，独立包记录在 G7-delivery-audit。
+
+补丁后重跑组件/独立目录的金额、数据库、浏览器、构建、lint、许可证、全仓库类型/构建/单元/集成以及 Rust。一次 Windows 并行浏览器出现两个导航超时，单 worker 曾完成 49/49；最终全量为 48/49，控制活动用例仍在诊断导航等待处超时，独立复验 1/1 通过（3.3 秒）。原导航时序不稳定未在 Arc 范围修改，不宣称最终全量完全无失败；未提高用例超时或修改旧视觉基线。原 Windows 包装入口通过显式数组接收参数，生成报告保存在本轮私有目录。

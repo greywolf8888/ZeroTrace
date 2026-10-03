@@ -15,7 +15,7 @@
   "dependencies": {
     "@zerotrace/chain-adapters": "*",
     "@zerotrace/evidence": "*",
-    "undici": "6.28.0",
+    "undici": "6.29.0",
     "viem": "2.55.11"
   }
 }

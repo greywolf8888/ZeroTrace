@@ -12,10 +12,10 @@
     "migrate": "node dist/migrate.js"
   },
   "dependencies": {
+    "@fastify/rate-limit": "11.2.0",
     "@zerotrace/arc-task-ledger": "*",
     "@zerotrace/evidence": "*",
-    "fastify": "5.11.3",
-    "@fastify/rate-limit": "11.2.0",
+    "fastify": "5.12.5",
     "pg": "8.23.0"
   },
   "devDependencies": {

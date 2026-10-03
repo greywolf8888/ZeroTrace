@@ -2469,3 +2469,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 主网实际请求因官方 RPC 在本机解析到 198.18 保留网段而被安全边界拒绝；主网生产门禁未通过。公开目标、出口策略及申请身份/资格资料缺失，先按用户要求跳过。Docker daemon 查询超时，只有 Compose 配置解析证据。原有 42 项外部服务集成本次跳过；原视觉证据清单因依赖清单变化过期，未改旧记录，当前 49 项浏览器/Windows 入口通过。
 
 详见 [Arc 本轮验收](docs/arc-task-ledger/FINAL_ACCEPTANCE.md)。本地功能通过不代表主网、公开部署、奖金申请、上游采用或 ZeroTrace 全终端完成。
+
+2026-10-04 安全补丁复核：Arc Fastify 5.12.5、Undici 6.29.0、Vitest 4.1.11 与许可证检查器 4.4.2，兼容间接依赖更新并复验；独立包全依赖及生产依赖已知审计告警均为 0。原全仓库仍有 10 项告警（6 high、4 moderate），明确未通过全仓库漏洞审计，不能继承旧零告警。最终源码包为 Arc_Task_Ledger_v1.0.0_20261004_delivery.zip。
+
+补丁后最后一次原浏览器全量 48/49，通过独立控制活动复验 1/1；原诊断导航存在时序不稳定，保留失败记录，不宣称最后全量完全通过。Arc 桌面/手机 4/4 及全部本地组件检查通过。

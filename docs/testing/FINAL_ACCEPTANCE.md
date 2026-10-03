@@ -1219,3 +1219,7 @@ archive-scale backfill, and independent-provider reconciliation remain required.
 实际主网执行：PRIVATE_NETWORK_BLOCKED，官方 RPC 被本机 DNS 映射到 198.18 保留地址，未取得任务竖切片。公开部署、申请资料及上游真实采用未确认。Docker daemon 未通过；Compose 配置可解析。原有 42 个服务集成用例因外部配置缺失跳过；旧视觉证据新鲜度未通过，未改旧证据。
 
 本轮结果与可重放收据索引见 [Arc 验收](../arc-task-ledger/FINAL_ACCEPTANCE.md)。本节不继承旧 PASS，不改变原市场结构各门禁状态，不宣称完整终端或主网已通过。
+
+2026-10-04 安全补丁复核：Arc Fastify 5.12.5、Undici 6.29.0、Vitest 4.1.11 与许可证检查器 4.4.2，兼容间接依赖更新并复验；独立包全依赖及生产依赖已知审计告警均为 0。原全仓库仍有 10 项告警（6 high、4 moderate），明确未通过全仓库漏洞审计，不能继承旧零告警。最终源码包为 Arc_Task_Ledger_v1.0.0_20261004_delivery.zip。
+
+补丁后最后一次原浏览器全量 48/49，通过独立控制活动复验 1/1；原诊断导航存在时序不稳定，保留失败记录，不宣称最后全量完全通过。Arc 桌面/手机 4/4 及全部本地组件检查通过。

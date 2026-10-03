@@ -260,6 +260,39 @@ while (pending.length) {
     }
   }
 }
+// dev 标记按导出依赖图重新计算，不能继承原全平台的生产可达性。
+const production = new Set();
+const productionQueue = Object.keys(locked.packages).filter(
+  (rel) => rel.startsWith('apps/') || rel.startsWith('packages/'),
+);
+while (productionQueue.length) {
+  const rel = productionQueue.shift();
+  if (production.has(rel)) continue;
+  production.add(rel);
+  const entry = locked.packages[rel];
+  if (entry.link) {
+    productionQueue.push(entry.resolved);
+    continue;
+  }
+  const deps = {
+    ...entry.dependencies,
+    ...entry.optionalDependencies,
+    ...Object.fromEntries(
+      Object.entries(entry.peerDependencies ?? {}).filter(
+        ([name]) => !entry.peerDependenciesMeta?.[name]?.optional,
+      ),
+    ),
+  };
+  for (const name of Object.keys(deps)) {
+    const key = resolve(rel, name);
+    if (key && locked.packages[key]) productionQueue.push(key);
+  }
+}
+for (const [rel, entry] of Object.entries(locked.packages)) {
+  delete entry.devOptional;
+  if (rel && !production.has(rel)) entry.dev = true;
+  else delete entry.dev;
+}
 write('package-lock.json', locked);
 const generated = [
   'package.json',
