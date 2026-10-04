@@ -2485,3 +2485,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 ## 2026-10-05 v1.1.0复审后连续窗口验收
 
 保持Arc原范围：声明窗口23388428–23465819连续完整；真实worker强制中断水位23392429，重启从23392430续采，任务18历史固定快照未接单→已接单。不是本轮新建或实时新增事件。窗口外与账户全历史仍partial、单来源正式取证关闭。40段/42项公开原始证明选定导出，未公开整个私有状态。原本地API/worker/数据库/网页及实际API重启黑盒通过；Docker守护进程不可用，公开目标/独立公开仓库/申请身份资格资料未提供。60单元、23 PG集成、8组件浏览器已执行；当前干净交付独立复验收据随包。原49浏览器经Windows流程通过，8依赖告警/42外部跳过/视觉指纹过期保留。四项状态及源码摘要见docs/arc-task-ledger/CONTINUOUS_ACCEPTANCE.md与PUBLICATION_READINESS.md。
+
+# 2026-10-05 Arc Task Ledger Northflank 托管执行追加
+
+当前托管状态 FREE_TIER_UNVERIFIED。管理 Token 真实核验有效，团队 Owner；已有 1 个空项目，工作负载为 0；账单近一天 0 USD 不是免费资格。官方目录没有零价计算规格，团队 Sandbox、构建、磁盘、流量与暂停 cron 手动运行免费条件未证明。未创建计费资源、未获得 HTTPS；云端迁移、主网、两次采集、定时触发及重启验收未执行。独立部署分支已推送；Northflank 未连接 Git，源码访问探测未通过。托管适配、费用门禁、私有构建排除与本地回归已完成，实际资源创建编排尚未完成。原用户修改保留。详见 `docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md` 及 `validation/northflank-deployment.json`，不公开整个私有状态目录。

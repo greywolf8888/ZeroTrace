@@ -1235,3 +1235,7 @@ archive-scale backfill, and independent-provider reconciliation remain required.
 ## 2026-10-05 v1.1.0复审后连续窗口验收
 
 保持Arc原范围：声明窗口23388428–23465819连续完整；真实worker强制中断水位23392429，重启从23392430续采，任务18历史固定快照未接单→已接单。不是本轮新建或实时新增事件。窗口外与账户全历史仍partial、单来源正式取证关闭。40段/42项公开原始证明选定导出，未公开整个私有状态。原本地API/worker/数据库/网页及实际API重启黑盒通过；Docker守护进程不可用，公开目标/独立公开仓库/申请身份资格资料未提供。60单元、23 PG集成、8组件浏览器已执行；当前干净交付独立复验收据随包。原49浏览器经Windows流程通过，8依赖告警/42外部跳过/视觉指纹过期保留。四项状态及源码摘要见docs/arc-task-ledger/CONTINUOUS_ACCEPTANCE.md与PUBLICATION_READINESS.md。
+
+# 2026-10-05 Northflank 专用托管追加
+
+Arc Task Ledger 新支出预算 0 USD；当前 FREE_TIER_UNVERIFIED，云端资源创建/迁移/主网采集/HTTPS/API 重启/cron 触发门禁均未执行。真实身份与账户资源发现通过，但公开套餐与零历史账单不足以证明该团队适用免费条件。独立部署分支已推送，平台源码权限待满足。当前本地专项与全仓库检查、失败诊断及恢复记录见 `../arc-task-ledger/validation/northflank-deployment.json`；不能继承历史 PASS 或将本地主网证据改称云端证据。原全仓库 8 项依赖告警与视觉指纹过期保留。

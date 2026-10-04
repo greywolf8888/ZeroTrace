@@ -1,0 +1,545 @@
+{
+  "schemaVersion": "atl-northflank-execution-v1",
+  "observedAt": "2026-10-04T19:32:32.475Z",
+  "status": "FREE_TIER_UNVERIFIED",
+  "状态说明": "团队免费资格尚未证明，未创建计费资源或部署；源码公开授权仍有效，尚未修改仓库可见性",
+  "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+  "candidateVersion": "1.1.0",
+  "deployedVersion": null,
+  "publicHttps": null,
+  "newPaidSpendUsd": 0,
+  "createdResources": [],
+  "auth": {
+    "verified": true,
+    "entityId": "zanetechs-team",
+    "entityType": "team",
+    "role": "Owner",
+    "expiresAt": null
+  },
+  "accountResourceSummary": {
+    "projects": [
+      {
+        "id": "arctrace",
+        "name": "ArcTrace"
+      }
+    ],
+    "workloadCount": 0
+  },
+  "freeTier": {
+    "status": "FREE_TIER_UNVERIFIED",
+    "accountEntitlement": null,
+    "remainingQuota": null,
+    "buildAllowance": null,
+    "storageAllowance": null,
+    "trafficAllowance": null,
+    "manualCronAllowance": null
+  },
+  "recentBilling": {
+    "window": {
+      "start": 1791055952,
+      "end": 1791142352
+    },
+    "usage": [
+      {
+        "currency": "usd",
+        "total": 0
+      }
+    ]
+  },
+  "sourceAccess": {
+    "linkedAccounts": 0,
+    "accessible": false,
+    "publicRepo": false,
+    "reason": "no-linked-access"
+  },
+  "独立部署源码": {
+    "repository": "greywolf8888/ZeroTrace",
+    "visibility": "PRIVATE",
+    "branch": "deploy/arc-task-ledger-northflank",
+    "commit": "1c043cb61f8c2a65a5f8b1d2f67426c72750d431",
+    "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+    "files": 131,
+    "gitBlobsMatchManifest": true,
+    "buildVerified": true,
+    "containerBuildVerified": false
+  },
+  "resourceIntents": [
+    {
+      "name": "atl-api",
+      "kind": "service",
+      "port": 8087,
+      "public": false
+    },
+    {
+      "name": "atl-web",
+      "kind": "service",
+      "port": 8080,
+      "public": true
+    },
+    {
+      "name": "atl-postgres",
+      "kind": "addon",
+      "public": false
+    },
+    {
+      "name": "atl-migrate",
+      "kind": "cron",
+      "suspended": true
+    },
+    {
+      "name": "atl-sync",
+      "kind": "cron",
+      "suspended": true
+    }
+  ],
+  "线上门禁": {
+    "chainIdentity": "未执行",
+    "fixedBlock": "未执行",
+    "taskFunds": "未执行",
+    "migration": "未执行",
+    "persistentApi": "未执行",
+    "twoSyncRuns": "未执行",
+    "restart": "未执行",
+    "cronTrigger": "未执行",
+    "networkPolicy": "未部署"
+  },
+  "本地既有主网数据只读复核": {
+    "observedAt": "2026-10-04T19:34:33.287Z",
+    "network": "arc-mainnet",
+    "ruleVersion": "atl-v1.1.0",
+    "stateHead": {
+      "state": "known",
+      "value": "23465819",
+      "evidenceIds": []
+    },
+    "historyRange": {
+      "state": "known",
+      "value": {
+        "gaps": [],
+        "scope": "DECLARED_WINDOW",
+        "status": "complete",
+        "fromBlock": "23388428",
+        "targetBlock": "23465819",
+        "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+        "checkpointVersion": "40",
+        "contiguousThrough": "23465819",
+        "omittedPriorHistory": true
+      },
+      "evidenceIds": []
+    },
+    "coverage": {
+      "currentState": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      },
+      "jobEnumeration": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      },
+      "sourceAgreement": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "lifecycleHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "settlementHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "accountPendingHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "deploymentVerification": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      }
+    },
+    "formalMode": "FAIL_CLOSED_COVERAGE_INSUFFICIENT",
+    "说明": "本轮只查询原本地存储，没有新主网采集；声明历史窗口完整不等于部署全历史或云端验证"
+  },
+  "当前本地验证": {
+    "arcUnit": 71,
+    "arcPostgresIntegration": 23,
+    "arcBrowser": 8,
+    "northflankFocused": 11,
+    "rootUnit": 1043,
+    "rootIntegration": 88,
+    "rootExternalSkipped": 42,
+    "rootBrowser": 49,
+    "rustWorkspace": 52,
+    "exportDependencyAdvisories": 0
+  },
+  "保留失败与恢复说明": [
+    "全仓库首次单元/集成在完整编译前运行，缺少 workspace 编译入口；构建后通过，未删除失败记录",
+    "独立包未定义 typecheck 脚本；改用当前实际 tsc 项目命令通过",
+    "Rust 首次缺 Desktop sidecar；构建真实 sidecar 后完整 workspace 通过",
+    "全仓库依赖审计仍有 8 项告警：4 high、4 moderate；不扩大本次修复范围",
+    "旧视觉源码指纹过期；未覆盖旧证据",
+    "Docker 引擎不可用；容器构建、启动与 Nginx 实际运行尚未验证"
+  ],
+  "apiCommands": [
+    {
+      "method": "GET",
+      "endpoint": "/v1/auth",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/plans",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/regions",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/integrations/vcs",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/services",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/addons",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/integrations/vcs/repo-access",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/billing/usage",
+      "attempt": 0,
+      "status": 200
+    }
+  ],
+  "commands": [
+    {
+      "name": "unit",
+      "command": "npm run test:unit",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:26:56.435Z",
+      "finishedAt": "2026-10-04T19:27:17.641Z",
+      "exitCode": 1,
+      "summaries": [" Test Files  10 failed | 185 passed (195)", "      Tests  1001 passed (1001)"]
+    },
+    {
+      "name": "format",
+      "command": "npm run format:check",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:26:56.425Z",
+      "finishedAt": "2026-10-04T19:27:21.432Z",
+      "exitCode": 0,
+      "summaries": ["Checking formatting..."]
+    },
+    {
+      "name": "integration",
+      "command": "npm run test:integration",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:17.757Z",
+      "finishedAt": "2026-10-04T19:27:22.495Z",
+      "exitCode": 1,
+      "summaries": [" Test Files  2 failed | 8 skipped (10)", "      Tests  16 skipped (16)"]
+    },
+    {
+      "name": "evals",
+      "command": "npm run test:evals",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:22.497Z",
+      "finishedAt": "2026-10-04T19:27:24.729Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  2 passed (2)", "      Tests  2 passed (2)"]
+    },
+    {
+      "name": "readonly-mcp",
+      "command": "npm run test:mcp",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:24.823Z",
+      "finishedAt": "2026-10-04T19:27:25.962Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  1 passed (1)", "      Tests  5 passed (5)"]
+    },
+    {
+      "name": "arc-unit",
+      "command": "npm run arc:test:unit",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:25.967Z",
+      "finishedAt": "2026-10-04T19:27:28.854Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  8 passed (8)", "      Tests  71 passed (71)"]
+    },
+    {
+      "name": "arc-integration",
+      "command": "npm run arc:test:integration",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:28.922Z",
+      "finishedAt": "2026-10-04T19:27:33.699Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  1 passed (1)", "      Tests  23 passed (23)"]
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:21.435Z",
+      "finishedAt": "2026-10-04T19:27:48.505Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:48.599Z",
+      "finishedAt": "2026-10-04T19:28:23.638Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "build",
+      "command": "npm run build",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:23.697Z",
+      "finishedAt": "2026-10-04T19:28:27.867Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "arc-build",
+      "command": "npm run arc:build",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:27.967Z",
+      "finishedAt": "2026-10-04T19:28:29.254Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "license",
+      "command": "npm run license:check",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:29.306Z",
+      "finishedAt": "2026-10-04T19:28:32.934Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "audit",
+      "command": "npm run audit",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:32.981Z",
+      "finishedAt": "2026-10-04T19:28:37.096Z",
+      "exitCode": 1,
+      "summaries": []
+    },
+    {
+      "name": "visual-fingerprint",
+      "command": "npm run test:visual-golden",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:37.154Z",
+      "finishedAt": "2026-10-04T19:28:38.407Z",
+      "exitCode": 1,
+      "summaries": []
+    },
+    {
+      "name": "rust-workspace",
+      "command": "cargo test --workspace -j 2",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:26:56.443Z",
+      "finishedAt": "2026-10-04T19:28:44.833Z",
+      "exitCode": 1,
+      "summaries": []
+    },
+    {
+      "name": "arc-e2e",
+      "command": "npm run arc:test:e2e",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:44.835Z",
+      "finishedAt": "2026-10-04T19:28:57.585Z",
+      "exitCode": 0,
+      "summaries": ["  8 passed (11.4s)"]
+    },
+    {
+      "name": "root-e2e",
+      "command": "powershell -NoProfile -File scripts/test-e2e-windows.ps1",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:57.586Z",
+      "finishedAt": "2026-10-04T19:29:38.431Z",
+      "exitCode": 0,
+      "summaries": ["  49 passed (34.2s)"]
+    },
+    {
+      "name": "export-install",
+      "command": "npm ci --ignore-scripts --no-audit --no-fund",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:38.771Z",
+      "finishedAt": "2026-10-04T19:27:56.795Z",
+      "exitCode": 0,
+      "summaries": ["added 359 packages in 17s"]
+    },
+    {
+      "name": "export-unit",
+      "command": "npm run arc:test:unit",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:27:57.112Z",
+      "finishedAt": "2026-10-04T19:28:04.679Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  8 passed (8)", "      Tests  71 passed (71)"]
+    },
+    {
+      "name": "export-build",
+      "command": "npm run arc:build",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:04.713Z",
+      "finishedAt": "2026-10-04T19:28:14.847Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-typecheck",
+      "command": "npm run typecheck",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:14.863Z",
+      "finishedAt": "2026-10-04T19:28:15.619Z",
+      "exitCode": 1,
+      "summaries": []
+    },
+    {
+      "name": "export-license",
+      "command": "npm run license:check",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:15.718Z",
+      "finishedAt": "2026-10-04T19:28:19.386Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-audit",
+      "command": "npm audit --audit-level=high",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:28:19.454Z",
+      "finishedAt": "2026-10-04T19:28:21.127Z",
+      "exitCode": 0,
+      "summaries": ["found 0 vulnerabilities"]
+    },
+    {
+      "name": "unit-after-build",
+      "command": "npm run test:unit",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:29:06.612Z",
+      "finishedAt": "2026-10-04T19:29:25.061Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  195 passed (195)", "      Tests  1043 passed (1043)"]
+    },
+    {
+      "name": "integration-after-build",
+      "command": "npm run test:integration",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:29:25.133Z",
+      "finishedAt": "2026-10-04T19:29:34.304Z",
+      "exitCode": 0,
+      "summaries": [
+        " Test Files  1 passed | 9 skipped (10)",
+        "      Tests  88 passed | 42 skipped (130)"
+      ]
+    },
+    {
+      "name": "export-types-corrected",
+      "command": "npx tsc -b apps/arc-task-ledger-api --pretty false",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:29:34.307Z",
+      "finishedAt": "2026-10-04T19:29:35.386Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "rust-after-sidecar",
+      "command": "node scripts/build-desktop-sidecar.mjs; cargo test --workspace -j 2",
+      "sourceCommit": "577efdd5e64d77de260d0aaefd9b0ae667d1c277",
+      "startedAt": "2026-10-04T19:30:42.897Z",
+      "finishedAt": "2026-10-04T19:32:48.121Z",
+      "exitCode": 0,
+      "summaries": ["Rust 52 项通过；先准备真实 Desktop sidecar，未使用占位文件"]
+    }
+  ],
+  "sourceMap": [
+    {
+      "path": ".dockerignore",
+      "sha256": "94f4e4270665a8246b60454fbd42422abaaa872ef594b7a79b9c283f7bf87bb0"
+    },
+    {
+      "path": "scripts/northflank-deploy.mjs",
+      "sha256": "f7ee9e165a7f021551be83d50c3e3e070af878baf3b2cd22e2256d36c1b9f638"
+    },
+    {
+      "path": "scripts/arc-task-ledger-export.mjs",
+      "sha256": "bda12ada7e5317d119f967d4d46cd60ed33d01567ea44783f72bac1cf68ab2b6"
+    },
+    {
+      "path": "infra/arc-task-ledger/.dockerignore",
+      "sha256": "2712aa071248da0997b5f21764604a81ce7b267bda30e12176f5c30ce83cb0dc"
+    },
+    {
+      "path": "infra/northflank/Dockerfile",
+      "sha256": "fca73aff603867c52556237e2270d14721c5595d3aca22052c8563af439d72ef"
+    },
+    {
+      "path": "infra/northflank/nginx.conf.template",
+      "sha256": "8d3800b8ea6db37cbc64db7cb5636fb2aef50adaed224d2f8725cefc0e61e4a0"
+    },
+    {
+      "path": "infra/northflank/web-entrypoint.sh",
+      "sha256": "eac1119e17c0d482a05de43b351563f6639846a6fd1defd6c188a49308852192"
+    },
+    {
+      "path": "infra/northflank/resource-intents.json",
+      "sha256": "df275e1d0e9f5f4112ef387064df3ccd5336c8e4f1c97710369582ba5f44747d"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/northflank-deploy.test.ts",
+      "sha256": "14105509b437922a7adec116457f5f33147b14aa92e671e82e6ec803682b496d"
+    }
+  ],
+  "后续恢复条件": [
+    "该团队实际 Sandbox 与选中规格、构建、磁盘、流量、手动 cron 的零费用证明",
+    "按已有公开授权解决构建源实际访问并核对固定提交",
+    "完成当前 schema 的真实资源创建、迁移编排与全部线上门禁"
+  ],
+  "未继承历史PASS": true,
+  "私有状态目录公开": false
+}
