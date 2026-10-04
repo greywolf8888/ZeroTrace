@@ -1,4 +1,4 @@
-export const RULE_VERSION = 'atl-v1.0.0';
+export const RULE_VERSION = 'atl-v1.0.1';
 export type Knowledge<T> =
   | { state: 'known'; value: T; evidenceIds: string[]; derivation?: string }
   | {
@@ -136,7 +136,8 @@ export interface SettlementLeg {
   expectedAmount: Amount;
   observedAmount: Amount;
   parkedAmount: Amount;
-  attribution: 'DIRECT' | 'UNIQUE_EVENT_SEGMENT' | 'ACCOUNT_ONLY' | 'AMBIGUOUS';
+  attribution: 'DIRECT' | 'UNIQUE_EVENT_SEGMENT' | 'ACCOUNT_ONLY' | 'AMBIGUOUS' | 'ZERO_ALLOCATION';
+  obligationIds: string[];
   evidenceIds: string[];
   ruleVersion: string;
 }
@@ -172,6 +173,17 @@ export interface PendingAccount {
     amount: Amount;
     attribution: 'ACCOUNT_ONLY';
     evidenceIds: string[];
+    obligationIds: string[];
+    eventId: string;
+  }[];
+  obligations: {
+    id: string;
+    jobId: string;
+    transactionHash: string;
+    logIndex: string;
+    amount: Amount;
+    status: 'OUTSTANDING' | 'CLEARED_SEQUENCE' | 'UNVERIFIED';
+    clearedBy?: string;
   }[];
   sequenceDerivedJobIds: string[];
   evidenceIds: string[];

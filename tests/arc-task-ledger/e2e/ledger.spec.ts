@@ -1,4 +1,38 @@
 import { test, expect } from '@playwright/test';
+test('正向资金展示：奖励、待领取、争议胜诉、零分配与原始回执', async ({ page }) => {
+  for (const [id, state] of [
+    ['19', '已核验直接转移'],
+    ['104', '部分直接转移，部分待领取'],
+    ['105', '裁定工作者胜'],
+    ['106', '外部退款已协调'],
+  ]) {
+    await page.goto('/');
+    await expect(page.getByText('本地测试样例，不是主网证据。')).toBeVisible();
+    await page.getByRole('button', { name: `任务 #${id}`, exact: true }).click();
+    await expect(page.getByText(state).first()).toBeVisible();
+    const funds = page
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: '独立资金腿' }) });
+    if (id === '106') {
+      await expect(funds).toContainText('应分配：0 USDC');
+      await expect(funds).toContainText('已核验零分配');
+      await expect(funds).toContainText('观察到转移：1 USDC');
+    } else {
+      await expect(funds).toContainText('工作者 · 奖励');
+      await expect(funds).toContainText(
+        id === '104' ? '曾转入待领取：0.99 USDC' : '观察到转移：0.99 USDC',
+      );
+    }
+    await page.getByRole('button', { name: '查看原始证据', exact: true }).click();
+    await page.getByText(/^证据 ev_/).click();
+    await expect(page.locator('pre').filter({ hasText: 'transactionHash' }).last()).toContainText(
+      'logs',
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  }
+});
 test('列表、详情、原始证据与导出闭环', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Arc 任务证据台' })).toBeVisible();

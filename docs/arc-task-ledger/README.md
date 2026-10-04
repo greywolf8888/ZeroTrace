@@ -1,8 +1,8 @@
-# Arc 任务证据组件 v1.0.0
+# Arc 任务证据组件 v1.0.1
 
 本组件在现有 ZeroTrace 中新增独立只读入口，查询 Arc 主网 5042 上单一已登记 ArcBounty 部署的任务历史、奖励、费用、保证金、退款及账户待领取证据。链上访问不包含签名、授权、提款、交易广播或托管。
 
-代码版本为 v1.0.0；本地验收、主网只读验收、公开部署、申请就绪分别记录。页面与单元测试通过不等于主网能力通过。最新实测结论见 [验收记录](FINAL_ACCEPTANCE.md)。
+代码版本为 v1.0.1；本地验收、主网只读验收、公开部署、申请就绪分别记录。页面与单元测试通过不等于主网能力通过。最新实测结论见 [当前审计修复验收](REPAIR_ACCEPTANCE.md)。
 
 ## 本地运行
 
@@ -67,3 +67,11 @@ npm run arc:test:live
 最小接入示例为 `examples/arc-task-ledger/consumer.ts`。它只替换数据读取，回退时明确 datasource 与 degraded，不把原始“业务完成”混为现金到账。本地 consumer 通过不能宣称 ArcBounty 已采用。
 
 协议接口来自锁定上游 [ArcBounty 源码](https://github.com/Sofiia7/ARC/tree/ef5d100882a4bfe475c685586902ecc72da420e8)，MIT 许可证见 [上游许可](UPSTREAM_LICENSE.txt)。ABI 与字节码参考 [Sourcify 精确匹配记录](https://sourcify.dev/server/v2/contract/5042/0x73c617e808ED5c7Ca41413DFC6EE940dDcBb0b8D?fields=all)。官方 [网络连接说明](https://docs.arc.network/arc/references/connect-to-arc) 和 [USDC 精度说明](https://docs.arc.network/arc/references/gas-and-fees) 是网络研究来源。源码验证记录不替代本次生产主网执行。
+
+## v1.0.1安全解析与定点证据
+
+系统DNS异常时可显式设置 `$env:ARC_DNS_MODE = 'google-doh'`；默认仍为system，不修改系统网络配置。Google官方bootstrap为8.8.8.8，HTTPS域名及RPC域名TLS验证保留；返回私网/保留地址仍拒绝。
+
+`ARC_EVIDENCE_BLOCKS`为可选逗号分隔区块编号，最多10个，必须介于已验证部署与本轮finalized快照之间。例如真实任务#18核验使用 `23388428,23465819,23466663,23508410`。候选编号只作定位，每个区块重新通过RPC完整日志、回执、锚点及历史部署版本核验。配合`--current-only`只补定点证据，不能宣布全历史complete；该参数不改变原连续水位规则。
+
+迁移3必须先执行`arc:migrate`；列表仅查询投影和证据ID。API的Fastify类型解析与该workspace实际依赖版本一致，独立导出回落到根安装路径，不以类型强制转换掩盖插件版本差异。

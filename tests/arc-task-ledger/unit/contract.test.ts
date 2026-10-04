@@ -9,6 +9,14 @@ import {
 import { known, unknown } from '../../../packages/arc-task-ledger/src/types.js';
 import { run, snapshot, meta } from '../fixtures/helpers.js';
 import { rawEvidence } from '../../../packages/arc-task-ledger/src/protocol.js';
+import { hashPayload } from '../../../packages/evidence/src/hash.js';
+it('原始响应后续变化不得改变已捕获观察', () => {
+  const raw = [{ answer: 'first' }];
+  const observation = rawEvidence(raw, snapshot, 'public-dns:https', '测试不可变观察');
+  raw.push({ answer: 'later' });
+  expect(hashPayload(observation.raw)).toBe(observation.payloadHash);
+  expect(observation.raw).toEqual([{ answer: 'first' }]);
+});
 const spec = JSON.parse(readFileSync('docs/arc-task-ledger/openapi.json', 'utf8'));
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 ajv.addFormat('date-time', {

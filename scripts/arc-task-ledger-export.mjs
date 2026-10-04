@@ -1,8 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 
 const root = process.cwd();
+const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
+  cwd: root,
+  encoding: 'utf8',
+}).trim();
+if (execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim())
+  throw new Error('请从干净提交导出；保留原工作副本改动，并使用独立干净检出。');
 const argument = process.argv.indexOf('--out');
 const target = path.resolve(
   root,
@@ -66,6 +73,8 @@ for (const relative of [
   'docs/arc-task-ledger/README.md',
   'docs/arc-task-ledger/DEPLOYMENT.md',
   'docs/arc-task-ledger/openapi.json',
+  'docs/arc-task-ledger/REPAIR_ACCEPTANCE.md',
+  'docs/arc-task-ledger/validation',
   'docs/arc-task-ledger/UPSTREAM_LICENSE.txt',
   'LICENSE',
   'eslint.config.mjs',
@@ -96,7 +105,7 @@ const devNames = [
 ];
 write('package.json', {
   name: 'arc-task-ledger-release',
-  version: '1.0.0',
+  version: '1.0.1',
   private: true,
   type: 'module',
   license: 'Apache-2.0',
@@ -169,7 +178,7 @@ write(
 );
 write(
   'docs/arc-task-ledger/FINAL_ACCEPTANCE.md',
-  '# 独立候选边界\n\n此目录是本地导出，不表示已经公开部署。实际本地测试与生产主网状态以原工作副本同版本的验收收据为准。当前主网生产读取受环境 DNS 保留地址阻塞；不得将测试样例作为主网记录。\n',
+  '# 独立候选边界\n\n此目录是本地导出，不表示已经公开部署。实际本地测试与生产主网状态以原工作副本同版本的验收收据为准。当前状态与主网案例见随包脱敏验收记录；定点区块不代表完整历史，不得将测试样例作为主网记录。\n',
 );
 // 导出后的 Compose 只能从自身根目录构建，不能再次寻找原仓库的 dist-public。
 const composeRelative = 'infra/arc-task-ledger/compose.yaml';
@@ -314,7 +323,8 @@ const files = [...new Set([...copied, ...generated])].sort().map((relative) => (
 }));
 write('release-manifest.json', {
   schemaVersion: 'atl-public-export-v1',
-  version: '1.0.0',
+  sourceCommit,
+  version: '1.0.1',
   published: false,
   privateHistoryIncluded: false,
   files,

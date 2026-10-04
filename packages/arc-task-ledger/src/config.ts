@@ -30,6 +30,11 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {
   if (!Number.isSafeInteger(maxJobs) || maxJobs < 1 || maxJobs > 10000)
     throw new LedgerError('CONFIG_INVALID', '任务采集上限不合法。');
   const scanBudget = decimal(env.ARC_SCAN_BLOCK_BUDGET ?? '20000');
+  const evidenceBlocks = (env.ARC_EVIDENCE_BLOCKS ?? '').split(',').filter(Boolean).map(decimal);
+  if (evidenceBlocks.length > 10) throw new LedgerError('CONFIG_INVALID', '定点区块最多10个。');
+  const dnsMode = env.ARC_DNS_MODE ?? 'system';
+  if (!['system', 'google-doh'].includes(dnsMode))
+    throw new LedgerError('CONFIG_INVALID', 'DNS 模式不合法。');
   if (BigInt(scanBudget) < 1n || BigInt(scanBudget) > 200000n)
     throw new LedgerError('CONFIG_INVALID', '历史扫描预算不合法。');
   return {
@@ -39,6 +44,11 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {
     databaseUrl,
     maxJobs,
     scanBudget,
-    providerAlias: env.ARC_PROVIDER_ALIAS ?? 'arc-blockdaemon-public',
+    evidenceBlocks,
+    dnsMode: dnsMode as 'system' | 'google-doh',
+    providerAlias:
+      env.ARC_PROVIDER_ALIAS ??
+      lock.rpcCandidates.find((source) => source.url === rpcUrl)?.alias ??
+      'arc-configured-provider',
   };
 }

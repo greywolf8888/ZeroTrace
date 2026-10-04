@@ -82,6 +82,7 @@ const lifecycleStates = new Set([
   'EXTERNAL_REFUND_RECONCILED',
 ]);
 const cashStates = new Set([
+  'NOT_APPLICABLE',
   'NONE_OBSERVED',
   'CONFIRMED_DIRECT',
   'PARKED',
@@ -133,7 +134,7 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
     });
   });
   const requireRun = async (id?: string) => {
-    const run = await store.getRun(id);
+    const run = await store.getRunMetadata(id);
     if (!run)
       throw new LedgerError(
         id ? 'SNAPSHOT_EXPIRED' : 'STATE_NOT_AVAILABLE',
@@ -172,33 +173,22 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
     if (cursor && (cursor.kind !== 'jobs' || cursor.filter !== digest))
       throw new LedgerError('CURSOR_FILTER_MISMATCH', '分页游标与当前筛选条件不一致。', 400);
     const run = await requireRun(cursor?.run);
-    const rows = run.jobs
-      .map((d) => d.job)
-      .filter(
-        (j) =>
-          (!filter.address ||
-            j.poster === filter.address ||
-            (j.worker.state === 'known' && j.worker.value === filter.address)) &&
-          (!filter.lifecycle || j.lifecycle === filter.lifecycle) &&
-          (!filter.cashState || j.cashState === filter.cashState) &&
-          (!cursor || BigInt(j.jobId) > BigInt(cursor.last)),
-      )
-      .sort((a, b) => (BigInt(a.jobId) < BigInt(b.jobId) ? -1 : 1));
+    const rows = await store.getJobPage(run.id, limit, cursor?.last, filter);
     const items = rows.slice(0, limit);
     const next =
       rows.length > limit
-        ? cursors.encode({ run: run.id, filter: digest, last: items.at(-1)!.jobId, kind: 'jobs' })
+        ? cursors.encode({
+            run: run.id,
+            filter: digest,
+            last: items.at(-1)!.job.jobId,
+            kind: 'jobs',
+          })
         : undefined;
     const attempt = await store.lastSync();
     return {
       snapshotRunId: run.id,
       snapshot: run.snapshot,
-      items: items.map((row) =>
-        publicRow(
-          row,
-          run.jobs.find((d) => d.job.jobId === row.jobId)?.evidence.map((e) => e.id),
-        ),
-      ),
+      items: items.map((row) => publicRow(row.job, row.evidenceIds)),
       nextCursor: next ?? null,
       coverage: publicCoverage(run.coverage),
       datasource: 'stored-replay',
@@ -247,7 +237,7 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
     )
       throw new LedgerError('CURSOR_FILTER_MISMATCH', '时间线游标与当前任务或快照不一致。', 400);
     const run = await requireRun(cursor?.run ?? q.snapshotRunId);
-    const detail = run.jobs.find((d) => d.job.jobId === params.jobId);
+    const detail = await store.getJobDetail(run.id, params.jobId);
     if (!detail)
       throw new LedgerError(
         run.coverage.jobEnumeration === 'complete'
@@ -279,7 +269,7 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
     };
   });
   app.get('/v1/coverage', async () => {
-    const run = await store.getRun();
+    const run = await store.getRunMetadata();
     const checkpoint = await store.currentCheckpoint(DEPLOYMENT.adapter);
     const attempt = await store.lastSync();
     return {

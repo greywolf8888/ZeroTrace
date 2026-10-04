@@ -1,5 +1,5 @@
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
-import { decodeEventLog, parseAbiItem } from 'viem';
+import { decodeEventLog, parseAbiItem, toEventSelector } from 'viem';
 import { ABI, DEPLOYMENT } from './config.js';
 import {
   RULE_VERSION,
@@ -26,6 +26,7 @@ export function rawEvidence(
   locator: string,
   summary: string,
 ): StoredEvidence {
+  raw = structuredClone(raw);
   const payloadHash = hashPayload(raw);
   const evidence = createEvidence({
     ledger: 'EVM',
@@ -49,16 +50,36 @@ export function decodeReceipt(
   events: ProtocolEvent[];
   movements: Movement[];
   normalization: 'complete' | 'unsupported' | 'conflict';
+  nonCashLogs: {
+    id: string;
+    classification: 'APPROVAL' | 'UNSUPPORTED_TOPIC';
+    evidenceIds: string[];
+  }[];
 } {
-  if (receipt.status !== '0x1') return { events: [], movements: [], normalization: 'unsupported' };
+  if (receipt.status !== '0x1')
+    return { events: [], movements: [], normalization: 'unsupported', nonCashLogs: [] };
+  const nonCashLogs: {
+    id: string;
+    classification: 'APPROVAL' | 'UNSUPPORTED_TOPIC';
+    evidenceIds: string[];
+  }[] = [];
   const events: ProtocolEvent[] = [];
   const system: Movement[] = [];
   const erc: Movement[] = [];
   const seen = new Map<string, string>();
   let conflict = false;
+  let unsupportedAdapter = false;
   const transferAbi = [
     parseAbiItem('event Transfer(address indexed from,address indexed to,uint256 value)'),
   ];
+  const approvalAbi = [
+    parseAbiItem('event Approval(address indexed owner,address indexed spender,uint256 value)'),
+  ];
+  const transferTopic = toEventSelector(transferAbi[0]!);
+  const approvalTopic = toEventSelector(approvalAbi[0]!);
+  const adapterTopics = new Set(
+    ABI.filter((item) => item.type === 'event').map((item) => toEventSelector(item)),
+  );
   for (const log of receipt.logs) {
     if (
       log.removed ||
@@ -79,6 +100,11 @@ export function decodeReceipt(
     seen.set(id, digest);
     const emitter = address(log.address);
     if (emitter === DEPLOYMENT.adapter) {
+      if (!adapterTopics.has(log.topics[0]!)) {
+        unsupportedAdapter = true;
+        nonCashLogs.push({ id, classification: 'UNSUPPORTED_TOPIC', evidenceIds });
+        continue;
+      }
       try {
         const decoded = decodeEventLog({
           abi: ABI,
@@ -112,6 +138,24 @@ export function decodeReceipt(
         conflict = true;
       }
     } else if (emitter === DEPLOYMENT.usdcSystemEmitter || emitter === DEPLOYMENT.usdcErc20) {
+      if (log.topics[0] === approvalTopic && emitter === DEPLOYMENT.usdcErc20) {
+        try {
+          decodeEventLog({
+            abi: approvalAbi,
+            data: log.data,
+            topics: log.topics as [typeof log.data, ...(typeof log.data)[]],
+            strict: true,
+          });
+          nonCashLogs.push({ id, classification: 'APPROVAL', evidenceIds });
+        } catch {
+          conflict = true;
+        }
+        continue;
+      }
+      if (log.topics[0] !== transferTopic) {
+        nonCashLogs.push({ id, classification: 'UNSUPPORTED_TOPIC', evidenceIds });
+        continue;
+      }
       try {
         const { args } = decodeEventLog({
           abi: transferAbi,
@@ -154,11 +198,14 @@ export function decodeReceipt(
   return {
     events: events.sort((a, b) => Number(BigInt(a.logIndex) - BigInt(b.logIndex))),
     movements: conflict ? [] : system,
+    nonCashLogs,
     normalization: conflict
       ? 'conflict'
-      : system.length === 0 && erc.length > 0
+      : unsupportedAdapter
         ? 'unsupported'
-        : 'complete',
+        : system.length === 0 && erc.length > 0
+          ? 'unsupported'
+          : 'complete',
   };
 }
 export function lifecycle(meta: RawMeta, events: ProtocolEvent[]): string {

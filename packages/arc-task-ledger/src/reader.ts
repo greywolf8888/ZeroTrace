@@ -11,6 +11,7 @@ import {
 } from 'viem';
 import { ABI, DEPLOYMENT, type configFromEnv } from './config.js';
 import { assertMeta, rawEvidence } from './protocol.js';
+import { createPublicDns } from './public-dns.js';
 import {
   LedgerError,
   hex,
@@ -70,21 +71,39 @@ export function assertReadRequest(method: string, params: readonly unknown[]): v
 export class ArcReader {
   readonly evidence: StoredEvidence[] = [];
   readonly dispatcher?: Agent;
+  readonly publicDns: ReturnType<typeof createPublicDns> | undefined;
   readonly transport: JsonRpcTransport;
   requests = 0;
   responseBytes = 0;
   constructor(
-    config: Pick<ReturnType<typeof configFromEnv>, 'rpcUrl' | 'rpcHosts' | 'providerAlias'>,
+    config: Pick<ReturnType<typeof configFromEnv>, 'rpcUrl' | 'rpcHosts' | 'providerAlias'> & {
+      dnsMode?: 'system' | 'google-doh';
+    },
     testTransport?: JsonRpcTransport,
   ) {
     if (testTransport) {
+      this.publicDns = undefined;
       this.transport = testTransport;
       return;
     }
     // 安全核验作用于实际连接使用的 DNS 结果，避免“检查后再次解析”的重绑定窗口。
+    this.publicDns = config.dnsMode === 'google-doh' ? createPublicDns(config.rpcHosts) : undefined;
+    const publicDns = this.publicDns;
     this.dispatcher = new Agent({
       connect: {
         lookup(hostname, options, callback) {
+          if (publicDns) {
+            void publicDns
+              .resolve(hostname)
+              .then((entries) => {
+                if (entries.some((e) => isPrivateOrReservedIp(e.address)))
+                  throw new LedgerError('PRIVATE_NETWORK_BLOCKED', '连接地址不是公网。');
+                if (options.all) callback(null, entries);
+                else callback(null, entries[0]!.address, entries[0]!.family);
+              })
+              .catch((error) => callback(error, '', 4));
+            return;
+          }
           lookup(hostname, { all: true }, (error, entries) => {
             if (error) {
               callback(error, '', 4);
@@ -125,7 +144,11 @@ export class ArcReader {
     this.transport = new SafeJsonRpcTransport({
       endpointId: config.providerAlias,
       baseUrl: config.rpcUrl,
-      policy: { allowedHosts: config.rpcHosts, allowPrivateNetworks: false },
+      policy: {
+        allowedHosts: config.rpcHosts,
+        allowPrivateNetworks: false,
+        ...(publicDns ? { resolveHostname: (hostname) => publicDns.resolve(hostname) } : {}),
+      },
       timeoutMs: 12000,
       maxResponseBytes: 4000000,
       resilience: { requestsPerSecond: 2, maxAttempts: 2, cacheTtlMs: 0 },
@@ -168,6 +191,13 @@ export class ArcReader {
       'eth_chainId+eth_getBlockByNumber:finalized',
       '目标链与固定最终区块。',
     );
+    if (this.publicDns)
+      this.observe(
+        this.publicDns.observations,
+        snapshot,
+        'public-dns:https',
+        '本进程公网解析来源；私网/保留地址继续拒绝，TLS 主机核验保留。',
+      );
     return snapshot;
   }
   async block(height: string): Promise<{ number: string; hash: string }> {
@@ -312,5 +342,6 @@ export class ArcReader {
   }
   async close(): Promise<void> {
     await this.dispatcher?.close();
+    await this.publicDns?.close();
   }
 }

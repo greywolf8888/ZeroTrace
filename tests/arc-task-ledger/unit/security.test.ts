@@ -5,6 +5,27 @@ import {
 } from '@zerotrace/chain-adapters/security';
 import { cursorCodec } from '../../../apps/arc-task-ledger-api/src/app.js';
 import { hashPayload } from '../../../packages/evidence/src/hash.js';
+import { validatePublicAnswers } from '../../../packages/arc-task-ledger/src/public-dns.js';
+it('可选公共解析继续拒绝保留地址、混合答案、空答案和解析失败', () => {
+  for (const data of ['198.18.0.59', '127.0.0.1', '169.254.169.254', '10.0.0.1'])
+    expect(() =>
+      validatePublicAnswers({ Status: 0, Answer: [{ type: 1, data, TTL: 60 }] }),
+    ).toThrow();
+  expect(() =>
+    validatePublicAnswers({
+      Status: 0,
+      Answer: [
+        { type: 1, data: '8.8.8.8', TTL: 60 },
+        { type: 1, data: '198.18.0.59', TTL: 60 },
+      ],
+    }),
+  ).toThrow();
+  expect(() => validatePublicAnswers({ Status: 0, Answer: [] })).toThrow();
+  expect(() => validatePublicAnswers({ Status: 3 })).toThrow();
+  expect(
+    validatePublicAnswers({ Status: 0, Answer: [{ type: 1, data: '8.8.8.8', TTL: 60 }] }),
+  ).toEqual([{ address: '8.8.8.8', family: 4 }]);
+});
 it('ATL-36 SSRF 地址、明文凭据、重定向目标不进入配置', () => {
   for (const url of [
     'http://rpc.mainnet.arc.io',

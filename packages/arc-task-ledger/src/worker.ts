@@ -3,7 +3,7 @@ import { DEPLOYMENT } from './config.js';
 import type { ArcReader } from './reader.js';
 import type { LedgerRepository } from './storage.js';
 import { lifecycle, protocolAtoms, ruleMetadata } from './protocol.js';
-import { accountPending, settlement } from './settlement.js';
+import { accountPending, settlement, sequenceCleared } from './settlement.js';
 import {
   LedgerError,
   RULE_VERSION,
@@ -20,6 +20,116 @@ import {
   type JobDetail,
   type PendingAccount,
 } from './types.js';
+
+async function readWindow(
+  reader: ArcReader,
+  snapshot: Snapshot,
+  from: string,
+  to: string,
+  observations: StoredEvidence[],
+  receipts: { receipt: Receipt; observationId: string }[],
+) {
+  const before = await reader.block(to);
+  const logs = await reader.logs(from, to);
+  const segmentEvidence = reader.observe(
+    { from: from, to: to, logs, anchor: before },
+    snapshot,
+    `eth_getLogs:${from}-${to}`,
+    '受控区间完整日志请求与锚点。',
+  );
+  observations.push(segmentEvidence);
+  const hashes = [...new Set(logs.map((l) => l.transactionHash))];
+  for (const tx of hashes) {
+    const receipt = await reader.read<Receipt | null>('eth_getTransactionReceipt', [tx]);
+    if (
+      !receipt ||
+      receipt.transactionHash !== tx ||
+      receipt.status !== '0x1' ||
+      !Array.isArray(receipt.logs)
+    )
+      throw new LedgerError('RECEIPT_UNAVAILABLE', '关联回执缺失或格式无效。');
+    const log = logs.find((l) => l.transactionHash === tx)!;
+    if (
+      receipt.blockHash !== log.blockHash ||
+      BigInt(receipt.blockNumber) !== BigInt(log.blockNumber) ||
+      (await reader.block(BigInt(receipt.blockNumber).toString())).hash !== receipt.blockHash
+    )
+      throw new LedgerError('SOURCE_CONFLICT', '回执与日志/区块锚点冲突。', 409);
+    for (const observed of logs.filter((l) => l.transactionHash === tx))
+      if (
+        !receipt.logs.some(
+          (l) =>
+            BigInt(l.logIndex) === BigInt(observed.logIndex) &&
+            l.address.toLowerCase() === observed.address.toLowerCase() &&
+            l.data === observed.data &&
+            JSON.stringify(l.topics) === JSON.stringify(observed.topics),
+        )
+      )
+        throw new LedgerError('RECEIPT_CONFLICT', '回执未包含查询返回的完整协议日志。', 409);
+    const evidence = reader.observe(
+      receipt,
+      snapshot,
+      `eth_getTransactionReceipt:${tx}`,
+      '协议交易完整原始回执。',
+    );
+    observations.push(evidence);
+    receipts.push({ receipt, observationId: evidence.id });
+  }
+  if ((await reader.block(to)).hash !== before.hash)
+    throw new LedgerError('SOURCE_CONFLICT', '日志窗口锚点变化。', 409);
+  return { before, logs };
+}
+
+export async function captureEvidenceBlocks(
+  reader: ArcReader,
+  store: LedgerRepository,
+  snapshot: Snapshot,
+  blocks: string[],
+) {
+  if (blocks.length > 10)
+    throw new LedgerError('EVIDENCE_BLOCK_LIMIT', '定点回执核验最多10个区块。', 400);
+  for (const height of [...new Set(blocks)]) {
+    if (
+      !/^(0|[1-9]\d*)$/.test(height) ||
+      BigInt(height) < BigInt(DEPLOYMENT.verifiedDeploymentBlock) ||
+      BigInt(height) > BigInt(snapshot.blockNumber)
+    )
+      throw new LedgerError('INVALID_RANGE', '定点历史区块不在已部署到固定快照的范围。', 400);
+    const anchor = await reader.block(height);
+    // 历史代码与当前代码分别验证，当前状态不代替历史部署版本。
+    await reader.verifyDeployment({ ...snapshot, blockNumber: height, blockHash: anchor.hash });
+    const checkpoint = await store.checkpoint(
+      DEPLOYMENT.adapter,
+      (BigInt(DEPLOYMENT.verifiedDeploymentBlock) - 1n).toString(),
+    );
+    const observations: StoredEvidence[] = [];
+    const receipts: { receipt: Receipt; observationId: string }[] = [];
+    const { before, logs } = await readWindow(
+      reader,
+      snapshot,
+      height,
+      height,
+      observations,
+      receipts,
+    );
+    await store.saveSegment({
+      deployment: DEPLOYMENT.adapter,
+      from: height,
+      to: height,
+      status: 'complete',
+      document: {
+        scope: 'selected-block-only',
+        snapshot,
+        anchor: before,
+        count: logs.length,
+        evidenceIds: observations.map((e) => e.id),
+      },
+      observations,
+      receipts,
+      expectedVersion: checkpoint.version,
+    });
+  }
+}
 
 export async function scanHistory(
   reader: ArcReader,
@@ -43,54 +153,14 @@ export async function scanHistory(
     const observations: StoredEvidence[] = [];
     const receipts: { receipt: Receipt; observationId: string }[] = [];
     try {
-      const before = await reader.block(to.toString());
-      const logs = await reader.logs(from.toString(), to.toString());
-      const segmentEvidence = reader.observe(
-        { from: from.toString(), to: to.toString(), logs, anchor: before },
+      const { before, logs } = await readWindow(
+        reader,
         snapshot,
-        `eth_getLogs:${from}-${to}`,
-        '受控区间完整日志请求与锚点。',
+        from.toString(),
+        to.toString(),
+        observations,
+        receipts,
       );
-      observations.push(segmentEvidence);
-      const hashes = [...new Set(logs.map((l) => l.transactionHash))];
-      for (const tx of hashes) {
-        const receipt = await reader.read<Receipt | null>('eth_getTransactionReceipt', [tx]);
-        if (
-          !receipt ||
-          receipt.transactionHash !== tx ||
-          receipt.status !== '0x1' ||
-          !Array.isArray(receipt.logs)
-        )
-          throw new LedgerError('RECEIPT_UNAVAILABLE', '关联回执缺失或格式无效。');
-        const log = logs.find((l) => l.transactionHash === tx)!;
-        if (
-          receipt.blockHash !== log.blockHash ||
-          BigInt(receipt.blockNumber) !== BigInt(log.blockNumber) ||
-          (await reader.block(BigInt(receipt.blockNumber).toString())).hash !== receipt.blockHash
-        )
-          throw new LedgerError('SOURCE_CONFLICT', '回执与日志/区块锚点冲突。', 409);
-        for (const observed of logs.filter((l) => l.transactionHash === tx))
-          if (
-            !receipt.logs.some(
-              (l) =>
-                BigInt(l.logIndex) === BigInt(observed.logIndex) &&
-                l.address.toLowerCase() === observed.address.toLowerCase() &&
-                l.data === observed.data &&
-                JSON.stringify(l.topics) === JSON.stringify(observed.topics),
-            )
-          )
-            throw new LedgerError('RECEIPT_CONFLICT', '回执未包含查询返回的完整协议日志。', 409);
-        const evidence = reader.observe(
-          receipt,
-          snapshot,
-          `eth_getTransactionReceipt:${tx}`,
-          '协议交易完整原始回执。',
-        );
-        observations.push(evidence);
-        receipts.push({ receipt, observationId: evidence.id });
-      }
-      if ((await reader.block(to.toString())).hash !== before.hash)
-        throw new LedgerError('SOURCE_CONFLICT', '日志窗口锚点变化。', 409);
       checkpoint = await store.saveSegment({
         deployment: DEPLOYMENT.adapter,
         from: from.toString(),
@@ -159,7 +229,12 @@ export async function scanHistory(
 export async function syncOnce(
   reader: ArcReader,
   store: LedgerRepository,
-  options: { maxJobs: number; scanBudget: string; currentOnly?: boolean },
+  options: {
+    maxJobs: number;
+    scanBudget: string;
+    currentOnly?: boolean;
+    evidenceBlocks?: string[];
+  },
 ): Promise<SnapshotRun> {
   return store.withWorkerLock(async () => {
     const snapshot = await reader.anchor();
@@ -179,6 +254,21 @@ export async function syncOnce(
           errors: ['本轮仅采集当前状态，历史尚未核验。'],
         }
       : await scanHistory(reader, store, snapshot, options.scanBudget);
+    if (options.evidenceBlocks?.length)
+      await captureEvidenceBlocks(reader, store, snapshot, options.evidenceBlocks);
+    deploymentEvidence.push(
+      ...reader.evidence.filter(
+        (e) =>
+          [
+            'deployment-receipt',
+            'escrow:EIP1967-implementation',
+            'eth_call:usdc',
+            'eth_call:agenticCommerce',
+            'eth_call:feeBps',
+          ].includes(String(e.evidence.locator)) ||
+          String(e.evidence.locator).startsWith('eth_getCode:'),
+      ),
+    );
     const receipts = await store.receiptsThrough(snapshot.blockNumber);
     const coverage = emptyCoverage();
     coverage.currentState = enumeration.errors.length === 0 ? 'complete' : 'partial';
@@ -198,6 +288,10 @@ export async function syncOnce(
         .map((a) => a.toLowerCase()),
     );
     const feeRecipient = String(await reader.call('feeRecipient', [], snapshot)).toLowerCase();
+    const feeBps = known(
+      String(await reader.call('feeBps', [], snapshot)),
+      reader.evidence.slice(-1).map((e) => e.id),
+    );
     payees.add(feeRecipient);
     const accounts: PendingAccount[] = [];
     for (const payee of payees) {
@@ -233,7 +327,7 @@ export async function syncOnce(
       ? 'complete'
       : 'partial';
     const jobs: JobDetail[] = enumeration.metas.map((meta: RawMeta) => {
-      const cash = settlement(meta, receipts);
+      const cash = settlement(meta, receipts, { feeBps, feeRecipient });
       const stateEvidence = reader.evidence.filter(
         (e) =>
           e.evidence.locator === 'eth_call:getBountyMeta' &&
@@ -265,18 +359,7 @@ export async function syncOnce(
           ].map((e) => [e.id, e]),
         ).values(),
       ];
-      const parkedLegs = cash.legs.filter(
-        (l) => l.parkedAmount.atomic.state === 'known' && BigInt(l.parkedAmount.atomic.value) > 0n,
-      );
-      const derived =
-        parkedLegs.length > 0 &&
-        cash.cashState !== 'UNKNOWN' &&
-        cash.cashState !== 'CONFLICT' &&
-        parkedLegs.every((leg) =>
-          pendingAccounts.some(
-            (a) => a.payee === leg.payee && a.sequenceDerivedJobIds.includes(meta.jobId),
-          ),
-        );
+      const derived = sequenceCleared(cash.legs, cash.cashState, pendingAccounts);
       return {
         job: {
           jobKey: `5042:${DEPLOYMENT.adapter}:${meta.jobId}`,
@@ -330,7 +413,7 @@ export async function syncOnce(
     if ((await reader.block(snapshot.blockNumber)).hash !== snapshot.blockHash)
       throw new LedgerError('SOURCE_CONFLICT', '发布前固定锚点不一致。', 409);
     const run: SnapshotRun = {
-      id: `run_${hashPayload({ snapshot, coverage, metas: enumeration.metas, receipts: receipts.map((r) => r.evidence.id) }).slice(0, 32)}`,
+      id: `run_${hashPayload({ ruleVersion: RULE_VERSION, snapshot, coverage, metas: enumeration.metas, receipts: receipts.map((r) => r.evidence.id) }).slice(0, 32)}`,
       snapshot,
       coverage,
       expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),

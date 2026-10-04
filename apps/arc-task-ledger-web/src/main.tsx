@@ -62,6 +62,8 @@ interface Detail {
   gas: { transactionHash: string; amount: Amount }[];
 }
 const labels: Record<string, string> = {
+  NOT_APPLICABLE: '零分配，无应付义务',
+  ZERO_ALLOCATION: '已核验零分配',
   OPEN: '待接单',
   TAKEN: '已接单',
   SUBMITTED: '已提交',

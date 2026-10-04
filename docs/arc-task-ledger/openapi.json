@@ -671,7 +671,7 @@
             "type": "string"
           },
           "role": {
-            "enum": ["WORKER", "POSTER", "PROTOCOL", "ESCROW"]
+            "enum": ["WORKER", "POSTER", "PROTOCOL", "ESCROW", "ADAPTER"]
           },
           "kind": {
             "enum": [
@@ -679,6 +679,7 @@
               "FEE",
               "REFUND",
               "BOND_RETURN",
+              "BOND_DEPOSIT",
               "BOND_FORFEIT",
               "TIMEOUT_SHARE",
               "ESCROW_TRANSIT",
@@ -701,6 +702,7 @@
               "ACCOUNT_ONLY",
               "VERIFIED_SEQUENCE_DERIVED",
               "AMBIGUOUS",
+              "ZERO_ALLOCATION",
               "UNKNOWN"
             ]
           },

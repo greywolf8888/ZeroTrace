@@ -1,11 +1,12 @@
-import { beforeAll, beforeEach, afterAll, describe, it, expect } from 'vitest';
+import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
 import { LedgerStore } from '../../../apps/arc-task-ledger-api/src/storage.js';
 import { DEPLOYMENT } from '../../../packages/arc-task-ledger/src/config.js';
 import { rawEvidence } from '../../../packages/arc-task-ledger/src/protocol.js';
 import { createLedgerApp } from '../../../apps/arc-task-ledger-api/src/app.js';
 import { run, snapshot, meta } from '../fixtures/helpers.js';
 import { ArcReader } from '../../../packages/arc-task-ledger/src/reader.js';
-import { scanHistory } from '../../../packages/arc-task-ledger/src/worker.js';
+import { scanHistory, syncOnce } from '../../../packages/arc-task-ledger/src/worker.js';
+import { readonlyChain } from '../fixtures/readonly-chain.js';
 import type { JsonRpcTransport } from '@zerotrace/chain-adapters/transport';
 import { fetchLedgerJob } from '../../../examples/arc-task-ledger/consumer.js';
 const url = process.env.ARC_TEST_DATABASE_URL;
@@ -25,6 +26,139 @@ afterAll(async () => {
   await store.close();
 });
 describe('真实 PostgreSQL 与 API 集成', () => {
+  it('定点真实回执路径仅覆盖指定区块，不越过历史缺口', async () => {
+    const reader = new ArcReader(
+      {
+        rpcUrl: 'https://rpc.mainnet.arc.io',
+        rpcHosts: ['rpc.mainnet.arc.io'],
+        providerAlias: 'test-only',
+      },
+      readonlyChain(false),
+    );
+    const height = (BigInt(DEPLOYMENT.verifiedDeploymentBlock) + 2n).toString();
+    try {
+      const result = await syncOnce(reader, store, {
+        maxJobs: 5,
+        scanBudget: '1',
+        currentOnly: true,
+        evidenceBlocks: [height],
+      });
+      expect(result.coverage.lifecycleHistory).toBe('partial');
+      expect(result.coverage.accountPendingHistory).toBe('partial');
+      expect((await store.currentCheckpoint(DEPLOYMENT.adapter))!.head).toBe(
+        (BigInt(DEPLOYMENT.verifiedDeploymentBlock) - 1n).toString(),
+      );
+      expect(
+        result.jobs[0]!.settlementLegs.find((l) => l.kind === 'REWARD')!.parkedAmount.atomic.state,
+      ).toBe('known');
+      expect(result.jobs[0]!.job.cashState).toBe('PARTIAL');
+      expect(
+        (await store.pool.query('SELECT document FROM arc_task_ledger_v1.segments')).rows[0]
+          .document.scope,
+      ).toBe('selected-block-only');
+    } finally {
+      await reader.close();
+    }
+  });
+  it.each([false, true])(
+    '完整reader/worker→真实PG→API→关闭重开，争议默认=%s，新义务不继承旧清偿',
+    async (defaultRuling) => {
+      const reader = new ArcReader(
+        {
+          rpcUrl: 'https://rpc.mainnet.arc.io',
+          rpcHosts: ['rpc.mainnet.arc.io'],
+          providerAlias: 'test-only',
+        },
+        readonlyChain(defaultRuling),
+      );
+      const result = await syncOnce(reader, store, { maxJobs: 5, scanBudget: '3' });
+      expect(result.coverage.lifecycleHistory).toBe('complete');
+      expect(result.jobs[0]!.job.cashState).toBe('PARTIAL');
+      expect(
+        result.jobs[0]!.settlementLegs.find((l) => l.kind === 'REWARD')!.parkedAmount.atomic,
+      ).toMatchObject({ state: 'known', value: '990000000000000000' });
+      const account = result.jobs[0]!.pendingAccounts.find(
+        (a) => a.payee === meta().assignedProvider,
+      )!;
+      expect(account.obligations.map((o) => o.status)).toEqual(['CLEARED_SEQUENCE', 'OUTSTANDING']);
+      const restart = new LedgerStore(url!);
+      const app = await createLedgerApp(restart, secret);
+      try {
+        expect(await restart.getRun(result.id)).toEqual(result);
+        const response = await app.inject(
+          `/v1/jobs/5042/${DEPLOYMENT.adapter}/8?snapshotRunId=${result.id}`,
+        );
+        expect(response.statusCode).toBe(200);
+        expect(response.json().job.cashState.value).toBe('PARTIAL');
+        expect(
+          response
+            .json()
+            .pendingAccounts.find((a: { payee: string }) => a.payee === meta().assignedProvider)
+            .withdrawals[0].obligationIds,
+        ).toEqual([account.obligations[0]!.id]);
+      } finally {
+        await app.close();
+        await restart.close();
+        await reader.close();
+      }
+    },
+  );
+  it('列表SQL keyset+LIMIT仅读投影；详情单任务；coverage不读jobs', async () => {
+    const fixture = run(
+      'query_bound',
+      Array.from({ length: 120 }, (_, i) => String(i + 1)),
+    );
+    fixture.jobs.forEach((detail) => {
+      detail.evidence = [
+        rawEvidence(
+          { testOnly: true, payload: 'x'.repeat(4096) },
+          snapshot,
+          'test-only:large',
+          '大原始记录不进入列表',
+        ),
+      ];
+    });
+    await store.publish(fixture, []);
+    const app = await createLedgerApp(store, secret);
+    const fullReplay = vi
+      .spyOn(store, 'getRun')
+      .mockRejectedValue(new Error('GET禁止完整运行读取'));
+    const queries = vi.spyOn(store.pool, 'query');
+    try {
+      const first = (await app.inject('/v1/jobs?limit=3')).json();
+      queries.mockClear();
+      const page = await app.inject(`/v1/jobs?limit=3&cursor=${first.nextCursor}`);
+      expect(page.json().items.map((j: { jobId: string }) => j.jobId)).toEqual(['4', '5', '6']);
+      const index = queries.mock.calls.findIndex((call) =>
+        String(call[0]).includes('FROM arc_task_ledger_v1.jobs'),
+      );
+      const [sql, values] = queries.mock.calls[index]!;
+      expect(String(sql)).toMatch(/SELECT list_projection,evidence_ids/);
+      expect(String(sql)).toMatch(/job_id>\$2::numeric.*ORDER BY job_id LIMIT \$3/);
+      expect(values).toEqual(['query_bound', '3', 4]);
+      expect((await queries.mock.results[index]!.value).rows).toHaveLength(4);
+      expect(page.body).not.toContain('xxxx');
+      queries.mockClear();
+      expect((await app.inject(`/v1/jobs/5042/${DEPLOYMENT.adapter}/8`)).statusCode).toBe(200);
+      expect(
+        queries.mock.calls
+          .filter((call) => String(call[0]).includes('FROM arc_task_ledger_v1.jobs'))
+          .map((call) => String(call[0])),
+      ).toEqual([
+        'SELECT document FROM arc_task_ledger_v1.jobs WHERE run_id=$1 AND job_id=$2 LIMIT 1',
+      ]);
+      queries.mockClear();
+      await app.inject('/v1/coverage');
+      expect(
+        queries.mock.calls.some((call) => String(call[0]).includes('FROM arc_task_ledger_v1.jobs')),
+      ).toBe(false);
+      expect(fullReplay).not.toHaveBeenCalled();
+    } finally {
+      queries.mockRestore();
+      fullReplay.mockRestore();
+      await app.close();
+    }
+  });
   it('worker 租约连接被终止后不能继续写入', async () => {
     const other = new LedgerStore(url!);
     try {
@@ -266,6 +400,7 @@ describe('真实 PostgreSQL 与 API 集成', () => {
           },
           history: 'partial',
           withdrawals: [],
+          obligations: [],
           sequenceDerivedJobIds: [],
           evidenceIds: [],
         },

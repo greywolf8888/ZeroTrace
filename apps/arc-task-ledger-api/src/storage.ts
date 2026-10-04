@@ -7,6 +7,8 @@ import {
   type SnapshotRun,
   type StoredEvidence,
   type LedgerRepository,
+  type JobDetail,
+  type JobRow,
 } from '@zerotrace/arc-task-ledger';
 
 // 与现有 storage 使用同一 pg 连接模式；独立 schema 只保存本组件链上只读投影。
@@ -24,6 +26,16 @@ CREATE INDEX IF NOT EXISTS atl_segment_frontier ON arc_task_ledger_v1.segments(d
 CREATE TABLE IF NOT EXISTS arc_task_ledger_v1.sync_attempts(id bigserial PRIMARY KEY,observed_at timestamptz NOT NULL DEFAULT now(),success boolean NOT NULL,document jsonb NOT NULL);
 INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(1) ON CONFLICT DO NOTHING;
 INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(2) ON CONFLICT DO NOTHING;
+ALTER TABLE arc_task_ledger_v1.jobs ADD COLUMN IF NOT EXISTS list_projection jsonb;
+ALTER TABLE arc_task_ledger_v1.jobs ADD COLUMN IF NOT EXISTS evidence_ids jsonb;
+UPDATE arc_task_ledger_v1.jobs SET list_projection=document->'job', evidence_ids=COALESCE((SELECT jsonb_agg(e->'id') FROM jsonb_array_elements(document->'evidence') e), '[]'::jsonb) WHERE list_projection IS NULL;
+ALTER TABLE arc_task_ledger_v1.jobs ALTER COLUMN list_projection SET NOT NULL;
+ALTER TABLE arc_task_ledger_v1.jobs ALTER COLUMN evidence_ids SET NOT NULL;
+CREATE INDEX IF NOT EXISTS atl_list_lifecycle ON arc_task_ledger_v1.jobs(run_id,(list_projection->>'lifecycle'),job_id);
+CREATE INDEX IF NOT EXISTS atl_list_cash ON arc_task_ledger_v1.jobs(run_id,(list_projection->>'cashState'),job_id);
+CREATE INDEX IF NOT EXISTS atl_list_poster ON arc_task_ledger_v1.jobs(run_id,(list_projection->>'poster'),job_id);
+CREATE INDEX IF NOT EXISTS atl_list_worker ON arc_task_ledger_v1.jobs(run_id,(list_projection->'worker'->>'value'),job_id);
+INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(3) ON CONFLICT DO NOTHING;
 `;
 export class LedgerStore implements LedgerRepository {
   readonly pool: Pool;
@@ -62,7 +74,7 @@ export class LedgerStore implements LedgerRepository {
   async ready(): Promise<boolean> {
     try {
       const r = await this.pool.query(
-        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=2',
+        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=3',
       );
       return r.rowCount === 1;
     } catch {
@@ -124,13 +136,29 @@ export class LedgerStore implements LedgerRepository {
       for (const detail of run.jobs) {
         for (const evidence of detail.evidence) await this.putEvidence(client, evidence);
         await client.query(
-          'INSERT INTO arc_task_ledger_v1.jobs(run_id,job_id,document) VALUES($1,$2,$3)',
-          [run.id, decimal(detail.job.jobId), JSON.stringify(detail)],
+          'INSERT INTO arc_task_ledger_v1.jobs(run_id,job_id,document,list_projection,evidence_ids) VALUES($1,$2,$3,$4,$5)',
+          [
+            run.id,
+            decimal(detail.job.jobId),
+            JSON.stringify(detail),
+            JSON.stringify(detail.job),
+            JSON.stringify(detail.evidence.map((e) => e.id)),
+          ],
         );
       }
     });
   }
   async getRun(id?: string): Promise<SnapshotRun | undefined> {
+    const metadata = await this.getRunMetadata(id);
+    if (!metadata) return undefined;
+    // 完整回放仅供 worker/验收使用，HTTP GET 不调用本方法。
+    const jobs = await this.pool.query(
+      'SELECT document FROM arc_task_ledger_v1.jobs WHERE run_id=$1 ORDER BY job_id',
+      [metadata.id],
+    );
+    return { ...metadata, jobs: jobs.rows.map((r) => r.document) };
+  }
+  async getRunMetadata(id?: string): Promise<Omit<SnapshotRun, 'jobs'> | undefined> {
     const selected =
       id === undefined
         ? await this.pool.query(
@@ -139,10 +167,6 @@ export class LedgerStore implements LedgerRepository {
         : await this.pool.query('SELECT * FROM arc_task_ledger_v1.runs WHERE id=$1', [id]);
     const row = selected.rows[0];
     if (!row) return undefined;
-    const jobs = await this.pool.query(
-      'SELECT document FROM arc_task_ledger_v1.jobs WHERE run_id=$1 ORDER BY job_id',
-      [row.id],
-    );
     return {
       id: row.id as string,
       snapshot: row.snapshot,
@@ -150,9 +174,51 @@ export class LedgerStore implements LedgerRepository {
       expiresAt: (row.expires_at as Date).toISOString(),
       totalExpected: String(row.expected),
       errors: row.errors,
-      jobs: jobs.rows.map((r) => r.document),
       mode: 'stored-replay',
     };
+  }
+  async getJobPage(
+    runId: string,
+    limit: number,
+    after?: string,
+    filter: {
+      address?: string | undefined;
+      lifecycle?: string | undefined;
+      cashState?: string | undefined;
+    } = {},
+  ): Promise<{ job: JobRow; evidenceIds: string[] }[]> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+      throw new LedgerError('INVALID_LIMIT', '列表数据库读取上限不合法。', 400);
+    const values: (string | number)[] = [runId];
+    const clauses = ['run_id=$1'];
+    const bind = (value: string | number) => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+    if (after !== undefined) clauses.push(`job_id>${bind(decimal(after))}::numeric`);
+    if (filter.address) {
+      const parameter = bind(filter.address);
+      clauses.push(
+        `(list_projection->>'poster'=${parameter} OR (list_projection->'worker'->>'state'='known' AND list_projection->'worker'->>'value'=${parameter}))`,
+      );
+    }
+    if (filter.lifecycle) clauses.push(`list_projection->>'lifecycle'=${bind(filter.lifecycle)}`);
+    if (filter.cashState) clauses.push(`list_projection->>'cashState'=${bind(filter.cashState)}`);
+    const result = await this.pool.query(
+      `SELECT list_projection,evidence_ids FROM arc_task_ledger_v1.jobs WHERE ${clauses.join(' AND ')} ORDER BY job_id LIMIT ${bind(limit + 1)}`,
+      values,
+    );
+    return result.rows.map((row) => ({
+      job: row.list_projection as JobRow,
+      evidenceIds: row.evidence_ids as string[],
+    }));
+  }
+  async getJobDetail(runId: string, jobId: string): Promise<JobDetail | undefined> {
+    const result = await this.pool.query(
+      'SELECT document FROM arc_task_ledger_v1.jobs WHERE run_id=$1 AND job_id=$2 LIMIT 1',
+      [runId, decimal(jobId)],
+    );
+    return result.rows[0]?.document as JobDetail | undefined;
   }
   async checkpoint(
     deployment: string,

@@ -2473,3 +2473,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 2026-10-04 安全补丁复核：Arc Fastify 5.12.5、Undici 6.29.0、Vitest 4.1.11 与许可证检查器 4.4.2，兼容间接依赖更新并复验；独立包全依赖及生产依赖已知审计告警均为 0。原全仓库仍有 10 项告警（6 high、4 moderate），明确未通过全仓库漏洞审计，不能继承旧零告警。最终源码包为 Arc_Task_Ledger_v1.0.0_20261004_delivery.zip。
 
 补丁后最后一次原浏览器全量 48/49，通过独立控制活动复验 1/1；原诊断导航存在时序不稳定，保留失败记录，不宣称最后全量完全通过。Arc 桌面/手机 4/4 及全部本地组件检查通过。
+
+## 2026-10-04 v1.0.1审计纠正（追加，旧证据保留）
+
+审计基线7df357d的资金正确性LOCAL_VALIDATED撤回。本轮完成具体义务归属、争议奖励、Approval与零分配修复及真实失败→通过回归；完成数据库有界读取与live分层错误分类。真实主网任务#18定点读取已核验奖励1.98 USDC、费用0.02 USDC，并通过持久/API进程重启回放；历史仍partial，正式模式关闭，特殊主网案例NOT_OBSERVED。最新源码、独立干净提交验收和脱敏命令以`docs/arc-task-ledger/REPAIR_ACCEPTANCE.md`及随包验证记录为准，不继承旧测试数量或PASS。公开部署与身份/申请资料继续未完成。

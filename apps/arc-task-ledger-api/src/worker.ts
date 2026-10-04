@@ -28,6 +28,7 @@ try {
         maxJobs: config.maxJobs,
         scanBudget: config.scanBudget,
         currentOnly: process.argv.includes('--current-only'),
+        evidenceBlocks: config.evidenceBlocks,
       });
       const result = {
         snapshotRunId: run.id,

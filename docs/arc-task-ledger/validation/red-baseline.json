@@ -1,0 +1,9 @@
+{
+  "baselineCommit": "7df357d194d66317017daae3775a6ebba3e9059c",
+  "command": "node node_modules/vitest/vitest.mjs run tests/arc-task-ledger/unit/audit-regression.test.ts",
+  "exitCode": 1,
+  "testsFailed": 11,
+  "testsPassed": 2,
+  "logSha256": "1463cd1ba3752db2428ed0173ec8060d38a917678e7c963abcdf4b1ca34c1468",
+  "note": "在资金源码尚未修改时运行13项原始新增回归。修复后追加更多边界测试；保留原失败日志，不把旧结果升级当前验收。"
+}

@@ -1,0 +1,182 @@
+{
+  "status": "MAINNET_READ_VALIDATED",
+  "snapshot": {
+    "chainId": "5042",
+    "blockNumber": "24188055",
+    "blockHash": "0x913bde2e7eb7f10d620ab7378b0a744164d4bf85b974c9dc4ad141c91795d56f",
+    "observedAt": "2026-10-04T07:57:48.485Z",
+    "finality": "FINALIZED",
+    "sourceSet": ["arc-circle-public"]
+  },
+  "snapshotRunId": "run_bfa6540a4b6e2aa2a98d6e1fe25caa8b",
+  "selectedJobId": "18",
+  "coverage": {
+    "currentState": "complete",
+    "jobEnumeration": "complete",
+    "lifecycleHistory": "partial",
+    "settlementHistory": "partial",
+    "accountPendingHistory": "partial",
+    "deploymentVerification": "complete",
+    "sourceAgreement": "partial"
+  },
+  "settlementLegs": [
+    {
+      "id": "leg_9bcb5ee9561e4e840b03de89",
+      "role": "ADAPTER",
+      "kind": "DEPOSIT",
+      "payee": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d",
+      "expectedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "2000000000000000000",
+          "evidenceIds": ["ev_d99d20e537dd9e025b51b46a"]
+        }
+      },
+      "observedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "2000000000000000000",
+          "evidenceIds": ["ev_d99d20e537dd9e025b51b46a"]
+        }
+      },
+      "parkedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "0",
+          "evidenceIds": ["ev_d99d20e537dd9e025b51b46a"]
+        }
+      },
+      "attribution": "DIRECT",
+      "obligationIds": [],
+      "evidenceIds": ["ev_d99d20e537dd9e025b51b46a"],
+      "ruleVersion": "atl-v1.0.1"
+    },
+    {
+      "id": "leg_78aaf3b3d7151d2a094d6db9",
+      "role": "ESCROW",
+      "kind": "ESCROW_TRANSIT",
+      "payee": "0x64ca39fc57315d0d488accac07c37c6e841cd058",
+      "expectedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "2000000000000000000",
+          "evidenceIds": ["ev_e637f2784bbb0eb14ea6acf7"]
+        }
+      },
+      "observedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "2000000000000000000",
+          "evidenceIds": ["ev_e637f2784bbb0eb14ea6acf7"]
+        }
+      },
+      "parkedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "0",
+          "evidenceIds": ["ev_e637f2784bbb0eb14ea6acf7"]
+        }
+      },
+      "attribution": "DIRECT",
+      "obligationIds": [],
+      "evidenceIds": ["ev_e637f2784bbb0eb14ea6acf7"],
+      "ruleVersion": "atl-v1.0.1"
+    },
+    {
+      "id": "leg_686bd98d63663b02fbf40ba0",
+      "role": "PROTOCOL",
+      "kind": "FEE",
+      "payee": "0xadac7534d3fe868e28c77df5cd930f2635bcb63a",
+      "expectedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "20000000000000000",
+          "evidenceIds": ["ev_d207570fbd4e90b2d182193d"]
+        }
+      },
+      "observedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "20000000000000000",
+          "evidenceIds": ["ev_d207570fbd4e90b2d182193d"]
+        }
+      },
+      "parkedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "0",
+          "evidenceIds": ["ev_d207570fbd4e90b2d182193d"]
+        }
+      },
+      "attribution": "DIRECT",
+      "obligationIds": [],
+      "evidenceIds": ["ev_d207570fbd4e90b2d182193d"],
+      "ruleVersion": "atl-v1.0.1"
+    },
+    {
+      "id": "leg_da08e97284fb8a68febcffe2",
+      "role": "WORKER",
+      "kind": "REWARD",
+      "payee": "0x41d926f3853fa2d3bdc9971d105e33210ba21c71",
+      "expectedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "1980000000000000000",
+          "evidenceIds": ["ev_d207570fbd4e90b2d182193d"]
+        }
+      },
+      "observedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "1980000000000000000",
+          "evidenceIds": ["ev_d207570fbd4e90b2d182193d"]
+        }
+      },
+      "parkedAmount": {
+        "asset": "USDC",
+        "decimals": 18,
+        "atomic": {
+          "state": "known",
+          "value": "0",
+          "evidenceIds": ["ev_d207570fbd4e90b2d182193d"]
+        }
+      },
+      "attribution": "DIRECT",
+      "obligationIds": [],
+      "evidenceIds": ["ev_d207570fbd4e90b2d182193d"],
+      "ruleVersion": "atl-v1.0.1"
+    }
+  ],
+  "rpcRequests": 120,
+  "responseBytes": 501335,
+  "historyScope": "SELECTED_BLOCKS_WITH_GAPS",
+  "apiReadVerified": true,
+  "mainnetEdgeCases": "NOT_OBSERVED",
+  "gaps": ["本轮仅采集当前状态，历史尚未核验。"],
+  "selectedBlocks": ["23388428", "23465819", "23466663", "23508410"],
+  "discoverySource": "https://explorer.arc.io/api/v2/addresses/0x73c617e808ED5c7Ca41413DFC6EE940dDcBb0b8D/logs",
+  "cashAuthority": "经固定区块RPC回执和日志锚点核验，不使用浏览器已解码字段作为资金权威。",
+  "stage": "修复工作副本已验证；最终干净提交复验单独记录。"
+}

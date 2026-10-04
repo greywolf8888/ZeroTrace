@@ -17,6 +17,7 @@ import {
 export function settlement(
   meta: RawMeta,
   receipts: { receipt: Receipt; evidenceIds: string[] }[],
+  configuration?: { feeBps: Knowledge<string>; feeRecipient: string },
 ): {
   legs: SettlementLeg[];
   cashState: string;
@@ -144,11 +145,33 @@ export function settlement(
         String(external.args.worker),
         protocolAtoms(String(external.args.workerAmount)),
       );
-    } else if (named('BountyCompleted')) {
-      const feeAtoms = fee ? BigInt(protocolAtoms(String(fee.args.amount))) : undefined;
+    } else if (named('BountyCompleted') || named('DisputeResolved')?.args.payProvider === true) {
       const distributable = incoming.length === 1 ? BigInt(incoming[0]!.atomic) : undefined;
+      const provenFee =
+        distributable !== undefined &&
+        configuration?.feeBps.state === 'known' &&
+        distributable % 10n ** 12n === 0n
+          ? (((distributable / 10n ** 12n) * BigInt(configuration.feeBps.value)) / 10000n) *
+            10n ** 12n
+          : undefined;
+      const feeAtoms = fee
+        ? BigInt(protocolAtoms(String(fee.args.amount)))
+        : provenFee === 0n
+          ? 0n
+          : undefined;
+      if (!fee)
+        add(
+          'PROTOCOL',
+          'FEE',
+          DEPLOYMENT.adapter,
+          configuration?.feeRecipient ?? '0x0000000000000000000000000000000000000000',
+          feeAtoms?.toString(),
+        );
       const net =
-        distributable !== undefined && feeAtoms !== undefined && distributable >= feeAtoms
+        distributable !== undefined &&
+        feeAtoms !== undefined &&
+        distributable >= feeAtoms &&
+        (provenFee === undefined || provenFee === feeAtoms)
           ? (distributable - feeAtoms).toString()
           : undefined;
       add('WORKER', 'REWARD', DEPLOYMENT.adapter, meta.assignedProvider, net);
@@ -199,15 +222,25 @@ export function settlement(
       let attribution: SettlementLeg['attribution'] = ambiguous
         ? 'AMBIGUOUS'
         : 'UNIQUE_EVENT_SEGMENT';
-      if (usable && candidates.length === 1) {
+      const obligationIds: string[] = [];
+      if (expectedValue === '0' && parsed.normalization === 'complete' && jobs.size === 1) {
+        observed =
+          candidates.length > 0 || parkedCandidates.length > 0
+            ? { state: 'conflict', reason: '协议零分配路径不应产生该支付或停放。', evidenceIds }
+            : known('0', evidenceIds);
+        parkedAmount = known('0', evidenceIds);
+        attribution = 'ZERO_ALLOCATION';
+      }
+      if (usable && expectedValue !== '0' && candidates.length === 1) {
         observed = known(candidates[0]!.atomic, evidenceIds);
         parkedAmount = known('0', evidenceIds);
         consumed.add(candidates[0]!.id);
         attribution = 'DIRECT';
       }
-      if (usable && parkedCandidates.length === 1) {
+      if (usable && expectedValue !== '0' && parkedCandidates.length === 1) {
         observed = known('0', evidenceIds);
         parkedAmount = known(protocolAtoms(String(parkedCandidates[0]!.args.amount)), evidenceIds);
+        obligationIds.push(parkedObligationId(parkedCandidates[0]!));
       }
       if (parsed.normalization === 'conflict')
         observed = { state: 'conflict', reason: '回执或系统/代币资金事件冲突。', evidenceIds };
@@ -220,6 +253,7 @@ export function settlement(
         observedAmount: amount(observed),
         parkedAmount: amount(parkedAmount),
         attribution,
+        obligationIds,
         evidenceIds,
         ruleVersion: RULE_VERSION,
       });
@@ -228,14 +262,27 @@ export function settlement(
   const payout = legs.filter(
     (l) => !['DEPOSIT', 'BOND_DEPOSIT', 'ESCROW_TRANSIT'].includes(l.kind),
   );
-  const conflict = payout.some((l) => l.observedAmount.atomic.state === 'conflict');
+  const conflict = legs.some((l) => l.observedAmount.atomic.state === 'conflict');
   const direct = payout.some(
     (l) => l.observedAmount.atomic.state === 'known' && BigInt(l.observedAmount.atomic.value) > 0n,
   );
   const parked = payout.some(
     (l) => l.parkedAmount.atomic.state === 'known' && BigInt(l.parkedAmount.atomic.value) > 0n,
   );
-  const uncertain = payout.some((l) => l.observedAmount.atomic.state !== 'known');
+  const uncertain = legs.some(
+    (l) => l.observedAmount.atomic.state !== 'known' || l.expectedAmount.atomic.state !== 'known',
+  );
+  const terminal = timeline.some((e) =>
+    [
+      'BountyCompleted',
+      'DisputeResolved',
+      'BountyCancelled',
+      'BountyExpired',
+      'RejectionFinalized',
+      'ArbitratorTimeoutClaimed',
+      'ExternalRefundReconciled',
+    ].includes(e.name),
+  );
   const cashState = conflict
     ? 'CONFLICT'
     : uncertain
@@ -245,8 +292,14 @@ export function settlement(
         : parked
           ? 'PARKED'
           : direct
-            ? 'CONFIRMED_DIRECT'
-            : 'NONE_OBSERVED';
+            ? terminal
+              ? 'CONFIRMED_DIRECT'
+              : 'UNKNOWN'
+            : terminal &&
+                payout.length > 0 &&
+                payout.every((l) => l.attribution === 'ZERO_ALLOCATION')
+              ? 'NOT_APPLICABLE'
+              : 'NONE_OBSERVED';
   const unique = new Map(timeline.map((e) => [e.id, e]));
   return {
     legs,
@@ -262,6 +315,36 @@ export function settlement(
   };
 }
 
+export const parkedObligationId = (event: ProtocolEvent): string =>
+  `obligation_${hashPayload({ chain: '5042', adapter: DEPLOYMENT.adapter, transactionHash: event.transactionHash, logIndex: event.logIndex, payee: String(event.args.payee).toLowerCase() }).slice(0, 32)}`;
+
+export function sequenceCleared(
+  legs: SettlementLeg[],
+  cashState: string,
+  accounts: PendingAccount[],
+): boolean {
+  const parked = legs.filter(
+    (l) => l.parkedAmount.atomic.state === 'known' && BigInt(l.parkedAmount.atomic.value) > 0n,
+  );
+  return (
+    parked.length > 0 &&
+    legs.some((l) => ['REWARD', 'REFUND', 'TIMEOUT_SHARE'].includes(l.kind)) &&
+    !['UNKNOWN', 'CONFLICT'].includes(cashState) &&
+    parked.every(
+      (leg) =>
+        leg.obligationIds.length > 0 &&
+        leg.obligationIds.every((id) =>
+          accounts.some(
+            (a) =>
+              a.payee === leg.payee &&
+              a.history === 'complete' &&
+              a.obligations.some((o) => o.id === id && o.status === 'CLEARED_SEQUENCE'),
+          ),
+        ),
+    )
+  );
+}
+
 export function accountPending(
   payee: string,
   balance: Knowledge<string>,
@@ -270,8 +353,9 @@ export function accountPending(
   verifiedOpening: Knowledge<string>,
 ): PendingAccount {
   let running = verifiedOpening.state === 'known' ? BigInt(verifiedOpening.value) : undefined;
-  const outstanding: string[] = [];
-  const derived = new Set<string>();
+  const outstanding: PendingAccount['obligations'] = [];
+  const obligations: PendingAccount['obligations'] = [];
+  const seenEvents = new Set<string>();
   const withdrawals: PendingAccount['withdrawals'] = [];
   const allEvidence = new Set<string>();
   let valid = completeHistory && running !== undefined;
@@ -289,10 +373,24 @@ export function accountPending(
     const parsed = decodeReceipt(receipt, evidenceIds);
     for (const e of parsed.events) {
       if (String(e.args.payee).toLowerCase() !== payee.toLowerCase()) continue;
+      if (seenEvents.has(e.id)) continue;
+      seenEvents.add(e.id);
+      if (parsed.normalization !== 'complete') valid = false;
       e.evidenceIds.forEach((id) => allEvidence.add(id));
       if (e.name === 'PayoutParked') {
         if (running !== undefined) running += BigInt(protocolAtoms(String(e.args.amount)));
-        if (e.jobId) outstanding.push(e.jobId);
+        if (e.jobId) {
+          const obligation: PendingAccount['obligations'][number] = {
+            id: parkedObligationId(e),
+            jobId: e.jobId,
+            transactionHash: e.transactionHash,
+            logIndex: e.logIndex,
+            amount: amount(known(protocolAtoms(String(e.args.amount)), evidenceIds)),
+            status: 'OUTSTANDING',
+          };
+          obligations.push(obligation);
+          outstanding.push(obligation);
+        }
       }
       if (e.name === 'WithdrawalClaimed') {
         const atoms = protocolAtoms(String(e.args.amount));
@@ -314,12 +412,20 @@ export function accountPending(
           ),
           attribution: 'ACCOUNT_ONLY',
           evidenceIds,
+          eventId: e.id,
+          obligationIds: [],
         });
         if (!confirmed || running === undefined || running !== BigInt(atoms)) {
           valid = false;
           running = undefined;
         } else {
-          if (valid) outstanding.forEach((id) => derived.add(id));
+          if (valid) {
+            withdrawals.at(-1)!.obligationIds = outstanding.map((o) => o.id);
+            outstanding.forEach((o) => {
+              o.status = 'CLEARED_SEQUENCE';
+              o.clearedBy = e.id;
+            });
+          }
           outstanding.length = 0;
           running = 0n;
         }
@@ -328,12 +434,27 @@ export function accountPending(
   }
   if (balance.state !== 'known' || running === undefined || running.toString() !== balance.value)
     valid = false;
+  if (!valid) {
+    obligations.forEach((o) => {
+      o.status = 'UNVERIFIED';
+      delete o.clearedBy;
+    });
+    withdrawals.forEach((w) => {
+      w.obligationIds = [];
+    });
+  }
+  const jobIds = [...new Set(obligations.map((o) => o.jobId))];
   return {
     payee: payee.toLowerCase(),
     balance: amount(balance),
     history: valid ? 'complete' : 'partial',
     withdrawals,
-    sequenceDerivedJobIds: valid ? [...derived] : [],
+    obligations,
+    sequenceDerivedJobIds: valid
+      ? jobIds.filter((id) =>
+          obligations.filter((o) => o.jobId === id).every((o) => o.status === 'CLEARED_SEQUENCE'),
+        )
+      : [],
     evidenceIds: [...allEvidence],
   };
 }

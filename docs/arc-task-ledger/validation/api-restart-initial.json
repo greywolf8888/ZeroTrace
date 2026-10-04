@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "restartKind": "API_PROCESS_TERMINATED_AND_RESTARTED",
+  "snapshotRunId": "run_bfa6540a4b6e2aa2a98d6e1fe25caa8b",
+  "jobId": "18",
+  "responseSha256": "3af8da3594609446301094927a8990b28dc4fecda729b7db26e2a2c2d8ff1eb0",
+  "equalAfterRestart": true,
+  "rpcConfiguredForApi": false,
+  "databaseRestarted": false
+}
