@@ -6,6 +6,26 @@ import {
 import { cursorCodec } from '../../../apps/arc-task-ledger-api/src/app.js';
 import { hashPayload } from '../../../packages/evidence/src/hash.js';
 import { validatePublicAnswers } from '../../../packages/arc-task-ledger/src/public-dns.js';
+import { configFromEnv, DEPLOYMENT } from '../../../packages/arc-task-ledger/src/config.js';
+it('历史窗口与固定目标必须声明合法边界，配置不修改原部署起点', () => {
+  const base = { ARC_DATABASE_URL: 'postgresql://test@localhost/arc_task_ledger_test' };
+  expect(
+    configFromEnv({ ...base, ARC_HISTORY_FROM_BLOCK: '', ARC_SNAPSHOT_BLOCK: '' }),
+  ).toMatchObject({ historyFromBlock: undefined, snapshotBlock: undefined });
+  const from = (BigInt(DEPLOYMENT.verifiedDeploymentBlock) + 2n).toString();
+  expect(
+    configFromEnv({ ...base, ARC_HISTORY_FROM_BLOCK: from, ARC_SNAPSHOT_BLOCK: from }),
+  ).toMatchObject({ historyFromBlock: from, snapshotBlock: from });
+  expect(() => configFromEnv({ ...base, ARC_HISTORY_FROM_BLOCK: '1' })).toThrow();
+  expect(() =>
+    configFromEnv({
+      ...base,
+      ARC_HISTORY_FROM_BLOCK: from,
+      ARC_SNAPSHOT_BLOCK: DEPLOYMENT.verifiedDeploymentBlock,
+    }),
+  ).toThrow();
+  expect(() => configFromEnv({ ...base, ARC_SNAPSHOT_BLOCK: '1;SELECT' })).toThrow();
+});
 it('可选公共解析继续拒绝保留地址、混合答案、空答案和解析失败', () => {
   for (const data of ['198.18.0.59', '127.0.0.1', '169.254.169.254', '10.0.0.1'])
     expect(() =>

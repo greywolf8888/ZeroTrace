@@ -167,16 +167,19 @@ export class ArcReader {
     this.evidence.push(evidence);
     return evidence;
   }
-  async anchor(): Promise<Snapshot> {
+  async anchor(targetBlock?: string): Promise<Snapshot> {
     const chain = await this.read<string>('eth_chainId');
     if (BigInt(chain) !== 5042n)
       throw new LedgerError('WRONG_CHAIN', '数据源不是 Arc 主网 5042。', 409);
-    const block = await this.read<{ number: string; hash: string; parentHash: string } | null>(
+    const finalized = await this.read<{ number: string; hash: string; parentHash: string } | null>(
       'eth_getBlockByNumber',
       ['finalized', false],
     );
-    if (!block || !/^0x[\da-fA-F]{64}$/.test(block.hash))
+    if (!finalized || !/^0x[\da-fA-F]{64}$/.test(finalized.hash))
       throw new LedgerError('FINALITY_UNAVAILABLE', '无法读取可核验的 finalized 区块。');
+    if (targetBlock !== undefined && BigInt(targetBlock) > BigInt(finalized.number))
+      throw new LedgerError('TARGET_NOT_FINALIZED', '固定目标尚未达到来源声明的最终区块。', 409);
+    const block = targetBlock === undefined ? finalized : await this.block(targetBlock);
     const snapshot: Snapshot = {
       chainId: '5042',
       blockNumber: BigInt(block.number).toString(),
@@ -186,7 +189,7 @@ export class ArcReader {
       sourceSet: [this.transport.endpointId],
     };
     this.observe(
-      { chainId: chain, block },
+      { chainId: chain, finalized, block },
       snapshot,
       'eth_chainId+eth_getBlockByNumber:finalized',
       '目标链与固定最终区块。',

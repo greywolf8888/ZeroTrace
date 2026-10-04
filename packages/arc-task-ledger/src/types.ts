@@ -1,4 +1,4 @@
-export const RULE_VERSION = 'atl-v1.0.1';
+export const RULE_VERSION = 'atl-v1.1.0';
 export type Knowledge<T> =
   | { state: 'known'; value: T; evidenceIds: string[]; derivation?: string }
   | {
@@ -156,6 +156,7 @@ export interface JobRow {
   freshness?: 'known' | 'stale';
   confidence: { state: 'uncalibrated'; reason: string };
   modelVersion: string;
+  historyRange?: HistoryRange;
 }
 export interface StoredEvidence {
   id: string;
@@ -200,6 +201,17 @@ export interface JobDetail {
   gas: { transactionHash: string; amount: Amount }[];
   trace: 'NOT_QUERIED';
 }
+export interface HistoryRange {
+  scope: 'DEPLOYMENT_TO_SNAPSHOT' | 'DECLARED_WINDOW';
+  fromBlock: string;
+  targetBlock: string;
+  contiguousThrough: string;
+  checkpointKey: string;
+  checkpointVersion: string;
+  status: 'complete' | 'partial';
+  omittedPriorHistory: boolean;
+  gaps: { fromBlock: string; toBlock: string; reason: string }[];
+}
 export interface SnapshotRun {
   id: string;
   snapshot: Snapshot;
@@ -209,6 +221,7 @@ export interface SnapshotRun {
   totalExpected: string;
   errors: string[];
   mode: 'stored-replay';
+  historyRange?: HistoryRange;
 }
 export class LedgerError extends Error {
   constructor(

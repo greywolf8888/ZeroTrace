@@ -9,6 +9,7 @@ import {
   type LedgerRepository,
   type JobDetail,
   type JobRow,
+  type SegmentInput,
 } from '@zerotrace/arc-task-ledger';
 
 // 与现有 storage 使用同一 pg 连接模式；独立 schema 只保存本组件链上只读投影。
@@ -36,6 +37,8 @@ CREATE INDEX IF NOT EXISTS atl_list_cash ON arc_task_ledger_v1.jobs(run_id,(list
 CREATE INDEX IF NOT EXISTS atl_list_poster ON arc_task_ledger_v1.jobs(run_id,(list_projection->>'poster'),job_id);
 CREATE INDEX IF NOT EXISTS atl_list_worker ON arc_task_ledger_v1.jobs(run_id,(list_projection->'worker'->>'value'),job_id);
 INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(3) ON CONFLICT DO NOTHING;
+ALTER TABLE arc_task_ledger_v1.runs ADD COLUMN IF NOT EXISTS history_range jsonb;
+INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(4) ON CONFLICT DO NOTHING;
 `;
 export class LedgerStore implements LedgerRepository {
   readonly pool: Pool;
@@ -74,7 +77,7 @@ export class LedgerStore implements LedgerRepository {
   async ready(): Promise<boolean> {
     try {
       const r = await this.pool.query(
-        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=3',
+        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=4',
       );
       return r.rowCount === 1;
     } catch {
@@ -121,7 +124,7 @@ export class LedgerStore implements LedgerRepository {
     await this.transaction(async (client) => {
       for (const evidence of observations) await this.putEvidence(client, evidence);
       const inserted = await client.query(
-        'INSERT INTO arc_task_ledger_v1.runs(id,snapshot,coverage,expires_at,expected,errors) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING',
+        'INSERT INTO arc_task_ledger_v1.runs(id,snapshot,coverage,expires_at,expected,errors,history_range) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING',
         [
           run.id,
           run.snapshot,
@@ -129,6 +132,7 @@ export class LedgerStore implements LedgerRepository {
           run.expiresAt,
           decimal(run.totalExpected),
           JSON.stringify(run.errors),
+          run.historyRange ?? null,
         ],
       );
       if (inserted.rowCount === 0)
@@ -175,6 +179,7 @@ export class LedgerStore implements LedgerRepository {
       totalExpected: String(row.expected),
       errors: row.errors,
       mode: 'stored-replay',
+      ...(row.history_range ? { historyRange: row.history_range } : {}),
     };
   }
   async getJobPage(
@@ -245,22 +250,14 @@ export class LedgerStore implements LedgerRepository {
       ? { head: String(r.rows[0].head), version: String(r.rows[0].version) }
       : undefined;
   }
-  async saveSegment(input: {
-    deployment: string;
-    from: string;
-    to: string;
-    status: 'complete' | 'partial' | 'conflict';
-    document: unknown;
-    observations: StoredEvidence[];
-    receipts: { receipt: Receipt; observationId: string }[];
-    expectedVersion: string;
-  }): Promise<{ head: string; version: string }> {
+  async saveSegment(input: SegmentInput): Promise<{ head: string; version: string }> {
     if (BigInt(decimal(input.from)) > BigInt(decimal(input.to)))
       throw new LedgerError('INVALID_RANGE', '区间顺序不合法。', 400);
     return this.transaction(async (client) => {
+      const checkpointKey = input.checkpointKey ?? input.deployment;
       const checkpoint = await client.query(
         'SELECT head,version FROM arc_task_ledger_v1.checkpoints WHERE deployment=$1 FOR UPDATE',
-        [input.deployment],
+        [checkpointKey],
       );
       if (String(checkpoint.rows[0]?.version) !== input.expectedVersion)
         throw new LedgerError('CHECKPOINT_CAS_CONFLICT', '采集检查点已被其他进程推进。', 409);
@@ -287,6 +284,7 @@ export class LedgerStore implements LedgerRepository {
         [id, input.deployment, input.from, input.to, input.status, JSON.stringify(input.document)],
       );
       let head = BigInt(String(checkpoint.rows[0]!.head));
+      if (input.status === 'conflict' && BigInt(input.from) <= head) head = BigInt(input.from) - 1n;
       while (true) {
         const conflict = await client.query(
           "SELECT 1 FROM arc_task_ledger_v1.segments WHERE deployment=$1 AND status='conflict' AND first_block<=$2 AND last_block>=$2 LIMIT 1",
@@ -298,11 +296,20 @@ export class LedgerStore implements LedgerRepository {
           [input.deployment, (head + 1n).toString()],
         );
         if (!r.rows[0]) break;
-        head = BigInt(r.rows[0].last_block);
+        const end = BigInt(r.rows[0].last_block);
+        const interior = await client.query(
+          "SELECT min(first_block) AS first_block FROM arc_task_ledger_v1.segments WHERE deployment=$1 AND status='conflict' AND first_block<=$3 AND last_block>=$2",
+          [input.deployment, (head + 1n).toString(), end.toString()],
+        );
+        if (interior.rows[0]?.first_block !== null && interior.rows[0]?.first_block !== undefined) {
+          head = BigInt(interior.rows[0].first_block) - 1n;
+          break;
+        }
+        head = end;
       }
       const updated = await client.query(
         'UPDATE arc_task_ledger_v1.checkpoints SET head=$1,version=version+1 WHERE deployment=$2 AND version=$3 RETURNING head,version',
-        [head.toString(), input.deployment, input.expectedVersion],
+        [head.toString(), checkpointKey, input.expectedVersion],
       );
       return { head: String(updated.rows[0]!.head), version: String(updated.rows[0]!.version) };
     });

@@ -1,0 +1,156 @@
+{
+  "scope": "本轮工作副本补充执行；不能把headAtStart当作干净提交验收。",
+  "records": [
+    {
+      "command": "npm run format:check",
+      "exitCode": 1,
+      "startedAt": "2026-10-04T18:25:02.435373+00:00",
+      "finishedAt": "2026-10-04T18:26:16.730350+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "8d9e3471e4846754f36303e298251a1f7deb0755789550834988525cd4630d87"
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:26:16.881978+00:00",
+      "finishedAt": "2026-10-04T18:28:02.814894+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6"
+    },
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:28:02.861013+00:00",
+      "finishedAt": "2026-10-04T18:28:14.844357+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8"
+    },
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:28:14.862557+00:00",
+      "finishedAt": "2026-10-04T18:28:50.718410+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "01a1398f304d70f979da78ce57c2de011437858ef81fa48c4c86ab9f44e6c0e7"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:28:50.747685+00:00",
+      "finishedAt": "2026-10-04T18:28:58.460210+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "04bbb8b5500f227556e1e8257f71f356824a4d60192942dc60ff7b79e818325b"
+    },
+    {
+      "command": "npm run license:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:28:58.584418+00:00",
+      "finishedAt": "2026-10-04T18:29:58.278362+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e"
+    },
+    {
+      "command": "npm run architecture:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:29:58.308611+00:00",
+      "finishedAt": "2026-10-04T18:30:21.346851+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "6b9cd9a759795787be49b3fce425cbabe9e09034c1af6db8f7599ed29ef4cf3a"
+    },
+    {
+      "command": "npm run ui:chinese:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:30:21.445726+00:00",
+      "finishedAt": "2026-10-04T18:30:22.258783+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "7724d8bd970dc1787592b4a9c489f12f6eeade48266262c8f0e45bffde6fd5f2"
+    },
+    {
+      "command": "npm run schema:drift:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:30:22.270559+00:00",
+      "finishedAt": "2026-10-04T18:30:23.123426+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "825e922aedf976dec50a43ad54e8765a2159fe16dd2218733c74926c0841ae97"
+    },
+    {
+      "command": "npm audit --json",
+      "exitCode": 1,
+      "startedAt": "2026-10-04T18:30:23.150874+00:00",
+      "finishedAt": "2026-10-04T18:30:28.679400+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "334083bc1bea34606ed89aeea41a00018f754db3ede230cd4f0f3e7ecc053533"
+    },
+    {
+      "command": "npm run test:visual-golden",
+      "exitCode": 1,
+      "startedAt": "2026-10-04T18:30:28.733147+00:00",
+      "finishedAt": "2026-10-04T18:30:29.664012+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "f80d8821b8f40a2ee01761f860ea2f05327ea040000a513239e68738b3cd928a"
+    },
+    {
+      "command": "cargo fmt --check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:25:02.653771+00:00",
+      "finishedAt": "2026-10-04T18:25:03.947207+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "cargo clippy --workspace -j 2 -- -D warnings",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:25:04.442322+00:00",
+      "finishedAt": "2026-10-04T18:27:34.921712+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "80576a6a396133f849a7631a937e755fc99e5a0d3b33f5edc775493b79786126"
+    },
+    {
+      "command": "cargo test --workspace -j 2",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T18:27:34.938255+00:00",
+      "finishedAt": "2026-10-04T18:30:49.651827+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "6050506c8cea3c0c35e7b6455a82951aa27071ae715920c886b9c64950e2ddad"
+    },
+    {
+      "command": "node node_modules/@playwright/test/cli.js test --workers=1",
+      "exitCode": 1,
+      "startedAt": "2026-10-04T18:25:02.880221+00:00",
+      "finishedAt": "2026-10-04T18:26:05.268421+00:00",
+      "headAtStart": "aa665e65bfe2143a5d049663aa1ba91c579afa0c",
+      "context": "本轮工作副本补充检查，不冒充该HEAD的干净源码验收。",
+      "logSha256": "58a3f8441432faadbc0dcdec58e06279afd8f7883ed052e826dc7a3b0b92889b"
+    }
+  ],
+  "originalBrowserWindowsRecovery": {
+    "command": "pwsh -NoProfile -File scripts/test-e2e-windows.ps1 --workers=1",
+    "exitCode": 0,
+    "testsPassed": 49,
+    "logSha256": "fc7f6d9337546c59b602dd727564b2efd3767c375b5a8bee0259e9f6417b020c"
+  },
+  "rootAudit": {
+    "high": 4,
+    "moderate": 4,
+    "total": 8,
+    "exitCode": 1
+  },
+  "visualFingerprint": "FAIL_STALE",
+  "externalIntegrationSkipped": 42,
+  "dockerDaemon": "UNAVAILABLE",
+  "composeConfig": "PASS_ONLY_NOT_CONTAINER_RUN"
+}

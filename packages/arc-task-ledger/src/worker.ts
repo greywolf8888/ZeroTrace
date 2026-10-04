@@ -19,6 +19,8 @@ import {
   type RawMeta,
   type JobDetail,
   type PendingAccount,
+  type HistoryRange,
+  decimal,
 } from './types.js';
 
 async function readWindow(
@@ -136,11 +138,18 @@ export async function scanHistory(
   store: LedgerRepository,
   snapshot: Snapshot,
   budget: string,
-): Promise<{ head: string; errors: string[] }> {
-  let checkpoint = await store.checkpoint(
-    DEPLOYMENT.adapter,
-    (BigInt(DEPLOYMENT.verifiedDeploymentBlock) - 1n).toString(),
-  );
+  historyFromBlock = DEPLOYMENT.verifiedDeploymentBlock,
+): Promise<{ head: string; errors: string[]; historyRange: HistoryRange }> {
+  const opening = BigInt(decimal(historyFromBlock));
+  if (
+    opening < BigInt(DEPLOYMENT.verifiedDeploymentBlock) ||
+    opening > BigInt(snapshot.blockNumber)
+  )
+    throw new LedgerError('INVALID_RANGE', '声明历史窗口不在部署到固定目标范围。', 400);
+  const checkpointKey = historyCheckpointKey(historyFromBlock);
+  let checkpoint = await store.checkpoint(checkpointKey, (opening - 1n).toString());
+  if (BigInt(checkpoint.head) < opening - 1n)
+    throw new LedgerError('CHECKPOINT_CONFLICT', '连续检查点低于声明窗口起点。', 409);
   let from = BigInt(checkpoint.head) + 1n;
   let remaining = BigInt(budget);
   let window = 2000n;
@@ -163,11 +172,13 @@ export async function scanHistory(
       );
       checkpoint = await store.saveSegment({
         deployment: DEPLOYMENT.adapter,
+        checkpointKey,
         from: from.toString(),
         to: to.toString(),
         status: 'complete',
         document: {
           filter: { adapter: DEPLOYMENT.adapter },
+          scopeFromBlock: historyFromBlock,
           snapshot,
           anchor: before,
           evidenceIds: observations.map((e) => e.id),
@@ -183,6 +194,7 @@ export async function scanHistory(
       if (error instanceof LedgerError && error.status === 409) {
         await store.saveSegment({
           deployment: DEPLOYMENT.adapter,
+          checkpointKey,
           from: from.toString(),
           to: to.toString(),
           status: 'conflict',
@@ -205,6 +217,7 @@ export async function scanHistory(
       }
       await store.saveSegment({
         deployment: DEPLOYMENT.adapter,
+        checkpointKey,
         from: from.toString(),
         to: to.toString(),
         status: 'partial',
@@ -223,8 +236,41 @@ export async function scanHistory(
   }
   if (BigInt(checkpoint.head) < BigInt(snapshot.blockNumber))
     errors.push(`历史仅连续核验至 ${checkpoint.head}；未覆盖至当前状态区块。`);
-  return { head: checkpoint.head, errors };
+  const head =
+    BigInt(checkpoint.head) > BigInt(snapshot.blockNumber) ? snapshot.blockNumber : checkpoint.head;
+  return {
+    head,
+    errors,
+    historyRange: {
+      scope:
+        historyFromBlock === DEPLOYMENT.verifiedDeploymentBlock
+          ? 'DEPLOYMENT_TO_SNAPSHOT'
+          : 'DECLARED_WINDOW',
+      fromBlock: historyFromBlock,
+      targetBlock: snapshot.blockNumber,
+      contiguousThrough: head,
+      checkpointKey,
+      checkpointVersion: checkpoint.version,
+      status: BigInt(head) >= BigInt(snapshot.blockNumber) ? 'complete' : 'partial',
+      omittedPriorHistory: historyFromBlock !== DEPLOYMENT.verifiedDeploymentBlock,
+      gaps:
+        BigInt(head) < BigInt(snapshot.blockNumber)
+          ? [
+              {
+                fromBlock: (BigInt(head) + 1n).toString(),
+                toBlock: snapshot.blockNumber,
+                reason: errors[0] ?? '声明窗口尚未连续采集完成。',
+              },
+            ]
+          : [],
+    },
+  };
 }
+
+export const historyCheckpointKey = (fromBlock: string): string =>
+  fromBlock === DEPLOYMENT.verifiedDeploymentBlock
+    ? DEPLOYMENT.adapter
+    : `${DEPLOYMENT.adapter}:from:${decimal(fromBlock)}`;
 
 export async function syncOnce(
   reader: ArcReader,
@@ -234,11 +280,21 @@ export async function syncOnce(
     scanBudget: string;
     currentOnly?: boolean;
     evidenceBlocks?: string[];
+    historyFromBlock?: string;
+    snapshotBlock?: string;
   },
 ): Promise<SnapshotRun> {
   return store.withWorkerLock(async () => {
-    const snapshot = await reader.anchor();
+    const snapshot = await reader.anchor(options.snapshotBlock);
     await reader.verifyDeployment(snapshot);
+    if (!options.currentOnly && options.historyFromBlock !== undefined) {
+      const startAnchor = await reader.block(options.historyFromBlock);
+      await reader.verifyDeployment({
+        ...snapshot,
+        blockNumber: options.historyFromBlock,
+        blockHash: startAnchor.hash,
+      });
+    }
     const deploymentEvidence = [...reader.evidence];
     const previousRun = await store.getRun();
     const enumeration = await reader.enumerate(snapshot, options.maxJobs);
@@ -253,7 +309,7 @@ export async function syncOnce(
           head: (BigInt(DEPLOYMENT.verifiedDeploymentBlock) - 1n).toString(),
           errors: ['本轮仅采集当前状态，历史尚未核验。'],
         }
-      : await scanHistory(reader, store, snapshot, options.scanBudget);
+      : await scanHistory(reader, store, snapshot, options.scanBudget, options.historyFromBlock);
     if (options.evidenceBlocks?.length)
       await captureEvidenceBlocks(reader, store, snapshot, options.evidenceBlocks);
     deploymentEvidence.push(
@@ -278,7 +334,11 @@ export async function syncOnce(
         : 'partial';
     coverage.deploymentVerification = 'complete';
     coverage.sourceAgreement = 'partial';
-    const historyComplete = BigInt(scan.head) >= BigInt(snapshot.blockNumber);
+    const historyComplete =
+      BigInt(scan.head) >= BigInt(snapshot.blockNumber) &&
+      (options.historyFromBlock === undefined ||
+        options.historyFromBlock === DEPLOYMENT.verifiedDeploymentBlock) &&
+      !options.currentOnly;
     coverage.lifecycleHistory = historyComplete ? 'complete' : 'partial';
     coverage.settlementHistory = historyComplete ? 'complete' : 'partial';
     const payees = new Set(
@@ -385,6 +445,7 @@ export async function syncOnce(
           coverage: { ...coverage },
           selfTake: meta.poster.toLowerCase() === meta.assignedProvider.toLowerCase(),
           ...ruleMetadata,
+          ...('historyRange' in scan ? { historyRange: scan.historyRange } : {}),
         },
         rawState: meta,
         settlementLegs: cash.legs,
@@ -413,7 +474,7 @@ export async function syncOnce(
     if ((await reader.block(snapshot.blockNumber)).hash !== snapshot.blockHash)
       throw new LedgerError('SOURCE_CONFLICT', '发布前固定锚点不一致。', 409);
     const run: SnapshotRun = {
-      id: `run_${hashPayload({ ruleVersion: RULE_VERSION, snapshot, coverage, metas: enumeration.metas, receipts: receipts.map((r) => r.evidence.id) }).slice(0, 32)}`,
+      id: `run_${hashPayload({ ruleVersion: RULE_VERSION, snapshot, coverage, historyRange: 'historyRange' in scan ? scan.historyRange : null, metas: enumeration.metas, receipts: receipts.map((r) => r.evidence.id) }).slice(0, 32)}`,
       snapshot,
       coverage,
       expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
@@ -421,6 +482,7 @@ export async function syncOnce(
       totalExpected: enumeration.total,
       errors: [...enumeration.errors, ...scan.errors],
       mode: 'stored-replay',
+      ...('historyRange' in scan ? { historyRange: scan.historyRange } : {}),
     };
     await store.publish(run, reader.evidence);
     return run;

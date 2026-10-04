@@ -5,7 +5,11 @@ import { rawEvidence } from '../../../packages/arc-task-ledger/src/protocol.js';
 import { createLedgerApp } from '../../../apps/arc-task-ledger-api/src/app.js';
 import { run, snapshot, meta } from '../fixtures/helpers.js';
 import { ArcReader } from '../../../packages/arc-task-ledger/src/reader.js';
-import { scanHistory, syncOnce } from '../../../packages/arc-task-ledger/src/worker.js';
+import {
+  scanHistory,
+  syncOnce,
+  historyCheckpointKey,
+} from '../../../packages/arc-task-ledger/src/worker.js';
 import { readonlyChain } from '../fixtures/readonly-chain.js';
 import type { JsonRpcTransport } from '@zerotrace/chain-adapters/transport';
 import { fetchLedgerJob } from '../../../examples/arc-task-ledger/consumer.js';
@@ -26,6 +30,133 @@ afterAll(async () => {
   await store.close();
 });
 describe('真实 PostgreSQL 与 API 集成', () => {
+  it('声明窗口预算缺口→关闭重开续采；窗口完整不提升部署全历史', async () => {
+    const from = (BigInt(DEPLOYMENT.verifiedDeploymentBlock) + 1n).toString();
+    const target = (BigInt(from) + 1n).toString();
+    const config = {
+      rpcUrl: 'https://rpc.mainnet.arc.io',
+      rpcHosts: ['rpc.mainnet.arc.io'],
+      providerAlias: 'test-only',
+    };
+    const reader = new ArcReader(config, readonlyChain(false));
+    const first = await syncOnce(reader, store, {
+      maxJobs: 5,
+      scanBudget: '1',
+      historyFromBlock: from,
+      snapshotBlock: from,
+    });
+    expect(first.snapshot.blockNumber).toBe(from);
+    expect(first.historyRange).toMatchObject({
+      status: 'complete',
+      contiguousThrough: from,
+      omittedPriorHistory: true,
+    });
+    const partial = await syncOnce(reader, store, {
+      maxJobs: 5,
+      scanBudget: '1',
+      historyFromBlock: from,
+      snapshotBlock: target,
+    });
+    expect(partial.historyRange?.status).toBe('complete');
+    expect(partial.coverage.lifecycleHistory).toBe('partial');
+    expect(partial.coverage.accountPendingHistory).toBe('partial');
+    expect(await store.currentCheckpoint(DEPLOYMENT.adapter)).toBeUndefined();
+    await reader.close();
+    const restarted = new LedgerStore(url!);
+    const resumed = new ArcReader(config, readonlyChain(false));
+    try {
+      const replay = await restarted.getRun(partial.id);
+      expect(replay?.historyRange).toEqual(partial.historyRange);
+      const rangeCalls = vi.spyOn(resumed, 'logs');
+      const result = await syncOnce(resumed, restarted, {
+        maxJobs: 5,
+        scanBudget: '1',
+        historyFromBlock: from,
+      });
+      expect(rangeCalls).not.toHaveBeenCalled();
+      expect(result.historyRange?.contiguousThrough).toBe(target);
+      expect((await restarted.currentCheckpoint(historyCheckpointKey(from)))!.head).toBe(target);
+      const app = await createLedgerApp(restarted, secret);
+      const response = (await app.inject('/v1/coverage')).json();
+      expect(response.historyRange.value.status).toBe('complete');
+      expect(response.historyHead.state).toBe('unknown');
+      expect(response.formalMode).toBe('FAIL_CLOSED_COVERAGE_INSUFFICIENT');
+      await app.close();
+    } finally {
+      await resumed.close();
+      await restarted.close();
+    }
+  });
+  it('声明窗口限额留缺口；恢复从下一块且不把失败日志视作空记录', async () => {
+    const from = (BigInt(DEPLOYMENT.verifiedDeploymentBlock) + 1n).toString();
+    const target = (BigInt(from) + 1n).toString();
+    const reader = new ArcReader(
+      {
+        rpcUrl: 'https://rpc.mainnet.arc.io',
+        rpcHosts: ['rpc.mainnet.arc.io'],
+        providerAlias: 'test-only',
+      },
+      readonlyChain(false),
+    );
+    const anchored = await reader.anchor();
+    const first = await scanHistory(reader, store, anchored, '1', from);
+    expect(first.historyRange).toMatchObject({
+      status: 'partial',
+      contiguousThrough: from,
+      gaps: [{ fromBlock: target, toBlock: target }],
+    });
+    const logs = vi
+      .spyOn(reader, 'logs')
+      .mockRejectedValueOnce(Object.assign(new Error('source timeout'), { code: 'ETIMEDOUT' }));
+    const failed = await scanHistory(reader, store, anchored, '1', from);
+    expect(failed.head).toBe(from);
+    expect(failed.historyRange.status).toBe('partial');
+    const last = await scanHistory(reader, store, anchored, '1', from);
+    expect(logs).toHaveBeenLastCalledWith(target, target);
+    expect(last.historyRange.status).toBe('complete');
+    expect(
+      (
+        await store.pool.query(
+          "SELECT count(*) FROM arc_task_ledger_v1.segments WHERE status='partial'",
+        )
+      ).rows[0].count,
+    ).toBe('1');
+    await reader.close();
+  });
+  it('已知区间中间冲突不被大区间跨越；已推进水位遇冲突撤回', async () => {
+    const key = historyCheckpointKey((BigInt(DEPLOYMENT.verifiedDeploymentBlock) + 1n).toString());
+    await store.checkpoint(key, '9');
+    const base = {
+      deployment: DEPLOYMENT.adapter,
+      checkpointKey: key,
+      document: {},
+      observations: [],
+      receipts: [],
+    };
+    await store.saveSegment({
+      ...base,
+      from: '12',
+      to: '12',
+      status: 'conflict',
+      expectedVersion: '0',
+    });
+    const state = await store.saveSegment({
+      ...base,
+      from: '10',
+      to: '20',
+      status: 'complete',
+      expectedVersion: '1',
+    });
+    expect(state.head).toBe('11');
+    const retracted = await store.saveSegment({
+      ...base,
+      from: '10',
+      to: '10',
+      status: 'conflict',
+      expectedVersion: state.version,
+    });
+    expect(retracted.head).toBe('9');
+  });
   it('定点真实回执路径仅覆盖指定区块，不越过历史缺口', async () => {
     const reader = new ArcReader(
       {

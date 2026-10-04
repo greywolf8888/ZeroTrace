@@ -29,6 +29,10 @@ try {
         scanBudget: config.scanBudget,
         currentOnly: process.argv.includes('--current-only'),
         evidenceBlocks: config.evidenceBlocks,
+        ...(config.historyFromBlock === undefined
+          ? {}
+          : { historyFromBlock: config.historyFromBlock }),
+        ...(config.snapshotBlock === undefined ? {} : { snapshotBlock: config.snapshotBlock }),
       });
       const result = {
         snapshotRunId: run.id,
@@ -40,6 +44,7 @@ try {
         responseBytes: reader.responseBytes,
         durationMs: Date.now() - started,
         gaps: run.errors,
+        historyRange: run.historyRange,
       };
       await store.recordSync(true, {
         snapshotRunId: run.id,

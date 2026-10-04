@@ -29,6 +29,8 @@ try {
     scanBudget: config.scanBudget,
     currentOnly: process.argv.includes('--current-only'),
     evidenceBlocks: config.evidenceBlocks,
+    ...(config.historyFromBlock === undefined ? {} : { historyFromBlock: config.historyFromBlock }),
+    ...(config.snapshotBlock === undefined ? {} : { snapshotBlock: config.snapshotBlock }),
   });
   assert.equal(run.snapshot.chainId, '5042');
   assert.equal(run.coverage.deploymentVerification, 'complete');
@@ -89,6 +91,7 @@ try {
     apiReadVerified: true,
     mainnetEdgeCases: 'NOT_OBSERVED',
     gaps: run.errors,
+    historyRange: run.historyRange,
   };
   await store.recordSync(true, {
     snapshotRunId: run.id,

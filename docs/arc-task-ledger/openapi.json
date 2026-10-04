@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Arc Task Ledger read-only API",
-    "version": "0.1.0-design",
+    "version": "1.1.0",
     "description": "Design contract, not evidence that endpoints already exist."
   },
   "servers": [
@@ -630,6 +630,9 @@
           },
           "coverage": {
             "$ref": "#/components/schemas/Coverage"
+          },
+          "historyRange": {
+            "$ref": "#/components/schemas/HistoryRange"
           }
         }
       },
@@ -848,6 +851,66 @@
           },
           "components": {
             "type": "object"
+          }
+        }
+      },
+      "HistoryRange": {
+        "type": "object",
+        "description": "声明窗口连续水位；不等于部署全历史覆盖。",
+        "required": [
+          "scope",
+          "fromBlock",
+          "targetBlock",
+          "contiguousThrough",
+          "status",
+          "omittedPriorHistory",
+          "gaps"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["DECLARED_WINDOW", "DEPLOYMENT_TO_SNAPSHOT"]
+          },
+          "fromBlock": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "targetBlock": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "contiguousThrough": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "status": {
+            "enum": ["complete", "partial"]
+          },
+          "omittedPriorHistory": {
+            "type": "boolean"
+          },
+          "checkpointKey": {
+            "type": "string"
+          },
+          "checkpointVersion": {
+            "type": "string"
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fromBlock": {
+                  "type": "string"
+                },
+                "toBlock": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       }

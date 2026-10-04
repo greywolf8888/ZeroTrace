@@ -32,6 +32,14 @@ interface Page {
   items: Row[];
   nextCursor: K<string>;
   freshness: { state: string; capturedAt: string };
+  historyRange?: K<{
+    fromBlock: string;
+    targetBlock: string;
+    contiguousThrough: string;
+    status: string;
+    omittedPriorHistory: boolean;
+    gaps: { fromBlock: string; toBlock: string; reason: string }[];
+  }>;
 }
 interface Detail {
   job: Row;
@@ -321,6 +329,34 @@ function App() {
               : '尚无可用快照'}
           </span>
         </div>
+        {page && (
+          <section aria-label="连续历史范围">
+            <h2>连续历史范围</h2>
+            {page.historyRange && knownValue(page.historyRange) ? (
+              (() => {
+                const range = knownValue(page.historyRange)!;
+                return (
+                  <>
+                    <p>
+                      声明窗口：区块 {range.fromBlock}–{range.targetBlock}；连续核验至{' '}
+                      {range.contiguousThrough}；{text(range.status)}。
+                    </p>
+                    {range.omittedPriorHistory && (
+                      <p>窗口之前的历史未覆盖，不能据此认定旧任务资金为零或完整清偿。</p>
+                    )}
+                    {range.gaps.map((gap) => (
+                      <p key={gap.fromBlock}>
+                        未核验区间 {gap.fromBlock}–{gap.toBlock}：{gap.reason}
+                      </p>
+                    ))}
+                  </>
+                );
+              })()
+            ) : (
+              <p>此快照尚未声明连续历史范围；定点证据不能代表全历史。</p>
+            )}
+          </section>
+        )}
         {showCoverage && (
           <section>
             <h2>数据覆盖与运行状态</h2>

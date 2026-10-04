@@ -1,0 +1,35 @@
+[
+  {
+    "phase": "window-created",
+    "command": "node apps/arc-task-ledger-api/dist/worker.js",
+    "declaredFromBlock": "23388428",
+    "targetBlock": "23388429",
+    "blockBudget": "2",
+    "exitCode": 0,
+    "startedAt": "2026-10-04T18:24:03.653268+00:00",
+    "finishedAt": "2026-10-04T18:24:41.981364+00:00",
+    "logSha256": "9059b8014cedfe7edb11bdb1ad3751676d8e5b9ec7071c3efe4c0d56caee88cf"
+  },
+  {
+    "phase": "window-partial",
+    "command": "node apps/arc-task-ledger-api/dist/worker.js",
+    "declaredFromBlock": "23388428",
+    "targetBlock": "23465819",
+    "blockBudget": "2000",
+    "exitCode": 0,
+    "startedAt": "2026-10-04T18:24:42.238931+00:00",
+    "finishedAt": "2026-10-04T18:25:20.813858+00:00",
+    "logSha256": "9eab94de249c92bf14a03bcff8255b8192796de6b5aa95cfba508167f402023d"
+  },
+  {
+    "phase": "window-resumed",
+    "command": "node apps/arc-task-ledger-api/dist/worker.js",
+    "declaredFromBlock": "23388428",
+    "targetBlock": "23465819",
+    "blockBudget": "200000",
+    "exitCode": 0,
+    "startedAt": "2026-10-04T18:25:54.320364+00:00",
+    "finishedAt": "2026-10-04T18:27:26.657004+00:00",
+    "logSha256": "11db54b9c7e2ccb1e9549f192ef78b676c7b978e8cda49cb703060c2e446b75e"
+  }
+]

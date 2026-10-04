@@ -1,0 +1,100 @@
+{
+  "status": "MAINNET_CONTINUOUS_WINDOW_AND_WORKER_RESUME_VALIDATED",
+  "sourceContext": "工作副本实际运行；干净提交独立复验另行记录。",
+  "declaredWindow": {
+    "fromBlock": "23388428",
+    "toBlock": "23465819"
+  },
+  "historicalStateChange": {
+    "jobId": "18",
+    "beforeSnapshot": {
+      "chainId": "5042",
+      "blockNumber": "23388429",
+      "blockHash": "0x00b8ec9dc2868e9500b49813e6f626eb1b21f56f8f995140dc82fec05750bf4f",
+      "observedAt": "2026-10-04T18:24:05.586Z",
+      "finality": "FINALIZED",
+      "sourceSet": ["arc-circle-public"]
+    },
+    "afterSnapshot": {
+      "chainId": "5042",
+      "blockNumber": "23465819",
+      "blockHash": "0xc2d7d04871fc1c418b47194c0294709f480ba2de7a2ac8990a17795b8f4a74e2",
+      "observedAt": "2026-10-04T18:25:57.152Z",
+      "finality": "FINALIZED",
+      "sourceSet": ["arc-circle-public"]
+    },
+    "isTakenBefore": false,
+    "isTakenAfter": true,
+    "classification": "HISTORICAL_MAINNET_INCREMENTAL_REPLAY_NOT_A_NEW_CURRENT_TASK"
+  },
+  "budgetGap": {
+    "scope": "DECLARED_WINDOW",
+    "fromBlock": "23388428",
+    "targetBlock": "23465819",
+    "contiguousThrough": "23390429",
+    "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+    "checkpointVersion": "2",
+    "status": "partial",
+    "omittedPriorHistory": true,
+    "gaps": [
+      {
+        "fromBlock": "23390430",
+        "toBlock": "23465819",
+        "reason": "历史仅连续核验至 23390429；未覆盖至当前状态区块。"
+      }
+    ]
+  },
+  "checkpointBeforeInterruption": {
+    "head": "23390429",
+    "version": "2"
+  },
+  "checkpointAtInterruption": {
+    "head": "23392429",
+    "version": "3"
+  },
+  "firstBlockAfterRestart": "23392430",
+  "workerTerminationInjected": true,
+  "unpublishedRunAbsent": true,
+  "oldPublishedSnapshotRetained": true,
+  "processTerminationExitCode": 1,
+  "final": {
+    "snapshotRunId": "run_b73d4f73227b925e073777551d62d3b1",
+    "snapshot": {
+      "chainId": "5042",
+      "blockNumber": "23465819",
+      "blockHash": "0xc2d7d04871fc1c418b47194c0294709f480ba2de7a2ac8990a17795b8f4a74e2",
+      "observedAt": "2026-10-04T18:25:57.152Z",
+      "finality": "FINALIZED",
+      "sourceSet": ["arc-circle-public"]
+    },
+    "coverage": {
+      "currentState": "complete",
+      "jobEnumeration": "complete",
+      "lifecycleHistory": "partial",
+      "settlementHistory": "partial",
+      "accountPendingHistory": "partial",
+      "deploymentVerification": "complete",
+      "sourceAgreement": "partial"
+    },
+    "tasks": 16,
+    "totalExpected": "16",
+    "rpcRequests": 181,
+    "responseBytes": 409493,
+    "durationMs": 90937,
+    "gaps": [],
+    "historyRange": {
+      "scope": "DECLARED_WINDOW",
+      "fromBlock": "23388428",
+      "targetBlock": "23465819",
+      "contiguousThrough": "23465819",
+      "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+      "checkpointVersion": "40",
+      "status": "complete",
+      "omittedPriorHistory": true,
+      "gaps": []
+    }
+  },
+  "dataProcurementCostAuthorized": 0,
+  "specialSettlementMainnetCases": "NOT_OBSERVED",
+  "publicDeployment": "NOT_DONE_TARGET_MISSING"
+}

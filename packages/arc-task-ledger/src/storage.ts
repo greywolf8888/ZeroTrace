@@ -7,6 +7,7 @@ export interface Checkpoint {
 }
 export interface SegmentInput {
   deployment: string;
+  checkpointKey?: string;
   from: string;
   to: string;
   status: 'complete' | 'partial' | 'conflict';

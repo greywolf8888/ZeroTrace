@@ -70,10 +70,13 @@ for (const relative of [
   'infra/arc-task-ledger',
   'scripts/arc-task-ledger-live.ts',
   'scripts/arc-receipt-current.ts',
+  'scripts/arc-window-evidence.ts',
   'docs/arc-task-ledger/README.md',
   'docs/arc-task-ledger/DEPLOYMENT.md',
   'docs/arc-task-ledger/openapi.json',
   'docs/arc-task-ledger/REPAIR_ACCEPTANCE.md',
+  'docs/arc-task-ledger/CONTINUOUS_ACCEPTANCE.md',
+  'docs/arc-task-ledger/PUBLICATION_READINESS.md',
   'docs/arc-task-ledger/validation',
   'docs/arc-task-ledger/UPSTREAM_LICENSE.txt',
   'LICENSE',
@@ -105,7 +108,7 @@ const devNames = [
 ];
 write('package.json', {
   name: 'arc-task-ledger-release',
-  version: '1.0.1',
+  version: '1.1.0',
   private: true,
   type: 'module',
   license: 'Apache-2.0',
@@ -324,7 +327,7 @@ const files = [...new Set([...copied, ...generated])].sort().map((relative) => (
 write('release-manifest.json', {
   schemaVersion: 'atl-public-export-v1',
   sourceCommit,
-  version: '1.0.1',
+  version: '1.1.0',
   published: false,
   privateHistoryIncluded: false,
   files,

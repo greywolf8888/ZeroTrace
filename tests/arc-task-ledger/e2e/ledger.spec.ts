@@ -1,4 +1,13 @@
 import { test, expect } from '@playwright/test';
+test('声明窗口、连续水位和缺口显示，不冒充部署全历史', async ({ page }) => {
+  await page.goto('/');
+  const range = page.getByRole('region', { name: '连续历史范围' });
+  await expect(range).toContainText('21153191–21153193');
+  await expect(range).toContainText('连续核验至 21153192');
+  await expect(range).toContainText('未核验区间 21153193–21153193');
+  await expect(range).toContainText('窗口之前的历史未覆盖');
+  await expect(page.getByText('本地测试样例，不是主网证据。')).toBeVisible();
+});
 test('正向资金展示：奖励、待领取、争议胜诉、零分配与原始回执', async ({ page }) => {
   for (const [id, state] of [
     ['19', '已核验直接转移'],

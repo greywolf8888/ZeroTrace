@@ -30,6 +30,20 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {
   if (!Number.isSafeInteger(maxJobs) || maxJobs < 1 || maxJobs > 10000)
     throw new LedgerError('CONFIG_INVALID', '任务采集上限不合法。');
   const scanBudget = decimal(env.ARC_SCAN_BLOCK_BUDGET ?? '20000');
+  const historyFromBlock = env.ARC_HISTORY_FROM_BLOCK
+    ? decimal(env.ARC_HISTORY_FROM_BLOCK)
+    : undefined;
+  const snapshotBlock = env.ARC_SNAPSHOT_BLOCK ? decimal(env.ARC_SNAPSHOT_BLOCK) : undefined;
+  if (
+    historyFromBlock !== undefined &&
+    BigInt(historyFromBlock) < BigInt(lock.verifiedDeploymentBlock)
+  )
+    throw new LedgerError('CONFIG_INVALID', '历史窗口不能早于已验证部署。', 400);
+  if (
+    snapshotBlock !== undefined &&
+    BigInt(snapshotBlock) < BigInt(historyFromBlock ?? lock.verifiedDeploymentBlock)
+  )
+    throw new LedgerError('CONFIG_INVALID', '固定目标不能早于历史窗口。', 400);
   const evidenceBlocks = (env.ARC_EVIDENCE_BLOCKS ?? '').split(',').filter(Boolean).map(decimal);
   if (evidenceBlocks.length > 10) throw new LedgerError('CONFIG_INVALID', '定点区块最多10个。');
   const dnsMode = env.ARC_DNS_MODE ?? 'system';
@@ -44,6 +58,8 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {
     databaseUrl,
     maxJobs,
     scanBudget,
+    historyFromBlock,
+    snapshotBlock,
     evidenceBlocks,
     dnsMode: dnsMode as 'system' | 'google-doh',
     providerAlias:

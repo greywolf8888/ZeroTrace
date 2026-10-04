@@ -9,6 +9,24 @@ const config = {
   rpcHosts: ['rpc.mainnet.arc.io'],
   providerAlias: 'test-only',
 };
+it('固定历史目标不能超过finalized，实际读取与证据保留该高度', async () => {
+  const reader = new ArcReader(
+    config,
+    fakeTransport((method, params) => {
+      if (method === 'eth_chainId') return '0x13b2';
+      if (method === 'eth_getBlockByNumber')
+        return { number: params[0] === 'finalized' ? '0x20' : params[0], hash: HASH };
+      throw new Error('test-only');
+    }),
+  );
+  await expect(reader.anchor('33')).rejects.toMatchObject({ code: 'TARGET_NOT_FINALIZED' });
+  expect((await reader.anchor('31')).blockNumber).toBe('31');
+  expect(reader.evidence.at(-1)?.raw).toMatchObject({
+    finalized: { number: '0x20' },
+    block: { number: '0x1f' },
+  });
+  await reader.close();
+});
 function fakeTransport(
   fn: (method: string, params: readonly unknown[]) => unknown,
 ): JsonRpcTransport {

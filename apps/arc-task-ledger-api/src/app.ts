@@ -191,6 +191,9 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
       items: items.map((row) => publicRow(row.job, row.evidenceIds)),
       nextCursor: next ?? null,
       coverage: publicCoverage(run.coverage),
+      historyRange: run.historyRange
+        ? known(run.historyRange)
+        : unknown('本快照未声明连续历史窗口。'),
       datasource: 'stored-replay',
       freshness: {
         capturedAt: run.snapshot.observedAt,
@@ -278,6 +281,7 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
       lastSuccessfulSync: run?.snapshot.observedAt ?? null,
       stateHead: run ? known(run.snapshot.blockNumber) : unknown('当前状态不可用。'),
       historyHead: checkpoint ? known(checkpoint.head) : unknown('尚无连续历史水位。'),
+      historyRange: run?.historyRange ? known(run.historyRange) : unknown('尚无声明窗口验收范围。'),
       coverage: publicCoverage(run?.coverage ?? emptyCoverage()),
       gaps: (run?.errors ?? ['尚无已发布快照。']).map((reason) => ({ reason })),
       datasource: 'stored-replay',

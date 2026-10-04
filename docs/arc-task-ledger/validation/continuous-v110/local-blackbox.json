@@ -1,0 +1,20 @@
+{
+  "status": "LOCAL_NATIVE_DEPLOYMENT_BLACKBOX_VALIDATED",
+  "version": "atl-v1.1.0",
+  "startedAt": "2026-10-04T18:29:23.990063+00:00",
+  "finishedAt": "2026-10-04T18:29:26.980871+00:00",
+  "runtime": "原本地Windows Node/API、worker、PostgreSQL、网页；非Docker、非公网。",
+  "realMainnetData": true,
+  "readOnly": true,
+  "snapshotRunId": "run_b73d4f73227b925e073777551d62d3b1",
+  "apiProcessActuallyRestarted": true,
+  "fixedResponseSha256": "4feefa84c10ea8cd5cce2316bfb159c406f85823c1402b2307180ebed5488d53",
+  "identicalAfterRestart": true,
+  "databaseServiceRestartedInThisCheck": false,
+  "errorsChecked": [400, 410, 422],
+  "windowCompleteButGlobalHistoryPartial": true,
+  "formalMode": "FAIL_CLOSED_COVERAGE_INSUFFICIENT",
+  "webProxyVerified": true,
+  "publicEndpoint": "NOT_AVAILABLE_TARGET_MISSING",
+  "sourceContext": "当前工作副本编译运行；干净提交交付复验另行记录。"
+}

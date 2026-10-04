@@ -42,6 +42,17 @@ const fixture = run('browser_test_only', [
   '112',
   '113',
 ]);
+fixture.historyRange = {
+  scope: 'DECLARED_WINDOW',
+  fromBlock: '21153191',
+  targetBlock: '21153193',
+  contiguousThrough: '21153192',
+  checkpointKey: `${DEPLOYMENT.adapter}:from:21153191`,
+  checkpointVersion: '1',
+  status: 'partial',
+  omittedPriorHistory: true,
+  gaps: [{ fromBlock: '21153193', toBlock: '21153193', reason: '本地测试：窗口限额未覆盖末块。' }],
+};
 fixture.jobs[0]!.rawState = meta({ ipfsDescHash: '<script>window.__unsafeExecuted=true</script>' });
 fixture.jobs[0]!.evidence = [
   rawEvidence(
