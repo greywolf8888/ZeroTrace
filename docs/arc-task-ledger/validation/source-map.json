@@ -1,0 +1,54 @@
+{
+  "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+  "mappings": [
+    {
+      "capability": "具体义务/提现关联",
+      "source": "packages/arc-task-ledger/src/settlement.ts",
+      "line": 348,
+      "sourceSha256": "41e52ffb8fee370e8b4dbb543b204a8bdca45f6fbdb8823d23c74da0728256c6",
+      "test": "tests/arc-task-ledger/unit/audit-regression.test.ts",
+      "testSha256": "15c72cab8754a0b8434f00a07e9b7056205e2498ea3518e0ddd144e7a98c7d17"
+    },
+    {
+      "capability": "必要资金段与争议/零分配",
+      "source": "packages/arc-task-ledger/src/settlement.ts",
+      "line": 17,
+      "sourceSha256": "41e52ffb8fee370e8b4dbb543b204a8bdca45f6fbdb8823d23c74da0728256c6",
+      "test": "tests/arc-task-ledger/unit/audit-regression.test.ts",
+      "testSha256": "15c72cab8754a0b8434f00a07e9b7056205e2498ea3518e0ddd144e7a98c7d17"
+    },
+    {
+      "capability": "Approval分类与回执证据不变性",
+      "source": "packages/arc-task-ledger/src/protocol.ts",
+      "line": 46,
+      "sourceSha256": "53ccc3c194e2934dbeb1b44e4464bcca4c7c204ffd98566221e8ba4ec218c12c",
+      "test": "tests/arc-task-ledger/unit/audit-regression.test.ts",
+      "testSha256": "15c72cab8754a0b8434f00a07e9b7056205e2498ea3518e0ddd144e7a98c7d17"
+    },
+    {
+      "capability": "数据库有界SQL",
+      "source": "apps/arc-task-ledger-api/src/storage.ts",
+      "line": 180,
+      "sourceSha256": "cca61260d20dcbe37b5a2252d99e5f89f61553d1cfe7028c046740a31d54683d",
+      "test": "tests/arc-task-ledger/integration/database.test.ts",
+      "testSha256": "e46e4e8b6bca9d9a5a5f9d8341aa9c18c5f3612e00f5c34e86add41a17def958"
+    },
+    {
+      "capability": "定点主网区块与缺口",
+      "source": "packages/arc-task-ledger/src/worker.ts",
+      "line": 83,
+      "sourceSha256": "c4d503bf3c8566c35c022e832cd30b08c0faf6694e853b04a88ba04fa1f5c88f",
+      "test": "tests/arc-task-ledger/integration/database.test.ts",
+      "testSha256": "e46e4e8b6bca9d9a5a5f9d8341aa9c18c5f3612e00f5c34e86add41a17def958"
+    },
+    {
+      "capability": "live错误分类",
+      "source": "packages/arc-task-ledger/src/live-result.ts",
+      "line": 3,
+      "sourceSha256": "f1b48b5aa3a4d109636f26e14df9f196561c008054c0b2274c46058c3d9dba04",
+      "test": "tests/arc-task-ledger/unit/live-result.test.ts",
+      "testSha256": "f5b9216829c9fa8d56646a70905aab2df846b02858fbee695c3dd6ddc08607ce"
+    }
+  ],
+  "note": "源码定位与测试文件哈希；案例真实性及覆盖限制见验收正文，schema/fixture/UI本身不算主网能力完成。"
+}

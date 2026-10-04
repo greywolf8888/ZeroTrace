@@ -1,0 +1,545 @@
+{
+  "schemaVersion": "atl-clean-validation-v1",
+  "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+  "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+  "files": [
+    {
+      "path": ".dockerignore",
+      "sha256": "25a65ab5971530544707d5a3d36c9c611b4f8e7440674a8f8e5511ace0dd00f5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "381f7a7e0549ac33f139fbbb7bff3d40f4ab8539d5a598afb6ce363325c1a0f3"
+    },
+    {
+      "path": "NOTICE",
+      "sha256": "a87bcafa7866d3e9368c0b7217226b3dcde4b290b41fd53935fe3492d745521a"
+    },
+    {
+      "path": "README.md",
+      "sha256": "0e3577fe38434c0d0c235408c4c358ec057889fe41f29cbc4c114ca33cbe9ef2"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/package.json",
+      "sha256": "948da7305676eca5048b97f44b7fbebc8a2156ac8841e63da3cff7d142ad8716"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/app.ts",
+      "sha256": "1f9d0059549060ad283db0a507952b42a9e225d9102ec79a2bcb1465f41cdd74"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/contract.ts",
+      "sha256": "ac42511278fd6fe63a70419ec2ab81e96296768b07d2631001292642f97e4e9f"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/migrate.ts",
+      "sha256": "50ac0a156cdbfe19c3776672643785922c2349f0029122568b3f6221ead7b83d"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/server.ts",
+      "sha256": "7b79115e48ecf63aa2e2b21cbaa3960c51391908529292c436783fe59f54a516"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/storage.ts",
+      "sha256": "cca61260d20dcbe37b5a2252d99e5f89f61553d1cfe7028c046740a31d54683d"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/worker.ts",
+      "sha256": "31cfa22026d8704d1003c1e194437e976878bcca319a69123f343ff35207cfac"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/tsconfig.json",
+      "sha256": "8da5b3f6ed50f8b3cdffb082ff21cafbeb5750a046b53711ae8e5131e48df6e1"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/index.html",
+      "sha256": "08bc493074f99b66cdc73dc7044cee45d49b5f23ef3025e1e2224d7355382f4c"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/package.json",
+      "sha256": "41abbe7e88ba3633a9bf952f46703623aa0ad8fe1e667a4c1b42960a957142bf"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/main.tsx",
+      "sha256": "0f01b732777283aa0265c427cf8640c738e4f89783a0aab07da08411a7add4f1"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/style.css",
+      "sha256": "e1a8f8049cf6e1937196c07508010b42889b60fe1785e33d34b3cf3965f41bd4"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/tsconfig.json",
+      "sha256": "d37a71e03f1773bc3db4c387d4f89cd3bf73d63a70546694c095d20cfc167032"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/vite.config.ts",
+      "sha256": "478d1dfec70cc418acdeaa07bb823d9967502345c4511403139d956afb390069"
+    },
+    {
+      "path": "docs/arc-task-ledger/DEPLOYMENT.md",
+      "sha256": "a240d8325b6104da9049243efc30ff932b24bb63e4c50f6e29ebb185c3d236cf"
+    },
+    {
+      "path": "docs/arc-task-ledger/FINAL_ACCEPTANCE.md",
+      "sha256": "6a1424ee2fe818c4175bc178784fec6e151576c932b870fb792af6a10ffbb1ec"
+    },
+    {
+      "path": "docs/arc-task-ledger/README.md",
+      "sha256": "815a11ffb25f8517093d033efe2c6d903d843e4e119a3d1418376e68c2b3f478"
+    },
+    {
+      "path": "docs/arc-task-ledger/REPAIR_ACCEPTANCE.md",
+      "sha256": "405273f97c2b948ccb2d7fbd29bbe72b4c3ab31dbb5978f94c43fb4766ad9e02"
+    },
+    {
+      "path": "docs/arc-task-ledger/UPSTREAM_LICENSE.txt",
+      "sha256": "bd17848d7a5128d1b07547b13ce2e1fdc64e5c277f29e66d04155f1c9e2b4544"
+    },
+    {
+      "path": "docs/arc-task-ledger/openapi.json",
+      "sha256": "4c9ea595cd7630b4fcdb87832837686c3e9180aa37af46e43ca79310e43e65ba"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/api-restart-initial.json",
+      "sha256": "29a5edefbf9f2793ade88c2951f2cafd1d7646d4d3087773e17cc679ea4800b3"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/mainnet-read-initial.json",
+      "sha256": "4e31ba605cfa302ef8b22b5ca3867fcd52ff78469cb133d7e1fac20265400d7b"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/red-baseline.json",
+      "sha256": "c896f7adeec21a40b039e5db7e4e907f476a74a0d8cbcd8647e8860bc9c74822"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "sha256": "d91198efcf554c455ef630a606a558e310f9cbae40e9f3005a34230082c38224"
+    },
+    {
+      "path": "examples/arc-task-ledger/consumer.ts",
+      "sha256": "c1e2c46a87cb06b5c97c327925d4d3b317e572adc85fcdc3316d85736a0dab9c"
+    },
+    {
+      "path": "infra/arc-task-ledger/.dockerignore",
+      "sha256": "25a65ab5971530544707d5a3d36c9c611b4f8e7440674a8f8e5511ace0dd00f5"
+    },
+    {
+      "path": "infra/arc-task-ledger/Dockerfile",
+      "sha256": "c4f2b930edece44e2f7f8666a57a2ce4924de865707124c71ab207011c30c2f3"
+    },
+    {
+      "path": "infra/arc-task-ledger/compose.yaml",
+      "sha256": "f332f207e253968991f2b35c352d6515f7cf1150f682055de13597a46bde6df9"
+    },
+    {
+      "path": "infra/arc-task-ledger/nginx.conf",
+      "sha256": "8918b0dab9ebdf98f4b15be53a0ec99ff68b5d1b37df512473c69d0c316bb37e"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "59dae3620eb8cdef1ad862b8361a1e761a98af167ba6e1af6106cbe535b29307"
+    },
+    {
+      "path": "package.json",
+      "sha256": "79c3d9b8633229d728c7530ede1cfc7b533271de4c395d1c2cf855ed7ecb7845"
+    },
+    {
+      "path": "packages/arc-task-ledger/AGENTS.md",
+      "sha256": "a703df9ca149d78d50146dc1bc07db80c9be76edb37a402de6a1df091f8b1a31"
+    },
+    {
+      "path": "packages/arc-task-ledger/package.json",
+      "sha256": "8d1aa6c2583d097076b518b9673633010ffbe1ef7f17b378ea471a87b48bd291"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/abi.json",
+      "sha256": "0e53af61dde5522b32f5586923acf3c7a3d052cf1f3f34426e1b6fd7931882ca"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/config.ts",
+      "sha256": "f0d3c2da6b5a1bb6c53c1d64cfa26a943003a6fe9de26e6b1eff2293e3ba2bfa"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/deployment.json",
+      "sha256": "461f89ef8152a26335d69dbe8489b95284374d881bade1901788abdf3b29f905"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/index.ts",
+      "sha256": "08f861083376c447fae1708aefea05a6d993888d885c001c69b69feb9a4545b4"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/live-result.ts",
+      "sha256": "f1b48b5aa3a4d109636f26e14df9f196561c008054c0b2274c46058c3d9dba04"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/protocol.ts",
+      "sha256": "53ccc3c194e2934dbeb1b44e4464bcca4c7c204ffd98566221e8ba4ec218c12c"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/public-dns.ts",
+      "sha256": "cf9ee16d65a0e4bb429d91d05d36b39ff7f4c959b202504782bcd1b2b2c477ea"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/reader.ts",
+      "sha256": "c6ab5130e86b584893ed4fda517227ac03268cacfe8dae768b91e6899737ba59"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/settlement.ts",
+      "sha256": "41e52ffb8fee370e8b4dbb543b204a8bdca45f6fbdb8823d23c74da0728256c6"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/storage.ts",
+      "sha256": "c86997ce74af60608e7272fd1776a24e21d16a062e2b6b0c7ad8ee82b137ade9"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/types.ts",
+      "sha256": "7e3e8020bc4ae85e86ea7f0d941d2ac7c1da8844e1d51e9718502f3a90937738"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/worker.ts",
+      "sha256": "c4d503bf3c8566c35c022e832cd30b08c0faf6694e853b04a88ba04fa1f5c88f"
+    },
+    {
+      "path": "packages/arc-task-ledger/tsconfig.json",
+      "sha256": "050bd4fb467a7881ba3755a38e14b23b638ceec3cc60b2a66c7f49b9d877bfcb"
+    },
+    {
+      "path": "packages/chain-adapters/package.json",
+      "sha256": "6735d5e5fb7176f608c1e79c8653b07604b437f7e0bb1548205c11a3f3b01cf2"
+    },
+    {
+      "path": "packages/chain-adapters/src/errors.ts",
+      "sha256": "bb63fdd2d1217054c9e8ee597f9dc443fb445283e68234a5d3207c59abf676db"
+    },
+    {
+      "path": "packages/chain-adapters/src/security.ts",
+      "sha256": "50f91c31a76c581c22b164024825b79ec467b623f67996ea653d4feaa01556c7"
+    },
+    {
+      "path": "packages/chain-adapters/src/transport.ts",
+      "sha256": "425e7fe4dcabc493e453e4431dee62b56a241324bc7e5d84fbb111d7583bd117"
+    },
+    {
+      "path": "packages/chain-adapters/tsconfig.json",
+      "sha256": "e9983d18efd0e4a41ae0d397294ebe1a37ff07fbe8d30538d1ee083fdd2e09a9"
+    },
+    {
+      "path": "packages/evidence/package.json",
+      "sha256": "e1fed3e534b68761c2b87fc29989812f925dfe4584a98081676ced3681a91e43"
+    },
+    {
+      "path": "packages/evidence/src/forensic.ts",
+      "sha256": "3e9f5b2ae3280f1a734f3e716cbd0cad613efaed9c03c93a648a9abcc1b36da2"
+    },
+    {
+      "path": "packages/evidence/src/hash.ts",
+      "sha256": "9bd55ba3842b1915ca7c7ab042a68d8ea35495d4998e8fde9949b4e2adb54bb5"
+    },
+    {
+      "path": "packages/evidence/src/index.ts",
+      "sha256": "3021721bd093e7246a709a78190c8b98b9700159b824803eef3a3de521e347ea"
+    },
+    {
+      "path": "packages/evidence/tsconfig.json",
+      "sha256": "c20b6cc26851be19a9755be809153c38edf415ead5e8cef898adb76eb2dd6ded"
+    },
+    {
+      "path": "packages/schemas/package.json",
+      "sha256": "a3eb7f6c106645f01ce34bc49637a6fbf3928d94f6cf6f34742de034002ac65d"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy-index.ts",
+      "sha256": "236ec9fa08f163ce0e35369d11fdee48189a394e5a95500eea37c2a1c6aa0987"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-01.ts",
+      "sha256": "6ad1d647d9ef653e5b581b6616e30d7d0cf4aaa64d9ca1abe7585ebfeb29a275"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-02.ts",
+      "sha256": "e8a2940c3cc095efe282da30a630b8483facc2707d4e231a8b6e4f01762c8f85"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-03.ts",
+      "sha256": "9f3ab27a356dd153857965f3e4d150b907a13254aafa1eb6dddeaeca40638875"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-04.ts",
+      "sha256": "5ba7e5c14581f63e7e53ba016b1743cef37260c71b4ce13e75ced660ef23bf57"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-05.ts",
+      "sha256": "bd3853e64cdfa12cbf29a64ac881a453565c1dff2b108e280602619b9e6cf5dc"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-06.ts",
+      "sha256": "fecde64e954c55598d83f74d3dd24ecf83220bc3469ef780cdb8559213208705"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-07.ts",
+      "sha256": "d72c5cfd65a3c5052e4a3807677ee03ab8daaa05e0db9c1ffba80d14f3945dd9"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-08.ts",
+      "sha256": "639bcc713cf9e1f8ae050d9cf7c0c876fb40b8c7292ce243618bf5d433c5aa49"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-09.ts",
+      "sha256": "8abc2bbed5a22b3a33c38f6b3c2d0e9247735fb24bcaa5585e6ea9b1c8ea9f29"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-10.ts",
+      "sha256": "450c124676e4840af41a4b94e16ff75dee5607dbdcb73ff22327235908ed4c20"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-11.ts",
+      "sha256": "52ca0186f2e940e596a2e3af15e87a09bb64cee505e9ad1a0ae3af61bd255ad2"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-12.ts",
+      "sha256": "60b5ed8c6938e8309e3f1c11b8a8e28d6004f70fab938e51d17fbac2c54e2ff3"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-13.ts",
+      "sha256": "1b1a0d80fd3a11a395af2250243759c275726053e11518348b27ccc42fb4b509"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-14.ts",
+      "sha256": "0f0938aee74698cf287849ef93685ef9d67ca01e240100f02ab6b1233077115f"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-15.ts",
+      "sha256": "1768173b5943391f8fde7b99995cf3a4fdce15a83f3381f4f673e8ef0641ac7b"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-16.ts",
+      "sha256": "2f5b5a1cf9013999716f7f2d0052160dc5a0c53f2206c13645400ed3d84a46fa"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-17.ts",
+      "sha256": "f6d0079423cfd1ce74dcfa2898f918756975b4c1dc4ba853d699751b9adc0e16"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-18.ts",
+      "sha256": "d1a145b0fc9fa6f7af958b43929000541133731070a01f1bc231e6338e313ce5"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "sha256": "ebfbb64cbc31a1b9d9700be07b02983bf2c3dd0ceda74a3301a9a9072777f6ef"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/ai-analysis.ts",
+      "sha256": "5ca5a9942b2af6fbabc9b231c3b9bcd08fdbb0e3cc4124585c97387ec18df51e"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/analyze.ts",
+      "sha256": "499c51c5c86c6550ce67edf975150ccc17fb4186f8155504d6b8e01e9cbafa5b"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/campaign.ts",
+      "sha256": "fee5f376fc8120d3957812504b5952d241a82815cae5e35c6365c6325e517db4"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/capital.ts",
+      "sha256": "2d0113a3e9c6976d224404cb3b884aee67a7cf5718fc440fdda0652c80f1fdf1"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/casework.ts",
+      "sha256": "99ae4aad60a750922bdd7ca6e923b78c500492f3df2a0d7bd00b79e96b7205d5"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/exit.ts",
+      "sha256": "7aab522b2ea8682f4e31183e7fdada7a01213421ad28460fab1aa329f4f3dd4f"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/foundation.ts",
+      "sha256": "b8cbf4eda85e75832946667667d9c2952dda0f0e2fe99b163b8337344c080b00"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/identity.ts",
+      "sha256": "cb510acbd3a0839df148782b5d44e9076d27c8f2f049a647c650b1f88ca4aa22"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/index.ts",
+      "sha256": "206ae74deaa7d0fb87140a7d3265fbd9bed5cea92e8840bef4c654820bf7700c"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/supply.ts",
+      "sha256": "023243d5b087df7564d307791c8610ea4e0bbe9ccbaec56c3dac247d416b304b"
+    },
+    {
+      "path": "packages/schemas/tsconfig.json",
+      "sha256": "f527d922aa612a8d0c7c0bc5bd5b140c5f51509f99dde7449504cda0b765d0b7"
+    },
+    {
+      "path": "scripts/arc-receipt-current.ts",
+      "sha256": "a4807ec542642039f89e327ecaf49882ae1b92c4529f793fd7b1122a8c3abf8d"
+    },
+    {
+      "path": "scripts/arc-task-ledger-live.ts",
+      "sha256": "db13f5f74ad0b3dc99e50902d976d6f53c40739aa1cb2718280e8840d3b8b996"
+    },
+    {
+      "path": "tests/arc-task-ledger/e2e/ledger.spec.ts",
+      "sha256": "a58184cad481a1adb386481c0bd7cfd7f4a63f7ee7d95925f0bbd8988a1520e8"
+    },
+    {
+      "path": "tests/arc-task-ledger/e2e/server.ts",
+      "sha256": "723232dd2062b7168942ca22a58bd47cd80801f757d2228fc8e2897afadd6063"
+    },
+    {
+      "path": "tests/arc-task-ledger/fixtures/helpers.ts",
+      "sha256": "318e97870bdcdfd6d6140fa7b810ad06a768b6544b0c9dd4bb0fac28a711938f"
+    },
+    {
+      "path": "tests/arc-task-ledger/fixtures/readonly-chain.ts",
+      "sha256": "027d4e772f07f5b0cd50c8782b4025109924f5478994fcd3f6aec75d98c33fb8"
+    },
+    {
+      "path": "tests/arc-task-ledger/integration/database.test.ts",
+      "sha256": "e46e4e8b6bca9d9a5a5f9d8341aa9c18c5f3612e00f5c34e86add41a17def958"
+    },
+    {
+      "path": "tests/arc-task-ledger/playwright.config.ts",
+      "sha256": "ba42b2e11c2d50c4137c66228159eb2aded926a556f1ef4dd74c47ea081bea1f"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/audit-regression.test.ts",
+      "sha256": "15c72cab8754a0b8434f00a07e9b7056205e2498ea3518e0ddd144e7a98c7d17"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/contract.test.ts",
+      "sha256": "d1b498953fa54ad4cca3c8139051a53dc1421b412cc8c9d13d6031b021fa250f"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/live-result.test.ts",
+      "sha256": "f5b9216829c9fa8d56646a70905aab2df846b02858fbee695c3dd6ddc08607ce"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/reader.test.ts",
+      "sha256": "3b74c00a4df153172821aeba10fc095110eddbf6ac39ab3591f5c9e17b9e2c6b"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/receipt-freshness.test.ts",
+      "sha256": "e7b6a3df97d65bee35c48815565c0d07728937f5fc3d8a08d69c18a327fd7105"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/security.test.ts",
+      "sha256": "7399fff693c5745707f749b859b01211f1d319d9d863d507165a19b8ad598d73"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/settlement.test.ts",
+      "sha256": "820df5d2fff57a712217142fbabf255d4ea430764dfa36641ab863a6605dc225"
+    },
+    {
+      "path": "tsconfig.base.json",
+      "sha256": "772882ab28ae3b44972dc57b18ed85618bf5595834a1671b78c2bdb7a7d3647b"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "cc1ae474958d921b96803b92089fe4eb643be1e005651ca674ac1cd96576469b"
+    },
+    {
+      "path": "vitest.config.ts",
+      "sha256": "7c01894fb6bdd49971874abbdc6992ca2545fd5d2c74560ed2e9e98ccde575b7"
+    }
+  ],
+  "records": [
+    {
+      "command": "npm run arc:build",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:09:24.590765+00:00",
+      "finishedAt": "2026-10-04T08:09:46.650777+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+      "sourceChangedDuringCheck": false,
+      "logSha256": "0588e0f02c40ddb6a0324312921d5a9c0b16be6206f0071de2946789402b282b"
+    },
+    {
+      "command": "npm run arc:test:unit",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:11:29.093326+00:00",
+      "finishedAt": "2026-10-04T08:11:48.616648+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+      "sourceChangedDuringCheck": false,
+      "logSha256": "6be072f089bb539605f012640ec5949abe51159904426ae19d26c1f50fafb0e7"
+    },
+    {
+      "command": "npm run arc:test:integration",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:11:48.818259+00:00",
+      "finishedAt": "2026-10-04T08:12:01.632232+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+      "sourceChangedDuringCheck": false,
+      "logSha256": "a7cb532ed0ce1fe73f38f06bd68296bd23d955db5310e45da754737b4118f89a"
+    },
+    {
+      "command": "npm run arc:test:e2e",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:12:01.809319+00:00",
+      "finishedAt": "2026-10-04T08:12:33.521209+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+      "sourceChangedDuringCheck": false,
+      "logSha256": "6c94f446eb3a17a58a981f431c892e3783b53131c1b324b41a5449c7b747a4eb"
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:12:33.567441+00:00",
+      "finishedAt": "2026-10-04T08:13:18.573566+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+      "sourceChangedDuringCheck": false,
+      "logSha256": "960ac8457dcad45b479991b72a99f82537fe47b6dfdcf916ad27963df8d8247b"
+    },
+    {
+      "command": "npm run license:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:13:18.627244+00:00",
+      "finishedAt": "2026-10-04T08:13:25.718207+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+      "sourceChangedDuringCheck": false,
+      "logSha256": "95862c2acf88d9d838688b621cfe0511628143fcc7b57fb971586adaed78befe"
+    },
+    {
+      "command": "npm audit --json",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:13:25.755597+00:00",
+      "finishedAt": "2026-10-04T08:13:28.189743+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+      "sourceChangedDuringCheck": false,
+      "logSha256": "71bb55dc3bb3b98fc73d60e98d7711e69fa498e998239863bdd9c4b5c8b8eca1"
+    },
+    {
+      "command": "npm run arc:test:live -- --current-only",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:13:28.229934+00:00",
+      "finishedAt": "2026-10-04T08:14:34.520787+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "sourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706",
+      "sourceChangedDuringCheck": false,
+      "logSha256": "4973af53caae1c2ed4a9cddf7a10c387fd2f00198b8e80cb41f432b56441f0b2"
+    }
+  ],
+  "scope": "干净代码提交导出的独立组件；不包含原工作副本未提交改动。后续验收文档提交的可执行文件必须与此清单逐字节一致。",
+  "installation": {
+    "command": "npm ci --ignore-scripts --no-audit --no-fund",
+    "exitCode": 0,
+    "packagesAdded": 359,
+    "logSha256": "d3ea32d0190428c3368b9ce34a3a6a0c8da9b2d21fd95c786e64253d371c87cb"
+  },
+  "summary": {
+    "unitPassed": 58,
+    "integrationPassed": 20,
+    "browserPassed": 6,
+    "knownDependencyVulnerabilities": 0,
+    "typecheckAndBuild": "PASS",
+    "lint": "PASS",
+    "permissiveLicenseCheck": "PASS"
+  }
+}

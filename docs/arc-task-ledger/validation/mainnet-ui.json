@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "jobId": "18",
+  "renderedReward": "1.98 USDC",
+  "renderedFee": "0.02 USDC",
+  "testFixture": false,
+  "apiVersion": "atl-v1.0.1",
+  "scope": "原工作副本本轮主网UI核验；与干净代码提交采用相同组件代码，不冒充独立浏览器主网自动门禁。"
+}

@@ -1,0 +1,177 @@
+{
+  "scope": "原ZeroTrace工作副本本轮执行；不继承历史PASS。",
+  "records": [
+    {
+      "command": "npm run format:check",
+      "exitCode": 1,
+      "startedAt": "2026-10-04T08:00:57.022930+00:00",
+      "finishedAt": "2026-10-04T08:02:37.780936+00:00",
+      "headAtStart": "7df357d194d66317017daae3775a6ebba3e9059c",
+      "logSha256": "91f007ca5104a19d7311150633ddb1a462c36bab263c52855b1663dfcabd3822",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:02:38.251072+00:00",
+      "finishedAt": "2026-10-04T08:03:18.176543+00:00",
+      "headAtStart": "7df357d194d66317017daae3775a6ebba3e9059c",
+      "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:03:18.193097+00:00",
+      "finishedAt": "2026-10-04T08:04:44.035255+00:00",
+      "headAtStart": "7df357d194d66317017daae3775a6ebba3e9059c",
+      "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm test",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:04:44.047492+00:00",
+      "finishedAt": "2026-10-04T08:05:54.274222+00:00",
+      "headAtStart": "7df357d194d66317017daae3775a6ebba3e9059c",
+      "logSha256": "fa3ba6614c6ff2a2b919033e5389620481402c57572d6eaaec87c614ce07c9eb",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:05:54.312765+00:00",
+      "finishedAt": "2026-10-04T08:06:09.995205+00:00",
+      "headAtStart": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "f1fbbd336bed19058694adf21ab5d3e8c5353b37969678cb42c4974a543dcd7f",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm run license:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:11:29.414377+00:00",
+      "finishedAt": "2026-10-04T08:11:55.820581+00:00",
+      "headAtStart": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm run architecture:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:11:56.273106+00:00",
+      "finishedAt": "2026-10-04T08:12:15.826803+00:00",
+      "headAtStart": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "6b9cd9a759795787be49b3fce425cbabe9e09034c1af6db8f7599ed29ef4cf3a",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm run ui:chinese:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:12:15.839852+00:00",
+      "finishedAt": "2026-10-04T08:12:18.300664+00:00",
+      "headAtStart": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "7724d8bd970dc1787592b4a9c489f12f6eeade48266262c8f0e45bffde6fd5f2",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm run schema:drift:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:12:18.314438+00:00",
+      "finishedAt": "2026-10-04T08:12:21.101366+00:00",
+      "headAtStart": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "825e922aedf976dec50a43ad54e8765a2159fe16dd2218733c74926c0841ae97",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm audit --json",
+      "exitCode": 1,
+      "startedAt": "2026-10-04T08:12:21.115815+00:00",
+      "finishedAt": "2026-10-04T08:12:26.991505+00:00",
+      "headAtStart": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "334083bc1bea34606ed89aeea41a00018f754db3ede230cd4f0f3e7ecc053533",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "cargo fmt --check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:00:57.545861+00:00",
+      "finishedAt": "2026-10-04T08:01:00.736501+00:00",
+      "headAtStart": "7df357d194d66317017daae3775a6ebba3e9059c",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "cargo clippy --workspace -j 2 -- -D warnings",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:01:01.090705+00:00",
+      "finishedAt": "2026-10-04T08:02:04.449923+00:00",
+      "headAtStart": "7df357d194d66317017daae3775a6ebba3e9059c",
+      "logSha256": "ea2c8fee67d571c9f49462107c695549ad570189198649215defd866d10a7f03",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "cargo test --workspace -j 2",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:02:04.462614+00:00",
+      "finishedAt": "2026-10-04T08:03:29.898365+00:00",
+      "headAtStart": "7df357d194d66317017daae3775a6ebba3e9059c",
+      "logSha256": "3465baaad17945fdc3ce4b2dbdc3d22703619f76ac9a950760f9855987442696",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "npm run format:check",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:12:27.188382+00:00",
+      "finishedAt": "2026-10-04T08:12:57.653010+00:00",
+      "headAtStart": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+      "validationContext": "工作副本补充检查；headAtStart只是当时HEAD，不代表该HEAD干净源码验收。"
+    },
+    {
+      "command": "API实际进程终止/重启，对固定快照执行两次GET并比较",
+      "exitCode": 0,
+      "startedAt": "2026-10-04T08:16:02.563987+00:00",
+      "finishedAt": "2026-10-04T08:16:08.477207+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "6e3ecc6e1eee678625c0aa66f62c1ee936854ea780d2c14741190b0b76ea7655"
+    },
+    {
+      "command": "npm run test:visual-golden",
+      "exitCode": 1,
+      "startedAt": "2026-10-04T08:16:08.602124+00:00",
+      "finishedAt": "2026-10-04T08:16:10.136792+00:00",
+      "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+      "logSha256": "f80d8821b8f40a2ee01761f860ea2f05327ea040000a513239e68738b3cd928a"
+    }
+  ],
+  "originalBrowser": {
+    "command": "node node_modules/@playwright/test/cli.js test --workers=1",
+    "exitCode": 0,
+    "testsPassed": 49,
+    "logSha256": "e9f9d3ed8a11ba21cd1ed4ef3212af3bebca8684d33994a608de7f4716a721a4",
+    "context": "工作副本补充浏览器检查"
+  },
+  "summary": {
+    "unitPassed": 1050,
+    "integrationPassed": 88,
+    "integrationSkipped": 42,
+    "evalPassed": 2,
+    "readOnlyMcpPassed": 5,
+    "rustPassed": 52,
+    "rootDependencyAudit": {
+      "exitCode": 1,
+      "high": 4,
+      "moderate": 4,
+      "total": 8
+    },
+    "visualSourceFingerprint": "FAIL_STALE",
+    "finalFormat": "PASS"
+  },
+  "unavailable": [
+    "外部服务集成42项跳过",
+    "Docker实际运行未验证",
+    "公开部署未完成",
+    "身份/资格/申请所需资料未提供"
+  ],
+  "note": "组件独立依赖审计为0，原仓库8项告警不以组件结果覆盖；视觉截图49项含7项实跑，源码指纹过期检查仍失败。"
+}

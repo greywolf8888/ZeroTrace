@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "restartKind": "API_PROCESS_TERMINATED_AND_RESTARTED",
+  "snapshotRunId": "run_79db397c5a87d332d2ab8106f749f5ab",
+  "jobId": "18",
+  "responseSha256": "269da42470984cde3b3f6a0632286eb21da9439f4b31463bf50834d00ca5ea05",
+  "equalAfterRestart": true,
+  "rpcConfiguredForApi": false,
+  "databaseRestarted": false,
+  "note": "API仅查询已有PostgreSQL投影；未重启数据库或启动worker。",
+  "sourceCommit": "3bfd4948998078662bb0d00369a481c10a6d7085",
+  "executableSourceFingerprint": "e61ec01ab99286aed1afdc34974d5fac919d780fd8222ed348e40cde502e0706"
+}

@@ -2477,3 +2477,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 ## 2026-10-04 v1.0.1审计纠正（追加，旧证据保留）
 
 审计基线7df357d的资金正确性LOCAL_VALIDATED撤回。本轮完成具体义务归属、争议奖励、Approval与零分配修复及真实失败→通过回归；完成数据库有界读取与live分层错误分类。真实主网任务#18定点读取已核验奖励1.98 USDC、费用0.02 USDC，并通过持久/API进程重启回放；历史仍partial，正式模式关闭，特殊主网案例NOT_OBSERVED。最新源码、独立干净提交验收和脱敏命令以`docs/arc-task-ledger/REPAIR_ACCEPTANCE.md`及随包验证记录为准，不继承旧测试数量或PASS。公开部署与身份/申请资料继续未完成。
+
+### v1.0.1最终干净代码复验（2026-10-04追加）
+
+干净提交3bfd494独立安装、58单元/20 PostgreSQL集成/6浏览器、构建类型/lint/许可证/独立依赖审计均通过。主网任务18在快照24189916经链身份/历史部署、四个定点区块、资金回执、原存储、API及实际API进程重启复核；奖励1.98、费用0.02 USDC。历史与来源一致性仍partial，争议/停放/零分配主网样例NOT_OBSERVED，正式取证关闭。原仓库工作副本检查：1050单元、88集成通过/42跳过、52 Rust与49浏览器通过；8项依赖告警及视觉指纹过期保留。源码/退出码/时间/摘要见Arc修复验收及validation，不公开整个私有状态目录。
