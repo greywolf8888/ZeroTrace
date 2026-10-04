@@ -9,3 +9,13 @@ playwright-report
 test-results
 reports
 .env
+.env.*
+**/.env
+**/.env.*
+.agent-state
+**/.agent-state
+dist-public
+output
+.zerotrace-backups
+target
+arc-task-ledger-pack

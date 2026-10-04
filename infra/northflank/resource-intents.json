@@ -1,0 +1,39 @@
+{
+  "项目": "arc-task-ledger",
+  "状态": "FREE_TIER_UNVERIFIED",
+  "新增付费预算USD": 0,
+  "说明": "此文件是非可发送的资源意图。免费规格、区域、数据库版本、源码权限及构建 ID 须由平台核验后填入完整请求。",
+  "数据库迁移版本": 4,
+  "镜像": { "Dockerfile": "infra/northflank/Dockerfile", "后端目标": "api", "网页目标": "web" },
+  "资源": [
+    { "名称": "atl-api", "类型": "service", "端口": 8087, "公开": false },
+    { "名称": "atl-web", "类型": "service", "端口": 8080, "公开": true },
+    { "名称": "atl-postgres", "类型": "PostgreSQL addon", "版本": null, "公开": false },
+    {
+      "名称": "atl-migrate",
+      "类型": "cron job",
+      "命令": "node apps/arc-task-ledger-api/dist/migrate.js",
+      "暂停": true
+    },
+    {
+      "名称": "atl-sync",
+      "类型": "cron job",
+      "命令": "node apps/arc-task-ledger-api/dist/worker.js",
+      "暂停": true
+    }
+  ],
+  "采集设置": {
+    "backoffLimit": 0,
+    "runOnSourceChange": "never",
+    "activeDeadlineSeconds": 240,
+    "cron": { "schedule": "*/10 * * * *", "suspended": true, "concurrencyPolicy": "forbid" }
+  },
+  "免费套餐资格": null,
+  "区域": null,
+  "构建规格": null,
+  "运行规格": null,
+  "内部数据库连接": "仅从实际 addon 加密注入 API、worker 和迁移",
+  "分页密钥": "平台加密保存并复用至少 32 字节随机值",
+  "网络策略": "未部署",
+  "实际HTTPS": null
+}
