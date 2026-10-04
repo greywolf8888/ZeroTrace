@@ -2,6 +2,11 @@ node_modules
 .git
 .env*
 .agent-state
+**/.agent-state
+**/.env*
+dist-public
+output
+target
 arc-task-ledger-pack
 tests
 playwright-report

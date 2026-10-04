@@ -75,6 +75,7 @@ for (const relative of [
   'scripts/northflank-deploy.mjs',
   'docs/arc-task-ledger/README.md',
   'docs/arc-task-ledger/DEPLOYMENT.md',
+  'docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md',
   'docs/arc-task-ledger/openapi.json',
   'docs/arc-task-ledger/REPAIR_ACCEPTANCE.md',
   'docs/arc-task-ledger/CONTINUOUS_ACCEPTANCE.md',
