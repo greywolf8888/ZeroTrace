@@ -670,3 +670,26 @@ p {
     font-size: 12px;
   }
 }
+@media (min-width: 601px) {
+  .result-lead h3 {
+    font-size: 20px;
+    margin: 10px 0;
+  }
+  .money-grid article {
+    padding: 14px;
+  }
+  .money-grid small {
+    min-height: 0;
+    margin-bottom: 8px;
+  }
+  .freshness {
+    margin: 14px 0;
+  }
+  .heading,
+  .toolbar {
+    margin: 12px 0;
+  }
+  .roles {
+    margin: 10px 0;
+  }
+}
