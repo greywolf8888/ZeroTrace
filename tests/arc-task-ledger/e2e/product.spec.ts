@@ -1,5 +1,21 @@
 import { test, expect } from '@playwright/test';
 const adapter = '0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d';
+test('首页加载期间保护输入，初始化完成后任务查询不被覆盖', async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/v1/jobs?limit=10', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto('/');
+  await expect(page.getByLabel('任务编号、任务链接或地址')).toBeDisabled();
+  release();
+  await page.getByLabel('任务编号、任务链接或地址').fill('19');
+  await page.getByRole('button', { name: '查询', exact: true }).click();
+  await expect(page.getByRole('region', { name: '结算结果' })).toContainText('0.99 USDC');
+});
 test('UX01/03/06/07 输入任务→真实HTTP金额→固定快照新上下文→同报告', async ({
   page,
   context,

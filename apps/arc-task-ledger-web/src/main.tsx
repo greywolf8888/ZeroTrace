@@ -145,7 +145,7 @@ function App() {
           u.searchParams.set('snapshotRunId', data.snapshotRunId);
           navigate(u.pathname + u.search, true);
         }
-        setInput(u.searchParams.get('address') ?? '');
+        if (u.searchParams.has('address')) setInput(u.searchParams.get('address')!);
         setRole(u.searchParams.get('role') ?? 'all');
         setLife(u.searchParams.get('lifecycle') ?? '');
         setCash(u.searchParams.get('cashState') ?? '');
@@ -272,6 +272,7 @@ function App() {
               <div className="input-action">
                 <input
                   id="task-input"
+                  disabled={!registry || busy}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="任务编号 / https://arcbounty.app/bounty/… / 0x…"
