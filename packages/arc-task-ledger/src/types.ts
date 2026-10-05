@@ -1,4 +1,4 @@
-export const RULE_VERSION = 'atl-v1.1.0';
+export const RULE_VERSION = 'atl-v1.2.0';
 export type Knowledge<T> =
   | { state: 'known'; value: T; evidenceIds: string[]; derivation?: string }
   | {
@@ -222,6 +222,7 @@ export interface SnapshotRun {
   errors: string[];
   mode: 'stored-replay';
   historyRange?: HistoryRange;
+  collection?: Record<string, unknown>;
 }
 export class LedgerError extends Error {
   constructor(

@@ -30,6 +30,7 @@ async function readWindow(
   to: string,
   observations: StoredEvidence[],
   receipts: { receipt: Receipt; observationId: string }[],
+  store?: LedgerRepository,
 ) {
   const before = await reader.block(to);
   const logs = await reader.logs(from, to);
@@ -42,7 +43,9 @@ async function readWindow(
   observations.push(segmentEvidence);
   const hashes = [...new Set(logs.map((l) => l.transactionHash))];
   for (const tx of hashes) {
-    const receipt = await reader.read<Receipt | null>('eth_getTransactionReceipt', [tx]);
+    const cached = await store?.cachedReceipt?.(tx, reader.transport.endpointId);
+    const receipt =
+      cached?.receipt ?? (await reader.read<Receipt | null>('eth_getTransactionReceipt', [tx]));
     if (
       !receipt ||
       receipt.transactionHash !== tx ||
@@ -68,12 +71,14 @@ async function readWindow(
         )
       )
         throw new LedgerError('RECEIPT_CONFLICT', '回执未包含查询返回的完整协议日志。', 409);
-    const evidence = reader.observe(
-      receipt,
-      snapshot,
-      `eth_getTransactionReceipt:${tx}`,
-      '协议交易完整原始回执。',
-    );
+    const evidence =
+      cached?.evidence ??
+      reader.observe(
+        receipt,
+        snapshot,
+        `eth_getTransactionReceipt:${tx}`,
+        '协议交易完整原始回执。',
+      );
     observations.push(evidence);
     receipts.push({ receipt, observationId: evidence.id });
   }
@@ -98,6 +103,12 @@ export async function captureEvidenceBlocks(
     )
       throw new LedgerError('INVALID_RANGE', '定点历史区块不在已部署到固定快照的范围。', 400);
     const anchor = await reader.block(height);
+    const cached = await store.capturedBlock?.(height, reader.transport.endpointId);
+    if (cached) {
+      if (cached.hash !== anchor.hash)
+        throw new LedgerError('SOURCE_CONFLICT', '已最终确认定点区块摘要变化，停止缓存复用。', 409);
+      continue;
+    }
     // 历史代码与当前代码分别验证，当前状态不代替历史部署版本。
     await reader.verifyDeployment({ ...snapshot, blockNumber: height, blockHash: anchor.hash });
     const checkpoint = await store.checkpoint(
@@ -113,6 +124,7 @@ export async function captureEvidenceBlocks(
       height,
       observations,
       receipts,
+      store,
     );
     await store.saveSegment({
       deployment: DEPLOYMENT.adapter,
@@ -121,6 +133,7 @@ export async function captureEvidenceBlocks(
       status: 'complete',
       document: {
         scope: 'selected-block-only',
+        ruleVersion: RULE_VERSION,
         snapshot,
         anchor: before,
         count: logs.length,
@@ -169,6 +182,7 @@ export async function scanHistory(
         to.toString(),
         observations,
         receipts,
+        store,
       );
       checkpoint = await store.saveSegment({
         deployment: DEPLOYMENT.adapter,
@@ -272,6 +286,133 @@ export const historyCheckpointKey = (fromBlock: string): string =>
     ? DEPLOYMENT.adapter
     : `${DEPLOYMENT.adapter}:from:${decimal(fromBlock)}`;
 
+/** 最新日志和请求补证分别保留自己的连续水位，不提升全历史覆盖。 */
+export async function scanPriority(
+  reader: ArcReader,
+  store: LedgerRepository,
+  snapshot: Snapshot,
+  recentBudget: string,
+  proofBudget: string,
+) {
+  const results: Record<string, unknown> = { recentBudget, proofBudget };
+  const recent = BigInt(decimal(recentBudget));
+  const proof = BigInt(decimal(proofBudget));
+  if (recent > 2000n || proof > 2000n)
+    throw new LedgerError('CONFIG_INVALID', '单轮最新/补证预算各最多2000区块。', 400);
+  const request = proof > 0n ? await store.nextEvidenceRequest?.() : undefined;
+  const jobs: {
+    key: string;
+    from: bigint;
+    target: bigint;
+    budget: bigint;
+    request?: typeof request;
+  }[] = [];
+  if (recent > 0n) {
+    const target = BigInt(snapshot.blockNumber);
+    const lower =
+      target - recent + 1n > BigInt(DEPLOYMENT.verifiedDeploymentBlock)
+        ? target - recent + 1n
+        : BigInt(DEPLOYMENT.verifiedDeploymentBlock);
+    const key = `${DEPLOYMENT.adapter}:recent:${RULE_VERSION}`;
+    const checkpoint = await store.checkpoint(key, (lower - 1n).toString());
+    jobs.push({ key, from: BigInt(checkpoint.head) + 1n, target, budget: recent });
+  }
+  if (request && BigInt(request.to) <= BigInt(snapshot.blockNumber))
+    jobs.push({
+      key: `${DEPLOYMENT.adapter}:request:${request.id}`,
+      from: BigInt(request.head) + 1n,
+      target: BigInt(request.to),
+      budget: proof,
+      request,
+    });
+  for (const job of jobs) {
+    const cp = await store.checkpoint(job.key, (job.from - 1n).toString());
+    if (job.from > job.target) continue;
+    const to = job.from + job.budget - 1n < job.target ? job.from + job.budget - 1n : job.target;
+    const observations: StoredEvidence[] = [];
+    const receipts: { receipt: Receipt; observationId: string }[] = [];
+    try {
+      const { before, logs } = await readWindow(
+        reader,
+        snapshot,
+        job.from.toString(),
+        to.toString(),
+        observations,
+        receipts,
+        store,
+      );
+      const result = await store.saveSegment({
+        deployment: DEPLOYMENT.adapter,
+        checkpointKey: job.key,
+        from: job.from.toString(),
+        to: to.toString(),
+        status: 'complete',
+        document: {
+          scope: job.request ? 'bounded-task-enrichment' : 'recent-changes',
+          snapshot,
+          anchor: before,
+          ruleVersion: RULE_VERSION,
+          count: logs.length,
+        },
+        observations,
+        receipts,
+        expectedVersion: cp.version,
+        ...(job.request
+          ? {
+              requestUpdate: {
+                id: job.request.id,
+                head: to.toString(),
+                status: to === job.target ? ('COMPLETED' as const) : ('PENDING' as const),
+              },
+            }
+          : {}),
+      });
+      results[job.request ? 'enrichment' : 'recent'] = {
+        from: job.from.toString(),
+        through: result.head,
+        target: job.target.toString(),
+        complete: BigInt(result.head) >= job.target,
+        ...(job.request ? { requestId: job.request.id, jobId: job.request.jobId } : {}),
+      };
+    } catch (error) {
+      const e = error as { code?: string; status?: number };
+      await store.saveSegment({
+        deployment: DEPLOYMENT.adapter,
+        checkpointKey: job.key,
+        from: job.from.toString(),
+        to: to.toString(),
+        status: e.status === 409 ? 'conflict' : 'partial',
+        document: {
+          scope: job.request ? 'bounded-task-enrichment' : 'recent-changes',
+          snapshot,
+          code: e.code ?? 'SOURCE_UNAVAILABLE',
+          ruleVersion: RULE_VERSION,
+        },
+        observations,
+        receipts: [],
+        expectedVersion: cp.version,
+        ...(job.request
+          ? {
+              requestUpdate: {
+                id: job.request.id,
+                head: cp.head,
+                status: 'FAILED' as const,
+                error: e.code ?? 'SOURCE_UNAVAILABLE',
+              },
+            }
+          : {}),
+      });
+      if (e.status === 409) throw error;
+      results[job.request ? 'enrichment' : 'recent'] = {
+        status: 'SOURCE_UNAVAILABLE',
+        head: cp.head,
+        requestId: job.request?.id,
+      };
+    }
+  }
+  return results;
+}
+
 export async function syncOnce(
   reader: ArcReader,
   store: LedgerRepository,
@@ -282,6 +423,8 @@ export async function syncOnce(
     evidenceBlocks?: string[];
     historyFromBlock?: string;
     snapshotBlock?: string;
+    recentBudget?: string;
+    proofBudget?: string;
   },
 ): Promise<SnapshotRun> {
   return store.withWorkerLock(async () => {
@@ -298,6 +441,13 @@ export async function syncOnce(
     const deploymentEvidence = [...reader.evidence];
     const previousRun = await store.getRun();
     const enumeration = await reader.enumerate(snapshot, options.maxJobs);
+    const collection = await scanPriority(
+      reader,
+      store,
+      snapshot,
+      options.recentBudget ?? '0',
+      options.proofBudget ?? '0',
+    );
     if (
       previousRun &&
       BigInt(snapshot.blockNumber) >= BigInt(previousRun.snapshot.blockNumber) &&
@@ -482,6 +632,7 @@ export async function syncOnce(
       totalExpected: enumeration.total,
       errors: [...enumeration.errors, ...scan.errors],
       mode: 'stored-replay',
+      collection,
       ...('historyRange' in scan ? { historyRange: scan.historyRange } : {}),
     };
     await store.publish(run, reader.evidence);

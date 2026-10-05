@@ -1,5 +1,6 @@
 import {
   known,
+  settlementResult,
   unknown,
   type Coverage,
   type JobDetail,
@@ -54,6 +55,7 @@ export function publicDetail(detail: JobDetail) {
   const ids = detail.evidence.map((e) => e.id);
   return {
     ...detail,
+    result: settlementResult(detail),
     job: publicRow(detail.job, ids),
     rawState: known(detail.rawState, ids),
     settlementLegs: detail.settlementLegs.map((l) => ({

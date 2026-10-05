@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Arc Task Ledger read-only API",
-    "version": "1.1.0",
-    "description": "Design contract, not evidence that endpoints already exist."
+    "title": "Arc 任务证据只读 API",
+    "version": "1.2.0",
+    "description": "持久快照查询与有界补证申请；链上只读，HTTP成功不代表证据完整。"
   },
   "servers": [
     {
@@ -61,6 +61,23 @@
               "type": "string",
               "maxLength": 48
             }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "schema": {
+              "enum": ["all", "poster", "worker"]
+            },
+            "description": "必须同时提供完整地址；由数据库过滤"
+          },
+          {
+            "name": "snapshotRunId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "description": "固定快照；过期返回410，不替换"
           }
         ],
         "responses": {
@@ -453,6 +470,98 @@
           }
         }
       }
+    },
+    "/v1/registry": {
+      "get": {
+        "operationId": "getRegistry",
+        "responses": {
+          "200": {
+            "description": "结构化结果；覆盖与资金状态另行表达",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Registry"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/jobs/{chainId}/{adapter}/{jobId}/evidence-requests": {
+      "post": {
+        "operationId": "requestBoundedEvidence",
+        "description": "仅登记部署的已采集任务；每IP每小时6次，每任务每小时1个新申请，全局20个当前版本待办，最大200000区块，单轮2000；相同快照幂等。空请求，不接受URL/区间/私密说明。",
+        "parameters": [
+          {
+            "name": "chainId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "adapter",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "结构化结果；覆盖与资金状态另行表达",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrichmentAccepted"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "结构化结果；覆盖与资金状态另行表达",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "结构化结果；覆盖与资金状态另行表达",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -753,7 +862,8 @@
           "timeline",
           "nextTimelineCursor",
           "evidence",
-          "ruleVersion"
+          "ruleVersion",
+          "result"
         ],
         "properties": {
           "job": {
@@ -802,6 +912,12 @@
           },
           "ruleVersion": {
             "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/SettlementResult"
+          },
+          "evidenceRequest": {
+            "$ref": "#/components/schemas/Knowledge"
           }
         }
       },
@@ -911,6 +1027,172 @@
                 }
               }
             }
+          }
+        }
+      },
+      "ResultMetric": {
+        "type": "object",
+        "required": ["key", "label", "amount", "scope", "evidenceIds"],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/ResultAmount"
+          },
+          "scope": {
+            "enum": ["OBSERVED", "VERIFIED_OBLIGATIONS", "FACE_VALUE"]
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SettlementResult": {
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "jobId",
+          "state",
+          "conclusion",
+          "reasons",
+          "nextAction",
+          "metrics",
+          "historyComplete",
+          "gas"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": "atl-settlement-result-v1"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "state": {
+            "enum": ["confirmed", "pending", "unknown", "conflict"]
+          },
+          "conclusion": {
+            "type": "string"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "nextAction": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResultMetric"
+            }
+          },
+          "historyComplete": {
+            "type": "boolean"
+          },
+          "gas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["transactionHash", "amount", "payer", "scope", "evidenceIds"],
+              "properties": {
+                "transactionHash": {
+                  "type": "string"
+                },
+                "amount": {
+                  "$ref": "#/components/schemas/ResultAmount"
+                },
+                "payer": {
+                  "$ref": "#/components/schemas/Knowledge"
+                },
+                "scope": {
+                  "const": "TRANSACTION_ONLY"
+                },
+                "evidenceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "EvidenceRequest": {
+        "type": "object",
+        "required": ["id", "jobId", "from", "to", "head", "status", "ruleVersion", "snapshotRunId"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "jobId": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "head": {
+            "type": "string"
+          },
+          "ruleVersion": {
+            "type": "string"
+          },
+          "snapshotRunId": {
+            "type": "string"
+          },
+          "status": {
+            "enum": ["PENDING", "COMPLETED", "FAILED"]
+          }
+        }
+      },
+      "Registry": {
+        "type": "object",
+        "required": ["chainId", "adapter", "navigation"],
+        "properties": {
+          "chainId": {
+            "const": "5042"
+          },
+          "adapter": {
+            "type": "string"
+          },
+          "navigation": {
+            "type": "object"
+          }
+        }
+      },
+      "EnrichmentAccepted": {
+        "type": "object",
+        "required": ["request"],
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/EvidenceRequest"
+          }
+        }
+      },
+      "ResultAmount": {
+        "type": "object",
+        "required": ["asset", "decimals", "atomic"],
+        "properties": {
+          "asset": {
+            "type": "string"
+          },
+          "decimals": {
+            "type": "integer"
+          },
+          "atomic": {
+            "$ref": "#/components/schemas/Knowledge"
           }
         }
       }

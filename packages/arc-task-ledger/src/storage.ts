@@ -15,6 +15,22 @@ export interface SegmentInput {
   observations: StoredEvidence[];
   receipts: { receipt: Receipt; observationId: string }[];
   expectedVersion: string;
+  requestUpdate?: {
+    id: string;
+    head: string;
+    status: 'PENDING' | 'COMPLETED' | 'FAILED';
+    error?: string;
+  };
+}
+export interface EvidenceRequest {
+  id: string;
+  jobId: string;
+  from: string;
+  to: string;
+  head: string;
+  status: string;
+  ruleVersion: string;
+  snapshotRunId: string;
 }
 export interface LedgerRepository {
   checkpoint(deployment: string, openingHead: string): Promise<Checkpoint>;
@@ -25,4 +41,10 @@ export interface LedgerRepository {
   withWorkerLock<T>(action: () => Promise<T>): Promise<T>;
   getRun(id?: string): Promise<SnapshotRun | undefined>;
   publish(run: SnapshotRun, observations: StoredEvidence[]): Promise<void>;
+  nextEvidenceRequest?(): Promise<EvidenceRequest | undefined>;
+  capturedBlock?(height: string, source: string): Promise<{ hash: string } | undefined>;
+  cachedReceipt?(
+    tx: string,
+    source: string,
+  ): Promise<{ receipt: Receipt; evidence: StoredEvidence } | undefined>;
 }

@@ -10,6 +10,9 @@ import {
   type JobDetail,
   type JobRow,
   type SegmentInput,
+  RULE_VERSION,
+  DEPLOYMENT,
+  type EvidenceRequest,
 } from '@zerotrace/arc-task-ledger';
 
 // 与现有 storage 使用同一 pg 连接模式；独立 schema 只保存本组件链上只读投影。
@@ -39,6 +42,15 @@ CREATE INDEX IF NOT EXISTS atl_list_worker ON arc_task_ledger_v1.jobs(run_id,(li
 INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(3) ON CONFLICT DO NOTHING;
 ALTER TABLE arc_task_ledger_v1.runs ADD COLUMN IF NOT EXISTS history_range jsonb;
 INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(4) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS arc_task_ledger_v1.evidence_requests(
+id text PRIMARY KEY, job_id numeric(78,0) NOT NULL, run_id text NOT NULL REFERENCES arc_task_ledger_v1.runs(id),
+first_block numeric(78,0) NOT NULL,last_block numeric(78,0) NOT NULL,head numeric(78,0) NOT NULL,
+status text NOT NULL CHECK(status IN ('PENDING','COMPLETED','FAILED')),rule_version text NOT NULL,
+error_code text,requested_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now());
+DROP INDEX IF EXISTS arc_task_ledger_v1.atl_request_active;
+CREATE UNIQUE INDEX IF NOT EXISTS atl_request_active_v5 ON arc_task_ledger_v1.evidence_requests(job_id,rule_version) WHERE status='PENDING';
+ALTER TABLE arc_task_ledger_v1.runs ADD COLUMN IF NOT EXISTS collection jsonb;
+INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(5) ON CONFLICT DO NOTHING;
 `;
 export class LedgerStore implements LedgerRepository {
   readonly pool: Pool;
@@ -77,7 +89,7 @@ export class LedgerStore implements LedgerRepository {
   async ready(): Promise<boolean> {
     try {
       const r = await this.pool.query(
-        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=4',
+        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=5',
       );
       return r.rowCount === 1;
     } catch {
@@ -124,7 +136,7 @@ export class LedgerStore implements LedgerRepository {
     await this.transaction(async (client) => {
       for (const evidence of observations) await this.putEvidence(client, evidence);
       const inserted = await client.query(
-        'INSERT INTO arc_task_ledger_v1.runs(id,snapshot,coverage,expires_at,expected,errors,history_range) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING',
+        'INSERT INTO arc_task_ledger_v1.runs(id,snapshot,coverage,expires_at,expected,errors,history_range,collection) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING',
         [
           run.id,
           run.snapshot,
@@ -133,6 +145,7 @@ export class LedgerStore implements LedgerRepository {
           decimal(run.totalExpected),
           JSON.stringify(run.errors),
           run.historyRange ?? null,
+          run.collection ?? null,
         ],
       );
       if (inserted.rowCount === 0)
@@ -180,6 +193,7 @@ export class LedgerStore implements LedgerRepository {
       errors: row.errors,
       mode: 'stored-replay',
       ...(row.history_range ? { historyRange: row.history_range } : {}),
+      ...(row.collection ? { collection: row.collection } : {}),
     };
   }
   async getJobPage(
@@ -190,6 +204,7 @@ export class LedgerStore implements LedgerRepository {
       address?: string | undefined;
       lifecycle?: string | undefined;
       cashState?: string | undefined;
+      role?: string | undefined;
     } = {},
   ): Promise<{ job: JobRow; evidenceIds: string[] }[]> {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
@@ -203,8 +218,14 @@ export class LedgerStore implements LedgerRepository {
     if (after !== undefined) clauses.push(`job_id>${bind(decimal(after))}::numeric`);
     if (filter.address) {
       const parameter = bind(filter.address);
+      const poster = `list_projection->>'poster'=${parameter}`;
+      const worker = `(list_projection->'worker'->>'state'='known' AND list_projection->'worker'->>'value'=${parameter})`;
       clauses.push(
-        `(list_projection->>'poster'=${parameter} OR (list_projection->'worker'->>'state'='known' AND list_projection->'worker'->>'value'=${parameter}))`,
+        filter.role === 'poster'
+          ? poster
+          : filter.role === 'worker'
+            ? worker
+            : `(${poster} OR ${worker})`,
       );
     }
     if (filter.lifecycle) clauses.push(`list_projection->>'lifecycle'=${bind(filter.lifecycle)}`);
@@ -311,6 +332,19 @@ export class LedgerStore implements LedgerRepository {
         'UPDATE arc_task_ledger_v1.checkpoints SET head=$1,version=version+1 WHERE deployment=$2 AND version=$3 RETURNING head,version',
         [head.toString(), checkpointKey, input.expectedVersion],
       );
+      if (input.requestUpdate) {
+        const u = input.requestUpdate;
+        const changed = await client.query(
+          "UPDATE arc_task_ledger_v1.evidence_requests SET head=$2,status=$3,error_code=$4,updated_at=now() WHERE id=$1 AND status='PENDING' AND rule_version=$5",
+          [u.id, u.head, u.status, u.error ?? null, RULE_VERSION],
+        );
+        if (changed.rowCount !== 1)
+          throw new LedgerError(
+            'REQUEST_VERSION_CONFLICT',
+            '补证请求状态或版本变化，整段回滚。',
+            409,
+          );
+      }
       return { head: String(updated.rows[0]!.head), version: String(updated.rows[0]!.version) };
     });
   }
@@ -336,6 +370,96 @@ export class LedgerStore implements LedgerRepository {
       unique.set(receipt.transactionHash, { receipt, evidenceIds: [evidence.id], evidence });
     }
     return [...unique.values()];
+  }
+  async evidenceRequest(jobId: string): Promise<EvidenceRequest | undefined> {
+    const r = await this.pool.query(
+      'SELECT * FROM arc_task_ledger_v1.evidence_requests WHERE job_id=$1 ORDER BY requested_at DESC,id DESC LIMIT 1',
+      [decimal(jobId)],
+    );
+    return r.rows[0] ? this.requestRow(r.rows[0]) : undefined;
+  }
+  private requestRow(r: Record<string, unknown>): EvidenceRequest {
+    return {
+      id: String(r.id),
+      jobId: String(r.job_id),
+      from: String(r.first_block),
+      to: String(r.last_block),
+      head: String(r.head),
+      status: String(r.status),
+      ruleVersion: String(r.rule_version),
+      snapshotRunId: String(r.run_id),
+    };
+  }
+  async enqueueEvidence(detail: JobDetail, runId: string): Promise<EvidenceRequest> {
+    return this.transaction(async (c) => {
+      await c.query("SELECT pg_advisory_xact_lock(hashtext('arc_task_ledger_v1:request-quota'))");
+      const active = await c.query(
+        "SELECT * FROM arc_task_ledger_v1.evidence_requests WHERE job_id=$1 AND rule_version=$2 AND (status='PENDING' OR run_id=$3) ORDER BY requested_at DESC LIMIT 1",
+        [detail.job.jobId, RULE_VERSION, runId],
+      );
+      if (active.rows[0]) return this.requestRow(active.rows[0]);
+      const quota = await c.query(
+        "SELECT count(*) FILTER(WHERE status='PENDING') AS active,count(*) FILTER(WHERE job_id=$1 AND requested_at>now()-interval '1 hour') AS recent FROM arc_task_ledger_v1.evidence_requests WHERE rule_version=$2",
+        [detail.job.jobId, RULE_VERSION],
+      );
+      if (Number(quota.rows[0].active) >= 20 || Number(quota.rows[0].recent) >= 1)
+        throw new LedgerError(
+          'REQUEST_QUOTA',
+          '补证队列已满或该任务一小时内已提交；请稍后查询队列状态。',
+          429,
+        );
+      const target = BigInt(detail.job.snapshot.blockNumber);
+      const created = detail.timeline.find((e) => e.name === 'BountyCreated')?.blockNumber;
+      const from = created
+        ? BigInt(created)
+        : target - 199999n > BigInt(DEPLOYMENT.verifiedDeploymentBlock)
+          ? target - 199999n
+          : BigInt(DEPLOYMENT.verifiedDeploymentBlock);
+      const to = from + 199999n < target ? from + 199999n : target;
+      const id =
+        'req_' +
+        hashPayload({ jobId: detail.job.jobId, runId, ruleVersion: RULE_VERSION }).slice(0, 32);
+      const r = await c.query(
+        "INSERT INTO arc_task_ledger_v1.evidence_requests(id,job_id,run_id,first_block,last_block,head,status,rule_version) VALUES($1,$2,$3,$4,$5,$6,'PENDING',$7) RETURNING *",
+        [
+          id,
+          detail.job.jobId,
+          runId,
+          from.toString(),
+          to.toString(),
+          (from - 1n).toString(),
+          RULE_VERSION,
+        ],
+      );
+      return this.requestRow(r.rows[0]);
+    });
+  }
+  async nextEvidenceRequest(): Promise<EvidenceRequest | undefined> {
+    const r = await this.pool.query(
+      "SELECT * FROM arc_task_ledger_v1.evidence_requests WHERE status='PENDING' AND rule_version=$1 ORDER BY requested_at,id LIMIT 1",
+      [RULE_VERSION],
+    );
+    return r.rows[0] ? this.requestRow(r.rows[0]) : undefined;
+  }
+  async capturedBlock(height: string, source: string): Promise<{ hash: string } | undefined> {
+    const r = await this.pool.query(
+      "SELECT document->'anchor'->>'hash' AS hash FROM arc_task_ledger_v1.segments WHERE deployment=$1 AND first_block=$2 AND last_block=$2 AND status='complete' AND document->>'scope'='selected-block-only' AND document->>'ruleVersion'=$3 AND document->'snapshot'->'sourceSet' ? $4 ORDER BY id LIMIT 1",
+      [DEPLOYMENT.adapter, decimal(height), RULE_VERSION, source],
+    );
+    return r.rows[0] ? { hash: r.rows[0].hash } : undefined;
+  }
+  async cachedReceipt(
+    tx: string,
+    source: string,
+  ): Promise<{ receipt: Receipt; evidence: StoredEvidence } | undefined> {
+    const r = await this.pool.query(
+      "SELECT r.document,o.document AS evidence FROM arc_task_ledger_v1.receipts r JOIN arc_task_ledger_v1.observations o ON o.id=r.observation_id WHERE r.tx_hash=$1 AND o.document->'snapshot'->'sourceSet' ? $2 ORDER BY r.observation_id LIMIT 2",
+      [tx, source],
+    );
+    if (!r.rows[0]) return undefined;
+    if (r.rows[1] && hashPayload(r.rows[0].document) !== hashPayload(r.rows[1].document))
+      throw new LedgerError('RECEIPT_CONFLICT', '缓存回执冲突，停止补证。', 409);
+    return { receipt: r.rows[0].document, evidence: r.rows[0].evidence };
   }
   async withWorkerLock<T>(action: () => Promise<T>): Promise<T> {
     const client = await this.pool.connect();

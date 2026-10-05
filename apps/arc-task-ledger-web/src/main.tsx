@@ -1,505 +1,735 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
+import { SettlementCard } from './SettlementCard.js';
+import {
+  api,
+  ApiError,
+  label,
+  value,
+  money,
+  semantics,
+  parseInput,
+  taskPath,
+  type Registry,
+  type Page,
+  type Detail,
+} from './model.js';
 import './style.css';
-type K<T> = { state: 'known'; value: T } | { state: string; reason: string };
-interface Amount {
-  atomic: K<string>;
-  decimals: 18;
-}
-interface Row {
-  jobKey: string;
-  jobId: string;
-  adapter: string;
-  poster: string;
-  worker: K<string>;
-  reward: Amount;
-  lifecycle: string;
-  cashState: string;
-  selfTake: boolean;
-  freshness?: 'known' | 'stale';
-  snapshot: {
-    chainId: string;
-    blockNumber: string;
-    blockHash: string;
-    observedAt: string;
-    sourceSet?: string[];
-  };
-  coverage: Record<string, string>;
-}
-interface Page {
-  snapshotRunId: string;
-  snapshot?: Row['snapshot'];
-  items: Row[];
-  nextCursor: K<string>;
-  freshness: { state: string; capturedAt: string };
-  historyRange?: K<{
-    fromBlock: string;
-    targetBlock: string;
-    contiguousThrough: string;
-    status: string;
-    omittedPriorHistory: boolean;
-    gaps: { fromBlock: string; toBlock: string; reason: string }[];
-  }>;
-}
-interface Detail {
-  job: Row;
-  rawState: Record<string, unknown>;
-  settlementLegs: {
-    id: string;
-    role: string;
-    kind: string;
-    payee: string;
-    observedAmount: Amount;
-    parkedAmount: Amount;
-    expectedAmount: Amount;
-    attribution: string;
-    evidenceIds: string[];
-  }[];
-  timeline: {
-    id: string;
-    name: string;
-    blockNumber: string;
-    transactionHash: string;
-    args: Record<string, unknown>;
-  }[];
-  nextTimelineCursor: K<string>;
-  evidence: { id: string; payloadHash: string; raw: unknown }[];
-  pendingAccounts: { payee: string; balance: Amount; history: string }[];
-  ruleVersion: string;
-  snapshotRunId: string;
-  gas: { transactionHash: string; amount: Amount }[];
-}
-const labels: Record<string, string> = {
-  NOT_APPLICABLE: '零分配，无应付义务',
-  ZERO_ALLOCATION: '已核验零分配',
-  OPEN: '待接单',
-  TAKEN: '已接单',
-  SUBMITTED: '已提交',
-  REJECTION_PENDING: '拒绝待处理',
-  DISPUTED: '争议中',
-  TERMINAL_UNKNOWN: '任务已结束，路径待核验',
-  APPROVED: '已批准',
-  CANCELLED: '已取消',
-  EXPIRED: '已执行到期',
-  REJECTED: '已拒绝',
-  DISPUTE_WORKER: '裁定工作者胜',
-  DISPUTE_POSTER: '裁定发布者胜',
-  TIMEOUT_SPLIT: '仲裁超时分账',
-  EXTERNAL_REFUND_RECONCILED: '外部退款已协调',
-  CONFIRMED_DIRECT: '已核验直接转移',
-  PARKED: '曾转入待领取',
-  PARTIAL: '部分直接转移，部分待领取',
-  UNKNOWN: '暂无法核验',
-  CONFLICT: '证据冲突',
-  NONE_OBSERVED: '未观察到任务付款',
-  VERIFIED_SEQUENCE_DERIVED: '完整账户序列推导已领取',
-  WORKER: '工作者',
-  POSTER: '发布者',
-  PROTOCOL: '协议费用',
-  ADAPTER: '任务适配器',
-  ESCROW: '托管合约',
-  DEPOSIT: '奖励存入',
-  ESCROW_TRANSIT: '托管中转',
-  BOND_DEPOSIT: '保证金存入',
-  REWARD: '奖励',
-  FEE: '费用',
-  REFUND: '退款',
-  BOND_RETURN: '保证金退回',
-  BOND_FORFEIT: '保证金没收',
-  TIMEOUT_SHARE: '超时份额',
-  DIRECT: '唯一直接转移',
-  UNIQUE_EVENT_SEGMENT: '唯一事件段',
-  ACCOUNT_ONLY: '仅账户级',
-  AMBIGUOUS: '归属有歧义',
-  complete: '完整',
-  partial: '不完整',
-  unknown: '未知',
-  conflict: '冲突',
-  currentState: '当前状态',
-  jobEnumeration: '任务枚举',
-  lifecycleHistory: '生命周期历史',
-  settlementHistory: '结算历史',
-  accountPendingHistory: '待领取历史',
-  deploymentVerification: '部署核验',
-  sourceAgreement: '来源一致性',
-  BountyCreated: '创建任务',
-  BountyTaken: '接单',
-  WorkSubmitted: '提交工作',
-  BountyCompleted: '任务完成事件',
-  BountyAutoApproved: '自动批准',
-  BountyCancelled: '取消任务',
-  BountyExpired: '执行到期',
-  ProtocolFeePaid: '费用分配声明',
-  PayoutParked: '转入待领取',
-  WithdrawalClaimed: '账户提现',
-  WorkerBondPosted: '保证金存入事件',
-  WorkerBondRefunded: '保证金退回声明',
-  WorkerBondForfeited: '保证金没收声明',
-  ArbitratorTimeoutClaimed: '仲裁超时分账',
-  ExternalRefundReconciled: '外部退款协调',
-  RejectionProposed: '提出拒绝',
-  RejectionFinalized: '拒绝生效',
-  RejectionChallenged: '拒绝被挑战',
-  RejectionWithdrawn: '撤回拒绝',
-  DisputeRaised: '发起争议',
-  DisputeResponded: '回应争议',
-  DisputeResolved: '争议裁决',
-};
-function text(value: string) {
-  return labels[value] ?? `协议字段：${value}`;
-}
-function knownValue<T>(value: K<T>): T | undefined {
-  return value.state === 'known' && 'value' in value ? value.value : undefined;
-}
-function money(value: Amount) {
-  const atoms = knownValue(value.atomic);
-  if (atoms === undefined) return '暂无法核验';
-  const n = BigInt(atoms);
-  const fraction = (n % 10n ** 18n).toString().padStart(18, '0').replace(/0+$/, '');
-  return `${n / 10n ** 18n}${fraction ? '.' + fraction : ''} USDC`;
-}
-function normalizeRow(wire: Record<string, unknown>): Row {
-  const coverage = Object.fromEntries(
-    Object.entries(wire.coverage as Record<string, K<string>>).map(([key, k]) => [
-      key,
-      knownValue(k) ?? k.state,
-    ]),
-  );
-  const cash = wire.cashState as K<string>;
-  return {
-    ...wire,
-    poster: knownValue(wire.poster as K<string>) ?? '',
-    reward: knownValue(wire.reward as K<Amount>) ?? {
-      atomic: { state: 'unknown', reason: '面值未核验' },
-      decimals: 18,
-    },
-    lifecycle: knownValue(wire.lifecycle as K<string>) ?? 'TERMINAL_UNKNOWN',
-    cashState: knownValue(cash) ?? (cash.state === 'conflict' ? 'CONFLICT' : 'UNKNOWN'),
-    coverage,
-  } as unknown as Row;
-}
-async function get<T>(path: string): Promise<T> {
-  const response = await fetch(`/api${path}`, { signal: AbortSignal.timeout(10000) });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.message ?? '读取失败，请检查服务。');
-  if (Array.isArray(body.items)) body.items = body.items.map(normalizeRow);
-  if ('nextCursor' in body)
-    body.nextCursor = body.nextCursor
-      ? { state: 'known', value: body.nextCursor }
-      : { state: 'unknown', reason: '末页' };
-  if (body.job) {
-    body.job = normalizeRow(body.job);
-    body.rawState = knownValue(body.rawState) ?? {};
-    body.nextTimelineCursor = body.nextTimelineCursor
-      ? { state: 'known', value: body.nextTimelineCursor }
-      : { state: 'unknown', reason: '末页' };
-    body.evidence = body.evidence.map((e: Record<string, unknown>) => ({
-      ...e,
-      raw: e.safePayload,
-    }));
-    body.settlementLegs = body.settlementLegs.map((leg: Record<string, unknown>) => ({
-      ...leg,
-      observedAmount: knownValue(leg.observedAmount as K<Amount>) ?? {
-        atomic: leg.observedAmount,
-        decimals: 18,
-      },
-      parkedAmount: knownValue(leg.parkedAmount as K<Amount>) ?? {
-        atomic: leg.parkedAmount,
-        decimals: 18,
-      },
-    }));
-  }
-  return body as T;
-}
-function Address({ value }: { value: string }) {
+function Address({ address }: { address: string }) {
+  const [feedback, setFeedback] = useState('');
   return (
-    <button
-      className="address"
-      title={`复制链上地址 ${value}`}
-      onClick={() => void navigator.clipboard.writeText(value)}
-    >
-      {value.slice(0, 8)}…{value.slice(-6)}
-    </button>
-  );
-}
-function Coverage({ coverage }: { coverage: Record<string, string> }) {
-  return (
-    <div className="coverage">
-      {Object.entries(coverage).map(([key, value]) => (
-        <span key={key} className={`badge ${value}`}>
-          {text(key)}：{text(value)}
-        </span>
-      ))}
-    </div>
+    <span className="address-wrap">
+      <button
+        className="address"
+        title={'复制链上地址 ' + address}
+        onClick={() =>
+          void navigator.clipboard.writeText(address).then(
+            () => setFeedback('已复制'),
+            () => setFeedback('复制失败，请选中完整地址'),
+          )
+        }
+      >
+        {address.slice(0, 8)}…{address.slice(-6)}
+      </button>
+      <small role="status">{feedback}</small>
+    </span>
   );
 }
 function App() {
+  const [route, setRoute] = useState(location.pathname + location.search);
+  const [registry, setRegistry] = useState<Registry>();
   const [page, setPage] = useState<Page>();
   const [detail, setDetail] = useState<Detail>();
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState('');
-  const [address, setAddress] = useState('');
-  const [coverage, setCoverage] = useState<Record<string, unknown>>();
-  const [showCoverage, setShowCoverage] = useState(false);
+  const [example, setExample] = useState<{ id: string; run: string }>();
+  const initial = new URLSearchParams(location.search);
+  const [input, setInput] = useState(initial.get('address') ?? '');
+  const [role, setRole] = useState(initial.get('role') ?? 'all');
+  const [life, setLife] = useState(initial.get('lifecycle') ?? '');
+  const [cash, setCash] = useState(initial.get('cashState') ?? '');
+  const [error, setError] = useState<Error>();
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
   const [showEvidence, setShowEvidence] = useState(false);
-  async function load(query = '', cursor?: string) {
-    setLoading(true);
-    setError('');
-    try {
-      setPage(
-        await get<Page>(
-          `/v1/jobs?limit=10${query ? '&address=' + encodeURIComponent(query) : ''}${cursor ? '&cursor=' + encodeURIComponent(cursor) : ''}`,
-        ),
-      );
-      setDetail(undefined);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '读取失败。');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [coverage, setCoverage] = useState<Record<string, unknown>>();
+  const report = route.split('?')[0]!.endsWith('/report');
+  const consumer = route.startsWith('/consumer');
+  const params = new URLSearchParams(route.split('?')[1]);
+  const navigate = useCallback((url: string, replace = false) => {
+    if (replace) history.replaceState(null, '', url);
+    else history.pushState(null, '', url);
+    setRoute(location.pathname + location.search);
+    setNotice('');
+  }, []);
   useEffect(() => {
+    const update = () => setRoute(location.pathname + location.search);
+    addEventListener('popstate', update);
+    api<Registry>('/v1/registry')
+      .then(setRegistry)
+      .catch((e) => setError(e));
+    return () => removeEventListener('popstate', update);
+  }, []);
+  useEffect(() => {
+    if (!registry) return;
     let cancelled = false;
-    get<Page>('/v1/jobs?limit=10')
+    api<Page>('/v1/jobs?limit=1&cashState=CONFIRMED_DIRECT')
       .then((p) => {
-        if (!cancelled) setPage(p);
+        if (!cancelled && p.items[0]) setExample({ id: p.items[0].jobId, run: p.snapshotRunId });
       })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [registry]);
+  useEffect(() => {
+    if (!registry) return;
+    let cancelled = false;
+    const u = new URL(route, location.origin);
+    const parts = u.pathname.split('/').filter(Boolean);
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setBusy(true);
+      setError(undefined);
+      setShowEvidence(false);
+      if (parts[0] === 'tasks') {
+        if (
+          parts[1] !== registry.chainId ||
+          parts[2]?.toLowerCase() !== registry.adapter ||
+          !parts[3] ||
+          !/^\d{1,78}$/.test(parts[3]) ||
+          parts.length > 5 ||
+          (parts[4] && parts[4] !== 'report')
+        )
+          throw new ApiError('UNSUPPORTED_DEPLOYMENT', '任务路径不在已登记主网部署内。', 422);
+        const data = await api<Detail>(
+          `/v1/jobs/${registry.chainId}/${registry.adapter}/${parts[3]}${u.searchParams.get('snapshotRunId') ? '?snapshotRunId=' + encodeURIComponent(u.searchParams.get('snapshotRunId')!) : ''}`,
+        );
+        if (cancelled) return;
+        setDetail(data);
+        setPage(undefined);
+        if (!u.searchParams.has('snapshotRunId'))
+          navigate(
+            taskPath(registry, data.job.jobId, data.snapshotRunId, u.pathname.endsWith('/report')),
+            true,
+          );
+      } else if (u.pathname === '/consumer') {
+        setDetail(undefined);
+        setPage(undefined);
+        if (u.searchParams.has('jobId')) {
+          const parsed = parseInput(u.searchParams.get('jobId')!, registry);
+          if (!('jobId' in parsed)) throw Error('集成演示请输入任务编号。');
+          const data = await api<Detail>(
+            `/v1/jobs/${registry.chainId}/${registry.adapter}/${parsed.jobId}${u.searchParams.has('snapshotRunId') ? '?snapshotRunId=' + encodeURIComponent(u.searchParams.get('snapshotRunId')!) : ''}`,
+          );
+          if (cancelled) return;
+          setDetail(data);
+          if (!u.searchParams.has('snapshotRunId'))
+            navigate(
+              '/consumer?jobId=' + parsed.jobId + '&snapshotRunId=' + data.snapshotRunId,
+              true,
+            );
+        }
+      } else if (u.pathname === '/') {
+        const q = new URLSearchParams({ limit: '10' });
+        for (const k of ['address', 'role', 'lifecycle', 'cashState', 'snapshotRunId', 'cursor']) {
+          const v = u.searchParams.get(k);
+          if (v) q.set(k, v);
+        }
+        const data = await api<Page>('/v1/jobs?' + q);
+        if (cancelled) return;
+        setPage(data);
+        setDetail(undefined);
+        if (!u.searchParams.has('snapshotRunId')) {
+          u.searchParams.set('snapshotRunId', data.snapshotRunId);
+          navigate(u.pathname + u.search, true);
+        }
+        setInput(u.searchParams.get('address') ?? '');
+        setRole(u.searchParams.get('role') ?? 'all');
+        setLife(u.searchParams.get('lifecycle') ?? '');
+        setCash(u.searchParams.get('cashState') ?? '');
+      } else throw new ApiError('UNSUPPORTED_ROUTE', '页面路径不受支持；请从首页查询。', 404);
+    })()
       .catch((e) => {
-        if (!cancelled) setError(String(e.message));
+        if (!cancelled) {
+          setDetail(undefined);
+          setPage(undefined);
+          setError(e instanceof Error ? e : Error('读取失败。'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setBusy(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
-  async function open(row: Row) {
-    setLoading(true);
-    setError('');
-    try {
-      setDetail(
-        await get<Detail>(
-          `/v1/jobs/5042/${row.adapter}/${row.jobId}?snapshotRunId=${page!.snapshotRunId}`,
-        ),
-      );
-      setShowEvidence(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '详情读取失败。');
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [route, registry, navigate]);
   function submit(e: FormEvent) {
     e.preventDefault();
-    setAddress(filter);
-    void load(filter);
+    if (!registry) return;
+    try {
+      const parsed = parseInput(input, registry);
+      if ('jobId' in parsed) {
+        navigate(consumer ? '/consumer?jobId=' + parsed.jobId : taskPath(registry, parsed.jobId));
+        return;
+      }
+      const q = new URLSearchParams({ address: parsed.address, role });
+      if (life) q.set('lifecycle', life);
+      if (cash) q.set('cashState', cash);
+      navigate('/?' + q);
+    } catch (e) {
+      setError(e instanceof Error ? e : Error('输入不受支持。'));
+    }
   }
-  const next = page ? knownValue(page.nextCursor) : undefined;
+  function filter() {
+    const q = new URLSearchParams();
+    if (input.trim()) {
+      if (!/^0x[\da-fA-F]{40}$/.test(input.trim())) {
+        setError(Error('地址格式不合法，请输入完整地址。'));
+        return;
+      }
+      q.set('address', input.trim().toLowerCase());
+      q.set('role', role);
+    }
+    if (life) q.set('lifecycle', life);
+    if (cash) q.set('cashState', cash);
+    navigate('/?' + q);
+  }
+  function paging(next: boolean) {
+    if (!page) return;
+    const q = new URLSearchParams(params);
+    let previous: string[];
+    try {
+      previous = JSON.parse(q.get('previous') ?? '[]');
+      if (
+        !Array.isArray(previous) ||
+        previous.some((p) => typeof p !== 'string' || p.length > 2048) ||
+        previous.length > 20
+      )
+        throw Error();
+    } catch {
+      setError(Error('前页位置不合法，请重新加载列表。'));
+      return;
+    }
+    if (next && page.nextCursor) {
+      previous.push(q.get('cursor') ?? '');
+      q.set('cursor', page.nextCursor);
+    } else {
+      const cursor = previous.pop();
+      if (cursor === undefined) return;
+      if (cursor) q.set('cursor', cursor);
+      else q.delete('cursor');
+    }
+    q.set('previous', JSON.stringify(previous));
+    navigate('/?' + q);
+  }
+  function reveal(ids: string[]) {
+    setShowEvidence(true);
+    setTimeout(
+      () =>
+        document
+          .getElementById('evidence-' + ids[0])
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      30,
+    );
+  }
+  const capture = detail?.job.snapshot ?? page?.snapshot;
+  const testOnly = capture?.sourceSet?.some((s) => s.includes('test'));
+  const transaction = (hash: string) =>
+    registry!.navigation.transactionOrigin + registry!.navigation.transactionPathPrefix + hash;
   return (
     <>
       <header>
-        <div className="brand">
+        <a
+          className="brand"
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate('/');
+          }}
+        >
           <span className="mark">◈</span>
           <div>
             <h1>Arc 任务证据台</h1>
-            <p>只读任务历史 · 结算事实 · 可回放证据</p>
+            <p>ArcBounty 报酬与结算核验</p>
           </div>
-        </div>
-        <span className="network">Arc 主网 · 5042</span>
+        </a>
+        <span className="network">Arc 主网 · 5042 · 只读</span>
       </header>
-      <main>
-        <div className="notice">
-          业务完成事件与真实资金到账分别核验。奖励、费用、保证金及账户待领取保持独立。
-        </div>
-        <div className="toolbar">
-          <button onClick={() => void load(address)}>刷新快照</button>
-          <button
-            onClick={() => {
-              setShowCoverage(!showCoverage);
-              if (!showCoverage)
-                get<Record<string, unknown>>('/v1/coverage')
-                  .then(setCoverage)
-                  .catch((e) => setError(e.message));
-            }}
-          >
-            查看覆盖与来源
-          </button>
-          <span>
-            {page
-              ? `存储回放 · 截至区块 ${page.snapshot?.blockNumber ?? page.items[0]?.snapshot.blockNumber ?? '当前范围为空'} · ${page.freshness.state === 'provider-down' ? '来源当前不可用' : page.freshness.state === 'stale' ? '快照已陈旧' : '显示采集时状态'}`
-              : '尚无可用快照'}
-          </span>
-        </div>
-        {page && (
-          <section aria-label="连续历史范围">
-            <h2>连续历史范围</h2>
-            {page.historyRange && knownValue(page.historyRange) ? (
-              (() => {
-                const range = knownValue(page.historyRange)!;
-                return (
-                  <>
-                    <p>
-                      声明窗口：区块 {range.fromBlock}–{range.targetBlock}；连续核验至{' '}
-                      {range.contiguousThrough}；{text(range.status)}。
-                    </p>
-                    {range.omittedPriorHistory && (
-                      <p>窗口之前的历史未覆盖，不能据此认定旧任务资金为零或完整清偿。</p>
-                    )}
-                    {range.gaps.map((gap) => (
-                      <p key={gap.fromBlock}>
-                        未核验区间 {gap.fromBlock}–{gap.toBlock}：{gap.reason}
-                      </p>
-                    ))}
-                  </>
-                );
-              })()
-            ) : (
-              <p>此快照尚未声明连续历史范围；定点证据不能代表全历史。</p>
+      <main className={report ? 'report' : ''}>
+        {testOnly && <p className="test-label">本地测试样例，不是主网证据。</p>}
+        {!detail && !report && (
+          <section className="search-hero">
+            <p className="eyebrow">从一个具体任务开始</p>
+            <h2>{consumer ? '结算卡独立集成演示' : '核对你的报酬、费用和待领取款'}</h2>
+            <p>
+              输入任务编号、ArcBounty
+              主网任务链接或完整地址，查看已采集的结算事实与证据。无需连接钱包。
+            </p>
+            <form onSubmit={submit}>
+              <label htmlFor="task-input">任务编号、任务链接或地址</label>
+              <div className="input-action">
+                <input
+                  id="task-input"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="任务编号 / https://arcbounty.app/bounty/… / 0x…"
+                  required
+                />
+                <button className="primary" disabled={!registry || busy}>
+                  查询
+                </button>
+              </div>
+            </form>
+            {example && registry && (
+              <button
+                className="subtle"
+                onClick={() => navigate(taskPath(registry, example.id, example.run))}
+              >
+                查看已核验示例：任务 #{example.id}
+              </button>
             )}
-          </section>
-        )}
-        {showCoverage && (
-          <section>
-            <h2>数据覆盖与运行状态</h2>
-            {page && <Coverage coverage={page.items[0]?.coverage ?? {}} />}
-            <pre>{JSON.stringify(coverage, null, 2)}</pre>
-            <p>完整当前状态不表示完整历史；存储回放不表示实时在线核验。</p>
+            <p className="quiet">查询只读已发布快照；不会匿名发起全链扫描。</p>
           </section>
         )}
         {error && (
-          <div role="alert" className="error">
-            <strong>数据暂不可用</strong>
-            <p>{error}</p>
-            <p>请检查数据库与采集记录，再重试；缺失值不会显示为零。</p>
+          <div className="error" role="alert">
+            <strong>
+              {error instanceof ApiError && error.status === 410
+                ? '固定快照已过期'
+                : error instanceof ApiError && error.status === 422
+                  ? '范围不受支持'
+                  : '查询未完成'}
+            </strong>
+            <p>{error.message}</p>
+            <p>缺失值不会显示为零；不会偷偷换成新快照。</p>
+            {error instanceof ApiError && error.status === 410 ? (
+              <button
+                onClick={() =>
+                  navigate(
+                    consumer
+                      ? '/consumer?jobId=' + encodeURIComponent(params.get('jobId') ?? '')
+                      : location.pathname,
+                  )
+                }
+              >
+                查询新的已采集快照
+              </button>
+            ) : (
+              <button onClick={() => navigate('/')}>返回首页重新查询</button>
+            )}
           </div>
         )}
-        {loading && <p role="status">正在读取持久快照…</p>}
-        {!detail ? (
-          <>
-            <div className="heading">
-              <h2>任务列表</h2>
-              <form onSubmit={submit}>
-                <label htmlFor="filter">角色地址筛选</label>
-                <input
-                  id="filter"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  placeholder="0x…"
-                />
-                <button>查询</button>
-              </form>
-            </div>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>任务</th>
-                    <th>发布者 / 工作者</th>
-                    <th>奖励面值</th>
-                    <th>业务状态</th>
-                    <th>现金状态</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {page?.items.map((row) => (
-                    <tr key={row.jobKey}>
-                      <td>
-                        <button className="job-link" onClick={() => void open(row)}>
-                          任务 #{row.jobId}
-                        </button>
-                        {row.selfTake && <small>自行接单标记</small>}
-                        {row.freshness === 'stale' && <small>旧快照，当前状态未刷新</small>}
-                      </td>
-                      <td>
-                        <Address value={row.poster} />
-                        <br />
-                        {knownValue(row.worker) ? (
-                          <Address value={knownValue(row.worker)!} />
-                        ) : (
-                          <span>尚未指定</span>
-                        )}
-                      </td>
-                      <td>{money(row.reward)}</td>
-                      <td>{text(row.lifecycle)}</td>
-                      <td>
-                        <span className="badge partial">{text(row.cashState)}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {page && page.items.length === 0 && (
-              <p>当前快照与筛选范围内没有记录。该结果仅适用于已声明的覆盖范围。</p>
+        {busy && <p role="status">正在读取持久快照…</p>}
+        {notice && (
+          <p role="status" className="feedback">
+            {notice}
+          </p>
+        )}
+        {capture && (
+          <div className="freshness">
+            <strong>
+              采集时间：
+              {new Date(capture.observedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Singapore' })}
+              （新加坡时间）
+            </strong>
+            <span>截至区块 {capture.blockNumber} · 单来源 · 存储回放</span>
+            {page?.freshness.state === 'stale' && <span>快照已陈旧</span>}
+            {page?.freshness.state === 'provider-down' && (
+              <span>来源当前不可用，保留已采集结果</span>
             )}
-            <button disabled={!next || loading} onClick={() => void load(address, next)}>
-              下一页
+          </div>
+        )}
+        {(page || detail) && (
+          <div className="toolbar no-print">
+            <button
+              onClick={() => {
+                if (detail && registry)
+                  navigate(
+                    consumer
+                      ? '/consumer?jobId=' + detail.job.jobId
+                      : taskPath(registry, detail.job.jobId),
+                  );
+                else {
+                  const q = new URLSearchParams(params);
+                  q.delete('snapshotRunId');
+                  q.delete('cursor');
+                  q.delete('previous');
+                  navigate('/?' + q);
+                }
+                setNotice('只重新读取已采集结果，不主动重新核验链。');
+              }}
+            >
+              重新加载已采集结果
             </button>
-          </>
-        ) : (
+            <button
+              onClick={() =>
+                void api<Record<string, unknown>>('/v1/coverage').then(setCoverage).catch(setError)
+              }
+            >
+              查看覆盖与来源
+            </button>
+          </div>
+        )}
+        {page && (
           <>
-            <button onClick={() => setDetail(undefined)}>← 返回任务列表</button>
+            <section className="filters">
+              <h2>任务列表</h2>
+              <div className="filter-grid">
+                <label>
+                  角色地址筛选
+                  <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="完整 0x 地址"
+                  />
+                </label>
+                <label>
+                  地址角色
+                  <select
+                    aria-label="地址角色"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                  >
+                    <option value="all">发布者或工作者</option>
+                    <option value="poster">发布者</option>
+                    <option value="worker">工作者</option>
+                  </select>
+                </label>
+                <label>
+                  业务状态
+                  <select
+                    aria-label="业务状态"
+                    value={life}
+                    onChange={(e) => setLife(e.target.value)}
+                  >
+                    <option value="">全部已采集业务状态</option>
+                    {[
+                      'OPEN',
+                      'TAKEN',
+                      'SUBMITTED',
+                      'DISPUTED',
+                      'APPROVED',
+                      'CANCELLED',
+                      'REJECTED',
+                      'EXPIRED',
+                      'DISPUTE_WORKER',
+                      'DISPUTE_POSTER',
+                      'TIMEOUT_SPLIT',
+                      'TERMINAL_UNKNOWN',
+                    ].map((s) => (
+                      <option key={s} value={s}>
+                        {label(s)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  资金状态
+                  <select
+                    aria-label="资金状态"
+                    value={cash}
+                    onChange={(e) => setCash(e.target.value)}
+                  >
+                    <option value="">全部已采集资金状态</option>
+                    {[
+                      'CONFIRMED_DIRECT',
+                      'PARKED',
+                      'PARTIAL',
+                      'UNKNOWN',
+                      'CONFLICT',
+                      'NONE_OBSERVED',
+                      'NOT_APPLICABLE',
+                      'VERIFIED_SEQUENCE_DERIVED',
+                    ].map((s) => (
+                      <option key={s} value={s}>
+                        {label(s)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button onClick={filter}>应用筛选</button>
+              </div>
+            </section>
+            <div className="job-grid">
+              {page.items.map((row) => (
+                <article className="job-card" key={row.jobId}>
+                  <button
+                    className="job-link"
+                    onClick={() => {
+                      if (registry)
+                        navigate(
+                          taskPath(registry, row.jobId, page.snapshotRunId) +
+                            '&returnQuery=' +
+                            encodeURIComponent(params.toString()),
+                        );
+                    }}
+                  >
+                    任务 #{row.jobId}
+                  </button>
+                  <span
+                    className={'badge ' + semantics(value(row.cashState) ?? row.cashState.state)}
+                  >
+                    {label(
+                      value(row.cashState) ??
+                        (row.cashState.state === 'conflict' ? 'CONFLICT' : 'UNKNOWN'),
+                    )}
+                  </span>
+                  <p>{label(value(row.lifecycle) ?? 'TERMINAL_UNKNOWN')}</p>
+                  <strong>{value(row.reward) ? money(value(row.reward)!) : '奖励面值未知'}</strong>
+                  <p>
+                    发布者：
+                    <Address address={value(row.poster) ?? ''} />
+                    <br />
+                    工作者：
+                    {value(row.worker) ? <Address address={value(row.worker)!} /> : '尚未指定'}
+                  </p>
+                  {params.has('address') && (
+                    <p className="role-match">
+                      查询地址的角色：{value(row.poster) === params.get('address') ? '发布者 ' : ''}
+                      {value(row.worker) === params.get('address') ? '工作者' : ''}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
+            {page.items.length === 0 && (
+              <section>
+                <h3>当前快照与筛选范围内没有匹配记录</h3>
+                <p>该结果不是全网无记录，也不表示款项为零。可清除筛选或核对支持的主网部署。</p>
+                <button onClick={() => navigate('/')}>清除筛选</button>
+              </section>
+            )}
+            <nav className="pagination" aria-label="任务分页">
+              <button
+                disabled={busy || !params.has('previous') || params.get('previous') === '[]'}
+                onClick={() => paging(false)}
+              >
+                上一页
+              </button>
+              <span>固定快照分页</span>
+              <button disabled={!page.nextCursor || busy} onClick={() => paging(true)}>
+                下一页
+              </button>
+            </nav>
+            <details className="advanced">
+              <summary>高级：连续历史范围与覆盖缺口</summary>
+              <section aria-label="连续历史范围">
+                <h2>连续历史范围</h2>
+                {value(page.historyRange) ? (
+                  <>
+                    <p>
+                      声明窗口：区块 {value(page.historyRange)!.fromBlock}–
+                      {value(page.historyRange)!.targetBlock}；连续核验至{' '}
+                      {value(page.historyRange)!.contiguousThrough}；
+                      {label(value(page.historyRange)!.status)}。
+                    </p>
+                    {value(page.historyRange)!.omittedPriorHistory && (
+                      <p>窗口之前的历史未覆盖，不能据此认定旧任务资金为零或完整清偿。</p>
+                    )}
+                    {value(page.historyRange)!.gaps.map((g) => (
+                      <p key={g.fromBlock}>
+                        未核验区间 {g.fromBlock}–{g.toBlock}：{g.reason}
+                      </p>
+                    ))}
+                  </>
+                ) : (
+                  <p>本快照未声明完整历史范围。</p>
+                )}
+              </section>
+            </details>
+          </>
+        )}
+        {detail && registry && (
+          <>
+            <div className="heading no-print">
+              <button
+                onClick={() =>
+                  navigate('/' + (params.get('returnQuery') ? '?' + params.get('returnQuery') : ''))
+                }
+              >
+                ← 返回任务列表
+              </button>
+              {consumer && <span>独立消费者：真实 HTTP，同一结算结果模型</span>}
+            </div>
             <div className="heading">
-              <h2>任务 #{detail.job.jobId}</h2>
+              <h2>
+                {report ? '结算报告 · ' : ''}任务 #{detail.job.jobId}
+              </h2>
+              <span className={'badge ' + semantics(detail.result.state)}>
+                {label(value(detail.job.lifecycle) ?? 'TERMINAL_UNKNOWN')}；
+                {label(value(detail.job.cashState) ?? 'UNKNOWN')}
+              </span>
+            </div>
+            <p className="roles">
+              发布者：
+              <Address address={value(detail.job.poster) ?? ''} />
+              工作者：
+              {value(detail.job.worker) ? (
+                <Address address={value(detail.job.worker)!} />
+              ) : (
+                '尚未指定'
+              )}
+            </p>
+            <SettlementCard result={detail.result} onEvidence={reveal} />
+            <div className="toolbar no-print">
+              <button
+                onClick={() =>
+                  void navigator.clipboard
+                    .writeText(
+                      location.origin + taskPath(registry, detail.job.jobId, detail.snapshotRunId),
+                    )
+                    .then(
+                      () => setNotice('固定快照任务链接已复制'),
+                      () => setNotice('复制失败，请从地址栏复制'),
+                    )
+                }
+              >
+                复制固定快照链接
+              </button>
+              <button
+                className="primary"
+                onClick={() =>
+                  navigate(taskPath(registry, detail.job.jobId, detail.snapshotRunId, true))
+                }
+              >
+                生成可读结算报告
+              </button>
+              {report && <button onClick={() => window.print()}>打印 / 保存 PDF</button>}
               <a
                 className="button"
-                href={`/api/v1/jobs/5042/${detail.job.adapter}/${detail.job.jobId}?snapshotRunId=${detail.snapshotRunId}&format=json`}
+                href={`/api/v1/jobs/${registry.chainId}/${registry.adapter}/${detail.job.jobId}?snapshotRunId=${detail.snapshotRunId}&format=json`}
               >
                 导出证据 JSON
               </a>
+              <a
+                className="button"
+                href={
+                  registry.navigation.taskOrigin +
+                  registry.navigation.taskPathPrefix +
+                  detail.job.jobId
+                }
+                target="_blank"
+                rel="noreferrer"
+              >
+                查看上游任务
+              </a>
             </div>
-            <p className="conclusion">
-              {text(detail.job.lifecycle)}；{text(detail.job.cashState)}。
-            </p>
-            <Coverage coverage={detail.job.coverage} />
-            <div className="grid">
-              <section>
-                <h3>合约状态快照</h3>
-                <p>奖励面值：{money(detail.job.reward)}</p>
-                <p>
-                  发布者：
-                  <Address value={detail.job.poster} />
-                </p>
-                <p>规则版本：{detail.ruleVersion}</p>
-                <p>采集时间：{detail.job.snapshot.observedAt}</p>
-                <details>
-                  <summary>查看原始状态</summary>
-                  <pre>{JSON.stringify(detail.rawState, null, 2)}</pre>
-                </details>
-              </section>
-              <section>
-                <h3>独立资金腿</h3>
-                {detail.settlementLegs.length === 0 ? (
-                  <p>当前历史不足，暂无法核验资金腿。</p>
-                ) : (
-                  detail.settlementLegs.map((leg) => (
-                    <article key={leg.id}>
+            {report && (
+              <p className="report-disclosure">
+                这是同一固定快照的只读结算报告，不是官方审计证书。快照：{detail.snapshotRunId}
+                ；金额和证据来自下列公开链上记录。
+              </p>
+            )}
+            <section>
+              <h3>资金分配明细</h3>
+              {detail.settlementLegs.length === 0 ? (
+                <p>当前历史不足，暂无法核验资金分配。</p>
+              ) : (
+                <div className="allocation-grid">
+                  {detail.settlementLegs.map((l) => (
+                    <article key={l.id}>
                       <strong>
-                        {text(leg.role)} · {text(leg.kind)}
+                        {label(l.role)} · {label(l.kind)}
                       </strong>
                       <p>
-                        应分配：{money(leg.expectedAmount)}
+                        应分配：{money(l.expectedAmount)}
                         <br />
-                        观察到转移：{money(leg.observedAmount)}
+                        观察到转移：
+                        {value(l.observedAmount)
+                          ? money(value(l.observedAmount)!)
+                          : '未知：暂无法核验'}
                         <br />
-                        曾转入待领取：{money(leg.parkedAmount)}
+                        曾转入待领取：
+                        {value(l.parkedAmount) ? money(value(l.parkedAmount)!) : '未知：暂无法核验'}
                       </p>
                       <p>
-                        {text(leg.attribution)} · <Address value={leg.payee} />
+                        {label(l.attribution)} · <Address address={l.payee} />
                       </p>
+                      <button
+                        onClick={() => reveal(l.evidenceIds)}
+                        disabled={!l.evidenceIds.length}
+                      >
+                        查看该分配证据
+                      </button>
                     </article>
-                  ))
-                )}
-              </section>
-            </div>
+                  ))}
+                </div>
+              )}
+            </section>
             <section>
-              <h3>账户级待领取</h3>
-              <p>此处金额属于整个账户，不能在每个任务中重复汇总。</p>
-              {detail.pendingAccounts.map((account) => (
-                <p key={account.payee}>
-                  <Address value={account.payee} /> {money(account.balance)} · 历史
-                  {text(account.history)}
-                </p>
+              <h3>具体待领取与清偿关系</h3>
+              <p>
+                账户级待领取总余额不能分摊为每个任务的欠款；旧义务清偿不会覆盖新的义务。历史不完整时只显示已核验范围。
+              </p>
+              {detail.pendingAccounts.map((a) => (
+                <article key={a.payee}>
+                  <h4>
+                    账户：
+                    <Address address={a.payee} />
+                  </h4>
+                  <p>
+                    账户总待领取：{money(a.balance)} · 历史{label(a.history)}
+                    （账户级，不能重复归属任务）
+                  </p>
+                  {a.obligations
+                    .filter((o) => o.jobId === detail.job.jobId)
+                    .map((o) => (
+                      <div className="obligation" key={o.id}>
+                        <strong>
+                          {label(o.status)}：{money(o.amount)}
+                        </strong>
+                        <p>本任务具体义务 {o.id}</p>
+                        {o.clearedBy && <p>对应清偿事件：{o.clearedBy}</p>}
+                        <a href={transaction(o.transactionHash)} target="_blank" rel="noreferrer">
+                          查看停放交易
+                        </a>
+                      </div>
+                    ))}
+                  {!a.obligations.some((o) => o.jobId === detail.job.jobId) && (
+                    <p>尚无可归属本任务的具体义务证据。</p>
+                  )}
+                  {a.withdrawals.map((w) => (
+                    <details key={w.eventId}>
+                      <summary>账户清偿批次：{money(w.amount)}</summary>
+                      <p>
+                        仅账户级，关联具体义务：
+                        {w.obligationIds.join('、') || '未完整核验，不能推定已领取'}
+                      </p>
+                      <p>清偿事件：{w.eventId}</p>
+                      <a href={transaction(w.transactionHash)} target="_blank" rel="noreferrer">
+                        查看提现交易
+                      </a>
+                    </details>
+                  ))}
+                </article>
               ))}
+            </section>
+            <section>
+              <h3>交易级 Gas（单列）</h3>
+              <p>
+                数值属于整笔交易；批量任务共用交易时，不分摊或重复累加为每个任务费用，也不从报酬中扣除。
+              </p>
+              {detail.result.gas.length === 0 ? (
+                <p>交易 Gas 未取得可核验回执。</p>
+              ) : (
+                detail.result.gas.map((g) => (
+                  <article key={g.transactionHash}>
+                    <strong>{money(g.amount)}</strong>
+                    <p>
+                      付费方：
+                      {value(g.payer) ? (
+                        <Address address={value(g.payer)!} />
+                      ) : (
+                        '未知：回执未提供付费方'
+                      )}
+                    </p>
+                    <a href={transaction(g.transactionHash)} target="_blank" rel="noreferrer">
+                      浏览器交易：{g.transactionHash.slice(0, 12)}…
+                    </a>
+                    <button onClick={() => reveal(g.evidenceIds)}>核对 Gas 回执</button>
+                  </article>
+                ))
+              )}
             </section>
             <section>
               <h3>链上事件时间线</h3>
@@ -507,54 +737,146 @@ function App() {
                 <p>尚未取得可核验历史事件。</p>
               ) : (
                 detail.timeline.map((e) => (
-                  <article key={e.id}>
-                    <strong>{text(e.name)}</strong>
-                    <p>区块 {e.blockNumber}</p>
-                    <details>
-                      <summary>交易与事件参数</summary>
-                      <pre>{JSON.stringify(e, null, 2)}</pre>
-                    </details>
+                  <article className="timeline-item" key={e.id}>
+                    <strong>{label(e.name)}</strong>
+                    <span>区块 {e.blockNumber}</span>
+                    <a href={transaction(e.transactionHash)} target="_blank" rel="noreferrer">
+                      交易证据
+                    </a>
                   </article>
                 ))
               )}
-              {knownValue(detail.nextTimelineCursor) && (
+              {detail.nextTimelineCursor && (
                 <button
                   onClick={() =>
-                    get<Detail>(
-                      `/v1/jobs/5042/${detail.job.adapter}/${detail.job.jobId}?snapshotRunId=${detail.snapshotRunId}&timelineCursor=${encodeURIComponent(knownValue(detail.nextTimelineCursor)!)}`,
+                    void api<Detail>(
+                      `/v1/jobs/${registry.chainId}/${registry.adapter}/${detail.job.jobId}?snapshotRunId=${detail.snapshotRunId}&timelineCursor=${encodeURIComponent(detail.nextTimelineCursor!)}`,
                     )
                       .then((d) =>
                         setDetail({ ...d, timeline: [...detail.timeline, ...d.timeline] }),
                       )
-                      .catch((e) => setError(e.message))
+                      .catch(setError)
                   }
                 >
                   继续读取时间线
                 </button>
               )}
             </section>
-            <section>
-              <h3>证据与回放</h3>
-              <p>来源：持久存储回放；未经校准概率评估。Gas 单列，未从任务奖励扣除。</p>
-              <button onClick={() => setShowEvidence(!showEvidence)}>查看原始证据</button>
-              {showEvidence &&
-                detail.evidence.map((e) => (
-                  <details key={e.id}>
-                    <summary>证据 {e.id}</summary>
-                    <p>内容摘要 {e.payloadHash}</p>
-                    <pre>{JSON.stringify(e.raw, null, 2)}</pre>
-                  </details>
-                ))}
+            <section className="no-print">
+              <h3>有界补证状态</h3>
+              {detail.evidenceRequest ? (
+                <p>
+                  {label(detail.evidenceRequest.status)}；所选区间 {detail.evidenceRequest.from}–
+                  {detail.evidenceRequest.to}，已核验至 {detail.evidenceRequest.head}
+                  。完成区间不表示完整任务历史。
+                </p>
+              ) : (
+                <p>
+                  当前没有该任务补证请求。每轮最多 2000 区块、总请求最多 200000
+                  区块；同任务一小时最多一个新请求。
+                </p>
+              )}
+              <button
+                disabled={detail.evidenceRequest?.status === 'PENDING'}
+                onClick={() =>
+                  void api<{ message: string }>(
+                    `/v1/jobs/${registry.chainId}/${registry.adapter}/${detail.job.jobId}/evidence-requests`,
+                    'POST',
+                  )
+                    .then((r) => setNotice(r.message))
+                    .catch(setError)
+                }
+              >
+                申请本任务有界补证
+              </button>
+              <button
+                onClick={() =>
+                  void api<Detail>(
+                    `/v1/jobs/${registry.chainId}/${registry.adapter}/${detail.job.jobId}?snapshotRunId=${detail.snapshotRunId}`,
+                  )
+                    .then(setDetail)
+                    .catch(setError)
+                }
+              >
+                查询补证队列状态
+              </button>
             </section>
+            <details className="advanced" open={showEvidence}>
+              <summary
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowEvidence(!showEvidence);
+                }}
+              >
+                证据与高级信息
+              </summary>
+              <h3>来源、覆盖与回放</h3>
+              <div className="coverage">
+                {Object.entries(detail.job.coverage).map(([k, v]) => (
+                  <span className={'badge ' + semantics(value(v) ?? v.state)} key={k}>
+                    {label(k)}：{label(value(v) ?? v.state)}
+                  </span>
+                ))}
+              </div>
+              <p>
+                来源：持久存储回放；未经校准概率评估。规则版本 {detail.ruleVersion}
+                。完整当前状态不表示完整历史；存储回放不表示实时在线核验。
+              </p>
+              <button onClick={() => setShowEvidence(true)}>查看原始证据</button>
+              <details>
+                <summary>查看原始状态</summary>
+                <pre>{JSON.stringify(value(detail.rawState), null, 2)}</pre>
+              </details>
+              {detail.evidence.map((e) => (
+                <details id={'evidence-' + e.id} key={e.id}>
+                  <summary>证据 {e.id}</summary>
+                  <p>
+                    来源：{e.sourceAlias} · 摘要：{e.payloadHash}
+                  </p>
+                  <pre>{JSON.stringify(e.safePayload, null, 2)}</pre>
+                </details>
+              ))}
+            </details>
           </>
         )}
+        {coverage && (
+          <details open className="advanced">
+            <summary>数据覆盖与运行状态</summary>
+            <p>完整当前状态不表示完整历史；存储回放不表示实时在线核验。</p>
+            <pre>{JSON.stringify(coverage, null, 2)}</pre>
+          </details>
+        )}
         <footer>
-          {page?.items.some((r) => r.snapshot.sourceSet?.includes('test-only')) && (
-            <p>本地测试样例，不是主网证据。</p>
+          <p>
+            仅支持已登记部署。局部结算事实可查询；正式取证模式仍依覆盖关闭。本组件独立提供数据，不表示
+            Arc 官方认证、资助已获批或上游已采用。
+          </p>
+          {registry && (
+            <nav>
+              <a href={registry.navigation.sourceRepository} target="_blank" rel="noreferrer">
+                部署分支公开源码
+              </a>
+              <a
+                href="/consumer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/consumer');
+                }}
+              >
+                开发者：结算卡集成演示
+              </a>
+            </nav>
           )}
-          仅支持已登记部署。此组件独立提供数据，不表示 Arc 官方认证或 ArcBounty 已采用。
-          <br />
-          {page && `快照采集于 ${page.freshness.capturedAt}`}
+          <details>
+            <summary>English overview（英文简介）</summary>
+            <p>
+              Arc Task Ledger is a read-only ArcBounty settlement viewer. Enter a supported task or
+              address, inspect observed rewards and fees, verify task-specific obligations, and
+              share a fixed-snapshot report. It reads Arc mainnet receipts and versioned PostgreSQL
+              projections. Partial history remains explicit; no wallet connection or signing is
+              required.
+            </p>
+          </details>
         </footer>
       </main>
     </>

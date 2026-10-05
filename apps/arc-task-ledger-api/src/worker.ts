@@ -27,6 +27,8 @@ try {
       const run = await syncOnce(reader, store, {
         maxJobs: config.maxJobs,
         scanBudget: config.scanBudget,
+        recentBudget: config.recentBudget,
+        proofBudget: config.proofBudget,
         currentOnly: process.argv.includes('--current-only'),
         evidenceBlocks: config.evidenceBlocks,
         ...(config.historyFromBlock === undefined
@@ -45,6 +47,7 @@ try {
         durationMs: Date.now() - started,
         gaps: run.errors,
         historyRange: run.historyRange,
+        collection: run.collection,
       };
       await store.recordSync(true, {
         snapshotRunId: run.id,
@@ -52,6 +55,7 @@ try {
         rpcRequests: reader.requests,
         responseBytes: reader.responseBytes,
         durationMs: Date.now() - started,
+        collection: run.collection,
       });
       if (process.env.ARC_EVIDENCE_OUTPUT)
         await writeFile(process.env.ARC_EVIDENCE_OUTPUT, JSON.stringify(result, null, 2) + '\n');

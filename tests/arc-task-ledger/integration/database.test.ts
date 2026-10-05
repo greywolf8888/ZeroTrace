@@ -1,14 +1,16 @@
 import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
 import { LedgerStore } from '../../../apps/arc-task-ledger-api/src/storage.js';
-import { DEPLOYMENT } from '../../../packages/arc-task-ledger/src/config.js';
+import { ABI, DEPLOYMENT } from '../../../packages/arc-task-ledger/src/config.js';
+import { decodeFunctionData, encodeFunctionResult } from 'viem';
 import { rawEvidence } from '../../../packages/arc-task-ledger/src/protocol.js';
 import { createLedgerApp } from '../../../apps/arc-task-ledger-api/src/app.js';
-import { run, snapshot, meta } from '../fixtures/helpers.js';
+import { run, snapshot, meta, receipt, event, POSTER } from '../fixtures/helpers.js';
 import { ArcReader } from '../../../packages/arc-task-ledger/src/reader.js';
 import {
   scanHistory,
   syncOnce,
   historyCheckpointKey,
+  scanPriority,
 } from '../../../packages/arc-task-ledger/src/worker.js';
 import { readonlyChain } from '../fixtures/readonly-chain.js';
 import type { JsonRpcTransport } from '@zerotrace/chain-adapters/transport';
@@ -23,13 +25,255 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
   await store.pool.query(
-    'TRUNCATE arc_task_ledger_v1.receipts,arc_task_ledger_v1.jobs,arc_task_ledger_v1.runs,arc_task_ledger_v1.observations,arc_task_ledger_v1.segments,arc_task_ledger_v1.checkpoints,arc_task_ledger_v1.sync_attempts',
+    'TRUNCATE arc_task_ledger_v1.evidence_requests,arc_task_ledger_v1.receipts,arc_task_ledger_v1.jobs,arc_task_ledger_v1.runs,arc_task_ledger_v1.observations,arc_task_ledger_v1.segments,arc_task_ledger_v1.checkpoints,arc_task_ledger_v1.sync_attempts',
   );
 });
 afterAll(async () => {
   await store.close();
 });
 describe('真实 PostgreSQL 与 API 集成', () => {
+  it('补证POST去重、有界、版本隔离；GET不触发，角色筛选在数据库执行', async () => {
+    const fixture = run('request_test', ['8']);
+    await store.publish(fixture, []);
+    const app = await createLedgerApp(store, secret, store);
+    try {
+      const path = `/v1/jobs/5042/${DEPLOYMENT.adapter}/8`;
+      const before = await store.pool.query(
+        'SELECT count(*) AS n FROM arc_task_ledger_v1.evidence_requests',
+      );
+      expect((await app.inject(path)).statusCode).toBe(200);
+      expect(
+        (await store.pool.query('SELECT count(*) AS n FROM arc_task_ledger_v1.evidence_requests'))
+          .rows,
+      ).toEqual(before.rows);
+      const first = await app.inject({
+        method: 'POST',
+        url: path + '/evidence-requests',
+        payload: {},
+      });
+      expect(first.statusCode).toBe(202);
+      const request = first.json().request;
+      expect(BigInt(request.to) - BigInt(request.from) + 1n).toBeLessThanOrEqual(200000n);
+      const again = await app.inject({
+        method: 'POST',
+        url: path + '/evidence-requests',
+        payload: {},
+      });
+      expect(again.json().request.id).toBe(request.id);
+      expect(
+        (await store.pool.query('SELECT count(*) AS n FROM arc_task_ledger_v1.evidence_requests'))
+          .rows[0].n,
+      ).toBe('1');
+      expect(
+        (
+          await app.inject({
+            method: 'POST',
+            url: path + '/evidence-requests',
+            payload: { rpcUrl: 'https://evil.test' },
+          })
+        ).statusCode,
+      ).toBe(400);
+      expect(
+        (
+          await app.inject({
+            method: 'POST',
+            url: '/v1/jobs/1/' + DEPLOYMENT.adapter + '/8/evidence-requests',
+            payload: {},
+          })
+        ).statusCode,
+      ).toBe(422);
+      expect((await store.nextEvidenceRequest())!.id).toBe(request.id);
+      await store.pool.query(
+        "UPDATE arc_task_ledger_v1.evidence_requests SET rule_version='retired',id='retired_'||id WHERE id=$1",
+        [request.id],
+      );
+      expect(await store.nextEvidenceRequest()).toBeUndefined();
+      const newer = await app.inject({
+        method: 'POST',
+        url: path + '/evidence-requests',
+        payload: {},
+      });
+      expect(newer.statusCode).toBe(202);
+      expect(newer.json().request.id).not.toBe('retired_' + request.id);
+      await store.pool.query(
+        "UPDATE arc_task_ledger_v1.evidence_requests SET status='COMPLETED' WHERE id=$1",
+        [newer.json().request.id],
+      );
+      expect(
+        (await app.inject({ method: 'POST', url: path + '/evidence-requests', payload: {} })).json()
+          .request.id,
+      ).toBe(newer.json().request.id);
+      const poster = fixture.jobs[0]!.job.poster;
+      const page = (await app.inject('/v1/jobs?address=' + poster + '&role=poster')).json();
+      expect(page.items.length).toBe(1);
+      expect(
+        (await app.inject('/v1/jobs?address=' + poster + '&role=worker')).json().items.length,
+      ).toBe(0);
+    } finally {
+      await app.close();
+    }
+  });
+  it('本地合成新任务从最新预算进入PG与API，不等待旧历史回填；重读定点复用原始回执', async () => {
+    const base = readonlyChain(false);
+    let added = false;
+    const height = BigInt(DEPLOYMENT.verifiedDeploymentBlock) + 1003n;
+    const tx = '0x' + 'd'.repeat(64);
+    const created = receipt(
+      [
+        event(
+          'BountyCreated',
+          {
+            jobId: 19n,
+            poster: POSTER,
+            reward: 1000000n,
+            deadline: 9999999999n,
+            category: '本地合成',
+          },
+          0,
+        ),
+      ].map((l) => ({ ...l, transactionHash: tx, blockNumber: '0x' + height.toString(16) })),
+      { transactionHash: tx, blockNumber: '0x' + height.toString(16) },
+    );
+    const handle = async <T>(method: string, params: readonly unknown[] = []) => {
+      if (method === 'eth_getBlockByNumber' && params[0] === 'finalized') {
+        const block = await base.request<Record<string, unknown>>(method, params);
+        return { ...block, number: '0x' + (added ? height : height - 1n).toString(16) } as T;
+      }
+      if (method === 'eth_call') {
+        const { functionName, args } = decodeFunctionData({
+          abi: ABI,
+          data: (params[0] as { data: `0x${string}` }).data,
+        });
+        if (functionName === 'totalBounties')
+          return encodeFunctionResult({ abi: ABI, functionName, result: added ? 2n : 1n }) as T;
+        if (functionName === 'allJobIds')
+          return encodeFunctionResult({
+            abi: ABI,
+            functionName,
+            result: args?.[0] === 1n ? 19n : 8n,
+          }) as T;
+        if (functionName === 'getBountyMeta' && args?.[0] === 19n) {
+          const state = meta({ jobId: '19', resolved: false, isTaken: false });
+          const decoded = Object.fromEntries(
+            Object.entries(state).map(([k, v]) => [
+              k,
+              typeof v === 'string' && /^\d+$/.test(v) ? BigInt(v) : v,
+            ]),
+          );
+          return encodeFunctionResult({ abi: ABI, functionName, result: decoded }) as T;
+        }
+      }
+      if (method === 'eth_getTransactionReceipt' && params[0] === tx) return created as T;
+      if (method === 'eth_getLogs') {
+        const q = params[0] as { fromBlock: string; toBlock: string };
+        const old = await base.request<unknown[]>(method, params);
+        return [
+          ...old,
+          ...(added && BigInt(q.fromBlock) <= height && BigInt(q.toBlock) >= height
+            ? created.logs
+            : []),
+        ] as T;
+      }
+      return base.request<T>(method, params);
+    };
+    const transport: JsonRpcTransport = {
+      endpointId: 'test-only',
+      request: handle,
+      requestSourced: async <T>(m: string, p: readonly unknown[] = []) => ({
+        value: await handle<T>(m, p),
+        endpointId: 'test-only',
+      }),
+    };
+    const reader = new ArcReader(
+      {
+        rpcUrl: 'https://rpc.mainnet.arc.io',
+        rpcHosts: ['rpc.mainnet.arc.io'],
+        providerAlias: 'test-only',
+      },
+      transport,
+    );
+    try {
+      const options = {
+        maxJobs: 5,
+        scanBudget: '1',
+        recentBudget: '1',
+        proofBudget: '0',
+        evidenceBlocks: [(height - 1n).toString()],
+      };
+      await syncOnce(reader, store, { ...options, snapshotBlock: (height - 1n).toString() });
+      added = true;
+      const receiptReads = vi.spyOn(reader, 'read');
+      const current = await syncOnce(reader, store, {
+        ...options,
+        snapshotBlock: height.toString(),
+      });
+      expect(current.totalExpected).toBe('2');
+      expect(current.coverage.lifecycleHistory).toBe('partial');
+      expect(
+        current.jobs
+          .find((j) => j.job.jobId === '19')!
+          .timeline.some((e) => e.name === 'BountyCreated'),
+      ).toBe(true);
+      expect(
+        receiptReads.mock.calls.filter(
+          ([method, params]) => method === 'eth_getTransactionReceipt' && params?.[0] === tx,
+        ),
+      ).toHaveLength(1);
+      const app = await createLedgerApp(store, secret);
+      try {
+        const visible = (
+          await app.inject(`/v1/jobs/5042/${DEPLOYMENT.adapter}/19?snapshotRunId=${current.id}`)
+        ).json();
+        expect(visible.job.jobId).toBe('19');
+        expect(visible.timeline[0].name).toBe('BountyCreated');
+      } finally {
+        await app.close();
+      }
+    } finally {
+      await reader.close();
+    }
+  });
+  it('最新变化预算独立落盘、续采与补证水位事务一致；回填仍partial', async () => {
+    const config = {
+      rpcUrl: 'https://rpc.mainnet.arc.io',
+      rpcHosts: ['rpc.mainnet.arc.io'],
+      providerAlias: 'test-only',
+    };
+    const reader = new ArcReader(config, readonlyChain(false));
+    const anchor = await reader.anchor();
+    const spy = vi.spyOn(reader, 'logs');
+    const first = await scanPriority(reader, store, anchor, '1', '0');
+    expect(first.recent).toMatchObject({ through: anchor.blockNumber, complete: true });
+    const receipts = await store.receiptsThrough(anchor.blockNumber);
+    expect(receipts.length).toBeGreaterThan(0);
+    const second = await scanPriority(
+      reader,
+      store,
+      { ...anchor, blockNumber: (BigInt(anchor.blockNumber) + 1n).toString() },
+      '1',
+      '0',
+    );
+    expect(spy).toHaveBeenLastCalledWith(
+      (BigInt(anchor.blockNumber) + 1n).toString(),
+      (BigInt(anchor.blockNumber) + 1n).toString(),
+    );
+    expect(second.recent).toMatchObject({ complete: true });
+    const fixture = run('proof_transaction', ['8']);
+    await store.publish(fixture, []);
+    const q = await store.enqueueEvidence(fixture.jobs[0]!, fixture.id);
+    const lower = { ...anchor, blockNumber: fixture.snapshot.blockNumber };
+    await scanPriority(reader, store, lower, '0', '1');
+    const progressed = await store.evidenceRequest('8');
+    expect(progressed!.head).toBe(q.from);
+    expect(
+      (
+        await store.pool.query(
+          "SELECT count(*) AS n FROM arc_task_ledger_v1.segments WHERE document->>'scope'='bounded-task-enrichment'",
+        )
+      ).rows[0].n,
+    ).toBe('1');
+    await reader.close();
+  });
   it('声明窗口预算缺口→关闭重开续采；窗口完整不提升部署全历史', async () => {
     const from = (BigInt(DEPLOYMENT.verifiedDeploymentBlock) + 1n).toString();
     const target = (BigInt(from) + 1n).toString();
@@ -606,7 +850,7 @@ describe('真实 PostgreSQL 与 API 集成', () => {
     try {
       const base = app.listeningOrigin;
       const result = await fetchLedgerJob(base, '5042', DEPLOYMENT.adapter, '8');
-      expect(result.degraded).toBe(false);
+      expect(result.degraded).toBe(true); // HTTP成功不等于资金与覆盖完整。
       expect((result.job as { job: { jobId: string } }).job.jobId).toBe('8');
       const fallback = await fetchLedgerJob(base, '5042', DEPLOYMENT.adapter, '999', async () => ({
         resolved: true,

@@ -7,6 +7,8 @@ import {
   lifecycle,
 } from '../../../packages/arc-task-ledger/src/protocol.js';
 import { settlement } from '../../../packages/arc-task-ledger/src/settlement.js';
+import { accountPending } from '../../../packages/arc-task-ledger/src/settlement.js';
+import { known } from '../../../packages/arc-task-ledger/src/types.js';
 import { DEPLOYMENT } from '../../../packages/arc-task-ledger/src/config.js';
 import { createLedgerApp } from '../../../apps/arc-task-ledger-api/src/app.js';
 import {
@@ -26,7 +28,7 @@ if (!url || new URL(url).pathname !== '/arc_task_ledger_test')
 const store = new LedgerStore(url);
 await store.migrate();
 await store.pool.query(
-  'TRUNCATE arc_task_ledger_v1.receipts,arc_task_ledger_v1.jobs,arc_task_ledger_v1.runs,arc_task_ledger_v1.observations,arc_task_ledger_v1.segments,arc_task_ledger_v1.checkpoints,arc_task_ledger_v1.sync_attempts',
+  'TRUNCATE arc_task_ledger_v1.evidence_requests,arc_task_ledger_v1.receipts,arc_task_ledger_v1.jobs,arc_task_ledger_v1.runs,arc_task_ledger_v1.observations,arc_task_ledger_v1.segments,arc_task_ledger_v1.checkpoints,arc_task_ledger_v1.sync_attempts',
 );
 const fixture = run('browser_test_only', [
   '8',
@@ -114,8 +116,28 @@ for (const [jobId, scenario] of [
   detail.evidence = [evidence];
   detail.gas = cash.gas;
 }
+// UX04：旧保证金已提现，新奖励仍未清偿；仅本地合成数据。
+const obligationLogs = [
+  event('PayoutParked', { jobId: 107n, payee: WORKER, amount: 500000n }, 0),
+  transfer(DEPLOYMENT.adapter, WORKER, protocolAtoms('500000'), 1),
+  event('WithdrawalClaimed', { payee: WORKER, amount: 500000n }, 2),
+  event('PayoutParked', { jobId: 107n, payee: WORKER, amount: 990000n }, 3),
+];
+const parked = fixture.jobs.find((d) => d.job.jobId === '107')!;
+parked.pendingAccounts = [
+  accountPending(
+    WORKER,
+    known(protocolAtoms('990000')),
+    [{ receipt: receipt(obligationLogs), evidenceIds: ['local-obligation-proof'] }],
+    true,
+    known('0'),
+  ),
+];
+parked.job.cashState = 'PARKED';
+const conflict = fixture.jobs.find((d) => d.job.jobId === '108')!;
+conflict.job.cashState = 'CONFLICT';
 await store.publish(fixture, []);
-const app = await createLedgerApp(store, 'browser-test-only-cursor-32-bytes-secret');
+const app = await createLedgerApp(store, 'browser-test-only-cursor-32-bytes-secret', store);
 app.addHook('onSend', async (_req, reply, payload) => {
   reply.header('x-atl-test-fixture', 'synthetic-not-mainnet');
   return payload;

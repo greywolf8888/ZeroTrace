@@ -10,5 +10,6 @@
     "tsBuildInfoFile": ".types/.tsbuildinfo",
     "emitDeclarationOnly": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "references": [{ "path": "../../packages/arc-task-ledger" }]
 }

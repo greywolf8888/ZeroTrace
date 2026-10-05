@@ -6,3 +6,4 @@ export * from './storage.js';
 export * from './reader.js';
 export * from './worker.js';
 export * from './live-result.js';
+export * from './result.js';

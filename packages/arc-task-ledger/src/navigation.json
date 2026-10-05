@@ -1,0 +1,12 @@
+{
+  "version": "atl-navigation-v1-20261006",
+  "taskOrigin": "https://arcbounty.app",
+  "taskPathPrefix": "/bounty/",
+  "transactionOrigin": "https://arcexplorer.org",
+  "transactionPathPrefix": "/tx/",
+  "sourceRepository": "https://github.com/greywolf8888/ZeroTrace/tree/deploy/arc-task-ledger-northflank",
+  "sources": [
+    "https://raw.githubusercontent.com/Sofiia7/ARC/ef5d100882a4bfe475c685586902ecc72da420e8/README.md",
+    "https://github.com/Sofiia7/ARC/blob/ef5d100882a4bfe475c685586902ecc72da420e8/frontend/app/bounty/%5BjobId%5D/page.tsx"
+  ]
+}

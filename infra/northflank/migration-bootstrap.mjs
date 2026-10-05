@@ -54,6 +54,41 @@ export async function configureRoles(pool, { workerRole, readerRole, readerPassw
   return { readerSelect: true, readerInsert: false, workerInsert: true };
 }
 
+export async function configureRequestRole(pool, password) {
+  if (!/^[a-f0-9]{64}$/.test(password ?? '')) throw new Error('补证请求账号密钥格式不合法。');
+  const role = 'atl_evidence_requester';
+  const existing = await pool.query(
+    'SELECT rolsuper,rolcreatedb,rolcreaterole,rolcanlogin FROM pg_roles WHERE rolname=$1',
+    [role],
+  );
+  if (existing.rowCount === 0)
+    await pool.query(
+      `CREATE ROLE ${role} LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD '${password}'`,
+    );
+  else if (
+    existing.rows[0].rolsuper ||
+    existing.rows[0].rolcreatedb ||
+    existing.rows[0].rolcreaterole ||
+    !existing.rows[0].rolcanlogin
+  )
+    throw new Error('补证角色不符合权限边界。');
+  const db = await pool.query('SELECT current_database() AS name');
+  await pool.query(`GRANT CONNECT ON DATABASE ${identifier(db.rows[0].name)} TO ${role}`);
+  await pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${role}`);
+  await pool.query(`GRANT SELECT,INSERT ON ${schema}.evidence_requests TO ${role}`);
+  const checked = await pool.query(
+    `SELECT has_table_privilege($1,'${schema}.evidence_requests','INSERT') AS request_insert,has_table_privilege($1,'${schema}.jobs','INSERT') AS projection_insert,has_table_privilege($1,'${schema}.observations','INSERT') AS evidence_insert`,
+    [role],
+  );
+  if (
+    !checked.rows[0].request_insert ||
+    checked.rows[0].projection_insert ||
+    checked.rows[0].evidence_insert
+  )
+    throw new Error('补证账号实际权限失败。');
+  return { requestInsert: true, projectionInsert: false, evidenceInsert: false };
+}
+
 async function main() {
   const { LedgerStore } = await import('../../apps/arc-task-ledger-api/dist/storage.js');
   const store = new LedgerStore(process.env.ARC_DATABASE_URL);
@@ -64,9 +99,17 @@ async function main() {
       readerRole: process.env.ARC_READER_DB_ROLE,
       readerPassword: process.env.ARC_READER_DB_PASSWORD,
     });
-    if (!(await store.ready())) throw new Error('专用数据库迁移版本未达到 4。');
+    const requestPermissions = process.env.ARC_REQUEST_DB_PASSWORD
+      ? await configureRequestRole(store.pool, process.env.ARC_REQUEST_DB_PASSWORD)
+      : null;
+    if (!(await store.ready())) throw new Error('专用数据库迁移版本未达到 5。');
     console.info(
-      JSON.stringify({ status: 'MIGRATION_VALIDATED', migrationVersion: 4, permissions }),
+      JSON.stringify({
+        status: 'MIGRATION_VALIDATED',
+        migrationVersion: 5,
+        permissions,
+        requestPermissions,
+      }),
     );
   } finally {
     await store.close();

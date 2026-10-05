@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 test('声明窗口、连续水位和缺口显示，不冒充部署全历史', async ({ page }) => {
   await page.goto('/');
+  await page.getByText('高级：连续历史范围与覆盖缺口', { exact: true }).click();
   const range = page.getByRole('region', { name: '连续历史范围' });
   await expect(range).toContainText('21153191–21153193');
   await expect(range).toContainText('连续核验至 21153192');
@@ -21,7 +22,7 @@ test('正向资金展示：奖励、待领取、争议胜诉、零分配与原�
     await expect(page.getByText(state).first()).toBeVisible();
     const funds = page
       .locator('section')
-      .filter({ has: page.getByRole('heading', { name: '独立资金腿' }) });
+      .filter({ has: page.getByRole('heading', { name: '资金分配明细' }) });
     if (id === '106') {
       await expect(funds).toContainText('应分配：0 USDC');
       await expect(funds).toContainText('已核验零分配');
@@ -32,6 +33,7 @@ test('正向资金展示：奖励、待领取、争议胜诉、零分配与原�
         id === '104' ? '曾转入待领取：0.99 USDC' : '观察到转移：0.99 USDC',
       );
     }
+    await page.getByText('证据与高级信息', { exact: true }).click();
     await page.getByRole('button', { name: '查看原始证据', exact: true }).click();
     await page.getByText(/^证据 ev_/).click();
     await expect(page.locator('pre').filter({ hasText: 'transactionHash' }).last()).toContainText(
@@ -48,7 +50,8 @@ test('列表、详情、原始证据与导出闭环', async ({ page }) => {
   await expect(page.getByRole('button', { name: '任务 #8', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '任务 #8', exact: true }).click();
   await expect(page.getByRole('heading', { name: '任务 #8', exact: true })).toBeVisible();
-  await expect(page.getByText('当前历史不足，暂无法核验资金腿。')).toBeVisible();
+  await expect(page.getByText('当前历史不足，暂无法核验资金分配。')).toBeVisible();
+  await page.getByText('证据与高级信息', { exact: true }).click();
   await page.getByRole('button', { name: '查看原始证据', exact: true }).click();
   await page.getByText(/^证据 ev_/).click();
   await expect(
@@ -72,13 +75,13 @@ test('固定快照分页、筛选、错误与覆盖', async ({ page }) => {
   await page.getByRole('button', { name: '查询', exact: true }).click();
   await expect(page.getByRole('button', { name: '任务 #8', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '查看覆盖与来源' }).click();
-  await expect(page.getByRole('heading', { name: '数据覆盖与运行状态' })).toBeVisible();
+  await expect(page.getByText('数据覆盖与运行状态', { exact: true })).toBeVisible();
   await expect(
     page.getByText('完整当前状态不表示完整历史；存储回放不表示实时在线核验。'),
   ).toBeVisible();
   await page.getByLabel('角色地址筛选').fill('invalid');
   await page.getByRole('button', { name: '查询', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('地址格式不合法');
+  await expect(page.getByRole('alert')).toContainText('输入不受支持');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );

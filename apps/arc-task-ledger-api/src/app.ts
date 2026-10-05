@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import { hashPayload } from '@zerotrace/evidence';
 import {
   DEPLOYMENT,
+  NAVIGATION,
   LedgerError,
   RULE_VERSION,
   address,
@@ -92,7 +93,11 @@ const cashStates = new Set([
   'UNKNOWN',
   'CONFLICT',
 ]);
-export async function createLedgerApp(store: LedgerStore, secret: string) {
+export async function createLedgerApp(
+  store: LedgerStore,
+  secret: string,
+  requestStore?: LedgerStore,
+) {
   const app = Fastify({
     logger: false,
     bodyLimit: 4096,
@@ -126,6 +131,12 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
     status: 'UP',
     components: { readOnly: true, version: RULE_VERSION },
   }));
+  app.get('/v1/registry', () => ({
+    chainId: DEPLOYMENT.chainId,
+    adapter: DEPLOYMENT.adapter,
+    navigation: NAVIGATION,
+    ruleVersion: RULE_VERSION,
+  }));
   app.get('/readyz', async (_request, reply) => {
     const ready = await store.ready();
     return reply.code(ready ? 200 : 503).send({
@@ -151,7 +162,16 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
       throw new LedgerError('INVALID_QUERY', '查询参数类型或长度不合法。', 400);
     if (
       Object.keys(q).some(
-        (key) => !['limit', 'cursor', 'address', 'lifecycle', 'cashState'].includes(key),
+        (key) =>
+          ![
+            'limit',
+            'cursor',
+            'address',
+            'role',
+            'snapshotRunId',
+            'lifecycle',
+            'cashState',
+          ].includes(key),
       )
     )
       throw new LedgerError('INVALID_QUERY', '查询参数不受支持。', 400);
@@ -162,17 +182,22 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
       address: q.address === undefined ? undefined : address(q.address),
       lifecycle: q.lifecycle,
       cashState: q.cashState,
+      role: q.role,
     };
     if (
       (q.lifecycle !== undefined && !lifecycleStates.has(q.lifecycle)) ||
       (q.cashState !== undefined && !cashStates.has(q.cashState))
     )
       throw new LedgerError('INVALID_FILTER', '业务或现金状态不合法。', 400);
+    if (q.role !== undefined && (!['poster', 'worker', 'all'].includes(q.role) || !q.address))
+      throw new LedgerError('INVALID_FILTER', '地址角色筛选必须带完整地址，角色不受支持。', 400);
     const digest = hashPayload(filter);
     const cursor = q.cursor ? cursors.decode(q.cursor) : undefined;
     if (cursor && (cursor.kind !== 'jobs' || cursor.filter !== digest))
       throw new LedgerError('CURSOR_FILTER_MISMATCH', '分页游标与当前筛选条件不一致。', 400);
-    const run = await requireRun(cursor?.run);
+    if (cursor && q.snapshotRunId && cursor.run !== q.snapshotRunId)
+      throw new LedgerError('CURSOR_FILTER_MISMATCH', '游标与快照不一致。', 400);
+    const run = await requireRun(cursor?.run ?? q.snapshotRunId);
     const rows = await store.getJobPage(run.id, limit, cursor?.last, filter);
     const items = rows.slice(0, limit);
     const next =
@@ -265,12 +290,44 @@ export async function createLedgerApp(store: LedgerStore, secret: string) {
       reply.header('content-disposition', `attachment; filename="arc-task-${params.jobId}.json"`);
     return {
       ...publicDetail(detail),
+      evidenceRequest: (await store.evidenceRequest(params.jobId)) ?? null,
       timeline,
       nextTimelineCursor: next.state === 'known' ? next.value : null,
       snapshotRunId: run.id,
       datasource: 'stored-replay',
     };
   });
+  app.post(
+    '/v1/jobs/:chainId/:adapter/:jobId/evidence-requests',
+    { config: { rateLimit: { max: 6, timeWindow: 3600000 } } },
+    async (request, reply) => {
+      const p = request.params as { chainId: string; adapter: string; jobId: string };
+      if (p.chainId !== DEPLOYMENT.chainId || address(p.adapter) !== DEPLOYMENT.adapter)
+        throw new LedgerError('UNSUPPORTED_DEPLOYMENT', '仅支持已登记 Arc 主网部署。', 422);
+      decimal(p.jobId);
+      if (
+        Object.keys((request.body ?? {}) as object).length ||
+        Object.keys((request.query ?? {}) as object).length
+      )
+        throw new LedgerError('INVALID_QUERY', '补证请求不接受自定义区间、URL、合约或说明。', 400);
+      if (!requestStore)
+        throw new LedgerError(
+          'REQUEST_UNAVAILABLE',
+          '当前服务未配置受限补证角色，已有查询继续可用。',
+          503,
+        );
+      const r = await requireRun();
+      const detail = await store.getJobDetail(r.id, p.jobId);
+      if (!detail)
+        throw new LedgerError('NOT_IN_ENUMERATED_SET', '该任务未在当前已采集范围内。', 404);
+      const queued = await requestStore.enqueueEvidence(detail, r.id);
+      return reply.code(202).send({
+        request: queued,
+        message:
+          '已登记有界补证；每轮最多2000区块，总区间最多200000区块。完成所选区间不等于完整任务历史，GET 查询不会触发扫描。',
+      });
+    },
+  );
   app.get('/v1/coverage', async () => {
     const run = await store.getRunMetadata();
     const checkpoint = await store.currentCheckpoint(DEPLOYMENT.adapter);

@@ -81,6 +81,7 @@ for (const relative of [
   'docs/arc-task-ledger/REPAIR_ACCEPTANCE.md',
   'docs/arc-task-ledger/CONTINUOUS_ACCEPTANCE.md',
   'docs/arc-task-ledger/PUBLICATION_READINESS.md',
+  'docs/arc-task-ledger/PRODUCT_CORRECTION.md',
   'docs/arc-task-ledger/validation',
   'docs/arc-task-ledger/UPSTREAM_LICENSE.txt',
   'LICENSE',
@@ -112,7 +113,7 @@ const devNames = [
 ];
 write('package.json', {
   name: 'arc-task-ledger-release',
-  version: '1.1.0',
+  version: '1.2.0',
   private: true,
   type: 'module',
   license: 'Apache-2.0',
@@ -181,7 +182,7 @@ write(
 );
 write(
   'README.md',
-  '# Arc 任务证据组件\n\n独立候选源码包。参见 docs/arc-task-ledger/README.md 与验收记录。没有公开部署、主网生产门禁或上游采用声明。\n',
+  '# Arc 任务证据组件\n\n独立候选源码包。参见 docs/arc-task-ledger/README.md 与验收记录。部署状态与实际门禁见同版本脱敏验收记录；导出动作本身不证明上线或上游采用。\n',
 );
 write(
   'docs/arc-task-ledger/FINAL_ACCEPTANCE.md',
@@ -331,7 +332,7 @@ const files = [...new Set([...copied, ...generated])].sort().map((relative) => (
 write('release-manifest.json', {
   schemaVersion: 'atl-public-export-v1',
   sourceCommit,
-  version: '1.1.0',
+  version: '1.2.0',
   published: false,
   privateHistoryIncluded: false,
   files,
