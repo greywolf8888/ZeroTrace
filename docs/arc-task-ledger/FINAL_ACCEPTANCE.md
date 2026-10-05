@@ -80,3 +80,9 @@
 ## 2026-10-04 v1.0.1审计纠正（追加，旧证据保留）
 
 审计基线7df357d的资金正确性LOCAL_VALIDATED撤回。本轮完成具体义务归属、争议奖励、Approval与零分配修复及真实失败→通过回归；完成数据库有界读取与live分层错误分类。真实主网任务#18定点读取已核验奖励1.98 USDC、费用0.02 USDC，并通过持久/API进程重启回放；历史仍partial，正式模式关闭，特殊主网案例NOT_OBSERVED。最新源码、独立干净提交验收和脱敏命令以`docs/arc-task-ledger/REPAIR_ACCEPTANCE.md`及随包验证记录为准，不继承旧测试数量或PASS。公开部署与身份/申请资料继续未完成。
+
+## 2026-10-05 Northflank 云端最终闭环（追加，保留旧证据）
+
+用户完成账户操作后，Arc Task Ledger v1.1.0 已实际托管于 https://web--atl-web--xtd599t97njk.code.run/，部署提交 5d7deacc440505320e7495b3d55c952ece90a35a，干净复验源码 e934896ebf4361671ec7e27be9e29cd6bd09a5f9。arctrace/us-central 下 2 服务、1 PostgreSQL 16 数据库和 2 cron 已创建，迁移 4、只读 API 角色、两个实际云端镜像、有界主网两次手动采集、API 重启后固定快照资金/回执及游标复核、真实 cron 自动触发全部通过。定时 run 29e397c7-9772-4dfb-a069-5c34014a2baa：2026-10-05T12:30:00.000Z → 2026-10-05T12:31:45.000Z，SUCCESS、exitCode=0，观察期间无手动采集 POST。当前 finalized 24390571 / run_60427b582d5c69f3e6701b5e1f51f170，16 任务；任务 #18 奖励 1.98、费用 0.02 USDC，四个必要资金腿和 49 项证据摘要均核验。
+
+当前源码完整检查：1043 单元、88 集成通过/42 外部跳过、52 Rust、49 浏览器、Arc 81 单元/23 PostgreSQL/8 浏览器，加格式/lint/类型/构建/许可证均通过；独立导出 139 文件摘要一致、独立审计 0 告警，全仓库仍 8 告警。新增付费授权 0，截至 2026-10-05T12:36:38.628Z 平台 24 小时账单 0 USD；不能据此保证永久免费。历史连续核验至 23400427，声明窗口之外和剩余窗口仍 partial，单来源、正式取证关闭，特殊结算主网 NOT_OBSERVED。数据库未重启；命名网络策略/固定出口/长期费用硬限制/资助申请及全终端其他门禁未完成。原用户修改保留，main 未合并。当前事实以 docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md 及 validation/northflank-hosted-20261005.json 为准，旧 BLOCKED 记录保留为历史。

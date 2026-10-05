@@ -1,0 +1,559 @@
+{
+  "schemaVersion": "atl-northflank-execution-v2",
+  "observedAt": "2026-10-05T08:36:50.134Z",
+  "status": "BLOCKED_EXTERNAL",
+  "blockers": ["ACCOUNT_PAYMENT_METHOD_REQUIRED"],
+  "状态说明": "已采用用户确认的官方免费 Sandbox 实际创建；平台要求默认支付方式，未升级或添加卡。源码已公开且平台可读，当前阻塞不再是资格未证明。",
+  "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+  "candidateVersion": "1.1.0",
+  "deployedVersion": null,
+  "publicHttps": null,
+  "buildId": null,
+  "newPaidSpendUsd": 0,
+  "paidBudgetUsd": 0,
+  "createdResources": [],
+  "auth": {
+    "verified": true,
+    "entityId": "zanetechs-team",
+    "entityType": "team",
+    "role": "Owner",
+    "expiresAt": null
+  },
+  "freeTier": {
+    "status": "USER_CONFIRMED_SANDBOX",
+    "accountEntitlement": null,
+    "remainingQuota": null,
+    "buildAllowance": null,
+    "storageAllowance": null,
+    "trafficAllowance": null,
+    "manualCronAllowance": null,
+    "basis": "用户明确确认官方免费套餐，新增付费预算仍为零"
+  },
+  "recentBilling": {
+    "window": {
+      "start": 1791102502,
+      "end": 1791188902
+    },
+    "usage": [
+      {
+        "currency": "usd",
+        "total": 0
+      }
+    ]
+  },
+  "accountResourceSummary": {
+    "projects": [
+      {
+        "id": "arctrace",
+        "name": "ArcTrace"
+      }
+    ],
+    "workloadCount": 0,
+    "actualTargetProject": "arctrace",
+    "region": "us-central"
+  },
+  "sourceAccess": {
+    "linkedAccounts": 0,
+    "accessible": true,
+    "publicRepo": true,
+    "reason": "public",
+    "repository": "https://github.com/greywolf8888/ZeroTrace",
+    "visibility": "PUBLIC",
+    "branch": "deploy/arc-task-ledger-northflank",
+    "observedBranchCommit": "1c043cb61f8c2a65a5f8b1d2f67426c72750d431",
+    "platformBuildVerified": false
+  },
+  "actualWrites": [
+    {
+      "method": "GitHub repository visibility update",
+      "result": "PUBLIC",
+      "basis": "用户明确允许公开整个 ZeroTrace"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects",
+      "region": "asia-southeast",
+      "httpStatus": 409,
+      "code": "FREE_REGION_UNSUPPORTED",
+      "result": "未创建",
+      "recordBasis": "本轮工具返回；原请求响应被后续同端点私有记录覆盖，未伪造原始收据"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects",
+      "region": "us-central",
+      "httpStatus": 409,
+      "code": "FREE_PROJECT_LIMIT_REACHED",
+      "result": "未创建"
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/v1/projects/arctrace",
+      "result": "连接中断；随后 GET 核对说明仍为空，没有重发"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/services/combined",
+      "httpStatus": 409,
+      "code": "ACCOUNT_PAYMENT_METHOD_REQUIRED",
+      "result": "未创建；后续数据库/任务未执行"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/services/combined",
+      "httpStatus": 409,
+      "code": "ACCOUNT_PAYMENT_METHOD_REQUIRED",
+      "result": "当前干净提交客户端复验同样被拒绝",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad"
+    }
+  ],
+  "execution": {
+    "creationAttempts": 1,
+    "writesPerformed": 0,
+    "selectedBillingPlans": {
+      "deployment": "nf-compute-10",
+      "build": "Sandbox 默认构建规格"
+    },
+    "entrypoint": "node scripts/northflank-deploy.mjs apply --sandbox-confirmed-by-user",
+    "projectEnvironment": "NORTHFLANK_PROJECT_ID=arctrace",
+    "managementCredential": "仅由受限文件或环境读取；值不公开、不注入工作负载",
+    "completeOrchestrationVerified": false
+  },
+  "resourceIntents": [
+    {
+      "name": "atl-api",
+      "kind": "service",
+      "port": 8087,
+      "public": false,
+      "actualResourceId": null
+    },
+    {
+      "name": "atl-web",
+      "kind": "service",
+      "port": 8080,
+      "public": true,
+      "actualResourceId": null
+    },
+    {
+      "name": "atl-postgres",
+      "kind": "addon",
+      "public": false,
+      "actualResourceId": null
+    },
+    {
+      "name": "atl-migrate",
+      "kind": "cron",
+      "suspended": true,
+      "actualResourceId": null
+    },
+    {
+      "name": "atl-sync",
+      "kind": "cron",
+      "suspended": true,
+      "actualResourceId": null
+    }
+  ],
+  "线上门禁": {
+    "chainIdentity": "未执行",
+    "fixedBlock": "未执行",
+    "taskFunds": "未执行",
+    "migration": "未执行",
+    "persistentApi": "未执行",
+    "twoSyncRuns": "未执行",
+    "restart": "未执行",
+    "cronTrigger": "未执行",
+    "networkPolicy": "未部署"
+  },
+  "本轮本地实时链核验": {
+    "kind": "LOCAL_NETWORK_ANCHOR_ONLY",
+    "status": "MAINNET_CHAIN_AND_DEPLOYMENT_VERIFIED",
+    "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+    "snapshot": {
+      "chainId": "5042",
+      "blockNumber": "24362547",
+      "blockHash": "0x236ce5ff42d469dd004a7469515422c913d1d587fe3d16f9d9829e783e209171",
+      "observedAt": "2026-10-05T08:33:21.867Z",
+      "finality": "FINALIZED",
+      "sourceSet": ["arc-circle-public"]
+    },
+    "dnsMode": "google-doh",
+    "requests": 12,
+    "responseBytes": 77092,
+    "startedAt": "2026-10-05T08:33:20.166Z",
+    "finishedAt": "2026-10-05T08:33:26.476Z",
+    "rawSha256": "02f196ac21e4e023ed72e478b3ce8bc334f2f5cace1170b072c9a77603b83cf5",
+    "diagnostics": [
+      {
+        "dnsMode": "system",
+        "status": "BLOCKED_EXTERNAL",
+        "category": "NETWORK_OR_AUTH_BLOCKED",
+        "code": "PRIVATE_NETWORK_BLOCKED",
+        "startedAt": "2026-10-05T08:33:20.152Z",
+        "finishedAt": "2026-10-05T08:33:20.165Z",
+        "requests": 1
+      }
+    ],
+    "hosted": false,
+    "taskFunds": "本轮未读取",
+    "cloudPersistence": "未执行",
+    "publicRawArtifact": "northflank-local-anchor-20261005.json",
+    "sourceApis": ["ArcReader.anchor", "ArcReader.verifyDeployment"],
+    "范围": "仅链身份、固定 finalized 区块、实际部署回执、代码/代理槽和 view 配置；未采集任务资金、未持久到云数据库",
+    "前序失败": [
+      "系统 DNS 为保留地址而拒绝；按已存在的 google-doh 适配读取",
+      "默认 Blockdaemon 候选未返回部署回执；官方 RPC 首次也未通过部署条件，诊断补读返回成功回执；随后记录原始观察的独立复验通过，失败未删除"
+    ],
+    "sourceAgreement": "partial",
+    "formalMode": "关闭",
+    "publicArtifactSha256": "cd90a5b13f711756bdc0395dc17afcb3678bdd23054b6ca0234a83735f457916",
+    "摘要说明": "rawSha256 为原始本地文件字节摘要；publicArtifactSha256 为仅排版后的公开原始观察文件摘要，JSON 内容相同"
+  },
+  "当前干净提交本地验证": {
+    "northflankFocused": 15,
+    "arcUnit": 75,
+    "arcPostgresIntegration": 23,
+    "arcBrowser": 8,
+    "rootUnit": 1043,
+    "rootIntegration": 88,
+    "rootExternalSkipped": 42,
+    "rootBrowser": 49,
+    "rustWorkspace": 52
+  },
+  "失败到通过回归": {
+    "baselineImplementationCommit": "691206b3bacc2272c32f961639e28f22656a8d9f",
+    "newTestsPatchFrom": "2e3b7698671176f810945eb921124aa53da0e7ea",
+    "before": {
+      "failed": 4,
+      "passed": 11,
+      "exitCode": 1
+    },
+    "after": {
+      "failed": 0,
+      "passed": 15,
+      "exitCode": 0
+    },
+    "command": "npx vitest run tests/arc-task-ledger/unit/northflank-deploy.test.ts",
+    "testSha256": "a3c308b43c09e0ffbd804f56610df34eccfba2a25568ee5744ac8b305ea7fd62"
+  },
+  "apiCommands": [
+    {
+      "method": "GET",
+      "endpoint": "/v1/auth",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/plans",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/regions",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/integrations/vcs",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/services",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/addons",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/integrations/vcs/repo-access",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/billing/usage",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/services/combined",
+      "attempt": 0,
+      "status": 409
+    }
+  ],
+  "commands": [
+    {
+      "name": "build",
+      "command": "npm run build",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:27:39.156Z",
+      "finishedAt": "2026-10-05T08:28:19.449Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "arc-build",
+      "command": "npm run arc:build",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:19.549Z",
+      "finishedAt": "2026-10-05T08:28:22.932Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "unit",
+      "command": "npm run test:unit",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:22.990Z",
+      "finishedAt": "2026-10-05T08:28:41.686Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  195 passed (195)", "      Tests  1043 passed (1043)"]
+    },
+    {
+      "name": "integration",
+      "command": "npm run test:integration",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:41.699Z",
+      "finishedAt": "2026-10-05T08:28:49.164Z",
+      "exitCode": 0,
+      "summaries": [
+        " Test Files  1 passed | 9 skipped (10)",
+        "      Tests  88 passed | 42 skipped (130)"
+      ]
+    },
+    {
+      "name": "format",
+      "command": "npm run format:check",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:22.981Z",
+      "finishedAt": "2026-10-05T08:28:49.617Z",
+      "exitCode": 0,
+      "summaries": ["Checking formatting..."]
+    },
+    {
+      "name": "evals",
+      "command": "npm run test:evals",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:49.166Z",
+      "finishedAt": "2026-10-05T08:28:51.475Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  2 passed (2)", "      Tests  2 passed (2)"]
+    },
+    {
+      "name": "readonly-mcp",
+      "command": "npm run test:mcp",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:51.477Z",
+      "finishedAt": "2026-10-05T08:28:52.619Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  1 passed (1)", "      Tests  5 passed (5)"]
+    },
+    {
+      "name": "arc-unit",
+      "command": "npm run arc:test:unit",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:52.648Z",
+      "finishedAt": "2026-10-05T08:28:55.752Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  8 passed (8)", "      Tests  75 passed (75)"]
+    },
+    {
+      "name": "sidecar",
+      "command": "node scripts/build-desktop-sidecar.mjs",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:22.998Z",
+      "finishedAt": "2026-10-05T08:28:57.019Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "arc-integration",
+      "command": "npm run arc:test:integration",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:55.755Z",
+      "finishedAt": "2026-10-05T08:29:00.763Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  1 passed (1)", "      Tests  23 passed (23)"]
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:49.619Z",
+      "finishedAt": "2026-10-05T08:29:14.551Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:29:14.554Z",
+      "finishedAt": "2026-10-05T08:29:18.088Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "license",
+      "command": "npm run license:check",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:29:18.091Z",
+      "finishedAt": "2026-10-05T08:29:22.574Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "rust-workspace",
+      "command": "cargo test --workspace -j 2",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:28:57.021Z",
+      "finishedAt": "2026-10-05T08:32:51.310Z",
+      "exitCode": 0,
+      "summaries": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "name": "arc-e2e",
+      "command": "npm run arc:test:e2e",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:32:51.322Z",
+      "finishedAt": "2026-10-05T08:33:04.483Z",
+      "exitCode": 0,
+      "summaries": ["  8 passed (11.8s)"]
+    },
+    {
+      "name": "root-e2e",
+      "command": "powershell -NoProfile -File scripts/test-e2e-windows.ps1",
+      "sourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+      "startedAt": "2026-10-05T08:33:04.485Z",
+      "finishedAt": "2026-10-05T08:33:32.046Z",
+      "exitCode": 0,
+      "summaries": ["  49 passed (22.2s)"]
+    }
+  ],
+  "sourceMap": [
+    {
+      "path": ".dockerignore",
+      "sha256": "94f4e4270665a8246b60454fbd42422abaaa872ef594b7a79b9c283f7bf87bb0"
+    },
+    {
+      "path": "scripts/northflank-deploy.mjs",
+      "sha256": "b6ee9e2f90a8be0f9aa9554395c3163e274301f73355ebdc74a853eeb84d9e9d"
+    },
+    {
+      "path": "scripts/arc-task-ledger-export.mjs",
+      "sha256": "bda12ada7e5317d119f967d4d46cd60ed33d01567ea44783f72bac1cf68ab2b6"
+    },
+    {
+      "path": "infra/arc-task-ledger/.dockerignore",
+      "sha256": "2712aa071248da0997b5f21764604a81ce7b267bda30e12176f5c30ce83cb0dc"
+    },
+    {
+      "path": "infra/northflank/Dockerfile",
+      "sha256": "fca73aff603867c52556237e2270d14721c5595d3aca22052c8563af439d72ef"
+    },
+    {
+      "path": "infra/northflank/nginx.conf.template",
+      "sha256": "8d3800b8ea6db37cbc64db7cb5636fb2aef50adaed224d2f8725cefc0e61e4a0"
+    },
+    {
+      "path": "infra/northflank/web-entrypoint.sh",
+      "sha256": "eac1119e17c0d482a05de43b351563f6639846a6fd1defd6c188a49308852192"
+    },
+    {
+      "path": "infra/northflank/resource-intents.json",
+      "sha256": "fa9c84eda473245e944f1163564d9eafcdf489b6b810aa270b9a5483f8d188ee"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/northflank-deploy.test.ts",
+      "sha256": "a3c308b43c09e0ffbd804f56610df34eccfba2a25568ee5744ac8b305ea7fd62"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/reader.ts",
+      "sha256": "1d2711dda201c2c666ae124f0f0d5018ea544e406458f18408fa97fe69482413"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/config.ts",
+      "sha256": "56b43db88aa844e54de02d6e12251a1833331425cdff763cd1d5fd82dd0779b5"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/deployment.json",
+      "sha256": "461f89ef8152a26335d69dbe8489b95284374d881bade1901788abdf3b29f905"
+    }
+  ],
+  "保留的限制": [
+    "尚未添加支付方式，云端完整部署与迁移编排及验收没有通过",
+    "Docker 引擎不可用，实际容器构建/Nginx 运行未验证",
+    "本轮 42 项全仓库外部集成跳过",
+    "旧收据全仓库 npm 审计 8 项告警、视觉证据源码指纹过期仍保留；未继承为通过",
+    "申请资料及上游采用证明未提供，未提交申请或发送消息"
+  ],
+  "previousReceipt": "northflank-preflight-20261004.json",
+  "officialAccountRequirement": "https://northflank.com/docs/v1/application/billing/pricing-on-northflank",
+  "私有状态目录公开": false,
+  "postRejectionInventory": {
+    "observedAt": "2026-10-05T08:37:39.377Z",
+    "projectId": "arctrace",
+    "counts": {
+      "services": 0,
+      "addons": 0,
+      "jobs": 0
+    },
+    "requests": [
+      {
+        "method": "GET",
+        "endpoint": "/v1/projects/arctrace/services",
+        "attempt": 0,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "endpoint": "/v1/projects/arctrace/addons",
+        "attempt": 0,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "endpoint": "/v1/projects/arctrace/jobs",
+        "attempt": 0,
+        "status": 200
+      }
+    ]
+  }
+}

@@ -1,0 +1,993 @@
+{
+  "schemaVersion": "atl-redacted-commands-v1",
+  "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+  "deployedCommit": "5d7deacc440505320e7495b3d55c952ece90a35a",
+  "explanation": "成功请求的字段白名单记录，不含请求体或认证头；接口接受成功与最终验收分别记录。",
+  "orchestrationRequests": [
+    {
+      "at": "2026-10-05T12:09:06.937Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "method": "PATCH",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T12:09:07.732Z",
+      "endpoint": "/v1/projects/arctrace/addons/atl-postgres",
+      "method": "GET",
+      "resourceId": "atl-postgres"
+    },
+    {
+      "at": "2026-10-05T12:09:08.119Z",
+      "endpoint": "/v1/projects/arctrace/addons/atl-postgres/credentials",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:09:08.686Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate",
+      "method": "PATCH",
+      "resourceId": "atl-migrate"
+    },
+    {
+      "at": "2026-10-05T12:09:10.008Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:09:10.427Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "method": "PATCH",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T12:09:11.453Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:09:11.777Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/83de0a2d-82e9-4fc5-834b-0e9dd64792ea",
+      "method": "GET",
+      "resourceId": "83de0a2d-82e9-4fc5-834b-0e9dd64792ea"
+    },
+    {
+      "at": "2026-10-05T12:09:12.582Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:09:13.391Z",
+      "endpoint": "/v1/projects/arctrace/services/combined/atl-api",
+      "method": "PATCH",
+      "resourceId": "atl-api"
+    },
+    {
+      "at": "2026-10-05T12:09:22.055Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs",
+      "method": "POST",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:09:23.198Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:09:34.346Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:09:45.516Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:09:56.671Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:10:07.808Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:10:18.938Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:10:30.219Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:10:41.774Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:10:53.691Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:11:04.941Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:11:17.583Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T12:11:19.742Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:11:20.192Z",
+      "endpoint": "/v1/projects/arctrace/services/combined/atl-web",
+      "method": "PATCH",
+      "resourceId": "atl-web"
+    },
+    {
+      "at": "2026-10-05T12:19:23.346Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "method": "PATCH",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T12:19:24.018Z",
+      "endpoint": "/v1/projects/arctrace/addons/atl-postgres",
+      "method": "GET",
+      "resourceId": "atl-postgres"
+    },
+    {
+      "at": "2026-10-05T12:19:24.354Z",
+      "endpoint": "/v1/projects/arctrace/addons/atl-postgres/credentials",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:19:24.847Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate",
+      "method": "PATCH",
+      "resourceId": "atl-migrate"
+    },
+    {
+      "at": "2026-10-05T12:19:26.038Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:19:26.485Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "method": "PATCH",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T12:19:27.630Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:19:36.226Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs",
+      "method": "POST",
+      "resourceId": "227f99c0-ec0a-4af9-893a-326e8d74bd2c"
+    },
+    {
+      "at": "2026-10-05T12:19:37.348Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/227f99c0-ec0a-4af9-893a-326e8d74bd2c",
+      "method": "GET",
+      "resourceId": "227f99c0-ec0a-4af9-893a-326e8d74bd2c"
+    },
+    {
+      "at": "2026-10-05T12:19:48.491Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/227f99c0-ec0a-4af9-893a-326e8d74bd2c",
+      "method": "GET",
+      "resourceId": "227f99c0-ec0a-4af9-893a-326e8d74bd2c"
+    },
+    {
+      "at": "2026-10-05T12:19:59.668Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/227f99c0-ec0a-4af9-893a-326e8d74bd2c",
+      "method": "GET",
+      "resourceId": "227f99c0-ec0a-4af9-893a-326e8d74bd2c"
+    },
+    {
+      "at": "2026-10-05T12:20:01.812Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:20:02.238Z",
+      "endpoint": "/v1/projects/arctrace/services/combined/atl-api",
+      "method": "PATCH",
+      "resourceId": "atl-api"
+    },
+    {
+      "at": "2026-10-05T12:20:11.714Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs",
+      "method": "POST",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:20:12.835Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:20:23.985Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:20:35.124Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:20:46.318Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:20:57.448Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:21:08.578Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:21:19.714Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:21:30.927Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:21:42.048Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:22:04.340Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T12:22:06.441Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:22:07.196Z",
+      "endpoint": "/v1/projects/arctrace/services/combined/atl-web",
+      "method": "PATCH",
+      "resourceId": "atl-web"
+    },
+    {
+      "at": "2026-10-05T12:22:13.786Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "method": "GET",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T12:22:23.009Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs",
+      "method": "POST",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:22:24.167Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:22:35.313Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:22:46.449Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:22:57.575Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:23:06.145Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web",
+      "method": "GET",
+      "resourceId": "atl-web"
+    },
+    {
+      "at": "2026-10-05T12:23:07.435Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "method": "PATCH",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T12:23:08.742Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:23:14.203Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web",
+      "method": "GET",
+      "resourceId": "atl-web"
+    },
+    {
+      "at": "2026-10-05T12:23:15.364Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api",
+      "method": "GET",
+      "resourceId": "atl-api"
+    },
+    {
+      "at": "2026-10-05T12:23:16.086Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/restart",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:23:19.878Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:23:22.210Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web",
+      "method": "GET",
+      "resourceId": "atl-web"
+    },
+    {
+      "at": "2026-10-05T12:23:23.391Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web",
+      "method": "GET",
+      "resourceId": "atl-web"
+    },
+    {
+      "at": "2026-10-05T12:23:31.060Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:23:42.207Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:23:54.323Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:24:05.460Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:24:16.671Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:24:18.022Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web",
+      "method": "GET",
+      "resourceId": "atl-web"
+    }
+  ],
+  "selectedReadReceipts": [
+    {
+      "at": "2026-10-05T12:12:46.173Z",
+      "endpoint": "/v1/billing/usage?granularity=total&startTime=1791115966&endTime=1791202366",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:22:09.619Z",
+      "endpoint": "/v1/billing/usage?granularity=total&startTime=1791116529&endTime=1791202929",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:36:38.628Z",
+      "endpoint": "/v1/billing/usage?granularity=total&startTime=1791117398&endTime=1791203798",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:24:30.779Z",
+      "endpoint": "/v1/projects/arctrace/addons",
+      "method": "POST",
+      "resourceId": "atl-postgres"
+    },
+    {
+      "at": "2026-10-05T12:28:28.369Z",
+      "endpoint": "/v1/projects/arctrace/addons/atl-postgres",
+      "method": "GET",
+      "resourceId": "atl-postgres"
+    },
+    {
+      "at": "2026-10-05T11:35:53.483Z",
+      "endpoint": "/v1/projects/arctrace/jobs",
+      "method": "POST",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T12:28:28.886Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate",
+      "method": "GET",
+      "resourceId": "atl-migrate"
+    },
+    {
+      "at": "2026-10-05T11:33:31.453Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate",
+      "method": "PATCH",
+      "resourceId": "atl-migrate"
+    },
+    {
+      "at": "2026-10-05T11:33:33.305Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:26:02.014Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/logs?runId=1dae757a-0786-4e6d-a6a3-1ad1fdab5150&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:37:55.539Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/logs?runId=227f99c0-ec0a-4af9-893a-326e8d74bd2c&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:42:39.273Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/logs?runId=2f104e59-1153-4551-a317-ce10af9fcc45&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:35:00.285Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/logs?runId=83de0a2d-82e9-4fc5-834b-0e9dd64792ea&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:29:30.625Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/logs?runId=a7ea6f11-4465-4d14-bd48-166789c6ff09&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:28:59.749Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:38:08.351Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs",
+      "method": "POST",
+      "resourceId": "2f104e59-1153-4551-a317-ce10af9fcc45"
+    },
+    {
+      "at": "2026-10-05T12:26:00.802Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/1dae757a-0786-4e6d-a6a3-1ad1fdab5150",
+      "method": "GET",
+      "resourceId": "1dae757a-0786-4e6d-a6a3-1ad1fdab5150"
+    },
+    {
+      "at": "2026-10-05T12:37:54.380Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/227f99c0-ec0a-4af9-893a-326e8d74bd2c",
+      "method": "GET",
+      "resourceId": "227f99c0-ec0a-4af9-893a-326e8d74bd2c"
+    },
+    {
+      "at": "2026-10-05T12:42:38.092Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/2f104e59-1153-4551-a317-ce10af9fcc45",
+      "method": "GET",
+      "resourceId": "2f104e59-1153-4551-a317-ce10af9fcc45"
+    },
+    {
+      "at": "2026-10-05T11:34:58.845Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/83de0a2d-82e9-4fc5-834b-0e9dd64792ea",
+      "method": "GET",
+      "resourceId": "83de0a2d-82e9-4fc5-834b-0e9dd64792ea"
+    },
+    {
+      "at": "2026-10-05T11:29:29.455Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/a7ea6f11-4465-4d14-bd48-166789c6ff09",
+      "method": "GET",
+      "resourceId": "a7ea6f11-4465-4d14-bd48-166789c6ff09"
+    },
+    {
+      "at": "2026-10-05T12:28:30.238Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "method": "GET",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T12:17:02.312Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "method": "PATCH",
+      "resourceId": "atl-sync"
+    },
+    {
+      "at": "2026-10-05T11:54:06.740Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T11:44:06.723Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=07c2b5a8-1c6c-43ac-98da-f63882340bd9&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:46:50.421Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=20f30e19-1f8e-402b-80d7-9cf027e7e3f2&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:36:13.594Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=29e397c7-9772-4dfb-a069-5c34014a2baa&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:11:35.726Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=4f7fec36-a5a7-4185-b63e-9dbe493693f0&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:50:53.926Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=56a0bedd-b4bc-4a1a-a845-205ebd0f7ecd&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:03:23.501Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=584ade07-a564-476e-a1cd-7bb578b5d413&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:59:00.087Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=78d68dde-2be9-440f-b603-571e7412b091&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:53:32.885Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=9171a9ff-ffb6-4f2a-85b8-8864c2e89060&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:37:52.614Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=938b0481-9678-4a9d-9768-82c66a9179b6&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:37:50.154Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=ae3bf26d-2b16-4286-b8d9-f11e8a09a895&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:45:09.373Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=e7a7f934-4952-4591-b0b1-5307ac61b55b&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:41:57.930Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/logs?runId=ee036780-b427-4d48-a868-a971334b87af&duration=900&lineLimit=100",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:36:09.736Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:00:41.476Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs",
+      "method": "POST",
+      "resourceId": "584ade07-a564-476e-a1cd-7bb578b5d413"
+    },
+    {
+      "at": "2026-10-05T11:44:05.532Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/07c2b5a8-1c6c-43ac-98da-f63882340bd9",
+      "method": "GET",
+      "resourceId": "07c2b5a8-1c6c-43ac-98da-f63882340bd9"
+    },
+    {
+      "at": "2026-10-05T11:46:48.733Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/20f30e19-1f8e-402b-80d7-9cf027e7e3f2",
+      "method": "GET",
+      "resourceId": "20f30e19-1f8e-402b-80d7-9cf027e7e3f2"
+    },
+    {
+      "at": "2026-10-05T12:36:13.250Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/29e397c7-9772-4dfb-a069-5c34014a2baa",
+      "method": "GET",
+      "resourceId": "29e397c7-9772-4dfb-a069-5c34014a2baa"
+    },
+    {
+      "at": "2026-10-05T12:11:34.486Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/4f7fec36-a5a7-4185-b63e-9dbe493693f0",
+      "method": "GET",
+      "resourceId": "4f7fec36-a5a7-4185-b63e-9dbe493693f0"
+    },
+    {
+      "at": "2026-10-05T11:50:52.709Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/56a0bedd-b4bc-4a1a-a845-205ebd0f7ecd",
+      "method": "GET",
+      "resourceId": "56a0bedd-b4bc-4a1a-a845-205ebd0f7ecd"
+    },
+    {
+      "at": "2026-10-05T12:03:22.142Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/584ade07-a564-476e-a1cd-7bb578b5d413",
+      "method": "GET",
+      "resourceId": "584ade07-a564-476e-a1cd-7bb578b5d413"
+    },
+    {
+      "at": "2026-10-05T11:58:58.783Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/78d68dde-2be9-440f-b603-571e7412b091",
+      "method": "GET",
+      "resourceId": "78d68dde-2be9-440f-b603-571e7412b091"
+    },
+    {
+      "at": "2026-10-05T11:53:31.661Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/9171a9ff-ffb6-4f2a-85b8-8864c2e89060",
+      "method": "GET",
+      "resourceId": "9171a9ff-ffb6-4f2a-85b8-8864c2e89060"
+    },
+    {
+      "at": "2026-10-05T12:37:51.432Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/938b0481-9678-4a9d-9768-82c66a9179b6",
+      "method": "GET",
+      "resourceId": "938b0481-9678-4a9d-9768-82c66a9179b6"
+    },
+    {
+      "at": "2026-10-05T12:37:48.866Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ae3bf26d-2b16-4286-b8d9-f11e8a09a895",
+      "method": "GET",
+      "resourceId": "ae3bf26d-2b16-4286-b8d9-f11e8a09a895"
+    },
+    {
+      "at": "2026-10-05T11:45:08.132Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/e7a7f934-4952-4591-b0b1-5307ac61b55b",
+      "method": "GET",
+      "resourceId": "e7a7f934-4952-4591-b0b1-5307ac61b55b"
+    },
+    {
+      "at": "2026-10-05T11:41:56.711Z",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/ee036780-b427-4d48-a868-a971334b87af",
+      "method": "GET",
+      "resourceId": "ee036780-b427-4d48-a868-a971334b87af"
+    },
+    {
+      "at": "2026-10-05T12:36:37.073Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api",
+      "method": "GET",
+      "resourceId": "atl-api"
+    },
+    {
+      "at": "2026-10-05T12:18:26.941Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/build",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:17:03.746Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/build",
+      "method": "POST",
+      "resourceId": "noiseless-plant-6606"
+    },
+    {
+      "at": "2026-10-05T12:25:36.117Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/containers",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T11:35:48.765Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:01:24.499Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/restart",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T12:36:38.266Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web",
+      "method": "GET",
+      "resourceId": "atl-web"
+    },
+    {
+      "at": "2026-10-05T12:18:28.284Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web/build",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-05T12:17:06.799Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web/build",
+      "method": "POST",
+      "resourceId": "dramatic-wall-6514"
+    },
+    {
+      "at": "2026-10-05T11:45:43.734Z",
+      "endpoint": "/v1/projects/arctrace/services/atl-web/deployment",
+      "method": "POST"
+    },
+    {
+      "at": "2026-10-05T11:43:49.344Z",
+      "endpoint": "/v1/projects/arctrace/services/combined",
+      "method": "POST",
+      "resourceId": "atl-web"
+    },
+    {
+      "at": "2026-10-05T11:35:50.486Z",
+      "endpoint": "/v1/projects/arctrace/services/combined/atl-api",
+      "method": "PATCH",
+      "resourceId": "atl-api"
+    },
+    {
+      "at": "2026-10-05T11:45:45.755Z",
+      "endpoint": "/v1/projects/arctrace/services/combined/atl-web",
+      "method": "PATCH",
+      "resourceId": "atl-web"
+    }
+  ],
+  "localChecks": [
+    {
+      "name": "build",
+      "command": "npm run build",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:16:29.275Z",
+      "finishedAt": "2026-10-05T12:16:33.985Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "arc-build",
+      "command": "npm run arc:build",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:16:34.256Z",
+      "finishedAt": "2026-10-05T12:16:35.718Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "unit",
+      "command": "npm run test:unit",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:16:35.815Z",
+      "finishedAt": "2026-10-05T12:17:01.026Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  195 passed (195)", "      Tests  1043 passed (1043)"]
+    },
+    {
+      "name": "sidecar",
+      "command": "node scripts/build-desktop-sidecar.mjs",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:16:35.825Z",
+      "finishedAt": "2026-10-05T12:17:08.703Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "integration",
+      "command": "npm run test:integration",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:01.028Z",
+      "finishedAt": "2026-10-05T12:17:11.939Z",
+      "exitCode": 0,
+      "summaries": [
+        " Test Files  1 passed | 9 skipped (10)",
+        "      Tests  88 passed | 42 skipped (130)"
+      ]
+    },
+    {
+      "name": "format",
+      "command": "npm run format:check",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:16:35.805Z",
+      "finishedAt": "2026-10-05T12:17:14.520Z",
+      "exitCode": 0,
+      "summaries": ["Checking formatting..."]
+    },
+    {
+      "name": "evals",
+      "command": "npm run test:evals",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:11.942Z",
+      "finishedAt": "2026-10-05T12:17:14.789Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  2 passed (2)", "      Tests  2 passed (2)"]
+    },
+    {
+      "name": "readonly-mcp",
+      "command": "npm run test:mcp",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:14.920Z",
+      "finishedAt": "2026-10-05T12:17:16.483Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  1 passed (1)", "      Tests  5 passed (5)"]
+    },
+    {
+      "name": "arc-unit",
+      "command": "npm run arc:test:unit",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:16.570Z",
+      "finishedAt": "2026-10-05T12:17:19.953Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  10 passed (10)", "      Tests  81 passed (81)"]
+    },
+    {
+      "name": "arc-integration",
+      "command": "npm run arc:test:integration",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:20.010Z",
+      "finishedAt": "2026-10-05T12:17:26.614Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  1 passed (1)", "      Tests  23 passed (23)"]
+    },
+    {
+      "name": "rust-workspace",
+      "command": "cargo test --workspace -j 2",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:08.728Z",
+      "finishedAt": "2026-10-05T12:17:34.864Z",
+      "exitCode": 0,
+      "summaries": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:14.651Z",
+      "finishedAt": "2026-10-05T12:17:35.559Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:35.562Z",
+      "finishedAt": "2026-10-05T12:17:40.536Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "license",
+      "command": "npm run license:check",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:40.538Z",
+      "finishedAt": "2026-10-05T12:17:42.291Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "arc-e2e",
+      "command": "npm run arc:test:e2e",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:42.293Z",
+      "finishedAt": "2026-10-05T12:17:54.540Z",
+      "exitCode": 0,
+      "summaries": ["  8 passed (11.1s)"]
+    },
+    {
+      "name": "root-e2e",
+      "command": "powershell -NoProfile -File scripts/test-e2e-windows.ps1",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:54.548Z",
+      "finishedAt": "2026-10-05T12:18:28.257Z",
+      "exitCode": 0,
+      "summaries": ["  49 passed (27.0s)"]
+    }
+  ],
+  "exportChecks": [
+    {
+      "name": "export-install",
+      "command": "npm ci --ignore-scripts --no-audit --no-fund",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:16:36.190Z",
+      "finishedAt": "2026-10-05T12:17:23.287Z",
+      "exitCode": 0,
+      "summaries": ["added 359 packages in 46s"]
+    },
+    {
+      "name": "export-unit",
+      "command": "npm run arc:test:unit",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:23.503Z",
+      "finishedAt": "2026-10-05T12:17:34.108Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  10 passed (10)", "      Tests  81 passed (81)"]
+    },
+    {
+      "name": "export-build",
+      "command": "npm run arc:build",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:34.111Z",
+      "finishedAt": "2026-10-05T12:17:49.783Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-typecheck",
+      "command": "npx tsc -b apps/arc-task-ledger-api --pretty false",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:49.785Z",
+      "finishedAt": "2026-10-05T12:17:51.039Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-license",
+      "command": "npm run license:check",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:51.042Z",
+      "finishedAt": "2026-10-05T12:17:55.457Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-audit",
+      "command": "npm audit --audit-level=high",
+      "sourceCommit": "e934896ebf4361671ec7e27be9e29cd6bd09a5f9",
+      "startedAt": "2026-10-05T12:17:55.460Z",
+      "finishedAt": "2026-10-05T12:17:57.235Z",
+      "exitCode": 0,
+      "summaries": ["found 0 vulnerabilities"]
+    }
+  ]
+}

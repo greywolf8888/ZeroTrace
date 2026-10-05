@@ -1,52 +1,71 @@
-# Northflank 实际执行与交付
+# Arc Task Ledger Northflank 实际部署交付
 
-2026-10-05，当前状态 **BLOCKED_EXTERNAL / ACCOUNT_PAYMENT_METHOD_REQUIRED**。已经按用户确认的官方免费 Sandbox 执行实际创建，新增付费授权为 0 USD。平台在创建服务时返回 HTTP 409，要求先添加默认支付方式。此条件来自平台的真实响应，不再等待免费资格证明；没有执行添加卡或升级。
+2026-10-05，状态 **PUBLIC_DEPLOYED_WITH_LIMITATIONS**。用户完成账户操作后，本组件已通过 Northflank REST API 实际部署并完成云端验收。新增付费授权为 **0 USD**；截至 2026-10-05T12:36:38.628Z，平台最近 24 小时使用量为 **0 USD**。这项观测不构成永久免费或账单硬上限证明。
 
-## 已完成的实际操作
+公开地址：[Arc 任务证据台](https://web--atl-web--xtd599t97njk.code.run/)。产品版本 **v1.1.0**；实际运行提交 **5d7deacc440505320e7495b3d55c952ece90a35a**，完整复验源码提交 **e934896ebf4361671ec7e27be9e29cd6bd09a5f9**。构建来源为同一仓库的独立分支 [deploy/arc-task-ledger-northflank](https://github.com/greywolf8888/ZeroTrace/tree/5d7deacc440505320e7495b3d55c952ece90a35a)，139 个导出文件与部署 Git blob 摘要一致。API 构建 noiseless-plant-6606、网页构建 dramatic-wall-6514 均 SUCCESS，部署 COMPLETED，镜像和配置摘要见验收记录。最后交付提交只更新文档、无密钥资源记录和收据，未更换执行源码或运行镜像。
 
-- 用户已授权公开整个 ZeroTrace，仓库现为 PUBLIC。独立源码分支为 [deploy/arc-task-ledger-northflank](https://github.com/greywolf8888/ZeroTrace/tree/deploy/arc-task-ledger-northflank)。Northflank 源码探测返回 200：publicRepo=true、accessible=true、reason=public；没有要求 CLI 登录或新 Key。
-- 在 asia-southeast 创建专用项目返回 409：Region does not support free projects.；改用 us-central 后返回 409：Maximum number of free projects reached。
-- 该账户已有唯一空项目 arctrace（显示名 ArcTrace），服务、数据库、任务均为 0。免费 Sandbox 只允许一个项目，因此复用这个空的 Arc 项目作为本组件的目标；实际 ID 保持 arctrace，没有假称新项目已创建或更名。
-- 项目说明更新发生连接中断，随即 GET 核对，说明仍为空。没有盲目重发未知结果的写入。
-- POST /v1/projects/arctrace/services/combined 实际返回 409：Please complete your account by adding a default payment method.。API 未创建，后续数据库、迁移、网页与采集未触发。
-- 管理凭据仅置于 Git 和构建上下文之外的受限本地文件；公开记录采用字段白名单，没有 Token、数据库密码或整份私有状态。既有代码与用户未提交修改保留，main 未合并。
+## 实际资源
 
-## 代码与本地验证
+复用既有空 Arc 专用项目 **arctrace / ArcTrace**，区域 **us-central**。此前免费区域、单项目上限和账户支付方式错误原样保留在历史记录；本轮没有添加支付方式、升级或创建新团队。
 
-scripts/northflank-deploy.mjs 支持官方 HTTPS、有界分页/响应/超时、受限 GET 重试、写入未知结果核对。apply 在明确用户确认 Sandbox 时执行真实 API 创建，使用明确选择的空 Arc 项目；默认不从标价或零历史账单推断授权。平台三种实际 409 分别分类为支付方式要求、免费项目额度及免费区域限制。创建请求先设实例为 0、端口私有、关闭自动源码触发与持久构建缓存。目录规格变化或已有资源冲突时停止，避免覆盖共享状态。
+| 资源         | 实际配置与用途                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------- |
+| atl-web      | nf-compute-10，1 实例，公开 8080 HTTP，经平台 HTTPS；同源 /api 代理至 atl-api:8087                |
+| atl-api      | nf-compute-10，1 实例，私有 8087 HTTP；API 数据库角色 atl_api_reader，只读                        |
+| atl-postgres | PostgreSQL 16，nf-compute-20，1 副本，4096 MiB NVMe；内部连接、TLS verify-full，无外部访问        |
+| atl-migrate  | nf-compute-10，计划暂停；固定 API 镜像，原 schema migration 4，原生迁移与角色引导                 |
+| atl-sync     | nf-compute-10，每 10 分钟，禁止重叠，240 秒截止，失败自动重试 0；单次原生有界 worker，无 --follow |
 
-此版本入口完成第一项创建尝试；即使平台将来接受创建，也只会返回 API_CREATED_PENDING_CONFIGURATION，不能当作完整迁移或上线成功。后续资源创建、固定提交构建、实际迁移和全部云门禁仍需在账户条件解除后完成并实测。管理 Token 不进入工作负载。
+用户确认 Sandbox；平台实际接受 2 服务、1 数据库、2 cron，此项资源额度剩余均为 0。数据库最小规格经实际平台拒绝后采用 nf-compute-20，未沿用付费教程参数。构建和流量剩余额度未获可证明数值；没有配置自动扩容、磁盘扩展、付费备份或附加 IP。数据库和 API 未开公开端口。未配置命名网络策略、宿主防火墙或固定出口，不把私有端口标志写成这些能力已完成。
 
-Dockerfile 与 Nginx 延用现有 API/web；迁移继续使用原 schema 的版本 4，worker 为单次有界采集，cron 默认暂停。同源代理只替换实际私有 DNS/端口，保留 Nginx 自身变量。Docker 引擎不可用，镜像实际构建与运行尚未验收。
+## 实际云端验收
 
-新增回归先在旧实现得到 4 失败／11 通过，修改后托管专项 15/15 通过；这是本地测试证据，不是平台部署证明。当前干净提交、后续检查与脱敏命令见 validation/northflank-deployment.json。旧预检完整保存在 validation/northflank-preflight-20261004.json，没有覆盖历史失败或继承其 PASS。
+- 当前提交镜像上的迁移 227f99c0-ec0a-4af9-893a-326e8d74bd2c 成功、退出码 0，migration 4；真实数据库权限检查 readerSelect=true、readerInsert=false、workerInsert=true。管理员连接仅迁移使用，worker 与 API 权限分离；网页无数据库凭据，所有工作负载已核查没有 Northflank 管理 Token。稳定游标密钥复用。
+- 两次手动有界采集 ae3bf26d-2b16-4286-b8d9-f11e8a09a895、938b0481-9678-4a9d-9768-82c66a9179b6 均 SUCCESS / exitCode=0；原生 worker 记录固定区块、请求数、响应字节、耗时与递增历史检查点。只读取链数据，未签名或广播交易。
+- 真实 cron 29e397c7-9772-4dfb-a069-5c34014a2baa 在 **2026-10-05T12:30:00.000Z** 自动触发，**2026-10-05T12:31:45.000Z** 成功结束、退出码 0。观察基线之后手动采集 POST 数为 0；不是以计划已启用代替定时执行。
+- API 实际重启后，同一快照 run_203377cfc0c702f996af65e2b5a772f3 的资金与原始回执完全一致，原分页游标仍有效；本轮没有重启数据库，不宣称数据库故障恢复完成。
+- 实际 HTTPS 浏览器的分页、任务 #18、金额和原始证据查看通过，页面异常 0，所访问 API 均 200。网页展示存储回放、快照时间、来源和覆盖缺口；截图及原始链上证据选集随收据提供。
 
-## 实际资源与云端门禁
+## 实际主网结果与覆盖
 
-| 项目                                     | 实际状态                                     |
-| ---------------------------------------- | -------------------------------------------- |
-| arctrace / ArcTrace                      | 既有空项目，us-central；作为本组件拟复用目标 |
-| atl-api、atl-web                         | 未创建；没有平台构建 ID、部署版本或 HTTPS    |
-| atl-postgres                             | 未创建；云端 migration 4 未运行              |
-| atl-migrate、atl-sync                    | 未创建；手动及定时运行均未发生               |
-| 主网链身份、部署、固定区块、任务资金结果 | 云端未执行                                   |
-| 持久化、API 展示、两次采集与重启复核     | 云端未执行                                   |
-| 网络策略与真实 cron 触发                 | 未部署／未执行                               |
+Arc 主网 **5042**，已登记适配器 **0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d**，托管合约 **0x64ca39fc57315d0d488accac07c37c6e841cd058**。云端完成链身份、部署交易回执、代码与协议状态核验，并在 finalized 固定区块 **24390571** 发布快照 **run_60427b582d5c69f3e6701b5e1f51f170**。16 个任务的当前状态与枚举完整；任务 #18 的存入 2 USDC、托管中转 2 USDC、费用 0.02 USDC、奖励 1.98 USDC 均由本轮真实事件和回执支持，49 项证据 payload 摘要复核一致。所有必要资金腿一起确认，不能仅因费用或保证金到账认定全款已确认。
 
-候选产品版本为 v1.1.0，部署版本为空。本地既有任务 #18 及窗口证明保持原来源和覆盖边界，不能改称 Northflank 实际观察。窗口外和账户全历史仍 partial，正式取证模式关闭。特殊结算案例仍仅为明确标注的本地回归。
+使用官方免费来源 https://rpc.mainnet.arc.io/?atl=northflank-20261005 和正常系统 DNS。普通 URL 的部署回执返回 null，查询隔离 URL 返回真实回执；保留两种观测，不推断未经证明的服务端原因。null 回执的真实反例在旧实现先失败（1 失败、11 通过），修复后专项 13/13，通过 RECEIPT_UNAVAILABLE 分类并继续关闭部署确认；没有更改预期迁就错误输出。
 
-## 外部阻塞与恢复顺序
+每次历史扫描预算 2000 区块，任务上限 1000；四个定点证据区块每次重新请求。声明窗口从 **23388428** 开始，当前连续核验至 **23400427**，其后至快照区块和窗口之前的历史仍不完整。当前状态不能代替全历史。单官方来源；生命周期、结算、待领取历史与独立来源一致性 partial，正式取证模式 **FAIL_CLOSED_COVERAGE_INSUFFICIENT**。争议胜诉、具体停放款归属、零分配等特殊案例本轮主网 **NOT_OBSERVED**，只保留明确标注的真实本地回归。
 
-Northflank 官方要求所有套餐先添加默认支付方式才能创建运行资源；免费套餐存在并不会跳过这一账户门槛。现有授权不包含添加支付方式，不能替用户补卡或升级。当前没有可交付的在线 URL，不能以源码公开或测试通过代替上线。
+两次纯 SELECT 存储测量、检查点、去重回执数与原始文档大小见收据。数据库容量是实际使用量，不能等同原始证据全部历史覆盖。
 
-账户允许创建后继续：固定提交构建 → 私有 PostgreSQL 就绪 → 稳定分页密钥和真实内部连接 → migration 4 exitCode=0 → API readiness → 有界真实主网采集 → 同源 HTTPS 网页 → 第二次采集与固定快照重启复核 → 观察真实 cron。回滚保留数据库和分页密钥，仅暂停本组件任务并切回已验证构建。
+## 当前源码复验与剩余条件
 
-官方依据：[账户创建资源与支付方式要求](https://northflank.com/docs/v1/application/billing/pricing-on-northflank)、[免费项目限制](https://northflank.com/docs/v1/application/getting-started/create-a-project)、[源码访问接口](https://northflank.com/docs/v1/api/team/integrations/check-repository-access)。
+干净提交 e934896ebf4361671ec7e27be9e29cd6bd09a5f9 的格式、lint、类型、构建、许可证、1043 单元、88 集成（42 外部跳过）、2 评估、5 只读 MCP、52 Rust、49 全仓库浏览器，以及 Arc 81 单元、23 真实本地 PostgreSQL 集成、8 浏览器均通过。独立导出安装、81 单元、构建、实际 TypeScript、许可证及依赖审计通过，独立依赖告警 0；全仓库仍 8 告警（4 high、4 moderate）。本机 Docker 引擎不可用，云端两个镜像已实际构建和运行。旧检查和失败记录保留，未继承历史 PASS。
 
-## 当前提交复验与本地实时链读取
+公开应用与源码已完成；资助申请及身份/资格资料未完成，也未向上游发送消息。全历史、多独立来源、数据库重启恢复、命名网络策略、长期免费或账单硬限制未验证。ZeroTrace 其他终端门禁未提升，main 未合并，用户原有未提交修改保持。
 
-干净提交 7d6593d12020749c7988cdd6fa70092b2bacecad 的格式、lint、类型、构建、许可证、1043 单元、88 集成（42 外部跳过）、2 评估、5 只读 MCP、52 Rust、49 全仓库浏览器及 Arc 75 单元／23 PostgreSQL／8 浏览器全部完成。官方 RPC 于 2026-10-05T08:33:21.867Z 核验 Arc 5042 finalized 区块 24362547、部署回执、代码/代理槽及 view 配置，原始观察选择导出至 validation/northflank-local-anchor-20261005.json。系统 DNS 与两个来源前序部署核验失败保留；当前成功不构成独立来源一致性或 Northflank 验收，任务资金本轮未重采，正式取证关闭。
+## 可重入操作与回滚
 
-## 最终交付源码
+完整主控为 scripts/northflank-orchestrate.mjs，模式 apply / status / sync / restart / schedule；复用 scripts/northflank-deploy.mjs 的官方 API 客户端。此前初建入口的 API_CREATED_PENDING_CONFIGURATION 是历史阶段状态，不代表完整上线。无密钥配置在 infra/northflank/；生产使用固定 SHA/buildId、关闭自动源码触发，并按迁移→API 就绪→有界采集→网页→复采/重启→计划的顺序执行。
 
-独立部署分支实际提交 cef7804a8fe3401b2e89204392cb40dc4c5f0470，导出源为 b17ea96a689dfbdcb76015187de2be1a7d3ed67d，134 个列明文件的 Git blob 摘要全部匹配；独立安装、75 单元、构建、实际 TypeScript 检查、许可证与依赖审计（0 告警）通过。平台再次确认最新部署分支 publicRepo=true、accessible=true。交付源码与已完整复验提交 7d6593d12020749c7988cdd6fa70092b2bacecad 的差异仅为文档和收据，12 项源码对应关系均核对相同。记录见 validation/northflank-delivery-20261005.json。没有 Northflank 构建或 HTTPS，不能把公开源分支称为部署版本。
+本机已有 NORTHFLANK_TOKEN_FILE、NORTHFLANK_STATE_DIR 与 NORTHFLANK_SOURCE_SHA 配置的启动包装已实际执行完整主控；不需要新 Key 或 CLI 登录。复用现有私有状态时必须保留游标及数据库密钥和相同 sourceSha。下列入口仅适用于已正确配置上述变量的进程，不含凭据值：
+
+```powershell
+node scripts/northflank-orchestrate.mjs status
+node scripts/northflank-orchestrate.mjs apply --sandbox-confirmed-by-user
+node scripts/northflank-orchestrate.mjs restart --sandbox-confirmed-by-user
+node scripts/northflank-orchestrate.mjs schedule --sandbox-confirmed-by-user
+```
+
+回滚先暂停 atl-sync 的计划，核对运行中的任务结束，再将 API、worker、迁移及网页切回同一已验证 SHA/buildId；保持数据库、schema 4 和稳定游标密钥，不 drop schema、不删除项目、不做破坏性降级。配置身份不符或 POST 结果未知时先 GET 对账，禁止盲目重发；外部不可用与版本/资金冲突分层处理。
+
+## 脱敏证据
+
+- [当前完整验收](validation/northflank-hosted-20261005.json)：真实资源、构建、主网回执选集、手动/定时运行、API 重启、费用和剩余条件。
+- [脱敏命令](validation/northflank-hosted-commands-20261005.json)：实际请求字段白名单与干净源码检查的时间、命令、退出码及摘要。
+- [源码对应](validation/northflank-hosted-source-map-20261005.json)：139 文件清单和关键源文件的 Git blob 摘要。
+- [当前网页截图](validation/northflank-hosted-job18-20261005.png)。历史阻塞记录见 NORTHFLANK_DEPLOYMENT_BEFORE_RESUME_20261005.md 与 validation/northflank-before-account-resume-20261005.json；旧预检及本地主网记录不改称云端证明。
+
+公开记录只选取必要链上数据和白名单摘要，没有上传整个私有状态目录。官方接口以本轮下载的实际 schema 和返回值为准：[REST API](https://northflank.com/docs/v1/api/use-the-api)、[计费条件](https://northflank.com/docs/v1/application/billing/pricing-on-northflank)、[定时任务](https://northflank.com/docs/v1/application/run/run-an-image-once-or-on-a-schedule)。
+
+### 有界查询与存储测量补充
+
+实际 HTTPS 复核：单项分页和固定快照游标通过；limit=0/101、篡改游标和更改筛选条件均返回 400。纯 SELECT 测得数据库由 24,976,407 增至 28,318,743 字节，快照 5→6、任务投影 80→96、观察 456→547、去重回执 20→24；新增固定快照需要新的区块锚定回执，不能把跨快照增加视为重复写入。两个手动采集和首个 cron 分别耗时 78,014 / 79,796 / 80,696 ms，均 134 次 RPC、历史推进 2000 区块；响应 586,849 / 585,875 / 592,913 字节。每 10 分钟 2000 区块即实测配置下 12,000 区块/小时；未证明能追平持续增长的主网全历史，240 秒截止不是性能承诺。平台实际构建规格 nf-compute-400-16，运行资源规格如上，本轮账单 0 USD，剩余构建额度不可证明。
