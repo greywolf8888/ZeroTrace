@@ -14,7 +14,11 @@
   "verifiedDeploymentBlock": "21153190",
   "upstreamRepository": "Sofiia7/ARC",
   "upstreamCommit": "ef5d100882a4bfe475c685586902ecc72da420e8",
-  "sourceIds": ["S03", "S04", "S10"],
+  "sourceIds": [
+    "S03",
+    "S04",
+    "S10"
+  ],
   "genesisHash": null,
   "verifiedAnchor": null,
   "rpcCandidates": [
@@ -32,7 +36,7 @@
       "alias": "arc-drpc-public",
       "url": "https://rpc.drpc.mainnet.arc.io",
       "verified": true,
-      "verifiedAt": "2026-10-05T18:20:00Z",
+      "verifiedAt": "2026-10-05T18:20:12.406Z",
       "officialSource": "https://docs.arc.io/arc/references/connect-to-arc",
       "verificationScope": "CHAIN_5042_DEPLOYMENT_AND_SELECTED_ARCHIVE_BLOCKS",
       "verificationBlock": "24431380"
