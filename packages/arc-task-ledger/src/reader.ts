@@ -235,8 +235,16 @@ export class ArcReader {
       'eth_getTransactionReceipt',
       [DEPLOYMENT.deploymentTransaction],
     );
+    if (!receipt) {
+      this.observe(
+        { transactionHash: DEPLOYMENT.deploymentTransaction, receipt: null },
+        snapshot,
+        'deployment-receipt:unavailable',
+        '来源未返回部署回执，停止部署确认。',
+      );
+      throw new LedgerError('RECEIPT_UNAVAILABLE', '来源未返回部署回执，无法确认部署。');
+    }
     if (
-      !receipt ||
       receipt.status !== '0x1' ||
       receipt.contractAddress?.toLowerCase() !== DEPLOYMENT.adapter ||
       BigInt(receipt.blockNumber).toString() !== DEPLOYMENT.verifiedDeploymentBlock

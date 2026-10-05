@@ -9,6 +9,19 @@ const config = {
   rpcHosts: ['rpc.mainnet.arc.io'],
   providerAlias: 'test-only',
 };
+it('云端部署回执为 null 时分类为来源暂不可用，保留原始观察并关闭确认', async () => {
+  const reader = new ArcReader(
+    config,
+    fakeTransport(() => null),
+  );
+  await expect(reader.verifyDeployment(snapshot)).rejects.toMatchObject({
+    code: 'RECEIPT_UNAVAILABLE',
+  });
+  expect(reader.evidence.at(-1)?.raw).toMatchObject({
+    transactionHash: DEPLOYMENT.deploymentTransaction,
+    receipt: null,
+  });
+});
 it('固定历史目标不能超过finalized，实际读取与证据保留该高度', async () => {
   const reader = new ArcReader(
     config,
