@@ -27,6 +27,15 @@
       "alias": "arc-blockdaemon-public",
       "url": "https://rpc.blockdaemon.mainnet.arc.io",
       "verified": false
+    },
+    {
+      "alias": "arc-drpc-public",
+      "url": "https://rpc.drpc.mainnet.arc.io",
+      "verified": true,
+      "verifiedAt": "2026-10-05T18:20:00Z",
+      "officialSource": "https://docs.arc.io/arc/references/connect-to-arc",
+      "verificationScope": "CHAIN_5042_DEPLOYMENT_AND_SELECTED_ARCHIVE_BLOCKS",
+      "verificationBlock": "24431380"
     }
   ],
   "explorerCandidate": "https://explorer.arc.io",
@@ -63,5 +72,6 @@
   },
   "escrowImplementation": "0x3BD209158283FE1cd81054b1c91Ea723f1eBB251",
   "abiHash": "06ed0dd9fd612a934b7aa27bc3d58de14954f498c08300f68caed31816a83ded",
-  "adapterCodeHash": "0x9eb001363e0d3b826ff00c911094749e26f2c610fa210920674cf8fe1ed055c7"
+  "adapterCodeHash": "0x9eb001363e0d3b826ff00c911094749e26f2c610fa210920674cf8fe1ed055c7",
+  "defaultRpcAlias": "arc-drpc-public"
 }

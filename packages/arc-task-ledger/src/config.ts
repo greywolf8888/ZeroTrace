@@ -20,7 +20,9 @@ if (
 )
   throw new LedgerError('LOCK_INVALID', '协议锁文件完整性核验失败。');
 export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {
-  const rpcUrl = env.ARC_RPC_URL ?? lock.rpcCandidates[1]!.url;
+  const defaultSource = lock.rpcCandidates.find((source) => source.alias === lock.defaultRpcAlias);
+  if (!defaultSource) throw new LedgerError('LOCK_INVALID', '默认 RPC 来源未登记。');
+  const rpcUrl = env.ARC_RPC_URL ?? defaultSource.url;
   const rpcHosts = lock.rpcCandidates.map((source) => new URL(source.url).hostname);
   const port = Number(env.ARC_API_PORT ?? 8087);
   if (!Number.isSafeInteger(port) || port < 1024 || port > 65535)
