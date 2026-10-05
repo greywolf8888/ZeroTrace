@@ -121,7 +121,8 @@ async function main() {
   if (mode === 'restart') {
     const before = await publicRead('/api/v1/jobs?limit=1');
     const api = await request(p + '/services/atl-api');
-    if (api.deployedSHA !== sha) throw new Error('实际部署提交与验收目标不同。');
+    if (api.deployment?.internal?.deployedSHA !== sha)
+      throw new Error('实际部署提交与验收目标不同。');
     await request(p + '/services/atl-api/restart', 'POST', {});
     for (let i = 0; i < 24; i++) {
       await sleep(5000);
