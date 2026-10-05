@@ -220,7 +220,19 @@ async function main() {
   state.apiBuildId = pin.buildId;
   save();
   const addon = await request(p + '/addons/atl-postgres');
-  if (addon.status !== 'RUNNING') throw new Error('数据库仍在启动，重入后继续。');
+  if (addon.status !== 'running') throw new Error('数据库仍在启动，重入后继续。');
+  const addonConfig = addon.spec?.config;
+  if (
+    addon.spec?.type !== 'postgresql' ||
+    addonConfig?.versionTag !== '16' ||
+    addonConfig?.deployment?.planId !== 'nf-compute-20' ||
+    addonConfig?.deployment?.storageSize !== 4096 ||
+    addonConfig?.deployment?.replicas !== 1 ||
+    addonConfig?.networking?.tlsEnabled !== true ||
+    addonConfig?.networking?.externalAccessEnabled !== false ||
+    addonConfig?.networking?.vpcAccessible !== false
+  )
+    throw new Error('实际数据库规格或私有 TLS 边界不符，停止配置凭据。');
   const credentials = await request(p + '/addons/atl-postgres/credentials');
   const uri = (value) => {
     const url = new URL(value);
