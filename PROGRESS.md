@@ -2489,3 +2489,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 # 2026-10-05 Arc Task Ledger Northflank 托管执行追加
 
 当前托管状态 FREE_TIER_UNVERIFIED。管理 Token 真实核验有效，团队 Owner；已有 1 个空项目，工作负载为 0；账单近一天 0 USD 不是免费资格。官方目录没有零价计算规格，团队 Sandbox、构建、磁盘、流量与暂停 cron 手动运行免费条件未证明。未创建计费资源、未获得 HTTPS；云端迁移、主网、两次采集、定时触发及重启验收未执行。独立部署分支已推送；Northflank 未连接 Git，源码访问探测未通过。托管适配、费用门禁、私有构建排除与本地回归已完成，实际资源创建编排尚未完成。原用户修改保留。详见 `docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md` 及 `validation/northflank-deployment.json`，不公开整个私有状态目录。
+
+## 2026-10-05 Northflank 实际创建续执行
+
+用户已明确确认官方免费 Sandbox，不再以 FREE_TIER_UNVERIFIED 阻止执行。ZeroTrace 已按授权公开，Northflank 实际源码访问 200。专用项目创建分别被免费区域与单项目上限拒绝；复用既有空 ArcTrace（arctrace、us-central），实际 API 创建返回 409 ACCOUNT_PAYMENT_METHOD_REQUIRED。没有新增运行资源、云端构建、HTTPS、迁移、采集、重启或 cron 证明；未添加卡、升级或产生新增支出。旧预检证据另存保留，本轮四项反例先失败再修复，专项 15/15 通过。完整托管仍未完成，当前命令、源码对应关系和外部阻塞见 docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md 与 validation/northflank-deployment.json。原用户未提交修改保留，main 未合并。

@@ -1239,3 +1239,7 @@ archive-scale backfill, and independent-provider reconciliation remain required.
 # 2026-10-05 Northflank 专用托管追加
 
 Arc Task Ledger 新支出预算 0 USD；当前 FREE_TIER_UNVERIFIED，云端资源创建/迁移/主网采集/HTTPS/API 重启/cron 触发门禁均未执行。真实身份与账户资源发现通过，但公开套餐与零历史账单不足以证明该团队适用免费条件。独立部署分支已推送，平台源码权限待满足。当前本地专项与全仓库检查、失败诊断及恢复记录见 `../arc-task-ledger/validation/northflank-deployment.json`；不能继承历史 PASS 或将本地主网证据改称云端证据。原全仓库 8 项依赖告警与视觉指纹过期保留。
+
+## 2026-10-05 Northflank 实际创建续执行
+
+用户已明确确认官方免费 Sandbox，不再以 FREE_TIER_UNVERIFIED 阻止执行。ZeroTrace 已按授权公开，Northflank 实际源码访问 200。专用项目创建分别被免费区域与单项目上限拒绝；复用既有空 ArcTrace（arctrace、us-central），实际 API 创建返回 409 ACCOUNT_PAYMENT_METHOD_REQUIRED。没有新增运行资源、云端构建、HTTPS、迁移、采集、重启或 cron 证明；未添加卡、升级或产生新增支出。旧预检证据另存保留，本轮四项反例先失败再修复，专项 15/15 通过。完整托管仍未完成，当前命令、源码对应关系和外部阻塞见 docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md 与 validation/northflank-deployment.json。原用户未提交修改保留，main 未合并。
