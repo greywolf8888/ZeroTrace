@@ -24,7 +24,7 @@ export function SettlementCard({
       </div>
       <div className="money-grid">
         {result.metrics.map((metric) => (
-          <article key={metric.key}>
+          <article key={metric.key} data-metric={metric.key}>
             <span>{metric.label}</span>
             <strong>{money(metric.amount)}</strong>
             <small>

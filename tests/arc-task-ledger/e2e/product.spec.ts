@@ -29,6 +29,12 @@ test('UX01/03/06/07 输入任务→真实HTTP金额→固定快照新上下文�
   const result = page.getByRole('region', { name: '结算结果' });
   await expect(result).toContainText('0.99 USDC');
   await expect(result).toContainText('0.01 USDC');
+  await page.evaluate(() => scrollTo(0, 0));
+  for (const amount of ['0.99 USDC', '0.01 USDC']) {
+    const box = await result.getByText(amount, { exact: true }).boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.y + box!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  }
   const url = page.url();
   const run = new URL(url).searchParams.get('snapshotRunId')!;
   const before = await (

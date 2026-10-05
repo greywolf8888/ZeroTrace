@@ -610,3 +610,63 @@ p {
     margin-right: 0;
   }
 }
+@media (max-width: 600px) {
+  header {
+    padding: 10px 14px;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  header p {
+    font-size: 12px;
+  }
+  .network {
+    padding: 3px 9px;
+    font-size: 11px;
+  }
+  main {
+    padding-top: 10px;
+  }
+  .freshness,
+  .heading,
+  .toolbar {
+    margin: 10px 0;
+  }
+  .toolbar > button,
+  .toolbar .button {
+    width: auto;
+    flex: 1 1 42%;
+    padding: 8px;
+    font-size: 13px;
+  }
+  .roles {
+    margin: 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .result-lead h3 {
+    font-size: 17px;
+    margin: 10px 0;
+  }
+  .money-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .money-grid article {
+    padding: 10px;
+  }
+  .money-grid article[data-metric='worker'] {
+    order: -2;
+  }
+  .money-grid article[data-metric='fee'] {
+    order: -1;
+  }
+  .money-grid strong {
+    font-size: 20px;
+    margin: 6px 0;
+  }
+  .money-grid article > span,
+  .money-grid small,
+  .money-grid .subtle {
+    font-size: 12px;
+  }
+}
