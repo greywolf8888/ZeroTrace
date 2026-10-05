@@ -32,6 +32,82 @@ afterAll(async () => {
   await store.close();
 });
 describe('真实 PostgreSQL 与 API 集成', () => {
+  it('小窗口分批仍消费完整的有界预算，每批原始证据和水位落盘', async () => {
+    const reader = new ArcReader(
+      {
+        rpcUrl: 'https://rpc.mainnet.arc.io',
+        rpcHosts: ['rpc.mainnet.arc.io'],
+        providerAlias: 'test-only',
+      },
+      readonlyChain(false),
+    );
+    Object.defineProperty(reader, 'logWindowLimit', { value: 1n });
+    try {
+      const anchor = await reader.anchor();
+      const calls = vi.spyOn(reader, 'logs');
+      const r = await scanPriority(reader, store, anchor, '3', '0');
+      expect(calls.mock.calls).toEqual(
+        [0n, 1n, 2n].map((offset) => {
+          const b = (BigInt(anchor.blockNumber) - 2n + offset).toString();
+          return [b, b];
+        }),
+      );
+      expect(r.recent).toMatchObject({ through: anchor.blockNumber, complete: true });
+      expect((await store.receiptsThrough(anchor.blockNumber)).length).toBe(3);
+      expect(
+        (
+          await store.pool.query(
+            "SELECT count(*) AS n FROM arc_task_ledger_v1.segments WHERE document->>'scope'='recent-changes'",
+          )
+        ).rows[0].n,
+      ).toBe('3');
+    } finally {
+      await reader.close();
+    }
+  });
+  it('补证头与已持久的连续检查点一致，既有区间复用不能使申请水位落后', async () => {
+    const fixture = run('proof_existing', ['8']);
+    await store.publish(fixture, []);
+    const q = await store.enqueueEvidence(fixture.jobs[0]!, fixture.id);
+    const base = await store.checkpoint(
+      DEPLOYMENT.adapter,
+      (BigInt(DEPLOYMENT.verifiedDeploymentBlock) - 1n).toString(),
+    );
+    const end = (BigInt(q.from) + 10n).toString();
+    await store.saveSegment({
+      deployment: DEPLOYMENT.adapter,
+      from: q.from,
+      to: end,
+      status: 'complete',
+      document: { scope: 'local-test-existing-window' },
+      observations: [],
+      receipts: [],
+      expectedVersion: base.version,
+    });
+    const reader = new ArcReader(
+      {
+        rpcUrl: 'https://rpc.mainnet.arc.io',
+        rpcHosts: ['rpc.mainnet.arc.io'],
+        providerAlias: 'test-only',
+      },
+      readonlyChain(false),
+    );
+    try {
+      await scanPriority(
+        reader,
+        store,
+        { ...snapshot, blockNumber: fixture.snapshot.blockNumber },
+        '0',
+        '1',
+      );
+      const request = await store.evidenceRequest('8');
+      const cp = await store.currentCheckpoint(`${DEPLOYMENT.adapter}:request:${q.id}`);
+      expect(request!.head).toBe(end);
+      expect(request!.head).toBe(cp!.head);
+    } finally {
+      await reader.close();
+    }
+  });
   it('补证POST去重、有界、版本隔离；GET不触发，角色筛选在数据库执行', async () => {
     const fixture = run('request_test', ['8']);
     await store.publish(fixture, []);

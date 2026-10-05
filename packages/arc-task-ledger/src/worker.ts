@@ -165,7 +165,7 @@ export async function scanHistory(
     throw new LedgerError('CHECKPOINT_CONFLICT', '连续检查点低于声明窗口起点。', 409);
   let from = BigInt(checkpoint.head) + 1n;
   let remaining = BigInt(budget);
-  let window = 2000n;
+  let window = reader.logWindowLimit;
   const errors: string[] = [];
   while (from <= BigInt(snapshot.blockNumber) && remaining > 0n) {
     const size = [window, remaining, BigInt(snapshot.blockNumber) - from + 1n].reduce((a, b) =>
@@ -326,88 +326,99 @@ export async function scanPriority(
       request,
     });
   for (const job of jobs) {
-    const cp = await store.checkpoint(job.key, (job.from - 1n).toString());
-    if (job.from > job.target) continue;
-    const to = job.from + job.budget - 1n < job.target ? job.from + job.budget - 1n : job.target;
-    const observations: StoredEvidence[] = [];
-    const receipts: { receipt: Receipt; observationId: string }[] = [];
-    try {
-      const { before, logs } = await readWindow(
-        reader,
-        snapshot,
-        job.from.toString(),
-        to.toString(),
-        observations,
-        receipts,
-        store,
+    let cp = await store.checkpoint(job.key, (job.from - 1n).toString());
+    let from = BigInt(cp.head) + 1n;
+    let remaining = job.budget;
+    while (from <= job.target && remaining > 0n) {
+      const size = [remaining, reader.logWindowLimit, job.target - from + 1n].reduce((a, b) =>
+        a < b ? a : b,
       );
-      const result = await store.saveSegment({
-        deployment: DEPLOYMENT.adapter,
-        checkpointKey: job.key,
-        from: job.from.toString(),
-        to: to.toString(),
-        status: 'complete',
-        document: {
-          scope: job.request ? 'bounded-task-enrichment' : 'recent-changes',
+      const to = from + size - 1n;
+      const observations: StoredEvidence[] = [];
+      const receipts: { receipt: Receipt; observationId: string }[] = [];
+      try {
+        const { before, logs } = await readWindow(
+          reader,
           snapshot,
-          anchor: before,
-          ruleVersion: RULE_VERSION,
-          count: logs.length,
-        },
-        observations,
-        receipts,
-        expectedVersion: cp.version,
-        ...(job.request
-          ? {
-              requestUpdate: {
-                id: job.request.id,
-                head: to.toString(),
-                status: to === job.target ? ('COMPLETED' as const) : ('PENDING' as const),
-              },
-            }
-          : {}),
-      });
-      results[job.request ? 'enrichment' : 'recent'] = {
-        from: job.from.toString(),
-        through: result.head,
-        target: job.target.toString(),
-        complete: BigInt(result.head) >= job.target,
-        ...(job.request ? { requestId: job.request.id, jobId: job.request.jobId } : {}),
-      };
-    } catch (error) {
-      const e = error as { code?: string; status?: number };
-      await store.saveSegment({
-        deployment: DEPLOYMENT.adapter,
-        checkpointKey: job.key,
-        from: job.from.toString(),
-        to: to.toString(),
-        status: e.status === 409 ? 'conflict' : 'partial',
-        document: {
-          scope: job.request ? 'bounded-task-enrichment' : 'recent-changes',
-          snapshot,
-          code: e.code ?? 'SOURCE_UNAVAILABLE',
-          ruleVersion: RULE_VERSION,
-        },
-        observations,
-        receipts: [],
-        expectedVersion: cp.version,
-        ...(job.request
-          ? {
-              requestUpdate: {
-                id: job.request.id,
-                head: cp.head,
-                status: 'FAILED' as const,
-                error: e.code ?? 'SOURCE_UNAVAILABLE',
-              },
-            }
-          : {}),
-      });
-      if (e.status === 409) throw error;
-      results[job.request ? 'enrichment' : 'recent'] = {
-        status: 'SOURCE_UNAVAILABLE',
-        head: cp.head,
-        requestId: job.request?.id,
-      };
+          from.toString(),
+          to.toString(),
+          observations,
+          receipts,
+          store,
+        );
+        const result = await store.saveSegment({
+          deployment: DEPLOYMENT.adapter,
+          checkpointKey: job.key,
+          from: from.toString(),
+          to: to.toString(),
+          status: 'complete',
+          document: {
+            scope: job.request ? 'bounded-task-enrichment' : 'recent-changes',
+            snapshot,
+            anchor: before,
+            ruleVersion: RULE_VERSION,
+            count: logs.length,
+          },
+          observations,
+          receipts,
+          expectedVersion: cp.version,
+          ...(job.request
+            ? {
+                requestUpdate: {
+                  id: job.request.id,
+                  head: to.toString(),
+                  status: to === job.target ? ('COMPLETED' as const) : ('PENDING' as const),
+                },
+              }
+            : {}),
+        });
+        results[job.request ? 'enrichment' : 'recent'] = {
+          from: job.from.toString(),
+          through: (BigInt(result.head) > job.target ? job.target : BigInt(result.head)).toString(),
+          target: job.target.toString(),
+          complete: BigInt(result.head) >= job.target,
+          ...(job.request ? { requestId: job.request.id, jobId: job.request.jobId } : {}),
+        };
+        cp = result;
+        remaining -= size;
+        if (BigInt(result.head) < to) break;
+        from = BigInt(result.head) + 1n;
+      } catch (error) {
+        const e = error as { code?: string; status?: number };
+        await store.saveSegment({
+          deployment: DEPLOYMENT.adapter,
+          checkpointKey: job.key,
+          from: from.toString(),
+          to: to.toString(),
+          status: e.status === 409 ? 'conflict' : 'partial',
+          document: {
+            scope: job.request ? 'bounded-task-enrichment' : 'recent-changes',
+            snapshot,
+            code: e.code ?? 'SOURCE_UNAVAILABLE',
+            ruleVersion: RULE_VERSION,
+          },
+          observations,
+          receipts: [],
+          expectedVersion: cp.version,
+          ...(job.request
+            ? {
+                requestUpdate: {
+                  id: job.request.id,
+                  head: cp.head,
+                  status: 'FAILED' as const,
+                  error: e.code ?? 'SOURCE_UNAVAILABLE',
+                },
+              }
+            : {}),
+        });
+        if (e.status === 409) throw error;
+        results[job.request ? 'enrichment' : 'recent'] = {
+          status: 'SOURCE_UNAVAILABLE',
+          head: cp.head,
+          requestId: job.request?.id,
+        };
+        break;
+      }
     }
   }
   return results;

@@ -73,6 +73,7 @@ export class ArcReader {
   readonly dispatcher?: Agent;
   readonly publicDns: ReturnType<typeof createPublicDns> | undefined;
   readonly transport: JsonRpcTransport;
+  readonly logWindowLimit: bigint;
   requests = 0;
   responseBytes = 0;
   constructor(
@@ -81,6 +82,14 @@ export class ArcReader {
     },
     testTransport?: JsonRpcTransport,
   ) {
+    const source = DEPLOYMENT.rpcCandidates.find(
+      (candidate) => new URL(candidate.url).origin === new URL(config.rpcUrl).origin,
+    );
+    const registeredWindow =
+      source && 'verifiedLogWindow' in source ? BigInt(String(source.verifiedLogWindow)) : 2000n;
+    if (registeredWindow < 1n || registeredWindow > 2000n)
+      throw new LedgerError('LOCK_INVALID', '登记日志窗口不合法。');
+    this.logWindowLimit = registeredWindow;
     if (testTransport) {
       this.publicDns = undefined;
       this.transport = testTransport;

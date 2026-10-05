@@ -335,8 +335,8 @@ export class LedgerStore implements LedgerRepository {
       if (input.requestUpdate) {
         const u = input.requestUpdate;
         const changed = await client.query(
-          "UPDATE arc_task_ledger_v1.evidence_requests SET head=$2,status=$3,error_code=$4,updated_at=now() WHERE id=$1 AND status='PENDING' AND rule_version=$5",
-          [u.id, u.head, u.status, u.error ?? null, RULE_VERSION],
+          "UPDATE arc_task_ledger_v1.evidence_requests SET head=LEAST($2,last_block),status=CASE WHEN $3='FAILED' THEN 'FAILED' WHEN LEAST($2,last_block)>=last_block THEN 'COMPLETED' ELSE 'PENDING' END,error_code=$4,updated_at=now() WHERE id=$1 AND status='PENDING' AND rule_version=$5",
+          [u.id, head.toString(), u.status, u.error ?? null, RULE_VERSION],
         );
         if (changed.rowCount !== 1)
           throw new LedgerError(
