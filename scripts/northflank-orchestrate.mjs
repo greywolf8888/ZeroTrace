@@ -12,6 +12,15 @@ export function assertScope(resources, sha) {
   if (resources.some((r) => !names.has(r.id)))
     throw new Error('专用项目存在范围外资源，停止修改。');
 }
+export function hostedCurrentVerified(coverage) {
+  return Boolean(
+    coverage?.lastSuccessfulSync &&
+    coverage.coverage?.currentState?.state === 'known' &&
+    coverage.coverage.currentState.value === 'complete' &&
+    coverage.coverage?.deploymentVerification?.state === 'known' &&
+    coverage.coverage.deploymentVerification.value === 'complete',
+  );
+}
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
@@ -135,7 +144,7 @@ async function main() {
   }
   if (mode === 'schedule') {
     const coverage = await publicRead('/api/v1/coverage');
-    if (!coverage.lastSuccessfulSync || coverage.coverage.currentState !== 'complete')
+    if (!hostedCurrentVerified(coverage))
       throw new Error('主网当前状态尚未核验，保持定时任务暂停。');
     await request(p + '/jobs/atl-sync', 'PATCH', {
       settings: {
