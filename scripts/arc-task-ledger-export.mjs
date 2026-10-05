@@ -73,6 +73,7 @@ for (const relative of [
   'scripts/arc-receipt-current.ts',
   'scripts/arc-window-evidence.ts',
   'scripts/northflank-deploy.mjs',
+  'scripts/northflank-orchestrate.mjs',
   'docs/arc-task-ledger/README.md',
   'docs/arc-task-ledger/DEPLOYMENT.md',
   'docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md',
