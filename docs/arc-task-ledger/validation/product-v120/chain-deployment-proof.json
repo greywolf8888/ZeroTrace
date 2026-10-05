@@ -1,0 +1,183 @@
+{
+  "at": "2026-10-05T18:20:12.406Z",
+  "officialSource": "https://docs.arc.io/arc/references/connect-to-arc",
+  "snapshot": {
+    "chainId": "5042",
+    "blockNumber": "24431380",
+    "blockHash": "0x0a49c206c5da664e6f3ba6690d17718000bc99b790985e88bcf62d9b67ce3ee1",
+    "observedAt": "2026-10-05T18:19:45.392Z",
+    "finality": "FINALIZED",
+    "sourceSet": ["arc-drpc-public"]
+  },
+  "evidence": [
+    {
+      "id": "ev_d4b272f03b90e84cf2658d3b",
+      "payloadHash": "1807c9e4cd50a3636937840efcd90c5c4553373650f3ba792bec54e0015e8982"
+    },
+    {
+      "id": "ev_0cfba8cf00759c34f4f1043a",
+      "payloadHash": "6a8c03e9f49781557610113207bb3a142381a7a07159bb15ac5f8577d43af49b"
+    },
+    {
+      "id": "ev_19890cc44ba7bfb640225be8",
+      "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57"
+    },
+    {
+      "id": "ev_e6b4c95d01106be2c4891c0e",
+      "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4"
+    },
+    {
+      "id": "ev_682811db8a8763324de1ff6b",
+      "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c"
+    },
+    {
+      "id": "ev_b7bc1dbadf25ae49051e2ae6",
+      "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9"
+    },
+    {
+      "id": "ev_a717939c6bc47f8d543c5a81",
+      "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652"
+    },
+    {
+      "id": "ev_55d33a94c0c95cde7dbd794a",
+      "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872"
+    },
+    {
+      "id": "ev_2184b707272bc000382220f6",
+      "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb"
+    },
+    {
+      "id": "ev_ce6dc780b3c4825ce7138dd7",
+      "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798"
+    },
+    {
+      "id": "ev_2e4599797cc8b171491e9d18",
+      "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57"
+    },
+    {
+      "id": "ev_43760d05b10baadb3359a401",
+      "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4"
+    },
+    {
+      "id": "ev_86dc0cca524ce4b9a5eaa575",
+      "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c"
+    },
+    {
+      "id": "ev_b65f7ce4191e3b90c5971462",
+      "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9"
+    },
+    {
+      "id": "ev_fd17f415130622d0589a99f1",
+      "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652"
+    },
+    {
+      "id": "ev_61fd547580755725fac77f16",
+      "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872"
+    },
+    {
+      "id": "ev_3415d0dd318b09658c362d62",
+      "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb"
+    },
+    {
+      "id": "ev_4ed478d928ff1a817ad3660c",
+      "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798"
+    },
+    {
+      "id": "ev_6d736321086698b8668d68db",
+      "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57"
+    },
+    {
+      "id": "ev_ca6a96b79f15585abea33a8f",
+      "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4"
+    },
+    {
+      "id": "ev_fe227dd8474a391bd7cb49b1",
+      "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c"
+    },
+    {
+      "id": "ev_90d72ae2489d05489d4f68cf",
+      "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9"
+    },
+    {
+      "id": "ev_da14cd8fdc3778a7c6044f08",
+      "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652"
+    },
+    {
+      "id": "ev_e4854078d419758b3bf14db5",
+      "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872"
+    },
+    {
+      "id": "ev_e9d9cdf626e9b80f87b5b655",
+      "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb"
+    },
+    {
+      "id": "ev_21af77878dd06d84fe6de7cc",
+      "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798"
+    },
+    {
+      "id": "ev_60f0f8b677e1728eb54f6f23",
+      "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57"
+    },
+    {
+      "id": "ev_fd81aca7d54e11b4faa3de2b",
+      "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4"
+    },
+    {
+      "id": "ev_76a0ee12434d31ebefb7a7a4",
+      "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c"
+    },
+    {
+      "id": "ev_5d41731d7db53dc97aeef978",
+      "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9"
+    },
+    {
+      "id": "ev_ef3eaff7a9937b387942b708",
+      "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652"
+    },
+    {
+      "id": "ev_05cb1a0a7a2f251d1c20de37",
+      "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872"
+    },
+    {
+      "id": "ev_774a08698d2e7bd6457f3340",
+      "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb"
+    },
+    {
+      "id": "ev_4b24c519b789c6385eef9a2c",
+      "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798"
+    },
+    {
+      "id": "ev_7326c879bcc27b5b5536f0a9",
+      "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57"
+    },
+    {
+      "id": "ev_d2b77f44ac23a0b668581fb7",
+      "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4"
+    },
+    {
+      "id": "ev_f948885a175eb7fd67f9640d",
+      "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c"
+    },
+    {
+      "id": "ev_dcf9d196ab14bcc20e340cde",
+      "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9"
+    },
+    {
+      "id": "ev_07fde7711b610f0dc5d41db7",
+      "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652"
+    },
+    {
+      "id": "ev_e784d7135831157051a39da0",
+      "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872"
+    },
+    {
+      "id": "ev_5cf5c6e823662277723e60a3",
+      "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb"
+    },
+    {
+      "id": "ev_809a3e5802482e8fd0c46b86",
+      "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798"
+    }
+  ],
+  "scope": "主网链身份、当前部署与四个定点归档区块；不代表完整历史或独立多来源。"
+}

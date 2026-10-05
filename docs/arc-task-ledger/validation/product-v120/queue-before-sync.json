@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-05T18:48:22.962Z",
+  "source": "MAINNET_HOSTED_ACTUAL",
+  "jobId": "1",
+  "postOnly": true,
+  "getBeforeRequest": null,
+  "first": {
+    "status": 202,
+    "body": {
+      "request": {
+        "id": "req_14529e6d2e115306e5122e8354aa1089",
+        "jobId": "1",
+        "from": "24233896",
+        "to": "24433895",
+        "head": "24233895",
+        "status": "PENDING",
+        "ruleVersion": "atl-v1.2.0",
+        "snapshotRunId": "run_38ac9ec4a3913a321fb5157a42bc0ea3"
+      },
+      "message": "已登记有界补证；每轮最多2000区块，总区间最多200000区块。完成所选区间不等于完整任务历史，GET 查询不会触发扫描。"
+    }
+  },
+  "second": {
+    "status": 202,
+    "body": {
+      "request": {
+        "id": "req_14529e6d2e115306e5122e8354aa1089",
+        "jobId": "1",
+        "from": "24233896",
+        "to": "24433895",
+        "head": "24233895",
+        "status": "PENDING",
+        "ruleVersion": "atl-v1.2.0",
+        "snapshotRunId": "run_38ac9ec4a3913a321fb5157a42bc0ea3"
+      },
+      "message": "已登记有界补证；每轮最多2000区块，总区间最多200000区块。完成所选区间不等于完整任务历史，GET 查询不会触发扫描。"
+    }
+  },
+  "invalid": {
+    "status": 400,
+    "body": {
+      "code": "INVALID_QUERY",
+      "message": "补证请求不接受自定义区间、URL、合约或说明。",
+      "retryable": false
+    }
+  },
+  "readBack": {
+    "id": "req_14529e6d2e115306e5122e8354aa1089",
+    "jobId": "1",
+    "from": "24233896",
+    "to": "24433895",
+    "head": "24233895",
+    "status": "PENDING",
+    "ruleVersion": "atl-v1.2.0",
+    "snapshotRunId": "run_38ac9ec4a3913a321fb5157a42bc0ea3"
+  },
+  "beforeSnapshotRunId": "run_38ac9ec4a3913a321fb5157a42bc0ea3"
+}

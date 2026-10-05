@@ -1,0 +1,145 @@
+{
+  "at": "2026-10-05T19:22:55.845Z",
+  "request": {
+    "id": "req_14529e6d2e115306e5122e8354aa1089",
+    "jobId": "1",
+    "from": "24233896",
+    "to": "24433895",
+    "head": "24245895",
+    "status": "PENDING",
+    "ruleVersion": "atl-v1.2.0",
+    "snapshotRunId": "run_38ac9ec4a3913a321fb5157a42bc0ea3"
+  },
+  "previousHead": "24233895",
+  "snapshotRunId": "run_54d1d9c00fd04c51bfc0cb8faf25b5c7",
+  "collection": {
+    "recent": {
+      "from": "24438002",
+      "target": "24438542",
+      "through": "24438542",
+      "complete": true
+    },
+    "enrichment": {
+      "from": "24243896",
+      "jobId": "1",
+      "target": "24433895",
+      "through": "24245895",
+      "complete": false,
+      "requestId": "req_14529e6d2e115306e5122e8354aa1089"
+    },
+    "proofBudget": "2000",
+    "recentBudget": "2000"
+  },
+  "coverage": {
+    "network": "arc-mainnet",
+    "adapter": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d",
+    "lastSuccessfulSync": "2026-10-05T19:20:19.175Z",
+    "stateHead": {
+      "state": "known",
+      "value": "24438542",
+      "evidenceIds": []
+    },
+    "historyHead": {
+      "state": "known",
+      "value": "21153189",
+      "evidenceIds": []
+    },
+    "historyRange": {
+      "state": "known",
+      "value": {
+        "gaps": [
+          {
+            "reason": "历史仅连续核验至 23458427；未覆盖至当前状态区块。",
+            "toBlock": "24438542",
+            "fromBlock": "23458428"
+          }
+        ],
+        "scope": "DECLARED_WINDOW",
+        "status": "partial",
+        "fromBlock": "23388428",
+        "targetBlock": "24438542",
+        "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+        "checkpointVersion": "168",
+        "contiguousThrough": "23458427",
+        "omittedPriorHistory": true
+      },
+      "evidenceIds": []
+    },
+    "coverage": {
+      "currentState": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      },
+      "jobEnumeration": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      },
+      "sourceAgreement": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "lifecycleHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "settlementHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "accountPendingHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "deploymentVerification": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      }
+    },
+    "gaps": [
+      {
+        "reason": "历史仅连续核验至 23458427；未覆盖至当前状态区块。"
+      }
+    ],
+    "datasource": "stored-replay",
+    "ruleVersion": "atl-v1.2.0",
+    "sourceSet": ["arc-drpc-public"],
+    "freshness": "known",
+    "lastAttempt": {
+      "success": true,
+      "observedAt": "2026-10-05T19:22:10.061Z",
+      "document": {
+        "collection": {
+          "recent": {
+            "from": "24438002",
+            "target": "24438542",
+            "through": "24438542",
+            "complete": true
+          },
+          "enrichment": {
+            "from": "24243896",
+            "jobId": "1",
+            "target": "24433895",
+            "through": "24245895",
+            "complete": false,
+            "requestId": "req_14529e6d2e115306e5122e8354aa1089"
+          },
+          "proofBudget": "2000",
+          "recentBudget": "2000"
+        },
+        "durationMs": 111811,
+        "rpcRequests": 209,
+        "providerAlias": "arc-drpc-public",
+        "responseBytes": 437631,
+        "snapshotRunId": "run_54d1d9c00fd04c51bfc0cb8faf25b5c7"
+      }
+    },
+    "formalMode": "FAIL_CLOSED_COVERAGE_INSUFFICIENT"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-05T19:17:04.810Z",
+  "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+  "deploymentSha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+  "origin": "https://web--atl-web--xtd599t97njk.code.run",
+  "files": [
+    {
+      "url": "/assets/index-41ecj1vU.js",
+      "bytes": 217309,
+      "sha256": "2260bddeb56c6347edc446d344ead99d18c4bec69122a6fba3b91fb757648058",
+      "localBuildIdentical": true
+    },
+    {
+      "url": "/assets/index-BH3qBLPm.css",
+      "bytes": 8415,
+      "sha256": "32eb840695a6c1a823972ccbf84bf75077305244e11fe7e13264f88ef77cd573",
+      "localBuildIdentical": true
+    }
+  ]
+}

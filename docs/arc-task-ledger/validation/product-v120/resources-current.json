@@ -1,0 +1,74 @@
+{
+  "at": "2026-10-05T19:22:59.671Z",
+  "services": [
+    {
+      "id": "atl-api",
+      "sha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+      "plan": "nf-compute-10",
+      "instances": 1,
+      "ports": [
+        {
+          "name": "api",
+          "public": false,
+          "vpcAccessible": false,
+          "dns": "api--atl-api--xtd599t97njk.code.run"
+        }
+      ]
+    },
+    {
+      "id": "atl-web",
+      "sha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+      "plan": "nf-compute-10",
+      "instances": 1,
+      "ports": [
+        {
+          "name": "web",
+          "public": true,
+          "vpcAccessible": false,
+          "dns": "web--atl-web--xtd599t97njk.code.run"
+        }
+      ]
+    }
+  ],
+  "database": {
+    "id": "atl-postgres",
+    "version": "16",
+    "plan": "nf-compute-20",
+    "replicas": 1,
+    "externalAccess": false,
+    "tls": true,
+    "storageMiB": 4096
+  },
+  "jobs": [
+    {
+      "id": "atl-sync",
+      "sha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+      "plan": "nf-compute-10",
+      "cron": {
+        "schedule": "*/10 * * * *",
+        "concurrencyPolicy": "Forbid"
+      },
+      "suspended": false,
+      "deadline": 240,
+      "backoffLimit": 0
+    },
+    {
+      "id": "atl-migrate",
+      "plan": "nf-compute-10"
+    }
+  ],
+  "billing": {
+    "startTime": 1791141779,
+    "endTime": 1791228179,
+    "window": {
+      "start": 1791141779,
+      "end": 1791228179
+    },
+    "usage": [
+      {
+        "currency": "usd",
+        "total": 0
+      }
+    ]
+  }
+}

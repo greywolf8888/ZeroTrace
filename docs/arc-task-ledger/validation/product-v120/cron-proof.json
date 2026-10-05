@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-05T19:22:21.868Z",
+  "baselineAt": "2026-10-05T19:18:31.587Z",
+  "schedule": "*/10 * * * *",
+  "sourceSha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+  "run": {
+    "id": "51276798-056f-4a6c-9082-da3d712c2ccf",
+    "status": "SUCCESS",
+    "startedAt": "2026-10-05T19:20:00.000Z",
+    "concludedAt": "2026-10-05T19:22:13.000Z"
+  },
+  "manualSyncPostsSinceBaseline": 0,
+  "exitCode": 0,
+  "status": "CRON_TRIGGER_VALIDATED"
+}

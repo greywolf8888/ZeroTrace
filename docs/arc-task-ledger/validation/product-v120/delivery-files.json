@@ -1,0 +1,127 @@
+{
+  "at": "2026-10-05T19:28:36.026Z",
+  "credentialScanPassed": true,
+  "privateStateDirectoryPublished": false,
+  "files": [
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/acceptance.json",
+      "bytes": 5006,
+      "sha256": "a414c269a3948ebfcc85a2d056ebb513eb1d93e4961bdb0c8df79d6e5a6bc69c"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/api-worker-source-compatibility.json",
+      "bytes": 11957,
+      "sha256": "693acb4133f44abf885b964eb0e1c4cb3f21752011acb5c9e83dd9d5f4782639"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/chain-deployment-proof.json",
+      "bytes": 6571,
+      "sha256": "95a2374a96e1f2a931edc70496e87755f4d00fae78a9d5b5b32492009a83ea85"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/checks.json",
+      "bytes": 9002,
+      "sha256": "873aec0897889fecfb1f6718e3f90e80de85b64444508d035cbe6829d10106d7"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/commands.json",
+      "bytes": 4880,
+      "sha256": "66165a73721f209b4dd295eeb94611757512a3160e922dd78d4a04902494d123"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/cron-proof.json",
+      "bytes": 446,
+      "sha256": "08e86b81af92bd8ab24daab476ad96fec8de6943070e84a8d58e4b4911a6464a"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/hosted-desktop-detail.png",
+      "bytes": 286666,
+      "sha256": "639a4f2519d66df15205955a2d6073cc430b886f23d2543a13a78d7adb6b1448"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/hosted-desktop-report.png",
+      "bytes": 298354,
+      "sha256": "e5af6581f80f0d2d3b16a2ac075c418e58dc4de62be546e63c7bdfde512b7621"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/hosted-mobile-detail.png",
+      "bytes": 267661,
+      "sha256": "8ae78819bd1b4271dc01cfa22e7d1a678c6b40c9b699e81056418ae33d445b10"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/hosted-mobile-first-screen.png",
+      "bytes": 60673,
+      "sha256": "f74f279f5c4f3220208fdf86a2d68204464987747d40c0d76b826a5e595f07d0"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/hosted-mobile-report.png",
+      "bytes": 280363,
+      "sha256": "947cb05644ee2015e8d34184be1bf00d0a197764b91f1fbb9e87ac0c316fea79"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/hosted-product-proof.json",
+      "bytes": 37700,
+      "sha256": "fb5bfb2f878fa91b6b55131be40f4ec6e818d266bbe120734cf5a1d14b34b37d"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/job-runs-safe.json",
+      "bytes": 8155,
+      "sha256": "565b77f0103904bea47fca04873e04bc780794ba243b17c407d662876a3b11d4"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/mainnet-current.json",
+      "bytes": 211400,
+      "sha256": "2df94ea0d83c0cd3fdb5ca7667e1de5cf8fb352339c325eb5603d176d31d12ee"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/mobile-first-screen-red.json",
+      "bytes": 545,
+      "sha256": "da2d308565e5c28cac5a39a3d6295dc202f065f6ee381a9c0c3584809170adf0"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/queue-after-sync.json",
+      "bytes": 3863,
+      "sha256": "9666b12c2200d1a0345b2ed785c85f7feea432d46baf750eb5e175e2b278b11d"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/queue-before-sync.json",
+      "bytes": 1784,
+      "sha256": "afcf9d88b2b2daf22f154aa8b606791aa21421d66a6871269c211489f5455260"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/red-baseline.json",
+      "bytes": 2315,
+      "sha256": "381cbed67a4ab40e2273b5a7e70179c3966434be73308846f56b2f2b8f79cced"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/resources-current.json",
+      "bytes": 1523,
+      "sha256": "2e5bf0a619915867ae071e43caf0cdbd1e3958e77cbcddcad63ee73a6b183157"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/restart-proof.json",
+      "bytes": 1278,
+      "sha256": "b2973ff41c913a6059d4c3cc6cc30ae1e4367f720a000d9a2b188fc0921f5b8a"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/source-current.json",
+      "bytes": 202,
+      "sha256": "eb5a9ea45646898c58195db78246801f86a0efe92fa382b5fff7cdc86cbb8be1"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/source-map.json",
+      "bytes": 3118,
+      "sha256": "82f7284a6b0bc0414e41f5583f9f310c2d231bc6a6587b994590df79d850da5e"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/product-v120/web-assets-proof.json",
+      "bytes": 631,
+      "sha256": "b29144637ab253492a27e3d642d71440bfaf9c3dcf644d4735db356f57564649"
+    },
+    {
+      "path": "docs/arc-task-ledger/PRODUCT_DELIVERY_20261006.md",
+      "bytes": 6552,
+      "sha256": "cd303e848b4a7f3f70553f5d225d0533b44b9543cf434b324bd78268b1e6d0ee"
+    }
+  ]
+}

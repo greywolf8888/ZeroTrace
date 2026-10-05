@@ -1,3 +1,9 @@
+# 当前交付：Arc Task Ledger v1.2.0
+
+2026-10-06 当前产品闭环已完成实际部署验收；固定版本、现行限制与证据见 [产品交付](PRODUCT_DELIVERY_20261006.md)。下文为保留的旧轮次记录，不代表当前版本状态。
+
+---
+
 # Arc Task Ledger Northflank 实际部署交付
 
 2026-10-05，状态 **PUBLIC_DEPLOYED_WITH_LIMITATIONS**。用户完成账户操作后，本组件已通过 Northflank REST API 实际部署并完成云端验收。新增付费授权为 **0 USD**；截至 2026-10-05T12:36:38.628Z，平台最近 24 小时使用量为 **0 USD**。这项观测不构成永久免费或账单硬上限证明。

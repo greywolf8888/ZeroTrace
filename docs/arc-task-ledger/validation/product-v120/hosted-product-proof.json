@@ -1,0 +1,1124 @@
+{
+  "at": "2026-10-05T19:25:31.603Z",
+  "origin": "https://web--atl-web--xtd599t97njk.code.run",
+  "version": "atl-v1.2.0",
+  "snapshotRunId": "run_54d1d9c00fd04c51bfc0cb8faf25b5c7",
+  "snapshot": {
+    "chainId": "5042",
+    "finality": "FINALIZED",
+    "blockHash": "0x2cf6f119985e6e2627be0d85256a5b51545e71e667de60d5ca003591308f4e92",
+    "sourceSet": ["arc-drpc-public"],
+    "observedAt": "2026-10-05T19:20:19.175Z",
+    "blockNumber": "24438542"
+  },
+  "totalTasks": 16,
+  "selectedJobIds": ["18", "1", "9"],
+  "jobs": [
+    {
+      "jobId": "18",
+      "cashState": {
+        "state": "known",
+        "value": "CONFIRMED_DIRECT",
+        "evidenceIds": [
+          "ev_1c9a7349bd6e08c7e0e5b0a1",
+          "ev_a49f000309d61ac216c07294",
+          "ev_eb58e57758c6cedb4575d829",
+          "ev_41ad5f4d41c403c868ea0dd0",
+          "ev_ed26a93c4a78c8a3394f9a6d",
+          "ev_1b64483cf8b1bdf94b872568",
+          "ev_56a2415351b8d8e49b0a7bd3",
+          "ev_a0e70838096d5c1dbfedab09",
+          "ev_8e35fe8d16ec4eb13d2f9bd0",
+          "ev_62e59d647414c48b3196e041",
+          "ev_9dcbc7462eef82bb5705c3cc",
+          "ev_4ffbf21c8dbdf972ebab9491",
+          "ev_49f821398f78f74a77a09c2e",
+          "ev_399bedd21c868da1d8ae5583",
+          "ev_d576cb0ed8183cebeaf5bc14",
+          "ev_4664cd0a8e721f0a86c4a748",
+          "ev_5fb48d4202dfe8e492acb6cf",
+          "ev_78a95ce79766af82bef14558",
+          "ev_bd3ddcaa2f9aa584579bf939",
+          "ev_0c85e78ba2ec30d72f59bbdf",
+          "ev_752e7ddba1b0b12fb70e8296",
+          "ev_001b70ded3e5a733b50a59b2",
+          "ev_4cbb369ec824c73e7530156e",
+          "ev_8da9b79d4a3a759e86178951",
+          "ev_189d2a76daf4be0dcee09df3"
+        ]
+      },
+      "result": {
+        "schemaVersion": "atl-settlement-result-v1",
+        "jobId": "18",
+        "state": "confirmed",
+        "conclusion": "本任务的已识别资金分配已核验；请按各收款角色查看金额。",
+        "reasons": [
+          "历史不完整；金额仅覆盖已观察转移和已核验具体义务。",
+          "单来源或独立来源一致性尚未完整核验。"
+        ],
+        "nextAction": "打开金额对应证据，复制固定快照链接或生成可读报告。",
+        "metrics": [
+          {
+            "key": "face",
+            "label": "奖励面值",
+            "amount": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "2000000000000000000",
+                "evidenceIds": ["ev_78a95ce79766af82bef14558"]
+              },
+              "decimals": 18
+            },
+            "scope": "FACE_VALUE",
+            "evidenceIds": ["ev_78a95ce79766af82bef14558"]
+          },
+          {
+            "key": "worker",
+            "label": "工作者已观察报酬",
+            "scope": "OBSERVED",
+            "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "known",
+                "value": "1980000000000000000",
+                "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+              }
+            }
+          },
+          {
+            "key": "fee",
+            "label": "已观察协议费",
+            "scope": "OBSERVED",
+            "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "known",
+                "value": "20000000000000000",
+                "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+              }
+            }
+          },
+          {
+            "key": "refund",
+            "label": "发布者已观察退款",
+            "scope": "OBSERVED",
+            "evidenceIds": [],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有取得该分配的任务级证据；不能认定已付 0。"
+              }
+            }
+          },
+          {
+            "key": "outstanding",
+            "label": "本任务已核验未清偿额",
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "known",
+                "value": "0",
+                "evidenceIds": []
+              }
+            },
+            "scope": "VERIFIED_OBLIGATIONS",
+            "evidenceIds": []
+          }
+        ],
+        "historyComplete": false,
+        "gas": [
+          {
+            "amount": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "13074720014382192",
+                "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"]
+              },
+              "decimals": 18
+            },
+            "transactionHash": "0xe9f6ebb98510b962b41a46a5d842c395aa23b0b2375e995b8e42178ab69db711",
+            "payer": {
+              "state": "known",
+              "value": "0xde427f3967cc7a0bf7a9f891195760ccffc82eda",
+              "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"]
+            },
+            "scope": "TRANSACTION_ONLY",
+            "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"]
+          },
+          {
+            "amount": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "4252657000000000",
+                "evidenceIds": ["ev_4cbb369ec824c73e7530156e"]
+              },
+              "decimals": 18
+            },
+            "transactionHash": "0x70d61162e71d1f09fda7a549d6218687a5f5f4ef0d236fd2280349f866027633",
+            "payer": {
+              "state": "known",
+              "value": "0x41d926f3853fa2d3bdc9971d105e33210ba21c71",
+              "evidenceIds": ["ev_4cbb369ec824c73e7530156e"]
+            },
+            "scope": "TRANSACTION_ONLY",
+            "evidenceIds": ["ev_4cbb369ec824c73e7530156e"]
+          },
+          {
+            "amount": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "3178517000000000",
+                "evidenceIds": ["ev_8da9b79d4a3a759e86178951"]
+              },
+              "decimals": 18
+            },
+            "transactionHash": "0xc88fac423566dc14c1c459c35dc15d097d936f4a8393a498bed23b29a7955f28",
+            "payer": {
+              "state": "known",
+              "value": "0x41d926f3853fa2d3bdc9971d105e33210ba21c71",
+              "evidenceIds": ["ev_8da9b79d4a3a759e86178951"]
+            },
+            "scope": "TRANSACTION_ONLY",
+            "evidenceIds": ["ev_8da9b79d4a3a759e86178951"]
+          },
+          {
+            "amount": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "3330560032639488",
+                "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+              },
+              "decimals": 18
+            },
+            "transactionHash": "0xe74cda47e54b3c3dc5d3a586371dbf23a94422ffa3567647e533cf27a3ece6e6",
+            "payer": {
+              "state": "known",
+              "value": "0xde427f3967cc7a0bf7a9f891195760ccffc82eda",
+              "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+            },
+            "scope": "TRANSACTION_ONLY",
+            "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+          }
+        ]
+      },
+      "evidenceHashes": [
+        {
+          "id": "ev_1c9a7349bd6e08c7e0e5b0a1",
+          "payloadHash": "1f70d16ca0de0a0c08cef78417ffad039a8c6d4f008c8a49abe2b2614839de78",
+          "verified": true
+        },
+        {
+          "id": "ev_a49f000309d61ac216c07294",
+          "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57",
+          "verified": true
+        },
+        {
+          "id": "ev_eb58e57758c6cedb4575d829",
+          "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4",
+          "verified": true
+        },
+        {
+          "id": "ev_41ad5f4d41c403c868ea0dd0",
+          "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c",
+          "verified": true
+        },
+        {
+          "id": "ev_ed26a93c4a78c8a3394f9a6d",
+          "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9",
+          "verified": true
+        },
+        {
+          "id": "ev_1b64483cf8b1bdf94b872568",
+          "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652",
+          "verified": true
+        },
+        {
+          "id": "ev_56a2415351b8d8e49b0a7bd3",
+          "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872",
+          "verified": true
+        },
+        {
+          "id": "ev_a0e70838096d5c1dbfedab09",
+          "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb",
+          "verified": true
+        },
+        {
+          "id": "ev_8e35fe8d16ec4eb13d2f9bd0",
+          "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798",
+          "verified": true
+        },
+        {
+          "id": "ev_62e59d647414c48b3196e041",
+          "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57",
+          "verified": true
+        },
+        {
+          "id": "ev_9dcbc7462eef82bb5705c3cc",
+          "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4",
+          "verified": true
+        },
+        {
+          "id": "ev_4ffbf21c8dbdf972ebab9491",
+          "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c",
+          "verified": true
+        },
+        {
+          "id": "ev_49f821398f78f74a77a09c2e",
+          "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9",
+          "verified": true
+        },
+        {
+          "id": "ev_399bedd21c868da1d8ae5583",
+          "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652",
+          "verified": true
+        },
+        {
+          "id": "ev_d576cb0ed8183cebeaf5bc14",
+          "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872",
+          "verified": true
+        },
+        {
+          "id": "ev_4664cd0a8e721f0a86c4a748",
+          "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb",
+          "verified": true
+        },
+        {
+          "id": "ev_5fb48d4202dfe8e492acb6cf",
+          "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798",
+          "verified": true
+        },
+        {
+          "id": "ev_78a95ce79766af82bef14558",
+          "payloadHash": "ca62b9bc8323754e57a6a8deb4f9bca8f8a49fe6c71e95112a7fcbd1797c8375",
+          "verified": true
+        },
+        {
+          "id": "ev_bd3ddcaa2f9aa584579bf939",
+          "payloadHash": "aefd9294a677d584ddeb07d5334bff2f6975529bfc5381aaa91a34f69e2bb30f",
+          "verified": true
+        },
+        {
+          "id": "ev_0c85e78ba2ec30d72f59bbdf",
+          "payloadHash": "d5e1b2032af0aca45a1fdaec6726c4e93280e264654fe09a6e11c0dd425c82f3",
+          "verified": true
+        },
+        {
+          "id": "ev_752e7ddba1b0b12fb70e8296",
+          "payloadHash": "ca2aa2cd3822a2459f4f18d3847685c1507757f7e869c97a0316089d826de266",
+          "verified": true
+        },
+        {
+          "id": "ev_001b70ded3e5a733b50a59b2",
+          "payloadHash": "5d511e321e031389ddfaf2fc9afa97eec7297112d82ee2b8b74616521d52bf6e",
+          "verified": true
+        },
+        {
+          "id": "ev_4cbb369ec824c73e7530156e",
+          "payloadHash": "ef7b86f89dd95ff4ec7d770db5ba453f3d7950b91035bde17aa78257958e7e9a",
+          "verified": true
+        },
+        {
+          "id": "ev_8da9b79d4a3a759e86178951",
+          "payloadHash": "e303c7c37fd8d6cc9871e6c5561873766548bbf9b333ca8f73ed924e069699b7",
+          "verified": true
+        },
+        {
+          "id": "ev_189d2a76daf4be0dcee09df3",
+          "payloadHash": "4903b3086c7ee8bca2c1795d9a566866104a41918f5d8b3408f80f58a5f3e28e",
+          "verified": true
+        }
+      ],
+      "legs": [
+        {
+          "id": "leg_c240fbe4ee7936c0ea955d1b",
+          "kind": "DEPOSIT",
+          "role": "ADAPTER",
+          "payee": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d",
+          "attribution": "DIRECT",
+          "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"],
+          "ruleVersion": "atl-v1.2.0",
+          "parkedAmount": {
+            "state": "known",
+            "value": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "0",
+                "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"]
+              },
+              "decimals": 18
+            },
+            "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"]
+          },
+          "obligationIds": [],
+          "expectedAmount": {
+            "asset": "USDC",
+            "atomic": {
+              "state": "known",
+              "value": "2000000000000000000",
+              "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"]
+            },
+            "decimals": 18
+          },
+          "observedAmount": {
+            "state": "known",
+            "value": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "2000000000000000000",
+                "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"]
+              },
+              "decimals": 18
+            },
+            "evidenceIds": ["ev_001b70ded3e5a733b50a59b2"]
+          }
+        },
+        {
+          "id": "leg_f48e4cc69ca8c5460ee5745a",
+          "kind": "ESCROW_TRANSIT",
+          "role": "ESCROW",
+          "payee": "0x64ca39fc57315d0d488accac07c37c6e841cd058",
+          "attribution": "DIRECT",
+          "evidenceIds": ["ev_4cbb369ec824c73e7530156e"],
+          "ruleVersion": "atl-v1.2.0",
+          "parkedAmount": {
+            "state": "known",
+            "value": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "0",
+                "evidenceIds": ["ev_4cbb369ec824c73e7530156e"]
+              },
+              "decimals": 18
+            },
+            "evidenceIds": ["ev_4cbb369ec824c73e7530156e"]
+          },
+          "obligationIds": [],
+          "expectedAmount": {
+            "asset": "USDC",
+            "atomic": {
+              "state": "known",
+              "value": "2000000000000000000",
+              "evidenceIds": ["ev_4cbb369ec824c73e7530156e"]
+            },
+            "decimals": 18
+          },
+          "observedAmount": {
+            "state": "known",
+            "value": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "2000000000000000000",
+                "evidenceIds": ["ev_4cbb369ec824c73e7530156e"]
+              },
+              "decimals": 18
+            },
+            "evidenceIds": ["ev_4cbb369ec824c73e7530156e"]
+          }
+        },
+        {
+          "id": "leg_ee38bee84334d3b528bfee2e",
+          "kind": "FEE",
+          "role": "PROTOCOL",
+          "payee": "0xadac7534d3fe868e28c77df5cd930f2635bcb63a",
+          "attribution": "DIRECT",
+          "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"],
+          "ruleVersion": "atl-v1.2.0",
+          "parkedAmount": {
+            "state": "known",
+            "value": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "0",
+                "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+              },
+              "decimals": 18
+            },
+            "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+          },
+          "obligationIds": [],
+          "expectedAmount": {
+            "asset": "USDC",
+            "atomic": {
+              "state": "known",
+              "value": "20000000000000000",
+              "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+            },
+            "decimals": 18
+          },
+          "observedAmount": {
+            "state": "known",
+            "value": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "20000000000000000",
+                "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+              },
+              "decimals": 18
+            },
+            "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+          }
+        },
+        {
+          "id": "leg_8bd57af68abd79dfdd77ea46",
+          "kind": "REWARD",
+          "role": "WORKER",
+          "payee": "0x41d926f3853fa2d3bdc9971d105e33210ba21c71",
+          "attribution": "DIRECT",
+          "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"],
+          "ruleVersion": "atl-v1.2.0",
+          "parkedAmount": {
+            "state": "known",
+            "value": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "0",
+                "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+              },
+              "decimals": 18
+            },
+            "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+          },
+          "obligationIds": [],
+          "expectedAmount": {
+            "asset": "USDC",
+            "atomic": {
+              "state": "known",
+              "value": "1980000000000000000",
+              "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+            },
+            "decimals": 18
+          },
+          "observedAmount": {
+            "state": "known",
+            "value": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "1980000000000000000",
+                "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+              },
+              "decimals": 18
+            },
+            "evidenceIds": ["ev_189d2a76daf4be0dcee09df3"]
+          }
+        }
+      ]
+    },
+    {
+      "jobId": "1",
+      "cashState": {
+        "state": "known",
+        "value": "NONE_OBSERVED",
+        "evidenceIds": [
+          "ev_1c9a7349bd6e08c7e0e5b0a1",
+          "ev_a49f000309d61ac216c07294",
+          "ev_eb58e57758c6cedb4575d829",
+          "ev_41ad5f4d41c403c868ea0dd0",
+          "ev_ed26a93c4a78c8a3394f9a6d",
+          "ev_1b64483cf8b1bdf94b872568",
+          "ev_56a2415351b8d8e49b0a7bd3",
+          "ev_a0e70838096d5c1dbfedab09",
+          "ev_8e35fe8d16ec4eb13d2f9bd0",
+          "ev_62e59d647414c48b3196e041",
+          "ev_9dcbc7462eef82bb5705c3cc",
+          "ev_4ffbf21c8dbdf972ebab9491",
+          "ev_49f821398f78f74a77a09c2e",
+          "ev_399bedd21c868da1d8ae5583",
+          "ev_d576cb0ed8183cebeaf5bc14",
+          "ev_4664cd0a8e721f0a86c4a748",
+          "ev_5fb48d4202dfe8e492acb6cf",
+          "ev_a1cea2e2b70702930cb90a7d",
+          "ev_bd3ddcaa2f9aa584579bf939",
+          "ev_298abd4219399e7c319b13d9",
+          "ev_752e7ddba1b0b12fb70e8296"
+        ]
+      },
+      "result": {
+        "schemaVersion": "atl-settlement-result-v1",
+        "jobId": "1",
+        "state": "unknown",
+        "conclusion": "目前无法确认本任务完整结算，缺失证据不表示已付 0。",
+        "reasons": [
+          "历史不完整；金额仅覆盖已观察转移和已核验具体义务。",
+          "单来源或独立来源一致性尚未完整核验。"
+        ],
+        "nextAction": "查看缺失证据，并申请本部署内的有界补证；稍后重新加载已采集结果。",
+        "metrics": [
+          {
+            "key": "face",
+            "label": "奖励面值",
+            "amount": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "2000000000000000000",
+                "evidenceIds": ["ev_a1cea2e2b70702930cb90a7d"]
+              },
+              "decimals": 18
+            },
+            "scope": "FACE_VALUE",
+            "evidenceIds": ["ev_a1cea2e2b70702930cb90a7d"]
+          },
+          {
+            "key": "worker",
+            "label": "工作者已观察报酬",
+            "scope": "OBSERVED",
+            "evidenceIds": [],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有取得该分配的任务级证据；不能认定已付 0。"
+              }
+            }
+          },
+          {
+            "key": "fee",
+            "label": "已观察协议费",
+            "scope": "OBSERVED",
+            "evidenceIds": [],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有取得该分配的任务级证据；不能认定已付 0。"
+              }
+            }
+          },
+          {
+            "key": "refund",
+            "label": "发布者已观察退款",
+            "scope": "OBSERVED",
+            "evidenceIds": [],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有取得该分配的任务级证据；不能认定已付 0。"
+              }
+            }
+          },
+          {
+            "key": "outstanding",
+            "label": "本任务已核验未清偿额",
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有完整的任务义务及清偿证据；账户余额不能替代任务未清偿额。"
+              }
+            },
+            "scope": "VERIFIED_OBLIGATIONS",
+            "evidenceIds": []
+          }
+        ],
+        "historyComplete": false,
+        "gas": []
+      },
+      "evidenceHashes": [
+        {
+          "id": "ev_1c9a7349bd6e08c7e0e5b0a1",
+          "payloadHash": "1f70d16ca0de0a0c08cef78417ffad039a8c6d4f008c8a49abe2b2614839de78",
+          "verified": true
+        },
+        {
+          "id": "ev_a49f000309d61ac216c07294",
+          "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57",
+          "verified": true
+        },
+        {
+          "id": "ev_eb58e57758c6cedb4575d829",
+          "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4",
+          "verified": true
+        },
+        {
+          "id": "ev_41ad5f4d41c403c868ea0dd0",
+          "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c",
+          "verified": true
+        },
+        {
+          "id": "ev_ed26a93c4a78c8a3394f9a6d",
+          "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9",
+          "verified": true
+        },
+        {
+          "id": "ev_1b64483cf8b1bdf94b872568",
+          "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652",
+          "verified": true
+        },
+        {
+          "id": "ev_56a2415351b8d8e49b0a7bd3",
+          "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872",
+          "verified": true
+        },
+        {
+          "id": "ev_a0e70838096d5c1dbfedab09",
+          "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb",
+          "verified": true
+        },
+        {
+          "id": "ev_8e35fe8d16ec4eb13d2f9bd0",
+          "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798",
+          "verified": true
+        },
+        {
+          "id": "ev_62e59d647414c48b3196e041",
+          "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57",
+          "verified": true
+        },
+        {
+          "id": "ev_9dcbc7462eef82bb5705c3cc",
+          "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4",
+          "verified": true
+        },
+        {
+          "id": "ev_4ffbf21c8dbdf972ebab9491",
+          "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c",
+          "verified": true
+        },
+        {
+          "id": "ev_49f821398f78f74a77a09c2e",
+          "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9",
+          "verified": true
+        },
+        {
+          "id": "ev_399bedd21c868da1d8ae5583",
+          "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652",
+          "verified": true
+        },
+        {
+          "id": "ev_d576cb0ed8183cebeaf5bc14",
+          "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872",
+          "verified": true
+        },
+        {
+          "id": "ev_4664cd0a8e721f0a86c4a748",
+          "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb",
+          "verified": true
+        },
+        {
+          "id": "ev_5fb48d4202dfe8e492acb6cf",
+          "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798",
+          "verified": true
+        },
+        {
+          "id": "ev_a1cea2e2b70702930cb90a7d",
+          "payloadHash": "8be6ac1a26ffa3af5fc3d5bbdaf756d36e2174b4f4edcc2c600315435336a37a",
+          "verified": true
+        },
+        {
+          "id": "ev_bd3ddcaa2f9aa584579bf939",
+          "payloadHash": "aefd9294a677d584ddeb07d5334bff2f6975529bfc5381aaa91a34f69e2bb30f",
+          "verified": true
+        },
+        {
+          "id": "ev_298abd4219399e7c319b13d9",
+          "payloadHash": "305c26c064a9d20ed3d343b881b62218c3852f733569fb5c54e627807f7fb64a",
+          "verified": true
+        },
+        {
+          "id": "ev_752e7ddba1b0b12fb70e8296",
+          "payloadHash": "ca2aa2cd3822a2459f4f18d3847685c1507757f7e869c97a0316089d826de266",
+          "verified": true
+        }
+      ],
+      "legs": []
+    },
+    {
+      "jobId": "9",
+      "cashState": {
+        "state": "known",
+        "value": "NONE_OBSERVED",
+        "evidenceIds": [
+          "ev_1c9a7349bd6e08c7e0e5b0a1",
+          "ev_a49f000309d61ac216c07294",
+          "ev_eb58e57758c6cedb4575d829",
+          "ev_41ad5f4d41c403c868ea0dd0",
+          "ev_ed26a93c4a78c8a3394f9a6d",
+          "ev_1b64483cf8b1bdf94b872568",
+          "ev_56a2415351b8d8e49b0a7bd3",
+          "ev_a0e70838096d5c1dbfedab09",
+          "ev_8e35fe8d16ec4eb13d2f9bd0",
+          "ev_62e59d647414c48b3196e041",
+          "ev_9dcbc7462eef82bb5705c3cc",
+          "ev_4ffbf21c8dbdf972ebab9491",
+          "ev_49f821398f78f74a77a09c2e",
+          "ev_399bedd21c868da1d8ae5583",
+          "ev_d576cb0ed8183cebeaf5bc14",
+          "ev_4664cd0a8e721f0a86c4a748",
+          "ev_5fb48d4202dfe8e492acb6cf",
+          "ev_1826b8f2005cdcd6051fdf08",
+          "ev_bd3ddcaa2f9aa584579bf939",
+          "ev_752e7ddba1b0b12fb70e8296"
+        ]
+      },
+      "result": {
+        "schemaVersion": "atl-settlement-result-v1",
+        "jobId": "9",
+        "state": "unknown",
+        "conclusion": "目前无法确认本任务完整结算，缺失证据不表示已付 0。",
+        "reasons": [
+          "历史不完整；金额仅覆盖已观察转移和已核验具体义务。",
+          "单来源或独立来源一致性尚未完整核验。"
+        ],
+        "nextAction": "查看缺失证据，并申请本部署内的有界补证；稍后重新加载已采集结果。",
+        "metrics": [
+          {
+            "key": "face",
+            "label": "奖励面值",
+            "amount": {
+              "asset": "USDC",
+              "atomic": {
+                "state": "known",
+                "value": "1000000000000000000",
+                "evidenceIds": ["ev_1826b8f2005cdcd6051fdf08"]
+              },
+              "decimals": 18
+            },
+            "scope": "FACE_VALUE",
+            "evidenceIds": ["ev_1826b8f2005cdcd6051fdf08"]
+          },
+          {
+            "key": "worker",
+            "label": "工作者已观察报酬",
+            "scope": "OBSERVED",
+            "evidenceIds": [],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有取得该分配的任务级证据；不能认定已付 0。"
+              }
+            }
+          },
+          {
+            "key": "fee",
+            "label": "已观察协议费",
+            "scope": "OBSERVED",
+            "evidenceIds": [],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有取得该分配的任务级证据；不能认定已付 0。"
+              }
+            }
+          },
+          {
+            "key": "refund",
+            "label": "发布者已观察退款",
+            "scope": "OBSERVED",
+            "evidenceIds": [],
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有取得该分配的任务级证据；不能认定已付 0。"
+              }
+            }
+          },
+          {
+            "key": "outstanding",
+            "label": "本任务已核验未清偿额",
+            "amount": {
+              "asset": "USDC",
+              "decimals": 18,
+              "atomic": {
+                "state": "unknown",
+                "reason": "没有完整的任务义务及清偿证据；账户余额不能替代任务未清偿额。"
+              }
+            },
+            "scope": "VERIFIED_OBLIGATIONS",
+            "evidenceIds": []
+          }
+        ],
+        "historyComplete": false,
+        "gas": []
+      },
+      "evidenceHashes": [
+        {
+          "id": "ev_1c9a7349bd6e08c7e0e5b0a1",
+          "payloadHash": "1f70d16ca0de0a0c08cef78417ffad039a8c6d4f008c8a49abe2b2614839de78",
+          "verified": true
+        },
+        {
+          "id": "ev_a49f000309d61ac216c07294",
+          "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57",
+          "verified": true
+        },
+        {
+          "id": "ev_eb58e57758c6cedb4575d829",
+          "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4",
+          "verified": true
+        },
+        {
+          "id": "ev_41ad5f4d41c403c868ea0dd0",
+          "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c",
+          "verified": true
+        },
+        {
+          "id": "ev_ed26a93c4a78c8a3394f9a6d",
+          "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9",
+          "verified": true
+        },
+        {
+          "id": "ev_1b64483cf8b1bdf94b872568",
+          "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652",
+          "verified": true
+        },
+        {
+          "id": "ev_56a2415351b8d8e49b0a7bd3",
+          "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872",
+          "verified": true
+        },
+        {
+          "id": "ev_a0e70838096d5c1dbfedab09",
+          "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb",
+          "verified": true
+        },
+        {
+          "id": "ev_8e35fe8d16ec4eb13d2f9bd0",
+          "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798",
+          "verified": true
+        },
+        {
+          "id": "ev_62e59d647414c48b3196e041",
+          "payloadHash": "f22e86c8320b0decb3acf89832104b46d168f136fbb2d851a849927c7964cc57",
+          "verified": true
+        },
+        {
+          "id": "ev_9dcbc7462eef82bb5705c3cc",
+          "payloadHash": "a9199e67227c77030f36d022eddb15fe465b81181127f6eada47c66f1d0f77a4",
+          "verified": true
+        },
+        {
+          "id": "ev_4ffbf21c8dbdf972ebab9491",
+          "payloadHash": "ed915845962209f872017f0606962dab43fbbd73b818e64d69d5c2d60520775c",
+          "verified": true
+        },
+        {
+          "id": "ev_49f821398f78f74a77a09c2e",
+          "payloadHash": "b9d327f0ac0dc6063973f2c3b7aa76cec98b4aa18f11b2c6ca2c92da57c935c9",
+          "verified": true
+        },
+        {
+          "id": "ev_399bedd21c868da1d8ae5583",
+          "payloadHash": "4d4b3476c5825cdf25026da60e64a051dad41684f7a10d6e98eac73cd817a652",
+          "verified": true
+        },
+        {
+          "id": "ev_d576cb0ed8183cebeaf5bc14",
+          "payloadHash": "c00798f484eb29c91d7ffbff0a078d2e1264f9f11d0c6d89ccb524dac2df0872",
+          "verified": true
+        },
+        {
+          "id": "ev_4664cd0a8e721f0a86c4a748",
+          "payloadHash": "4dfdcbee6210428a7311607fc3faacb26bcef8fd65c296c615d5a125fba843eb",
+          "verified": true
+        },
+        {
+          "id": "ev_5fb48d4202dfe8e492acb6cf",
+          "payloadHash": "9fd17276fe5c11545c29580249985958b6c4f5625d47bac2736429bfebc3a798",
+          "verified": true
+        },
+        {
+          "id": "ev_1826b8f2005cdcd6051fdf08",
+          "payloadHash": "8e5b5d3317ff641f69ed0ec44639f18f746d72e8ea8dbc378dcfbe151c0d2b99",
+          "verified": true
+        },
+        {
+          "id": "ev_bd3ddcaa2f9aa584579bf939",
+          "payloadHash": "aefd9294a677d584ddeb07d5334bff2f6975529bfc5381aaa91a34f69e2bb30f",
+          "verified": true
+        },
+        {
+          "id": "ev_752e7ddba1b0b12fb70e8296",
+          "payloadHash": "ca2aa2cd3822a2459f4f18d3847685c1507757f7e869c97a0316089d826de266",
+          "verified": true
+        }
+      ],
+      "legs": []
+    }
+  ],
+  "coverage": {
+    "network": "arc-mainnet",
+    "adapter": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d",
+    "lastSuccessfulSync": "2026-10-05T19:20:19.175Z",
+    "stateHead": {
+      "state": "known",
+      "value": "24438542",
+      "evidenceIds": []
+    },
+    "historyHead": {
+      "state": "known",
+      "value": "21153189",
+      "evidenceIds": []
+    },
+    "historyRange": {
+      "state": "known",
+      "value": {
+        "gaps": [
+          {
+            "reason": "历史仅连续核验至 23458427；未覆盖至当前状态区块。",
+            "toBlock": "24438542",
+            "fromBlock": "23458428"
+          }
+        ],
+        "scope": "DECLARED_WINDOW",
+        "status": "partial",
+        "fromBlock": "23388428",
+        "targetBlock": "24438542",
+        "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+        "checkpointVersion": "168",
+        "contiguousThrough": "23458427",
+        "omittedPriorHistory": true
+      },
+      "evidenceIds": []
+    },
+    "coverage": {
+      "currentState": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      },
+      "jobEnumeration": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      },
+      "sourceAgreement": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "lifecycleHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "settlementHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "accountPendingHistory": {
+        "state": "known",
+        "value": "partial",
+        "evidenceIds": []
+      },
+      "deploymentVerification": {
+        "state": "known",
+        "value": "complete",
+        "evidenceIds": []
+      }
+    },
+    "gaps": [
+      {
+        "reason": "历史仅连续核验至 23458427；未覆盖至当前状态区块。"
+      }
+    ],
+    "datasource": "stored-replay",
+    "ruleVersion": "atl-v1.2.0",
+    "sourceSet": ["arc-drpc-public"],
+    "freshness": "known",
+    "lastAttempt": {
+      "success": true,
+      "observedAt": "2026-10-05T19:22:10.061Z",
+      "document": {
+        "collection": {
+          "recent": {
+            "from": "24438002",
+            "target": "24438542",
+            "through": "24438542",
+            "complete": true
+          },
+          "enrichment": {
+            "from": "24243896",
+            "jobId": "1",
+            "target": "24433895",
+            "through": "24245895",
+            "complete": false,
+            "requestId": "req_14529e6d2e115306e5122e8354aa1089"
+          },
+          "proofBudget": "2000",
+          "recentBudget": "2000"
+        },
+        "durationMs": 111811,
+        "rpcRequests": 209,
+        "providerAlias": "arc-drpc-public",
+        "responseBytes": 437631,
+        "snapshotRunId": "run_54d1d9c00fd04c51bfc0cb8faf25b5c7"
+      }
+    },
+    "formalMode": "FAIL_CLOSED_COVERAGE_INSUFFICIENT"
+  },
+  "userPaths": [
+    {
+      "surface": "desktop",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "firstScreenAmounts": true,
+      "taskInput": true,
+      "canonicalUrl": true,
+      "amounts": true,
+      "copyFeedback": true,
+      "fixedSnapshotFreshContext": true,
+      "report": true,
+      "consumer": true,
+      "addressRoleFilter": true,
+      "reload": true,
+      "unknownTask": true,
+      "mobileOverflow": false
+    },
+    {
+      "surface": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "firstScreenAmounts": true,
+      "taskInput": true,
+      "canonicalUrl": true,
+      "amounts": true,
+      "copyFeedback": true,
+      "fixedSnapshotFreshContext": true,
+      "report": true,
+      "consumer": true,
+      "addressRoleFilter": true,
+      "reload": true,
+      "unknownTask": true,
+      "mobileOverflow": false
+    }
+  ],
+  "mainnetSpecialSettlements": "NOT_OBSERVED",
+  "newMainnetTaskDuringObservation": "NOT_OBSERVED",
+  "formalMode": "FAIL_CLOSED_COVERAGE_INSUFFICIENT"
+}

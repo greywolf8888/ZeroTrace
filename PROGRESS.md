@@ -2503,3 +2503,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 用户完成账户操作后，Arc Task Ledger v1.1.0 已实际托管于 https://web--atl-web--xtd599t97njk.code.run/，部署提交 5d7deacc440505320e7495b3d55c952ece90a35a，干净复验源码 e934896ebf4361671ec7e27be9e29cd6bd09a5f9。arctrace/us-central 下 2 服务、1 PostgreSQL 16 数据库和 2 cron 已创建，迁移 4、只读 API 角色、两个实际云端镜像、有界主网两次手动采集、API 重启后固定快照资金/回执及游标复核、真实 cron 自动触发全部通过。定时 run 29e397c7-9772-4dfb-a069-5c34014a2baa：2026-10-05T12:30:00.000Z → 2026-10-05T12:31:45.000Z，SUCCESS、exitCode=0，观察期间无手动采集 POST。当前 finalized 24390571 / run_60427b582d5c69f3e6701b5e1f51f170，16 任务；任务 #18 奖励 1.98、费用 0.02 USDC，四个必要资金腿和 49 项证据摘要均核验。
 
 当前源码完整检查：1043 单元、88 集成通过/42 外部跳过、52 Rust、49 浏览器、Arc 81 单元/23 PostgreSQL/8 浏览器，加格式/lint/类型/构建/许可证均通过；独立导出 139 文件摘要一致、独立审计 0 告警，全仓库仍 8 告警。新增付费授权 0，截至 2026-10-05T12:36:38.628Z 平台 24 小时账单 0 USD；不能据此保证永久免费。历史连续核验至 23400427，声明窗口之外和剩余窗口仍 partial，单来源、正式取证关闭，特殊结算主网 NOT_OBSERVED。数据库未重启；命名网络策略/固定出口/长期费用硬限制/资助申请及全终端其他门禁未完成。原用户修改保留，main 未合并。当前事实以 docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md 及 validation/northflank-hosted-20261005.json 为准，旧 BLOCKED 记录保留为历史。
+
+## 2026-10-06 Arc Task Ledger v1.2.0 窄产品闭环
+
+当前固定源码 10592d9e963a24e8bb5af46d7fca983dc710a651、部署 8084e258d2b0574fabaf15393089b4fe6898acb6 已完成输入／角色筛选／同模型金额证据／固定分享报告／消费者集成／有界补证及实际 HTTPS、重启和自动采集。16 任务，#18 报酬1.98、费用0.02 USDC，25项证据摘要复核；完整检查和边界见 [产品交付](docs/arc-task-ledger/PRODUCT_DELIVERY_20261006.md)。42项外部集成跳过、单来源与历史 partial、正式取证关闭；未提升其他 ZeroTrace 门禁，原桌面未提交修改保留。

@@ -1,3 +1,9 @@
+# 当前交付：Arc Task Ledger v1.2.0
+
+2026-10-06 当前产品闭环已完成实际部署验收；固定版本、现行限制与证据见 [产品交付](PRODUCT_DELIVERY_20261006.md)。下文为保留的旧轮次记录，不代表当前版本状态。
+
+---
+
 # 独立公开版本与申请准备
 
 2026-10-05。Arc Task Ledger v1.1.0 **PUBLIC_DEPLOYED_WITH_LIMITATIONS**，实际 HTTPS 为 [Arc 任务证据台](https://web--atl-web--xtd599t97njk.code.run/)。源码已按用户明确授权公开；独立部署分支、固定 SHA 构建、数据库迁移、云端主网采集、API 重启及真实定时运行已完成。完整证据见 [托管交付](NORTHFLANK_DEPLOYMENT.md)。

@@ -1,0 +1,306 @@
+{
+  "at": "2026-10-05T19:13:09.291Z",
+  "priorDeploymentSha": "b9f442db773d914943f2e2ba8415ff426e46a03f",
+  "currentDeploymentSha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+  "currentSourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+  "apiWorkerMigrationSourcesIdentical": true,
+  "files": [
+    {
+      "path": "apps/arc-task-ledger-api/package.json",
+      "sha256": "5e08fe492d8c5a0497f8367976f88ab2db51839df4933852ea3dc66ca8bf7c34"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/app.ts",
+      "sha256": "7e09dffdbf7bfe6d4edd9037c43d318d34e68c4512dc624f8af44ded20c59752"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/contract.ts",
+      "sha256": "3ea8279e6be7ed9d10a48dca26689761bb27d2c7512529d3f0b1c553cae8e90b"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/migrate.ts",
+      "sha256": "50ac0a156cdbfe19c3776672643785922c2349f0029122568b3f6221ead7b83d"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/server.ts",
+      "sha256": "343ddbefc7c0443019f3e2c2696b39ad79f7bb88e10f2e770661e47fee3d6e8b"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/storage.ts",
+      "sha256": "a69a9a6d6cabdde8cb4a5134e7641a10f82fc3cd52ceda9362586a08895137b7"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/worker.ts",
+      "sha256": "6e5267b05fb41be7690eee320f4d3609cc38d21050e8b870f37bafb8d7d5e6af"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/tsconfig.json",
+      "sha256": "8da5b3f6ed50f8b3cdffb082ff21cafbeb5750a046b53711ae8e5131e48df6e1"
+    },
+    {
+      "path": "infra/northflank/Dockerfile",
+      "sha256": "fca73aff603867c52556237e2270d14721c5595d3aca22052c8563af439d72ef"
+    },
+    {
+      "path": "infra/northflank/migration-bootstrap.mjs",
+      "sha256": "989328b2d92dd70b28c7e9ee4ebd3560775b719c049c9ef7bf682c8a638ef1cf"
+    },
+    {
+      "path": "infra/northflank/nginx.conf.template",
+      "sha256": "8d3800b8ea6db37cbc64db7cb5636fb2aef50adaed224d2f8725cefc0e61e4a0"
+    },
+    {
+      "path": "infra/northflank/resource-intents.json",
+      "sha256": "fec000901e5a87371a52cb6fb69a680493844f80b06db8905347ae3d0e27b4b7"
+    },
+    {
+      "path": "infra/northflank/web-entrypoint.sh",
+      "sha256": "eac1119e17c0d482a05de43b351563f6639846a6fd1defd6c188a49308852192"
+    },
+    {
+      "path": "packages/arc-task-ledger/AGENTS.md",
+      "sha256": "a703df9ca149d78d50146dc1bc07db80c9be76edb37a402de6a1df091f8b1a31"
+    },
+    {
+      "path": "packages/arc-task-ledger/package.json",
+      "sha256": "d9296de9db414fcbf07326cd69a2d4484932138ad964d8569d6c6004b125d087"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/abi.json",
+      "sha256": "0e53af61dde5522b32f5586923acf3c7a3d052cf1f3f34426e1b6fd7931882ca"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/config.ts",
+      "sha256": "fceed0a90700b612e99064495aa35180233d63145e1f5e32f1847d2224adbbcf"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/deployment.json",
+      "sha256": "8d55eb37b20ab2d6bb46a07bc72f1fa552978edddf736a6974bb23bea1a7e003"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/index.ts",
+      "sha256": "c917bddad39802467c4098b3a216dfa80dbdf585decad5834744e80cb69ca164"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/live-result.ts",
+      "sha256": "f1b48b5aa3a4d109636f26e14df9f196561c008054c0b2274c46058c3d9dba04"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/navigation.json",
+      "sha256": "4a838d27981f286536d4c757eeacd270d0d8c94fa1d22e00eaf41cf4c07bb3b7"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/protocol.ts",
+      "sha256": "53ccc3c194e2934dbeb1b44e4464bcca4c7c204ffd98566221e8ba4ec218c12c"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/public-dns.ts",
+      "sha256": "cf9ee16d65a0e4bb429d91d05d36b39ff7f4c959b202504782bcd1b2b2c477ea"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/reader.ts",
+      "sha256": "848dd697b6bfe88010b3bf6081cc70488f5ccb61b01f1d8c97ba4a3b9de6f9be"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/result.ts",
+      "sha256": "fc1eb49c7b56a56ed9348527bd990cc0d540b61e2e6fd7ccce267cff60d6183d"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/settlement.ts",
+      "sha256": "41e52ffb8fee370e8b4dbb543b204a8bdca45f6fbdb8823d23c74da0728256c6"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/storage.ts",
+      "sha256": "9c6bd15a72b274c294a99c9f433462964ce647cf6253c42525cf07d0826058a4"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/types.ts",
+      "sha256": "0dfe582e356c159945960fcfff5f74f00dd67f00bdd9a0255ed8c9e1b0dda662"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/worker.ts",
+      "sha256": "c1822bb37fbc4f49ed28edb82a987a80a53e55afb69caf613186502092d79abb"
+    },
+    {
+      "path": "packages/arc-task-ledger/tsconfig.json",
+      "sha256": "050bd4fb467a7881ba3755a38e14b23b638ceec3cc60b2a66c7f49b9d877bfcb"
+    },
+    {
+      "path": "packages/chain-adapters/package.json",
+      "sha256": "6735d5e5fb7176f608c1e79c8653b07604b437f7e0bb1548205c11a3f3b01cf2"
+    },
+    {
+      "path": "packages/chain-adapters/src/errors.ts",
+      "sha256": "bb63fdd2d1217054c9e8ee597f9dc443fb445283e68234a5d3207c59abf676db"
+    },
+    {
+      "path": "packages/chain-adapters/src/security.ts",
+      "sha256": "50f91c31a76c581c22b164024825b79ec467b623f67996ea653d4feaa01556c7"
+    },
+    {
+      "path": "packages/chain-adapters/src/transport.ts",
+      "sha256": "425e7fe4dcabc493e453e4431dee62b56a241324bc7e5d84fbb111d7583bd117"
+    },
+    {
+      "path": "packages/chain-adapters/tsconfig.json",
+      "sha256": "e9983d18efd0e4a41ae0d397294ebe1a37ff07fbe8d30538d1ee083fdd2e09a9"
+    },
+    {
+      "path": "packages/evidence/package.json",
+      "sha256": "e1fed3e534b68761c2b87fc29989812f925dfe4584a98081676ced3681a91e43"
+    },
+    {
+      "path": "packages/evidence/src/forensic.ts",
+      "sha256": "3e9f5b2ae3280f1a734f3e716cbd0cad613efaed9c03c93a648a9abcc1b36da2"
+    },
+    {
+      "path": "packages/evidence/src/hash.ts",
+      "sha256": "9bd55ba3842b1915ca7c7ab042a68d8ea35495d4998e8fde9949b4e2adb54bb5"
+    },
+    {
+      "path": "packages/evidence/src/index.ts",
+      "sha256": "3021721bd093e7246a709a78190c8b98b9700159b824803eef3a3de521e347ea"
+    },
+    {
+      "path": "packages/evidence/tsconfig.json",
+      "sha256": "c20b6cc26851be19a9755be809153c38edf415ead5e8cef898adb76eb2dd6ded"
+    },
+    {
+      "path": "packages/schemas/package.json",
+      "sha256": "a3eb7f6c106645f01ce34bc49637a6fbf3928d94f6cf6f34742de034002ac65d"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy-index.ts",
+      "sha256": "236ec9fa08f163ce0e35369d11fdee48189a394e5a95500eea37c2a1c6aa0987"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-01.ts",
+      "sha256": "6ad1d647d9ef653e5b581b6616e30d7d0cf4aaa64d9ca1abe7585ebfeb29a275"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-02.ts",
+      "sha256": "e8a2940c3cc095efe282da30a630b8483facc2707d4e231a8b6e4f01762c8f85"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-03.ts",
+      "sha256": "9f3ab27a356dd153857965f3e4d150b907a13254aafa1eb6dddeaeca40638875"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-04.ts",
+      "sha256": "5ba7e5c14581f63e7e53ba016b1743cef37260c71b4ce13e75ced660ef23bf57"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-05.ts",
+      "sha256": "bd3853e64cdfa12cbf29a64ac881a453565c1dff2b108e280602619b9e6cf5dc"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-06.ts",
+      "sha256": "fecde64e954c55598d83f74d3dd24ecf83220bc3469ef780cdb8559213208705"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-07.ts",
+      "sha256": "d72c5cfd65a3c5052e4a3807677ee03ab8daaa05e0db9c1ffba80d14f3945dd9"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-08.ts",
+      "sha256": "639bcc713cf9e1f8ae050d9cf7c0c876fb40b8c7292ce243618bf5d433c5aa49"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-09.ts",
+      "sha256": "8abc2bbed5a22b3a33c38f6b3c2d0e9247735fb24bcaa5585e6ea9b1c8ea9f29"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-10.ts",
+      "sha256": "450c124676e4840af41a4b94e16ff75dee5607dbdcb73ff22327235908ed4c20"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-11.ts",
+      "sha256": "52ca0186f2e940e596a2e3af15e87a09bb64cee505e9ad1a0ae3af61bd255ad2"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-12.ts",
+      "sha256": "60b5ed8c6938e8309e3f1c11b8a8e28d6004f70fab938e51d17fbac2c54e2ff3"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-13.ts",
+      "sha256": "1b1a0d80fd3a11a395af2250243759c275726053e11518348b27ccc42fb4b509"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-14.ts",
+      "sha256": "0f0938aee74698cf287849ef93685ef9d67ca01e240100f02ab6b1233077115f"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-15.ts",
+      "sha256": "1768173b5943391f8fde7b99995cf3a4fdce15a83f3381f4f673e8ef0641ac7b"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-16.ts",
+      "sha256": "2f5b5a1cf9013999716f7f2d0052160dc5a0c53f2206c13645400ed3d84a46fa"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-17.ts",
+      "sha256": "f6d0079423cfd1ce74dcfa2898f918756975b4c1dc4ba853d699751b9adc0e16"
+    },
+    {
+      "path": "packages/schemas/src/contracts/legacy/part-18.ts",
+      "sha256": "d1a145b0fc9fa6f7af958b43929000541133731070a01f1bc231e6338e313ce5"
+    },
+    {
+      "path": "packages/schemas/src/index.ts",
+      "sha256": "ebfbb64cbc31a1b9d9700be07b02983bf2c3dd0ceda74a3301a9a9072777f6ef"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/ai-analysis.ts",
+      "sha256": "5ca5a9942b2af6fbabc9b231c3b9bcd08fdbb0e3cc4124585c97387ec18df51e"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/analyze.ts",
+      "sha256": "499c51c5c86c6550ce67edf975150ccc17fb4186f8155504d6b8e01e9cbafa5b"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/campaign.ts",
+      "sha256": "fee5f376fc8120d3957812504b5952d241a82815cae5e35c6365c6325e517db4"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/capital.ts",
+      "sha256": "2d0113a3e9c6976d224404cb3b884aee67a7cf5718fc440fdda0652c80f1fdf1"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/casework.ts",
+      "sha256": "99ae4aad60a750922bdd7ca6e923b78c500492f3df2a0d7bd00b79e96b7205d5"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/exit.ts",
+      "sha256": "7aab522b2ea8682f4e31183e7fdada7a01213421ad28460fab1aa329f4f3dd4f"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/foundation.ts",
+      "sha256": "b8cbf4eda85e75832946667667d9c2952dda0f0e2fe99b163b8337344c080b00"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/identity.ts",
+      "sha256": "cb510acbd3a0839df148782b5d44e9076d27c8f2f049a647c650b1f88ca4aa22"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/index.ts",
+      "sha256": "206ae74deaa7d0fb87140a7d3265fbd9bed5cea92e8840bef4c654820bf7700c"
+    },
+    {
+      "path": "packages/schemas/src/market-structure/supply.ts",
+      "sha256": "023243d5b087df7564d307791c8610ea4e0bbe9ccbaec56c3dac247d416b304b"
+    },
+    {
+      "path": "packages/schemas/tsconfig.json",
+      "sha256": "f527d922aa612a8d0c7c0bc5bd5b140c5f51509f99dde7449504cda0b765d0b7"
+    },
+    {
+      "path": "scripts/northflank-deploy.mjs",
+      "sha256": "b6ee9e2f90a8be0f9aa9554395c3163e274301f73355ebdc74a853eeb84d9e9d"
+    },
+    {
+      "path": "scripts/northflank-orchestrate.mjs",
+      "sha256": "daaa8b4abe3b0ec34ee5472742400bcd2c9c686e5096de0e2bdeaf4a6d079db9"
+    }
+  ],
+  "scope": "只复用仍相同的数据库迁移与已有采集记录，前端当前版本另行实际验收；自动执行必须以当前固定作业配置和新日志记录。"
+}

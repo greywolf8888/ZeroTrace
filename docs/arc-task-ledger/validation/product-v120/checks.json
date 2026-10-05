@@ -1,0 +1,237 @@
+{
+  "at": "2026-10-05T19:13:34.211Z",
+  "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+  "cleanCheckout": true,
+  "localRegressionOnly": true,
+  "checks": [
+    {
+      "name": "build",
+      "command": "npm run build",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:11.101Z",
+      "finishedAt": "2026-10-05T19:10:15.107Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "arc-build",
+      "command": "npm run arc:build",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:15.120Z",
+      "finishedAt": "2026-10-05T19:10:16.448Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "unit",
+      "command": "npm run test:unit",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:16.458Z",
+      "finishedAt": "2026-10-05T19:10:34.786Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  195 passed (195)", "      Tests  1043 passed (1043)"]
+    },
+    {
+      "name": "sidecar",
+      "command": "node scripts/build-desktop-sidecar.mjs",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:16.466Z",
+      "finishedAt": "2026-10-05T19:10:42.297Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "integration",
+      "command": "npm run test:integration",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:34.798Z",
+      "finishedAt": "2026-10-05T19:10:43.763Z",
+      "exitCode": 0,
+      "summaries": [
+        " Test Files  1 passed | 9 skipped (10)",
+        "      Tests  88 passed | 42 skipped (130)"
+      ]
+    },
+    {
+      "name": "format",
+      "command": "npm run format:check",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:16.450Z",
+      "finishedAt": "2026-10-05T19:10:45.430Z",
+      "exitCode": 0,
+      "summaries": ["Checking formatting..."]
+    },
+    {
+      "name": "evals",
+      "command": "npm run test:evals",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:43.765Z",
+      "finishedAt": "2026-10-05T19:10:45.985Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  2 passed (2)", "      Tests  2 passed (2)"]
+    },
+    {
+      "name": "readonly-mcp",
+      "command": "npm run test:mcp",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:45.987Z",
+      "finishedAt": "2026-10-05T19:10:47.163Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  1 passed (1)", "      Tests  5 passed (5)"]
+    },
+    {
+      "name": "arc-unit",
+      "command": "npm run arc:test:unit",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:47.164Z",
+      "finishedAt": "2026-10-05T19:10:49.990Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  12 passed (12)", "      Tests  87 passed (87)"]
+    },
+    {
+      "name": "arc-integration",
+      "command": "npm run arc:test:integration",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:50.120Z",
+      "finishedAt": "2026-10-05T19:10:56.286Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  1 passed (1)", "      Tests  28 passed (28)"]
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:45.432Z",
+      "finishedAt": "2026-10-05T19:11:02.525Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:11:02.661Z",
+      "finishedAt": "2026-10-05T19:11:06.493Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "license",
+      "command": "npm run license:check",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:11:06.512Z",
+      "finishedAt": "2026-10-05T19:11:07.983Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "rust-workspace",
+      "command": "cargo test --workspace -j 2",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:42.309Z",
+      "finishedAt": "2026-10-05T19:12:03.037Z",
+      "exitCode": 0,
+      "summaries": [
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "name": "arc-e2e",
+      "command": "npm run arc:test:e2e",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:12:03.039Z",
+      "finishedAt": "2026-10-05T19:12:24.260Z",
+      "exitCode": 0,
+      "summaries": ["  9 passed (9.6s)", "  9 passed (10.3s)"]
+    },
+    {
+      "name": "root-e2e",
+      "command": "powershell -NoProfile -File scripts/test-e2e-windows.ps1",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:12:24.262Z",
+      "finishedAt": "2026-10-05T19:12:52.089Z",
+      "exitCode": 0,
+      "summaries": ["  49 passed (22.5s)"]
+    }
+  ],
+  "standalone": [
+    {
+      "name": "export-install",
+      "command": "npm ci --prefix <独立导出目录> --ignore-scripts --no-audit --no-fund",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:33.561Z",
+      "finishedAt": "2026-10-05T19:10:56.424Z",
+      "exitCode": 0,
+      "summaries": ["added 359 packages in 22s"]
+    },
+    {
+      "name": "export-unit",
+      "command": "npm run arc:test:unit",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:10:56.472Z",
+      "finishedAt": "2026-10-05T19:11:04.754Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  12 passed (12)", "      Tests  87 passed (87)"]
+    },
+    {
+      "name": "export-build",
+      "command": "npm run arc:build",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:11:04.792Z",
+      "finishedAt": "2026-10-05T19:11:15.795Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-typecheck",
+      "command": "npx tsc -b apps/arc-task-ledger-api --pretty false",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:11:15.847Z",
+      "finishedAt": "2026-10-05T19:11:16.702Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-license",
+      "command": "npm run license:check",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:11:16.719Z",
+      "finishedAt": "2026-10-05T19:11:19.758Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-audit",
+      "command": "npm audit --audit-level=high",
+      "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+      "startedAt": "2026-10-05T19:11:19.780Z",
+      "finishedAt": "2026-10-05T19:11:21.202Z",
+      "exitCode": 0,
+      "summaries": ["found 0 vulnerabilities"]
+    }
+  ],
+  "rootAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 4,
+    "high": 4,
+    "critical": 0,
+    "total": 8
+  },
+  "externalIntegrationSkipped": 42,
+  "rustTestsPassed": 52,
+  "dependencyAuditScope": "全仓库8项既有告警；独立Arc部署依赖0项。未跨本轮范围升级全仓库依赖。"
+}

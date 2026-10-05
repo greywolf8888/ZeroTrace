@@ -1,0 +1,149 @@
+{
+  "at": "2026-10-05T19:26:10.849Z",
+  "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+  "credentials": "仅从私有文件读取；请求头、密钥、数据库连接与完整响应不公开。",
+  "successfulRestCalls": [
+    {
+      "method": "PATCH",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "count": 9,
+      "firstAt": "2026-10-05T18:39:32.110Z",
+      "lastAt": "2026-10-05T19:14:42.439Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/addons/atl-postgres",
+      "count": 3,
+      "firstAt": "2026-10-05T18:39:40.138Z",
+      "lastAt": "2026-10-05T19:13:23.796Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/addons/atl-postgres/credentials",
+      "count": 3,
+      "firstAt": "2026-10-05T18:39:41.031Z",
+      "lastAt": "2026-10-05T19:13:24.139Z"
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate",
+      "count": 3,
+      "firstAt": "2026-10-05T18:39:42.951Z",
+      "lastAt": "2026-10-05T19:13:24.929Z"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/deployment",
+      "count": 3,
+      "firstAt": "2026-10-05T18:39:45.807Z",
+      "lastAt": "2026-10-05T19:13:26.028Z"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/deployment",
+      "count": 3,
+      "firstAt": "2026-10-05T18:39:49.032Z",
+      "lastAt": "2026-10-05T19:13:28.810Z"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs",
+      "count": 2,
+      "firstAt": "2026-10-05T18:39:57.466Z",
+      "lastAt": "2026-10-05T18:56:17.409Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/120cc96d-a4ae-4acf-b4a6-9f7821668414",
+      "count": 4,
+      "firstAt": "2026-10-05T18:39:58.835Z",
+      "lastAt": "2026-10-05T18:40:32.419Z"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/services/atl-api/deployment",
+      "count": 3,
+      "firstAt": "2026-10-05T18:40:34.063Z",
+      "lastAt": "2026-10-05T19:13:30.622Z"
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/v1/projects/arctrace/services/combined/atl-api",
+      "count": 3,
+      "firstAt": "2026-10-05T18:40:34.969Z",
+      "lastAt": "2026-10-05T19:13:31.037Z"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs",
+      "count": 4,
+      "firstAt": "2026-10-05T18:40:42.549Z",
+      "lastAt": "2026-10-05T19:15:21.199Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/6f4d440d-2d31-42c7-b924-b7a43e085220",
+      "count": 15,
+      "firstAt": "2026-10-05T18:40:43.708Z",
+      "lastAt": "2026-10-05T18:43:21.930Z"
+    },
+    {
+      "method": "POST",
+      "endpoint": "/v1/projects/arctrace/services/atl-web/deployment",
+      "count": 3,
+      "firstAt": "2026-10-05T18:43:24.142Z",
+      "lastAt": "2026-10-05T19:13:32.611Z"
+    },
+    {
+      "method": "PATCH",
+      "endpoint": "/v1/projects/arctrace/services/combined/atl-web",
+      "count": 3,
+      "firstAt": "2026-10-05T18:43:25.197Z",
+      "lastAt": "2026-10-05T19:13:32.996Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "count": 2,
+      "firstAt": "2026-10-05T18:48:35.579Z",
+      "lastAt": "2026-10-05T19:15:17.067Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/54c27fe5-ae12-42a4-a852-7b36be397666",
+      "count": 14,
+      "firstAt": "2026-10-05T18:48:43.668Z",
+      "lastAt": "2026-10-05T18:51:09.456Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/services/atl-web",
+      "count": 4,
+      "firstAt": "2026-10-05T18:51:10.589Z",
+      "lastAt": "2026-10-05T19:17:48.487Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate/runs/17e9c3bd-f677-49c9-8a7b-5f9b19b99c1f",
+      "count": 5,
+      "firstAt": "2026-10-05T18:56:18.537Z",
+      "lastAt": "2026-10-05T19:13:29.146Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/dec66119-1d26-42d1-bb04-3b8b85383bd2",
+      "count": 14,
+      "firstAt": "2026-10-05T18:57:00.477Z",
+      "lastAt": "2026-10-05T19:13:31.376Z"
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync/runs/5f9c1d67-e550-4e51-930b-f3e7a29789a1",
+      "count": 14,
+      "firstAt": "2026-10-05T19:15:22.340Z",
+      "lastAt": "2026-10-05T19:17:47.348Z"
+    }
+  ],
+  "localCommands": "checks.json；ARC_TEST_DATABASE_URL与NORTHFLANK_TOKEN_FILE仅使用占位符。",
+  "failedDiagnostics": "初次构建尚未结束时apply停止，等待同一构建重入；保留私有原记录，未重复创建资源或降低门禁。"
+}

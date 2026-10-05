@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-05T19:03:19.810Z",
+  "sourceSha": "b9f442db773d914943f2e2ba8415ff426e46a03f",
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "metrics": [
+    {
+      "text": "1.98 USDC",
+      "box": {
+        "x": 53,
+        "y": 1043.234375,
+        "width": 287,
+        "height": 31
+      },
+      "visibleInFirstScreen": false
+    },
+    {
+      "text": "0.02 USDC",
+      "box": {
+        "x": 53,
+        "y": 1240.40625,
+        "width": 287,
+        "height": 31
+      },
+      "visibleInFirstScreen": false
+    }
+  ]
+}

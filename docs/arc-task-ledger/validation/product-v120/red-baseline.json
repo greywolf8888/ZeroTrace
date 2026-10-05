@@ -1,0 +1,88 @@
+{
+  "scope": "各case明确范围；实际UI反例不等于稀有结算主网观察。",
+  "oldMoneyAssertionsChanged": false,
+  "cases": [
+    {
+      "sourceBefore": "5370649e0c79092f181592093f5e553f2c5221a8",
+      "case": "HTTP成功但历史/资金不足应degraded",
+      "before": {
+        "expected": true,
+        "actual": false,
+        "failed": 1
+      },
+      "after": {
+        "passed": true,
+        "integrationSuitePassed": 28
+      }
+    },
+    {
+      "case": "请求进度必须等于实际事务检查点",
+      "before": {
+        "expected": "21800011",
+        "actual": "21800001",
+        "failed": 1
+      },
+      "after": {
+        "passed": true,
+        "integrationSuitePassed": 28
+      }
+    },
+    {
+      "sourceBefore": "9258be19b64a410e5cdd6272610a81fe0b008ac9",
+      "case": "首页初始化和固定快照重定向期间保护输入",
+      "before": {
+        "failed": 1,
+        "passed": 17,
+        "surface": "手机"
+      },
+      "after": {
+        "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+        "failed": 0,
+        "passed": 18
+      }
+    },
+    {
+      "scope": "MAINNET_HOSTED_UI_BEFORE_AND_AFTER",
+      "case": "报酬和费用必须处于常见手机首屏",
+      "before": {
+        "at": "2026-10-05T19:03:19.810Z",
+        "sourceSha": "b9f442db773d914943f2e2ba8415ff426e46a03f",
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "metrics": [
+          {
+            "text": "1.98 USDC",
+            "box": {
+              "x": 53,
+              "y": 1043.234375,
+              "width": 287,
+              "height": 31
+            },
+            "visibleInFirstScreen": false
+          },
+          {
+            "text": "0.02 USDC",
+            "box": {
+              "x": 53,
+              "y": 1240.40625,
+              "width": 287,
+              "height": 31
+            },
+            "visibleInFirstScreen": false
+          }
+        ]
+      },
+      "after": {
+        "sourceCommit": "10592d9e963a24e8bb5af46d7fca983dc710a651",
+        "desktop": "1280x720",
+        "mobile": "390x844",
+        "bothAmountsVisible": true,
+        "localBrowserTestsPassed": 18,
+        "evidence": "hosted-product-proof.json"
+      }
+    }
+  ],
+  "mainnetSpecialSettlements": "NOT_OBSERVED"
+}

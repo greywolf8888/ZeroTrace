@@ -1,0 +1,243 @@
+{
+  "at": "2026-10-05T19:18:36.297Z",
+  "sourceSha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+  "records": [
+    {
+      "key": "migration",
+      "job": "atl-migrate",
+      "id": "17e9c3bd-f677-49c9-8a7b-5f9b19b99c1f",
+      "sourceSha": "b9f442db773d914943f2e2ba8415ff426e46a03f",
+      "status": "SUCCESS",
+      "startedAt": "2026-10-05T18:56:17.000Z",
+      "concludedAt": "2026-10-05T18:56:45.000Z",
+      "exitCode": 0,
+      "migration": {
+        "status": "MIGRATION_VALIDATED",
+        "migrationVersion": 5,
+        "permissions": {
+          "readerSelect": true,
+          "readerInsert": false,
+          "workerInsert": true
+        },
+        "requestPermissions": {
+          "requestInsert": true,
+          "projectionInsert": false,
+          "evidenceInsert": false
+        }
+      }
+    },
+    {
+      "key": "first-sync",
+      "job": "atl-sync",
+      "id": "dec66119-1d26-42d1-bb04-3b8b85383bd2",
+      "sourceSha": "b9f442db773d914943f2e2ba8415ff426e46a03f",
+      "status": "SUCCESS",
+      "startedAt": "2026-10-05T18:56:59.000Z",
+      "concludedAt": "2026-10-05T18:59:20.000Z",
+      "exitCode": 0,
+      "worker": {
+        "snapshotRunId": "run_e31403113560ef4374e7af363f9d7d3e",
+        "snapshot": {
+          "chainId": "5042",
+          "blockNumber": "24435824",
+          "blockHash": "0x1f27019382256b337666609c49c7c43c2ad41aafca126f4af90721ada54502d0",
+          "observedAt": "2026-10-05T18:57:19.903Z",
+          "finality": "FINALIZED",
+          "sourceSet": ["arc-drpc-public"]
+        },
+        "coverage": {
+          "currentState": "complete",
+          "jobEnumeration": "complete",
+          "lifecycleHistory": "partial",
+          "settlementHistory": "partial",
+          "accountPendingHistory": "partial",
+          "deploymentVerification": "complete",
+          "sourceAgreement": "partial"
+        },
+        "tasks": 16,
+        "totalExpected": "16",
+        "rpcRequests": 221,
+        "responseBytes": 442003,
+        "durationMs": 118474,
+        "gaps": ["历史仅连续核验至 23450427；未覆盖至当前状态区块。"],
+        "historyRange": {
+          "scope": "DECLARED_WINDOW",
+          "fromBlock": "23388428",
+          "targetBlock": "24435824",
+          "contiguousThrough": "23450427",
+          "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+          "checkpointVersion": "88",
+          "status": "partial",
+          "omittedPriorHistory": true,
+          "gaps": [
+            {
+              "fromBlock": "23450428",
+              "toBlock": "24435824",
+              "reason": "历史仅连续核验至 23450427；未覆盖至当前状态区块。"
+            }
+          ]
+        },
+        "collection": {
+          "recentBudget": "2000",
+          "proofBudget": "2000",
+          "recent": {
+            "from": "24434849",
+            "through": "24435824",
+            "target": "24435824",
+            "complete": true
+          },
+          "enrichment": {
+            "from": "24235896",
+            "through": "24237895",
+            "target": "24433895",
+            "complete": false,
+            "requestId": "req_14529e6d2e115306e5122e8354aa1089",
+            "jobId": "1"
+          }
+        }
+      }
+    },
+    {
+      "key": "v120-queue-proof",
+      "job": "atl-sync",
+      "id": "54c27fe5-ae12-42a4-a852-7b36be397666",
+      "sourceSha": "490b20c83b21dd2819f8f0c3a0961d2a21f38627",
+      "status": "SUCCESS",
+      "startedAt": "2026-10-05T18:48:42.000Z",
+      "concludedAt": "2026-10-05T18:51:04.000Z",
+      "exitCode": 0,
+      "worker": {
+        "snapshotRunId": "run_ab29acd0863f3d7b63bc6f8e5573a49a",
+        "snapshot": {
+          "chainId": "5042",
+          "blockNumber": "24434848",
+          "blockHash": "0x2722041500ce43a95db4b0ccd2888d516442ac73048b80b0054420d527ca5a80",
+          "observedAt": "2026-10-05T18:49:05.054Z",
+          "finality": "FINALIZED",
+          "sourceSet": ["arc-drpc-public"]
+        },
+        "coverage": {
+          "currentState": "complete",
+          "jobEnumeration": "complete",
+          "lifecycleHistory": "partial",
+          "settlementHistory": "partial",
+          "accountPendingHistory": "partial",
+          "deploymentVerification": "complete",
+          "sourceAgreement": "partial"
+        },
+        "tasks": 16,
+        "totalExpected": "16",
+        "rpcRequests": 221,
+        "responseBytes": 446293,
+        "durationMs": 117817,
+        "gaps": ["历史仅连续核验至 23448427；未覆盖至当前状态区块。"],
+        "historyRange": {
+          "scope": "DECLARED_WINDOW",
+          "fromBlock": "23388428",
+          "targetBlock": "24434848",
+          "contiguousThrough": "23448427",
+          "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+          "checkpointVersion": "68",
+          "status": "partial",
+          "omittedPriorHistory": true,
+          "gaps": [
+            {
+              "fromBlock": "23448428",
+              "toBlock": "24434848",
+              "reason": "历史仅连续核验至 23448427；未覆盖至当前状态区块。"
+            }
+          ]
+        },
+        "collection": {
+          "recentBudget": "2000",
+          "proofBudget": "2000",
+          "recent": {
+            "from": "24433896",
+            "through": "24434848",
+            "target": "24434848",
+            "complete": true
+          },
+          "enrichment": {
+            "from": "24233896",
+            "through": "24235895",
+            "target": "24433895",
+            "complete": false,
+            "requestId": "req_14529e6d2e115306e5122e8354aa1089",
+            "jobId": "1"
+          }
+        }
+      }
+    },
+    {
+      "key": "v120-final-fixed",
+      "job": "atl-sync",
+      "id": "5f9c1d67-e550-4e51-930b-f3e7a29789a1",
+      "sourceSha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+      "status": "SUCCESS",
+      "startedAt": "2026-10-05T19:15:21.000Z",
+      "concludedAt": "2026-10-05T19:17:40.000Z",
+      "exitCode": 0,
+      "worker": {
+        "snapshotRunId": "run_9ad2eca471c5af4657ea20a79be5b51b",
+        "snapshot": {
+          "chainId": "5042",
+          "blockNumber": "24438001",
+          "blockHash": "0x6a024053ff3d8b9d6e1fe2a8d0bfdf04d7424faf2631b3ef8976efe4bb2221c1",
+          "observedAt": "2026-10-05T19:15:44.765Z",
+          "finality": "FINALIZED",
+          "sourceSet": ["arc-drpc-public"]
+        },
+        "coverage": {
+          "currentState": "complete",
+          "jobEnumeration": "complete",
+          "lifecycleHistory": "partial",
+          "settlementHistory": "partial",
+          "accountPendingHistory": "partial",
+          "deploymentVerification": "complete",
+          "sourceAgreement": "partial"
+        },
+        "tasks": 16,
+        "totalExpected": "16",
+        "rpcRequests": 212,
+        "responseBytes": 434421,
+        "durationMs": 113395,
+        "gaps": ["历史仅连续核验至 23456427；未覆盖至当前状态区块。"],
+        "historyRange": {
+          "scope": "DECLARED_WINDOW",
+          "fromBlock": "23388428",
+          "targetBlock": "24438001",
+          "contiguousThrough": "23456427",
+          "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+          "checkpointVersion": "148",
+          "status": "partial",
+          "omittedPriorHistory": true,
+          "gaps": [
+            {
+              "fromBlock": "23456428",
+              "toBlock": "24438001",
+              "reason": "历史仅连续核验至 23456427；未覆盖至当前状态区块。"
+            }
+          ]
+        },
+        "collection": {
+          "recentBudget": "2000",
+          "proofBudget": "2000",
+          "recent": {
+            "from": "24437370",
+            "through": "24438001",
+            "target": "24438001",
+            "complete": true
+          },
+          "enrichment": {
+            "from": "24241896",
+            "through": "24243895",
+            "target": "24433895",
+            "complete": false,
+            "requestId": "req_14529e6d2e115306e5122e8354aa1089",
+            "jobId": "1"
+          }
+        }
+      }
+    }
+  ]
+}

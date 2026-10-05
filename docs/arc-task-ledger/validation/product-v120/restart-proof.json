@@ -1,0 +1,44 @@
+{
+  "at": "2026-10-05T19:17:07.547Z",
+  "beforeAt": "2026-10-05T19:15:32.416Z",
+  "status": "API_RESTART_VALIDATED",
+  "snapshotRunId": "run_26f8024e74534388a3e70b2fd127d637",
+  "cursorAccepted": true,
+  "resultIdentical": true,
+  "evidenceIdentical": true,
+  "settlementLegsIdentical": true,
+  "ready": {
+    "status": "UP",
+    "components": {
+      "database": "UP",
+      "mainnet": "独立查询覆盖接口核验"
+    }
+  },
+  "containersBefore": [
+    "atl-api-5664cb98b4-tkfcc",
+    "atl-api-588c89b4b4-djjp6",
+    "atl-api-5df445db5c-9mnk8",
+    "atl-api-64d5f8ffc7-5bd8z",
+    "atl-api-66f8f8fdcd-nfzxd",
+    "atl-api-6f98bc96cf-wqv29",
+    "atl-api-6ffbf95596-ntcbj",
+    "atl-api-77bdfbdb7b-zq9mx",
+    "atl-api-86879c8d79-q24pg",
+    "atl-api-c7d6d7755-twbgh"
+  ],
+  "containersAfter": [
+    "atl-api-5664cb98b4-tkfcc",
+    "atl-api-57b8b5bd89-4zxln",
+    "atl-api-588c89b4b4-djjp6",
+    "atl-api-5df445db5c-9mnk8",
+    "atl-api-64d5f8ffc7-5bd8z",
+    "atl-api-66f8f8fdcd-nfzxd",
+    "atl-api-6f98bc96cf-wqv29",
+    "atl-api-6ffbf95596-ntcbj",
+    "atl-api-77bdfbdb7b-zq9mx",
+    "atl-api-86879c8d79-q24pg",
+    "atl-api-c7d6d7755-twbgh"
+  ],
+  "databaseRestart": "NOT_EXECUTED",
+  "resultHash": "4be9bfc7bc1830250da5661983f9607dd31ad3ee55f9caa88819283eccdf3f3f"
+}
