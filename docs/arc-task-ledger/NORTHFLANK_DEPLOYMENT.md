@@ -46,3 +46,7 @@ Northflank 官方要求所有套餐先添加默认支付方式才能创建运行
 ## 当前提交复验与本地实时链读取
 
 干净提交 7d6593d12020749c7988cdd6fa70092b2bacecad 的格式、lint、类型、构建、许可证、1043 单元、88 集成（42 外部跳过）、2 评估、5 只读 MCP、52 Rust、49 全仓库浏览器及 Arc 75 单元／23 PostgreSQL／8 浏览器全部完成。官方 RPC 于 2026-10-05T08:33:21.867Z 核验 Arc 5042 finalized 区块 24362547、部署回执、代码/代理槽及 view 配置，原始观察选择导出至 validation/northflank-local-anchor-20261005.json。系统 DNS 与两个来源前序部署核验失败保留；当前成功不构成独立来源一致性或 Northflank 验收，任务资金本轮未重采，正式取证关闭。
+
+## 最终交付源码
+
+独立部署分支实际提交 cef7804a8fe3401b2e89204392cb40dc4c5f0470，导出源为 b17ea96a689dfbdcb76015187de2be1a7d3ed67d，134 个列明文件的 Git blob 摘要全部匹配；独立安装、75 单元、构建、实际 TypeScript 检查、许可证与依赖审计（0 告警）通过。平台再次确认最新部署分支 publicRepo=true、accessible=true。交付源码与已完整复验提交 7d6593d12020749c7988cdd6fa70092b2bacecad 的差异仅为文档和收据，12 项源码对应关系均核对相同。记录见 validation/northflank-delivery-20261005.json。没有 Northflank 构建或 HTTPS，不能把公开源分支称为部署版本。

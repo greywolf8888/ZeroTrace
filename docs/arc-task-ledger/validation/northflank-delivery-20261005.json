@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "atl-northflank-delivery-v1",
+  "observedAt": "2026-10-05T08:42:23.207Z",
+  "status": "BLOCKED_EXTERNAL",
+  "blocker": "ACCOUNT_PAYMENT_METHOD_REQUIRED",
+  "candidateVersion": "1.1.0",
+  "deployedVersion": null,
+  "publicHttps": null,
+  "createdResources": [],
+  "newPaidSpendUsd": 0,
+  "functionalChecksSourceCommit": "7d6593d12020749c7988cdd6fa70092b2bacecad",
+  "exportSourceCommit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+  "deployBranchCommit": "cef7804a8fe3401b2e89204392cb40dc4c5f0470",
+  "sourceFiles": 134,
+  "gitBlobsMatchManifest": true,
+  "sourceMapVerifiedAgainstExport": true,
+  "changesSinceChecks": [
+    "PROGRESS.md",
+    "docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md",
+    "docs/arc-task-ledger/validation/northflank-deployment.json",
+    "docs/arc-task-ledger/validation/northflank-local-anchor-20261005.json",
+    "docs/terminal-market-structure/Arc任务证据组件_20261004.md",
+    "docs/testing/FINAL_ACCEPTANCE.md"
+  ],
+  "sourceAccess": {
+    "publicRepo": true,
+    "accessible": true,
+    "reason": "public",
+    "requests": [
+      {
+        "method": "POST",
+        "endpoint": "/v1/integrations/vcs/repo-access",
+        "attempt": 0,
+        "status": 200
+      }
+    ]
+  },
+  "remoteBranches": [
+    {
+      "commit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+      "ref": "refs/heads/agent/arc-task-ledger-v1"
+    },
+    {
+      "commit": "cef7804a8fe3401b2e89204392cb40dc4c5f0470",
+      "ref": "refs/heads/deploy/arc-task-ledger-northflank"
+    },
+    {
+      "commit": "821848f22a87e0a6e563f1367a8f6ff1b95c74fe",
+      "ref": "refs/heads/main"
+    }
+  ],
+  "exportCommands": [
+    {
+      "name": "export-install",
+      "command": "npm ci --ignore-scripts --no-audit --no-fund",
+      "sourceCommit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+      "startedAt": "2026-10-05T08:39:13.984Z",
+      "finishedAt": "2026-10-05T08:39:30.382Z",
+      "exitCode": 0,
+      "summaries": ["added 359 packages in 16s"]
+    },
+    {
+      "name": "export-unit",
+      "command": "npm run arc:test:unit",
+      "sourceCommit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+      "startedAt": "2026-10-05T08:39:30.460Z",
+      "finishedAt": "2026-10-05T08:39:38.181Z",
+      "exitCode": 0,
+      "summaries": [" Test Files  8 passed (8)", "      Tests  75 passed (75)"]
+    },
+    {
+      "name": "export-build",
+      "command": "npm run arc:build",
+      "sourceCommit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+      "startedAt": "2026-10-05T08:39:38.183Z",
+      "finishedAt": "2026-10-05T08:39:49.191Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-typecheck",
+      "command": "npx tsc -b apps/arc-task-ledger-api --pretty false",
+      "sourceCommit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+      "startedAt": "2026-10-05T08:39:49.203Z",
+      "finishedAt": "2026-10-05T08:39:50.103Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-license",
+      "command": "npm run license:check",
+      "sourceCommit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+      "startedAt": "2026-10-05T08:39:50.105Z",
+      "finishedAt": "2026-10-05T08:39:53.148Z",
+      "exitCode": 0,
+      "summaries": []
+    },
+    {
+      "name": "export-audit",
+      "command": "npm audit --audit-level=high",
+      "sourceCommit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+      "startedAt": "2026-10-05T08:39:53.151Z",
+      "finishedAt": "2026-10-05T08:39:54.946Z",
+      "exitCode": 0,
+      "summaries": ["found 0 vulnerabilities"]
+    }
+  ],
+  "finalFormatting": {
+    "command": "npm run format:check",
+    "sourceCommit": "b17ea96a689dfbdcb76015187de2be1a7d3ed67d",
+    "exitCode": 0
+  },
+  "localMainnet": {
+    "chainId": "5042",
+    "blockNumber": "24362547",
+    "hosted": false,
+    "status": "仅本地链身份与部署读取通过，云端采集未执行"
+  },
+  "unfinished": [
+    "平台账户默认支付方式门槛尚未解除",
+    "实际容器构建和云端五项资源配置",
+    "migration 4、真实主网任务资金采集、持久化与 HTTPS API 展示",
+    "第二次采集、进程重启及真实 cron 运行验收"
+  ],
+  "executionReceipt": "northflank-deployment.json",
+  "priorReceiptPreserved": "northflank-preflight-20261004.json",
+  "privateStatePublished": false
+}
