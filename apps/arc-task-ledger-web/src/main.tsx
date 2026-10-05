@@ -85,6 +85,7 @@ function App() {
     if (!registry) return;
     let cancelled = false;
     const u = new URL(route, location.origin);
+    let redirected = false;
     const parts = u.pathname.split('/').filter(Boolean);
     (async () => {
       await Promise.resolve();
@@ -109,11 +110,13 @@ function App() {
         if (cancelled) return;
         setDetail(data);
         setPage(undefined);
-        if (!u.searchParams.has('snapshotRunId'))
+        if (!u.searchParams.has('snapshotRunId')) {
+          redirected = true;
           navigate(
             taskPath(registry, data.job.jobId, data.snapshotRunId, u.pathname.endsWith('/report')),
             true,
           );
+        }
       } else if (u.pathname === '/consumer') {
         setDetail(undefined);
         setPage(undefined);
@@ -125,11 +128,13 @@ function App() {
           );
           if (cancelled) return;
           setDetail(data);
-          if (!u.searchParams.has('snapshotRunId'))
+          if (!u.searchParams.has('snapshotRunId')) {
+            redirected = true;
             navigate(
               '/consumer?jobId=' + parsed.jobId + '&snapshotRunId=' + data.snapshotRunId,
               true,
             );
+          }
         }
       } else if (u.pathname === '/') {
         const q = new URLSearchParams({ limit: '10' });
@@ -142,6 +147,7 @@ function App() {
         setPage(data);
         setDetail(undefined);
         if (!u.searchParams.has('snapshotRunId')) {
+          redirected = true;
           u.searchParams.set('snapshotRunId', data.snapshotRunId);
           navigate(u.pathname + u.search, true);
         }
@@ -159,7 +165,7 @@ function App() {
         }
       })
       .finally(() => {
-        if (!cancelled) setBusy(false);
+        if (!cancelled && !redirected) setBusy(false);
       });
     return () => {
       cancelled = true;
