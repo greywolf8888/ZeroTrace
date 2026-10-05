@@ -48,6 +48,7 @@ function App() {
   const [cash, setCash] = useState(initial.get('cashState') ?? '');
   const [error, setError] = useState<Error>();
   const [busy, setBusy] = useState(false);
+  const [readAt, setReadAt] = useState(() => Date.now());
   const [notice, setNotice] = useState('');
   const [showEvidence, setShowEvidence] = useState(false);
   const [coverage, setCoverage] = useState<Record<string, unknown>>();
@@ -89,6 +90,7 @@ function App() {
       await Promise.resolve();
       if (cancelled) return;
       setBusy(true);
+      setReadAt(Date.now());
       setError(undefined);
       setShowEvidence(false);
       if (parts[0] === 'tasks') {
@@ -334,7 +336,7 @@ function App() {
             </strong>
             <span>截至区块 {capture.blockNumber} · 单来源 · 存储回放</span>
             {(page?.freshness.state === 'stale' ||
-              Date.now() - Date.parse(capture.observedAt) > 3600000) && <span>快照已陈旧</span>}
+              readAt - Date.parse(capture.observedAt) > 3600000) && <span>快照已陈旧</span>}
             {page?.freshness.state === 'provider-down' && (
               <span>来源当前不可用，保留已采集结果</span>
             )}
