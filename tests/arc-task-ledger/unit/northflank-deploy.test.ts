@@ -12,6 +12,79 @@ const reply = (data: unknown, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), { status, headers });
 
 describe('Northflank 费用、凭据与有界请求门禁', () => {
+  it('用户已确认 Sandbox 时实际创建，支付方式门槛不能误报免费资格未证明', async () => {
+    const transport = vi.fn().mockImplementation(async (url: string, options) => {
+      const endpoint = new URL(url).pathname;
+      if (endpoint === '/v1/auth')
+        return reply({ data: { tokenKind: 'api', entityType: 'team', entityId: 'test-team' } });
+      if (endpoint === '/v1/plans')
+        return reply({
+          data: { plans: [{ id: 'nf-compute-10', cpuResource: 0.1, ramResource: 256 }] },
+        });
+      if (endpoint === '/v1/regions') return reply({ data: { regions: [] } });
+      if (endpoint === '/v1/projects')
+        return reply({
+          data: { projects: [{ id: 'arctrace', name: 'ArcTrace' }] },
+          pagination: { hasNextPage: false },
+        });
+      if (/\/v1\/projects\/arctrace\/(services|addons|jobs)$/.test(endpoint))
+        return reply({
+          data: { [endpoint.split('/').at(-1)!]: [] },
+          pagination: { hasNextPage: false },
+        });
+      if (endpoint === '/v1/integrations/vcs') return reply({ data: { vcsAccountLinks: [] } });
+      if (endpoint === '/v1/integrations/vcs/repo-access') {
+        expect(JSON.parse(options.body).projectBranch).toBe('deploy/arc-task-ledger-northflank');
+        return reply({ data: { accessible: true, publicRepo: true } });
+      }
+      if (endpoint === '/v1/billing/usage')
+        return reply({ data: { granularity: 'total', usage: [{ currency: 'usd', total: 0 }] } });
+      if (endpoint === '/v1/projects/arctrace/services/combined')
+        return reply(
+          {
+            error: { message: 'Please complete your account by adding a default payment method.' },
+          },
+          409,
+        );
+      throw new Error('测试拒绝继续创建数据库或任务');
+    });
+    const result = await apply(new NorthflankClient(testToken, { transport }), {
+      sandboxConfirmedByUser: true,
+      projectId: 'arctrace',
+    });
+    expect(result.status).toBe('BLOCKED_EXTERNAL');
+    expect(result.blockers).toEqual(['ACCOUNT_PAYMENT_METHOD_REQUIRED']);
+    expect(result.creationAttempts).toBe(1);
+    expect(result.writesPerformed).toBe(0);
+    expect(result.publicUrl).toBeNull();
+    const creation = transport.mock.calls.find(([url]) =>
+      new URL(url).pathname.endsWith('/services/combined'),
+    )!;
+    expect(JSON.parse(creation[1].body)).toMatchObject({
+      deployment: { instances: 0 },
+      ports: [{ public: false }],
+      buildConfiguration: { dockerfileTarget: 'api', pathIgnoreRules: ['*'] },
+    });
+    expect(JSON.stringify(result)).not.toContain(testToken);
+  });
+
+  it.each([
+    [
+      'Please complete your account by adding a default payment method.',
+      'ACCOUNT_PAYMENT_METHOD_REQUIRED',
+    ],
+    ['Maximum number of free projects reached', 'FREE_PROJECT_LIMIT_REACHED'],
+    ['Region does not support free projects.', 'FREE_REGION_UNSUPPORTED'],
+  ])('分类平台已发生的 409：%s', async (message, code) => {
+    const client = new NorthflankClient(testToken, {
+      transport: vi.fn().mockResolvedValue(reply({ error: { message } }, 409)),
+    });
+    await expect(
+      client.request('/v1/projects', { method: 'POST', body: {} }),
+    ).rejects.toMatchObject({ code, status: 409 });
+    expect(JSON.stringify(client.records)).not.toContain(message);
+  });
+
   it('apply 重新读取账户，只探测源码，不创建计费资源', async () => {
     const transport = vi.fn().mockImplementation(async (url: string) => {
       const endpoint = new URL(url).pathname;

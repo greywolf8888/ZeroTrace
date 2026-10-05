@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 
 const origin = 'https://api.northflank.com';
 const targetProject = 'arc-task-ledger';
+const sourceBranch = 'deploy/arc-task-ledger-northflank';
 export class DeploymentError extends Error {
   constructor(code, status = null) {
     super(code);
@@ -87,6 +88,18 @@ export class NorthflankClient {
       }
       if (response.status === 401) throw new DeploymentError('AUTH_REQUIRED', 401);
       if (response.status === 403) throw new DeploymentError('PERMISSION_DENIED', 403);
+      if (response.status === 409) {
+        // 仅匹配平台已经实测的固定错误；不把任意响应正文写入公开日志。
+        const code = new Map([
+          [
+            'Please complete your account by adding a default payment method.',
+            'ACCOUNT_PAYMENT_METHOD_REQUIRED',
+          ],
+          ['Maximum number of free projects reached', 'FREE_PROJECT_LIMIT_REACHED'],
+          ['Region does not support free projects.', 'FREE_REGION_UNSUPPORTED'],
+        ]).get(json.error?.message);
+        if (code) throw new DeploymentError(code, 409);
+      }
       if (
         method === 'GET' &&
         (response.status === 429 || response.status >= 500) &&
@@ -167,7 +180,7 @@ export async function discover(client) {
     body: {
       projectUrl: 'https://github.com/greywolf8888/ZeroTrace',
       projectType: 'github',
-      projectBranch: 'agent/arc-task-ledger-v1',
+      projectBranch: sourceBranch,
     },
   });
   if (typeof source.accessible !== 'boolean' || typeof source.publicRepo !== 'boolean')
@@ -248,17 +261,105 @@ export function plan(discovery) {
   };
 }
 
-export async function apply(client) {
+export function apiCreationPayload() {
+  return {
+    name: 'atl-api',
+    description: 'Arc Task Ledger read-only API. Pinned dedicated source branch.',
+    billing: { deploymentPlan: 'nf-compute-10' },
+    deployment: { instances: 0, docker: { configType: 'default' } },
+    ports: [{ name: 'api', internalPort: 8087, public: false, protocol: 'HTTP' }],
+    buildSource: 'git',
+    vcsData: {
+      projectUrl: 'https://github.com/greywolf8888/ZeroTrace',
+      projectType: 'github',
+      projectBranch: sourceBranch,
+    },
+    buildSettings: {
+      dockerfile: {
+        buildEngine: 'buildkit',
+        dockerFilePath: '/infra/northflank/Dockerfile',
+        dockerWorkDir: '/',
+        buildkit: { useCache: false },
+      },
+    },
+    buildConfiguration: {
+      dockerfileTarget: 'api',
+      pathIgnoreRules: ['*'],
+      isAllowList: false,
+      includeGitFolder: false,
+      fullGitClone: false,
+    },
+    runtimeEnvironment: { ARC_API_HOST: '0.0.0.0', ARC_API_PORT: '8087' },
+    healthChecks: [
+      {
+        protocol: 'HTTP',
+        type: 'readinessProbe',
+        path: '/readyz',
+        port: 8087,
+        initialDelaySeconds: 5,
+        periodSeconds: 10,
+        timeoutSeconds: 3,
+        failureThreshold: 3,
+        successThreshold: 1,
+      },
+    ],
+  };
+}
+
+export async function apply(client, { sandboxConfirmedByUser = false, projectId } = {}) {
   const current = await discover(client);
   const result = plan(current);
-  // 不能用价格目录、零历史账单或本地布尔标志绕过真实账户资格核验。
-  // 资源创建编排必须在资格和完整 payload 实测后完成；此版本明确停止于预检。
-  return {
-    ...result,
-    discovery: current,
-    writesPerformed: 0,
-    deploymentImplementation: '待免费资格核验后完成真实资源创建与迁移编排',
+  const execution = { ...result, discovery: current, writesPerformed: 0, creationAttempts: 0 };
+  // 明确的人类授权优先于旧预检；不能从标价或历史账单自行推断授权。
+  if (!sandboxConfirmedByUser) return execution;
+  current.freeTier = {
+    ...current.freeTier,
+    status: 'USER_CONFIRMED_SANDBOX',
+    basis: '用户明确确认官方免费套餐，新增付费预算仍为零',
   };
+  const stop = (code) => ({ ...execution, status: 'BLOCKED_EXTERNAL', blockers: [code] });
+  if (!current.vcs.accessible) return stop('SOURCE_ACCESS_REQUIRED');
+  // 免费 Sandbox 仅有一个项目；只复用明确选定的空 Arc 项目，不改动共享资源。
+  if (
+    !['arctrace', targetProject].includes(projectId) ||
+    !current.projects.some((p) => p.id === projectId)
+  )
+    return stop('DEDICATED_PROJECT_REQUIRED');
+  execution.actualProjectId = projectId;
+  if (current.resources.some((r) => r.projectId === projectId))
+    return stop('EXISTING_RESOURCES_REQUIRE_RECONCILIATION');
+  const selected = current.catalog.find((p) => p.id === 'nf-compute-10');
+  if (!selected || selected.cpuResource !== 0.1 || selected.ramResource !== 256)
+    return stop('SANDBOX_COMPUTE_SPEC_CHANGED');
+  execution.selectedBillingPlans = { deployment: selected.id, build: 'Sandbox 默认构建规格' };
+  execution.creationAttempts = 1;
+  try {
+    const { data: resource } = await client.request(`/v1/projects/${projectId}/services/combined`, {
+      method: 'POST',
+      body: apiCreationPayload(),
+    });
+    if (resource.id !== 'atl-api')
+      throw new DeploymentError('CREATION_RESPONSE_REQUIRES_RECONCILIATION');
+    // 创建成功不等于迁移、上线或主网验收通过；此入口只完成第一项真实创建。
+    return {
+      ...execution,
+      status: 'API_CREATED_PENDING_CONFIGURATION',
+      blockers: [],
+      writesPerformed: 1,
+      createdResources: [{ projectId, kind: 'service', id: resource.id }],
+    };
+  } catch (error) {
+    const code = error instanceof DeploymentError ? error.code : 'FAIL_LOCAL';
+    if (['WRITE_OUTCOME_UNKNOWN', 'CREATION_RESPONSE_REQUIRES_RECONCILIATION'].includes(code)) {
+      try {
+        const items = await client.list(`/v1/projects/${projectId}/services`, 'services');
+        execution.reconciledResources = items.map((r) => ({ id: r.id, name: r.name }));
+      } catch {
+        execution.reconciliation = 'UNAVAILABLE';
+      }
+    }
+    return { ...stop(code), httpStatus: error instanceof DeploymentError ? error.status : null };
+  }
 }
 
 function loadToken() {
@@ -275,7 +376,11 @@ async function main() {
   const client = new NorthflankClient(loadToken());
   const discovery = mode === 'apply' ? undefined : await discover(client);
   let result;
-  if (mode === 'apply') result = await apply(client);
+  if (mode === 'apply')
+    result = await apply(client, {
+      sandboxConfirmedByUser: process.argv.includes('--sandbox-confirmed-by-user'),
+      projectId: process.env.NORTHFLANK_PROJECT_ID,
+    });
   else if (mode === 'plan') result = { ...plan(discovery), discovery };
   else if (mode === 'verify')
     result = {
@@ -303,7 +408,9 @@ async function main() {
       status: result.status ?? result.freeTier?.status,
       observedAt: discovery?.observedAt ?? result.discovery?.observedAt,
       publicUrl: result.publicUrl ?? null,
-      writesPerformed: 0,
+      writesPerformed: result.writesPerformed ?? 0,
+      creationAttempts: result.creationAttempts ?? 0,
+      blockers: result.blockers ?? [],
     }),
   );
   if (mode === 'apply' || mode === 'verify') process.exitCode = 2;
