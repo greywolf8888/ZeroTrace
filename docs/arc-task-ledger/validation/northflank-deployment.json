@@ -204,7 +204,9 @@
       "默认 Blockdaemon 候选未返回部署回执；官方 RPC 首次也未通过部署条件，诊断补读返回成功回执；随后记录原始观察的独立复验通过，失败未删除"
     ],
     "sourceAgreement": "partial",
-    "formalMode": "关闭"
+    "formalMode": "关闭",
+    "publicArtifactSha256": "cd90a5b13f711756bdc0395dc17afcb3678bdd23054b6ca0234a83735f457916",
+    "摘要说明": "rawSha256 为原始本地文件字节摘要；publicArtifactSha256 为仅排版后的公开原始观察文件摘要，JSON 内容相同"
   },
   "当前干净提交本地验证": {
     "northflankFocused": 15,
@@ -524,5 +526,34 @@
   ],
   "previousReceipt": "northflank-preflight-20261004.json",
   "officialAccountRequirement": "https://northflank.com/docs/v1/application/billing/pricing-on-northflank",
-  "私有状态目录公开": false
+  "私有状态目录公开": false,
+  "postRejectionInventory": {
+    "observedAt": "2026-10-05T08:37:39.377Z",
+    "projectId": "arctrace",
+    "counts": {
+      "services": 0,
+      "addons": 0,
+      "jobs": 0
+    },
+    "requests": [
+      {
+        "method": "GET",
+        "endpoint": "/v1/projects/arctrace/services",
+        "attempt": 0,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "endpoint": "/v1/projects/arctrace/addons",
+        "attempt": 0,
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "endpoint": "/v1/projects/arctrace/jobs",
+        "attempt": 0,
+        "status": 200
+      }
+    ]
+  }
 }
