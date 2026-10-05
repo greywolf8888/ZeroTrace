@@ -333,7 +333,8 @@ function App() {
               （新加坡时间）
             </strong>
             <span>截至区块 {capture.blockNumber} · 单来源 · 存储回放</span>
-            {page?.freshness.state === 'stale' && <span>快照已陈旧</span>}
+            {(page?.freshness.state === 'stale' ||
+              Date.now() - Date.parse(capture.observedAt) > 3600000) && <span>快照已陈旧</span>}
             {page?.freshness.state === 'provider-down' && (
               <span>来源当前不可用，保留已采集结果</span>
             )}

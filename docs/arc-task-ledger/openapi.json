@@ -917,7 +917,14 @@
             "$ref": "#/components/schemas/SettlementResult"
           },
           "evidenceRequest": {
-            "$ref": "#/components/schemas/Knowledge"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },

@@ -33,6 +33,21 @@ it('三个 API 数据结构符合冻结 OpenAPI 契约', () => {
   d.evidence = [rawEvidence(meta(), snapshot, 'test-only', '测试')];
   const detail = publicDetail(d);
   validate('JobDetail', { ...detail, nextTimelineCursor: null });
+  validate('JobDetail', { ...detail, nextTimelineCursor: null, evidenceRequest: null });
+  validate('JobDetail', {
+    ...detail,
+    nextTimelineCursor: null,
+    evidenceRequest: {
+      id: 'req_test',
+      jobId: '8',
+      from: '1',
+      to: '2',
+      head: '0',
+      status: 'PENDING',
+      ruleVersion: 'atl-v1.2.0',
+      snapshotRunId: 'test_run_a',
+    },
+  });
   validate('JobsPage', {
     snapshotRunId: r.id,
     items: r.jobs.map((j) => publicRow(j.job)),
