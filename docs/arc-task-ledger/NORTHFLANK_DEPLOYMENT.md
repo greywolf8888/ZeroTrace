@@ -42,3 +42,7 @@ Northflank 官方要求所有套餐先添加默认支付方式才能创建运行
 账户允许创建后继续：固定提交构建 → 私有 PostgreSQL 就绪 → 稳定分页密钥和真实内部连接 → migration 4 exitCode=0 → API readiness → 有界真实主网采集 → 同源 HTTPS 网页 → 第二次采集与固定快照重启复核 → 观察真实 cron。回滚保留数据库和分页密钥，仅暂停本组件任务并切回已验证构建。
 
 官方依据：[账户创建资源与支付方式要求](https://northflank.com/docs/v1/application/billing/pricing-on-northflank)、[免费项目限制](https://northflank.com/docs/v1/application/getting-started/create-a-project)、[源码访问接口](https://northflank.com/docs/v1/api/team/integrations/check-repository-access)。
+
+## 当前提交复验与本地实时链读取
+
+干净提交 7d6593d12020749c7988cdd6fa70092b2bacecad 的格式、lint、类型、构建、许可证、1043 单元、88 集成（42 外部跳过）、2 评估、5 只读 MCP、52 Rust、49 全仓库浏览器及 Arc 75 单元／23 PostgreSQL／8 浏览器全部完成。官方 RPC 于 2026-10-05T08:33:21.867Z 核验 Arc 5042 finalized 区块 24362547、部署回执、代码/代理槽及 view 配置，原始观察选择导出至 validation/northflank-local-anchor-20261005.json。系统 DNS 与两个来源前序部署核验失败保留；当前成功不构成独立来源一致性或 Northflank 验收，任务资金本轮未重采，正式取证关闭。
