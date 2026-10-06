@@ -103,7 +103,7 @@
     "arc:migrate": "tsx apps/arc-task-ledger-api/src/migrate.ts",
     "arc:test:unit": "vitest run tests/arc-task-ledger/unit",
     "arc:test:integration": "vitest run tests/arc-task-ledger/integration",
-    "arc:test:e2e": "playwright test --config tests/arc-task-ledger/playwright.config.ts --project arc-desktop && playwright test --config tests/arc-task-ledger/playwright.config.ts --project arc-mobile",
+    "arc:test:e2e": "playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/ledger.spec.ts tests/arc-task-ledger/e2e/product.spec.ts --project arc-desktop && playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/ledger.spec.ts tests/arc-task-ledger/e2e/product.spec.ts --project arc-mobile && playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts --project arc-desktop && playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts --project arc-mobile",
     "arc:test:live": "tsx scripts/arc-task-ledger-live.ts",
     "arc:verify": "npm run arc:test:unit && npm run arc:test:integration && npm run arc:build && npm run arc:test:e2e",
     "arc:export": "node scripts/arc-task-ledger-export.mjs"

@@ -4,6 +4,9 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
 const root = process.cwd();
+const version = JSON.parse(
+  fs.readFileSync(path.join(root, 'packages/arc-task-ledger/package.json'), 'utf8'),
+).version;
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
   cwd: root,
   encoding: 'utf8',
@@ -82,6 +85,8 @@ for (const relative of [
   'docs/arc-task-ledger/CONTINUOUS_ACCEPTANCE.md',
   'docs/arc-task-ledger/PUBLICATION_READINESS.md',
   'docs/arc-task-ledger/PRODUCT_CORRECTION.md',
+  'docs/arc-task-ledger/PRODUCT_DELIVERY_20261006.md',
+  'docs/arc-task-ledger/UI_AUDIT_CORRECTION_20261006.md',
   'docs/arc-task-ledger/validation',
   'docs/arc-task-ledger/UPSTREAM_LICENSE.txt',
   'LICENSE',
@@ -113,7 +118,7 @@ const devNames = [
 ];
 write('package.json', {
   name: 'arc-task-ledger-release',
-  version: '1.2.0',
+  version,
   private: true,
   type: 'module',
   license: 'Apache-2.0',
@@ -186,7 +191,7 @@ write(
 );
 write(
   'docs/arc-task-ledger/FINAL_ACCEPTANCE.md',
-  '# 独立候选边界\n\n此目录是本地导出，不表示已经公开部署。实际本地测试与生产主网状态以原工作副本同版本的验收收据为准。当前状态与主网案例见随包脱敏验收记录；定点区块不代表完整历史，不得将测试样例作为主网记录。\n',
+  '# 独立候选边界\n\n此目录是本地导出，不表示已经公开部署。当前审计修复与验收边界见 UI_AUDIT_CORRECTION_20261006.md。实际本地测试与生产主网状态以原工作副本同版本的验收收据为准。定点区块不代表完整历史，不得将测试样例作为主网记录。\n',
 );
 // 导出后的 Compose 只能从自身根目录构建，不能再次寻找原仓库的 dist-public。
 const composeRelative = 'infra/arc-task-ledger/compose.yaml';
@@ -332,7 +337,7 @@ const files = [...new Set([...copied, ...generated])].sort().map((relative) => (
 write('release-manifest.json', {
   schemaVersion: 'atl-public-export-v1',
   sourceCommit,
-  version: '1.2.0',
+  version,
   published: false,
   privateHistoryIncluded: false,
   files,

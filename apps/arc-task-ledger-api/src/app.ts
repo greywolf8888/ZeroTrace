@@ -295,6 +295,9 @@ export async function createLedgerApp(
       nextTimelineCursor: next.state === 'known' ? next.value : null,
       snapshotRunId: run.id,
       datasource: 'stored-replay',
+      snapshotTasks: (await store.getJobPage(run.id, 20))
+        .slice(0, 20)
+        .map((row) => publicRow(row.job, row.evidenceIds)),
     };
   });
   app.post(
@@ -320,11 +323,12 @@ export async function createLedgerApp(
       const detail = await store.getJobDetail(r.id, p.jobId);
       if (!detail)
         throw new LedgerError('NOT_IN_ENUMERATED_SET', '该任务未在当前已采集范围内。', 404);
-      const queued = await requestStore.enqueueEvidence(detail, r.id);
+      const queued = await requestStore.enqueueEvidence(detail, r.id, await store.coveredRanges());
       return reply.code(202).send({
         request: queued,
-        message:
-          '已登记有界补证；每轮最多2000区块，总区间最多200000区块。完成所选区间不等于完整任务历史，GET 查询不会触发扫描。',
+        message: queued.plan?.from
+          ? '已登记有界补证；完成扫描与找到新证据分别报告，原固定快照保持不变。'
+          : (queued.plan?.reason ?? '补证目标暂无法定位。'),
       });
     },
   );

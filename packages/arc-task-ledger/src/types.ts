@@ -1,4 +1,4 @@
-export const RULE_VERSION = 'atl-v1.2.0';
+export const RULE_VERSION = 'atl-v1.2.1';
 export type Knowledge<T> =
   | { state: 'known'; value: T; evidenceIds: string[]; derivation?: string }
   | {
@@ -121,6 +121,7 @@ export const amount = (atomic: Knowledge<string>): Amount => ({
 });
 export interface SettlementLeg {
   id: string;
+  from?: string;
   role: 'WORKER' | 'POSTER' | 'PROTOCOL' | 'ADAPTER' | 'ESCROW';
   kind:
     | 'DEPOSIT'

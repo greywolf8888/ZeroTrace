@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SettlementCard } from './SettlementCard.js';
+import { SettlementWorkbench } from './SettlementWorkbench.js';
 import {
   api,
   ApiError,
@@ -51,6 +52,7 @@ function App() {
   const [readAt, setReadAt] = useState(() => Date.now());
   const [notice, setNotice] = useState('');
   const [showEvidence, setShowEvidence] = useState(false);
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
   const [coverage, setCoverage] = useState<Record<string, unknown>>();
   const report = route.split('?')[0]!.endsWith('/report');
   const consumer = route.startsWith('/consumer');
@@ -94,6 +96,7 @@ function App() {
       setReadAt(Date.now());
       setError(undefined);
       setShowEvidence(false);
+      setSelectedEvidenceIds([]);
       if (parts[0] === 'tasks') {
         if (
           parts[1] !== registry.chainId ||
@@ -231,6 +234,7 @@ function App() {
     navigate('/?' + q);
   }
   function reveal(ids: string[]) {
+    setSelectedEvidenceIds(ids);
     setShowEvidence(true);
     setTimeout(
       () =>
@@ -263,8 +267,7 @@ function App() {
         </a>
         <span className="network">Arc 主网 · 5042 · 只读</span>
       </header>
-      <main className={report ? 'report' : ''}>
-        {testOnly && <p className="test-label">本地测试样例，不是主网证据。</p>}
+      <main className={report ? 'report' : detail && !consumer ? 'task-page' : ''}>
         {!detail && !report && (
           <section className="search-hero">
             <p className="eyebrow">从一个具体任务开始</p>
@@ -334,52 +337,59 @@ function App() {
             {notice}
           </p>
         )}
-        {capture && (
-          <div className="freshness">
-            <strong>
-              采集时间：
-              {new Date(capture.observedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Singapore' })}
-              （新加坡时间）
-            </strong>
-            <span>截至区块 {capture.blockNumber} · 单来源 · 存储回放</span>
-            {(page?.freshness.state === 'stale' ||
-              readAt - Date.parse(capture.observedAt) > 3600000) && <span>快照已陈旧</span>}
-            {page?.freshness.state === 'provider-down' && (
-              <span>来源当前不可用，保留已采集结果</span>
-            )}
-          </div>
-        )}
-        {(page || detail) && (
-          <div className="toolbar no-print">
-            <button
-              onClick={() => {
-                if (detail && registry)
-                  navigate(
-                    consumer
-                      ? '/consumer?jobId=' + detail.job.jobId
-                      : taskPath(registry, detail.job.jobId),
-                  );
-                else {
-                  const q = new URLSearchParams(params);
-                  q.delete('snapshotRunId');
-                  q.delete('cursor');
-                  q.delete('previous');
-                  navigate('/?' + q);
+        <div className={detail && !report && !consumer ? 'task-statusbar' : ''}>
+          {testOnly && <p className="test-label">本地测试样例，不是主网证据。</p>}
+          {capture && (
+            <div className="freshness">
+              <strong>
+                采集时间：
+                {new Date(capture.observedAt).toLocaleString('zh-CN', {
+                  timeZone: 'Asia/Singapore',
+                })}
+                （新加坡时间）
+              </strong>
+              <span>截至区块 {capture.blockNumber} · 单来源 · 存储回放</span>
+              {(page?.freshness.state === 'stale' ||
+                readAt - Date.parse(capture.observedAt) > 3600000) && <span>快照已陈旧</span>}
+              {page?.freshness.state === 'provider-down' && (
+                <span>来源当前不可用，保留已采集结果</span>
+              )}
+            </div>
+          )}
+          {(page || detail) && (
+            <div className="toolbar no-print">
+              <button
+                onClick={() => {
+                  if (detail && registry)
+                    navigate(
+                      consumer
+                        ? '/consumer?jobId=' + detail.job.jobId
+                        : taskPath(registry, detail.job.jobId),
+                    );
+                  else {
+                    const q = new URLSearchParams(params);
+                    q.delete('snapshotRunId');
+                    q.delete('cursor');
+                    q.delete('previous');
+                    navigate('/?' + q);
+                  }
+                  setNotice('只重新读取已采集结果，不主动重新核验链。');
+                }}
+              >
+                重新加载已采集结果
+              </button>
+              <button
+                onClick={() =>
+                  void api<Record<string, unknown>>('/v1/coverage')
+                    .then(setCoverage)
+                    .catch(setError)
                 }
-                setNotice('只重新读取已采集结果，不主动重新核验链。');
-              }}
-            >
-              重新加载已采集结果
-            </button>
-            <button
-              onClick={() =>
-                void api<Record<string, unknown>>('/v1/coverage').then(setCoverage).catch(setError)
-              }
-            >
-              查看覆盖与来源
-            </button>
-          </div>
-        )}
+              >
+                查看覆盖与来源
+              </button>
+            </div>
+          )}
+        </div>
         {page && (
           <>
             <section className="filters">
@@ -551,8 +561,9 @@ function App() {
         )}
         {detail && registry && (
           <>
-            <div className="heading no-print">
+            <div className="heading task-heading">
               <button
+                className="no-print"
                 onClick={() =>
                   navigate('/' + (params.get('returnQuery') ? '?' + params.get('returnQuery') : ''))
                 }
@@ -560,8 +571,6 @@ function App() {
                 ← 返回任务列表
               </button>
               {consumer && <span>独立消费者：真实 HTTP，同一结算结果模型</span>}
-            </div>
-            <div className="heading">
               <h2>
                 {report ? '结算报告 · ' : ''}任务 #{detail.job.jobId}
               </h2>
@@ -580,7 +589,17 @@ function App() {
                 '尚未指定'
               )}
             </p>
-            <SettlementCard result={detail.result} onEvidence={reveal} />
+            {report || consumer ? (
+              <SettlementCard result={detail.result} onEvidence={reveal} />
+            ) : (
+              <SettlementWorkbench
+                key={detail.snapshotRunId + detail.job.jobId}
+                detail={detail}
+                registry={registry}
+                onEvidence={reveal}
+                onTask={(id) => navigate(taskPath(registry, id, detail.snapshotRunId))}
+              />
+            )}
             <div className="toolbar no-print">
               <button
                 onClick={() =>
@@ -775,11 +794,56 @@ function App() {
             <section className="no-print">
               <h3>有界补证状态</h3>
               {detail.evidenceRequest ? (
-                <p>
-                  {label(detail.evidenceRequest.status)}；所选区间 {detail.evidenceRequest.from}–
-                  {detail.evidenceRequest.to}，已核验至 {detail.evidenceRequest.head}
-                  。完成区间不表示完整任务历史。
-                </p>
+                <>
+                  <p>
+                    {detail.evidenceRequest.plan && !detail.evidenceRequest.plan.from ? (
+                      '未启动新的扫描。'
+                    ) : (
+                      <>
+                        {label(detail.evidenceRequest.status)}；所选区间{' '}
+                        {detail.evidenceRequest.from}–{detail.evidenceRequest.to}，已核验至{' '}
+                        {detail.evidenceRequest.head}。完成区间不表示完整任务历史。
+                      </>
+                    )}
+                  </p>
+                  <p>
+                    {detail.evidenceRequest.plan?.reason ??
+                      '旧申请未保存目标定位计划；扫描状态不能证明已补齐。'}
+                  </p>
+                  <p>
+                    查证结果：
+                    {detail.evidenceRequest.outcome
+                      ? detail.evidenceRequest.outcome.state === 'PENDING'
+                        ? '尚待扫描及新结果发布'
+                        : label(detail.evidenceRequest.outcome.state)
+                      : '旧申请未保存查证结果'}
+                  </p>
+                  {detail.evidenceRequest.outcome?.afterSnapshot && (
+                    <>
+                      <p>
+                        新增相关证据：{detail.evidenceRequest.outcome.newEvidenceIds.length}；结论
+                        {detail.evidenceRequest.outcome.conclusionChanged
+                          ? '发生变化'
+                          : '未发生变化'}
+                        。当前固定快照未变。
+                      </p>
+                      <button
+                        onClick={() =>
+                          navigate(
+                            taskPath(
+                              registry,
+                              detail.job.jobId,
+                              detail.evidenceRequest!.outcome!.afterSnapshot,
+                              report,
+                            ),
+                          )
+                        }
+                      >
+                        打开补证后的固定快照
+                      </button>
+                    </>
+                  )}
+                </>
               ) : (
                 <p>
                   当前没有该任务补证请求。每轮最多 2000 区块、总请求最多 200000
@@ -838,7 +902,11 @@ function App() {
                 <pre>{JSON.stringify(value(detail.rawState), null, 2)}</pre>
               </details>
               {detail.evidence.map((e) => (
-                <details id={'evidence-' + e.id} key={e.id}>
+                <details
+                  id={'evidence-' + e.id}
+                  key={e.id}
+                  open={selectedEvidenceIds.includes(e.id)}
+                >
                   <summary>证据 {e.id}</summary>
                   <p>
                     来源：{e.sourceAlias} · 摘要：{e.payloadHash}

@@ -1,4 +1,5 @@
 import type { Receipt, SnapshotRun, StoredEvidence } from './types.js';
+import type { EvidencePlan } from './enrichment.js';
 
 // 领域逻辑仅依赖可重放仓储契约；PostgreSQL 实现位于独立 API 基础设施层。
 export interface Checkpoint {
@@ -31,6 +32,14 @@ export interface EvidenceRequest {
   status: string;
   ruleVersion: string;
   snapshotRunId: string;
+  plan?: EvidencePlan;
+  outcome?: {
+    state: 'PENDING' | 'NEW_EVIDENCE_FOUND' | 'NO_MATCH_IN_RANGE' | 'STILL_INSUFFICIENT' | 'FAILED';
+    beforeSnapshot: string;
+    afterSnapshot?: string;
+    newEvidenceIds: string[];
+    conclusionChanged: boolean | null;
+  };
 }
 export interface LedgerRepository {
   checkpoint(deployment: string, openingHead: string): Promise<Checkpoint>;

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Arc 任务证据只读 API",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "持久快照查询与有界补证申请；链上只读，HTTP成功不代表证据完整。"
   },
   "servers": [
@@ -925,6 +925,13 @@
                 "type": "null"
               }
             ]
+          },
+          "snapshotTasks": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/JobRow"
+            }
           }
         }
       },
@@ -1039,7 +1046,16 @@
       },
       "ResultMetric": {
         "type": "object",
-        "required": ["key", "label", "amount", "scope", "evidenceIds"],
+        "required": [
+          "key",
+          "label",
+          "amount",
+          "scope",
+          "evidenceIds",
+          "qualifier",
+          "role",
+          "phase"
+        ],
         "properties": {
           "key": {
             "type": "string"
@@ -1058,6 +1074,15 @@
             "items": {
               "type": "string"
             }
+          },
+          "qualifier": {
+            "enum": ["EXACT", "OBSERVED_SUBSET", "AT_LEAST", "UNKNOWN"]
+          },
+          "role": {
+            "enum": ["WORKER", "POSTER", "PROTOCOL", "ADAPTER", "ESCROW", "TASK"]
+          },
+          "phase": {
+            "enum": ["DIRECT", "CLAIMED", "OUTSTANDING", "FACE_VALUE"]
           }
         }
       },
@@ -1072,11 +1097,12 @@
           "nextAction",
           "metrics",
           "historyComplete",
-          "gas"
+          "gas",
+          "flows"
         ],
         "properties": {
           "schemaVersion": {
-            "const": "atl-settlement-result-v1"
+            "const": "atl-settlement-result-v2"
           },
           "jobId": {
             "type": "string"
@@ -1131,6 +1157,12 @@
                 }
               }
             }
+          },
+          "flows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettlementFlow"
+            }
           }
         }
       },
@@ -1161,6 +1193,95 @@
           },
           "status": {
             "enum": ["PENDING", "COMPLETED", "FAILED"]
+          },
+          "plan": {
+            "type": "object",
+            "required": [
+              "version",
+              "targetKinds",
+              "basis",
+              "reason",
+              "priorCoverage",
+              "beforeReceiptHashes",
+              "beforeConclusion"
+            ],
+            "properties": {
+              "version": {
+                "const": "atl-enrichment-plan-v2"
+              },
+              "targetKinds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "basis": {
+                "enum": ["KNOWN_EVENT", "KNOWN_CREATION_UNSCANNED", "UNLOCATABLE", "COVERED"]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "priorCoverage": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["from", "to"],
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "beforeReceiptHashes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "beforeConclusion": {
+                "type": "string"
+              }
+            }
+          },
+          "outcome": {
+            "type": "object",
+            "required": ["state", "beforeSnapshot", "newEvidenceIds", "conclusionChanged"],
+            "properties": {
+              "state": {
+                "enum": [
+                  "PENDING",
+                  "NEW_EVIDENCE_FOUND",
+                  "NO_MATCH_IN_RANGE",
+                  "STILL_INSUFFICIENT",
+                  "FAILED"
+                ]
+              },
+              "beforeSnapshot": {
+                "type": "string"
+              },
+              "afterSnapshot": {
+                "type": "string"
+              },
+              "newEvidenceIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "conclusionChanged": {
+                "type": ["boolean", "null"]
+              }
+            }
           }
         }
       },
@@ -1200,6 +1321,62 @@
           },
           "atomic": {
             "$ref": "#/components/schemas/Knowledge"
+          }
+        }
+      },
+      "SettlementFlow": {
+        "type": "object",
+        "required": [
+          "id",
+          "from",
+          "to",
+          "role",
+          "kind",
+          "phase",
+          "amount",
+          "evidenceIds",
+          "eventIds",
+          "transactionHashes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "role": {
+            "enum": ["WORKER", "POSTER", "PROTOCOL", "ADAPTER", "ESCROW"]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "phase": {
+            "enum": ["DIRECT", "PARKED", "CLAIMED"]
+          },
+          "amount": {
+            "$ref": "#/components/schemas/ResultAmount"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "eventIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transactionHashes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       }

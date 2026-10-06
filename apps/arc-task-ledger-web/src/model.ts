@@ -1,4 +1,5 @@
 import type { SettlementResult } from '../../../packages/arc-task-ledger/src/result.js';
+import type { EvidenceRequest } from '../../../packages/arc-task-ledger/src/storage.js';
 export type K<T> =
   | { state: 'known'; value: T; evidenceIds?: string[] }
   | { state: string; reason: string; evidenceIds?: string[] };
@@ -52,6 +53,7 @@ export interface Page {
 }
 export interface Detail {
   job: Row;
+  snapshotTasks?: Row[];
   snapshotRunId: string;
   result: SettlementResult;
   rawState: K<Record<string, unknown>>;
@@ -96,7 +98,7 @@ export interface Detail {
   }[];
   nextTimelineCursor: string | null;
   evidence: { id: string; payloadHash: string; sourceAlias: string; safePayload: unknown }[];
-  evidenceRequest: { id: string; from: string; to: string; head: string; status: string } | null;
+  evidenceRequest: EvidenceRequest | null;
 }
 export const value = <T>(k: K<T>): T | undefined =>
   k.state === 'known' && 'value' in k ? k.value : undefined;
@@ -157,6 +159,9 @@ export const labels: Record<string, string> = {
   PENDING: '等待有界采集',
   COMPLETED: '所选区间已完成',
   FAILED: '补证失败，未自动扩张范围',
+  NEW_EVIDENCE_FOUND: '取得新的相关回执证据',
+  NO_MATCH_IN_RANGE: '所选区间未取得新的相关回执',
+  STILL_INSUFFICIENT: '仍缺少可定位的证据',
   complete: '完整',
   partial: '不完整',
   unknown: '未知',

@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vites
 import { LedgerStore } from '../../../apps/arc-task-ledger-api/src/storage.js';
 import { ABI, DEPLOYMENT } from '../../../packages/arc-task-ledger/src/config.js';
 import { decodeFunctionData, encodeFunctionResult } from 'viem';
-import { rawEvidence } from '../../../packages/arc-task-ledger/src/protocol.js';
+import { rawEvidence, decodeReceipt } from '../../../packages/arc-task-ledger/src/protocol.js';
 import { createLedgerApp } from '../../../apps/arc-task-ledger-api/src/app.js';
 import { run, snapshot, meta, receipt, event, POSTER } from '../fixtures/helpers.js';
 import { ArcReader } from '../../../packages/arc-task-ledger/src/reader.js';
@@ -20,6 +20,23 @@ if (!url || new URL(url).pathname !== '/arc_task_ledger_test')
   throw new Error('必须显式配置专用 arc_task_ledger_test 测试数据库，不允许跳过真实持久门禁。');
 const store = new LedgerStore(url);
 const secret = 'test-only-cursor-secret-with-32-bytes';
+const requestFixture = (id: string) => {
+  const fixture = run(id, ['8']);
+  fixture.jobs[0]!.timeline = [
+    {
+      id: 'test-only-creation',
+      name: 'BountyCreated',
+      args: {},
+      jobId: '8',
+      transactionHash: '0x' + 'b'.repeat(64),
+      blockHash: snapshot.blockHash,
+      blockNumber: DEPLOYMENT.verifiedDeploymentBlock,
+      logIndex: '0',
+      evidenceIds: [],
+    },
+  ];
+  return fixture;
+};
 beforeAll(async () => {
   await store.migrate();
 });
@@ -32,6 +49,110 @@ afterAll(async () => {
   await store.close();
 });
 describe('真实 PostgreSQL 与 API 集成', () => {
+  it('无法定位的申请不进入扫描队列，GET明确报告仍缺证且幂等', async () => {
+    const fixture = run('unlocatable_request', ['8']);
+    await store.publish(fixture, []);
+    const first = await store.enqueueEvidence(fixture.jobs[0]!, fixture.id);
+    expect(first).toMatchObject({
+      status: 'COMPLETED',
+      plan: { basis: 'UNLOCATABLE' },
+      outcome: { state: 'STILL_INSUFFICIENT', conclusionChanged: null },
+    });
+    expect(await store.nextEvidenceRequest()).toBeUndefined();
+    expect((await store.enqueueEvidence(fixture.jobs[0]!, fixture.id)).id).toBe(first.id);
+    const app = await createLedgerApp(store, secret, store);
+    try {
+      expect(
+        (
+          await app.inject(`/v1/jobs/5042/${DEPLOYMENT.adapter}/8?snapshotRunId=${fixture.id}`)
+        ).json().evidenceRequest.outcome.state,
+      ).toBe('STILL_INSUFFICIENT');
+    } finally {
+      await app.close();
+    }
+  });
+  for (const found of [false, true, 'outside'])
+    it(`扫描进度与任务查证结果分开：${found === 'outside' ? '窗口外证据' : found ? '相关新证据' : '扫描无匹配'}，新旧快照保持独立`, async () => {
+      const fixture = requestFixture('enrichment_before');
+      await store.publish(fixture, []);
+      const q = await store.enqueueEvidence(fixture.jobs[0]!, fixture.id);
+      const cp = await store.checkpoint(
+        `${DEPLOYMENT.adapter}:request:${q.id}`,
+        (BigInt(q.from) - 1n).toString(),
+      );
+      await store.saveSegment({
+        deployment: DEPLOYMENT.adapter,
+        checkpointKey: `${DEPLOYMENT.adapter}:request:${q.id}`,
+        from: q.from,
+        to: q.to,
+        status: 'complete',
+        document: {
+          scope: 'local-test-only-enrichment',
+          ruleVersion: fixture.jobs[0]!.ruleVersion,
+        },
+        observations: [],
+        receipts: [],
+        expectedVersion: cp.version,
+        requestUpdate: { id: q.id, head: q.to, status: 'COMPLETED' },
+      });
+      expect((await store.evidenceRequest('8'))!.outcome!.state).toBe('PENDING');
+      const after = structuredClone(fixture);
+      after.id = 'enrichment_after';
+      if (found) {
+        const raw = receipt([
+          event('BountyCompleted', { jobId: 8n, agentId: 0n, reputationScore: 100n }, 0),
+        ]);
+        if (found === 'outside') {
+          raw.blockNumber = '0x' + (BigInt(q.from) - 1n).toString(16);
+          raw.logs.forEach((log) => {
+            log.blockNumber = raw.blockNumber;
+          });
+        }
+        const proof = rawEvidence(
+          raw,
+          snapshot,
+          'test-only:enrichment',
+          '本地合成，不是主网观察。',
+        );
+        after.jobs[0]!.evidence = [proof];
+        after.jobs[0]!.timeline.push(...decodeReceipt(raw, [proof.id]).events);
+      } else {
+        // 与目标无关的账户或部署回执不能冒充任务新证据。
+        after.jobs[0]!.evidence = [
+          rawEvidence(receipt([]), snapshot, 'test-only:unrelated', '本地合成无关回执。'),
+        ];
+      }
+      await store.publish(after, []);
+      const result = (await store.evidenceRequest('8'))!;
+      expect(result.outcome).toMatchObject({
+        state: found === true ? 'NEW_EVIDENCE_FOUND' : 'NO_MATCH_IN_RANGE',
+        beforeSnapshot: fixture.id,
+        afterSnapshot: after.id,
+        conclusionChanged: false,
+      });
+      expect(result.outcome!.newEvidenceIds.length).toBe(found === true ? 1 : 0);
+      expect((await store.getJobDetail(fixture.id, '8'))!.evidence).toEqual([]);
+      await store.pool.query(
+        "UPDATE arc_task_ledger_v1.evidence_requests SET requested_at=now()-interval '2 hours' WHERE id=$1",
+        [q.id],
+      );
+      const next = await store.enqueueEvidence(after.jobs[0]!, after.id);
+      expect(BigInt(next.to)).toBeLessThan(BigInt(q.from));
+    });
+  it('新快照不替退休模型补写查证结论，旧请求保留原状', async () => {
+    const fixture = requestFixture('retired_result_before');
+    await store.publish(fixture, []);
+    const q = await store.enqueueEvidence(fixture.jobs[0]!, fixture.id);
+    await store.pool.query(
+      "UPDATE arc_task_ledger_v1.evidence_requests SET status='COMPLETED',rule_version='atl-v1.2.0' WHERE id=$1",
+      [q.id],
+    );
+    const after = structuredClone(fixture);
+    after.id = 'retired_result_after';
+    await store.publish(after, []);
+    expect((await store.evidenceRequest('8'))!.outcome).toEqual(q.outcome);
+    expect(await store.nextEvidenceRequest()).toBeUndefined();
+  });
   it('小窗口分批仍消费完整的有界预算，每批原始证据和水位落盘', async () => {
     const reader = new ArcReader(
       {
@@ -66,7 +187,7 @@ describe('真实 PostgreSQL 与 API 集成', () => {
     }
   });
   it('补证头与已持久的连续检查点一致，既有区间复用不能使申请水位落后', async () => {
-    const fixture = run('proof_existing', ['8']);
+    const fixture = requestFixture('proof_existing');
     await store.publish(fixture, []);
     const q = await store.enqueueEvidence(fixture.jobs[0]!, fixture.id);
     const base = await store.checkpoint(
@@ -109,7 +230,7 @@ describe('真实 PostgreSQL 与 API 集成', () => {
     }
   });
   it('补证POST去重、有界、版本隔离；GET不触发，角色筛选在数据库执行', async () => {
-    const fixture = run('request_test', ['8']);
+    const fixture = requestFixture('request_test');
     await store.publish(fixture, []);
     const app = await createLedgerApp(store, secret, store);
     try {
@@ -334,7 +455,7 @@ describe('真实 PostgreSQL 与 API 集成', () => {
       (BigInt(anchor.blockNumber) + 1n).toString(),
     );
     expect(second.recent).toMatchObject({ complete: true });
-    const fixture = run('proof_transaction', ['8']);
+    const fixture = requestFixture('proof_transaction');
     await store.publish(fixture, []);
     const q = await store.enqueueEvidence(fixture.jobs[0]!, fixture.id);
     const lower = { ...anchor, blockNumber: fixture.snapshot.blockNumber };
@@ -554,7 +675,7 @@ describe('真实 PostgreSQL 与 API 集成', () => {
       }
     },
   );
-  it('列表SQL keyset+LIMIT仅读投影；详情单任务；coverage不读jobs', async () => {
+  it('列表SQL keyset+LIMIT仅读投影；详情单任务与20条导航；coverage不读jobs', async () => {
     const fixture = run(
       'query_bound',
       Array.from({ length: 120 }, (_, i) => String(i + 1)),
@@ -590,14 +711,21 @@ describe('真实 PostgreSQL 与 API 集成', () => {
       expect((await queries.mock.results[index]!.value).rows).toHaveLength(4);
       expect(page.body).not.toContain('xxxx');
       queries.mockClear();
-      expect((await app.inject(`/v1/jobs/5042/${DEPLOYMENT.adapter}/8`)).statusCode).toBe(200);
+      const detail = await app.inject(`/v1/jobs/5042/${DEPLOYMENT.adapter}/8`);
+      expect(detail.statusCode).toBe(200);
+      expect(detail.json().snapshotTasks).toHaveLength(20);
+      expect(JSON.stringify(detail.json().snapshotTasks)).not.toContain('xxxx');
       expect(
         queries.mock.calls
           .filter((call) => String(call[0]).includes('FROM arc_task_ledger_v1.jobs'))
           .map((call) => String(call[0])),
       ).toEqual([
         'SELECT document FROM arc_task_ledger_v1.jobs WHERE run_id=$1 AND job_id=$2 LIMIT 1',
+        'SELECT list_projection,evidence_ids FROM arc_task_ledger_v1.jobs WHERE run_id=$1 ORDER BY job_id LIMIT $2',
       ]);
+      expect(
+        queries.mock.calls.find((call) => String(call[0]).includes('SELECT list_projection'))?.[1],
+      ).toEqual(['query_bound', 21]);
       queries.mockClear();
       await app.inject('/v1/coverage');
       expect(

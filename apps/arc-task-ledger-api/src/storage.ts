@@ -13,6 +13,9 @@ import {
   RULE_VERSION,
   DEPLOYMENT,
   type EvidenceRequest,
+  planEvidence,
+  conclusionDigest,
+  taskReceiptEvidence,
 } from '@zerotrace/arc-task-ledger';
 
 // 与现有 storage 使用同一 pg 连接模式；独立 schema 只保存本组件链上只读投影。
@@ -51,6 +54,9 @@ DROP INDEX IF EXISTS arc_task_ledger_v1.atl_request_active;
 CREATE UNIQUE INDEX IF NOT EXISTS atl_request_active_v5 ON arc_task_ledger_v1.evidence_requests(job_id,rule_version) WHERE status='PENDING';
 ALTER TABLE arc_task_ledger_v1.runs ADD COLUMN IF NOT EXISTS collection jsonb;
 INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(5) ON CONFLICT DO NOTHING;
+ALTER TABLE arc_task_ledger_v1.evidence_requests ADD COLUMN IF NOT EXISTS plan jsonb;
+ALTER TABLE arc_task_ledger_v1.evidence_requests ADD COLUMN IF NOT EXISTS outcome jsonb;
+INSERT INTO arc_task_ledger_v1.migrations(version) VALUES(6) ON CONFLICT DO NOTHING;
 `;
 export class LedgerStore implements LedgerRepository {
   readonly pool: Pool;
@@ -89,7 +95,7 @@ export class LedgerStore implements LedgerRepository {
   async ready(): Promise<boolean> {
     try {
       const r = await this.pool.query(
-        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=5',
+        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=6',
       );
       return r.rowCount === 1;
     } catch {
@@ -161,6 +167,43 @@ export class LedgerStore implements LedgerRepository {
             JSON.stringify(detail.job),
             JSON.stringify(detail.evidence.map((e) => e.id)),
           ],
+        );
+      }
+      // 只有新快照与原件在同一事务内发布后，才报告任务级补证结果。
+      const completed = await client.query(
+        "SELECT * FROM arc_task_ledger_v1.evidence_requests WHERE status='COMPLETED' AND rule_version=$1 AND plan IS NOT NULL AND outcome->>'state'='PENDING' FOR UPDATE",
+        [RULE_VERSION],
+      );
+      for (const row of completed.rows) {
+        const detail = run.jobs.find((d) => d.job.jobId === String(row.job_id));
+        if (
+          !detail ||
+          detail.job.modelVersion !== row.rule_version ||
+          detail.job.freshness === 'stale' ||
+          BigInt(detail.job.snapshot.blockNumber) < BigInt(row.last_block)
+        )
+          continue;
+        const plan = row.plan as NonNullable<EvidenceRequest['plan']>;
+        const fresh = taskReceiptEvidence(detail).filter((e) => {
+          const block = (e.raw as { blockNumber?: string } | null)?.blockNumber;
+          return (
+            typeof block === 'string' &&
+            /^(?:0x[\da-fA-F]+|\d+)$/.test(block) &&
+            BigInt(block) >= BigInt(row.first_block) &&
+            BigInt(block) <= BigInt(row.last_block) &&
+            !plan.beforeReceiptHashes.includes(e.payloadHash)
+          );
+        });
+        const outcome: EvidenceRequest['outcome'] = {
+          state: fresh.length ? 'NEW_EVIDENCE_FOUND' : 'NO_MATCH_IN_RANGE',
+          beforeSnapshot: String(row.run_id),
+          afterSnapshot: run.id,
+          newEvidenceIds: fresh.map((e) => e.id),
+          conclusionChanged: conclusionDigest(detail) !== plan.beforeConclusion,
+        };
+        await client.query(
+          'UPDATE arc_task_ledger_v1.evidence_requests SET outcome=$2,updated_at=now() WHERE id=$1',
+          [row.id, JSON.stringify(outcome)],
         );
       }
     });
@@ -335,7 +378,7 @@ export class LedgerStore implements LedgerRepository {
       if (input.requestUpdate) {
         const u = input.requestUpdate;
         const changed = await client.query(
-          "UPDATE arc_task_ledger_v1.evidence_requests SET head=LEAST($2,last_block),status=CASE WHEN $3='FAILED' THEN 'FAILED' WHEN LEAST($2,last_block)>=last_block THEN 'COMPLETED' ELSE 'PENDING' END,error_code=$4,updated_at=now() WHERE id=$1 AND status='PENDING' AND rule_version=$5",
+          "UPDATE arc_task_ledger_v1.evidence_requests SET head=LEAST($2,last_block),status=CASE WHEN $3='FAILED' THEN 'FAILED' WHEN LEAST($2,last_block)>=last_block THEN 'COMPLETED' ELSE 'PENDING' END,outcome=CASE WHEN $3='FAILED' AND outcome IS NOT NULL THEN jsonb_set(outcome,'{state}','\"FAILED\"') ELSE outcome END,error_code=$4,updated_at=now() WHERE id=$1 AND status='PENDING' AND rule_version=$5",
           [u.id, head.toString(), u.status, u.error ?? null, RULE_VERSION],
         );
         if (changed.rowCount !== 1)
@@ -388,9 +431,23 @@ export class LedgerStore implements LedgerRepository {
       status: String(r.status),
       ruleVersion: String(r.rule_version),
       snapshotRunId: String(r.run_id),
+      ...(r.plan ? { plan: r.plan as NonNullable<EvidenceRequest['plan']> } : {}),
+      ...(r.outcome ? { outcome: r.outcome as NonNullable<EvidenceRequest['outcome']> } : {}),
     };
   }
-  async enqueueEvidence(detail: JobDetail, runId: string): Promise<EvidenceRequest> {
+  async coveredRanges(): Promise<{ from: string; to: string }[]> {
+    const r = await this.pool.query(
+      "SELECT first_block,last_block FROM arc_task_ledger_v1.segments WHERE deployment=$1 AND status='complete' ORDER BY first_block,last_block",
+      [DEPLOYMENT.adapter],
+    );
+    return r.rows.map((row) => ({ from: String(row.first_block), to: String(row.last_block) }));
+  }
+  async enqueueEvidence(
+    detail: JobDetail,
+    runId: string,
+    covered?: { from: string; to: string }[],
+  ): Promise<EvidenceRequest> {
+    const ranges = covered ?? (await this.coveredRanges());
     return this.transaction(async (c) => {
       await c.query("SELECT pg_advisory_xact_lock(hashtext('arc_task_ledger_v1:request-quota'))");
       const active = await c.query(
@@ -409,26 +466,32 @@ export class LedgerStore implements LedgerRepository {
           429,
         );
       const target = BigInt(detail.job.snapshot.blockNumber);
-      const created = detail.timeline.find((e) => e.name === 'BountyCreated')?.blockNumber;
-      const from = created
-        ? BigInt(created)
-        : target - 199999n > BigInt(DEPLOYMENT.verifiedDeploymentBlock)
-          ? target - 199999n
-          : BigInt(DEPLOYMENT.verifiedDeploymentBlock);
-      const to = from + 199999n < target ? from + 199999n : target;
+      const plan = planEvidence(detail, ranges);
+      const from = plan.from ? BigInt(plan.from) : target;
+      const to = plan.to ? BigInt(plan.to) : target;
+      const scannable = plan.from !== undefined;
+      const outcome: EvidenceRequest['outcome'] = {
+        state: scannable ? 'PENDING' : 'STILL_INSUFFICIENT',
+        beforeSnapshot: runId,
+        newEvidenceIds: [],
+        conclusionChanged: null,
+      };
       const id =
         'req_' +
         hashPayload({ jobId: detail.job.jobId, runId, ruleVersion: RULE_VERSION }).slice(0, 32);
       const r = await c.query(
-        "INSERT INTO arc_task_ledger_v1.evidence_requests(id,job_id,run_id,first_block,last_block,head,status,rule_version) VALUES($1,$2,$3,$4,$5,$6,'PENDING',$7) RETURNING *",
+        'INSERT INTO arc_task_ledger_v1.evidence_requests(id,job_id,run_id,first_block,last_block,head,status,rule_version,plan,outcome) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *',
         [
           id,
           detail.job.jobId,
           runId,
           from.toString(),
           to.toString(),
-          (from - 1n).toString(),
+          (scannable ? from - 1n : target).toString(),
+          scannable ? 'PENDING' : 'COMPLETED',
           RULE_VERSION,
+          JSON.stringify(plan),
+          JSON.stringify(outcome),
         ],
       );
       return this.requestRow(r.rows[0]);

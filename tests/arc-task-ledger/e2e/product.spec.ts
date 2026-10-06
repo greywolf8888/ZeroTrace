@@ -57,7 +57,7 @@ test('UX01/03/06/07 输入任务→真实HTTP金额→固定快照新上下文�
   await expect(page).toHaveURL(/19\/report\?snapshotRunId=/);
   await expect(page.getByRole('heading', { name: '结算报告 · 任务 #19' })).toBeVisible();
   await expect(result).toContainText('0.99 USDC');
-  await page.getByRole('button', { name: '核对工作者已观察报酬证据' }).click();
+  await page.getByRole('button', { name: '核对工作者直接奖励证据' }).click();
   await expect(page.getByText(/^证据 ev_/).first()).toBeVisible();
   await page.screenshot({
     path: `.agent-state/arc-task-ledger/evidence/product-report-${test.info().project.name}.png`,

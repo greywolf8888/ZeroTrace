@@ -2507,3 +2507,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 ## 2026-10-06 Arc Task Ledger v1.2.0 窄产品闭环
 
 当前固定源码 10592d9e963a24e8bb5af46d7fca983dc710a651、部署 8084e258d2b0574fabaf15393089b4fe6898acb6 已完成输入／角色筛选／同模型金额证据／固定分享报告／消费者集成／有界补证及实际 HTTPS、重启和自动采集。16 任务，#18 报酬1.98、费用0.02 USDC，25项证据摘要复核；完整检查和边界见 [产品交付](docs/arc-task-ledger/PRODUCT_DELIVERY_20261006.md)。42项外部集成跳过、单来源与历史 partial、正式取证关闭；未提升其他 ZeroTrace 门禁，原桌面未提交修改保留。
+
+## 2026-10-06 Arc v1.2.1 附件审计修复续执行
+
+按附件问题修复部分历史未清偿零、发布者超时份额和具体任务后续领取；新增服务器资金路径、三栏证据检查器、精确记录展开和缺口定位补证。结果 schema v2、规则 atl-v1.2.1、申请表增量迁移 6；旧证据保留，旧模型申请不消费或改写。93 Arc 单元和33真实 PostgreSQL通过；当前浏览器、独立导出和源码摘要见 [本轮验收](docs/arc-task-ledger/UI_AUDIT_CORRECTION_20261006.md) 及新收据目录。真实主网24544735/16任务，#18奖励1.98、费用0.02 USDC，未清偿额未知；稀有结算主网未观察、历史及来源仍partial、正式取证关闭。当前10依赖告警和旧视觉指纹失败保留。云端仍为旧部署，本轮不继承托管PASS；其他终端门禁与原桌面未提交工作不变。

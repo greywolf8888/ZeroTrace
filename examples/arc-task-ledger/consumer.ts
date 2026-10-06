@@ -20,7 +20,7 @@ export async function fetchLedgerJob(
     if (!response.ok) throw new Error('证据服务暂不可用');
     const job = (await response.json()) as LedgerResponse;
     if (
-      job.result?.schemaVersion !== 'atl-settlement-result-v1' ||
+      job.result?.schemaVersion !== 'atl-settlement-result-v2' ||
       !Array.isArray(job.result.metrics) ||
       job.job?.jobId !== jobId ||
       typeof job.snapshotRunId !== 'string'

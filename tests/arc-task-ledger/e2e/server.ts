@@ -69,12 +69,24 @@ for (const [jobId, scenario] of [
   ['104', 'parked'],
   ['105', 'dispute'],
   ['106', 'zero-refund'],
+  ['109', 'timeout'],
+  ['110', 'claimed'],
 ] as const) {
   let logs = completeLogs();
-  if (scenario === 'parked')
+  if (scenario === 'parked' || scenario === 'claimed')
     logs = [
       ...logs.filter((l) => BigInt(l.logIndex) !== 3n),
       event('PayoutParked', { jobId: 8n, payee: WORKER, amount: 990000n }, 5),
+    ];
+  if (scenario === 'timeout')
+    logs = [
+      event(
+        'ArbitratorTimeoutClaimed',
+        { jobId: 8n, posterAmount: 500000n, providerAmount: 500000n },
+        0,
+      ),
+      transfer(DEPLOYMENT.adapter, POSTER, protocolAtoms('500000'), 1),
+      transfer(DEPLOYMENT.adapter, WORKER, protocolAtoms('500000'), 2),
     ];
   if (scenario === 'dispute')
     logs[4] = event(
@@ -115,6 +127,37 @@ for (const [jobId, scenario] of [
   detail.timeline = cash.events;
   detail.evidence = [evidence];
   detail.gas = cash.gas;
+  if (scenario === 'claimed') {
+    const claimTx = '0x' + 'c'.repeat(64);
+    const claimBlock = '0x14fb181';
+    const claim = receipt(
+      [
+        transfer(DEPLOYMENT.adapter, WORKER, protocolAtoms('990000'), 0),
+        event('WithdrawalClaimed', { payee: WORKER, amount: 990000n }, 1),
+      ].map((l) => ({ ...l, transactionHash: claimTx, blockNumber: claimBlock })),
+      { transactionHash: claimTx, blockNumber: claimBlock },
+    );
+    const claimProof = rawEvidence(
+      claim,
+      snapshot,
+      'test-only:claimed-sequence',
+      '本地合成完整义务序列，不是主网观察。',
+    );
+    detail.pendingAccounts = [
+      accountPending(
+        WORKER,
+        known('0'),
+        [
+          { receipt: raw, evidenceIds: [evidence.id] },
+          { receipt: claim, evidenceIds: [claimProof.id] },
+        ],
+        true,
+        known('0'),
+      ),
+    ];
+    detail.evidence.push(claimProof);
+    detail.job.cashState = 'VERIFIED_SEQUENCE_DERIVED';
+  }
 }
 // UX04：旧保证金已提现，新奖励仍未清偿；仅本地合成数据。
 const obligationLogs = [

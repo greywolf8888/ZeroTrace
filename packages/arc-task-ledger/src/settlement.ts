@@ -246,6 +246,7 @@ export function settlement(
         observed = { state: 'conflict', reason: '回执或系统/代币资金事件冲突。', evidenceIds };
       legs.push({
         id: `leg_${hashPayload({ tx: receipt.transactionHash, jobId: meta.jobId, index, rule: RULE_VERSION }).slice(0, 24)}`,
+        from: request.from,
         role: request.role,
         kind: request.kind,
         payee: request.payee,
