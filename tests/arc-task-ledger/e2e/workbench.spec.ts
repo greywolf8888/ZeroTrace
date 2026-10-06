@@ -91,7 +91,7 @@ test('1440、1280与手机实际截图；状态、长地址与200%缩放不裁�
         expect(graph!.y + graph!.height).toBeLessThanOrEqual(height!);
       }
       await page.screenshot({
-        path: `.agent-state/arc-task-ledger/ui-audit-20261006/ui-${id}-${width}x${height}.png`,
+        path: `.agent-state/arc-task-ledger/neon-ui-20261006/ui-${id}-${width}x${height}.png`,
         fullPage: false,
       });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

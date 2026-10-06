@@ -47,9 +47,11 @@ function downloadObservation(data: LiveData) {
 export function LiveStrip({
   runId,
   onLatest,
+  compact = false,
 }: {
   runId?: string | undefined;
   onLatest: () => void;
+  compact?: boolean;
 }) {
   const [data, setData] = useState<LiveData>();
   const [automatic, setAutomatic] = useState(true);
@@ -96,7 +98,11 @@ export function LiveStrip({
     data?.chain.lastSuccessfulObservation ?? (failed || outdated ? observation : undefined);
   const fresh = !failed && !outdated && data?.chain.state === 'fresh' && !!observation;
   return (
-    <section className="live-strip no-print" aria-label="实时链状态">
+    <section
+      className={'live-strip no-print' + (compact ? ' live-compact' : '')}
+      aria-label="实时链状态"
+      title="实时观察未归档，不用于正式取证；资金事实沿用固定快照。"
+    >
       <div className="live-title">
         <span className={'signal-dot ' + (fresh ? 'online' : 'offline')} />
         <strong>实时链观察</strong>

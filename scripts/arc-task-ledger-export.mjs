@@ -81,6 +81,7 @@ for (const relative of [
   'docs/arc-task-ledger/DEPLOYMENT.md',
   'docs/arc-task-ledger/NORTHFLANK_DEPLOYMENT.md',
   'docs/arc-task-ledger/openapi.json',
+  'docs/arc-task-ledger/UI_NEON_20261006.md',
   'docs/arc-task-ledger/REPAIR_ACCEPTANCE.md',
   'docs/arc-task-ledger/CONTINUOUS_ACCEPTANCE.md',
   'docs/arc-task-ledger/PUBLICATION_READINESS.md',

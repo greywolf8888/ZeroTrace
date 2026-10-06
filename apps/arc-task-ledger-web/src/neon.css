@@ -518,6 +518,30 @@ section {
   gap: 8px 20px;
   padding: 10px 14px;
 }
+.live-strip.live-compact {
+  padding: 5px 10px;
+  gap: 8px 14px;
+  margin: 8px 0;
+}
+.live-compact .live-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.live-compact .live-value strong {
+  font-size: 17px;
+}
+.live-compact .live-provenance {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.live-compact .live-provenance small {
+  font-size: 10px;
+}
+.live-compact .live-title .quiet {
+  display: none;
+}
 .task-page .live-boundary {
   display: none;
 }
@@ -526,11 +550,26 @@ section {
   padding: 5px 8px;
 }
 .task-page .flow-panel {
-  padding: 14px;
+  padding: 10px;
+  margin-top: 8px;
+}
+.flow-panel .panel-heading h3 {
+  font-size: 14px;
+}
+.flow-panel .flow-legend {
+  margin: 4px 0;
+  color: #a6b891;
 }
 .task-page .flow-graph {
   min-height: 180px;
-  height: 210px;
+  height: 200px;
+}
+.task-page .test-label {
+  margin: 5px 0;
+}
+.task-page .freshness,
+.task-page .toolbar {
+  margin: 6px 0;
 }
 .stream-svg path {
   stroke-width: 1.1;
@@ -552,6 +591,14 @@ section {
   background: #263914;
   border-color: #66852e;
   color: #c9ed8f;
+}
+.snapshot-tasks button[aria-current='page'] {
+  background: #263714;
+}
+.workbench-navigation dt,
+.flow-panel .panel-heading span,
+.compact .history-boundary {
+  color: #a6b891;
 }
 .workbench-navigation,
 .workbench-inspector,

@@ -272,6 +272,7 @@ function App() {
       <main className={report ? 'report' : detail && !consumer ? 'task-page' : ''}>
         {!report && (
           <LiveStrip
+            compact={!!detail}
             runId={page?.snapshotRunId ?? detail?.snapshotRunId}
             onLatest={() => {
               if (detail && registry)
