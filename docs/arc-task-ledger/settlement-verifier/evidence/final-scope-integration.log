@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 arc:test:integration
+> vitest run tests/arc-task-ledger/integration --no-file-parallelism
+
+
+ RUN  v4.1.11 F:/ZeroTrace
+
+
+ Test Files  2 passed (2)
+      Tests  42 passed (42)
+   Start at  04:09:41
+   Duration  17.34s (transform 1.62s, setup 0ms, import 4.75s, tests 8.77s, environment 0ms)
+

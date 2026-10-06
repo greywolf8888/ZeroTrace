@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 arc:test:unit
+> vitest run tests/arc-task-ledger/unit
+
+
+ RUN  v4.1.11 F:/ZeroTrace
+
+
+ Test Files  18 passed (18)
+      Tests  114 passed (114)
+   Start at  03:49:13
+   Duration  20.10s (transform 48.29s, setup 0ms, import 182.90s, tests 824ms, environment 2ms)
+
