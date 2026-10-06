@@ -49,6 +49,29 @@ afterAll(async () => {
   await store.close();
 });
 describe('真实 PostgreSQL 与 API 集成', () => {
+  it('仪表盘沿用固定快照，实时接口仅提示最新持久快照且拒绝任意来源', async () => {
+    await store.publish(run('dashboard_before', ['8', '19']), []);
+    await store.publish(run('dashboard_latest', ['8']), []);
+    const app = await createLedgerApp(store, secret);
+    try {
+      const dashboard = await app.inject('/v1/dashboard?snapshotRunId=dashboard_before');
+      expect(dashboard.statusCode).toBe(200);
+      expect(dashboard.json()).toMatchObject({
+        snapshotRunId: 'dashboard_before',
+        truncated: false,
+      });
+      expect(dashboard.json().items).toHaveLength(2);
+      expect((await app.inject('/v1/live')).json()).toMatchObject({
+        chain: { state: 'unavailable', observation: null, formalForensicReady: false },
+        latestStored: { id: 'dashboard_latest' },
+      });
+      expect((await app.inject('/v1/live?rpcUrl=https://example.com')).statusCode).toBe(400);
+      expect((await app.inject('/v1/dashboard?limit=5000')).statusCode).toBe(400);
+      expect((await app.inject('/v1/dashboard?snapshotRunId=missing')).statusCode).toBe(410);
+    } finally {
+      await app.close();
+    }
+  });
   it('旧快照页面申请以最新持久结果为基线；GET不暗换原金额和快照', async () => {
     const before = run('request_view_before', ['8']);
     const after = structuredClone(before);

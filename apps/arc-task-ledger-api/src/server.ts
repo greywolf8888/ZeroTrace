@@ -1,6 +1,7 @@
 import { LedgerStore } from './storage.js';
 import { configFromEnv } from '@zerotrace/arc-task-ledger';
 import { createLedgerApp } from './app.js';
+import { productionLiveObserver } from './live.js';
 const config = configFromEnv();
 const store = new LedgerStore(config.databaseUrl);
 const secret = process.env.ARC_CURSOR_SECRET;
@@ -8,7 +9,7 @@ if (!secret) throw new Error('请配置稳定的 ARC_CURSOR_SECRET，以保持�
 const requestStore = process.env.ARC_REQUEST_DATABASE_URL
   ? new LedgerStore(process.env.ARC_REQUEST_DATABASE_URL)
   : undefined;
-const app = await createLedgerApp(store, secret, requestStore);
+const app = await createLedgerApp(store, secret, requestStore, productionLiveObserver(config));
 const close = async () => {
   await app.close();
   await store.close();

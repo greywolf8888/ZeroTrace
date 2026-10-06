@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Arc 任务证据只读 API",
-    "version": "1.2.1",
+    "version": "1.3.0",
     "description": "持久快照查询与有界补证申请；链上只读，HTTP成功不代表证据完整。"
   },
   "servers": [
@@ -559,6 +559,43 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/live": {
+      "get": {
+        "operationId": "liveChainObservation",
+        "summary": "单来源实时最终区块观察与最新持久快照提示",
+        "description": "仅使用已登记来源；全局并发合并，成功或失败后冷却30秒。原始观察未归档，formalForensicReady=false；不执行任务扫描、转账或补证。来源陈旧、冲突、不可用与provider-down分开返回。",
+        "responses": {
+          "200": {
+            "description": "typed chain state, observation or null, lastSuccessfulObservation, raw evidence, latestStored snapshot identity"
+          }
+        }
+      }
+    },
+    "/v1/dashboard": {
+      "get": {
+        "operationId": "fixedSnapshotDashboard",
+        "summary": "沿用原数据库的固定快照事实总览",
+        "parameters": [
+          {
+            "name": "snapshotRunId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          }
+        ],
+        "description": "最多读取按任务编号排序的前100项，truncated显式表示截断。报酬不是到账；状态分类不是资金金额。每项保留证据标识、来源、快照和coverage；不建立新数据权威。",
+        "responses": {
+          "200": {
+            "description": "fixed snapshot, existing ruleVersion, coverage and public job rows"
+          },
+          "410": {
+            "description": "快照不存在或过期"
           }
         }
       }

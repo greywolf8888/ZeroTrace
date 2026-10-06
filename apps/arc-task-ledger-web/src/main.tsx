@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SettlementCard } from './SettlementCard.js';
 import { SettlementWorkbench } from './SettlementWorkbench.js';
+import { Dashboard, LiveStrip } from './Dashboard.js';
 import {
   api,
   ApiError,
@@ -16,6 +17,7 @@ import {
   type Detail,
 } from './model.js';
 import './style.css';
+import './neon.css';
 function Address({ address }: { address: string }) {
   const [feedback, setFeedback] = useState('');
   return (
@@ -268,6 +270,27 @@ function App() {
         <span className="network">Arc 主网 · 5042 · 只读</span>
       </header>
       <main className={report ? 'report' : detail && !consumer ? 'task-page' : ''}>
+        {!report && (
+          <LiveStrip
+            runId={page?.snapshotRunId ?? detail?.snapshotRunId}
+            onLatest={() => {
+              if (detail && registry)
+                navigate(
+                  consumer
+                    ? '/consumer?jobId=' + detail.job.jobId
+                    : taskPath(registry, detail.job.jobId),
+                );
+              else {
+                const query = new URLSearchParams(params);
+                for (const key of ['snapshotRunId', 'cursor', 'previous']) query.delete(key);
+                navigate('/?' + query);
+              }
+            }}
+          />
+        )}
+        {page && registry && (
+          <Dashboard runId={page.snapshotRunId} registry={registry} onNavigate={navigate} />
+        )}
         {!detail && !report && (
           <section className="search-hero">
             <p className="eyebrow">从一个具体任务开始</p>

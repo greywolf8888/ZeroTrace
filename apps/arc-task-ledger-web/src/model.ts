@@ -242,7 +242,7 @@ export class ApiError extends Error {
 export async function api<T>(path: string, method = 'GET'): Promise<T> {
   const r = await fetch('/api' + path, {
     method,
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(path === '/v1/live' ? 60000 : 15000),
     ...(method === 'POST' ? { headers: { 'content-type': 'application/json' }, body: '{}' } : {}),
   });
   const body = await r.json();

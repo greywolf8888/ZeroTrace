@@ -15,6 +15,7 @@ import {
   unknown,
 } from '@zerotrace/arc-task-ledger';
 import { publicCoverage, publicDetail, publicRow } from './contract.js';
+import type { liveObserver } from './live.js';
 
 interface Cursor {
   run: string;
@@ -97,6 +98,7 @@ export async function createLedgerApp(
   store: LedgerStore,
   secret: string,
   requestStore?: LedgerStore,
+  live?: ReturnType<typeof liveObserver>,
 ) {
   const app = Fastify({
     logger: false,
@@ -129,13 +131,14 @@ export async function createLedgerApp(
   });
   app.get('/healthz', () => ({
     status: 'UP',
-    components: { readOnly: true, version: RULE_VERSION },
+    components: { readOnly: true, version: RULE_VERSION, interfaceVersion: 'atl-ui-v1.3.0' },
   }));
   app.get('/v1/registry', () => ({
     chainId: DEPLOYMENT.chainId,
     adapter: DEPLOYMENT.adapter,
     navigation: NAVIGATION,
     ruleVersion: RULE_VERSION,
+    interfaceVersion: 'atl-ui-v1.3.0',
   }));
   app.get('/readyz', async (_request, reply) => {
     const ready = await store.ready();
@@ -143,6 +146,27 @@ export async function createLedgerApp(
       status: ready ? 'UP' : 'DOWN',
       components: { database: ready ? 'UP' : 'DOWN', mainnet: '独立查询覆盖接口核验' },
     });
+  });
+  app.get('/v1/live', async (request) => {
+    if (Object.keys(request.query as object).length)
+      throw new LedgerError('INVALID_QUERY', '实时观察不接受自定义来源或参数。', 400);
+    const latest = await store.getRunMetadata();
+    return {
+      chain: live
+        ? await live.read()
+        : {
+            state: 'unavailable',
+            observation: null,
+            lastSuccessfulObservation: null,
+            durable: false,
+            formalForensicReady: false,
+            reason: '实时观察未启用。',
+          },
+      latestStored: latest
+        ? { id: latest.id, snapshot: latest.snapshot, expiresAt: latest.expiresAt }
+        : null,
+      ledgerRefresh: '已发布资金快照按原有采集计划更新；实时观察不启动扫描。',
+    };
   });
   const requireRun = async (id?: string) => {
     const run = await store.getRunMetadata(id);
@@ -156,6 +180,26 @@ export async function createLedgerApp(
       throw new LedgerError('SNAPSHOT_EXPIRED', '快照已过期，请重新加载列表。', 410);
     return run;
   };
+  app.get('/v1/dashboard', async (request) => {
+    const q = request.query as Record<string, string>;
+    if (
+      Object.keys(q).some((k) => k !== 'snapshotRunId') ||
+      (q.snapshotRunId !== undefined && !/^[a-zA-Z0-9_-]{1,100}$/.test(q.snapshotRunId))
+    )
+      throw new LedgerError('INVALID_QUERY', '仪表盘只接受固定快照编号。', 400);
+    const run = await requireRun(q.snapshotRunId);
+    const rows = await store.getJobPage(run.id, 100);
+    return {
+      snapshotRunId: run.id,
+      snapshot: run.snapshot,
+      ruleVersion: RULE_VERSION,
+      coverage: publicCoverage(run.coverage),
+      scope: '固定快照中按任务编号排序的前 100 项；分类数量不是资金金额。',
+      truncated: rows.length > 100,
+      totalExpected: run.totalExpected,
+      items: rows.slice(0, 100).map((r) => publicRow(r.job, r.evidenceIds)),
+    };
+  });
   app.get('/v1/jobs', async (request) => {
     const q = request.query as Record<string, string>;
     if (Object.values(q).some((value) => typeof value !== 'string' || value.length > 2048))
