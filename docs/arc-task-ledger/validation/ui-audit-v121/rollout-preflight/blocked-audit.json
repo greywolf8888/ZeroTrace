@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-06T11:14:53.369221+00:00",
+  "goalObjective": "按计划去继续完成项目",
+  "previousGoalTurn": "PROGRESS_MIGRATION_DIAGNOSTIC_AND_R2_CANDIDATE",
+  "blockingCondition": "PUBLIC_RELEASE_AUTHORIZATION_NOT_RECEIVED",
+  "consecutiveGoalTurnsWithSameCondition": 3,
+  "authority": "packages/arc-task-ledger/AGENTS.md",
+  "requiredInstruction": "公开部署、对外消息、奖金申请仍须具体用户授权",
+  "humanAuthorizationInCurrentInput": false,
+  "managementTokenLoaded": false,
+  "lastPublicRead": {
+    "observedAt": "2026-10-06T11:14:08.587Z",
+    "method": "GET",
+    "status": 200,
+    "ruleVersion": "atl-v1.2.0"
+  },
+  "candidateVerification": {
+    "archive": "Arc_Task_Ledger_v121_Audit_Fix_Candidate_R2_20261006.zip",
+    "sha256": "3aaae6311f35546be13350d41a1f77bbcc0483d6f03c8c460e42f3788ad2b0f5",
+    "manifestFiles": 230,
+    "zipEntries": 231,
+    "crcAndAllFileHashesVerified": true,
+    "independentCommands": 8,
+    "independentExitCodesAllZero": true
+  },
+  "currentSourceCommit": "a925fe30efc9247e6cbf9b9f9a96d6f2ca728fa1",
+  "noExecutableChangesAfterTestedCommit": true,
+  "cloudMutations": 0,
+  "currentFeesAndManagementConfiguration": "NOT_VERIFIED",
+  "remainingAction": "收到具体发布授权并安全载入既有管理凭据后，先GET核验身份/费用/资源，再执行现有更新和回滚清单。",
+  "completionClaim": false,
+  "blockAudit": "THRESHOLD_SATISFIED_AND_NO_INDEPENDENT_SCOPED_ACTION_REMAINS"
+}
