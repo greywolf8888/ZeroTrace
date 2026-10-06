@@ -2533,3 +2533,5 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 ## 2026-10-06 云端 v1.2.1 已授权更新
 
 用户明确授权云端更新后，既有五资源发布验收通过。固定部署源码d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26；迁移1–6和实际权限、真实主网16任务、公开三尺寸与新会话/报告/消费者、幂等有界补证及结果、旧快照/游标、API实际重启、恢复后自动作业5891c06e-5fe0-4e1b-8a3e-dea423fb7c06的SUCCESS和日志退出码0、当前24小时账单0 USD均取得新收据。#18奖励1.98、费用0.02 USDC，未清偿额未知。完整历史/多来源/主网稀有案例/真人及其他终端门禁仍未完成；本轮关闭的是有限Arc审计修复与发布范围。详情见[云端验收](docs/arc-task-ledger/validation/v121-cloud-20261006/README.md)。
+
+云端交付包追加：Arc_Task_Ledger_v121_Cloud_Published_R3_20261006.zip，6,351,753字节，SHA256 f4b64cc3d1fe395051b45c598c460874fe389ab3b1bdf940747ace44c979e027。源码3d0b9004仅包含云端收据/文档增量，全部123个执行/契约/锁定文件与实际部署及已测试候选相同；266清单文件、267 ZIP条目CRC与逐文件摘要、33项收据摘要及凭据排除检查通过。原附件及R2候选保留；新增R3打包收据为rollout-preflight/package-cloud-r3.json。
