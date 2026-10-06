@@ -795,6 +795,10 @@ function App() {
               <h3>有界补证状态</h3>
               {detail.evidenceRequest ? (
                 <>
+                  <p>申请基线快照：{detail.evidenceRequest.snapshotRunId}。</p>
+                  {detail.evidenceRequest.snapshotRunId !== detail.snapshotRunId && (
+                    <p>补证基线与当前查看快照不同；当前结果仍固定在原快照。</p>
+                  )}
                   <p>
                     {detail.evidenceRequest.plan && !detail.evidenceRequest.plan.from ? (
                       '未启动新的扫描。'
@@ -863,6 +867,7 @@ function App() {
               >
                 申请本任务有界补证
               </button>
+              <p className="quiet">补证以申请时最新已采集快照为基线；不会自动更换当前结果。</p>
               <button
                 onClick={() =>
                   void api<Detail>(

@@ -49,6 +49,41 @@ afterAll(async () => {
   await store.close();
 });
 describe('真实 PostgreSQL 与 API 集成', () => {
+  it('旧快照页面申请以最新持久结果为基线；GET不暗换原金额和快照', async () => {
+    const before = run('request_view_before', ['8']);
+    const after = structuredClone(before);
+    after.id = 'request_baseline_latest';
+    after.jobs[0]!.job.reward.atomic = {
+      state: 'known',
+      value: '2000000000000000000',
+      evidenceIds: [],
+    };
+    await store.publish(before, []);
+    await store.publish(after, []);
+    const app = await createLedgerApp(store, secret, store);
+    try {
+      const path = `/v1/jobs/5042/${DEPLOYMENT.adapter}/8`;
+      const requested = await app.inject({
+        method: 'POST',
+        url: path + '/evidence-requests',
+        payload: {},
+      });
+      expect(requested.statusCode).toBe(202);
+      expect(requested.json().request.snapshotRunId).toBe(after.id);
+      const old = (await app.inject(path + '?snapshotRunId=' + before.id)).json();
+      expect(old.snapshotRunId).toBe(before.id);
+      expect(old.evidenceRequest.outcome.beforeSnapshot).toBe(after.id);
+      expect(
+        old.result.metrics.find((m: { key: string }) => m.key === 'face').amount.atomic.value,
+      ).toBe(
+        before.jobs[0]!.job.reward.atomic.state === 'known'
+          ? before.jobs[0]!.job.reward.atomic.value
+          : undefined,
+      );
+    } finally {
+      await app.close();
+    }
+  });
   it('无法定位的申请不进入扫描队列，GET明确报告仍缺证且幂等', async () => {
     const fixture = run('unlocatable_request', ['8']);
     await store.publish(fixture, []);
