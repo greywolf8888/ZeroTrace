@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "44d4a8020ab789914e505e056eb1c1c6bf410259",
+  "baseTestedSourceCommit": "a2d3ae580d06d7d922b23463167b1d33c014c857",
+  "unchangedExecutableAndContractFiles": 121,
+  "changedFiles": [
+    "infra/northflank/migration-bootstrap.mjs",
+    "infra/northflank/resource-intents.json"
+  ],
+  "changeScope": "MIGRATION_VERSION_LOG_AND_CANDIDATE_RESOURCE_INTENT_ONLY",
+  "manifestFiles": 227
+}

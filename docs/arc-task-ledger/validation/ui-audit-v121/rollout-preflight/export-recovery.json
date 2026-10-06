@@ -1,0 +1,13 @@
+{
+  "expectedSourceCommit": "44d4a8020ab789914e505e056eb1c1c6bf410259",
+  "rejectedSourceCommit": "6fc768d96a224da27ce6183dae2823ab12f229af",
+  "reason": "SHORT_SHA_FETCH_FAILED_AND_SHELL_CONTINUED_TO_OLD_EXPORT",
+  "stopped": true,
+  "rejectedExport": "arc-task-ledger-v121-rollout",
+  "rejectedValidation": "NOT_ACCEPTED",
+  "recovery": "FULL_SHA_FETCH_AND_VERIFIED_DETACHED_HEAD_NEW_EXPORT_DIRECTORY",
+  "acceptedExport": "arc-task-ledger-v121-rollout-current",
+  "acceptedChecks": 8,
+  "acceptedExitCodes": [0, 0, 0, 0, 0, 0, 0, 0],
+  "cloudMutations": 0
+}

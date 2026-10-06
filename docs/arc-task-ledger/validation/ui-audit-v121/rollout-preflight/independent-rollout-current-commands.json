@@ -1,0 +1,66 @@
+[
+  {
+    "command": "npm ci --ignore-scripts --no-audit --no-fund",
+    "startedAt": "2026-10-06T11:08:46.225215+00:00",
+    "finishedAt": "2026-10-06T11:09:06.271564+00:00",
+    "exitCode": 0,
+    "logSha256": "522c0c437b973ae403fab24505434b12f99d2cfb35c28dc0a07b4b880f730c88",
+    "summaries": []
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T11:09:06.295806+00:00",
+    "finishedAt": "2026-10-06T11:09:18.289568+00:00",
+    "exitCode": 0,
+    "logSha256": "514c31f33d2619d0d1ec11e68f0fc863065d9a21febd356fb9478927c876d048",
+    "summaries": []
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T11:09:18.301821+00:00",
+    "finishedAt": "2026-10-06T11:09:26.533348+00:00",
+    "exitCode": 0,
+    "logSha256": "eee113a692f492f89370776f81b55644b0b4f1180fd2e527ceba0fdda174460c",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"]
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T11:09:26.545747+00:00",
+    "finishedAt": "2026-10-06T11:09:33.948567+00:00",
+    "exitCode": 0,
+    "logSha256": "7dd8a57c726d2adf9b81946b1913b8d015fce425c313014c50fa7f0baf30861f",
+    "summaries": ["Test Files  1 passed (1)", "Tests  34 passed (34)"]
+  },
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T11:09:33.960431+00:00",
+    "finishedAt": "2026-10-06T11:10:14.226684+00:00",
+    "exitCode": 0,
+    "logSha256": "10a8891a2ed7443a75bc36bb9b6c3b47bd03add6b0faf8d8952f2368dab8c050",
+    "summaries": ["9 passed (12.0s)", "9 passed (10.6s)", "5 passed (7.9s)", "5 passed (7.0s)"]
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T11:10:14.238642+00:00",
+    "finishedAt": "2026-10-06T11:10:33.247300+00:00",
+    "exitCode": 0,
+    "logSha256": "98873c6ceffac64eb7d34f31d1723cc1c10da24d11253b9a55faceb2228fda6a",
+    "summaries": []
+  },
+  {
+    "command": "npm run license:check",
+    "startedAt": "2026-10-06T11:10:33.259319+00:00",
+    "finishedAt": "2026-10-06T11:10:36.701231+00:00",
+    "exitCode": 0,
+    "logSha256": "b43a3c4d7f81173b00b68ef3dd5bf9eb62d70db09da43ded5db09fce71a28ce8",
+    "summaries": []
+  },
+  {
+    "command": "npm audit --json",
+    "startedAt": "2026-10-06T11:10:36.713440+00:00",
+    "finishedAt": "2026-10-06T11:10:38.259660+00:00",
+    "exitCode": 0,
+    "logSha256": "71bb55dc3bb3b98fc73d60e98d7711e69fa498e998239863bdd9c4b5c8b8eca1",
+    "summaries": []
+  }
+]
