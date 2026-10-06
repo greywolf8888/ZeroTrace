@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-06T20:36:43.581540+00:00",
+  "exportCommit": "0f0289a0ec56a9168849c03e35539d58e71e580e",
+  "testedCodeCommit": "6b2454f666befe3179dc6093800f36eea6df3976",
+  "deploymentSha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+  "file": "F:\\ZeroTrace\\dist-public\\Arc_USDC_Verifier_2.0.0_Cloud_20261007.zip",
+  "bytes": 14973922,
+  "sha256": "12a0236ae7e3871951425a30764f7898acc4d86f212c2a961683a187487f89c0",
+  "entries": 415,
+  "runtimeFilesEqualTestedCandidate": 112,
+  "zipCrc": "PASS",
+  "allEntryHashes": "PASS",
+  "allGateArtifactHashes": "PASS",
+  "archiveScope": "manifest files only; no node_modules/private state/git/database backup",
+  "grantApplication": "NOT_SUBMITTED"
+}

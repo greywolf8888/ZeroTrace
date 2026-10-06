@@ -43,7 +43,9 @@
           ],
           "dataProvenance": "REAL_MAINNET",
           "observedOutcome": "生产库采集前报告/旧回执0；正常HTTPS输入后保存观察及MATCHED报告2；后来反事实新版本增加到5。",
-          "limitations": ["交易首次保存限定生产Arc报告库；本机同交易已有独立样本"]
+          "limitations": [
+            "交易首次保存限定生产Arc报告库；本机同交易已有独立样本"
+          ]
         }
       ]
     },
@@ -83,7 +85,9 @@
           ],
           "dataProvenance": "REAL_MAINNET",
           "observedOutcome": "生产原生3条规范资金边和ArcBounty/ERC20镜像样本均真实6RPC采集，镜像不双计。",
-          "limitations": ["单个已登记公共RPC，未独立交叉认证"]
+          "limitations": [
+            "单个已登记公共RPC，未独立交叉认证"
+          ]
         }
       ]
     },
@@ -113,7 +117,9 @@
           ],
           "dataProvenance": "SYNTHETIC_AND_REPLAY",
           "observedOutcome": "独立单元114项通过，精确尾数、18/6位、镜像多重集、同额不同身份与重复冲突已覆盖。",
-          "limitations": ["语义异常样本为合成测试，不伪称主网事故"]
+          "limitations": [
+            "语义异常样本为合成测试，不伪称主网事故"
+          ]
         }
       ]
     },
@@ -143,7 +149,9 @@
           ],
           "dataProvenance": "REAL_MAINNET_WITH_COUNTERFACTUAL_CONDITIONS",
           "observedOutcome": "公开API真实资金原件：错收款人/金额/UTC截止3个MISMATCHED，独立消费者全部NO_ALLOCATION。",
-          "limitations": ["用途、事前约定、履约和独立来源未核验"]
+          "limitations": [
+            "用途、事前约定、履约和独立来源未核验"
+          ]
         }
       ]
     },
@@ -178,7 +186,9 @@
           ],
           "dataProvenance": "SYNTHETIC_AND_REPLAY",
           "observedOutcome": "独立单元覆盖复杂movement和付款角色，真实原生收入/支出/净变化分别显示。",
-          "limitations": ["罕见mint/burn/revert/镜像冲突为合成样本，未声称已观测主网事故"]
+          "limitations": [
+            "罕见mint/burn/revert/镜像冲突为合成样本，未声称已观测主网事故"
+          ]
         }
       ]
     },
@@ -218,7 +228,9 @@
           ],
           "dataProvenance": "SYNTHETIC_AND_REAL_MAINNET",
           "observedOutcome": "真实不存在交易为UNAVAILABLE/TRANSACTION_NOT_FOUND、facts=null、INCONCLUSIVE；故障注入不标成功。",
-          "limitations": ["来源异常及429/预算故障来自合成注入；不存在交易为真实主网查询"]
+          "limitations": [
+            "来源异常及429/预算故障来自合成注入；不存在交易为真实主网查询"
+          ]
         }
       ]
     },
@@ -253,7 +265,9 @@
           ],
           "dataProvenance": "INDEPENDENT_RUNTIME",
           "observedOutcome": "三个真实原件在Node/Chromium WebCrypto摘要一致，生产在线重查6RPC保持事实和报告标识。",
-          "limitations": ["原件元数据随重查变化，规范事实和冻结条件保持稳定"]
+          "limitations": [
+            "原件元数据随重查变化，规范事实和冻结条件保持稳定"
+          ]
         }
       ]
     },
@@ -293,7 +307,9 @@
           ],
           "dataProvenance": "OFFLINE_REPLAY",
           "observedOutcome": "原件重新解析并比较；篡改拒绝，自洽合成复算PASS仍NOT_VERIFIED_OFFLINE。",
-          "limitations": ["离线只证明完整性和原件复算；主网真实性为NOT_VERIFIED_OFFLINE"]
+          "limitations": [
+            "离线只证明完整性和原件复算；主网真实性为NOT_VERIFIED_OFFLINE"
+          ]
         }
       ]
     },
@@ -385,7 +401,9 @@
           ],
           "dataProvenance": "REPLAY_MAINNET_AND_HTTP",
           "observedOutcome": "旧#18固定字段/原件/导出保持摘要9b15352d…；旧签名游标HTTP200，独立PG42与浏览器28通过。",
-          "limitations": ["用途、事前约定、履约和独立来源未核验"]
+          "limitations": [
+            "用途、事前约定、履约和独立来源未核验"
+          ]
         }
       ]
     },
@@ -430,7 +448,9 @@
           ],
           "dataProvenance": "BROWSER_AND_HTTP_AND_DB",
           "observedOutcome": "私有匿名404；实际完整包预览后明确发布，手机匿名可读；PG禁止报告覆盖/输入改写，报告不依赖旧快照TTL。",
-          "limitations": ["会话七天到期；丢失会话无所有权恢复；公开固定版本不可撤回"]
+          "limitations": [
+            "会话七天到期；丢失会话无所有权恢复；公开固定版本不可撤回"
+          ]
         }
       ]
     },
@@ -475,7 +495,9 @@
           ],
           "dataProvenance": "SEPARATE_PROCESS",
           "observedOutcome": "公开API独立Node进程生成1条自身SQLite对账及证据链接，重复第二进程0新增；3个MISMATCHED不分配。",
-          "limitations": ["消费者自己的namespace账本；不证明业务归属/用途/履约或第三方采用"]
+          "limitations": [
+            "消费者自己的namespace账本；不证明业务归属/用途/履约或第三方采用"
+          ]
         }
       ]
     },
@@ -525,7 +547,9 @@
           ],
           "dataProvenance": "REAL_BROWSER",
           "observedOutcome": "三尺寸中英文及两种真实200%缩放无横向溢出，4条合成平行/反向/自环边独立可键盘选中；截图已目视复核。",
-          "limitations": ["旧任务工作区保持中文，核心核验操作双语；合成多边图为测试页面"]
+          "limitations": [
+            "旧任务工作区保持中文，核心核验操作双语；合成多边图为测试页面"
+          ]
         }
       ]
     },
@@ -570,7 +594,9 @@
           ],
           "dataProvenance": "SECURITY_AND_RESOURCE_CHECKS",
           "observedOutcome": "只读/SSRF/身份/配额/去重检查通过，生产audit0；现有5资源规格/存储/计划保持，24h实际费用观测0。",
-          "limitations": ["24小时费用观测0，不保证终身免费；无公开剩余额度接口"]
+          "limitations": [
+            "24小时费用观测0，不保证终身免费；无公开剩余额度接口"
+          ]
         }
       ]
     },
@@ -615,7 +641,9 @@
           ],
           "dataProvenance": "CLEAN_BUILD_AND_PUBLIC_DEPLOYMENT",
           "observedOutcome": "独立安装/构建/lint/类型/114单元/42PG/28浏览器/license/audit通过；API/Web/migrate/sync同部署60284c4，迁移/同步job SUCCESS，前端字节摘要一致。",
-          "limitations": ["既有独立服务规格不变；未全面升级其他业务域"]
+          "limitations": [
+            "既有独立服务规格不变；未全面升级其他业务域"
+          ]
         }
       ]
     },
@@ -650,7 +678,9 @@
           ],
           "dataProvenance": "MEASURED_LOW_VOLUME_RUNS",
           "observedOutcome": "生产新核验n1 2798ms/6RPC/12483bytes，重查n1 2585ms/6RPC/12624bytes，任务n1 2577ms/6RPC/15072bytes；报告GET n5 214–219ms。",
-          "limitations": ["小样本实测，不是负载测试、SLA或P95"]
+          "limitations": [
+            "小样本实测，不是负载测试、SLA或P95"
+          ]
         }
       ]
     },
@@ -663,16 +693,17 @@
       "acceptance": "当前版本清楚、证据关联、数据类别清楚、申请未代提交、未夸大采用/获奖率/取证保证。",
       "evidence": [
         {
-          "executedAt": "2026-10-06T20:26:30.698Z",
+          "executedAt": "2026-10-06T20:36:43.581540+00:00",
           "sourceSha": "6b2454f666befe3179dc6093800f36eea6df3976",
           "deploymentSha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
           "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
-          "commandOrAction": "当前版源码/命令/原件/部署/独立包清单核对，文档明确未提交申请与所有限制",
+          "commandOrAction": "当前版源码/命令/原件/部署/独立包清单核对，文档明确未提交申请与所有限制；python package-delivery.py 按清单打包，逐条ZIP CRC和SHA256、门禁证据摘要及112个执行/配置文件与已测试候选比对",
           "exitCodeOrHttpStatus": 0,
           "artifactPaths": [
             "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
             "docs/arc-task-ledger/settlement-verifier/evidence/independent-proof.json",
-            "docs/arc-task-ledger/settlement-verifier/evidence/deployment-proof.json"
+            "docs/arc-task-ledger/settlement-verifier/evidence/deployment-proof.json",
+            "docs/arc-task-ledger/settlement-verifier/PACKAGE_RECEIPT.json"
           ],
           "artifactSha256": [
             {
@@ -686,11 +717,17 @@
             {
               "path": "docs/arc-task-ledger/settlement-verifier/evidence/deployment-proof.json",
               "sha256": "e323e0f03d466b658f533244a79eb7eed2f4919a24b7553b5e86289b6513aee4"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/PACKAGE_RECEIPT.json",
+              "sha256": "857e336931311866eaddc21dc3ab7ccae82db212f7668621b0ee06c559524736"
             }
           ],
           "dataProvenance": "ARTIFACT_REVIEW",
           "observedOutcome": "源码版本、原件/命令摘要、部署和独立交付材料一致；申请草稿未提交，边界及外部未执行项明确保留。",
-          "limitations": ["正式完整取证、独立来源、用户采用、获奖概率、申请提交均未宣称完成"]
+          "limitations": [
+            "正式完整取证、独立来源、用户采用、获奖概率、申请提交均未宣称完成"
+          ]
         }
       ]
     }
@@ -700,7 +737,16 @@
       "id": "LOOP_TRANSACTION",
       "name": "新主网交易→条件核对→结果与证据",
       "status": "PASS",
-      "gates": ["G01", "G02", "G03", "G04", "G05", "G06", "G13", "G14"],
+      "gates": [
+        "G01",
+        "G02",
+        "G03",
+        "G04",
+        "G05",
+        "G06",
+        "G13",
+        "G14"
+      ],
       "evidence": [
         "docs/arc-task-ledger/settlement-verifier/evidence/public-loop-proof.json",
         "docs/arc-task-ledger/settlement-verifier/evidence/cloud-db-before.json",
@@ -711,7 +757,13 @@
       "id": "LOOP_REPORT",
       "name": "保存→分享→导出→独立复算/在线重查",
       "status": "PASS",
-      "gates": ["G07", "G08", "G09", "G11", "G13"],
+      "gates": [
+        "G07",
+        "G08",
+        "G09",
+        "G11",
+        "G13"
+      ],
       "evidence": [
         "docs/arc-task-ledger/settlement-verifier/evidence/contract-schema-proof.json",
         "docs/arc-task-ledger/settlement-verifier/evidence/public-loop-proof.json",
@@ -723,7 +775,13 @@
       "id": "LOOP_CONSUMER",
       "name": "独立程序→API/报告→对账输出",
       "status": "PASS",
-      "gates": ["G10", "G12", "G15", "G16", "G17"],
+      "gates": [
+        "G10",
+        "G12",
+        "G15",
+        "G16",
+        "G17"
+      ],
       "evidence": [
         "docs/arc-task-ledger/settlement-verifier/evidence/contract-schema-proof.json",
         "docs/arc-task-ledger/settlement-verifier/evidence/public-loop-proof.json",
@@ -910,8 +968,26 @@
     },
     "reportGet": {
       "n": 5,
-      "milliseconds": [219, 219, 216, 214, 215],
+      "milliseconds": [
+        219,
+        219,
+        216,
+        214,
+        215
+      ],
       "noP95Claim": true
     }
+  },
+  "packageDelivery": {
+    "exportCommit": "0f0289a0ec56a9168849c03e35539d58e71e580e",
+    "testedCodeCommit": "6b2454f666befe3179dc6093800f36eea6df3976",
+    "deploymentSha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+    "receipt": "docs/arc-task-ledger/settlement-verifier/PACKAGE_RECEIPT.json",
+    "sha256": "12a0236ae7e3871951425a30764f7898acc4d86f212c2a961683a187487f89c0",
+    "entries": 415,
+    "bytes": 14973922,
+    "allEntryHashes": "PASS",
+    "allGateArtifactHashes": "PASS",
+    "documentNote": "package snapshot includes all validation evidence through exportCommit; this final package receipt is external to avoid a self-referential archive hash"
   }
 }

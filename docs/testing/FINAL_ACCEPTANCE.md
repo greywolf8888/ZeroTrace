@@ -1301,3 +1301,5 @@ Arc Task Ledger 新支出预算 0 USD；当前 FREE_TIER_UNVERIFIED，云端资�
 ## 2026-10-07 Arc USDC 结算核验器 2.0.0
 
 限定Arc开发、真实主网只读闭环、独立构建和既有云端更新已完成。源码6b2454f666befe3179dc6093800f36eea6df3976，部署60284c4667e4d6215d0aac5c6f1c92041fa85972，迁移7；旧#18/游标/原件保持。114 Arc单元、42真实PG、28 Arc浏览器、独立构建/lint/类型/license/生产audit0通过。根1050单元、88集成(42外部SKIP)、49浏览器、Windows49及Rust工作区通过；旧视觉指纹FAIL、最终格式检查通过，原输入/原件排除以保留摘要，不宣称全平台/完整取证通过。没有链上写入、数据库重建或新增付费资源，申请未提交。详见[本轮交付](../arc-task-ledger/settlement-verifier/HANDOFF.md)和VALIDATION.json。
+
+独立包Arc_USDC_Verifier_2.0.0_Cloud_20261007.zip已交付：14973922字节/415条目，SHA256 12a0236ae7e3871951425a30764f7898acc4d86f212c2a961683a187487f89c0；112执行/配置文件与独立测试候选一致，CRC及逐项摘要通过。包收据外置，不改云端部署。

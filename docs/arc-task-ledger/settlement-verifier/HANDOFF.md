@@ -11,3 +11,5 @@ Arc独立包114单元、42真实PG、28浏览器通过；构建、lint、客户�
 公开新核验6RPC/2798ms/12483bytes，重查6RPC/2585ms。报告GET五样本 219/219/216/214/215ms，非P95/SLA。原服务、实例、存储、定时设置保持，24h实际观测费用0，无新增资源/付款/付费数据源；剩余免费额度未公开，不保证永久免费。
 
 逐项门禁和产物摘要见[VALIDATION.json](VALIDATION.json)，操作见[USER_GUIDE.zh.md](USER_GUIDE.zh.md)，API见[API.md](API.md)及[openapi.json](openapi.json)，边界见[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)，申请草稿见[SUBMISSION_DRAFT.en.md](SUBMISSION_DRAFT.en.md)。submissionReadiness是资料准备状态；grantApplication=NOT_SUBMITTED。单RPC、离线无法认证主网、私有会话7天且无找回、公开版本不可撤回等限制保留。
+
+独立包：`Arc_USDC_Verifier_2.0.0_Cloud_20261007.zip`，14973922字节，415条目；SHA256 `12a0236ae7e3871951425a30764f7898acc4d86f212c2a961683a187487f89c0`。导出提交0f0289a0ec56a9168849c03e35539d58e71e580e，112项执行/配置文件与独立测试候选逐字相同，ZIP CRC、条目摘要和17门禁产物摘要通过。外置[包收据](PACKAGE_RECEIPT.json)避免自引用哈希；文档收据提交不再次部署，旧包保留。
