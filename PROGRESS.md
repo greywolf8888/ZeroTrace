@@ -2549,3 +2549,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 实际云端三尺寸及真正200%浏览器缩放通过；旧#18任务/结果/证据逐项保持，旧游标可用，实时区块 24577090→24577153、固定链接不变、期间GET-only。实时原始引用明确为unarchived，未归档且formalForensicReady=false；不把当前区块当资金实时到账。新独立收据见 [界面云端验收](docs/arc-task-ledger/validation/ui-neon-v130-20261006/README.md)。
 
 交付包 `Arc_Task_Ledger_UI_v130_Cloud_20261006.zip`：13,020,606字节，SHA256 `041296671ebb83a89110997765b4b02e80f4764343489ee7a5a15212bda6170b`。文档导出源码59328cb、127项执行/配置与已测试6006123逐字匹配，297清单文件/298 ZIP条目CRC及逐文件摘要、23项公开收据摘要再次核验。实际云端源码仍8f2d479，打包不再次改动云端；旧包保留。打包收据见 docs/arc-task-ledger/validation/ui-neon-v130-package-20261006.json。
+
+## 2026-10-07 Arc USDC 结算核验器 2.0.0
+
+限定Arc开发、真实主网只读闭环、独立构建和既有云端更新已完成。源码6b2454f666befe3179dc6093800f36eea6df3976，部署60284c4667e4d6215d0aac5c6f1c92041fa85972，迁移7；旧#18/游标/原件保持。114 Arc单元、42真实PG、28 Arc浏览器、独立构建/lint/类型/license/生产audit0通过。根1050单元、88集成(42外部SKIP)、49浏览器、Windows49及Rust工作区通过；旧视觉指纹FAIL、最终格式检查通过，原输入/原件排除以保留摘要，不宣称全平台/完整取证通过。没有链上写入、数据库重建或新增付费资源，申请未提交。详见[本轮交付](docs/arc-task-ledger/settlement-verifier/HANDOFF.md)和VALIDATION.json。

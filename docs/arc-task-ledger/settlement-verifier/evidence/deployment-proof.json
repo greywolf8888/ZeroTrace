@@ -1,0 +1,117 @@
+{
+  "at": "2026-10-06T20:26:30.695Z",
+  "sourceCommit": "6b2454f666befe3179dc6093800f36eea6df3976",
+  "deploymentSha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+  "parentDeploymentSha": "8f2d47922847236be7448619a9a21543730d7b07",
+  "publicUrl": "https://web--atl-web--xtd599t97njk.code.run",
+  "builds": {
+    "atl-api": "swanky-example-2536",
+    "atl-web": "elated-beef-9812"
+  },
+  "runs": {
+    "atl-migrate": "72f073a5-f545-440b-8e49-ae04ecc758d6",
+    "atl-sync": "89e3495a-2f18-43fd-9584-5e40df4fbfbc"
+  },
+  "health": {
+    "status": "UP",
+    "components": {
+      "readOnly": true,
+      "version": "atl-v1.2.1",
+      "interfaceVersion": "atl-ui-v1.3.0",
+      "verifierInterfaceVersion": "zasv-interface-v1",
+      "verifierRuleVersion": "zasv-rules-v1.0.0",
+      "schemaMigration": 7,
+      "releaseVersion": "2.0.0",
+      "sourceCommit": "60284c4667e4d6215d0aac5c6f1c92041fa85972"
+    }
+  },
+  "ready": {
+    "status": "UP",
+    "components": {
+      "database": "UP",
+      "mainnet": "独立查询覆盖接口核验"
+    }
+  },
+  "assets": [
+    {
+      "path": "/assets/index-CKnDF2Ab.js",
+      "sha256": "4822dd2a76c7a787d72fe5433f6d32fea90c3100c94d2f65069feeecfc4d1b35",
+      "bytes": 317120
+    },
+    {
+      "path": "/assets/index-q_OniWT7.css",
+      "sha256": "10e2062ca392501c2c0d89e4231995dae167b6bddd2a373e1f4ec146a02869bd",
+      "bytes": 25353
+    }
+  ],
+  "htmlSha256": "c355b6abc5048a2ed0eb44b8c8cda94572413df861334c670d38b2acf59a1f3d",
+  "resources": [
+    {
+      "kind": "services",
+      "id": "atl-api",
+      "plan": "nf-compute-10",
+      "sha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+      "image": "registry.northflank.com/northflank/service/6ac38807c110671a3e4e3674:6ac5574a1d3641fa8700fe52",
+      "instances": 1
+    },
+    {
+      "kind": "services",
+      "id": "atl-web",
+      "plan": "nf-compute-10",
+      "sha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+      "image": "registry.northflank.com/northflank/service/6ac38d7517e2e7c0e24aec35:6ac5574c961bf345038a8448",
+      "instances": 1
+    },
+    {
+      "kind": "jobs",
+      "id": "atl-migrate",
+      "plan": "nf-compute-10",
+      "sha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+      "image": "registry.northflank.com/northflank/service/6ac38807c110671a3e4e3674:6ac5574a1d3641fa8700fe52",
+      "settings": {
+        "cron": {
+          "schedule": "*/10 * * * *",
+          "concurrencyPolicy": "Forbid"
+        },
+        "backoffLimit": 0,
+        "runOnSourceChange": "never",
+        "activeDeadlineSeconds": 240
+      },
+      "suspended": true
+    },
+    {
+      "kind": "jobs",
+      "id": "atl-sync",
+      "plan": "nf-compute-10",
+      "sha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+      "image": "registry.northflank.com/northflank/service/6ac38807c110671a3e4e3674:6ac5574a1d3641fa8700fe52",
+      "settings": {
+        "cron": {
+          "schedule": "*/10 * * * *",
+          "concurrencyPolicy": "Forbid"
+        },
+        "backoffLimit": 0,
+        "runOnSourceChange": "never",
+        "activeDeadlineSeconds": 240
+      },
+      "suspended": false
+    },
+    {
+      "kind": "addons",
+      "id": "atl-postgres"
+    }
+  ],
+  "legacy": {
+    "taskId": "18",
+    "taskSnapshotRunId": "run_31d0b702348917f7416b0110b8ae4e64",
+    "fixedTaskFieldsUnchanged": true,
+    "oldListSnapshot": "run_345daabc559ee09da9294df72e20ee39",
+    "oldItemsUnchanged": true,
+    "oldCursorUnchanged": true,
+    "cursorHttpStatus": 200,
+    "reportHttpStatus": 200,
+    "reportSha256": "9b15352dd3d41126dd6ece36112a16cf1a879207435d420174da84f2e23d86e3"
+  },
+  "scope": "Existing five resources only; no creation/payment/scale/database reset",
+  "grantApplication": "NOT_SUBMITTED"
+}

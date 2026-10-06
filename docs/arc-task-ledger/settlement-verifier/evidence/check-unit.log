@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 test:unit
+> vitest run packages services apps/api/test/unit scripts/operational-gates.test.ts tests/unit
+
+
+ RUN  v4.1.11 F:/ZeroTrace
+
+
+ Test Files  197 passed (197)
+      Tests  1050 passed (1050)
+   Start at  03:26:25
+   Duration  34.04s (transform 36.86s, setup 0ms, import 507.30s, tests 79.79s, environment 23ms)
+

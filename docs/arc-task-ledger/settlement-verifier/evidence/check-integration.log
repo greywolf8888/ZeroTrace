@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 test:integration
+> vitest run tests/integration
+
+
+ RUN  v4.1.11 F:/ZeroTrace
+
+
+ Test Files  1 passed | 9 skipped (10)
+      Tests  88 passed | 42 skipped (130)
+   Start at  03:27:01
+   Duration  5.59s (transform 7.13s, setup 0ms, import 23.13s, tests 1.38s, environment 1ms)
+

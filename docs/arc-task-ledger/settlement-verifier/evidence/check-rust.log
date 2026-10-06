@@ -1,0 +1,222 @@
+   Compiling zerotrace-desktop v0.1.0 (F:\ZeroTrace\apps\desktop\src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18m 12s
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_campaign-5672105fe5466258.exe)
+
+running 5 tests
+test tests::pelt_matches_the_standard_multi_change_reference ... ok
+test tests::partition_covers_without_overlap ... ok
+test tests::tactic_requires_two_families ... ok
+test tests::pelt_finds_mean_shift ... ok
+test tests::bocpd_returns_normalized_run_length_rows_and_resets_on_a_shift ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_capital-8e6875d754149821.exe)
+
+running 2 tests
+test tests::max_flow_respects_capacity ... ok
+test tests::fifo_inherits_cost_and_rejects_shortage ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\zerotrace_compute-481a1dfdc5d35281.exe)
+
+running 1 test
+test tests::hash_op_is_deterministic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\zerotrace_desktop-15534262e97ead11.exe)
+
+running 4 tests
+test tests::rejects_empty_oversized_and_control_text ... ok
+test tests::accepts_bounded_chinese_notification_text ... ok
+test tests::installed_layout_uses_resource_config_and_app_data ... ok
+test tests::portable_layout_requires_a_read_only_marker_and_adjacent_config ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_desktop_core-3797224fb2a78d81.exe)
+
+running 10 tests
+test launcher::tests::parses_workspace_pointer_with_utf8_bom ... ok
+test launcher::tests::rejects_writable_dev_link ... ok
+test launcher::tests::endpoint_url_omits_trailing_slash_on_root ... ok
+test launcher::tests::attach_when_both_ports_live_spawn_when_both_down ... ok
+test launcher::tests::extra_json_fields_do_not_invalidate_dev_link ... ok
+test tests::encrypted_case_fails_closed_without_key ... ok
+test tests::identical_payloads_have_hash_parity ... ok
+test launcher::tests::walks_from_bin_dir_and_pointer ... ok
+test launcher::tests::env_root_wins_and_fails_closed_when_invalid ... ok
+test launcher::tests::spawn_plan_requires_node_modules ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_entity-41b713b26f804b06.exe)
+
+running 3 tests
+test tests::calibrated_conjunction_can_confirm_hidden ... ok
+test tests::early_alone_is_not_hidden_affiliate ... ok
+test tests::service_hub_is_not_retail ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_evm_executor-62366580ba590c97.exe)
+
+running 5 tests
+test tests::constant_product_matches_integer_identity ... ok
+test tests::virtual_reserve_v3_is_never_exact ... ok
+test tests::isolated_sum_is_illegal ... ok
+test tests::exact_vm_fails_closed_without_fork ... ok
+test tests::exact_vm_requires_the_full_evidence_triplet ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_graph-9309443bb407f0a1.exe)
+
+running 4 tests
+test tests::cannot_link_blocks_a_transitive_component_merge ... ok
+test tests::indirect_must_link_cannot_link_conflict_fails_closed ... ok
+test tests::conflicting_constraints_fail_closed ... ok
+test tests::cannot_link_blocks_score_merge ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_ledger-0829a46afe76c868.exe)
+
+running 1 test
+test tests::conserves_and_keeps_unknown_remainder ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_protocol_sdk-7b4b95f2c52cd49f.exe)
+
+running 1 test
+test tests::unknown_without_path_is_unsupported ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_provider_scheduler-d9cdaeb543cb059f.exe)
+
+running 4 tests
+test tests::aimd_multiplies_down_on_throttle ... ok
+test tests::two_urls_same_group_are_not_independent ... ok
+test tests::low_cost_aimd_never_exceeds_one ... ok
+test tests::coalesces_identical_historical_reads ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_query_planner-27682b4a74a646e2.exe)
+
+running 6 tests
+test tests::admission_requires_two_independence_groups ... ok
+test tests::unindexed_range_is_a_gap_not_an_empty_result ... ok
+test tests::vectorized_filter_keeps_matching_rows ... ok
+test tests::local_index_avoids_genesis_rpc ... ok
+test tests::lifetime_history_is_local_when_coverage_complete ... ok
+test tests::corpus_discovery_uses_bulk_dataset_not_public_logs ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_replay-ad4be0e6622445f7.exe)
+
+running 1 test
+test tests::matching_hashes_pass ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_route_optimizer-6c303e6b3e4f5082.exe)
+
+running 2 tests
+test tests::one_constant_product_venue_is_exact_but_multi_venue_is_not ... ok
+test tests::shared_state_consumes_reserves ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_types-048094131cd6399d.exe)
+
+running 3 tests
+test tests::canonical_json_sorts_object_keys ... ok
+test tests::content_id_uses_first_24_hex ... ok
+test tests::unknown_is_not_numeric_zero ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_campaign
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_capital
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_desktop_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_entity
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_evm_executor
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_graph
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_ledger
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_protocol_sdk
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_provider_scheduler
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_query_planner
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_replay
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_route_optimizer
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_types
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

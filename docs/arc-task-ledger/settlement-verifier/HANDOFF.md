@@ -1,13 +1,13 @@
-# Arc USDC 核验器交付状态
+# Arc USDC 结算核验器 2.0.0 交付
 
-本轮基线为实际最新 agent/arc-task-ledger-v1 的48582b9。旧规则atl-v1.2.1保持，新核验器规则zasv-rules-v1.0.0、解析器zasv-usdc-parser-v1.0.0、接口zasv-interface-v1、迁移7。API/Web2.0.0，共享Arc包1.3.0。未合并main、未强推、未修改桌面六项用户改动。
+已完成限定Arc S0—S7开发与公开更新。实际开发/独立构建源码 6b2454f666befe3179dc6093800f36eea6df3976；云端导出源码 60284c4667e4d6215d0aac5c6f1c92041fa85972，API/Web/migrate/sync同版本，迁移7，旧资金规则atl-v1.2.1。未合并main或强推，原桌面用户改动、旧数据库、旧报告/原件/游标保留。
 
-交易→选择真实资金边→冻结收款条件→逐项核对→持久报告→显式分享/导出→独立复算和对账已在真实主网只读链路执行。原生/ERC20镜像均有实际样本，反事实条件生成不匹配/未知。独立对账进程只写自身SQLite，不移动资金或确认履约。
+[公开核验器](https://web--atl-web--xtd599t97njk.code.run) · [真实原生报告](https://web--atl-web--xtd599t97njk.code.run/?report=zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148)。首页可打开两个实际公开示例；金额由原始回执计算。通用交易和ArcBounty固定条件模式都在正常HTTPS浏览器完成。独立对账只写自身SQLite，重复0新增；不确认用途、事前约定、履约或真实用户采用。
 
-本轮Arc单元114项、PG集成42项、桌面/手机浏览器28项通过。根lint/typecheck/unit/integration/evals/MCP/build/license及Rust工作区通过，全仓库浏览器49项重试通过。初次启动、旧首屏布局、设备项目合并触发限流的失败保留。根格式曾因任务输入JSON和自有文件失败；自有代码已格式化，原任务包保持原始内容，不能伪造全根格式PASS。
+Arc独立包114单元、42真实PG、28浏览器通过；构建、lint、客户端类型、许可证和生产依赖审计0漏洞通过。根1050单元、88集成通过但42外部跳过；全仓库49浏览器、Windows49、Rust工作区及静态门禁执行。旧视觉基线源码指纹仍FAIL，最终全根格式检查通过，外部任务输入及原件显式排除以保持原始字节；不宣称全平台通过。初次资源竞争/布局/合并设备触发限流失败已保留，修复后的窄回归通过。
 
-生产数据库实际备份后，在独立PG恢复全部Arc对象和数据。迁移6→7前后六个旧表摘要/数量相同；真实隔离重启后19个报告原件保持一致。托管pg_stat_kcache扩展不属Arc恢复范围，未声称完整平台恢复，未重启共享或生产数据库。
+实际生产备份在独立PG恢复全部Arc对象/数据，迁移6→7前后旧六表一致，真实隔离重启19份原件一致；不是包含平台专用扩展的全平台恢复，未重启生产/共享数据库。旧#18固定版本各字段与JSON导出摘要保持，旧游标仍可用。
 
-当前候选待干净独立构建和云端滚动更新。旧公开8f2d479不是本轮发布。现有服务、实例、数据库容量保持；24小时实际费用观测0，剩余免费额度不由公开接口暴露，不保证永久免费。最终部署SHA、构建号、迁移job、worker和公开闭环另写部署收据。
+公开新核验6RPC/2798ms/12483bytes，重查6RPC/2585ms。报告GET五样本 219/219/216/214/215ms，非P95/SLA。原服务、实例、存储、定时设置保持，24h实际观测费用0，无新增资源/付款/付费数据源；剩余免费额度未公开，不保证永久免费。
 
-执行矩阵见[VALIDATION.json](VALIDATION.json)，使用说明见[USER_GUIDE.zh.md](USER_GUIDE.zh.md)，边界见[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)。资助草稿只供用户使用，NOT_SUBMITTED。来源独立性、离线主网真实性、用途/事前约定/履约未核验。
+逐项门禁和产物摘要见[VALIDATION.json](VALIDATION.json)，操作见[USER_GUIDE.zh.md](USER_GUIDE.zh.md)，API见[API.md](API.md)及[openapi.json](openapi.json)，边界见[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)，申请草稿见[SUBMISSION_DRAFT.en.md](SUBMISSION_DRAFT.en.md)。submissionReadiness是资料准备状态；grantApplication=NOT_SUBMITTED。单RPC、离线无法认证主网、私有会话7天且无找回、公开版本不可撤回等限制保留。

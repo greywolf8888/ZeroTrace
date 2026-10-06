@@ -1,0 +1,91 @@
+{
+  "sourceCommit": "6b2454f666befe3179dc6093800f36eea6df3976",
+  "deploymentSha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+  "cleanCheckout": true,
+  "sourceManifestGitBytesVerified": true,
+  "sourceFiles": 365,
+  "checks": [
+    {
+      "name": "install",
+      "command": "npm ci --ignore-scripts --no-audit --no-fund",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:14:03.954Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-install.log",
+      "sha256": "651bd8e31c9acc264437882485d3f2822eb2214bcc605e17b6543a9876fca3f7"
+    },
+    {
+      "name": "build",
+      "command": "npm run arc:build",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:14:17.886Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-build.log",
+      "sha256": "f79f37e7cb7d65fcbdade7ab39bf3d236e484eb89f47f7a9178aa6c14c7e5ae3"
+    },
+    {
+      "name": "unit",
+      "command": "npm run arc:test:unit",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:14:23.421Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-unit.log",
+      "sha256": "892eb3623679e4492e87497dd0c4728b88264c33c45abbdc24d22ff2d13aa03b"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:14:23.835Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-lint.log",
+      "sha256": "db85e22912bd7605f782dc2bd3ca9a08ba0c3c90073cb5e4197aa1d2485bd2a1"
+    },
+    {
+      "name": "client",
+      "command": "npm run arc:client:typecheck",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:14:41.856Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-client.log",
+      "sha256": "e832214b4eea9be8510fe2698048f7fadc9fba9b515258777b15897b71f28847"
+    },
+    {
+      "name": "license",
+      "command": "npm run license:check",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:15:27.874Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-license.log",
+      "sha256": "289f8c0cfc8306612a7e5916a9bf2f432159fdd8e8b47f0da1ee2be7b9933808"
+    },
+    {
+      "name": "audit",
+      "command": "npm audit --omit=dev --json",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:15:29.178Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-audit.json",
+      "sha256": "a69366fd057aa53ee47df860d48a92126538c3c6d4c9081f2a866623e5d097a3"
+    },
+    {
+      "name": "integration",
+      "command": "npm run arc:test:integration",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:16:01.048Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-integration.log",
+      "sha256": "6f03ece0f5c1bc0ec3871651a230e2352fce46c12a07fe550b7be8e5e8559134"
+    },
+    {
+      "name": "e2e",
+      "command": "npm run arc:test:e2e",
+      "exitCode": 0,
+      "executedAt": "2026-10-06T20:17:00.748Z",
+      "artifact": "docs/arc-task-ledger/settlement-verifier/evidence/independent-e2e.log",
+      "sha256": "a65224e3fcd20ac21042326312ef722648a2e5152b39090a9bc2bb091fa0ebef"
+    }
+  ],
+  "productionAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "testClasses": "test fixtures only in tests; actual public mainnet evidence recorded separately",
+  "runtimeClosure": "four permissive dependency packages and two Arc apps; no full-platform runtime needed"
+}

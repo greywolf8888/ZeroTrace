@@ -1297,3 +1297,7 @@ Arc Task Ledger 新支出预算 0 USD；当前 FREE_TIER_UNVERIFIED，云端资�
 本轮参考图 UI/动画、固定快照事实与30秒实时链观察已发布。已测试源码 `60061232b3047596ecfd40db866a7c243f3e8732`、实际云端导出 `8f2d47922847236be7448619a9a21543730d7b07`；API/网站 COMPLETED，资金规则atl-v1.2.1、迁移6、原数据库/作业/权限保持。96 Arc 单元、35真实PostgreSQL、32 Arc浏览器、独立构建/lint/许可证/依赖审计0、格式和全仓库类型通过。根1050单元、88集成（42外部跳过）、49浏览器/49 Windows/7视觉、52 Rust及原静态检查通过；旧视觉基线源码指纹仍FAIL，完整历史/多来源/真人/正式取证和其他终端门禁仍未关闭。
 
 实际云端三尺寸及真正200%浏览器缩放通过；旧#18任务/结果/证据逐项保持，旧游标可用，实时区块 24577090→24577153、固定链接不变、期间GET-only。实时原始引用明确为unarchived，未归档且formalForensicReady=false；不把当前区块当资金实时到账。新独立收据见 [界面云端验收](../arc-task-ledger/validation/ui-neon-v130-20261006/README.md)。
+
+## 2026-10-07 Arc USDC 结算核验器 2.0.0
+
+限定Arc开发、真实主网只读闭环、独立构建和既有云端更新已完成。源码6b2454f666befe3179dc6093800f36eea6df3976，部署60284c4667e4d6215d0aac5c6f1c92041fa85972，迁移7；旧#18/游标/原件保持。114 Arc单元、42真实PG、28 Arc浏览器、独立构建/lint/类型/license/生产audit0通过。根1050单元、88集成(42外部SKIP)、49浏览器、Windows49及Rust工作区通过；旧视觉指纹FAIL、最终格式检查通过，原输入/原件排除以保留摘要，不宣称全平台/完整取证通过。没有链上写入、数据库重建或新增付费资源，申请未提交。详见[本轮交付](../arc-task-ledger/settlement-verifier/HANDOFF.md)和VALIDATION.json。

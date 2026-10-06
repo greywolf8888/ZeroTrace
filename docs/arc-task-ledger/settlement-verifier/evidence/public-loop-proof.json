@@ -1,0 +1,132 @@
+{
+  "at": "2026-10-06T20:24:15.370Z",
+  "sourceSha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+  "sourceCommit": "6b2454f666befe3179dc6093800f36eea6df3976",
+  "environment": "EXISTING_PUBLIC_NORTHFLANK_SERVICES",
+  "transaction": "0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d",
+  "before": {
+    "at": "2026-10-06T20:19:54.541Z",
+    "mode": "READ_ONLY_ACTUAL_PRODUCTION_SQL",
+    "transaction": "0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d",
+    "sourceCommit": "OLD_UNDECLARED",
+    "migration": 7,
+    "reports": 0,
+    "legacy_receipts": 0,
+    "reader_insert": false,
+    "requester_insert": true,
+    "requester_update": false,
+    "requester_input_update": false
+  },
+  "amount": "98.743570043781435381",
+  "movement": "5042:0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d:0",
+  "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+  "factsHash": "8c9d6374a8bd38a7a0f9507c2309c117c521e080b38d7b5bbf915c2cae4af5fa",
+  "readMetrics": {
+    "elapsedMs": 2798,
+    "rpcRequests": 6,
+    "rpcAttempts": 6,
+    "responseBytes": 12483,
+    "cacheHit": false
+  },
+  "recheckMetrics": {
+    "elapsedMs": 2585,
+    "rpcRequests": 6,
+    "rpcAttempts": 6,
+    "responseBytes": 12624,
+    "cacheHit": false
+  },
+  "reportGet": {
+    "n": 5,
+    "milliseconds": [
+      219,
+      219,
+      216,
+      214,
+      215
+    ],
+    "noP95Claim": true
+  },
+  "ui": {
+    "normalInput": true,
+    "keyboardRawEvidence": true,
+    "download": true,
+    "browserOfflineRecompute": true,
+    "privateAnonymous404": true,
+    "explicitFullPreview": true,
+    "publish": true,
+    "anonymousMobile": true,
+    "reducedMotion": [
+      "none"
+    ],
+    "pageErrors": []
+  },
+  "share": "https://web--atl-web--xtd599t97njk.code.run/?report=zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+  "offline": {
+    "exitCode": 0,
+    "result": {
+      "integrity": "PASS",
+      "recomputation": "PASS",
+      "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+      "factsHash": "8c9d6374a8bd38a7a0f9507c2309c117c521e080b38d7b5bbf915c2cae4af5fa",
+      "mainnetAuthenticity": "NOT_VERIFIED_OFFLINE",
+      "sourceTrust": "DECLARED_SOURCE_NOT_AUTHENTICATED"
+    }
+  },
+  "consumer": {
+    "exitCode": 0,
+    "result": {
+      "state": "ALLOCATED_LOCALLY",
+      "inserted": 1,
+      "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+      "scope": "THIS_ACCOUNTING_NAMESPACE_ONLY",
+      "evidence": {
+        "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+        "bundleHash": "8f2e7979f0b618bc7703ba5ec0617429c663430c2f4b076ec8b99377e76f9ac5",
+        "factsHash": "8c9d6374a8bd38a7a0f9507c2309c117c521e080b38d7b5bbf915c2cae4af5fa",
+        "transactionUrl": "https://explorer.arc.io/tx/0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d"
+      },
+      "accountingRows": [
+        {
+          "namespace": "zasv-public-60284c46",
+          "businessReference": "public-browser-payment",
+          "movementId": "5042:0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d:0",
+          "amountAtomic18": "98743570043781435381",
+          "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+          "bundleHash": "8f2e7979f0b618bc7703ba5ec0617429c663430c2f4b076ec8b99377e76f9ac5",
+          "factsHash": "8c9d6374a8bd38a7a0f9507c2309c117c521e080b38d7b5bbf915c2cae4af5fa",
+          "transactionUrl": "https://explorer.arc.io/tx/0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d"
+        }
+      ],
+      "mainnetAuthenticity": "NOT_VERIFIED_OFFLINE"
+    }
+  },
+  "repeated": {
+    "exitCode": 0,
+    "result": {
+      "state": "IDEMPOTENT_LOCAL_ALLOCATION",
+      "inserted": 0,
+      "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+      "scope": "THIS_ACCOUNTING_NAMESPACE_ONLY",
+      "evidence": {
+        "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+        "bundleHash": "8f2e7979f0b618bc7703ba5ec0617429c663430c2f4b076ec8b99377e76f9ac5",
+        "factsHash": "8c9d6374a8bd38a7a0f9507c2309c117c521e080b38d7b5bbf915c2cae4af5fa",
+        "transactionUrl": "https://explorer.arc.io/tx/0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d"
+      },
+      "accountingRows": [
+        {
+          "namespace": "zasv-public-60284c46",
+          "businessReference": "public-browser-payment",
+          "movementId": "5042:0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d:0",
+          "amountAtomic18": "98743570043781435381",
+          "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+          "bundleHash": "8f2e7979f0b618bc7703ba5ec0617429c663430c2f4b076ec8b99377e76f9ac5",
+          "factsHash": "8c9d6374a8bd38a7a0f9507c2309c117c521e080b38d7b5bbf915c2cae4af5fa",
+          "transactionUrl": "https://explorer.arc.io/tx/0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d"
+        }
+      ],
+      "mainnetAuthenticity": "NOT_VERIFIED_OFFLINE"
+    }
+  },
+  "grantApplication": "NOT_SUBMITTED"
+}

@@ -1,0 +1,87 @@
+{
+  "report": {
+    "facts": null,
+    "reportId": "zasv_01f549195a7b75e36368f4b5f01f7b10beee8f8e01a81a2079232ec302365461",
+    "factsHash": "2fb19da23260e172f7b6d2126f1f23f6b93c46848d125b6cf30ab4df8c83a264",
+    "confidence": {
+      "basis": "DETERMINISTIC_RULES_WITH_DECLARED_COVERAGE",
+      "state": "UNCALIBRATED"
+    },
+    "evaluation": null,
+    "acquisition": {
+      "code": "TRANSACTION_NOT_FOUND",
+      "state": "UNAVAILABLE",
+      "completeness": "INCOMPLETE"
+    },
+    "expectation": null,
+    "ruleVersion": "zasv-rules-v1.0.0",
+    "parserVersion": "zasv-usdc-parser-v1.0.0",
+    "schemaVersion": "zasv-report-v1",
+    "networkVersion": "arc-mainnet-usdc-20261007",
+    "expectationHash": null,
+    "transactionHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "bundleHash": "586ad0a52be2cc9a0628fae6cfb20390734ac56e1c278afed10078df4bc1798d",
+  "observation": {
+    "raw": {
+      "chainId": "0x13b2",
+      "receipt": null,
+      "finalized": {
+        "hash": "0x0d642f3e1afd849a1c8f9fb31798fecf06e3319b8a55821a1967af39c4ca419e",
+        "size": "0x352",
+        "miner": "0x47b9fb845f2c5b19f241598fe1bb7efcab704e35",
+        "nonce": "0x0000000000000000",
+        "number": "0x1779e94",
+        "uncles": [],
+        "gasUsed": "0x13d71",
+        "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "gasLimit": "0x1c9c380",
+        "extraData": "0x00000004a817c800",
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "stateRoot": "0x7e47e99f9bff4b4da91b95b9e9295cf4fc74a05ba35f305df8d8f4a54dadec1a",
+        "timestamp": "0x6ac55958",
+        "difficulty": "0x0",
+        "parentHash": "0x8c74e813dbf55bab4871f219c9a118788e25e3a356dbc7bb679f6bd41357006e",
+        "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+        "blobGasUsed": "0x0",
+        "withdrawals": [],
+        "receiptsRoot": "0xb03c0cebef4f90cb26db93e0c937ad5efc803d33dfdda6680a1a943c0b56ee19",
+        "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transactions": [
+          "0xbd3dc23d4d68325da41a69a218f9044fdcd8754d822ecb17fa8634bc21222c00"
+        ],
+        "baseFeePerGas": "0x4a817c800",
+        "excessBlobGas": "0x0",
+        "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+        "transactionsRoot": "0x6b254accba69a709e68f420c3eb915e543fe70f25bbdbdf1a06a1cb3778d2ab9",
+        "parentBeaconBlockRoot": "0x8c74e813dbf55bab4871f219c9a118788e25e3a356dbc7bb679f6bd41357006e"
+      },
+      "blockAfter": null,
+      "blockBefore": null,
+      "transaction": null
+    },
+    "source": {
+      "alias": "arc-drpc-public",
+      "agreement": "SINGLE_SOURCE",
+      "observedAt": "2026-10-06T20:26:00.731Z",
+      "authenticity": "RPC_SOURCE_REPORTED",
+      "independence": "NOT_VERIFIED"
+    },
+    "metrics": {
+      "cacheHit": false,
+      "elapsedMs": 1587,
+      "rpcAttempts": 4,
+      "rpcRequests": 4,
+      "responseBytes": 1943
+    },
+    "acquisition": {
+      "code": "TRANSACTION_NOT_FOUND",
+      "facts": null,
+      "state": "UNAVAILABLE",
+      "completeness": "INCOMPLETE"
+    },
+    "collectionError": null,
+    "transactionHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "schemaVersion": "zasv-bundle-v1"
+}

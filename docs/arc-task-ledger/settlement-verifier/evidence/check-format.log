@@ -1,0 +1,11 @@
+
+> zerotrace@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+[warn] apps/arc-task-ledger-api/package.json
+[warn] apps/arc-task-ledger-web/package.json
+[warn] packages/arc-task-ledger/package.json
+[warn] tests/arc-task-ledger/e2e/ledger.spec.ts
+[warn] zerotrace_codex_rebuild/02_ACCEPTANCE_MATRIX.json
+[warn] Code style issues found in 5 files. Run Prettier with --write to fix.

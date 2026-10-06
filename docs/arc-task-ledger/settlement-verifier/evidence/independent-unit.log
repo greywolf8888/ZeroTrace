@@ -1,0 +1,13 @@
+
+> arc-task-ledger-release@1.3.0 arc:test:unit
+> vitest run tests/arc-task-ledger/unit
+
+
+ RUN  v4.1.11 C:/Users/GreyWolf/.codex/worktrees/arc-v121-export/ZeroTrace/dist-public/arc-usdc-verifier-2.0.0-20261007
+
+
+ Test Files  18 passed (18)
+      Tests  114 passed (114)
+   Start at  04:14:19
+   Duration  3.88s (transform 5.74s, setup 0ms, import 31.64s, tests 553ms, environment 2ms)
+

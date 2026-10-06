@@ -1,0 +1,13 @@
+
+> arc-task-ledger-release@1.3.0 arc:test:integration
+> vitest run tests/arc-task-ledger/integration --no-file-parallelism
+
+
+ RUN  v4.1.11 C:/Users/GreyWolf/.codex/worktrees/arc-v121-export/ZeroTrace/dist-public/arc-usdc-verifier-2.0.0-20261007
+
+
+ Test Files  2 passed (2)
+      Tests  42 passed (42)
+   Start at  04:15:50
+   Duration  10.96s (transform 630ms, setup 0ms, import 3.50s, tests 7.10s, environment 0ms)
+

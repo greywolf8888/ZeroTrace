@@ -1,0 +1,9 @@
+{
+  "name": "visual-baseline",
+  "command": "npm run test:visual-golden",
+  "started": "2026-10-06T20:26:59.316Z",
+  "finished": "2026-10-06T20:27:02.729Z",
+  "exitCode": 1,
+  "artifact": ".agent-state/arc-task-ledger/zasv-20261007/visual-baseline.log",
+  "sha256": "f80d8821b8f40a2ee01761f860ea2f05327ea040000a513239e68738b3cd928a"
+}

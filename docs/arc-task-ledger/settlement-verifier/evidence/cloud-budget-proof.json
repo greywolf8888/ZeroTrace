@@ -1,8 +1,8 @@
 {
-  "at": "2026-10-06T19:29:12.483Z",
+  "at": "2026-10-06T20:22:53.256Z",
   "usageWindow": {
-    "start": 1791228549,
-    "end": 1791314949
+    "start": 1791231771,
+    "end": 1791318171
   },
   "usage": [
     {
@@ -18,13 +18,13 @@
   "requests": [
     {
       "method": "GET",
-      "endpoint": "/v1/auth",
+      "endpoint": "/v1/plans",
       "attempt": 0,
       "status": 200
     },
     {
       "method": "GET",
-      "endpoint": "/v1/plans",
+      "endpoint": "/v1/auth",
       "attempt": 0,
       "status": 200
     },

@@ -1,0 +1,76 @@
+
+> arc-task-ledger-release@1.3.0 arc:test:e2e
+> playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/ledger.spec.ts tests/arc-task-ledger/e2e/product.spec.ts --project arc-desktop && playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/ledger.spec.ts tests/arc-task-ledger/e2e/product.spec.ts --project arc-mobile && playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts --project arc-desktop && playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts --project arc-mobile
+
+[WebServer] (node:49832) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:67240) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 9 tests using 1 worker
+
+(node:66796) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [arc-desktop] › tests\arc-task-ledger\e2e\ledger.spec.ts:2:1 › 声明窗口、连续水位和缺口显示，不冒充部署全历史 (714ms)
+  ok 2 [arc-desktop] › tests\arc-task-ledger\e2e\ledger.spec.ts:12:1 › 正向资金展示：奖励、待领取、争议胜诉、零分配与原始回执 (2.5s)
+  ok 3 [arc-desktop] › tests\arc-task-ledger\e2e\ledger.spec.ts:47:1 › 列表、详情、原始证据与导出闭环 (1.3s)
+  ok 4 [arc-desktop] › tests\arc-task-ledger\e2e\ledger.spec.ts:71:1 › 固定快照分页、筛选、错误与覆盖 (1.5s)
+  ok 5 [arc-desktop] › tests\arc-task-ledger\e2e\product.spec.ts:3:1 › 首页加载期间保护输入，初始化完成后任务查询不被覆盖 (760ms)
+  ok 6 [arc-desktop] › tests\arc-task-ledger\e2e\product.spec.ts:19:1 › UX01/03/06/07 输入任务→真实HTTP金额→固定快照新上下文→同报告 (2.6s)
+  ok 7 [arc-desktop] › tests\arc-task-ledger\e2e\product.spec.ts:68:1 › UX02/06 角色、状态筛选及前页刷新保留固定快照 (1.3s)
+  ok 8 [arc-desktop] › tests\arc-task-ledger\e2e\product.spec.ts:86:1 › UX04/05 具体旧义务清偿和新奖励待领取；未知不转零、过期不暗换 (1.2s)
+  ok 9 [arc-desktop] › tests\arc-task-ledger\e2e\product.spec.ts:101:1 › UX08/09/11 真实消费者、刷新含义、非法链接及手机操作 (923ms)
+
+  9 passed (20.7s)
+[WebServer] (node:20172) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:72256) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 9 tests using 1 worker
+
+(node:36980) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [arc-mobile] › tests\arc-task-ledger\e2e\ledger.spec.ts:2:1 › 声明窗口、连续水位和缺口显示，不冒充部署全历史 (643ms)
+  ok 2 [arc-mobile] › tests\arc-task-ledger\e2e\ledger.spec.ts:12:1 › 正向资金展示：奖励、待领取、争议胜诉、零分配与原始回执 (2.1s)
+  ok 3 [arc-mobile] › tests\arc-task-ledger\e2e\ledger.spec.ts:47:1 › 列表、详情、原始证据与导出闭环 (1.5s)
+  ok 4 [arc-mobile] › tests\arc-task-ledger\e2e\ledger.spec.ts:71:1 › 固定快照分页、筛选、错误与覆盖 (2.0s)
+  ok 5 [arc-mobile] › tests\arc-task-ledger\e2e\product.spec.ts:3:1 › 首页加载期间保护输入，初始化完成后任务查询不被覆盖 (654ms)
+  ok 6 [arc-mobile] › tests\arc-task-ledger\e2e\product.spec.ts:19:1 › UX01/03/06/07 输入任务→真实HTTP金额→固定快照新上下文→同报告 (2.6s)
+  ok 7 [arc-mobile] › tests\arc-task-ledger\e2e\product.spec.ts:68:1 › UX02/06 角色、状态筛选及前页刷新保留固定快照 (1.0s)
+  ok 8 [arc-mobile] › tests\arc-task-ledger\e2e\product.spec.ts:86:1 › UX04/05 具体旧义务清偿和新奖励待领取；未知不转零、过期不暗换 (916ms)
+  ok 9 [arc-mobile] › tests\arc-task-ledger\e2e\product.spec.ts:101:1 › UX08/09/11 真实消费者、刷新含义、非法链接及手机操作 (760ms)
+
+  9 passed (15.7s)
+[WebServer] (node:33616) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:3872) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 1 worker
+
+(node:78588) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:6:1 › 资金边→精确检查器→原始支持记录；键盘和手机视图联动 (636ms)
+  ok 2 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:30:1 › R1/R2/R3 服务器→详情→报告→consumer同快照金额及限定范围 (2.1s)
+  ok 3 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:47:1 › 补证无法定位明确反馈；重新查询队列不会扫描或暗换快照 (556ms)
+  ok 4 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:57:1 › 固定快照任务导航和角色切换沿用同一服务器金额 (533ms)
+  ok 5 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:75:1 › 1440、1280与手机实际截图；状态、长地址与200%缩放不裁切 (3.5s)
+
+  5 passed (10.7s)
+[WebServer] (node:79864) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:49132) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 1 worker
+
+(node:63920) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [arc-mobile] › tests\arc-task-ledger\e2e\workbench.spec.ts:6:1 › 资金边→精确检查器→原始支持记录；键盘和手机视图联动 (693ms)
+  ok 2 [arc-mobile] › tests\arc-task-ledger\e2e\workbench.spec.ts:30:1 › R1/R2/R3 服务器→详情→报告→consumer同快照金额及限定范围 (2.2s)
+  ok 3 [arc-mobile] › tests\arc-task-ledger\e2e\workbench.spec.ts:47:1 › 补证无法定位明确反馈；重新查询队列不会扫描或暗换快照 (560ms)
+  ok 4 [arc-mobile] › tests\arc-task-ledger\e2e\workbench.spec.ts:57:1 › 固定快照任务导航和角色切换沿用同一服务器金额 (469ms)
+  ok 5 [arc-mobile] › tests\arc-task-ledger\e2e\workbench.spec.ts:75:1 › 1440、1280与手机实际截图；状态、长地址与200%缩放不裁切 (2.2s)
+
+  5 passed (9.6s)

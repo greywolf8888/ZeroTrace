@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 test:evals
+> vitest run evals
+
+
+ RUN  v4.1.11 F:/ZeroTrace
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  03:27:07
+   Duration  1.19s (transform 583ms, setup 0ms, import 1.64s, tests 25ms, environment 0ms)
+

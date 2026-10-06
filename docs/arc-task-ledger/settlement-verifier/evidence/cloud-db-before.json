@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-06T20:19:54.541Z",
+  "mode": "READ_ONLY_ACTUAL_PRODUCTION_SQL",
+  "transaction": "0xc6a4db67f61aa634326b3f6c3bbf0536dc816bac908fba546faf7c1aa904945d",
+  "sourceCommit": "OLD_UNDECLARED",
+  "migration": 7,
+  "reports": 0,
+  "legacy_receipts": 0,
+  "reader_insert": false,
+  "requester_insert": true,
+  "requester_update": false,
+  "requester_input_update": false
+}

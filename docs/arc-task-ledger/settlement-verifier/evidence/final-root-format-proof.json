@@ -1,0 +1,9 @@
+{
+  "name": "final-root-format",
+  "command": "npm run format:check",
+  "started": "2026-10-06T20:31:04.568Z",
+  "finished": "2026-10-06T20:32:42.319Z",
+  "exitCode": 0,
+  "artifact": ".agent-state/arc-task-ledger/zasv-20261007/final-root-format.log",
+  "sha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0"
+}
