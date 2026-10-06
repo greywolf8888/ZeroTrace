@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:04:34.261Z",
+  "jobId": "1",
+  "request": {
+    "id": "req_de8ce47eb3f58107d3a9e4c8efa9b92f",
+    "jobId": "1",
+    "from": "24556566",
+    "to": "24556566",
+    "head": "24556566",
+    "status": "COMPLETED",
+    "ruleVersion": "atl-v1.2.1",
+    "snapshotRunId": "run_c842327a47b628c305be2d408c872d61",
+    "plan": {
+      "basis": "UNLOCATABLE",
+      "reason": "尚不能定位所缺事件；没有可信创建或相关事件区块，不自动扫描最近窗口。",
+      "version": "atl-enrichment-plan-v2",
+      "targetKinds": ["LIFECYCLE_GAP", "SETTLEMENT_GAP", "OBLIGATION_SEQUENCE_GAP"],
+      "beforeConclusion": "a8315603561ed26a264e6054cca4a5bc6031095b6126a6f74f55500f908fec65",
+      "beforeReceiptHashes": [],
+      "priorCoverageRanges": 5316,
+      "priorCoverageSha256": "dd05046d98cdc0457e203d5706b6965244c9625a9b839d032a0f351a8b5555de"
+    },
+    "outcome": {
+      "state": "STILL_INSUFFICIENT",
+      "beforeSnapshot": "run_c842327a47b628c305be2d408c872d61",
+      "newEvidenceIds": [],
+      "conclusionChanged": null
+    }
+  },
+  "idempotent": true,
+  "originalSnapshotUnchanged": true,
+  "requestPayloadEmpty": true
+}

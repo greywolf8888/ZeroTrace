@@ -1,0 +1,36 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:08:56.733Z",
+  "jobId": "18",
+  "requestId": "req_f3cd679ce36d0852b585b2646eb54b82",
+  "from": "24554445",
+  "to": "24554566",
+  "head": "24554566",
+  "scanState": "COMPLETED",
+  "outcome": {
+    "state": "NO_MATCH_IN_RANGE",
+    "afterSnapshot": "run_3ff8484e9a28257783a41dd1a29e7977",
+    "beforeSnapshot": "run_c842327a47b628c305be2d408c872d61",
+    "newEvidenceIds": [],
+    "conclusionChanged": false
+  },
+  "scanWindowBlocks": "122",
+  "planBasis": "KNOWN_CREATION_UNSCANNED",
+  "beforeSnapshotUnchanged": true,
+  "idempotentRequestVerified": true,
+  "unlocatableJob1": {
+    "requestId": "req_de8ce47eb3f58107d3a9e4c8efa9b92f",
+    "scanDispatched": false,
+    "outcome": {
+      "state": "STILL_INSUFFICIENT",
+      "beforeSnapshot": "run_c842327a47b628c305be2d408c872d61",
+      "newEvidenceIds": [],
+      "conclusionChanged": null
+    }
+  },
+  "customWindowAndUrlRejected": {
+    "httpStatus": 400,
+    "code": "INVALID_QUERY"
+  },
+  "feesUsd": 0
+}

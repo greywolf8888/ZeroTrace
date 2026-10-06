@@ -1,0 +1,12 @@
+{
+  "sourceCommit": "92ed0409b888d410be242661dd51e91089c61954",
+  "testedExecutableSourceCommit": "44d4a8020ab789914e505e056eb1c1c6bf410259",
+  "branchCommit": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+  "files": 230,
+  "gitBlobsMatchManifest": true,
+  "credentialScan": true,
+  "mainChanged": false,
+  "pushCompleted": true,
+  "remoteVerifiedAt": "2026-10-06T12:13:14.194Z",
+  "deliveryDocumentationBase": "b863dba4c17f6bbfe907e224a50115da4be69448"
+}

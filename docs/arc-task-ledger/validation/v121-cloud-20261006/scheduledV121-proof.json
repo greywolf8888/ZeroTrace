@@ -1,0 +1,71 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:12:31.649Z",
+  "jobId": "atl-sync",
+  "runId": "5891c06e-5fe0-4e1b-8a3e-dea423fb7c06",
+  "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+  "runStatus": "SUCCESS",
+  "startedAt": "2026-10-06T12:10:01.000Z",
+  "concludedAt": "2026-10-06T12:11:45.000Z",
+  "containers": [
+    {
+      "name": "atl-sync-29854810-nct4h",
+      "status": "TASK_FINISHED",
+      "runId": "5891c06e-5fe0-4e1b-8a3e-dea423fb7c06"
+    }
+  ],
+  "result": {
+    "snapshotRunId": "run_31d0b702348917f7416b0110b8ae4e64",
+    "snapshot": {
+      "chainId": "5042",
+      "blockNumber": "24557985",
+      "blockHash": "0x6d92fb9eca8e819187cef0cdc1232b9d7fefa35fe8d5b30d0a19ad6b92b84e85",
+      "observedAt": "2026-10-06T12:10:22.729Z",
+      "finality": "FINALIZED",
+      "sourceSet": ["arc-drpc-public"]
+    },
+    "coverage": {
+      "currentState": "complete",
+      "jobEnumeration": "complete",
+      "lifecycleHistory": "partial",
+      "settlementHistory": "partial",
+      "accountPendingHistory": "partial",
+      "deploymentVerification": "complete",
+      "sourceAgreement": "partial"
+    },
+    "tasks": 16,
+    "totalExpected": "16",
+    "rpcRequests": 149,
+    "responseBytes": 328343,
+    "durationMs": 81600,
+    "gaps": ["历史仅连续核验至 23658427；未覆盖至当前状态区块。"],
+    "historyRange": {
+      "scope": "DECLARED_WINDOW",
+      "fromBlock": "23388428",
+      "targetBlock": "24557985",
+      "contiguousThrough": "23658427",
+      "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+      "checkpointVersion": "2168",
+      "status": "partial",
+      "omittedPriorHistory": true,
+      "gaps": [
+        {
+          "fromBlock": "23658428",
+          "toBlock": "24557985",
+          "reason": "历史仅连续核验至 23658427；未覆盖至当前状态区块。"
+        }
+      ]
+    },
+    "collection": {
+      "recentBudget": "2000",
+      "proofBudget": "2000",
+      "recent": {
+        "from": "24557433",
+        "through": "24557985",
+        "target": "24557985",
+        "complete": true
+      }
+    }
+  },
+  "processExitCode": 0
+}

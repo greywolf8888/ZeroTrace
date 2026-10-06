@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:06:13.953Z",
+  "comparedTo": "CURRENT_EXECUTABLE_BUILD_MATCHING_TESTED_44d4a802_SOURCE",
+  "assets": [
+    {
+      "path": "/assets/index-BMeWcayr.js",
+      "bytes": 228999,
+      "sha256": "2b5aef4df7c3906180f3c995374f38265aa690874bd5474035d62802f764b93d"
+    },
+    {
+      "path": "/assets/index-CuJ--18N.css",
+      "bytes": 10961,
+      "sha256": "05b2d67ffb5899fba72c057faa0db04a4d7aeb43060c65fb95391b478476229c"
+    }
+  ]
+}

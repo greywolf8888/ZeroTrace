@@ -1,0 +1,41 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:04:37.925Z",
+  "jobId": "18",
+  "request": {
+    "id": "req_f3cd679ce36d0852b585b2646eb54b82",
+    "jobId": "18",
+    "from": "24554445",
+    "to": "24554566",
+    "head": "24554444",
+    "status": "PENDING",
+    "ruleVersion": "atl-v1.2.1",
+    "snapshotRunId": "run_c842327a47b628c305be2d408c872d61",
+    "plan": {
+      "to": "24554566",
+      "from": "24554445",
+      "basis": "KNOWN_CREATION_UNSCANNED",
+      "reason": "按可信创建位置与已有覆盖选择未扫描缺口；此窗口不保证包含目标结算。",
+      "version": "atl-enrichment-plan-v2",
+      "targetKinds": ["LIFECYCLE_GAP", "SETTLEMENT_GAP", "OBLIGATION_SEQUENCE_GAP"],
+      "beforeConclusion": "0214e8ea7ba405f9c680c237c4c89b7b68d8e14fabea858bdb3f46e239d5639e",
+      "beforeReceiptHashes": [
+        "5d511e321e031389ddfaf2fc9afa97eec7297112d82ee2b8b74616521d52bf6e",
+        "ef7b86f89dd95ff4ec7d770db5ba453f3d7950b91035bde17aa78257958e7e9a",
+        "e303c7c37fd8d6cc9871e6c5561873766548bbf9b333ca8f73ed924e069699b7",
+        "4903b3086c7ee8bca2c1795d9a566866104a41918f5d8b3408f80f58a5f3e28e"
+      ],
+      "priorCoverageRanges": 5316,
+      "priorCoverageSha256": "dd05046d98cdc0457e203d5706b6965244c9625a9b839d032a0f351a8b5555de"
+    },
+    "outcome": {
+      "state": "PENDING",
+      "beforeSnapshot": "run_c842327a47b628c305be2d408c872d61",
+      "newEvidenceIds": [],
+      "conclusionChanged": null
+    }
+  },
+  "idempotent": true,
+  "originalSnapshotUnchanged": true,
+  "requestPayloadEmpty": true
+}

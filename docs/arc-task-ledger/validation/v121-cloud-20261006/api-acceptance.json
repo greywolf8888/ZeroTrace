@@ -1,0 +1,101 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:01:09.957Z",
+  "snapshotRunId": "run_c842327a47b628c305be2d408c872d61",
+  "snapshot": {
+    "chainId": "5042",
+    "finality": "FINALIZED",
+    "blockHash": "0x8d6e22d1d738e6d361d3b14ca9476c50562918d57ed765c70c73d41bc746d058",
+    "sourceSet": ["arc-drpc-public"],
+    "observedAt": "2026-10-06T11:58:22.974Z",
+    "blockNumber": "24556566"
+  },
+  "tasks": 16,
+  "ruleVersion": "atl-v1.2.1",
+  "schemaVersion": "atl-settlement-result-v2",
+  "workerAtomic": "1980000000000000000",
+  "feeAtomic": "20000000000000000",
+  "outstandingState": "unknown",
+  "uniquePagination": true,
+  "posterFilter": true,
+  "exactEvidenceReferences": true,
+  "oldCursorAccepted": true,
+  "oldSnapshots": [
+    {
+      "jobId": "18",
+      "snapshotRunId": "run_0c0cd17cd3dab42a6af2db56cd198eda",
+      "storedRuleVersion": "atl-v1.2.0",
+      "persistedFactsSha256": "d4e28f60636a43bbb40a70e8904073cf4b69b0b51cc52c4530e5e9bd904d478d",
+      "resultSchema": "atl-settlement-result-v2",
+      "derivedPresentationChanged": true
+    },
+    {
+      "jobId": "1",
+      "snapshotRunId": "run_0c0cd17cd3dab42a6af2db56cd198eda",
+      "storedRuleVersion": "atl-v1.2.0",
+      "persistedFactsSha256": "c224e79e7f8d0b758c28d02a0b2eaeea73bf8bff8f35add4de9fd35182def847",
+      "resultSchema": "atl-settlement-result-v2",
+      "derivedPresentationChanged": true
+    }
+  ],
+  "errorStates": [
+    {
+      "status": 400,
+      "code": "INVALID_LIMIT"
+    },
+    {
+      "status": 400,
+      "code": "INVALID_FILTER"
+    },
+    {
+      "status": 400,
+      "code": "CURSOR_FILTER_MISMATCH"
+    },
+    {
+      "status": 410,
+      "code": "SNAPSHOT_EXPIRED"
+    },
+    {
+      "status": 404,
+      "code": "NOT_IN_ENUMERATED_SET"
+    }
+  ],
+  "coverage": {
+    "currentState": {
+      "state": "known",
+      "value": "complete",
+      "evidenceIds": []
+    },
+    "jobEnumeration": {
+      "state": "known",
+      "value": "complete",
+      "evidenceIds": []
+    },
+    "sourceAgreement": {
+      "state": "known",
+      "value": "partial",
+      "evidenceIds": []
+    },
+    "lifecycleHistory": {
+      "state": "known",
+      "value": "partial",
+      "evidenceIds": []
+    },
+    "settlementHistory": {
+      "state": "known",
+      "value": "partial",
+      "evidenceIds": []
+    },
+    "accountPendingHistory": {
+      "state": "known",
+      "value": "partial",
+      "evidenceIds": []
+    },
+    "deploymentVerification": {
+      "state": "known",
+      "value": "complete",
+      "evidenceIds": []
+    }
+  },
+  "formalMode": "FAIL_CLOSED_COVERAGE_INSUFFICIENT"
+}

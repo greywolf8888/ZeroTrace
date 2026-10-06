@@ -1,0 +1,20 @@
+{
+  "observedAt": "2026-10-06T11:54:22.140Z",
+  "runId": "e6424d41-cf7b-4e98-8ded-1e08cdd072bc",
+  "containerId": "atl-migrate-6ac4e11f1d3641fa8700f996-6x5gk",
+  "timestamp": "2026-10-06T11:53:22.918Z",
+  "result": {
+    "status": "MIGRATION_VALIDATED",
+    "migrationVersion": 6,
+    "permissions": {
+      "readerSelect": true,
+      "readerInsert": false,
+      "workerInsert": true
+    },
+    "requestPermissions": {
+      "requestInsert": true,
+      "projectionInsert": false,
+      "evidenceInsert": false
+    }
+  }
+}

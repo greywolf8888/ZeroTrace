@@ -1,0 +1,79 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:07:39.333Z",
+  "jobId": "atl-sync",
+  "runId": "bc070a65-4ac0-46e4-8e24-8c0b18a08ce2",
+  "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+  "runStatus": "SUCCESS",
+  "startedAt": "2026-10-06T12:05:20.000Z",
+  "concludedAt": "2026-10-06T12:07:14.000Z",
+  "containers": [
+    {
+      "name": "atl-sync-6ac4e40043b9e7fd1d5988f6-h4nt8",
+      "status": "TASK_FINISHED",
+      "runId": "bc070a65-4ac0-46e4-8e24-8c0b18a08ce2"
+    }
+  ],
+  "result": {
+    "snapshotRunId": "run_3ff8484e9a28257783a41dd1a29e7977",
+    "snapshot": {
+      "chainId": "5042",
+      "blockNumber": "24557432",
+      "blockHash": "0x279a5a8a40061bcd4cde595f43e8a1c1c05a58fd3b731497322f6fd9cd8514c0",
+      "observedAt": "2026-10-06T12:05:42.054Z",
+      "finality": "FINALIZED",
+      "sourceSet": ["arc-drpc-public"]
+    },
+    "coverage": {
+      "currentState": "complete",
+      "jobEnumeration": "complete",
+      "lifecycleHistory": "partial",
+      "settlementHistory": "partial",
+      "accountPendingHistory": "partial",
+      "deploymentVerification": "complete",
+      "sourceAgreement": "partial"
+    },
+    "tasks": 16,
+    "totalExpected": "16",
+    "rpcRequests": 164,
+    "responseBytes": 352213,
+    "durationMs": 90217,
+    "gaps": ["历史仅连续核验至 23656427；未覆盖至当前状态区块。"],
+    "historyRange": {
+      "scope": "DECLARED_WINDOW",
+      "fromBlock": "23388428",
+      "targetBlock": "24557432",
+      "contiguousThrough": "23656427",
+      "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+      "checkpointVersion": "2148",
+      "status": "partial",
+      "omittedPriorHistory": true,
+      "gaps": [
+        {
+          "fromBlock": "23656428",
+          "toBlock": "24557432",
+          "reason": "历史仅连续核验至 23656427；未覆盖至当前状态区块。"
+        }
+      ]
+    },
+    "collection": {
+      "recentBudget": "2000",
+      "proofBudget": "2000",
+      "recent": {
+        "from": "24556567",
+        "through": "24557432",
+        "target": "24557432",
+        "complete": true
+      },
+      "enrichment": {
+        "from": "24554445",
+        "through": "24554566",
+        "target": "24554566",
+        "complete": true,
+        "requestId": "req_f3cd679ce36d0852b585b2646eb54b82",
+        "jobId": "18"
+      }
+    }
+  },
+  "processExitCode": 0
+}

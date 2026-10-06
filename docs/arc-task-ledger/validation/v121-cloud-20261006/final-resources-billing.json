@@ -1,0 +1,88 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:11:57.377Z",
+  "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+  "resources": [
+    {
+      "id": "atl-api",
+      "deploymentPlan": "nf-compute-10",
+      "instances": 1,
+      "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+      "imageUrl": "registry.northflank.com/northflank/service/6ac38807c110671a3e4e3674:6ac4e04e961bf345038a7fb3",
+      "status": "COMPLETED",
+      "environmentUnchanged": true,
+      "portsUnchanged": true
+    },
+    {
+      "id": "atl-web",
+      "deploymentPlan": "nf-compute-10",
+      "instances": 1,
+      "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+      "imageUrl": "registry.northflank.com/northflank/service/6ac38d7517e2e7c0e24aec35:6ac4e050b7ee246e18029548",
+      "status": "COMPLETED",
+      "environmentUnchanged": true,
+      "portsUnchanged": true
+    },
+    {
+      "id": "atl-postgres",
+      "specUnchanged": true,
+      "versionTag": "16",
+      "planId": "nf-compute-20",
+      "storageMiB": 4096,
+      "tlsEnabled": true,
+      "externalAccessEnabled": false
+    },
+    {
+      "id": "atl-sync",
+      "deploymentPlan": "nf-compute-10",
+      "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+      "suspended": false,
+      "schedule": "*/10 * * * *",
+      "settingsUnchanged": true,
+      "environmentValuesUnchanged": true,
+      "entrypointExitTelemetryOnly": true
+    },
+    {
+      "id": "atl-migrate",
+      "deploymentPlan": "nf-compute-10",
+      "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+      "suspended": true,
+      "schedule": "*/10 * * * *",
+      "settingsUnchanged": true,
+      "environmentValuesUnchanged": true,
+      "entrypointExitTelemetryOnly": false,
+      "migrationVersion": 6
+    }
+  ],
+  "resourceCount": 5,
+  "newPaidResources": 0,
+  "paidDataProcurementUsd": 0,
+  "recentBilling": {
+    "window": {
+      "start": 1791202316,
+      "end": 1791288716
+    },
+    "usage": [
+      {
+        "currency": "usd",
+        "total": 0
+      }
+    ]
+  },
+  "zeroIncrementalBudget": true,
+  "doesNotGuaranteeFutureFreeUsage": true,
+  "health": {
+    "status": "UP",
+    "components": {
+      "readOnly": true,
+      "version": "atl-v1.2.1"
+    }
+  },
+  "ready": {
+    "status": "UP",
+    "components": {
+      "database": "UP",
+      "mainnet": "独立查询覆盖接口核验"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:08:52.347Z",
+  "schedule": "*/10 * * * *",
+  "concurrencyPolicy": "Forbid",
+  "activeDeadlineSeconds": 240,
+  "backoffLimit": 0,
+  "suspended": false,
+  "manualRunsAfterRestore": 0
+}

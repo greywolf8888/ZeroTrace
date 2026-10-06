@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:08:40.389Z",
+  "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+  "snapshotRunId": "run_3ff8484e9a28257783a41dd1a29e7977",
+  "previousContainerNames": [
+    "atl-api-8646b9876f-k2w8z",
+    "atl-api-57b8b5bd89-4zxln",
+    "atl-api-6f98bc96cf-wqv29",
+    "atl-api-c7d6d7755-twbgh",
+    "atl-api-5664cb98b4-tkfcc",
+    "atl-api-77bdfbdb7b-zq9mx",
+    "atl-api-64d5f8ffc7-5bd8z",
+    "atl-api-66f8f8fdcd-nfzxd",
+    "atl-api-588c89b4b4-djjp6",
+    "atl-api-86879c8d79-q24pg",
+    "atl-api-6ffbf95596-ntcbj",
+    "atl-api-5df445db5c-9mnk8"
+  ],
+  "currentContainerNames": ["atl-api-8579ffddd6-xnsqx"],
+  "persistentResultEvidenceExactEquality": true,
+  "oldAndNewSignedCursorsAccepted": true,
+  "restartDataSha256": "4e7fb541ab29336fbda876bcc65f0fcd8a9474ab8715ba808934a0f736d63acb",
+  "databaseRestarted": false
+}

@@ -1,0 +1,15 @@
+{
+  "observedAt": "2026-10-06T11:46:29.709Z",
+  "status": "EXISTING_RESOURCES_AND_SECRETS_VERIFIED_CRON_PAUSED",
+  "historicalSourceSha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+  "apiBuildId": "beautiful-slope-7310",
+  "webBuildId": "curved-hair-5643",
+  "stableCursorVerified": true,
+  "readerAndRequesterSecretsVerified": true,
+  "readOnlyRoleNamesVerified": true,
+  "resourceSpecsPreserved": true,
+  "paidBudgetUsd": 0,
+  "snapshotRunId": "run_0c0cd17cd3dab42a6af2db56cd198eda",
+  "activeRuns": 0,
+  "environmentReadEndpoint": "DOCUMENTED_DEPRECATED_GET_DETAILS_BECAUSE_CURRENT_GET_OMITS_SECRETS"
+}

@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:13:09.001Z",
+  "snapshotRunId": "run_31d0b702348917f7416b0110b8ae4e64",
+  "snapshot": {
+    "chainId": "5042",
+    "finality": "FINALIZED",
+    "blockHash": "0x6d92fb9eca8e819187cef0cdc1232b9d7fefa35fe8d5b30d0a19ad6b92b84e85",
+    "sourceSet": ["arc-drpc-public"],
+    "observedAt": "2026-10-06T12:10:22.729Z",
+    "blockNumber": "24557985"
+  },
+  "taskCount": 16,
+  "modelVersion": "atl-v1.2.1",
+  "schemaVersion": "atl-settlement-result-v2",
+  "outstanding": "unknown",
+  "enrichmentState": "NO_MATCH_IN_RANGE",
+  "executableSourceUnchanged": true,
+  "changedFiles": [
+    "PROGRESS.md",
+    "docs/arc-task-ledger/UI_AUDIT_CORRECTION_20261006.md",
+    "docs/arc-task-ledger/validation/ui-audit-v121/rollout-preflight/blocked-audit.json",
+    "docs/arc-task-ledger/validation/ui-audit-v121/rollout-preflight/export-recovery.json",
+    "docs/arc-task-ledger/validation/ui-audit-v121/rollout-preflight/independent-rollout-current-commands.json",
+    "docs/arc-task-ledger/validation/ui-audit-v121/rollout-preflight/package-r2.json",
+    "docs/arc-task-ledger/validation/ui-audit-v121/rollout-preflight/rollout-equivalence.json",
+    "docs/terminal-market-structure/Arc任务审计修复_20261006.md",
+    "docs/testing/FINAL_ACCEPTANCE.md"
+  ]
+}

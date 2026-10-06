@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:05:44.444Z",
+  "snapshotRunId": "run_c842327a47b628c305be2d408c872d61",
+  "shareFreshContexts": 3,
+  "detailReportConsumerExactEquality": true,
+  "clipboardLink": true,
+  "uiPaginationRefresh": true,
+  "roleSwitch": true,
+  "exactMetricSupports": true,
+  "longRealAddresses": true,
+  "unlocatableOutcome": true,
+  "expiredSnapshotDoesNotSwitch": true,
+  "noResult": true,
+  "browserErrors": [],
+  "humanVisualApproval": false,
+  "providerDownAndConflict": "ISOLATED_TEST_ONLY_NOT_INJECTED_IN_PRODUCTION",
+  "cssStyleZoomNoHorizontalScroll": true,
+  "cssStyleZoomSufficientForBrowserZoomAcceptance": false,
+  "actualBrowserZoomReceipt": "browser-real-zoom-native.json"
+}

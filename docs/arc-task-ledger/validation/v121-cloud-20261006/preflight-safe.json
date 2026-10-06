@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-10-06T11:43:58.481Z",
+  "auth": {
+    "verified": true,
+    "tokenKind": "api",
+    "entityType": "team",
+    "role": "Owner",
+    "expiresAt": null
+  },
+  "recentBilling": {
+    "window": {
+      "start": 1791200638,
+      "end": 1791287038
+    },
+    "usage": [
+      {
+        "currency": "usd",
+        "total": 0
+      }
+    ]
+  },
+  "resourceIds": ["atl-api", "atl-web", "atl-postgres", "atl-migrate", "atl-sync"],
+  "paidBudgetUsd": 0
+}

@@ -1,0 +1,72 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:03:11.673Z",
+  "jobId": "atl-sync",
+  "runId": "b6a83d41-c25e-476b-83d1-00a3053033db",
+  "sourceSha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+  "runStatus": "SUCCESS",
+  "startedAt": "2026-10-06T11:58:07.000Z",
+  "concludedAt": "2026-10-06T12:00:41.000Z",
+  "containers": [
+    {
+      "name": "atl-sync-6ac4e24e434957d759832a8b-6h4bd",
+      "status": "TASK_FINISHED",
+      "runId": "b6a83d41-c25e-476b-83d1-00a3053033db"
+    }
+  ],
+  "result": {
+    "snapshotRunId": "run_c842327a47b628c305be2d408c872d61",
+    "snapshot": {
+      "chainId": "5042",
+      "blockNumber": "24556566",
+      "blockHash": "0x8d6e22d1d738e6d361d3b14ca9476c50562918d57ed765c70c73d41bc746d058",
+      "observedAt": "2026-10-06T11:58:22.974Z",
+      "finality": "FINALIZED",
+      "sourceSet": ["arc-drpc-public"]
+    },
+    "coverage": {
+      "currentState": "complete",
+      "jobEnumeration": "complete",
+      "lifecycleHistory": "partial",
+      "settlementHistory": "partial",
+      "accountPendingHistory": "partial",
+      "deploymentVerification": "complete",
+      "sourceAgreement": "partial"
+    },
+    "tasks": 16,
+    "totalExpected": "16",
+    "rpcRequests": 247,
+    "responseBytes": 726910,
+    "durationMs": 135003,
+    "gaps": ["历史仅连续核验至 23654427；未覆盖至当前状态区块。"],
+    "historyRange": {
+      "scope": "DECLARED_WINDOW",
+      "fromBlock": "23388428",
+      "targetBlock": "24556566",
+      "contiguousThrough": "23654427",
+      "checkpointKey": "0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d:from:23388428",
+      "checkpointVersion": "2128",
+      "status": "partial",
+      "omittedPriorHistory": true,
+      "gaps": [
+        {
+          "fromBlock": "23654428",
+          "toBlock": "24556566",
+          "reason": "历史仅连续核验至 23654427；未覆盖至当前状态区块。"
+        }
+      ]
+    },
+    "collection": {
+      "recentBudget": "2000",
+      "proofBudget": "2000",
+      "recent": {
+        "from": "24554567",
+        "through": "24556566",
+        "target": "24556566",
+        "complete": true
+      }
+    }
+  },
+  "processExitCode": null,
+  "exitCodeUnavailableInManagementResponse": true
+}

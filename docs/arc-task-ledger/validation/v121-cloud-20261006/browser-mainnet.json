@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:01:54.779Z",
+  "snapshotRunId": "run_c842327a47b628c305be2d408c872d61",
+  "records": [
+    {
+      "viewport": [1440, 900],
+      "file": "mainnet-18-1440x900.png",
+      "source": "PUBLIC_HTTPS_LIVE_CHAIN_STORED_REPLAY",
+      "snapshotRunId": "run_c842327a47b628c305be2d408c872d61"
+    },
+    {
+      "viewport": [1280, 800],
+      "file": "mainnet-18-1280x800.png",
+      "source": "PUBLIC_HTTPS_LIVE_CHAIN_STORED_REPLAY",
+      "snapshotRunId": "run_c842327a47b628c305be2d408c872d61"
+    },
+    {
+      "viewport": [390, 844],
+      "file": "mainnet-18-390x844.png",
+      "source": "PUBLIC_HTTPS_LIVE_CHAIN_STORED_REPLAY",
+      "snapshotRunId": "run_c842327a47b628c305be2d408c872d61"
+    }
+  ],
+  "exactEvidenceOpened": true,
+  "sameSnapshotNavigation": true,
+  "detailReportConsumerConsistency": true,
+  "browserErrors": [],
+  "humanVisualApproval": false
+}

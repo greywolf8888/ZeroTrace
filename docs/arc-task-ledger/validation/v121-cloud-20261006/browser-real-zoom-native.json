@@ -1,0 +1,129 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-06T12:18:52.848Z",
+  "snapshotRunId": "run_c842327a47b628c305be2d408c872d61",
+  "browser": "FULL_CHROMIUM",
+  "browserZoomFactor": 2,
+  "styleZoomModified": false,
+  "actualDprAndViewportVerified": true,
+  "sourceVerification": "https://raw.githubusercontent.com/chromium/chromium/main/chrome/browser/ui/zoom/chrome_zoom_level_prefs.cc",
+  "cases": [
+    {
+      "browserWindowWidth": 1440,
+      "actual": {
+        "innerWidth": 709,
+        "innerHeight": 401,
+        "outerWidth": 1440,
+        "outerHeight": 900,
+        "devicePixelRatio": 2,
+        "cssZoom": "1",
+        "documentWidth": 709,
+        "responsiveColumns": "170px 479px"
+      },
+      "amountClippingChecks": [
+        {
+          "text": "1.98 USDC",
+          "clientWidth": 126,
+          "scrollWidth": 126,
+          "parentWidth": 142,
+          "boxWidth": 125.6640625,
+          "parentBox": 143.6640625
+        },
+        {
+          "text": "0.02 USDC",
+          "clientWidth": 126,
+          "scrollWidth": 126,
+          "parentWidth": 142,
+          "boxWidth": 125.6640625,
+          "parentBox": 143.6640625
+        },
+        {
+          "text": "未知：暂无法核验",
+          "clientWidth": 126,
+          "scrollWidth": 126,
+          "parentWidth": 142,
+          "boxWidth": 125.671875,
+          "parentBox": 143.671875
+        },
+        {
+          "text": "2 USDC",
+          "clientWidth": 126,
+          "scrollWidth": 126,
+          "parentWidth": 142,
+          "boxWidth": 125.6640625,
+          "parentBox": 143.6640625
+        },
+        {
+          "text": "未知：暂无法核验",
+          "clientWidth": 126,
+          "scrollWidth": 126,
+          "parentWidth": 142,
+          "boxWidth": 125.6640625,
+          "parentBox": 143.6640625
+        }
+      ],
+      "file": "browser-native-zoom-200-1440.png",
+      "nativeCapturePixels": [1418, 802]
+    },
+    {
+      "browserWindowWidth": 1280,
+      "actual": {
+        "innerWidth": 629,
+        "innerHeight": 401,
+        "outerWidth": 1280,
+        "outerHeight": 900,
+        "devicePixelRatio": 2,
+        "cssZoom": "1",
+        "documentWidth": 629,
+        "responsiveColumns": "170px 399px"
+      },
+      "amountClippingChecks": [
+        {
+          "text": "1.98 USDC",
+          "clientWidth": 99,
+          "scrollWidth": 99,
+          "parentWidth": 115,
+          "boxWidth": 99,
+          "parentBox": 117
+        },
+        {
+          "text": "0.02 USDC",
+          "clientWidth": 99,
+          "scrollWidth": 99,
+          "parentWidth": 115,
+          "boxWidth": 99,
+          "parentBox": 117
+        },
+        {
+          "text": "未知：暂无法核验",
+          "clientWidth": 99,
+          "scrollWidth": 99,
+          "parentWidth": 115,
+          "boxWidth": 99,
+          "parentBox": 117
+        },
+        {
+          "text": "2 USDC",
+          "clientWidth": 99,
+          "scrollWidth": 99,
+          "parentWidth": 115,
+          "boxWidth": 99,
+          "parentBox": 117
+        },
+        {
+          "text": "未知：暂无法核验",
+          "clientWidth": 99,
+          "scrollWidth": 99,
+          "parentWidth": 115,
+          "boxWidth": 99,
+          "parentBox": 117
+        }
+      ],
+      "file": "browser-native-zoom-200-1280.png",
+      "nativeCapturePixels": [1258, 802]
+    }
+  ],
+  "priorCssZoomProof": "INSUFFICIENT_FOR_BROWSER_ZOOM_AND_SUPERSEDED",
+  "priorPlaywrightCapture": "CROPPED_BY_SCREENSHOT_HARNESS_REPLACED_WITH_NATIVE_CDP_CAPTURE",
+  "humanVisualApproval": false
+}
