@@ -1,0 +1,10 @@
+
+> zerotrace@0.1.0 test:visual-golden
+> tsx scripts/visual-golden-check.ts
+
+{
+  "status": "FAIL",
+  "errors": [
+    "视觉基线源码指纹已过期。"
+  ]
+}
