@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "path": "Arc_Task_Ledger_v121_Audit_Fix_Candidate_20261006.zip",
+  "bytes": 4906332,
+  "sha256": "9308b26a6f537c592aaaf9e93dafc8ebbb5d06815025409d8297db7d455013eb",
+  "exportSourceCommit": "6fc768d96a224da27ce6183dae2823ab12f229af",
+  "testedExecutableSourceCommit": "a2d3ae580d06d7d922b23463167b1d33c014c857",
+  "unchangedExecutableAndContractFiles": 123,
+  "manifestFiles": 213,
+  "zipFiles": 214,
+  "zipCrcVerified": true,
+  "zipFileHashesVerified": true,
+  "cloudRelease": false
+}
