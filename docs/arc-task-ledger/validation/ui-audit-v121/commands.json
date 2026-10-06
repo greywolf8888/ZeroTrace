@@ -1,0 +1,1104 @@
+[
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T10:04:21.903346+00:00",
+    "finishedAt": "2026-10-06T10:05:20.560851+00:00",
+    "exitCode": 0,
+    "logSha256": "ddc92f7213087c749f382a81fb7f8ed1281c8a02fb58db309fa33a6362b25b9a",
+    "summaries": ["9 passed (19.7s)", "9 passed (18.1s)", "4 passed (9.3s)", "4 passed (8.3s)"],
+    "group": "arc-browser-compact"
+  },
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T09:59:28.497907+00:00",
+    "finishedAt": "2026-10-06T10:00:22.139067+00:00",
+    "exitCode": 0,
+    "logSha256": "2d93f9587b7a10a9c478aad0bdcf1ff1531b073788d81b16ba6864d5a7e010d9",
+    "summaries": ["9 passed (15.1s)", "9 passed (15.7s)", "4 passed (10.0s)", "4 passed (9.0s)"],
+    "group": "arc-browser-isolated"
+  },
+  {
+    "command": "node node_modules/@playwright/test/cli.js test --config tests/arc-task-ledger/playwright.config.ts --project arc-desktop",
+    "startedAt": "2026-10-06T09:54:22.637138+00:00",
+    "finishedAt": "2026-10-06T09:56:44.646302+00:00",
+    "exitCode": 1,
+    "logSha256": "e5f145425a74abd3e74dd231e3809a1de83b548aae32ad683148e44b264bd5b6",
+    "summaries": [
+      "TypeError: Cannot read properties of undefined (reading 'flows')",
+      "Error: expect(locator).toContainText(expected) failed",
+      "Error: element(s) not found",
+      "Error: locator.click: Test timeout of 30000ms exceeded.",
+      "Error: expect(locator).toBeVisible() failed",
+      "Error: element(s) not found",
+      "9 passed (2.2m)"
+    ],
+    "group": "browser"
+  },
+  {
+    "command": "node node_modules/@playwright/test/cli.js test --config tests/arc-task-ledger/playwright.config.ts --project arc-mobile",
+    "startedAt": "2026-10-06T09:56:44.658520+00:00",
+    "finishedAt": "2026-10-06T09:57:44.303864+00:00",
+    "exitCode": 1,
+    "logSha256": "a8a24d751e74fe75e1af6c65172eb743e6ae84b47b0a49c8972525a6978c9a7f",
+    "summaries": [
+      "Error: expect(locator).toContainText(expected) failed",
+      "Error: element(s) not found",
+      "Error: locator.click: Test timeout of 30000ms exceeded.",
+      "Error: expect(locator).toBeVisible() failed",
+      "Error: element(s) not found",
+      "10 passed (58.2s)"
+    ],
+    "group": "browser"
+  },
+  {
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-e2e-windows.ps1",
+    "startedAt": "2026-10-06T09:57:44.317469+00:00",
+    "finishedAt": "2026-10-06T09:58:38.441880+00:00",
+    "exitCode": 1,
+    "logSha256": "701361d0d3c836fdd54e0db975301aefdd8b21d2f5eee480d5df6aac2aae0e18",
+    "summaries": [
+      "Error: expect(locator).toContainText(expected) failed",
+      "Error: expect(locator).toContainText(expected) failed",
+      "47 passed (38.7s)"
+    ],
+    "group": "browser"
+  },
+  {
+    "command": "npm run test:visual-golden",
+    "startedAt": "2026-10-06T09:58:38.453783+00:00",
+    "finishedAt": "2026-10-06T09:58:39.328066+00:00",
+    "exitCode": 1,
+    "logSha256": "f80d8821b8f40a2ee01761f860ea2f05327ea040000a513239e68738b3cd928a",
+    "summaries": [],
+    "group": "browser"
+  },
+  {
+    "command": "npm run test:e2e:visual",
+    "startedAt": "2026-10-06T09:58:39.340178+00:00",
+    "finishedAt": "2026-10-06T09:58:48.629313+00:00",
+    "exitCode": 0,
+    "logSha256": "c597ed7bca6a10809775a4f098a48c69fc7b77e00889ddbbf76b955512eaa436",
+    "summaries": ["7 passed (8.0s)"],
+    "group": "browser"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T09:50:45.895480+00:00",
+    "finishedAt": "2026-10-06T09:51:49.236325+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "code"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T09:51:49.609714+00:00",
+    "finishedAt": "2026-10-06T09:53:22.541690+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "code"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T09:53:22.570480+00:00",
+    "finishedAt": "2026-10-06T09:53:30.236901+00:00",
+    "exitCode": 1,
+    "logSha256": "4c70db747c495a93b3574b28932ffb9c9d122a9419ae68cc40b82fe6b81a4971",
+    "summaries": [
+      "apps/arc-task-ledger-api/src/storage.ts(416,5): error TS2375: Type '{ outcome?: EvidenceRequest[\"outcome\"]; plan?: EvidenceRequest[\"plan\"]; id: string; jobId: string; from: string; to: string; head: string; status: string; ruleVersion: string; snapshotRunId: string; }' is not assignable to type 'EvidenceRequest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+    ],
+    "group": "code"
+  },
+  {
+    "command": "npm run build",
+    "startedAt": "2026-10-06T09:53:30.299865+00:00",
+    "finishedAt": "2026-10-06T09:53:43.086251+00:00",
+    "exitCode": 0,
+    "logSha256": "1b34b52e46f4baab21f63c014eb15e320ed03cd5dc6b012cbbceb679ef15ad3c",
+    "summaries": [],
+    "group": "code"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T09:53:43.143275+00:00",
+    "finishedAt": "2026-10-06T09:53:45.174017+00:00",
+    "exitCode": 1,
+    "logSha256": "0eddb20c44b2ce8077b6667132000fb04e1d639f22de4cad5e39ee9cc8e8a6d0",
+    "summaries": [
+      "apps/arc-task-ledger-api/src/storage.ts(416,5): error TS2375: Type '{ outcome?: EvidenceRequest[\"outcome\"]; plan?: EvidenceRequest[\"plan\"]; id: string; jobId: string; from: string; to: string; head: string; status: string; ruleVersion: string; snapshotRunId: string; }' is not assignable to type 'EvidenceRequest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+    ],
+    "group": "code"
+  },
+  {
+    "command": "npm run license:check",
+    "startedAt": "2026-10-06T09:53:45.208333+00:00",
+    "finishedAt": "2026-10-06T09:54:48.685430+00:00",
+    "exitCode": 0,
+    "logSha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e",
+    "summaries": [],
+    "group": "code"
+  },
+  {
+    "command": "npm run architecture:check",
+    "startedAt": "2026-10-06T09:54:48.738421+00:00",
+    "finishedAt": "2026-10-06T09:55:48.607000+00:00",
+    "exitCode": 0,
+    "logSha256": "6b9cd9a759795787be49b3fce425cbabe9e09034c1af6db8f7599ed29ef4cf3a",
+    "summaries": [],
+    "group": "code"
+  },
+  {
+    "command": "npm run ui:chinese:check",
+    "startedAt": "2026-10-06T09:55:48.610896+00:00",
+    "finishedAt": "2026-10-06T09:55:49.665563+00:00",
+    "exitCode": 0,
+    "logSha256": "7724d8bd970dc1787592b4a9c489f12f6eeade48266262c8f0e45bffde6fd5f2",
+    "summaries": [],
+    "group": "code"
+  },
+  {
+    "command": "npm run schema:drift:check",
+    "startedAt": "2026-10-06T09:55:49.676503+00:00",
+    "finishedAt": "2026-10-06T09:55:51.168611+00:00",
+    "exitCode": 0,
+    "logSha256": "825e922aedf976dec50a43ad54e8765a2159fe16dd2218733c74926c0841ae97",
+    "summaries": [],
+    "group": "code"
+  },
+  {
+    "command": "npm audit --json",
+    "startedAt": "2026-10-06T09:55:51.228085+00:00",
+    "finishedAt": "2026-10-06T09:55:55.565219+00:00",
+    "exitCode": 1,
+    "logSha256": "0f2c31962da2672ca813f4625cf37bd3c441d58702517f4bafc5274ea48f7579",
+    "summaries": [
+      "\"title\": \"fastify vulnerable to request validation bypass via skipped boolean false schemas\","
+    ],
+    "group": "code"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:34:33.236463+00:00",
+    "finishedAt": "2026-10-06T10:34:44.221429+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "dependency-patch"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:34:44.249835+00:00",
+    "finishedAt": "2026-10-06T10:34:55.809456+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "dependency-patch"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:34:55.821634+00:00",
+    "finishedAt": "2026-10-06T10:34:59.856740+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "dependency-patch"
+  },
+  {
+    "command": "npm run build",
+    "startedAt": "2026-10-06T10:34:59.868640+00:00",
+    "finishedAt": "2026-10-06T10:35:04.013927+00:00",
+    "exitCode": 0,
+    "logSha256": "f1e26eec09fe98e0dcb6934357f09c7402c563ddf0e3584e17e34128da93e7a3",
+    "summaries": [],
+    "group": "dependency-patch"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:35:04.025753+00:00",
+    "finishedAt": "2026-10-06T10:35:05.447134+00:00",
+    "exitCode": 0,
+    "logSha256": "a86cea76bd36d967cb78a7294a1ccf7f0803456edd0dbe1e0385d3604e78a743",
+    "summaries": [],
+    "group": "dependency-patch"
+  },
+  {
+    "command": "npm run license:check",
+    "startedAt": "2026-10-06T10:35:05.459344+00:00",
+    "finishedAt": "2026-10-06T10:35:06.620611+00:00",
+    "exitCode": 0,
+    "logSha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e",
+    "summaries": [],
+    "group": "dependency-patch"
+  },
+  {
+    "command": "npm audit --json",
+    "startedAt": "2026-10-06T10:35:06.633032+00:00",
+    "finishedAt": "2026-10-06T10:35:09.801748+00:00",
+    "exitCode": 1,
+    "logSha256": "7ac2d37ad57aa1f792cd8789d56a591a99d225478ce700b05eb782b639eae1c8",
+    "summaries": [
+      "\"title\": \"fastify vulnerable to request validation bypass via skipped boolean false schemas\","
+    ],
+    "group": "dependency-patch"
+  },
+  {
+    "command": "node node_modules/vitest/vitest.mjs run packages services apps/api/test/unit scripts/operational-gates.test.ts tests/unit --maxWorkers=2",
+    "startedAt": "2026-10-06T10:39:40.320135+00:00",
+    "finishedAt": "2026-10-06T10:40:35.032091+00:00",
+    "exitCode": 0,
+    "logSha256": "2b9551e2caba5167e971be5271c57839d8d7714aaf434a0e3117fd2fc9d93795",
+    "summaries": ["Test Files  197 passed (197)", "Tests  1050 passed (1050)"],
+    "group": "dependency-root-regression"
+  },
+  {
+    "command": "npm run test:integration",
+    "startedAt": "2026-10-06T10:40:35.058949+00:00",
+    "finishedAt": "2026-10-06T10:40:41.540915+00:00",
+    "exitCode": 0,
+    "logSha256": "79a57af284d8e5173d3b4fd8f975013c0d308721fcf249d4fc39df3a5f21da6e",
+    "summaries": ["Test Files  1 passed | 9 skipped (10)", "Tests  88 passed | 42 skipped (130)"],
+    "group": "dependency-root-regression"
+  },
+  {
+    "command": "npm run test:evals",
+    "startedAt": "2026-10-06T10:40:41.553229+00:00",
+    "finishedAt": "2026-10-06T10:40:43.587367+00:00",
+    "exitCode": 0,
+    "logSha256": "86179d082eb333bf5ccbf4dea35d9102ce7b6fb4a86956413bc07fda5f726dc2",
+    "summaries": ["Test Files  2 passed (2)", "Tests  2 passed (2)"],
+    "group": "dependency-root-regression"
+  },
+  {
+    "command": "npm run test:mcp",
+    "startedAt": "2026-10-06T10:40:43.599366+00:00",
+    "finishedAt": "2026-10-06T10:40:44.654091+00:00",
+    "exitCode": 0,
+    "logSha256": "99d9b6265075e652cc62674934c502927e5647b9ecec620e0f3cd6caa2bf61a8",
+    "summaries": ["Test Files  1 passed (1)", "Tests  5 passed (5)"],
+    "group": "dependency-root-regression"
+  },
+  {
+    "command": "node node_modules/@playwright/test/cli.js test",
+    "startedAt": "2026-10-06T10:40:44.666203+00:00",
+    "finishedAt": "2026-10-06T10:41:16.767036+00:00",
+    "exitCode": 0,
+    "logSha256": "9977623dfcb24fe31635cce37f54e6ef9923d6f68f29bc003d874106d7f15cb1",
+    "summaries": ["49 passed (31.4s)"],
+    "group": "dependency-root-regression"
+  },
+  {
+    "command": "npm run test:e2e:visual",
+    "startedAt": "2026-10-06T10:41:16.778995+00:00",
+    "finishedAt": "2026-10-06T10:41:25.281100+00:00",
+    "exitCode": 0,
+    "logSha256": "2bd3cdbf2d728352e1d9729f00182656892778783bd3a97c681807c96071dc35",
+    "summaries": ["7 passed (7.4s)"],
+    "group": "dependency-root-regression"
+  },
+  {
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-e2e-windows.ps1",
+    "startedAt": "2026-10-06T10:41:25.295060+00:00",
+    "finishedAt": "2026-10-06T10:41:58.065239+00:00",
+    "exitCode": 0,
+    "logSha256": "65e1afce746013f8d2777dae7be6842fdaec278984ee393930a7b5d0ff696932",
+    "summaries": ["49 passed (27.4s)"],
+    "group": "dependency-root-regression"
+  },
+  {
+    "command": "npm run test:visual-golden",
+    "startedAt": "2026-10-06T10:41:58.077186+00:00",
+    "finishedAt": "2026-10-06T10:41:58.861858+00:00",
+    "exitCode": 1,
+    "logSha256": "f80d8821b8f40a2ee01761f860ea2f05327ea040000a513239e68738b3cd928a",
+    "summaries": [],
+    "group": "dependency-root-regression"
+  },
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T10:19:03.381133+00:00",
+    "finishedAt": "2026-10-06T10:19:43.283132+00:00",
+    "exitCode": 1,
+    "logSha256": "b1076f2563ea089d479637aeb25d817c227683a1d335a7f12d1a4b499d8817d0",
+    "summaries": [
+      "9 passed (13.1s)",
+      "9 passed (14.3s)",
+      "Error: expect(received).toBeLessThanOrEqual(expected)",
+      "4 passed (9.5s)"
+    ],
+    "group": "final-arc-browser"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:10:15.177203+00:00",
+    "finishedAt": "2026-10-06T10:10:25.536374+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "final-arc-contract"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:10:25.593361+00:00",
+    "finishedAt": "2026-10-06T10:10:37.410507+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "final-arc-contract"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:10:37.423071+00:00",
+    "finishedAt": "2026-10-06T10:10:40.926036+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "final-arc-contract"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T10:10:40.937806+00:00",
+    "finishedAt": "2026-10-06T10:10:43.424246+00:00",
+    "exitCode": 0,
+    "logSha256": "e6c2d1f5bebdaa4e03a1b2d4ebb2ec10d630965a081cc23df03a7aceee97fc8a",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"],
+    "group": "final-arc-contract"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T10:10:43.469676+00:00",
+    "finishedAt": "2026-10-06T10:10:49.033522+00:00",
+    "exitCode": 1,
+    "logSha256": "a1f7d0bf8c332d22bea689af56d9986d1dc39f51ff41e888ed6238c3df23907a",
+    "summaries": [
+      "AssertionError: expected [ …(2) ] to deeply equal [ Array(1) ]",
+      "Test Files  1 failed (1)",
+      "Tests  1 failed | 30 passed (31)"
+    ],
+    "group": "final-arc-contract"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:10:49.046061+00:00",
+    "finishedAt": "2026-10-06T10:10:50.435978+00:00",
+    "exitCode": 0,
+    "logSha256": "a8d349ad862e202353afd6f81ee8bb969d7845bf2721f7bf610e156c6b581af0",
+    "summaries": [],
+    "group": "final-arc-contract"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:12:51.328874+00:00",
+    "finishedAt": "2026-10-06T10:13:01.322766+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "final-arc-repaired"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:13:01.357018+00:00",
+    "finishedAt": "2026-10-06T10:13:13.522516+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "final-arc-repaired"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:13:13.534675+00:00",
+    "finishedAt": "2026-10-06T10:13:17.088956+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "final-arc-repaired"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T10:13:17.101214+00:00",
+    "finishedAt": "2026-10-06T10:13:19.614476+00:00",
+    "exitCode": 0,
+    "logSha256": "1c64ad4d24db3dcc01510e018267d4237cd8668308e4defac0f4a8bcc9f5e124",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"],
+    "group": "final-arc-repaired"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T10:13:19.626970+00:00",
+    "finishedAt": "2026-10-06T10:13:25.278464+00:00",
+    "exitCode": 1,
+    "logSha256": "0fecbd22d6de2a7338cc35892d2a295557709ed90c4658ea07e4f6a631fe152f",
+    "summaries": [
+      "AssertionError: expected '{\"gas\":[],\"job\":{\"jobId\":\"8\",\"jobKey\"…' not to contain 'xxxx'",
+      "Test Files  1 failed (1)",
+      "Tests  1 failed | 30 passed (31)"
+    ],
+    "group": "final-arc-repaired"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:13:25.290723+00:00",
+    "finishedAt": "2026-10-06T10:13:26.714696+00:00",
+    "exitCode": 0,
+    "logSha256": "f80fbe34d58d6e530b75b1c5cc2ac013e990debdd6b37a70be28a440bb20f347",
+    "summaries": [],
+    "group": "final-arc-repaired"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:14:56.039420+00:00",
+    "finishedAt": "2026-10-06T10:15:08.125828+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "final-arc-verified"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:15:08.158231+00:00",
+    "finishedAt": "2026-10-06T10:15:22.361249+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "final-arc-verified"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:15:22.373904+00:00",
+    "finishedAt": "2026-10-06T10:15:27.793171+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "final-arc-verified"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T10:15:27.805328+00:00",
+    "finishedAt": "2026-10-06T10:15:30.731545+00:00",
+    "exitCode": 0,
+    "logSha256": "35a11266b56b99b0f51a099827444d30b780de73a3cca75f8f3d45bcecbf3dad",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"],
+    "group": "final-arc-verified"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T10:15:30.743468+00:00",
+    "finishedAt": "2026-10-06T10:15:36.920591+00:00",
+    "exitCode": 0,
+    "logSha256": "40027cf67af0b238f3dde25fc9d05e292e61563315adeb05a255c6b8b6a99aa5",
+    "summaries": ["Test Files  1 passed (1)", "Tests  31 passed (31)"],
+    "group": "final-arc-verified"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:15:36.932763+00:00",
+    "finishedAt": "2026-10-06T10:15:38.350266+00:00",
+    "exitCode": 0,
+    "logSha256": "0412022158b634fcb64856deecd8cada9fc13460c043739c8eb2ce2cd90f5741",
+    "summaries": [],
+    "group": "final-arc-verified"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:01:21.153897+00:00",
+    "finishedAt": "2026-10-06T10:01:37.670254+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "final-code"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:01:37.765402+00:00",
+    "finishedAt": "2026-10-06T10:01:53.009754+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "final-code"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:01:53.039484+00:00",
+    "finishedAt": "2026-10-06T10:01:58.802609+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "final-code"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:01:58.814396+00:00",
+    "finishedAt": "2026-10-06T10:02:00.302660+00:00",
+    "exitCode": 0,
+    "logSha256": "fd0bdd547008f36dd9a3c32180d0e53f5a1a5ba67208523b8281c18e804d4f82",
+    "summaries": [],
+    "group": "final-code"
+  },
+  {
+    "command": "npm ci --ignore-scripts --no-audit --no-fund",
+    "startedAt": "2026-10-06T10:30:37.513441+00:00",
+    "finishedAt": "2026-10-06T10:30:56.413422+00:00",
+    "exitCode": 0,
+    "logSha256": "fd980bc2642c240deac487a3793eab77216e0e0025637030d6aa56dce3dba8c9",
+    "summaries": [],
+    "group": "independent"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:30:56.442804+00:00",
+    "finishedAt": "2026-10-06T10:31:10.502010+00:00",
+    "exitCode": 0,
+    "logSha256": "9bb79c220e12f354b825c779b7cd550d55b7e580a66dba7fd2474461483a8252",
+    "summaries": [],
+    "group": "independent"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T10:31:10.525291+00:00",
+    "finishedAt": "2026-10-06T10:31:20.223809+00:00",
+    "exitCode": 0,
+    "logSha256": "0a191692aab60880ee70545559df7ecde5d518c6ebdab34d4d90f93afd677cbb",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"],
+    "group": "independent"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T10:31:20.235921+00:00",
+    "finishedAt": "2026-10-06T10:31:27.679825+00:00",
+    "exitCode": 0,
+    "logSha256": "d3196c0ff34f1f808c100bf5f92ffbf777dbd66b49db5dbc4bc30dfa0befd89a",
+    "summaries": ["Test Files  1 passed (1)", "Tests  33 passed (33)"],
+    "group": "independent"
+  },
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T10:31:27.692233+00:00",
+    "finishedAt": "2026-10-06T10:32:10.081158+00:00",
+    "exitCode": 0,
+    "logSha256": "6c43a55b75f18204a46fdbcce1346a482c609877142d40149fbb33f5bd8fbcd0",
+    "summaries": ["9 passed (13.3s)", "9 passed (11.2s)", "5 passed (7.9s)", "5 passed (7.0s)"],
+    "group": "independent"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:32:10.093707+00:00",
+    "finishedAt": "2026-10-06T10:32:29.910090+00:00",
+    "exitCode": 0,
+    "logSha256": "98873c6ceffac64eb7d34f31d1723cc1c10da24d11253b9a55faceb2228fda6a",
+    "summaries": [],
+    "group": "independent"
+  },
+  {
+    "command": "npm run license:check",
+    "startedAt": "2026-10-06T10:32:29.922989+00:00",
+    "finishedAt": "2026-10-06T10:32:33.588094+00:00",
+    "exitCode": 0,
+    "logSha256": "b43a3c4d7f81173b00b68ef3dd5bf9eb62d70db09da43ded5db09fce71a28ce8",
+    "summaries": [],
+    "group": "independent"
+  },
+  {
+    "command": "npm audit --json",
+    "startedAt": "2026-10-06T10:32:33.600680+00:00",
+    "finishedAt": "2026-10-06T10:32:35.757789+00:00",
+    "exitCode": 1,
+    "logSha256": "4b1ab105f167f94ff2d5eb660fe9293df7ff46e8d5b5496a654093b91489eccc",
+    "summaries": [],
+    "group": "independent"
+  },
+  {
+    "command": "npm ci --ignore-scripts --no-audit --no-fund",
+    "startedAt": "2026-10-06T10:38:34.294892+00:00",
+    "finishedAt": "2026-10-06T10:38:50.472034+00:00",
+    "exitCode": 0,
+    "logSha256": "4f672ec864b08107437e7c6dd08ed4ad9feb420fe88235733457030edcebebae",
+    "summaries": [],
+    "group": "independent-safe"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:38:50.511070+00:00",
+    "finishedAt": "2026-10-06T10:39:01.892896+00:00",
+    "exitCode": 0,
+    "logSha256": "533459ca490657954a787e9a9bd2a5ab1f5dc0420dd0facb96d9dc3fd212ffac",
+    "summaries": [],
+    "group": "independent-safe"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T10:39:01.905667+00:00",
+    "finishedAt": "2026-10-06T10:39:09.392580+00:00",
+    "exitCode": 0,
+    "logSha256": "28fae6cd49a3b80dbe4931a936b2cb83e6d50bb11085202235398dcb466c23af",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"],
+    "group": "independent-safe"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T10:39:09.405395+00:00",
+    "finishedAt": "2026-10-06T10:39:16.182162+00:00",
+    "exitCode": 0,
+    "logSha256": "2ba507d54107e00cdd88579b3886c9656254666067f9b6ada0fab6210fa91f73",
+    "summaries": ["Test Files  1 passed (1)", "Tests  34 passed (34)"],
+    "group": "independent-safe"
+  },
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T10:39:16.194313+00:00",
+    "finishedAt": "2026-10-06T10:39:58.092054+00:00",
+    "exitCode": 0,
+    "logSha256": "613fb68a141080a1ebd7027ec032399df0e49829358fe15ec1dd00704a22c47b",
+    "summaries": ["9 passed (12.0s)", "9 passed (11.1s)", "5 passed (8.4s)", "5 passed (7.5s)"],
+    "group": "independent-safe"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:39:58.104184+00:00",
+    "finishedAt": "2026-10-06T10:40:17.229318+00:00",
+    "exitCode": 0,
+    "logSha256": "98873c6ceffac64eb7d34f31d1723cc1c10da24d11253b9a55faceb2228fda6a",
+    "summaries": [],
+    "group": "independent-safe"
+  },
+  {
+    "command": "npm run license:check",
+    "startedAt": "2026-10-06T10:40:17.241349+00:00",
+    "finishedAt": "2026-10-06T10:40:21.073660+00:00",
+    "exitCode": 0,
+    "logSha256": "b43a3c4d7f81173b00b68ef3dd5bf9eb62d70db09da43ded5db09fce71a28ce8",
+    "summaries": [],
+    "group": "independent-safe"
+  },
+  {
+    "command": "npm audit --json",
+    "startedAt": "2026-10-06T10:40:21.085830+00:00",
+    "finishedAt": "2026-10-06T10:40:22.743633+00:00",
+    "exitCode": 0,
+    "logSha256": "71bb55dc3bb3b98fc73d60e98d7711e69fa498e998239863bdd9c4b5c8b8eca1",
+    "summaries": [],
+    "group": "independent-safe"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:36:43.410832+00:00",
+    "finishedAt": "2026-10-06T10:36:54.074639+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "queue-baseline-contract"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:36:54.098117+00:00",
+    "finishedAt": "2026-10-06T10:37:06.126375+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "queue-baseline-contract"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:37:06.138907+00:00",
+    "finishedAt": "2026-10-06T10:37:10.514849+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "queue-baseline-contract"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T10:37:10.526903+00:00",
+    "finishedAt": "2026-10-06T10:37:13.402952+00:00",
+    "exitCode": 0,
+    "logSha256": "9106154e93b163a717b9a40f025a1fcddfa99f5ca79aa7e8eb73804661a2bea4",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"],
+    "group": "queue-baseline-contract"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T10:37:13.415341+00:00",
+    "finishedAt": "2026-10-06T10:37:19.362416+00:00",
+    "exitCode": 0,
+    "logSha256": "43fed15c0c86ba9e4c2b0863c10065a4342ad828bcaba3dc39a154c2c9c55518",
+    "summaries": ["Test Files  1 passed (1)", "Tests  34 passed (34)"],
+    "group": "queue-baseline-contract"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:37:19.374158+00:00",
+    "finishedAt": "2026-10-06T10:37:20.740677+00:00",
+    "exitCode": 0,
+    "logSha256": "cd51450a600a6eb26eaae975c38965fd8671115b840ed1c20e0049fc029e3e7d",
+    "summaries": [],
+    "group": "queue-baseline-contract"
+  },
+  {
+    "command": "node node_modules/@playwright/test/cli.js test",
+    "startedAt": "2026-10-06T10:01:10.631150+00:00",
+    "finishedAt": "2026-10-06T10:01:47.185622+00:00",
+    "exitCode": 0,
+    "logSha256": "b22d2387e671cd51e4863cadcc5d5a103e559db3488acc11b63b27c1ee21d796",
+    "summaries": ["49 passed (35.7s)"],
+    "group": "root-browser-clean"
+  },
+  {
+    "command": "cargo fmt --check",
+    "startedAt": "2026-10-06T09:51:14.377257+00:00",
+    "finishedAt": "2026-10-06T09:51:17.350181+00:00",
+    "exitCode": 0,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "summaries": [],
+    "group": "rust"
+  },
+  {
+    "command": "cargo clippy --workspace -j 2 -- -D warnings",
+    "startedAt": "2026-10-06T09:51:17.823753+00:00",
+    "finishedAt": "2026-10-06T09:53:16.679872+00:00",
+    "exitCode": 0,
+    "logSha256": "49ae4bc502630ba9084424b03d37462e985085d3dbb7ce9454e7042beeb6bcad",
+    "summaries": [],
+    "group": "rust"
+  },
+  {
+    "command": "cargo test --workspace -j 2",
+    "startedAt": "2026-10-06T09:53:16.692369+00:00",
+    "finishedAt": "2026-10-06T09:56:29.365615+00:00",
+    "exitCode": 0,
+    "logSha256": "6e4ab360889d813d6f9750091a4469d980d8bcb15d97772411880ffcba510edc",
+    "summaries": [
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ],
+    "group": "rust"
+  },
+  {
+    "command": "npm test",
+    "startedAt": "2026-10-06T09:51:03.893809+00:00",
+    "finishedAt": "2026-10-06T09:51:51.828043+00:00",
+    "exitCode": 1,
+    "logSha256": "efba1f5bb730666a149ecd80c3dd879017173f8ad63c0be9b74c6c23efedd479",
+    "summaries": [
+      "Error: Test timed out in 15000ms.",
+      "Error: Test timed out in 15000ms.",
+      "Error: Test timed out in 15000ms.",
+      "Test Files  3 failed | 194 passed (197)",
+      "Tests  3 failed | 1047 passed (1050)"
+    ],
+    "group": "tests"
+  },
+  {
+    "command": "node node_modules/vitest/vitest.mjs run packages services apps/api/test/unit scripts/operational-gates.test.ts tests/unit --maxWorkers=2",
+    "startedAt": "2026-10-06T09:54:32.282174+00:00",
+    "finishedAt": "2026-10-06T09:55:33.581945+00:00",
+    "exitCode": 0,
+    "logSha256": "946b9348c49173fddce6eb655005d6c2dac399a39e814ec04579cc365f636af6",
+    "summaries": ["Test Files  197 passed (197)", "Tests  1050 passed (1050)"],
+    "group": "tests-resource-bounded"
+  },
+  {
+    "command": "npm run test:integration",
+    "startedAt": "2026-10-06T09:55:33.885003+00:00",
+    "finishedAt": "2026-10-06T09:55:41.915471+00:00",
+    "exitCode": 0,
+    "logSha256": "ed2a1d6a2c4946dd556e8d73d114f540a1f38c568efe2e09dd1cf28b5501218c",
+    "summaries": ["Test Files  1 passed | 9 skipped (10)", "Tests  88 passed | 42 skipped (130)"],
+    "group": "tests-resource-bounded"
+  },
+  {
+    "command": "npm run test:evals",
+    "startedAt": "2026-10-06T09:55:41.956761+00:00",
+    "finishedAt": "2026-10-06T09:55:48.190367+00:00",
+    "exitCode": 0,
+    "logSha256": "32844894233bf437fb15a9a431867fca3efc55c271affbf7362b6f792ff1625a",
+    "summaries": ["Test Files  2 passed (2)", "Tests  2 passed (2)"],
+    "group": "tests-resource-bounded"
+  },
+  {
+    "command": "npm run test:mcp",
+    "startedAt": "2026-10-06T09:55:48.195548+00:00",
+    "finishedAt": "2026-10-06T09:55:49.859915+00:00",
+    "exitCode": 0,
+    "logSha256": "6dc5203611d1e76538a7d73217126a4c6609e849713bbd0618634cf289ff7655",
+    "summaries": ["Test Files  1 passed (1)", "Tests  5 passed (5)"],
+    "group": "tests-resource-bounded"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T09:55:49.907574+00:00",
+    "finishedAt": "2026-10-06T09:55:53.852057+00:00",
+    "exitCode": 1,
+    "logSha256": "58af7ab443fc22eb2b5a6757fbcccc11f2992ed4b9998ad80fa05b7d18e23cf7",
+    "summaries": [
+      "AssertionError: [{\"instancePath\":\"/result/schemaVersion\",\"schemaPath\":\"#/properties/schemaVersion/const\",\"keyword\":\"const\",\"params\":{\"allowedValue\":\"atl-settlement-result-v1\"},\"message\":\"must be equal to constant\"}]: expected false to be true // Object.is equality",
+      "Test Files  1 failed | 12 passed (13)",
+      "Tests  1 failed | 92 passed (93)"
+    ],
+    "group": "tests-resource-bounded"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T09:55:53.871767+00:00",
+    "finishedAt": "2026-10-06T09:56:00.327599+00:00",
+    "exitCode": 0,
+    "logSha256": "7f567554874f76b9e569a11e7971285343cefb7c7c626de53abece4641444eaa",
+    "summaries": ["Test Files  1 passed (1)", "Tests  31 passed (31)"],
+    "group": "tests-resource-bounded"
+  },
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T10:22:35.652439+00:00",
+    "finishedAt": "2026-10-06T10:23:23.211904+00:00",
+    "exitCode": 0,
+    "logSha256": "c49f0e5b2d5d5821d61600e88241f763e184f69bfc29e8c5f26de8c0ddb2fcdb",
+    "summaries": ["9 passed (12.8s)", "9 passed (13.4s)", "5 passed (9.4s)", "5 passed (9.1s)"],
+    "group": "v121-browser-final"
+  },
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T10:19:54.868371+00:00",
+    "finishedAt": "2026-10-06T10:20:36.308118+00:00",
+    "exitCode": 1,
+    "logSha256": "5eba19a0c40ae361d87f3d603b63f0fa85b8eb54de1a40f6f6c554520ca428ed",
+    "summaries": [
+      "9 passed (14.1s)",
+      "9 passed (14.4s)",
+      "Error: expect(received).toBeLessThanOrEqual(expected)",
+      "4 passed (9.8s)"
+    ],
+    "group": "v121-browser-repaired"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:16:13.703271+00:00",
+    "finishedAt": "2026-10-06T10:16:26.999805+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "v121-contract"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:16:27.049187+00:00",
+    "finishedAt": "2026-10-06T10:16:40.821400+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "v121-contract"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:16:40.853998+00:00",
+    "finishedAt": "2026-10-06T10:16:48.721214+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "v121-contract"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T10:16:48.733434+00:00",
+    "finishedAt": "2026-10-06T10:16:51.526602+00:00",
+    "exitCode": 0,
+    "logSha256": "9905728ca8d62d6530310ca70acdbd9564412f54306c7dd81fe1b907802c8ff9",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"],
+    "group": "v121-contract"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T10:16:51.538762+00:00",
+    "finishedAt": "2026-10-06T10:16:57.801656+00:00",
+    "exitCode": 0,
+    "logSha256": "262d5ddb6c9929072e4b32b483b5a4a4a38385db492e04c365ee3beeb185abae",
+    "summaries": ["Test Files  1 passed (1)", "Tests  31 passed (31)"],
+    "group": "v121-contract"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:16:57.813463+00:00",
+    "finishedAt": "2026-10-06T10:16:59.325192+00:00",
+    "exitCode": 0,
+    "logSha256": "20bad9b067acde8d2cc67e6fa7c1b528a4fe04daff375ca07ce3461f4bfcab8a",
+    "summaries": [],
+    "group": "v121-contract"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:17:51.983265+00:00",
+    "finishedAt": "2026-10-06T10:18:03.298964+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "v121-final-contract"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:18:03.326964+00:00",
+    "finishedAt": "2026-10-06T10:18:16.554051+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "v121-final-contract"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:18:16.566294+00:00",
+    "finishedAt": "2026-10-06T10:18:21.920526+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "v121-final-contract"
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T10:18:21.932506+00:00",
+    "finishedAt": "2026-10-06T10:18:25.073706+00:00",
+    "exitCode": 0,
+    "logSha256": "7890606d0d89a62ac9356c678c26f7d4e2d3dfe8422e50f7d4ad030d6a49c3f7",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"],
+    "group": "v121-final-contract"
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T10:18:25.086140+00:00",
+    "finishedAt": "2026-10-06T10:18:31.672193+00:00",
+    "exitCode": 0,
+    "logSha256": "5f4f3d11a4d2977007b23c54c32a4b3559ef62a5ee88e37aaa712ee84abd28b8",
+    "summaries": ["Test Files  1 passed (1)", "Tests  33 passed (33)"],
+    "group": "v121-final-contract"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:18:31.684257+00:00",
+    "finishedAt": "2026-10-06T10:18:33.306210+00:00",
+    "exitCode": 0,
+    "logSha256": "1eb392abb8d1c0722baffa4b091577a1d353edd370ef917c18c1edfac5d6819c",
+    "summaries": [],
+    "group": "v121-final-contract"
+  },
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T10:23:39.555667+00:00",
+    "finishedAt": "2026-10-06T10:23:49.787274+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T10:23:49.819662+00:00",
+    "finishedAt": "2026-10-06T10:24:01.475781+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T10:24:01.487978+00:00",
+    "finishedAt": "2026-10-06T10:24:05.819997+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "npm run build",
+    "startedAt": "2026-10-06T10:24:05.831866+00:00",
+    "finishedAt": "2026-10-06T10:24:10.082322+00:00",
+    "exitCode": 0,
+    "logSha256": "dc4cb2efd1b189dc6c452d3dc4a14ae81b91caf8ed23978af6344f8fa3864f49",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T10:24:10.094761+00:00",
+    "finishedAt": "2026-10-06T10:24:11.434792+00:00",
+    "exitCode": 0,
+    "logSha256": "24e0ea45e114f1919f69875c221f63bb3a69c5eccb07a356bdcc3c0c7d72cdf5",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "npm run license:check",
+    "startedAt": "2026-10-06T10:24:11.446805+00:00",
+    "finishedAt": "2026-10-06T10:24:12.671043+00:00",
+    "exitCode": 0,
+    "logSha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "npm run architecture:check",
+    "startedAt": "2026-10-06T10:24:12.682906+00:00",
+    "finishedAt": "2026-10-06T10:24:13.644719+00:00",
+    "exitCode": 0,
+    "logSha256": "6b9cd9a759795787be49b3fce425cbabe9e09034c1af6db8f7599ed29ef4cf3a",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "npm run ui:chinese:check",
+    "startedAt": "2026-10-06T10:24:13.656631+00:00",
+    "finishedAt": "2026-10-06T10:24:14.319532+00:00",
+    "exitCode": 0,
+    "logSha256": "7724d8bd970dc1787592b4a9c489f12f6eeade48266262c8f0e45bffde6fd5f2",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "npm run schema:drift:check",
+    "startedAt": "2026-10-06T10:24:14.331273+00:00",
+    "finishedAt": "2026-10-06T10:24:15.012644+00:00",
+    "exitCode": 0,
+    "logSha256": "825e922aedf976dec50a43ad54e8765a2159fe16dd2218733c74926c0841ae97",
+    "summaries": [],
+    "group": "v121-shipping-code"
+  },
+  {
+    "command": "node node_modules/@playwright/test/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts --project arc-desktop",
+    "startedAt": "2026-10-06T10:24:39.031246+00:00",
+    "finishedAt": "2026-10-06T10:24:48.925769+00:00",
+    "exitCode": 0,
+    "logSha256": "1142f8bbaf63b5d971635619f9768c004aebfea79f5513f80b2b950a783d3b40",
+    "summaries": ["5 passed (9.2s)"],
+    "group": "v121-workbench-final"
+  },
+  {
+    "command": "node node_modules/@playwright/test/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts --project arc-mobile",
+    "startedAt": "2026-10-06T10:24:48.995007+00:00",
+    "finishedAt": "2026-10-06T10:24:58.084074+00:00",
+    "exitCode": 0,
+    "logSha256": "8cc7d8f8e17b976ead945b4d16c656caedb8db2697ab323d02f43ee48840c491",
+    "summaries": ["5 passed (8.3s)"],
+    "group": "v121-workbench-final"
+  },
+  {
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-e2e-windows.ps1",
+    "startedAt": "2026-10-06T10:04:13.730725+00:00",
+    "finishedAt": "2026-10-06T10:04:57.377621+00:00",
+    "exitCode": 0,
+    "logSha256": "8d6717f4f07bada5be4a3062816bfc95cb6b76113be1279cdb7e56483d4d1cb7",
+    "summaries": ["49 passed (38.1s)"],
+    "group": "windows-isolated"
+  }
+]

@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "atl-ui-audit-source-map-v1",
+  "sourceCommit": "1b3d13555f5c24546597851448a21d0dfe52b9c8",
+  "baseCommit": "06bc0f38d300468aed6dace32049b8d5e60a8e02",
+  "createdAt": "2026-10-06T10:27:05.705229+00:00",
+  "attachmentSha256": "5b914f5b0f3adb635fe172925fcd2725a0a432a52727f2a53dc76d42cd3820ba",
+  "files": [
+    {
+      "path": "apps/arc-task-ledger-api/package.json",
+      "sha256": "8aa13a856c7cbdbfcccd5ebbe5fe95477096b42fc37ab3752870170f023824b3"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/app.ts",
+      "sha256": "08c8e646ce0d631dd2eb606caf4e4846c00614780ec0dbf6ce021116e716e7c4"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/storage.ts",
+      "sha256": "b486f459bc2655b61c3b36501214f92de9cdaf56a4782e19e2f48578b2419579"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/package.json",
+      "sha256": "b9cb24bf128710674c13ad43983a93f91500ada9242920e56967d3c80f2b365a"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/SettlementCard.tsx",
+      "sha256": "01cbe5503b4956bef3b20ed76ae08be2df0629956ceb03a692345db1a29a4011"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/SettlementWorkbench.tsx",
+      "sha256": "6c2ea27c9417fa7c21f70a48981fc75f7563ef162c0f074882302eac8ae1927e"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/main.tsx",
+      "sha256": "aa236872212c721d2200496b02e8198c38bdcb6c65b295b66815646d4c359a05"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/model.ts",
+      "sha256": "e77f28b9fe6d934a63702bdd591097e8c94bf376d47c86f2d8b854ab6aca9c9a"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/style.css",
+      "sha256": "911d496febe360ac7025370befd728adb3891092319edea8f7c1b2091c97da6d"
+    },
+    {
+      "path": "docs/arc-task-ledger/openapi.json",
+      "sha256": "48be2d96db39ff7c47093b9e1791504b029d5e989f36ef0db58cffae22ddbc4c"
+    },
+    {
+      "path": "examples/arc-task-ledger/README.zh-CN.md",
+      "sha256": "070c92cd9063b3f2c62a9e021f21d30be806f22dbd9df46ec12702c863bd7574"
+    },
+    {
+      "path": "examples/arc-task-ledger/consumer.ts",
+      "sha256": "0a80d8dbbfa68b532342c48c29233b099524a238a5e6a62d7ff08ff3d11c040c"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "933ed4944328443026e2de3eea3c627af42a9ee6d8987956f755e3350b2ffa83"
+    },
+    {
+      "path": "package.json",
+      "sha256": "6f9bb78905e630c9da534bd0232cc7eb7915f5bb1efc37ce2a81d486a88ae615"
+    },
+    {
+      "path": "packages/arc-task-ledger/package.json",
+      "sha256": "ae712b65478342222905b31df41a562f6d64979611dbeb865960b1e8ad49652e"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/enrichment.ts",
+      "sha256": "072bf69720f05d681b84aa6f30f168e59b83d26ee122dcde2d16830ebeb344e3"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/index.ts",
+      "sha256": "32a3d548c6573b3670fb8c227a83af10374c729d9b088d7c0cf0f91c491c3b51"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/result.ts",
+      "sha256": "6020b64d7f5326a69f31417a04f51aca39bfbb749ebfd4db64d737c0dcb0335f"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/settlement.ts",
+      "sha256": "dccdd29d9a34b80be02cceaddaa036022b21bb7c1519656920b38b5d826019f7"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/storage.ts",
+      "sha256": "3e5a858eda0a33a0b558c95703fa07765908feca666ef312ff86100c92d37483"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/types.ts",
+      "sha256": "dd6a9ad164a0be06e9ea484a4c516c340d85fe88268106d676c983bc5e695362"
+    },
+    {
+      "path": "scripts/arc-task-ledger-export.mjs",
+      "sha256": "5651b093fb34674d1058956705a5f98f18dc4112bda0d49d9bf337f555196d81"
+    },
+    {
+      "path": "scripts/test-e2e-windows.ps1",
+      "sha256": "9ac305b17f3ad175cb83fa65a05235db67bb016c4c33c48005d2eb7f3eb43585"
+    },
+    {
+      "path": "tests/arc-task-ledger/e2e/product.spec.ts",
+      "sha256": "41b00c86e07efec34e3b478ca1b5e962bd5b92463ebc60321771f74131407c6b"
+    },
+    {
+      "path": "tests/arc-task-ledger/e2e/server.ts",
+      "sha256": "bb6ac592923caf541720c3ce32814663b995599f102ac29a4f56bbbd53819309"
+    },
+    {
+      "path": "tests/arc-task-ledger/e2e/workbench.spec.ts",
+      "sha256": "483f581029f7d7553fc39c51d8549cd3c3cf154535f21517ddf8d978615bcf78"
+    },
+    {
+      "path": "tests/arc-task-ledger/integration/database.test.ts",
+      "sha256": "9b11a302191fc6c18c4ffe9e4705ee8aec5597337e3aaa3caddcc98927a91e40"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/enrichment.test.ts",
+      "sha256": "262c143c8d429605c412241cb63466eeff463e0ec52aaf12ac405777054d6cef"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/result.test.ts",
+      "sha256": "197bf87d00e94ec01678cbd7835b6b9495031e397c39f44edfdaa52e65dc42b9"
+    },
+    {
+      "path": "tests/e2e/isolated-api.mjs",
+      "sha256": "82fd4d5722a5f1a9b85ac11eeb2fa3f1c0d25ce723a66b91b01aa7f5defd5812"
+    }
+  ],
+  "modelVersion": "atl-v1.2.1",
+  "resultSchema": "atl-settlement-result-v2",
+  "publicDeploymentUpdated": false,
+  "humanVisualApproval": false
+}

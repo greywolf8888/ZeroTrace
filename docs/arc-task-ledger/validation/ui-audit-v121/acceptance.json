@@ -1,0 +1,48 @@
+{
+  "status": "LOCAL_CANDIDATE_REPRODUCIBLE_WITH_LIMITATIONS",
+  "sourceCommit": "a2d3ae580d06d7d922b23463167b1d33c014c857",
+  "arcUnit": 93,
+  "arcPostgreSQL": 34,
+  "arcBrowser": 28,
+  "workbenchFinalRecheck": 10,
+  "rootUnit": 1050,
+  "rootIntegrationPassed": 88,
+  "rootIntegrationSkipped": 42,
+  "rootEval": 2,
+  "rootMcp": 5,
+  "rust": 52,
+  "rootBrowser": 49,
+  "windowsBrowser": 49,
+  "visualBrowser": 7,
+  "rootDependencyAudit": {
+    "status": "FAIL",
+    "high": 4,
+    "moderate": 5,
+    "total": 9
+  },
+  "visualFingerprint": {
+    "status": "FAIL",
+    "reason": "旧基线源码指纹过期，保留旧证据"
+  },
+  "mainnet": {
+    "status": "BOUNDED_PASS",
+    "tasks": 16,
+    "block": "24544735",
+    "snapshotRunId": "run_57e5b4386432693d068b7321124c74a4",
+    "rareCases": "NOT_OBSERVED",
+    "coverage": "PARTIAL",
+    "formalForensic": false
+  },
+  "independentCandidate": "PASS",
+  "cloudRelease": "NOT_EXECUTED",
+  "humanVisualApproval": false,
+  "upstreamAdoption": false,
+  "independentDependencyAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  }
+}
