@@ -19,7 +19,17 @@ describe('Northflank 专用数据库权限', () => {
         if (sql.includes('current_database')) return { rows: [{ name: 'test_db' }] };
         if (sql.includes('has_table_privilege'))
           return {
-            rows: [{ request_insert: true, projection_insert: false, evidence_insert: false }],
+            rows: [
+              {
+                request_insert: true,
+                projection_insert: false,
+                evidence_insert: false,
+                verifier_insert: true,
+                verifier_update: false,
+                verifier_delete: false,
+                verifier_input_update: false,
+              },
+            ],
           };
         return { rows: [] };
       }),
@@ -35,6 +45,7 @@ describe('Northflank 专用数据库权限', () => {
         .filter((sql) => sql.includes('GRANT SELECT,INSERT')),
     ).toEqual([
       'GRANT SELECT,INSERT ON arc_task_ledger_v1.evidence_requests TO atl_evidence_requester',
+      'GRANT SELECT,INSERT ON arc_task_ledger_v1.zasv_requests,arc_task_ledger_v1.zasv_reports,arc_task_ledger_v1.zasv_bundles,arc_task_ledger_v1.zasv_ownership,arc_task_ledger_v1.zasv_publications TO atl_evidence_requester',
     ]);
   });
   it('角色与密钥异常时不执行 SQL', async () => {

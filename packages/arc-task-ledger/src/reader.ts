@@ -12,6 +12,7 @@ import {
 import { ABI, DEPLOYMENT, type configFromEnv } from './config.js';
 import { assertMeta, rawEvidence } from './protocol.js';
 import { createPublicDns } from './public-dns.js';
+import { rpcPermit, rpcSpacing } from './rpc-governor.js';
 import {
   LedgerError,
   hex,
@@ -76,12 +77,37 @@ export class ArcReader {
   readonly logWindowLimit: bigint;
   requests = 0;
   responseBytes = 0;
+  attempts = 0;
+  private wireBytes = 0;
+  private readonly budget:
+    { maxRequests: number; maxResponseBytes: number; signal: AbortSignal } | undefined;
+  private readonly testTransport: boolean;
   constructor(
     config: Pick<ReturnType<typeof configFromEnv>, 'rpcUrl' | 'rpcHosts' | 'providerAlias'> & {
       dnsMode?: 'system' | 'google-doh';
     },
     testTransport?: JsonRpcTransport,
+    budget?: { maxRequests?: number; maxResponseBytes?: number; deadlineMs?: number },
   ) {
+    this.testTransport = !!testTransport;
+    if (budget) {
+      const maxRequests = budget.maxRequests ?? 24,
+        maxResponseBytes = budget.maxResponseBytes ?? 8388608,
+        deadlineMs = budget.deadlineMs ?? 45000;
+      if (
+        !Number.isInteger(maxRequests) ||
+        maxRequests < 1 ||
+        maxRequests > 24 ||
+        !Number.isInteger(maxResponseBytes) ||
+        maxResponseBytes < 1 ||
+        maxResponseBytes > 8388608 ||
+        !Number.isInteger(deadlineMs) ||
+        deadlineMs < 1 ||
+        deadlineMs > 45000
+      )
+        throw new LedgerError('INVALID_READ_BUDGET', '读取预算不得超过既有工程上限。', 400);
+      this.budget = { maxRequests, maxResponseBytes, signal: AbortSignal.timeout(deadlineMs) };
+    }
     const source = DEPLOYMENT.rpcCandidates.find(
       (candidate) => new URL(candidate.url).origin === new URL(config.rpcUrl).origin,
     );
@@ -130,14 +156,24 @@ export class ArcReader {
     });
     const dispatcher = this.dispatcher;
     const secureFetch: typeof fetch = async (input, init) => {
+      await rpcSpacing(init?.signal ?? undefined);
+      this.attempts++;
+      if (this.budget && this.attempts > this.budget.maxRequests)
+        throw new LedgerError('RPC_REQUEST_LIMIT', '本次读取达到RPC次数上限。');
       const response = await pinnedFetch(input.toString(), { ...init, dispatcher } as Parameters<
         typeof pinnedFetch
       >[1]);
       let bytes = 0;
+      const countBytes = (count: number) => {
+        this.wireBytes += count;
+        if (this.budget && this.wireBytes > this.budget.maxResponseBytes)
+          throw new LedgerError('RESPONSE_SIZE_LIMIT', '本次响应累计达到上限。');
+      };
       const body = (response.body as unknown as ReadableStream<Uint8Array> | null)?.pipeThrough(
         new TransformStream<Uint8Array, Uint8Array>({
           transform(chunk, controller) {
             bytes += chunk.byteLength;
+            countBytes(chunk.byteLength);
             if (bytes > 4000000)
               throw new LedgerError('RESPONSE_SIZE_LIMIT', '链响应超过读取上限。');
             controller.enqueue(chunk);
@@ -164,12 +200,30 @@ export class ArcReader {
       fetchImplementation: secureFetch,
     });
   }
+  get receivedBytes(): number {
+    return this.testTransport ? this.responseBytes : this.wireBytes;
+  }
   async read<T>(method: string, params: readonly unknown[] = []): Promise<T> {
     assertReadRequest(method, params);
+    if (this.budget && (this.budget.signal.aborted || this.requests >= this.budget.maxRequests))
+      throw new LedgerError(
+        this.budget.signal.aborted ? 'READ_DEADLINE' : 'RPC_REQUEST_LIMIT',
+        '有界读取期限或次数达到上限。',
+      );
     this.requests++;
-    const result = await this.transport.request<T>(method, params, { cacheMode: 'bypass' });
-    this.responseBytes += Buffer.byteLength(JSON.stringify(result));
-    return result;
+    const release = this.testTransport ? () => undefined : await rpcPermit(this.budget?.signal);
+    try {
+      const result = await this.transport.request<T>(method, params, {
+        cacheMode: 'bypass',
+        ...(this.budget ? { signal: this.budget.signal } : {}),
+      });
+      this.responseBytes += Buffer.byteLength(JSON.stringify(result));
+      if (this.budget && this.responseBytes > this.budget.maxResponseBytes)
+        throw new LedgerError('RESPONSE_SIZE_LIMIT', '本次响应累计达到上限。');
+      return result;
+    } finally {
+      release();
+    }
   }
   observe(raw: unknown, snapshot: Snapshot, locator: string, summary: string): StoredEvidence {
     const evidence = rawEvidence(raw, snapshot, locator, summary);

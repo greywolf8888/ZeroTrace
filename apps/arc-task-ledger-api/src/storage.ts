@@ -1,5 +1,6 @@
 import { hashPayload } from '@zerotrace/evidence';
 import { Pool, type PoolClient } from 'pg';
+import { VERIFIER_MIGRATION } from './verifier-storage.js';
 import {
   LedgerError,
   decimal,
@@ -90,12 +91,13 @@ export class LedgerStore implements LedgerRepository {
     await this.transaction(async (client) => {
       await client.query("SELECT pg_advisory_xact_lock(hashtext('arc_task_ledger_v1:migrate'))");
       await client.query(MIGRATION);
+      await client.query(VERIFIER_MIGRATION);
     });
   }
   async ready(): Promise<boolean> {
     try {
       const r = await this.pool.query(
-        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=6',
+        'SELECT version FROM arc_task_ledger_v1.migrations WHERE version=7',
       );
       return r.rowCount === 1;
     } catch {

@@ -4,6 +4,7 @@ import abiJson from './abi.json' with { type: 'json' };
 import lock from './deployment.json' with { type: 'json' };
 import navigation from './navigation.json' with { type: 'json' };
 import { LedgerError, address, decimal } from './types.js';
+import { USDC_NETWORK } from './usdc-log.js';
 
 export const ABI = abiJson as Abi;
 export const NAVIGATION = navigation;
@@ -19,6 +20,11 @@ if (
   keccak256(lock.adapterCode as `0x${string}`) !== lock.adapterCodeHash
 )
   throw new LedgerError('LOCK_INVALID', '协议锁文件完整性核验失败。');
+if (
+  DEPLOYMENT.usdcSystemEmitter !== USDC_NETWORK.systemEmitter ||
+  DEPLOYMENT.usdcErc20 !== USDC_NETWORK.erc20Emitter
+)
+  throw new LedgerError('LOCK_INVALID', '任务协议与USDC网络登记不一致。');
 export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {
   const defaultSource = lock.rpcCandidates.find((source) => source.alias === lock.defaultRpcAlias);
   if (!defaultSource) throw new LedgerError('LOCK_INVALID', '默认 RPC 来源未登记。');

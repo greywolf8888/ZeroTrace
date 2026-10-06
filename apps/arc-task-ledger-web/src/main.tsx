@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { SettlementCard } from './SettlementCard.js';
 import { SettlementWorkbench } from './SettlementWorkbench.js';
 import { Dashboard, LiveStrip } from './Dashboard.js';
+import { VerificationWorkspace } from './VerificationWorkspace.js';
 import {
   api,
   ApiError,
@@ -18,6 +19,7 @@ import {
 } from './model.js';
 import './style.css';
 import './neon.css';
+import './verifier.css';
 function Address({ address }: { address: string }) {
   const [feedback, setFeedback] = useState('');
   return (
@@ -263,34 +265,41 @@ function App() {
         >
           <span className="mark">◈</span>
           <div>
-            <h1>Arc 任务证据台</h1>
-            <p>ArcBounty 报酬与结算核验</p>
+            <h1>Arc USDC 结算核验器</h1>
+            <p>交易核验 · 固定报告 · ArcBounty 任务</p>
           </div>
         </a>
         <span className="network">Arc 主网 · 5042 · 只读</span>
       </header>
       <main className={report ? 'report' : detail && !consumer ? 'task-page' : ''}>
+        {!detail && !report && !consumer && <VerificationWorkspace />}
         {!report && (
-          <LiveStrip
-            compact={!!detail}
-            runId={page?.snapshotRunId ?? detail?.snapshotRunId}
-            onLatest={() => {
-              if (detail && registry)
-                navigate(
-                  consumer
-                    ? '/consumer?jobId=' + detail.job.jobId
-                    : taskPath(registry, detail.job.jobId),
-                );
-              else {
-                const query = new URLSearchParams(params);
-                for (const key of ['snapshotRunId', 'cursor', 'previous']) query.delete(key);
-                navigate('/?' + query);
-              }
-            }}
-          />
+          <details open={!!detail} className="snapshot-summary">
+            <summary>链状态与已保存任务概览</summary>
+            <LiveStrip
+              compact={!!detail}
+              runId={page?.snapshotRunId ?? detail?.snapshotRunId}
+              onLatest={() => {
+                if (detail && registry)
+                  navigate(
+                    consumer
+                      ? '/consumer?jobId=' + detail.job.jobId
+                      : taskPath(registry, detail.job.jobId),
+                  );
+                else {
+                  const query = new URLSearchParams(params);
+                  for (const key of ['snapshotRunId', 'cursor', 'previous']) query.delete(key);
+                  navigate('/?' + query);
+                }
+              }}
+            />
+          </details>
         )}
         {page && registry && (
-          <Dashboard runId={page.snapshotRunId} registry={registry} onNavigate={navigate} />
+          <details className="snapshot-summary">
+            <summary>已采集任务快照统计（可选）</summary>
+            <Dashboard runId={page.snapshotRunId} registry={registry} onNavigate={navigate} />
+          </details>
         )}
         {!detail && !report && (
           <section className="search-hero">

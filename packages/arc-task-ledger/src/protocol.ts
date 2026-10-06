@@ -1,6 +1,7 @@
 import { createEvidence, hashPayload } from '@zerotrace/evidence';
 import { decodeEventLog, parseAbiItem, toEventSelector } from 'viem';
 import { ABI, DEPLOYMENT } from './config.js';
+import { decodeUsdcLog, USDC_TRANSFER_TOPIC, usdcAtoms } from './usdc-log.js';
 import {
   RULE_VERSION,
   ZERO_ADDRESS,
@@ -14,8 +15,7 @@ import {
   type StoredEvidence,
 } from './types.js';
 
-export const protocolAtoms = (value: string): string =>
-  (BigInt(decimal(value)) * 10n ** 12n).toString();
+export const protocolAtoms = (value: string): string => usdcAtoms(value, 6);
 export const timeoutSplit = (value: string): [string, string] => {
   const n = BigInt(decimal(value));
   return [(n / 2n).toString(), (n - n / 2n).toString()];
@@ -69,13 +69,10 @@ export function decodeReceipt(
   const seen = new Map<string, string>();
   let conflict = false;
   let unsupportedAdapter = false;
-  const transferAbi = [
-    parseAbiItem('event Transfer(address indexed from,address indexed to,uint256 value)'),
-  ];
   const approvalAbi = [
     parseAbiItem('event Approval(address indexed owner,address indexed spender,uint256 value)'),
   ];
-  const transferTopic = toEventSelector(transferAbi[0]!);
+  const transferTopic = USDC_TRANSFER_TOPIC;
   const approvalTopic = toEventSelector(approvalAbi[0]!);
   const adapterTopics = new Set(
     ABI.filter((item) => item.type === 'event').map((item) => toEventSelector(item)),
@@ -157,27 +154,8 @@ export function decodeReceipt(
         continue;
       }
       try {
-        const { args } = decodeEventLog({
-          abi: transferAbi,
-          data: log.data,
-          topics: log.topics as [typeof log.data, ...(typeof log.data)[]],
-          strict: true,
-        });
-        const movement: Movement = {
-          id,
-          transactionHash: receipt.transactionHash,
-          blockHash: receipt.blockHash,
-          logIndex: BigInt(log.logIndex).toString(),
-          from: address(args.from),
-          to: address(args.to),
-          atomic:
-            emitter === DEPLOYMENT.usdcSystemEmitter
-              ? args.value.toString()
-              : protocolAtoms(args.value.toString()),
-          evidenceIds,
-          crossCheck: 'absent',
-        };
-        (emitter === DEPLOYMENT.usdcSystemEmitter ? system : erc).push(movement);
+        const parsed = decodeUsdcLog(log, receipt, evidenceIds);
+        if (parsed) (parsed.interface === 'SYSTEM' ? system : erc).push(parsed.movement);
       } catch {
         conflict = true;
       }

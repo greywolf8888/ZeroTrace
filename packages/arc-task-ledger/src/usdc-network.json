@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "zasv-network-v1",
+  "version": "arc-mainnet-usdc-20261007",
+  "chainId": "5042",
+  "network": "arc-mainnet",
+  "systemEmitter": "0xfffffffffffffffffffffffffffffffffffffffe",
+  "erc20Emitter": "0x3600000000000000000000000000000000000000",
+  "systemDecimals": 18,
+  "erc20Decimals": 6,
+  "systemEventsFrom": "GENESIS",
+  "explorerOrigin": "https://explorer.arc.io",
+  "reviewedAt": "2026-10-07",
+  "officialSources": [
+    "https://docs.arc.io/arc/references/usdc-system-events",
+    "https://docs.arc.io/arc/concepts/stablecoin-native-model",
+    "https://docs.arc.io/arc/references/connect-to-arc"
+  ]
+}

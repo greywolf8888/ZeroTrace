@@ -76,14 +76,24 @@ export async function configureRequestRole(pool, password) {
   await pool.query(`GRANT CONNECT ON DATABASE ${identifier(db.rows[0].name)} TO ${role}`);
   await pool.query(`GRANT USAGE ON SCHEMA ${schema} TO ${role}`);
   await pool.query(`GRANT SELECT,INSERT ON ${schema}.evidence_requests TO ${role}`);
+  await pool.query(
+    `GRANT SELECT,INSERT ON ${schema}.zasv_requests,${schema}.zasv_reports,${schema}.zasv_bundles,${schema}.zasv_ownership,${schema}.zasv_publications TO ${role}`,
+  );
+  await pool.query(
+    `GRANT UPDATE(status,report_id,bundle_hash,error_code,updated_at) ON ${schema}.zasv_requests TO ${role}`,
+  );
   const checked = await pool.query(
-    `SELECT has_table_privilege($1,'${schema}.evidence_requests','INSERT') AS request_insert,has_table_privilege($1,'${schema}.jobs','INSERT') AS projection_insert,has_table_privilege($1,'${schema}.observations','INSERT') AS evidence_insert`,
+    `SELECT has_table_privilege($1,'${schema}.evidence_requests','INSERT') AS request_insert,has_table_privilege($1,'${schema}.jobs','INSERT') AS projection_insert,has_table_privilege($1,'${schema}.observations','INSERT') AS evidence_insert,has_table_privilege($1,'${schema}.zasv_reports','INSERT') AS verifier_insert,has_table_privilege($1,'${schema}.zasv_reports','UPDATE') AS verifier_update,has_table_privilege($1,'${schema}.zasv_reports','DELETE') AS verifier_delete,has_column_privilege($1,'${schema}.zasv_requests','input_hash','UPDATE') AS verifier_input_update`,
     [role],
   );
   if (
     !checked.rows[0].request_insert ||
     checked.rows[0].projection_insert ||
-    checked.rows[0].evidence_insert
+    checked.rows[0].evidence_insert ||
+    !checked.rows[0].verifier_insert ||
+    checked.rows[0].verifier_update ||
+    checked.rows[0].verifier_delete ||
+    checked.rows[0].verifier_input_update
   )
     throw new Error('补证账号实际权限失败。');
   return { requestInsert: true, projectionInsert: false, evidenceInsert: false };
@@ -102,11 +112,11 @@ async function main() {
     const requestPermissions = process.env.ARC_REQUEST_DB_PASSWORD
       ? await configureRequestRole(store.pool, process.env.ARC_REQUEST_DB_PASSWORD)
       : null;
-    if (!(await store.ready())) throw new Error('专用数据库迁移版本未达到 6。');
+    if (!(await store.ready())) throw new Error('专用数据库迁移版本未达到 7。');
     console.info(
       JSON.stringify({
         status: 'MIGRATION_VALIDATED',
-        migrationVersion: 6,
+        migrationVersion: 7,
         permissions,
         requestPermissions,
       }),

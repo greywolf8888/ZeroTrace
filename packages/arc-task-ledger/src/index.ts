@@ -8,3 +8,7 @@ export * from './worker.js';
 export * from './live-result.js';
 export * from './result.js';
 export * from './enrichment.js';
+export * from './usdc-log.js';
+export * from './verifier-core.js';
+export * from './transaction-reader.js';
+export * from './verifier-report.js';

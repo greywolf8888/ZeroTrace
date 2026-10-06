@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-06T18:19:29.385027+00:00",
+  "baselineSha": "48582b9b327213edd0d10a2a867d5eab6b8a46ad",
+  "developmentBranch": "agent/arc-task-ledger-v1",
+  "remoteEqual": true,
+  "oldDeploymentSha": "8f2d47922847236be7448619a9a21543730d7b07",
+  "oldRule": "atl-v1.2.1",
+  "oldMigration": 6,
+  "newValidationInherited": false,
+  "unrelatedDirtyPaths": [
+    "apps/desktop/README.md",
+    "apps/desktop/portable/README_zh-CN.txt",
+    "apps/desktop/src-tauri/src/main.rs",
+    "scripts/build-portable-desktop.ps1",
+    "scripts/desktop-launch-smoke.ps1",
+    "scripts/portable-desktop-smoke.ps1"
+  ],
+  "oldHttp": [
+    {
+      "name": "health",
+      "sha256": "bfd9b918a89c113c5253237401bb1baf2f03106609ffd902180b19305932a701",
+      "bytes": 104
+    },
+    {
+      "name": "registry",
+      "sha256": "864559b26ecd75e18ab29e3259972f50f36c2bc9050ef00293bb6b9496d758b1",
+      "bytes": 664
+    },
+    {
+      "name": "old-task18",
+      "sha256": "9b15352dd3d41126dd6ece36112a16cf1a879207435d420174da84f2e23d86e3",
+      "bytes": 534323
+    },
+    {
+      "name": "old-list",
+      "sha256": "a4ff07713d6bc4f6124ed47862f3183502580bffc30a282673e203a0bdd94c0f",
+      "bytes": 90447
+    }
+  ],
+  "baselineDefects": [
+    "无给定交易入口与冻结条件。",
+    "旧镜像核对some不保证数量，已合成复现一对二被接受。",
+    "旧报告依赖任务快照，没有独立报告、权限与原件复算。"
+  ]
+}
