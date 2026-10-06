@@ -103,6 +103,15 @@
 .report-actions details {
   margin: 8px 0;
 }
+.verification-account > div {
+  padding: 8px 0;
+  border-bottom: 1px solid #35401b;
+}
+.verification-account dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  color: #c6f77c;
+}
 .verification-flow {
   width: 100%;
   height: auto;

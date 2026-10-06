@@ -23,14 +23,14 @@ export class ArcUsdcClient {
       u.password ||
       u.search ||
       u.hash ||
-      u.pathname !== '/' ||
+      !['/', '/api', '/api/'].includes(u.pathname) ||
       !(
         u.protocol === 'https:' ||
         (u.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(u.hostname))
       )
     )
       throw Error('API origin must be HTTPS or loopback HTTP, without credentials');
-    this.baseUrl = u.origin;
+    this.baseUrl = u.origin + (u.pathname.startsWith('/api') ? '/api' : '');
   }
   async request<T>(path: string, method = 'GET', body?: unknown, key?: string): Promise<T> {
     if (!/^\/v1\/[a-z0-9/_-]+$/i.test(path)) throw Error('Invalid API path');

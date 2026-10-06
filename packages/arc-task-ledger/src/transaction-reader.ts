@@ -11,6 +11,7 @@ import {
 import { LedgerError, hex, type Receipt } from './types.js';
 
 export interface TransactionObservation {
+  originalAcquisitionMetrics?: TransactionObservation['metrics'];
   taskContext?: {
     schemaVersion: 'zasv-task-context-v1';
     jobId: string;
@@ -61,11 +62,21 @@ export function transactionCollector(
   return async function collect(input: string, force = false): Promise<TransactionObservation> {
     const transactionHash = parseTransactionInput(input);
     const entry = cache.get(transactionHash);
-    if (entry && (entry.active || (Date.now() < entry.until && !force)))
+    if (entry && (entry.active || (Date.now() < entry.until && !force))) {
+      const start = Date.now();
+      const original = await entry.pending;
       return {
-        ...(await entry.pending),
-        metrics: { ...(await entry.pending).metrics, cacheHit: true },
+        ...original,
+        originalAcquisitionMetrics: original.originalAcquisitionMetrics ?? original.metrics,
+        metrics: {
+          elapsedMs: Date.now() - start,
+          rpcRequests: 0,
+          rpcAttempts: 0,
+          responseBytes: 0,
+          cacheHit: true,
+        },
       };
+    }
     for (const [key, value] of cache)
       if (!value.active && value.until <= Date.now()) cache.delete(key);
     if (cache.size >= 64)

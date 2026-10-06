@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { browserReplayReportBundle } from '../../../packages/arc-task-ledger/src/verifier-browser-replay.js';
 import type { SettlementReport } from '../../../packages/arc-task-ledger/src/verifier-report-core.js';
 import { VerificationFlow } from './VerificationFlow.js';
+import { VerifierTaskChooser, type VerifierTaskReference } from './VerifierTaskChooser.js';
 import {
   decimalUsdcToAtomic18,
   displayUsdc,
@@ -21,14 +22,8 @@ interface Verification {
 }
 export function VerificationWorkspace() {
   const session = useRef<string>('');
-  const [task, setTask] = useState<{
-    jobId: string;
-    snapshotRunId: string;
-    legId: string;
-    expectedPayee: string;
-    expectedMovementPayer?: string;
-    expectedAmountAtomic18: string;
-  }>();
+  const [task, setTask] = useState<VerifierTaskReference>();
+  const [taskMode, setTaskMode] = useState(false);
   const [sharePreview, setSharePreview] = useState<{
     report: SettlementReport;
     bundleHash: string;
@@ -224,6 +219,31 @@ export function VerificationWorkspace() {
           {lang === 'zh' ? 'English' : '中文'}
         </button>
       </div>
+      <nav className="verifier-modes" aria-label={t('核验模式', 'Verification modes')}>
+        <button type="button" aria-pressed={!taskMode} onClick={() => setTaskMode(false)}>
+          {t('通用交易核验', 'Transaction verification')}
+        </button>
+        <button type="button" aria-pressed={taskMode} onClick={() => setTaskMode(true)}>
+          {t('ArcBounty任务模式', 'ArcBounty task mode')}
+        </button>
+      </nav>
+      {taskMode && (
+        <VerifierTaskChooser
+          lang={lang}
+          onChoose={(context, tx) => {
+            setTask(context);
+            setTransaction(tx);
+            setPayee(context.expectedPayee);
+            setPayer(context.expectedMovementPayer ?? '');
+            setAmount(displayUsdc(context.expectedAmountAtomic18));
+            setMode('EXACT');
+            setDeadline('');
+            setSelected([]);
+            setResult(undefined);
+            setError('');
+          }}
+        />
+      )}
       <form
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
@@ -427,6 +447,39 @@ export function VerificationWorkspace() {
                 {result.evaluation.selectedAmountAtomic18 === null
                   ? t('未知', 'Unknown')
                   : displayUsdc(result.evaluation.selectedAmountAtomic18) + ' USDC'}
+              </p>
+              <dl className="verification-account">
+                {(
+                  [
+                    ['incomingAtomic18', '本交易观察收入', 'Observed incoming in this transaction'],
+                    ['outgoingAtomic18', '本交易观察支出', 'Observed outgoing in this transaction'],
+                    ['netMovementAtomic18', '净资金转移（未扣Gas）', 'Net movement before Gas'],
+                    ['gasAtomic18', '收款人承担的Gas', 'Gas borne by payee'],
+                    [
+                      'netAfterGasAtomic18',
+                      '扣Gas后本交易净变化',
+                      'Net transaction change after Gas',
+                    ],
+                  ] as const
+                ).map(([key, zh, en]) => (
+                  <div key={key}>
+                    <dt>{t(zh, en)}</dt>
+                    <dd>
+                      {result.evaluation!.account[key] === null
+                        ? t(
+                            '未知或不适用，见付费方',
+                            'Unknown or not applicable; inspect Gas payer',
+                          )
+                        : displayUsdc(result.evaluation!.account[key]!) + ' USDC'}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="quiet">
+                {t(
+                  '这些是本交易观察范围；用途、事前约定、订单归属与履约均未验证。',
+                  'These values cover this transaction only. Purpose, prior agreement, order attribution and fulfillment remain unverified.',
+                )}
               </p>
               {result.evaluation.checks.map((c) => (
                 <button

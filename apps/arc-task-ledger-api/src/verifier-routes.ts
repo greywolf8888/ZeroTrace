@@ -98,6 +98,7 @@ export async function registerVerifierRoutes(
     const leg = detail?.settlementLegs.find((l) => l.id === t.legId);
     if (
       !detail ||
+      detail.job.cashState === 'CONFLICT' ||
       !leg ||
       leg.expectedAmount.atomic.state !== 'known' ||
       leg.expectedAmount.decimals !== 18 ||

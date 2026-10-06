@@ -76,7 +76,10 @@ export function VerificationFlow({
             <path className="movement-line" d={g.path} markerEnd="url(#verification-arrow)" />
             <rect x={g.x - 69} y={g.y - 15} width="138" height="30" />
             <text x={g.x} y={g.y + 4} textAnchor="middle">
-              {displayUsdc(m.atomic)} USDC
+              {displayUsdc(m.atomic).length > 16
+                ? displayUsdc(m.atomic).slice(0, 12) + '…'
+                : displayUsdc(m.atomic)}{' '}
+              USDC
             </text>
           </g>
         );

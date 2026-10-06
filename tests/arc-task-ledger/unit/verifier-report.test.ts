@@ -11,6 +11,7 @@ import {
   parseExpectation,
 } from '../../../packages/arc-task-ledger/src/verifier-core.js';
 import type { TransactionObservation } from '../../../packages/arc-task-ledger/src/transaction-reader.js';
+import { browserReplayReportBundle } from '../../../packages/arc-task-ledger/src/verifier-browser-replay.js';
 import { POSTER, WORKER, TX, HASH, transfer, receipt } from '../fixtures/helpers.js';
 
 function observation(): TransactionObservation {
@@ -62,6 +63,19 @@ const condition = () =>
     provenance: 'USER_INPUT',
   });
 describe('不可覆盖报告与原件复算，合成数据不证明主网真实性', () => {
+  it('WebCrypto与Node规范序列化/三层标识一致；Unicode/指数数字向量与非JSON值校验', async () => {
+    expect(canonicalJson({ z: 1e30, a: '欧元€😀', n: 0.000001 })).toBe(
+      '{"a":"欧元€😀","n":0.000001,"z":1e+30}',
+    );
+    const b = buildReportBundle(observation(), condition());
+    const browser = await browserReplayReportBundle(b),
+      node = replayReportBundle(b);
+    expect(browser.reportId).toBe(node.reportId);
+    expect(browser.factsHash).toBe(node.factsHash);
+    expect(browser.expectationHash).toBe(b.report.expectationHash);
+    for (const value of [NaN, Infinity, undefined, '\ud800'])
+      expect(() => assertReportJson(value)).toThrow();
+  });
   it('协议条件必须绑定固定任务投影；离线保留来源声明，不能凭输入自称协议结果', () => {
     const o = observation();
     const e = { ...condition(), provenance: 'REGISTERED_TASK' as const };
@@ -105,7 +119,7 @@ describe('不可覆盖报告与原件复算，合成数据不证明主网真实�
   it('从原件重解析：仅改结论且重新包装摘要也不能骗过复算', () => {
     const b = buildReportBundle(observation(), condition());
     b.report.evaluation!.outcome = 'MISMATCHED';
-    const { bundleHash: _old, ...rest } = b;
+    const rest = { schemaVersion: b.schemaVersion, report: b.report, observation: b.observation };
     b.bundleHash = hashPayload(rest);
     expect(() => replayReportBundle(b)).toThrow('从原始回执重新解析');
   });
@@ -118,7 +132,7 @@ describe('不可覆盖报告与原件复算，合成数据不证明主网真实�
     expect(() => replayReportBundle(b)).toThrow('不支持');
     const c = buildReportBundle(observation(), condition());
     c.observation.acquisition.code = 'FAKE';
-    const { bundleHash: _hash, ...rest } = c;
+    const rest = { schemaVersion: c.schemaVersion, report: c.report, observation: c.observation };
     c.bundleHash = hashPayload(rest);
     expect(() => replayReportBundle(c)).toThrow('规范事实不一致');
   });
@@ -133,7 +147,7 @@ describe('不可覆盖报告与原件复算，合成数据不证明主网真实�
   });
   it('既有规范排序符合新报告向量；只对新报告拒绝非法JSON', () => {
     const vector = {
-      numbers: [333333333.33333329, 1e30, 4.5, 2e-3, 1e-27],
+      numbers: [JSON.parse('333333333.33333329'), 1e30, 4.5, 2e-3, 1e-27],
       literals: [null, true, false],
       z: '€',
       a: '\u000f',
