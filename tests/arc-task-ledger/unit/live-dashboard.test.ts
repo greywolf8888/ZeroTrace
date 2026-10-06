@@ -2,11 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import { liveObserver } from '../../../apps/arc-task-ledger-api/src/live.js';
 import { LedgerError } from '../../../packages/arc-task-ledger/src/types.js';
 import { snapshot } from '../fixtures/helpers.js';
+import { rawEvidence } from '../../../packages/arc-task-ledger/src/protocol.js';
 
 describe('实时只读观察的负载与证据边界', () => {
   it('并发访问合并为一次来源读取，30 秒内复用，不声明持久取证', async () => {
     let time = Date.now();
-    const collect = vi.fn(async () => ({ snapshot, evidence: [] }));
+    const raw = rawEvidence({ block: '0x1' }, snapshot, '测试定位', '临时观察');
+    const originalRef = raw.evidence.rawArtifactRef;
+    const collect = vi.fn(async () => ({ snapshot, evidence: [raw] }));
     const observer = liveObserver(collect, () => time);
     const results = await Promise.all(Array.from({ length: 20 }, () => observer.read()));
     expect(collect).toHaveBeenCalledTimes(1);
@@ -15,6 +18,10 @@ describe('实时只读观察的负载与证据边界', () => {
       durable: false,
       formalForensicReady: false,
     });
+    expect(results[0]?.observation?.evidence[0]?.evidence.rawArtifactRef).toBe(
+      `unarchived:sha256:${raw.evidence.payloadHash}`,
+    );
+    expect(raw.evidence.rawArtifactRef).toBe(originalRef);
     time += 29999;
     await observer.read();
     expect(collect).toHaveBeenCalledTimes(1);

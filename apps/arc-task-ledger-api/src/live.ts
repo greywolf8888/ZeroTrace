@@ -43,7 +43,18 @@ export function liveObserver(
       attemptedAt = now();
       pending = (async () => {
         try {
-          last = await collect();
+          const collected = await collect();
+          // 采集器的 pg 引用只在发布持久快照后成立；临时观察不能声称已经归档。
+          last = {
+            ...collected,
+            evidence: collected.evidence.map((item) => ({
+              ...item,
+              evidence: {
+                ...item.evidence,
+                rawArtifactRef: `unarchived:sha256:${item.evidence.payloadHash}`,
+              },
+            })),
+          };
           failureCode = null;
           state =
             last.blockTimestamp && now() - Date.parse(last.blockTimestamp) > 120000
