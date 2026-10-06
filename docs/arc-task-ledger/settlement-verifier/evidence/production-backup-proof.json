@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-06T19:19:44.471Z",
+  "method": "POSTGRESQL_CUSTOM_DUMP_OVER_AUTHENTICATED_LOOPBACK_FORWARD",
+  "scope": "existing dedicated Arc database",
+  "beforeMigration": 7,
+  "bytes": 180729845,
+  "sha256": "1be8b85c01253fdbea0b5dc763922a27f560a72c964f65cabe63a7c633214814",
+  "dumpExit": 0,
+  "catalogExit": 0,
+  "catalogEntries": 49,
+  "externalDatabaseAccessChanged": false,
+  "newResourceCreated": false,
+  "databaseRestarted": false
+}

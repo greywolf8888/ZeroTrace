@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { browserReplayReportBundle } from '../../../packages/arc-task-ledger/src/verifier-browser-replay.js';
-import type { SettlementReport } from '../../../packages/arc-task-ledger/src/verifier-report-core.js';
+import type {
+  SettlementReport,
+  ReportBundle,
+} from '../../../packages/arc-task-ledger/src/verifier-report-core.js';
 import { VerificationFlow } from './VerificationFlow.js';
 import { VerifierTaskChooser, type VerifierTaskReference } from './VerifierTaskChooser.js';
 import {
@@ -24,8 +27,10 @@ export function VerificationWorkspace() {
   const session = useRef<string>('');
   const [task, setTask] = useState<VerifierTaskReference>();
   const [taskMode, setTaskMode] = useState(false);
+  const [examples, setExamples] = useState<{ reportId: string; transactionHash: string }[]>([]);
   const [sharePreview, setSharePreview] = useState<{
     report: SettlementReport;
+    bundle: ReportBundle;
     bundleHash: string;
     warning: string;
   }>();
@@ -33,6 +38,44 @@ export function VerificationWorkspace() {
     [replay, setReplay] = useState('');
   const [lang, setLang] = useState<'zh' | 'en'>('zh');
   const t = (zh: string, en: string) => (lang === 'zh' ? zh : en);
+  const labels: Record<string, string> = {
+    MATCHED: '匹配',
+    MISMATCHED: '不匹配',
+    INCONCLUSIVE: '未知',
+    UNSUPPORTED: '暂不支持',
+    PASS: '通过',
+    FAIL: '不符合',
+    UNKNOWN: '未知',
+    NOT_APPLICABLE: '不适用',
+    CHAIN: '网络',
+    ACQUISITION: '链数据读取',
+    TX_SUCCESS: '交易成功状态',
+    TRANSACTION_SUCCESS: '交易成功状态',
+    SELECTION: '选定资金转移',
+    PAYMENT_MOVEMENT: '可作为付款的资金转移',
+    PAYEE: '收款人',
+    PAYER: '资金付款人',
+    MOVEMENT_PAYER: '资金付款人',
+    AMOUNT: '金额',
+    NOT_BEFORE: '最早时间',
+    DEADLINE: '截止时间',
+    TRANSFER: '转移',
+    MINT: '增发',
+    BURN: '销毁',
+    ZERO: '零值事件',
+    SELF: '自转移',
+    NATIVE: '原生接口',
+    ERC20_MIRRORED: 'ERC-20镜像接口',
+    AMBIGUOUS: '接口关系不明确',
+    matched: '镜像一致',
+    absent: '未观察到镜像',
+    ambiguous: '镜像匹配不唯一',
+    native_only: '仅原生接口',
+    missing: '镜像缺失',
+    conflict: '镜像冲突',
+  };
+  const explain = (code: string) =>
+    lang === 'zh' && labels[code] ? `${labels[code]} (${code})` : code;
   const [transaction, setTransaction] = useState(() => {
       const tx = new URLSearchParams(location.search).get('transaction');
       return tx && /^0x[0-9a-f]{64}$/i.test(tx) ? tx : '';
@@ -75,6 +118,11 @@ export function VerificationWorkspace() {
     return data;
   }
   useEffect(() => {
+    void fetch('/api/v1/verifier/examples')
+      .then(async (response) => {
+        if (response.ok) setExamples((await response.json()).examples);
+      })
+      .catch(() => setExamples([]));
     const params = new URLSearchParams(location.search);
     const tx = params.get('transaction');
     if (tx && /^0x[0-9a-f]{64}$/i.test(tx)) {
@@ -227,6 +275,29 @@ export function VerificationWorkspace() {
           {t('ArcBounty任务模式', 'ArcBounty task mode')}
         </button>
       </nav>
+      <details>
+        <summary>{t('打开已保存的公开示例', 'Open a saved public example')}</summary>
+        <p className="quiet">
+          {t(
+            '仅列出明确公开的固定报告。条件来源见报告；不证明订单用途或履约。',
+            'Only explicitly published fixed reports. Inspect condition provenance; purpose and fulfillment are unverified.',
+          )}
+        </p>
+        {examples.length ? (
+          examples.map((example) => (
+            <p key={example.reportId}>
+              <a href={'/?report=' + example.reportId}>{example.transactionHash}</a>
+            </p>
+          ))
+        ) : (
+          <p>
+            {t(
+              '暂无公开示例，请输入交易开始核验。',
+              'No public examples yet. Enter a transaction to begin.',
+            )}
+          </p>
+        )}
+      </details>
       {taskMode && (
         <VerifierTaskChooser
           lang={lang}
@@ -416,7 +487,7 @@ export function VerificationWorkspace() {
                     )
                   }
                 />
-                {displayUsdc(m.atomic)} USDC · {m.kind} · {m.interface}
+                {displayUsdc(m.atomic)} USDC · {explain(m.kind)} · {explain(m.interface)}
               </label>
               <button type="button" onClick={() => setEvidence(m.id)}>
                 {t('查看资金与原件', 'Inspect movement and raw evidence')}
@@ -425,7 +496,7 @@ export function VerificationWorkspace() {
                 {m.from} → {m.to}
               </p>
               <small>
-                {m.id} · {t('镜像核对', 'Mirror check')}: {m.crossCheck}
+                {m.id} · {t('镜像核对', 'Mirror check')}: {explain(m.crossCheck)}
               </small>
             </div>
           ))}
@@ -440,7 +511,7 @@ export function VerificationWorkspace() {
           {result?.evaluation && (
             <section aria-label={t('逐项核验结果', 'Individual checks')}>
               <h3>
-                {t('条件核对结果', 'Condition outcome')}: {result.evaluation.outcome}
+                {t('条件核对结果', 'Condition outcome')}: {explain(result.evaluation.outcome)}
               </h3>
               <p>
                 {t('选定总额', 'Selected amount')}:{' '}
@@ -488,7 +559,7 @@ export function VerificationWorkspace() {
                   key={c.code}
                   onClick={() => setEvidence(c.movementIds[0])}
                 >
-                  {c.code}: {c.state}
+                  {explain(c.code)}: {explain(c.state)}
                   <br />
                   <small>
                     {t('期望', 'Expected')} {JSON.stringify(c.expected)} · {t('实际', 'Actual')}{' '}
@@ -584,11 +655,11 @@ export function VerificationWorkspace() {
           <section aria-label={t('公开分享完整预览', 'Full public sharing preview')}>
             <p>
               {t(
-                '将公开链上原件、收款地址、金额、时间条件及逐项结果；内部业务引用已移除。公开固定版本不能撤回。',
-                'Sharing publishes raw chain data, payee, amount, time conditions and checks. Private context references are removed. The public fixed version cannot be withdrawn.',
+                '将公开链上原件、收款地址、金额、时间条件及逐项结果，并可能进入公开示例列表；内部业务引用已移除。公开固定版本不能撤回。',
+                'Sharing publishes raw chain data, payee, amount, time conditions and checks, and may list the report among public examples. Private context references are removed. The public fixed version cannot be withdrawn.',
               )}
             </p>
-            <pre tabIndex={0}>{JSON.stringify(sharePreview.report, null, 2)}</pre>
+            <pre tabIndex={0}>{JSON.stringify(sharePreview.bundle, null, 2)}</pre>
             <button disabled={busy} onClick={() => void reportAction('publish')}>
               {t('确认公开此固定版本', 'Confirm publication of this fixed version')}
             </button>

@@ -1,4 +1,4 @@
-import { flowGeometry } from './flow-geometry.js';
+import { flowLayout } from './flow-geometry.js';
 import {
   displayUsdc,
   type UsdcMovement,
@@ -16,7 +16,7 @@ export function VerificationFlow({
 }) {
   const addresses = [...new Set(movements.flatMap((m) => [m.from, m.to]))];
   if (!movements.length) return null;
-  if (addresses.length > 8)
+  if (addresses.length > 8 || movements.length > 16)
     return (
       <p>
         {lang === 'zh'
@@ -29,6 +29,7 @@ export function VerificationFlow({
     x: addresses.length === 1 ? 400 : 400 + Math.cos((i / addresses.length) * Math.PI * 2) * 265,
     y: 200 + Math.sin((i / addresses.length) * Math.PI * 2) * 95,
   }));
+  const layout = flowLayout(movements, nodes);
   return (
     <svg
       className="verification-flow"
@@ -50,9 +51,7 @@ export function VerificationFlow({
         </marker>
       </defs>
       {movements.map((m) => {
-        const from = nodes.find((n) => n.address === m.from)!,
-          to = nodes.find((n) => n.address === m.to)!;
-        const g = flowGeometry(m, movements, from, to);
+        const g = layout.get(m.id)!;
         return (
           <g
             key={m.id}
@@ -74,6 +73,14 @@ export function VerificationFlow({
               {m.id} · {m.kind}
             </title>
             <path className="movement-line" d={g.path} markerEnd="url(#verification-arrow)" />
+            <line
+              x1={g.anchorX}
+              y1={g.anchorY}
+              x2={g.x}
+              y2={g.y}
+              stroke="#668a26"
+              strokeDasharray="3 3"
+            />
             <rect x={g.x - 69} y={g.y - 15} width="138" height="30" />
             <text x={g.x} y={g.y + 4} textAnchor="middle">
               {displayUsdc(m.atomic).length > 16

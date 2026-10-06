@@ -46,7 +46,9 @@ test('正向资金展示：奖励、待领取、争议胜诉、零分配与原�
 });
 test('列表、详情、原始证据与导出闭环', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Arc 任务证据台' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Arc USDC 结算核验器', exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: '任务 #8', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '任务 #8', exact: true }).click();
   await expect(page.getByRole('heading', { name: '任务 #8', exact: true })).toBeVisible();

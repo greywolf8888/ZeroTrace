@@ -1,0 +1,21 @@
+{
+  "at": "2026-10-06T18:56:45.718Z",
+  "sourceCommit": "bbb7755",
+  "taskId": "18",
+  "sourceTaskSnapshot": "run_57e5b4386432693d068b7321124c74a4",
+  "transaction": "0xe9f6ebb98510b962b41a46a5d842c395aa23b0b2375e995b8e42178ab69db711",
+  "expectationHash": "4159e0d6a90964d9d2eb7de6169779c183b7b03787676c1b3f0220b3330c34cd",
+  "reportId": "zasv_81047088a51f44495c573ee7aa702742cf1c285df79a2a292cf81cb042424291",
+  "outcome": "MATCHED",
+  "provenance": "REGISTERED_TASK",
+  "mainnetRead": {
+    "elapsedMs": 3796,
+    "rpcRequests": 6,
+    "rpcAttempts": 6,
+    "responseBytes": 15072,
+    "cacheHit": false
+  },
+  "explicitLocalPublicShare": true,
+  "anonymousGET": true,
+  "pageErrors": []
+}

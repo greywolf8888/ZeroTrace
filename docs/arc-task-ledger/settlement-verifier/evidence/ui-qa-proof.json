@@ -1,0 +1,139 @@
+{
+  "at": "2026-10-06T19:57:26.772Z",
+  "shots": [
+    {
+      "name": "ui-1440-zh",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-1440-zh.png",
+      "innerWidth": 1440,
+      "innerHeight": 900,
+      "dpr": 1,
+      "cssZoom": "1",
+      "overflow": false
+    },
+    {
+      "name": "ui-1440-en",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-1440-en.png",
+      "innerWidth": 1440,
+      "innerHeight": 900,
+      "dpr": 1,
+      "cssZoom": "1",
+      "overflow": false
+    },
+    {
+      "name": "ui-1280-zh",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-1280-zh.png",
+      "innerWidth": 1280,
+      "innerHeight": 800,
+      "dpr": 1,
+      "cssZoom": "1",
+      "overflow": false
+    },
+    {
+      "name": "ui-1280-en",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-1280-en.png",
+      "innerWidth": 1280,
+      "innerHeight": 800,
+      "dpr": 1,
+      "cssZoom": "1",
+      "overflow": false
+    },
+    {
+      "name": "ui-390-zh",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-390-zh.png",
+      "innerWidth": 390,
+      "innerHeight": 844,
+      "dpr": 1,
+      "cssZoom": "1",
+      "overflow": false
+    },
+    {
+      "name": "ui-390-en",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-390-en.png",
+      "innerWidth": 390,
+      "innerHeight": 844,
+      "dpr": 1,
+      "cssZoom": "1",
+      "overflow": false
+    },
+    {
+      "name": "ui-public-mobile",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-public-mobile.png",
+      "innerWidth": 390,
+      "innerHeight": 844,
+      "dpr": 1,
+      "cssZoom": "1",
+      "overflow": false
+    },
+    {
+      "name": "ui-1440-real-200-percent",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-1440-real-200-percent.png",
+      "innerWidth": 709,
+      "innerHeight": 401,
+      "dpr": 2,
+      "cssZoom": "1",
+      "overflow": false
+    },
+    {
+      "name": "ui-1280-real-200-percent",
+      "screenshot": ".agent-state/arc-task-ledger/zasv-20261007/ui-1280-real-200-percent.png",
+      "innerWidth": 629,
+      "innerHeight": 401,
+      "dpr": 2,
+      "cssZoom": "1",
+      "overflow": false
+    }
+  ],
+  "graph": {
+    "origin": "EXPLICIT_TEST_ONLY_SYNTHETIC",
+    "edges": 4,
+    "distinctPaths": 4,
+    "labelsDoNotOverlap": true,
+    "keyboard": true,
+    "pageErrors": []
+  },
+  "replays": [
+    {
+      "file": "real-matched-bundle.json",
+      "nodeProcessExit": 0,
+      "reportId": "zasv_75a746b7d815ddae48f23d35fdfc329e71706cdf625fe806f870108c18a7b319",
+      "factsHash": "4809a110f9e2e3c050859606f29a7d614d26d618e70a7a1bf28efa438b3761cf",
+      "expectationHash": "0e474989f93fee8f372d9522957d9e00e34be350e71b2e004f1bf4faa5adefaf",
+      "bundleHash": "4e6f06ef007d68b2bdc47874581234042a7dfd6786f698f0d60fee00bf23658a",
+      "browserRuntime": "ACTUAL_CHROMIUM_WEBCRYPTO",
+      "recomputation": "PASS",
+      "mainnetAuthenticity": "NOT_VERIFIED_OFFLINE"
+    },
+    {
+      "file": "real-task-bundle.json",
+      "nodeProcessExit": 0,
+      "reportId": "zasv_81047088a51f44495c573ee7aa702742cf1c285df79a2a292cf81cb042424291",
+      "factsHash": "7bee71095f0a50ca55921472a465d6dd29f7ad69b83918536b8fcf2a9f15bb1f",
+      "expectationHash": "4159e0d6a90964d9d2eb7de6169779c183b7b03787676c1b3f0220b3330c34cd",
+      "bundleHash": "ee9527302acd1912c4003ba42740eb79fd51c95c43ac294acfec7eb83904c76b",
+      "browserRuntime": "ACTUAL_CHROMIUM_WEBCRYPTO",
+      "recomputation": "PASS",
+      "mainnetAuthenticity": "NOT_VERIFIED_OFFLINE"
+    },
+    {
+      "file": "final-browser-bundle.json",
+      "nodeProcessExit": 0,
+      "reportId": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+      "factsHash": "8c9d6374a8bd38a7a0f9507c2309c117c521e080b38d7b5bbf915c2cae4af5fa",
+      "expectationHash": "199efd7c94c967c31626db810aa79d4d8b2dd7fa4c3731365e12a89214ec98e6",
+      "bundleHash": "f51f0be2392a7b0fcb18ffcbedbdcebc48060856b90fdad1a8e4f0e0e9378f4c",
+      "browserRuntime": "ACTUAL_CHROMIUM_WEBCRYPTO",
+      "recomputation": "PASS",
+      "mainnetAuthenticity": "NOT_VERIFIED_OFFLINE"
+    }
+  ],
+  "visualInspection": {
+    "status": "PASS",
+    "at": "2026-10-06T20:09:55.357Z",
+    "observations": [
+      "手机表单纵向排列，地址输入可滚动，无横向溢出",
+      "桌面表单、资金边与原件检查器可同时读取",
+      "合成平行、反向、自环路径各自独立，金额标签互不覆盖，键盘选中可见"
+    ]
+  },
+  "keyboardEvidence": true
+}

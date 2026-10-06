@@ -1,0 +1,480 @@
+{
+  "at": "2026-10-06T19:23:33.959Z",
+  "results": [
+    {
+      "name": "correct",
+      "scenario": "USER_COUNTERFACTUAL_ON_REAL_MAINNET_TRANSACTION",
+      "outcome": "MATCHED",
+      "reportId": "zasv_75a746b7d815ddae48f23d35fdfc329e71706cdf625fe806f870108c18a7b319",
+      "checks": [
+        {
+          "code": "CHAIN",
+          "state": "PASS",
+          "expected": "5042",
+          "actual": "5042",
+          "movementIds": []
+        },
+        {
+          "code": "ACQUISITION",
+          "state": "PASS",
+          "expected": "READY",
+          "actual": "READY",
+          "movementIds": []
+        },
+        {
+          "code": "TRANSACTION_SUCCESS",
+          "state": "PASS",
+          "expected": "SUCCESS",
+          "actual": "SUCCESS",
+          "movementIds": []
+        },
+        {
+          "code": "SELECTION",
+          "state": "PASS",
+          "expected": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ],
+          "actual": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "PAYMENT_MOVEMENT",
+          "state": "PASS",
+          "expected": "TRANSFER",
+          "actual": [
+            "TRANSFER"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "PAYEE",
+          "state": "PASS",
+          "expected": "0x43cdbf8edb8fe41dde4ba519f49499d1ed78e74a",
+          "actual": [
+            "0x43cdbf8edb8fe41dde4ba519f49499d1ed78e74a"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "MOVEMENT_PAYER",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": [
+            "0x8366a39cc670b4001a1121b8f6a443a643e40951"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "AMOUNT",
+          "state": "PASS",
+          "expected": {
+            "mode": "EXACT",
+            "min": "62710761903106836",
+            "max": "62710761903106836"
+          },
+          "actual": "62710761903106836",
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "NOT_BEFORE",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": "2026-10-06T18:13:43.000Z",
+          "movementIds": []
+        },
+        {
+          "code": "DEADLINE",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": "2026-10-06T18:13:43.000Z",
+          "movementIds": []
+        }
+      ],
+      "independentConsumption": {
+        "state": "IDEMPOTENT_LOCAL_ALLOCATION",
+        "inserted": 0,
+        "reportId": "zasv_75a746b7d815ddae48f23d35fdfc329e71706cdf625fe806f870108c18a7b319",
+        "scope": "THIS_ACCOUNTING_NAMESPACE_ONLY",
+        "mainnetAuthenticity": "NOT_VERIFIED_OFFLINE"
+      }
+    },
+    {
+      "name": "wrong_payee",
+      "scenario": "USER_COUNTERFACTUAL_ON_REAL_MAINNET_TRANSACTION",
+      "outcome": "MISMATCHED",
+      "reportId": "zasv_b10a0f6736e7cbd2aedc914e7bac98c146887ff73777d8f39720c66e0f8e805b",
+      "checks": [
+        {
+          "code": "CHAIN",
+          "state": "PASS",
+          "expected": "5042",
+          "actual": "5042",
+          "movementIds": []
+        },
+        {
+          "code": "ACQUISITION",
+          "state": "PASS",
+          "expected": "READY",
+          "actual": "READY",
+          "movementIds": []
+        },
+        {
+          "code": "TRANSACTION_SUCCESS",
+          "state": "PASS",
+          "expected": "SUCCESS",
+          "actual": "SUCCESS",
+          "movementIds": []
+        },
+        {
+          "code": "SELECTION",
+          "state": "PASS",
+          "expected": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ],
+          "actual": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "PAYMENT_MOVEMENT",
+          "state": "PASS",
+          "expected": "TRANSFER",
+          "actual": [
+            "TRANSFER"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "PAYEE",
+          "state": "FAIL",
+          "expected": "0x0000000000000000000000000000000000000001",
+          "actual": [
+            "0x43cdbf8edb8fe41dde4ba519f49499d1ed78e74a"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "MOVEMENT_PAYER",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": [
+            "0x8366a39cc670b4001a1121b8f6a443a643e40951"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "AMOUNT",
+          "state": "PASS",
+          "expected": {
+            "mode": "EXACT",
+            "min": "62710761903106836",
+            "max": "62710761903106836"
+          },
+          "actual": "62710761903106836",
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "NOT_BEFORE",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": "2026-10-06T18:13:43.000Z",
+          "movementIds": []
+        },
+        {
+          "code": "DEADLINE",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": "2026-10-06T18:13:43.000Z",
+          "movementIds": []
+        }
+      ],
+      "independentConsumption": {
+        "state": "NO_ALLOCATION",
+        "outcome": "MISMATCHED",
+        "reportId": "zasv_b10a0f6736e7cbd2aedc914e7bac98c146887ff73777d8f39720c66e0f8e805b"
+      }
+    },
+    {
+      "name": "wrong_amount",
+      "scenario": "USER_COUNTERFACTUAL_ON_REAL_MAINNET_TRANSACTION",
+      "outcome": "MISMATCHED",
+      "reportId": "zasv_c374c91686e31f2dc8eed54e8f1bd1434c1c893987380704310f31d1b02e5144",
+      "checks": [
+        {
+          "code": "CHAIN",
+          "state": "PASS",
+          "expected": "5042",
+          "actual": "5042",
+          "movementIds": []
+        },
+        {
+          "code": "ACQUISITION",
+          "state": "PASS",
+          "expected": "READY",
+          "actual": "READY",
+          "movementIds": []
+        },
+        {
+          "code": "TRANSACTION_SUCCESS",
+          "state": "PASS",
+          "expected": "SUCCESS",
+          "actual": "SUCCESS",
+          "movementIds": []
+        },
+        {
+          "code": "SELECTION",
+          "state": "PASS",
+          "expected": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ],
+          "actual": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "PAYMENT_MOVEMENT",
+          "state": "PASS",
+          "expected": "TRANSFER",
+          "actual": [
+            "TRANSFER"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "PAYEE",
+          "state": "PASS",
+          "expected": "0x43cdbf8edb8fe41dde4ba519f49499d1ed78e74a",
+          "actual": [
+            "0x43cdbf8edb8fe41dde4ba519f49499d1ed78e74a"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "MOVEMENT_PAYER",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": [
+            "0x8366a39cc670b4001a1121b8f6a443a643e40951"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "AMOUNT",
+          "state": "FAIL",
+          "expected": {
+            "mode": "EXACT",
+            "min": "62710761903106837",
+            "max": "62710761903106837"
+          },
+          "actual": "62710761903106836",
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "NOT_BEFORE",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": "2026-10-06T18:13:43.000Z",
+          "movementIds": []
+        },
+        {
+          "code": "DEADLINE",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": "2026-10-06T18:13:43.000Z",
+          "movementIds": []
+        }
+      ],
+      "independentConsumption": {
+        "state": "NO_ALLOCATION",
+        "outcome": "MISMATCHED",
+        "reportId": "zasv_c374c91686e31f2dc8eed54e8f1bd1434c1c893987380704310f31d1b02e5144"
+      }
+    },
+    {
+      "name": "wrong_deadline",
+      "scenario": "USER_COUNTERFACTUAL_ON_REAL_MAINNET_TRANSACTION",
+      "outcome": "MISMATCHED",
+      "reportId": "zasv_5e70f6be884952f25f5c837499e1bb56c3c23c1e90fee641ab56381e3d763bb6",
+      "checks": [
+        {
+          "code": "CHAIN",
+          "state": "PASS",
+          "expected": "5042",
+          "actual": "5042",
+          "movementIds": []
+        },
+        {
+          "code": "ACQUISITION",
+          "state": "PASS",
+          "expected": "READY",
+          "actual": "READY",
+          "movementIds": []
+        },
+        {
+          "code": "TRANSACTION_SUCCESS",
+          "state": "PASS",
+          "expected": "SUCCESS",
+          "actual": "SUCCESS",
+          "movementIds": []
+        },
+        {
+          "code": "SELECTION",
+          "state": "PASS",
+          "expected": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ],
+          "actual": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "PAYMENT_MOVEMENT",
+          "state": "PASS",
+          "expected": "TRANSFER",
+          "actual": [
+            "TRANSFER"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "PAYEE",
+          "state": "PASS",
+          "expected": "0x43cdbf8edb8fe41dde4ba519f49499d1ed78e74a",
+          "actual": [
+            "0x43cdbf8edb8fe41dde4ba519f49499d1ed78e74a"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "MOVEMENT_PAYER",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": [
+            "0x8366a39cc670b4001a1121b8f6a443a643e40951"
+          ],
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "AMOUNT",
+          "state": "PASS",
+          "expected": {
+            "mode": "EXACT",
+            "min": "62710761903106836",
+            "max": "62710761903106836"
+          },
+          "actual": "62710761903106836",
+          "movementIds": [
+            "5042:0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c:4"
+          ]
+        },
+        {
+          "code": "NOT_BEFORE",
+          "state": "NOT_APPLICABLE",
+          "expected": null,
+          "actual": "2026-10-06T18:13:43.000Z",
+          "movementIds": []
+        },
+        {
+          "code": "DEADLINE",
+          "state": "FAIL",
+          "expected": "2026-10-06T18:13:42.000Z",
+          "actual": "2026-10-06T18:13:43.000Z",
+          "movementIds": []
+        }
+      ],
+      "independentConsumption": {
+        "state": "NO_ALLOCATION",
+        "outcome": "MISMATCHED",
+        "reportId": "zasv_5e70f6be884952f25f5c837499e1bb56c3c23c1e90fee641ab56381e3d763bb6"
+      }
+    },
+    {
+      "name": "observation_without_conditions",
+      "scenario": "USER_COUNTERFACTUAL_ON_REAL_MAINNET_TRANSACTION",
+      "outcome": "INCONCLUSIVE",
+      "reportId": "zasv_8cab0c6c9167007d497e685e975f3149ab8699d7ba992af0f71d4905e515d89d",
+      "independentConsumption": {
+        "state": "NO_ALLOCATION",
+        "outcome": "INCONCLUSIVE",
+        "reportId": "zasv_8cab0c6c9167007d497e685e975f3149ab8699d7ba992af0f71d4905e515d89d"
+      }
+    }
+  ],
+  "apiErrors": [
+    {
+      "name": "missing_report",
+      "status": 404,
+      "code": "REPORT_NOT_FOUND"
+    },
+    {
+      "name": "ssrf_url",
+      "status": 400,
+      "code": "INVALID_TRANSACTION"
+    },
+    {
+      "name": "empty_selection",
+      "status": 400,
+      "code": "INVALID_SELECTION"
+    },
+    {
+      "name": "anonymous_private_report",
+      "status": 404,
+      "code": "REPORT_NOT_FOUND"
+    }
+  ],
+  "allocationConflictRejected": true,
+  "onlineRequery": {
+    "reportId": "zasv_75a746b7d815ddae48f23d35fdfc329e71706cdf625fe806f870108c18a7b319",
+    "sameFactsHash": true
+  },
+  "rawReceiptTamperRejected": true,
+  "selfConsistentSynthetic": {
+    "integrity": "PASS",
+    "mainnetAuthenticity": "NOT_VERIFIED_OFFLINE",
+    "claim": "SYNTHETIC_COUNTERFACTUAL_ONLY"
+  },
+  "fundMovement": false
+}

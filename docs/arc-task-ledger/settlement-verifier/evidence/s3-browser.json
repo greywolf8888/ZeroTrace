@@ -1,0 +1,25 @@
+{
+  "at": "2026-10-06T18:42:04.740Z",
+  "transaction": "0x914cd3236b0d04e5f96235fd322b5f6ebc8ace758871ba2a873c1d5817ae985c",
+  "before": {
+    "reports": 0,
+    "legacy_receipts": 0
+  },
+  "after": {
+    "reports": 2,
+    "legacy_receipts": 0
+  },
+  "reportId": "zasv_75a746b7d815ddae48f23d35fdfc329e71706cdf625fe806f870108c18a7b319",
+  "amount": "0.062710761903106836",
+  "mainnetRead": {
+    "elapsedMs": 4010,
+    "rpcRequests": 6,
+    "rpcAttempts": 6,
+    "responseBytes": 13302,
+    "cacheHit": false
+  },
+  "matched": true,
+  "browserOfflineRecompute": true,
+  "pageErrors": [],
+  "overflow": false
+}

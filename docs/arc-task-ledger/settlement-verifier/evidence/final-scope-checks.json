@@ -1,0 +1,47 @@
+[
+  {
+    "name": "workbench",
+    "command": "npx playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts",
+    "started": "2026-10-06T20:08:46.334Z",
+    "finished": "2026-10-06T20:09:20.235Z",
+    "exitCode": 1,
+    "artifact": ".agent-state/arc-task-ledger/zasv-20261007/final-scope-workbench.log",
+    "sha256": "1ae529dbffc5b9f41364f0fcfb5da64a1115085e8e40198a88a93ccff1fa3856"
+  },
+  {
+    "name": "integration",
+    "command": "npm run arc:test:integration",
+    "started": "2026-10-06T20:09:20.516Z",
+    "finished": "2026-10-06T20:09:58.753Z",
+    "exitCode": 0,
+    "artifact": ".agent-state/arc-task-ledger/zasv-20261007/final-scope-integration.log",
+    "sha256": "e56ea46ed82285ff90a29b6e1f33ff888b5d88b2b0dc3aad28fdceb534e9ebe9"
+  },
+  {
+    "name": "build",
+    "command": "npm run arc:build",
+    "started": "2026-10-06T20:09:58.767Z",
+    "finished": "2026-10-06T20:10:00.366Z",
+    "exitCode": 0,
+    "artifact": ".agent-state/arc-task-ledger/zasv-20261007/final-scope-build.log",
+    "sha256": "2eec10355203a0c752714de9cb6dc2fba76658df258be4f7ec91fe033a43caf7"
+  },
+  {
+    "name": "examples",
+    "command": "npx tsc -p tsconfig.arc-examples.json --noEmit",
+    "started": "2026-10-06T20:10:00.379Z",
+    "finished": "2026-10-06T20:10:02.225Z",
+    "exitCode": 0,
+    "artifact": ".agent-state/arc-task-ledger/zasv-20261007/final-scope-examples.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "lint",
+    "command": "npx eslint apps/arc-task-ledger-api/src apps/arc-task-ledger-web/src examples/arc-task-ledger tests/arc-task-ledger",
+    "started": "2026-10-06T20:10:02.228Z",
+    "finished": "2026-10-06T20:10:29.729Z",
+    "exitCode": 0,
+    "artifact": ".agent-state/arc-task-ledger/zasv-20261007/final-scope-lint.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

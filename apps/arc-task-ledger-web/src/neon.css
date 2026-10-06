@@ -564,6 +564,23 @@ section {
   min-height: 180px;
   height: 200px;
 }
+@media (min-width: 1101px) {
+  .task-page .compact {
+    padding: 6px 10px;
+  }
+  .task-page .compact .result-lead {
+    margin-bottom: 6px;
+  }
+  .task-page .compact .money-grid article {
+    padding: 4px 8px;
+  }
+  .task-page .compact .money-grid strong {
+    margin: 2px 0;
+  }
+  .task-page .compact .result-context {
+    margin-top: 4px;
+  }
+}
 .task-page .test-label {
   margin: 5px 0;
 }

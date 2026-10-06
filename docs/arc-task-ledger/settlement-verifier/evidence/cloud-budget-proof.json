@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-06T19:29:12.483Z",
+  "usageWindow": {
+    "start": 1791228549,
+    "end": 1791314949
+  },
+  "usage": [
+    {
+      "currency": "usd",
+      "total": 0
+    }
+  ],
+  "allObservedUsageZero": true,
+  "scope": "reuse existing resources and plans only; no added resource/storage/scale/payment method",
+  "paidBudget": 0,
+  "remainingAllowance": "NOT_EXPOSED_BY_PUBLIC_API",
+  "noLifetimeFreeGuarantee": true,
+  "requests": [
+    {
+      "method": "GET",
+      "endpoint": "/v1/auth",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/plans",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/billing/usage",
+      "attempt": 0,
+      "status": 200
+    }
+  ]
+}

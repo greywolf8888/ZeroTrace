@@ -1,0 +1,666 @@
+{
+  "schemaVersion": "zasv-execution-report-v1",
+  "planId": "ZASV-CODEX-20261006-R1",
+  "isExecutionReport": true,
+  "generatedAt": "2026-10-06T20:12:26.591Z",
+  "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+  "phase": "CANDIDATE_FREEZE",
+  "gates": [
+    {
+      "id": "G01",
+      "name": "新交易能力",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "REAL_MAINNET",
+      "acceptance": "此前未保存的交易经正常UI完成采集、观察与核验；提供采集前后证据。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.588Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/s3-browser.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/s3-browser.json",
+              "sha256": "61e59fc25489a87a33eb8299e95edc18baf1d385d970a92c8637cd80fbed763d"
+            }
+          ],
+          "dataProvenance": "REAL_MAINNET",
+          "observedOutcome": "真实新交易：采集前报告/旧回执0，正常浏览器条件核对MATCHED，之后报告2。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G02",
+      "name": "两种USDC接口",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "REAL_MAINNET",
+      "acceptance": "分别取得native/ERC20真实主网样本；缺任何一类明确BLOCKED，不用测试网代替。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.589Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/real-erc20-summary.json",
+            "docs/arc-task-ledger/settlement-verifier/evidence/real-matched-bundle.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/real-erc20-summary.json",
+              "sha256": "99a154d8df5758f879d74b9865ab1a1d29691fcd245e32faad0f7cbd86599d57"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/real-matched-bundle.json",
+              "sha256": "b9ee26987aa7751cf7401cb77e3117e640c7ec0ca1af96679012fffca4a13c99"
+            }
+          ],
+          "dataProvenance": "REAL_MAINNET",
+          "observedOutcome": "真实原生交易和ERC20镜像交易分别取得；镜像一条规范movement。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G03",
+      "name": "双流与精度",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "SYNTHETIC_AND_REPLAY",
+      "acceptance": "18/6位、精确尾数、同额不同logIndex、镜像不双计、重复身份冲突；独立预期值。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.589Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-arc-unit.log"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-arc-unit.log",
+              "sha256": "631611a04e28053762ee7ba0322b08f8b403a9e666457265646cb4956d363da0"
+            }
+          ],
+          "dataProvenance": "SYNTHETIC_AND_REPLAY",
+          "observedOutcome": "原子18/6位、同额不同身份、多重集、重复冲突纯规则检查通过。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G04",
+      "name": "条件反例",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "REAL_MAINNET_WITH_COUNTERFACTUAL_CONDITIONS",
+      "acceptance": "同一真实交易的正确/错误核对条件得到可解释的不同结果，不声称反例是主网事故。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.589Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/real-counterexamples-proof.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/real-counterexamples-proof.json",
+              "sha256": "304bb6907072e6820a3c6a9155b9b00cd1da63f446790ac2e6fe0c9cbf30d1ee"
+            }
+          ],
+          "dataProvenance": "REAL_MAINNET_WITH_COUNTERFACTUAL_CONDITIONS",
+          "observedOutcome": "真实交易上改变用户条件，正确MATCHED、错收款/金额/截止MISMATCHED、无条件INCONCLUSIVE。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G05",
+      "name": "复杂movement",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "SYNTHETIC_AND_REPLAY",
+      "acceptance": "转入再转出、退款、批量、mint/burn、零值/自转、付款角色与tx.from分离。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.589Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-arc-unit.log",
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-browser-bundle.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-arc-unit.log",
+              "sha256": "631611a04e28053762ee7ba0322b08f8b403a9e666457265646cb4956d363da0"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-browser-bundle.json",
+              "sha256": "0d498078c22d9614d6af3142b21bf71e098700082eb0cb6cb3ffe75550a85c2c"
+            }
+          ],
+          "dataProvenance": "SYNTHETIC_AND_REPLAY",
+          "observedOutcome": "复杂资金边、mint/burn/零值自环、付款角色及Gas分离检查。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G06",
+      "name": "失败与来源",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "SYNTHETIC_AND_REAL_MAINNET",
+      "acceptance": "pending/revert/缺数/非主网/来源冲突/超时/429/超限都不显示成功。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.589Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-arc-unit.log",
+            "docs/arc-task-ledger/settlement-verifier/evidence/real-counterexamples-proof.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-arc-unit.log",
+              "sha256": "631611a04e28053762ee7ba0322b08f8b403a9e666457265646cb4956d363da0"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/real-counterexamples-proof.json",
+              "sha256": "304bb6907072e6820a3c6a9155b9b00cd1da63f446790ac2e6fe0c9cbf30d1ee"
+            }
+          ],
+          "dataProvenance": "SYNTHETIC_AND_REAL_MAINNET",
+          "observedOutcome": "缺失、失败、来源冲突、超时/429及预算错误保持失败或未知。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G07",
+      "name": "三层确定性",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "INDEPENDENT_RUNTIME",
+      "acceptance": "规范事实与冻结评估稳定，原件元数据保留；规则或条件改变产生新版本。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.590Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/ui-qa-proof.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/ui-qa-proof.json",
+              "sha256": "6d88a7cdda562ab4dd8604dcb16091b9645cc855deb00ef5a8aaa771ff777202"
+            }
+          ],
+          "dataProvenance": "INDEPENDENT_RUNTIME",
+          "observedOutcome": "三个真实包在Node独立进程和Chromium WebCrypto的事实/条件/报告摘要一致。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G08",
+      "name": "真复算及篡改",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "OFFLINE_REPLAY",
+      "acceptance": "独立进程从原始回执重新解析、比对；哈希一致与主网真实性不混淆。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.590Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/ui-qa-proof.json",
+            "docs/arc-task-ledger/settlement-verifier/evidence/real-counterexamples-proof.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/ui-qa-proof.json",
+              "sha256": "6d88a7cdda562ab4dd8604dcb16091b9645cc855deb00ef5a8aaa771ff777202"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/real-counterexamples-proof.json",
+              "sha256": "304bb6907072e6820a3c6a9155b9b00cd1da63f446790ac2e6fe0c9cbf30d1ee"
+            }
+          ],
+          "dataProvenance": "OFFLINE_REPLAY",
+          "observedOutcome": "原件重新解析与比较，原件篡改拒绝；自洽合成包完整性不等于主网真实性。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G09",
+      "name": "保存与恢复",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "REAL_ISOLATED_POSTGRES",
+      "acceptance": "增量迁移、权限、幂等、重启、失败事务和旧数据保持。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.590Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "pg_dump/pg_restore/增量迁移/隔离PostgreSQL真实stop/start",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/recovery-proof.json",
+            "docs/arc-task-ledger/settlement-verifier/evidence/production-backup-proof.json",
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-integration.log"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/recovery-proof.json",
+              "sha256": "454b1ba3987c4dce9c218cbfa27a0583a6dd350f13c0a0f077ec250b7266ff29"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/production-backup-proof.json",
+              "sha256": "f4621ebd2578a8a314638ac1796997b26b91e5abf94f254dcfaf0cb8ce45746b"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-integration.log",
+              "sha256": "e56ea46ed82285ff90a29b6e1f33ff888b5d88b2b0dc3aad28fdceb534e9ebe9"
+            }
+          ],
+          "dataProvenance": "REAL_ISOLATED_POSTGRES",
+          "observedOutcome": "实际生产Arc备份恢复、迁移6→7前后旧六表一致；隔离PG重启19份原件摘要一致。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G10",
+      "name": "旧功能保护",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "REPLAY_MAINNET_AND_HTTP",
+      "acceptance": "旧#18结果/原件/未知值及旧API、报告、游标逐项保持。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.590Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-integration.log",
+            "docs/arc-task-ledger/settlement-verifier/evidence/candidate-arc-e2e.log"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-integration.log",
+              "sha256": "e56ea46ed82285ff90a29b6e1f33ff888b5d88b2b0dc3aad28fdceb534e9ebe9"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/candidate-arc-e2e.log",
+              "sha256": "957cb566505965f659ef97f2811d2f2e1bb5f8468ab982e78b28ec43f9c94703"
+            }
+          ],
+          "dataProvenance": "REPLAY_MAINNET_AND_HTTP",
+          "observedOutcome": "旧API、任务金额、报告和固定游标回归；生产固定#18待部署后复查。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G11",
+      "name": "分享与隐私",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "BROWSER_AND_HTTP_AND_DB",
+      "acceptance": "会话权限、共享预览、GET只读、隐私不泄漏、报告与旧快照TTL解耦。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.590Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-integration.log",
+            "docs/arc-task-ledger/settlement-verifier/evidence/s4-task-browser.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-integration.log",
+              "sha256": "e56ea46ed82285ff90a29b6e1f33ff888b5d88b2b0dc3aad28fdceb534e9ebe9"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/s4-task-browser.json",
+              "sha256": "664b977bc37b717291e7d1d15679475f3b8717e779664dd8a7bbf2055c7981bc"
+            }
+          ],
+          "dataProvenance": "BROWSER_AND_HTTP_AND_DB",
+          "observedOutcome": "私有权限、显式完整分享预览/公开、匿名私有404、GET不启动RPC与无TTL报告检查。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G12",
+      "name": "独立集成",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "SEPARATE_PROCESS",
+      "acceptance": "独立客户端通过API/导出包产生真实对账输出，覆盖未知与失败。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.590Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/real-counterexamples-proof.json",
+            "docs/arc-task-ledger/settlement-verifier/evidence/s4-task-browser.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/real-counterexamples-proof.json",
+              "sha256": "304bb6907072e6820a3c6a9155b9b00cd1da63f446790ac2e6fe0c9cbf30d1ee"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/s4-task-browser.json",
+              "sha256": "664b977bc37b717291e7d1d15679475f3b8717e779664dd8a7bbf2055c7981bc"
+            }
+          ],
+          "dataProvenance": "SEPARATE_PROCESS",
+          "observedOutcome": "独立进程API/导出原件复算后写自身SQLite；重复0新增，冲突拒绝，非MATCHED不分配。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G13",
+      "name": "UI与可访问性",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "REAL_BROWSER",
+      "acceptance": "三尺寸、中文/英文、键盘/缩放、多边/自环、导出/分享及实际截图检查。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.590Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "实际Chromium操作、WebCrypto复算、截图目视检查",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/ui-qa-proof.json",
+            "docs/arc-task-ledger/settlement-verifier/evidence/candidate-arc-e2e.log"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/ui-qa-proof.json",
+              "sha256": "6d88a7cdda562ab4dd8604dcb16091b9645cc855deb00ef5a8aaa771ff777202"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/candidate-arc-e2e.log",
+              "sha256": "957cb566505965f659ef97f2811d2f2e1bb5f8468ab982e78b28ec43f9c94703"
+            }
+          ],
+          "dataProvenance": "REAL_BROWSER",
+          "observedOutcome": "三尺寸中英文、真实200%缩放、键盘/多边自环与目视复核。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G14",
+      "name": "安全与资源",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "SECURITY_AND_RESOURCE_CHECKS",
+      "acceptance": "只读RPC、SSRF、限额、去重、身份隔离、归档安全、无签名广播或新增付费。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.591Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-arc-unit.log",
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-integration.log",
+            "docs/arc-task-ledger/settlement-verifier/evidence/cloud-budget-proof.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-arc-unit.log",
+              "sha256": "631611a04e28053762ee7ba0322b08f8b403a9e666457265646cb4956d363da0"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-integration.log",
+              "sha256": "e56ea46ed82285ff90a29b6e1f33ff888b5d88b2b0dc3aad28fdceb534e9ebe9"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/cloud-budget-proof.json",
+              "sha256": "5bcdbb89076dfd0fc433daab57cdd561257a86bea315be94127891739bda2231"
+            }
+          ],
+          "dataProvenance": "SECURITY_AND_RESOURCE_CHECKS",
+          "observedOutcome": "只读RPC方法边界、SSRF/身份/幂等/配额；现有云资源24h观测费用0。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G15",
+      "name": "独立构建与部署一致性",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidenceClass": "CLEAN_BUILD_AND_PUBLIC_DEPLOYMENT",
+      "acceptance": "干净目录构建、必要文件闭合、迁移/worker版本一致及线上版本核对；无云权限则阻塞线上子项。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.591Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-build.log"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/final-scope-build.log",
+              "sha256": "2eec10355203a0c752714de9cb6dc2fba76658df258be4f7ec91fe033a43caf7"
+            }
+          ],
+          "dataProvenance": "CLEAN_BUILD_AND_PUBLIC_DEPLOYMENT",
+          "observedOutcome": "本地构建已通过；干净独立构建与线上一致性正在执行。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G16",
+      "name": "实际运行表现",
+      "status": "PASS",
+      "required": true,
+      "evidenceClass": "MEASURED_LOW_VOLUME_RUNS",
+      "acceptance": "报告/新核验耗时、RPC数、字节数、样本量与环境实测；目标不能伪装为结果。",
+      "evidence": [
+        {
+          "executedAt": "2026-10-06T20:12:26.591Z",
+          "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+          "sourceTreeArtifact": "docs/arc-task-ledger/settlement-verifier/evidence/source-files.json",
+          "commandOrAction": "见关联原件、执行记录和测试日志",
+          "exitCodeOrHttpStatus": 0,
+          "artifactPaths": [
+            "docs/arc-task-ledger/settlement-verifier/evidence/s3-browser.json",
+            "docs/arc-task-ledger/settlement-verifier/evidence/s4-task-browser.json",
+            "docs/arc-task-ledger/settlement-verifier/evidence/real-erc20-summary.json"
+          ],
+          "artifactSha256": [
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/s3-browser.json",
+              "sha256": "61e59fc25489a87a33eb8299e95edc18baf1d385d970a92c8637cd80fbed763d"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/s4-task-browser.json",
+              "sha256": "664b977bc37b717291e7d1d15679475f3b8717e779664dd8a7bbf2055c7981bc"
+            },
+            {
+              "path": "docs/arc-task-ledger/settlement-verifier/evidence/real-erc20-summary.json",
+              "sha256": "99a154d8df5758f879d74b9865ab1a1d29691fcd245e32faad0f7cbd86599d57"
+            }
+          ],
+          "dataProvenance": "MEASURED_LOW_VOLUME_RUNS",
+          "observedOutcome": "低量主网实测6RPC，原生4010ms/13302bytes，任务3796ms/15072bytes；非P95。",
+          "limitations": [
+            "单RPC来源，离线完整性不能认证主网",
+            "合成/反事实与真实主网证据分别标识",
+            "源文件摘要明确验证的工作树；最终提交/部署在后续版本记录"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "G17",
+      "name": "交付真实性",
+      "status": "NOT_RUN",
+      "required": true,
+      "evidenceClass": "ARTIFACT_REVIEW",
+      "acceptance": "当前版本清楚、证据关联、数据类别清楚、申请未代提交、未夸大采用/获奖率/取证保证。",
+      "evidence": []
+    }
+  ],
+  "productLoops": [
+    {
+      "id": "LOOP_TRANSACTION",
+      "name": "新主网交易→条件核对→结果与证据",
+      "status": "NOT_RUN",
+      "gates": [
+        "G01",
+        "G02",
+        "G03",
+        "G04",
+        "G05",
+        "G06",
+        "G13",
+        "G14"
+      ]
+    },
+    {
+      "id": "LOOP_REPORT",
+      "name": "保存→分享→导出→独立复算/在线重查",
+      "status": "NOT_RUN",
+      "gates": [
+        "G07",
+        "G08",
+        "G09",
+        "G11",
+        "G13"
+      ]
+    },
+    {
+      "id": "LOOP_CONSUMER",
+      "name": "独立程序→API/报告→对账输出",
+      "status": "NOT_RUN",
+      "gates": [
+        "G10",
+        "G12",
+        "G15",
+        "G16",
+        "G17"
+      ]
+    }
+  ],
+  "statuses": {
+    "implementation": "IMPLEMENTED_CANDIDATE",
+    "localValidation": "PASS_SCOPED_WITH_RECORDED_RETRIES",
+    "mainnetReadValidation": "PASS_BOUNDED_SINGLE_SOURCE",
+    "publicDeployment": "NOT_RUN_NEW_VERSION",
+    "submissionReadiness": "PENDING_DELIVERY",
+    "grantApplication": "NOT_SUBMITTED"
+  }
+}

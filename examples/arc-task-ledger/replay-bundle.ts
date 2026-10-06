@@ -1,10 +1,9 @@
 // 独立离线入口不包含 fetch、RPC 或服务端数据库依赖。
-import { readFile, stat } from 'node:fs/promises';
+import { readBundleFile } from './read-bundle.js';
 import { replayReportBundle } from '@zerotrace/arc-task-ledger';
 import { pathToFileURL } from 'node:url';
 export async function offlineReplay(file: string) {
-  if ((await stat(file)).size > 16777216) throw Error('原件包超过16MiB上限');
-  return replayReportBundle(JSON.parse(await readFile(file, 'utf8')));
+  return replayReportBundle(await readBundleFile(file));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const file = process.argv[2];

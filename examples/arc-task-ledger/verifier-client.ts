@@ -8,6 +8,7 @@ export class VerifierApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
+    readonly requestId?: string,
   ) {
     super(`Arc API ${status}: ${code}`);
   }
@@ -70,6 +71,7 @@ export class ArcUsdcClient {
       throw new VerifierApiError(
         response.status,
         typeof data.code === 'string' ? data.code : 'API_FAILED',
+        typeof data.requestId === 'string' ? data.requestId : undefined,
       );
     return data as T;
   }
@@ -85,7 +87,7 @@ export class ArcUsdcClient {
   }
   async verify(transaction: string, expectation?: SettlementExpectation, key = randomUUID()) {
     if (!this.token) await this.session();
-    return this.request<{ report: SettlementReport }>(
+    return this.request<{ report: SettlementReport; requestId: string }>(
       '/v1/verifications',
       'POST',
       { transaction, ...(expectation ? { expectation } : {}) },
@@ -94,6 +96,14 @@ export class ArcUsdcClient {
   }
   report(id: string) {
     return this.request<{ report: SettlementReport }>('/v1/reports/' + id);
+  }
+  status(id: string) {
+    return this.request<{
+      requestId: string;
+      status: 'RUNNING' | 'COMPLETED' | 'FAILED';
+      errorCode: string | null;
+      result: { report: SettlementReport } | null;
+    }>('/v1/verifications/' + id);
   }
   bundle(id: string) {
     return this.request<ReportBundle>('/v1/reports/' + id + '/bundle');

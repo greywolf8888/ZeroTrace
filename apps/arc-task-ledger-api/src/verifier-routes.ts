@@ -180,6 +180,12 @@ export async function registerVerifierRoutes(
     { bodyLimit: 1024, config: { rateLimit: { max: 10, timeWindow: 60000 } } },
     async (r, reply) => sessions.issue(r, reply),
   );
+  app.get('/v1/verifier/examples', async () => ({
+    examples: await read.examples(),
+    scope: 'EXPLICITLY_PUBLISHED_FIXED_REPORTS',
+    conditionProvenance: 'SEE_EACH_REPORT',
+    startsChainWork: false,
+  }));
   app.post(
     '/v1/verifications',
     { bodyLimit: 32768, config: { rateLimit: { max: 12, timeWindow: 60000 } } },
@@ -226,7 +232,10 @@ export async function registerVerifierRoutes(
       });
       if (!request.fresh) {
         if (request.status === 'COMPLETED')
-          return document(await read.get(request.report_id, owner, request.bundle_hash));
+          return {
+            ...document(await read.get(request.report_id, owner, request.bundle_hash)),
+            requestId: request.id,
+          };
         return reply.code(request.status === 'RUNNING' ? 202 : 409).send({
           code: request.status === 'RUNNING' ? 'VERIFICATION_RUNNING' : 'VERIFICATION_FAILED',
           requestId: request.id,
@@ -240,7 +249,7 @@ export async function registerVerifierRoutes(
           expectation,
         );
         await repo.complete(request.id, owner, bundle);
-        return document(bundle);
+        return { ...document(bundle), requestId: request.id };
       } catch (e) {
         await repo.fail(
           request.id,
@@ -251,6 +260,25 @@ export async function registerVerifierRoutes(
       }
     },
   );
+  app.get('/v1/verifications/:id', async (r) => {
+    const id = (r.params as { id: string }).id;
+    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(id))
+      throw new LedgerError('INVALID_REQUEST_ID', '核验请求编号无效。', 400);
+    const owner = sessions.owner(r, true)!;
+    const row = await read.request(id, owner);
+    return {
+      requestId: row.id,
+      status: row.status,
+      errorCode: row.error_code,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      result:
+        row.status === 'COMPLETED'
+          ? document(await read.get(row.report_id, owner, row.bundle_hash))
+          : null,
+      startsChainWork: false,
+    };
+  });
   app.get('/v1/reports/:id', async (r) => document(await read.get(reportId(r), sessions.owner(r))));
   app.get('/v1/reports/:id/bundle', async (r, reply) => {
     const bundle = await read.get(reportId(r), sessions.owner(r));
@@ -271,7 +299,10 @@ export async function registerVerifierRoutes(
       });
       if (!request.fresh) {
         if (request.status === 'COMPLETED')
-          return document(await read.get(request.report_id, owner, request.bundle_hash));
+          return {
+            ...document(await read.get(request.report_id, owner, request.bundle_hash)),
+            requestId: request.id,
+          };
         return reply.code(request.status === 'RUNNING' ? 202 : 409).send({
           code: request.status === 'RUNNING' ? 'VERIFICATION_RUNNING' : 'VERIFICATION_FAILED',
           requestId: request.id,
@@ -288,6 +319,7 @@ export async function registerVerifierRoutes(
         await repo.complete(request.id, owner, bundle);
         return {
           ...document(bundle),
+          requestId: request.id,
           previousReportId: old.report.reportId,
           factsChanged: old.report.factsHash !== bundle.report.factsHash,
         };
@@ -313,6 +345,7 @@ export async function registerVerifierRoutes(
     const { bundle } = await publicPreview(r);
     return {
       report: bundle.report,
+      bundle,
       bundleHash: bundle.bundleHash,
       removedFields: ['expectation.contextRef'],
       publicFields: [
@@ -321,7 +354,8 @@ export async function registerVerifierRoutes(
         'source alias and acquisition time',
         'per-condition checks',
       ],
-      warning: '公开后固定版本不能撤回；核对条件是用户输入，不证明事先约定。',
+      warning:
+        '公开后固定版本不能撤回，并可能进入公开示例列表；核对条件是用户输入，不证明事先约定。',
     };
   });
   app.post(

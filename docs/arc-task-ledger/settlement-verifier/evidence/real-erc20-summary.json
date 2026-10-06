@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-06T18:43:49.946Z",
+  "candidateOrigin": "existing raw mainnet artifacts; freshly requery by hash",
+  "samples": [
+    {
+      "hash": "0xe9f6ebb98510b962b41a46a5d842c395aa23b0b2375e995b8e42178ab69db711",
+      "state": "READY",
+      "movements": [
+        {
+          "interface": "ERC20_MIRRORED",
+          "atomic": "2000000000000000000",
+          "crossCheck": "matched"
+        }
+      ],
+      "metrics": {
+        "elapsedMs": 3227,
+        "rpcRequests": 6,
+        "rpcAttempts": 6,
+        "responseBytes": 15280,
+        "cacheHit": false
+      }
+    },
+    {
+      "hash": "0x70d61162e71d1f09fda7a549d6218687a5f5f4ef0d236fd2280349f866027633",
+      "state": "READY",
+      "movements": [
+        {
+          "interface": "ERC20_MIRRORED",
+          "atomic": "2000000000000000000",
+          "crossCheck": "matched"
+        }
+      ],
+      "metrics": {
+        "elapsedMs": 3066,
+        "rpcRequests": 6,
+        "rpcAttempts": 6,
+        "responseBytes": 11838,
+        "cacheHit": false
+      }
+    }
+  ]
+}

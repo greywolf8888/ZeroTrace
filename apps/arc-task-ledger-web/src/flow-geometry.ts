@@ -43,3 +43,42 @@ export function flowGeometry(
     y,
   };
 }
+
+/** 全图避让金额标签与地址节点；引线连接原资金路径，身份与路径保持独立。 */
+export function flowLayout(flows: FlowIdentity[], nodes: FlowPosition[], height = 400) {
+  const occupied = nodes.map((n) => ({ x: n.x, y: n.y, width: 140, height: 50 }));
+  const result = new Map<
+    string,
+    ReturnType<typeof flowGeometry> & { anchorX: number; anchorY: number }
+  >();
+  for (const flow of [...flows].sort((a, b) => a.id.localeCompare(b.id))) {
+    const from = nodes.find((n) => n.address === flow.from)!,
+      to = nodes.find((n) => n.address === flow.to)!;
+    const g = flowGeometry(flow, flows, from, to);
+    const self = from.address === to.address;
+    const anchorX = self ? g.x : ((from.x + to.x) / 2 + g.x) / 2;
+    const anchorY = self ? (from.y - 25) / 4 + (g.y * 3) / 4 : ((from.y + to.y) / 2 + g.y) / 2;
+    let position = { x: g.x, y: g.y };
+    search: for (const dy of [0, -60, 60, -120, 120, -180, 180]) {
+      for (const dx of [0, -150, 150, -300, 300]) {
+        const candidate = {
+          x: Math.max(78, Math.min(722, anchorX + dx)),
+          y: Math.max(32, Math.min(height - 32, anchorY + dy)),
+        };
+        if (
+          occupied.every(
+            (b) =>
+              Math.abs(b.x - candidate.x) > (b.width + 138) / 2 + 6 ||
+              Math.abs(b.y - candidate.y) > (b.height + 50) / 2 + 6,
+          )
+        ) {
+          position = candidate;
+          break search;
+        }
+      }
+    }
+    occupied.push({ ...position, width: 138, height: 50 });
+    result.set(flow.id, { ...g, ...position, anchorX, anchorY });
+  }
+  return result;
+}

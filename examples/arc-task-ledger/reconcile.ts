@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { readFile, stat } from 'node:fs/promises';
+import { readBundleFile } from './read-bundle.js';
 import { pathToFileURL } from 'node:url';
 import { replayReportBundle, type ReportBundle } from '@zerotrace/arc-task-ledger';
 import { ArcUsdcClient } from './verifier-client.js';
@@ -13,11 +13,18 @@ export function reconcile(
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(namespace) || !/^[A-Za-z0-9_-]{1,120}$/.test(businessReference))
     throw Error('Invalid local accounting namespace/reference');
   const report = bundle.report;
+  const evidence = {
+    reportId: report.reportId,
+    bundleHash: bundle.bundleHash,
+    factsHash: report.factsHash,
+    transactionUrl: 'https://explorer.arc.io/tx/' + report.transactionHash,
+  };
   if (report.evaluation?.outcome !== 'MATCHED')
     return {
       state: 'NO_ALLOCATION',
       outcome: report.evaluation?.outcome ?? 'INCONCLUSIVE',
       reportId: report.reportId,
+      evidence,
     };
   const db = new DatabaseSync(database);
   try {
@@ -52,6 +59,14 @@ export function reconcile(
       inserted,
       reportId: report.reportId,
       scope: 'THIS_ACCOUNTING_NAMESPACE_ONLY',
+      evidence,
+      accountingRows: report.evaluation.selectedMovementIds.map((id) => ({
+        namespace,
+        businessReference,
+        movementId: id,
+        amountAtomic18: report.facts!.movements.find((m) => m.id === id)!.atomic,
+        ...evidence,
+      })),
       mainnetAuthenticity: 'NOT_VERIFIED_OFFLINE',
     };
   } catch (e) {
@@ -74,8 +89,7 @@ async function main() {
     u.hash = '';
     bundle = await new ArcUsdcClient(u.href).bundle(id);
   } else {
-    if ((await stat(source)).size > 16777216) throw Error('Bundle exceeds 16MiB');
-    bundle = JSON.parse(await readFile(source, 'utf8'));
+    bundle = (await readBundleFile(source)) as ReportBundle;
   }
   console.log(JSON.stringify(reconcile(bundle, database, namespace, businessReference)));
 }

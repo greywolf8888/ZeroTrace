@@ -6,7 +6,7 @@ server {
   location /api/ {
     proxy_pass http://${ARC_INTERNAL_API_HOST}:${ARC_INTERNAL_API_PORT}/;
     proxy_set_header Host $host;
-    proxy_read_timeout 15s;
+    proxy_read_timeout 60s;
   }
   location / { try_files $uri $uri/ /index.html; }
 }

@@ -1,0 +1,96 @@
+{
+  "at": "2026-10-06T20:00:43.445Z",
+  "productionBackupRestored": true,
+  "restoredScope": "ALL_ARC_SCHEMA_OBJECTS_AND_DATA; vendor pg_stat_kcache outside Arc excluded",
+  "oldTablesBefore": [
+    {
+      "table": "jobs",
+      "count": 2832,
+      "hash": "499539b73f0bed048c3841748d9a45b5"
+    },
+    {
+      "table": "receipts",
+      "count": 116,
+      "hash": "f1aeb84be912920d12f9fb35801ef8ec"
+    },
+    {
+      "table": "runs",
+      "count": 177,
+      "hash": "44c78a69475ffcde48476c20c9b46515"
+    },
+    {
+      "table": "observations",
+      "count": 17860,
+      "hash": "96e54a2eeb0a3ea3caa61b5ea7239715"
+    },
+    {
+      "table": "segments",
+      "count": 6722,
+      "hash": "7d3e16a4f58cc153f7f5af1e7f67050e"
+    },
+    {
+      "table": "checkpoints",
+      "count": 6,
+      "hash": "51b5034b14275a7a20d5385fb56d9af0"
+    }
+  ],
+  "oldTablesAfter": [
+    {
+      "table": "jobs",
+      "count": 2832,
+      "hash": "499539b73f0bed048c3841748d9a45b5"
+    },
+    {
+      "table": "receipts",
+      "count": 116,
+      "hash": "f1aeb84be912920d12f9fb35801ef8ec"
+    },
+    {
+      "table": "runs",
+      "count": 177,
+      "hash": "44c78a69475ffcde48476c20c9b46515"
+    },
+    {
+      "table": "observations",
+      "count": 17860,
+      "hash": "96e54a2eeb0a3ea3caa61b5ea7239715"
+    },
+    {
+      "table": "segments",
+      "count": 6722,
+      "hash": "7d3e16a4f58cc153f7f5af1e7f67050e"
+    },
+    {
+      "table": "checkpoints",
+      "count": 6,
+      "hash": "51b5034b14275a7a20d5385fb56d9af0"
+    }
+  ],
+  "oldDataIdentical": true,
+  "migration": 7,
+  "reportsBackup": {
+    "bytes": 3807799,
+    "sha256": "d27e7d616e94cd29870b9e6856ab2eb71e763ddde3da6a1161f77b5e7dd8f2ac"
+  },
+  "restoredBundles": 19,
+  "operations": [
+    {
+      "operation": "stop",
+      "exit": 0
+    },
+    {
+      "operation": "start",
+      "exit": 0
+    }
+  ],
+  "postmasterChanged": true,
+  "publicReportAfterRestart": {
+    "reportId": "zasv_81047088a51f44495c573ee7aa702742cf1c285df79a2a292cf81cb042424291",
+    "http": 200,
+    "bundleHash": "ee9527302acd1912c4003ba42740eb79fd51c95c43ac294acfec7eb83904c76b",
+    "offlineRecompute": "PASS",
+    "chainCalls": 0
+  },
+  "sharedPostgresRestarted": false,
+  "productionDatabaseModified": false
+}

@@ -38,6 +38,25 @@ export function verifierRepository(store: LedgerStore) {
   const lock = (c: PoolClient) =>
     c.query("SELECT pg_advisory_xact_lock(hashtext('zasv:bounded-requests-v1'))");
   return {
+    async examples() {
+      return (
+        await store.pool.query(
+          `SELECT p.report_id,r.document->>'transactionHash' AS transaction_hash
+        FROM arc_task_ledger_v1.zasv_publications p JOIN arc_task_ledger_v1.zasv_reports r USING(report_id)
+        WHERE r.document->'evaluation'->>'outcome'='MATCHED'
+        ORDER BY p.created_at DESC,p.report_id LIMIT 3`,
+        )
+      ).rows.map((row) => ({ reportId: row.report_id, transactionHash: row.transaction_hash }));
+    },
+    async request(id: string, owner: string) {
+      const result = await store.pool.query(
+        'SELECT id,status,report_id,bundle_hash,error_code,created_at,updated_at FROM arc_task_ledger_v1.zasv_requests WHERE id=$1 AND owner_hash=$2',
+        [id, owner],
+      );
+      if (!result.rows[0])
+        throw new LedgerError('REQUEST_NOT_FOUND', '核验请求不存在或未授权。', 404);
+      return result.rows[0];
+    },
     async begin(owner: string, key: string, input: unknown) {
       const digest = hashPayload(input);
       return store.transaction(async (c) => {
@@ -102,6 +121,16 @@ export function verifierRepository(store: LedgerStore) {
         );
         if (bytes > 16777216 || +size.rows[0].total + bytes > 134217728)
           throw new LedgerError('REPORT_CAPACITY', '原件包超过有界存储容量。', 429);
+        const capacity = await c.query(
+          'SELECT (SELECT count(*) FROM arc_task_ledger_v1.zasv_reports) AS total, EXISTS(SELECT 1 FROM arc_task_ledger_v1.zasv_reports WHERE report_id=$1) AS existing',
+          [bundle.report.reportId],
+        );
+        if (!capacity.rows[0].existing && +capacity.rows[0].total >= 1000)
+          throw new LedgerError(
+            'REPORT_CAPACITY',
+            '并发保存后报告容量已满，已有报告仍可读取。',
+            429,
+          );
         await c.query(
           'INSERT INTO arc_task_ledger_v1.zasv_reports(report_id,document) VALUES($1,$2) ON CONFLICT DO NOTHING',
           [bundle.report.reportId, JSON.stringify(bundle.report)],

@@ -1,0 +1,9 @@
+{
+  "name": "candidate-arc-e2e",
+  "command": "npm run arc:test:e2e",
+  "started": "2026-10-06T20:10:23.706Z",
+  "finished": "2026-10-06T20:11:44.861Z",
+  "exitCode": 0,
+  "artifact": ".agent-state/arc-task-ledger/zasv-20261007/candidate-arc-e2e.log",
+  "sha256": "957cb566505965f659ef97f2811d2f2e1bb5f8468ab982e78b28ec43f9c94703"
+}

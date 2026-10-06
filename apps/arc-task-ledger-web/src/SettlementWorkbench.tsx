@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SettlementCard } from './SettlementCard.js';
 import { label, money, value, type Detail, type Registry } from './model.js';
-import { flowGeometry } from './flow-geometry.js';
+import { flowLayout } from './flow-geometry.js';
 
 /** 联动只读服务器投影；本组件不计算或匹配链上金额。 */
 export function SettlementWorkbench({
@@ -42,6 +42,7 @@ export function SettlementWorkbench({
       y: i === 0 ? 160 : 160 + Math.sin(angle) * 105,
     };
   });
+  const graphLayout = flowLayout(flows, nodes, 320);
   const supportIds =
     metric?.evidenceIds ??
     flow?.evidenceIds ??
@@ -171,9 +172,7 @@ export function SettlementWorkbench({
                   </marker>
                 </defs>
                 {flows.map((f) => {
-                  const from = nodes.find((n) => n.address === f.from)!;
-                  const to = nodes.find((n) => n.address === f.to)!;
-                  const geometry = flowGeometry(f, flows, from, to);
+                  const geometry = graphLayout.get(f.id)!;
                   const edgePath = geometry.path,
                     mx = geometry.x,
                     my = geometry.y;
@@ -207,6 +206,14 @@ export function SettlementWorkbench({
                       }
                     >
                       <path d={edgePath} markerEnd="url(#flow-arrow)" />
+                      <line
+                        x1={geometry.anchorX}
+                        y1={geometry.anchorY}
+                        x2={mx}
+                        y2={my}
+                        stroke="#668a26"
+                        strokeDasharray="3 3"
+                      />
                       <rect x={mx - 64} y={my - 25} width="128" height="50" rx="8" />
                       <text x={mx} y={my - 10} textAnchor="middle">
                         {label(f.kind)}

@@ -135,7 +135,16 @@ export async function createLedgerApp(
   });
   app.get('/healthz', () => ({
     status: 'UP',
-    components: { readOnly: true, version: RULE_VERSION, interfaceVersion: 'atl-ui-v1.3.0' },
+    components: {
+      readOnly: true,
+      version: RULE_VERSION,
+      interfaceVersion: 'atl-ui-v1.3.0',
+      verifierInterfaceVersion: 'zasv-interface-v1',
+      verifierRuleVersion: 'zasv-rules-v1.0.0',
+      schemaMigration: 7,
+      releaseVersion: '2.0.0',
+      sourceCommit: process.env.ARC_SOURCE_COMMIT ?? 'LOCAL_UNDECLARED',
+    },
   }));
   app.get('/v1/registry', () => ({
     chainId: DEPLOYMENT.chainId,

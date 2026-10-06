@@ -8,6 +8,8 @@
 
 所有工作 POST 必须发送 `X-ZASV-CSRF`。核验、重查和发布另要求 `Idempotency-Key`，16—100个字母、数字、下划线或连字符；同键不同输入返回409。失败后使用新键发起新的明确请求。进行中的同键请求返回202 VERIFICATION_RUNNING，不产生第二条链查询。
 
+成功核验与重查返回持久 `requestId`。`GET /v1/verifications/:id` 只读取该会话自己的 RUNNING/COMPLETED/FAILED 状态，完成时返回固定结果，不进行 RPC、回收或重跑；无会话401，其他所有者/不存在404。SDK 提供 `status(id)`；202 的 `VerifierApiError.requestId` 可用于明确状态读取。报告会话过期或丢失无法恢复私有权限，请及时导出；报告本身不会随会话过期而删除。
+
 `POST /v1/verifications` 接受 `{transaction, expectation? , task?}`。transaction 只能是 Arc 主网规范哈希或登记的 explorer 交易链接。没有 expectation 时只是交易观察；不能声称订单已付款。expectation 为 zasv-expectation-v1，包含 chainId、asset、expectedPayee、可选 expectedMovementPayer、EXACT/RANGE、精确 min/maxAmountAtomic18、可选 UTC notBefore/deadline、明确同交易 selection、可选私有 contextRef、provenance。金额必须是整数字符串。provenance 普通入口为 USER_INPUT 或 REPORT_IMPORT，不能自行声称 REGISTERED_TASK。
 
 task 为 `{jobId,snapshotRunId,legId}`，只能引用原持久任务投影。任务金额、收款人和可选付款人必须与固定协议条件相同；手改条件使用普通入口。报告原件保留任务来源与规则版本，交易仍重新读取。`GET /v1/task-conditions/:jobId?snapshotRunId=…&legId=…&transaction=…` 只读取已有固定任务条件，不触发 RPC。
@@ -31,6 +33,8 @@ task 为 `{jobId,snapshotRunId,legId}`，只能引用原持久任务投影。任
 错误响应为 `{code,message,retryable}`。常用状态：400输入不合法；401无会话；403来源或CSRF拒绝；404无报告权限；409输入/版本/原件冲突；422未知规则或无法确定任务条件；429频率/配额/容量达到上限；503持久写入或来源不可用。不得把这些情况转为金额0或付款成功。
 
 ## Independent client contract
+
+机器可读规范见 `openapi.json`。`GET /v1/verifier/examples` 只展示最多三份实际已明确公开、条件核对 MATCHED 的固定报告；没有种子示例，不触发链查询。公开预览包含即将分享的完整原件包，说明公开内容也可能进入该示例列表。
 
 Use `ArcUsdcClient` from `examples/arc-task-ledger/verifier-client.ts`. Start a private session, verify one transaction with an explicit expectation, inspect each check, fetch the bundle, and preview before publication. GET never starts RPC work. An identical idempotency key cannot bind different input. Reports are content-addressed; changing conditions creates a different report. Requery preserves earlier versions.
 

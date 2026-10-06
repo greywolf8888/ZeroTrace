@@ -1,5 +1,5 @@
 import { it, expect } from 'vitest';
-import { flowGeometry } from '../../../apps/arc-task-ledger-web/src/flow-geometry.js';
+import { flowGeometry, flowLayout } from '../../../apps/arc-task-ledger-web/src/flow-geometry.js';
 it('并行、反向与自环资金边独立可选，输入顺序不改变路由', () => {
   const flows = [
     { id: '1', from: 'a', to: 'b' },
@@ -24,4 +24,14 @@ it('并行、反向与自环资金边独立可选，输入顺序不改变路由'
       ),
     ).toEqual(geometries[i]);
   expect(geometries[3]!.y).toBeGreaterThan(0);
+  const layout = flowLayout(flows, [a, b]);
+  const entries = [...layout.values()];
+  for (let i = 0; i < entries.length; i++)
+    for (let j = i + 1; j < entries.length; j++) {
+      expect(
+        Math.abs(entries[i]!.x - entries[j]!.x) > 144 ||
+          Math.abs(entries[i]!.y - entries[j]!.y) > 56,
+      ).toBe(true);
+    }
+  expect([...flowLayout([...flows].reverse(), [a, b]).entries()]).toEqual([...layout.entries()]);
 });

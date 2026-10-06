@@ -1,0 +1,155 @@
+[
+  {
+    "name": "arc-unit",
+    "command": "npm run arc:test:unit",
+    "started": "2026-10-06T19:17:32.860Z",
+    "finished": "2026-10-06T19:18:54.357Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-arc-unit.log",
+    "sha256": "7d139711292a8fb05af53d002493e902c52e9f0122fb82105461dc236a307b97"
+  },
+  {
+    "name": "arc-integration",
+    "command": "npm run arc:test:integration",
+    "started": "2026-10-06T19:18:54.448Z",
+    "finished": "2026-10-06T19:19:00.592Z",
+    "exitCode": 1,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-arc-integration.log",
+    "sha256": "0ecae87943b6c2c4f56c79ff6817bf5a3e87f3146ec44fcd0624784618a9d7a8"
+  },
+  {
+    "name": "arc-build",
+    "command": "npm run arc:build",
+    "started": "2026-10-06T19:19:00.770Z",
+    "finished": "2026-10-06T19:19:30.746Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-arc-build.log",
+    "sha256": "4b2d03cd9a19b5082f4baab220f4ba5e3008b17fa25bec35cad3f48e06ba1ec3"
+  },
+  {
+    "name": "arc-integration",
+    "command": "npm run arc:test:integration",
+    "started": "2026-10-06T19:19:47.930Z",
+    "finished": "2026-10-06T19:19:58.286Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-arc-integration.log",
+    "sha256": "766eb7c46b4cd73f8052c63eac3c3982d708962a48500a1f4fd289861543fe76"
+  },
+  {
+    "name": "arc-build",
+    "command": "npm run arc:build",
+    "started": "2026-10-06T19:19:58.298Z",
+    "finished": "2026-10-06T19:20:00.015Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-arc-build.log",
+    "sha256": "48357e93ac13598a36f9ff3f1789745453f81ca8da2f24dfd6272531b1fe1078"
+  },
+  {
+    "name": "arc-e2e",
+    "command": "npm run arc:test:e2e",
+    "started": "2026-10-06T19:20:00.176Z",
+    "finished": "2026-10-06T19:20:45.447Z",
+    "exitCode": 1,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-arc-e2e.log",
+    "sha256": "ef7a280abbfd9f632de50a53dfa161726e8cee78dcb7f4400ac924ead5f66f3e"
+  },
+  {
+    "name": "format",
+    "command": "npm run format:check",
+    "started": "2026-10-06T19:20:45.471Z",
+    "finished": "2026-10-06T19:22:33.219Z",
+    "exitCode": 1,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-format.log",
+    "sha256": "4e9203e972993bba4970384057abb7bde47e45d0bb6a0c82e2a5b44e85187594"
+  },
+  {
+    "name": "lint",
+    "command": "npm run lint",
+    "started": "2026-10-06T19:22:33.287Z",
+    "finished": "2026-10-06T19:23:24.282Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-lint.log",
+    "sha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6"
+  },
+  {
+    "name": "typecheck",
+    "command": "npm run typecheck",
+    "started": "2026-10-06T19:23:24.369Z",
+    "finished": "2026-10-06T19:25:55.501Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-typecheck.log",
+    "sha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8"
+  },
+  {
+    "name": "unit",
+    "command": "npm run test:unit",
+    "started": "2026-10-06T19:25:55.514Z",
+    "finished": "2026-10-06T19:27:00.497Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-unit.log",
+    "sha256": "7ae07b63a50ac86bc09b42fe48dbecf13163da2078db13e70c8e7cd06953413a"
+  },
+  {
+    "name": "integration",
+    "command": "npm run test:integration",
+    "started": "2026-10-06T19:27:00.556Z",
+    "finished": "2026-10-06T19:27:07.143Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-integration.log",
+    "sha256": "8f4351218add664bdaeaf3713dbee5b925fa6bd37971a5a29dd873e5d8daac82"
+  },
+  {
+    "name": "evals",
+    "command": "npm run test:evals",
+    "started": "2026-10-06T19:27:07.165Z",
+    "finished": "2026-10-06T19:27:09.197Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-evals.log",
+    "sha256": "064dc64051b8673d7e627f1acfe6ba1340a6704b03f3c6d2e86c0e9a1943b9fc"
+  },
+  {
+    "name": "mcp",
+    "command": "npm run test:mcp",
+    "started": "2026-10-06T19:27:09.202Z",
+    "finished": "2026-10-06T19:27:10.241Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-mcp.log",
+    "sha256": "1c48bab1ac4538cfa75a3d73ea25e4d09963d5d2fe2066236f422ea743684aaf"
+  },
+  {
+    "name": "build",
+    "command": "npm run build",
+    "started": "2026-10-06T19:27:10.254Z",
+    "finished": "2026-10-06T19:27:26.230Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-build.log",
+    "sha256": "24af8aecdc2444cace2291fce01721018eee05ca465a97116ed1383a16074db2"
+  },
+  {
+    "name": "license",
+    "command": "npm run license:check",
+    "started": "2026-10-06T19:27:26.244Z",
+    "finished": "2026-10-06T19:28:13.872Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-license.log",
+    "sha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e"
+  },
+  {
+    "name": "rust",
+    "command": "cargo test --workspace -j 2",
+    "started": "2026-10-06T19:28:14.057Z",
+    "finished": "2026-10-06T19:47:24.849Z",
+    "exitCode": 0,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-rust.log",
+    "sha256": "0f00616d622a5fa53697581f306e3256796061b468621c782888996576496051"
+  },
+  {
+    "name": "e2e",
+    "command": "npm run test:e2e",
+    "started": "2026-10-06T19:47:25.305Z",
+    "finished": "2026-10-06T19:50:47.133Z",
+    "exitCode": 1,
+    "log": ".agent-state/arc-task-ledger/zasv-20261007/check-e2e.log",
+    "sha256": "0b9347b090280064404e09fa3e4456a316d8b025ed87ec5b59fe8f75467ca20c"
+  }
+]

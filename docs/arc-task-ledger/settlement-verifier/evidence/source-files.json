@@ -1,0 +1,246 @@
+{
+  "sourceSha": "ba217dfae1c56b9a6993d7a3a23a1a72a7d37f23",
+  "workingTreeChangesIncluded": true,
+  "files": [
+    {
+      "path": "apps/arc-task-ledger-api/package.json",
+      "sha256": "b1c854e238b76b4fc6fc3b90bd1c57757c541afadba40847383f767c467b8fb9"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/app.ts",
+      "sha256": "efbf705b1fe9c2231c0c6fd59eec42a58d057ac975eeb79cf5dafff2c1c5fb21"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/contract.ts",
+      "sha256": "3ea8279e6be7ed9d10a48dca26689761bb27d2c7512529d3f0b1c553cae8e90b"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/live.ts",
+      "sha256": "1d02cfcc58b068c0f3f7787faad37c7dbbf35d94832e8f61f416da9967b9678c"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/migrate.ts",
+      "sha256": "50ac0a156cdbfe19c3776672643785922c2349f0029122568b3f6221ead7b83d"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/server.ts",
+      "sha256": "81401da3d72fae97574420ab135461aafbbedfee6d51d9e3b9133f87b68b6384"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/storage.ts",
+      "sha256": "3a1d0c37d403f8057e96dc2183ffe11960a82f1cce680cbfadec96b5ea5e96ec"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/verifier-routes.ts",
+      "sha256": "7230213c02918fcca2edad274aef4fc4c3b49534e7426c1fb34dad128b34330d"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/verifier-session.ts",
+      "sha256": "5407559d68018b69a183f1936ccf514ffb13b5e9c9391b10397ccaec7418bfa2"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/verifier-storage.ts",
+      "sha256": "7bffe912d4b5968bb531b8c016340203bafd21be1f038e8cb69e41d9bf34fa3b"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/worker.ts",
+      "sha256": "6e5267b05fb41be7690eee320f4d3609cc38d21050e8b870f37bafb8d7d5e6af"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/tsconfig.json",
+      "sha256": "8da5b3f6ed50f8b3cdffb082ff21cafbeb5750a046b53711ae8e5131e48df6e1"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/index.html",
+      "sha256": "08bc493074f99b66cdc73dc7044cee45d49b5f23ef3025e1e2224d7355382f4c"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/package.json",
+      "sha256": "9b2ca52a8515d4a3f108ebd0490f77dd2133dc06a8b42df0c38a52a3f6a010bb"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/Dashboard.tsx",
+      "sha256": "6684da57d15a3813035a0d4e163868ac50f41e272a00400c9b2ed552af1a52be"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/SettlementCard.tsx",
+      "sha256": "01cbe5503b4956bef3b20ed76ae08be2df0629956ceb03a692345db1a29a4011"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/SettlementWorkbench.tsx",
+      "sha256": "a1a4d974b69f9da83384682a4b7970e47dd55d532702551557a750c7b4279608"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/VerificationFlow.tsx",
+      "sha256": "f3dba49f476f449d3d88ebc2d57e159d3969bdf6e1d5a99cf39a60881fbccdfe"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/VerificationWorkspace.tsx",
+      "sha256": "1fe39444178d830ffe457023e35fa0600a42557b1c4097abe8170051ca8523de"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/VerifierTaskChooser.tsx",
+      "sha256": "a29e5fb490c3fa8ca0e5659519ee11a231b7d96d435c489ed402e308c1d56fc9"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/flow-geometry.ts",
+      "sha256": "9381f201f39600f44ef3f8f37d3ec47e1a8e8ea521d47b1729980c5d936781d1"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/main.tsx",
+      "sha256": "8da2116c4c1793e2bf0049f40a346dbdb726e9b86699fcef1c77de6f352fa2dd"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/model.ts",
+      "sha256": "5f27856c51f45e0bac0e275674970f0f2d0a594329c45e121f40f53152329f94"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/neon.css",
+      "sha256": "3ffc5596122ef7016cf4dd614746e958c21ef86fcb1783c6ce6037362cdad71d"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/style.css",
+      "sha256": "911d496febe360ac7025370befd728adb3891092319edea8f7c1b2091c97da6d"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/verifier.css",
+      "sha256": "cad81661f71602b23f153f33f6213fd7c86e3c67e6411289926c6efd86718c32"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/tsconfig.json",
+      "sha256": "a344b35b010171588d2435daaffc13d177c98c11acf7cb2e57b436ec64023604"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/vite.config.ts",
+      "sha256": "478d1dfec70cc418acdeaa07bb823d9967502345c4511403139d956afb390069"
+    },
+    {
+      "path": "examples/arc-task-ledger/README.zh-CN.md",
+      "sha256": "070c92cd9063b3f2c62a9e021f21d30be806f22dbd9df46ec12702c863bd7574"
+    },
+    {
+      "path": "examples/arc-task-ledger/consumer.ts",
+      "sha256": "0a80d8dbbfa68b532342c48c29233b099524a238a5e6a62d7ff08ff3d11c040c"
+    },
+    {
+      "path": "examples/arc-task-ledger/reconcile.ts",
+      "sha256": "d61f9e06f34a8fa7f390f9028b1def1f6286bf03580692f1fa07aeabb2201def"
+    },
+    {
+      "path": "examples/arc-task-ledger/replay-bundle.ts",
+      "sha256": "be708f4a395fefb6c64b94a69b7ece0533d45a23436f361ee7b84f9bdca8b3c5"
+    },
+    {
+      "path": "examples/arc-task-ledger/verifier-client.ts",
+      "sha256": "7d369613f6f59abd3b1fb060a6d38266d52df8d42e89ed9bb12ddb87fdb158c7"
+    },
+    {
+      "path": "infra/northflank/migration-bootstrap.mjs",
+      "sha256": "dab63f523d8cee68b8b4ffff6bcc4de591aa81c137a11bb03d720c9822d367d3"
+    },
+    {
+      "path": "packages/arc-task-ledger/AGENTS.md",
+      "sha256": "a703df9ca149d78d50146dc1bc07db80c9be76edb37a402de6a1df091f8b1a31"
+    },
+    {
+      "path": "packages/arc-task-ledger/package.json",
+      "sha256": "4c43b8af5da35dd48147c7b398d9e268f70e8eabf1d8624c3c6a58511a89cd2b"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/abi.json",
+      "sha256": "0e53af61dde5522b32f5586923acf3c7a3d052cf1f3f34426e1b6fd7931882ca"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/config.ts",
+      "sha256": "52eb79d0987787098615d4499212d0abc9c3722a9458811e23bb35e65ccce1dc"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/deployment.json",
+      "sha256": "8d55eb37b20ab2d6bb46a07bc72f1fa552978edddf736a6974bb23bea1a7e003"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/enrichment.ts",
+      "sha256": "072bf69720f05d681b84aa6f30f168e59b83d26ee122dcde2d16830ebeb344e3"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/index.ts",
+      "sha256": "38bbb8dec87ffe1604e296c861002c2ed08b402a6c71aae92714326ad47d992d"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/live-result.ts",
+      "sha256": "f1b48b5aa3a4d109636f26e14df9f196561c008054c0b2274c46058c3d9dba04"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/navigation.json",
+      "sha256": "4a838d27981f286536d4c757eeacd270d0d8c94fa1d22e00eaf41cf4c07bb3b7"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/protocol.ts",
+      "sha256": "8ab3f479ac0d9b3f147e044c64f0f41b89acfd13b71b77d93d12c8238947327d"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/public-dns.ts",
+      "sha256": "cf9ee16d65a0e4bb429d91d05d36b39ff7f4c959b202504782bcd1b2b2c477ea"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/reader.ts",
+      "sha256": "c0b9922ae14d3db660e64fb5e10ebb69672f33bbc553ca59b6b008087f027a37"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/result.ts",
+      "sha256": "6020b64d7f5326a69f31417a04f51aca39bfbb749ebfd4db64d737c0dcb0335f"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/rpc-governor.ts",
+      "sha256": "6be8adc4864bd54094a96d4ca7b0949034a7fbd219075b03f1c2aaef298ff431"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/settlement.ts",
+      "sha256": "dccdd29d9a34b80be02cceaddaa036022b21bb7c1519656920b38b5d826019f7"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/storage.ts",
+      "sha256": "3e5a858eda0a33a0b558c95703fa07765908feca666ef312ff86100c92d37483"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/transaction-reader.ts",
+      "sha256": "414fbfedae6e68b4b36050dba8c84a54489948b6c9e06abefc37ed7e54399a3a"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/types.ts",
+      "sha256": "dd6a9ad164a0be06e9ea484a4c516c340d85fe88268106d676c983bc5e695362"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/usdc-log.ts",
+      "sha256": "3cf23cf684f12a90bc2fabbfeafc1ec3f693c477060857dad27611c1e8c8b8de"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/usdc-network.json",
+      "sha256": "49ed5e17e01122a5919aa1befb943b7bb0d7e859f946fdc6c065bcaa275c9871"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/verifier-browser-replay.ts",
+      "sha256": "8e3e43f1d7c1896deb73f875be69afda1b572a0e45db6068f8e079a92610d5b5"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/verifier-core.ts",
+      "sha256": "eba2c5fe1671b252335b3570c38f23dc1dbb5adac8f7dbc8392107527588a833"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/verifier-report-core.ts",
+      "sha256": "1fd928c443443d8a343aea5f5d227cb4052767656b45586eeef836f85390acf9"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/verifier-report.ts",
+      "sha256": "5bf8f4ff7b15d0ad4509eaa1054d0d66cdde9455b3c19fb30fc11a1683e6d9d6"
+    },
+    {
+      "path": "packages/arc-task-ledger/src/worker.ts",
+      "sha256": "c1822bb37fbc4f49ed28edb82a987a80a53e55afb69caf613186502092d79abb"
+    },
+    {
+      "path": "packages/arc-task-ledger/tsconfig.json",
+      "sha256": "050bd4fb467a7881ba3755a38e14b23b638ceec3cc60b2a66c7f49b9d877bfcb"
+    }
+  ]
+}

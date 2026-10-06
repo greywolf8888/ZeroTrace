@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, afterAll, describe, it, expect, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
 import { LedgerStore } from '../../../apps/arc-task-ledger-api/src/storage.js';
 import { createLedgerApp } from '../../../apps/arc-task-ledger-api/src/app.js';
 import { verifierRepository } from '../../../apps/arc-task-ledger-api/src/verifier-storage.js';
@@ -22,6 +23,92 @@ afterAll(() => store.close());
 const sdk = { 'x-arc-client': 'zasv-sdk-v1' };
 const secret = 'test-only-settlement-session-secret-32-bytes';
 describe('真实持久核验权限与原子性', () => {
+  it('接近容量的两个请求不能突破1000报告硬限额，失败保存保持原子性', async () => {
+    await store.pool.query(
+      "INSERT INTO arc_task_ledger_v1.zasv_reports(report_id,document) SELECT 'test_only_capacity_'||n,'{\"testOnly\":true}'::jsonb FROM generate_series(1,999) n",
+    );
+    const repo = verifierRepository(store),
+      owner = 'test-only-capacity-owner';
+    const first = await repo.begin(owner, 'capacity-request-one', { n: 1 }),
+      second = await repo.begin(owner, 'capacity-request-two', { n: 2 });
+    await repo.complete(
+      first.id,
+      owner,
+      buildReportBundle(verifierObservation(), verifierCondition()),
+    );
+    const condition = { ...verifierCondition(), minAmountAtomic18: '2', maxAmountAtomic18: '2' };
+    await expect(
+      repo.complete(second.id, owner, buildReportBundle(verifierObservation(), condition)),
+    ).rejects.toMatchObject({ code: 'REPORT_CAPACITY' });
+    expect(
+      (await store.pool.query('SELECT count(*)::int AS n FROM arc_task_ledger_v1.zasv_reports'))
+        .rows[0].n,
+    ).toBe(1000);
+    expect(
+      (
+        await store.pool.query('SELECT status FROM arc_task_ledger_v1.zasv_requests WHERE id=$1', [
+          second.id,
+        ])
+      ).rows[0].status,
+    ).toBe('RUNNING');
+  });
+  it('请求状态读取只认会话所有者；RUNNING/FAILED/COMPLETED均不触发链读取或回收', async () => {
+    const observe = vi.fn(async () => verifierObservation());
+    const app = await createLedgerApp(store, secret, store, undefined, observe);
+    try {
+      const s = (await app.inject({ method: 'POST', url: '/v1/sessions', headers: sdk })).json();
+      const headers = {
+        ...sdk,
+        authorization: 'Bearer ' + s.sessionToken,
+        'x-zasv-csrf': s.csrfToken,
+        'idempotency-key': 'status-contract-request-001',
+      };
+      const verified = await app.inject({
+        method: 'POST',
+        url: '/v1/verifications',
+        headers,
+        payload: { transaction: TX, expectation: verifierCondition() },
+      });
+      expect(verified.statusCode).toBe(200);
+      const row = (
+        await store.pool.query(
+          'SELECT id,owner_hash FROM arc_task_ledger_v1.zasv_requests WHERE idempotency_key=$1',
+          [headers['idempotency-key']],
+        )
+      ).rows[0];
+      const read = await app.inject({ url: '/v1/verifications/' + row.id, headers });
+      expect(read.json().status).toBe('COMPLETED');
+      expect(verified.json().requestId).toBe(row.id);
+      expect(read.json().result.report.reportId).toBe(verified.json().report.reportId);
+      expect(read.json().startsChainWork).toBe(false);
+      expect((await app.inject('/v1/verifications/' + row.id)).statusCode).toBe(401);
+      const stranger = (
+        await app.inject({ method: 'POST', url: '/v1/sessions', headers: sdk })
+      ).json();
+      expect(
+        (
+          await app.inject({
+            url: '/v1/verifications/' + row.id,
+            headers: { ...sdk, authorization: 'Bearer ' + stranger.sessionToken },
+          })
+        ).statusCode,
+      ).toBe(404);
+      const repo = verifierRepository(store);
+      const pending = await repo.begin(row.owner_hash, 'status-running-request-001', {
+        testOnly: true,
+      });
+      expect(
+        (await app.inject({ url: '/v1/verifications/' + pending.id, headers })).json().status,
+      ).toBe('RUNNING');
+      await repo.fail(pending.id, row.owner_hash, 'TEST_ONLY_FAILURE');
+      const failed = (await app.inject({ url: '/v1/verifications/' + pending.id, headers })).json();
+      expect(failed.status).toBe('FAILED');
+      expect(failed.errorCode).toBe('TEST_ONLY_FAILURE');
+      expect(observe).toHaveBeenCalledTimes(1);
+    } finally {
+      await app.close();
+    }
+  });
   it('固定任务协议条件进入真实持久报告；改金额、无来源和未知归属不伪造协议条件', async () => {
     const observation = verifierObservation();
     const raw = rawEvidence(
@@ -30,7 +117,7 @@ describe('真实持久核验权限与原子性', () => {
       'test-task-receipt',
       '仅测试合成回执',
     );
-    const fixture = run('verifier_registered_task_fixture', ['8']);
+    const fixture = run('verifier_registered_task_fixture_' + randomUUID(), ['8']);
     const detail = fixture.jobs[0]!;
     detail.evidence = [raw];
     detail.settlementLegs = [
@@ -179,6 +266,8 @@ describe('真实持久核验权限与原子性', () => {
       });
       expect(preview.body).not.toContain('PRIVATE_ORDER');
       expect(preview.statusCode).toBe(200);
+      expect(preview.json().bundle.bundleHash).toBe(preview.json().bundleHash);
+      expect((await app.inject('/v1/verifier/examples')).json().examples).toEqual([]);
       const publicVersion = preview.json();
       expect(
         (
@@ -206,6 +295,9 @@ describe('真实持久核验权限与原子性', () => {
       const publicRead = await app.inject('/v1/reports/' + publish.json().reportId + '/bundle');
       expect(publicRead.statusCode).toBe(200);
       expect(publicRead.body).not.toContain('PRIVATE_ORDER');
+      expect((await app.inject('/v1/verifier/examples')).json().examples).toEqual([
+        { reportId: publish.json().reportId, transactionHash: TX },
+      ]);
       expect((await app.inject({ url: path + '/bundle', headers })).statusCode).toBe(200);
       expect(observe).toHaveBeenCalledTimes(2);
       const recheck = await app.inject({

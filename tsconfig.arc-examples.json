@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "tsBuildInfoFile": "./.agent-state/arc-task-ledger/arc-examples.tsbuildinfo"
+  },
+  "include": ["examples/arc-task-ledger/*.ts"],
+  "references": [{ "path": "packages/arc-task-ledger" }, { "path": "packages/evidence" }]
+}
