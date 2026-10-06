@@ -1,0 +1,30 @@
+{
+  "observedAt": "2026-10-06T11:02:05.298Z",
+  "status": "ISOLATED_SCHEMA_5_TO_6_AND_ROLE_VALIDATED",
+  "database": "arc_task_ledger_rollout_20261006",
+  "source": "REAL_CHAIN_OBSERVATION_COPY_IN_ISOLATED_TEST_DATABASE",
+  "observationId": "ev_04e3db24a347e86e5e34e7a5",
+  "payloadHash": "4dc6b39d870a45beb5054d5e571c894e1ab7bf0ee645aaa92b335d397c28d869",
+  "beforeVersion": 5,
+  "afterVersion": 6,
+  "oldRawObservationPreserved": true,
+  "addedColumns": ["outcome", "plan"],
+  "versions": [1, 2, 3, 4, 5, 6],
+  "result": {
+    "status": "MIGRATION_VALIDATED",
+    "migrationVersion": 6,
+    "permissions": {
+      "readerSelect": true,
+      "readerInsert": false,
+      "workerInsert": true
+    },
+    "requestPermissions": {
+      "requestInsert": true,
+      "projectionInsert": false,
+      "evidenceInsert": false
+    }
+  },
+  "cloudMutations": 0,
+  "cloudMigration": "NOT_EXECUTED",
+  "rollbackExecution": "NOT_EXECUTED"
+}

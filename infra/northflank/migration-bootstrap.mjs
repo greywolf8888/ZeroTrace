@@ -102,11 +102,11 @@ async function main() {
     const requestPermissions = process.env.ARC_REQUEST_DB_PASSWORD
       ? await configureRequestRole(store.pool, process.env.ARC_REQUEST_DB_PASSWORD)
       : null;
-    if (!(await store.ready())) throw new Error('专用数据库迁移版本未达到 5。');
+    if (!(await store.ready())) throw new Error('专用数据库迁移版本未达到 6。');
     console.info(
       JSON.stringify({
         status: 'MIGRATION_VALIDATED',
-        migrationVersion: 5,
+        migrationVersion: 6,
         permissions,
         requestPermissions,
       }),

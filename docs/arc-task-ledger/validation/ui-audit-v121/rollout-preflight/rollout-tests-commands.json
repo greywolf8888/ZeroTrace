@@ -1,0 +1,100 @@
+[
+  {
+    "command": "node node_modules/vitest/vitest.mjs run packages services apps/api/test/unit scripts/operational-gates.test.ts tests/unit --maxWorkers=2",
+    "startedAt": "2026-10-06T11:03:37.930327+00:00",
+    "finishedAt": "2026-10-06T11:04:41.148939+00:00",
+    "exitCode": 0,
+    "logSha256": "687366cb9dda85a75e72b37d64cfd0a00738f7974cb6a96c614d1dcb803ca1b8",
+    "summaries": ["Test Files  197 passed (197)", "Tests  1050 passed (1050)"]
+  },
+  {
+    "command": "npm run test:integration",
+    "startedAt": "2026-10-06T11:04:41.178503+00:00",
+    "finishedAt": "2026-10-06T11:04:47.538985+00:00",
+    "exitCode": 0,
+    "logSha256": "988ab471ce2b1c3b092ceaf55d2b5a36bdf2fea9e4f877bc8c65867f22f0befd",
+    "summaries": ["Test Files  1 passed | 9 skipped (10)", "Tests  88 passed | 42 skipped (130)"]
+  },
+  {
+    "command": "npm run test:evals",
+    "startedAt": "2026-10-06T11:04:47.551009+00:00",
+    "finishedAt": "2026-10-06T11:04:49.569558+00:00",
+    "exitCode": 0,
+    "logSha256": "ce5fada1edb46f72a54c4a17a2e6c1e48da54e6a05d4ea6e7952cc4e5dca57cf",
+    "summaries": ["Test Files  2 passed (2)", "Tests  2 passed (2)"]
+  },
+  {
+    "command": "npm run test:mcp",
+    "startedAt": "2026-10-06T11:04:49.581803+00:00",
+    "finishedAt": "2026-10-06T11:04:50.637395+00:00",
+    "exitCode": 0,
+    "logSha256": "e01567aa81093086da154d8d0ff61c7830e9a3719e0ad85c3b348454429b0433",
+    "summaries": ["Test Files  1 passed (1)", "Tests  5 passed (5)"]
+  },
+  {
+    "command": "npm run arc:test:unit",
+    "startedAt": "2026-10-06T11:04:50.649269+00:00",
+    "finishedAt": "2026-10-06T11:04:53.471509+00:00",
+    "exitCode": 0,
+    "logSha256": "c9704fec85d6535f22717ffea354049b52bad8e9f3867b0375778e48c92d64f2",
+    "summaries": ["Test Files  13 passed (13)", "Tests  93 passed (93)"]
+  },
+  {
+    "command": "npm run arc:test:integration",
+    "startedAt": "2026-10-06T11:04:53.483892+00:00",
+    "finishedAt": "2026-10-06T11:05:00.071526+00:00",
+    "exitCode": 0,
+    "logSha256": "5186d9c7e89c281d765c2ba6b6035d7edb6183431a50b9f96c1d2c2ea3784eb7",
+    "summaries": ["Test Files  1 passed (1)", "Tests  34 passed (34)"]
+  },
+  {
+    "command": "npm run arc:test:e2e",
+    "startedAt": "2026-10-06T11:05:00.083544+00:00",
+    "finishedAt": "2026-10-06T11:05:48.509447+00:00",
+    "exitCode": 0,
+    "logSha256": "f1d44f80513073c409c22bb50277113320164bb0bb2756bfb426dff3855fcd90",
+    "summaries": ["9 passed (13.3s)", "9 passed (13.9s)", "5 passed (9.6s)", "5 passed (8.7s)"]
+  },
+  {
+    "command": "node node_modules/@playwright/test/cli.js test",
+    "startedAt": "2026-10-06T11:05:48.521689+00:00",
+    "finishedAt": "2026-10-06T11:06:22.380312+00:00",
+    "exitCode": 0,
+    "logSha256": "788b662462a528a25e856152da8a207d4f12ec95888d6d9637fa56af2fc4de2b",
+    "summaries": ["49 passed (33.1s)"]
+  },
+  {
+    "command": "npm run test:e2e:visual",
+    "startedAt": "2026-10-06T11:06:22.392283+00:00",
+    "finishedAt": "2026-10-06T11:06:31.027544+00:00",
+    "exitCode": 0,
+    "logSha256": "222adf999ccb1c5d35bd088649281fbcddd8ff4c492245a3251a74ef4aaa473a",
+    "summaries": ["7 passed (7.5s)"]
+  },
+  {
+    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-e2e-windows.ps1",
+    "startedAt": "2026-10-06T11:06:31.051220+00:00",
+    "finishedAt": "2026-10-06T11:07:05.466685+00:00",
+    "exitCode": 0,
+    "logSha256": "9b7d685136eda8a6ec28533cea839dfbfc97e2912ce04180c60a977184f93697",
+    "summaries": ["49 passed (28.9s)"]
+  },
+  {
+    "command": "npm run test:visual-golden",
+    "startedAt": "2026-10-06T11:07:05.485238+00:00",
+    "finishedAt": "2026-10-06T11:07:06.277119+00:00",
+    "exitCode": 1,
+    "logSha256": "f80d8821b8f40a2ee01761f860ea2f05327ea040000a513239e68738b3cd928a",
+    "summaries": []
+  },
+  {
+    "command": "npm audit --json",
+    "startedAt": "2026-10-06T11:07:06.289264+00:00",
+    "finishedAt": "2026-10-06T11:07:09.435068+00:00",
+    "exitCode": 1,
+    "logSha256": "7ac2d37ad57aa1f792cd8789d56a591a99d225478ce700b05eb782b639eae1c8",
+    "summaries": [
+      "\"title\": \"fastify vulnerable to request validation bypass via skipped boolean false schemas\","
+    ]
+  }
+]

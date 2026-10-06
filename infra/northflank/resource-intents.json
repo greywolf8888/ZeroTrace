@@ -1,9 +1,9 @@
 {
   "项目": "arc-task-ledger",
-  "状态": "PUBLIC_DEPLOYED_WITH_LIMITATIONS",
+  "状态": "V121_CANDIDATE_NOT_DEPLOYED",
   "新增付费预算USD": 0,
-  "说明": "可重入部署意图，初建先暂停计划；本轮实际部署已通过，实际配置与证据见 docs/arc-task-ledger/validation/northflank-hosted-20261005.json。",
-  "数据库迁移版本": 4,
+  "说明": "v1.2.1 候选更新意图，复用既有五个资源；公开服务当前仍是 v1.2.0。迁移6及新镜像尚未执行，不继承旧版托管验收。历史资源证据保留，当前更新清单见 docs/arc-task-ledger/V121_ROLLOUT_PLAN_20261006.md。",
+  "数据库迁移版本": 6,
   "镜像": {
     "Dockerfile": "infra/northflank/Dockerfile",
     "后端目标": "api",

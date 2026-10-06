@@ -87,6 +87,7 @@ for (const relative of [
   'docs/arc-task-ledger/PRODUCT_CORRECTION.md',
   'docs/arc-task-ledger/PRODUCT_DELIVERY_20261006.md',
   'docs/arc-task-ledger/UI_AUDIT_CORRECTION_20261006.md',
+  'docs/arc-task-ledger/V121_ROLLOUT_PLAN_20261006.md',
   'docs/arc-task-ledger/validation',
   'docs/arc-task-ledger/UPSTREAM_LICENSE.txt',
   'LICENSE',

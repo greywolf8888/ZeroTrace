@@ -1,0 +1,74 @@
+[
+  {
+    "command": "npm run format:check",
+    "startedAt": "2026-10-06T11:03:37.447078+00:00",
+    "finishedAt": "2026-10-06T11:03:54.031846+00:00",
+    "exitCode": 0,
+    "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+    "summaries": []
+  },
+  {
+    "command": "npm run lint",
+    "startedAt": "2026-10-06T11:03:54.123578+00:00",
+    "finishedAt": "2026-10-06T11:04:09.418422+00:00",
+    "exitCode": 0,
+    "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+    "summaries": []
+  },
+  {
+    "command": "npm run typecheck",
+    "startedAt": "2026-10-06T11:04:09.445846+00:00",
+    "finishedAt": "2026-10-06T11:04:13.840734+00:00",
+    "exitCode": 0,
+    "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+    "summaries": []
+  },
+  {
+    "command": "npm run build",
+    "startedAt": "2026-10-06T11:04:13.843158+00:00",
+    "finishedAt": "2026-10-06T11:04:18.914816+00:00",
+    "exitCode": 0,
+    "logSha256": "82be1bb1da94eba52459487b3a998ad392a553fdcb6aaeb75f9e814ab1f90285",
+    "summaries": []
+  },
+  {
+    "command": "npm run arc:build",
+    "startedAt": "2026-10-06T11:04:18.926917+00:00",
+    "finishedAt": "2026-10-06T11:04:20.573113+00:00",
+    "exitCode": 0,
+    "logSha256": "993a3ace1165f0f8e04855b17982c4ec5d7735be12607b43a836630b20850165",
+    "summaries": []
+  },
+  {
+    "command": "npm run license:check",
+    "startedAt": "2026-10-06T11:04:20.585208+00:00",
+    "finishedAt": "2026-10-06T11:04:24.595286+00:00",
+    "exitCode": 0,
+    "logSha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e",
+    "summaries": []
+  },
+  {
+    "command": "npm run architecture:check",
+    "startedAt": "2026-10-06T11:04:24.607864+00:00",
+    "finishedAt": "2026-10-06T11:04:26.311986+00:00",
+    "exitCode": 0,
+    "logSha256": "6b9cd9a759795787be49b3fce425cbabe9e09034c1af6db8f7599ed29ef4cf3a",
+    "summaries": []
+  },
+  {
+    "command": "npm run ui:chinese:check",
+    "startedAt": "2026-10-06T11:04:26.320435+00:00",
+    "finishedAt": "2026-10-06T11:04:27.740427+00:00",
+    "exitCode": 0,
+    "logSha256": "7724d8bd970dc1787592b4a9c489f12f6eeade48266262c8f0e45bffde6fd5f2",
+    "summaries": []
+  },
+  {
+    "command": "npm run schema:drift:check",
+    "startedAt": "2026-10-06T11:04:27.745473+00:00",
+    "finishedAt": "2026-10-06T11:04:28.750827+00:00",
+    "exitCode": 0,
+    "logSha256": "825e922aedf976dec50a43ad54e8765a2159fe16dd2218733c74926c0841ae97",
+    "summaries": []
+  }
+]

@@ -1,0 +1,65 @@
+{
+  "observedAt": "2026-10-06T11:04:19.558125+00:00",
+  "status": "PREFLIGHT_LOCAL_PROGRESS_PUBLIC_RELEASE_NOT_EXECUTED",
+  "liveRuleVersion": "atl-v1.2.0",
+  "liveSchemaVersion": "atl-settlement-result-v1",
+  "liveHistoryComplete": false,
+  "liveOutstanding": {
+    "state": "known",
+    "value": "0",
+    "evidenceIds": []
+  },
+  "historicalV120Rollback": {
+    "sourceSha": "8084e258d2b0574fabaf15393089b4fe6898acb6",
+    "apiBuildId": "beautiful-slope-7310",
+    "webBuildId": "curved-hair-5643"
+  },
+  "rollbackAuthority": "LOCAL_HISTORICAL_NOT_CURRENT_MANAGEMENT_READ",
+  "excludedV110State": "northflank-live-20261005/orchestration.private.json",
+  "remoteDeploymentBranchSha": "89c1c42af2212ececa52611ff2bea96a92cc8ccf",
+  "managementCredential": "UNAVAILABLE_IN_CURRENT_PROCESS",
+  "currentBilling": "NOT_VERIFIED",
+  "currentResourceConfiguration": "NOT_VERIFIED",
+  "cloudMutations": 0,
+  "publicApproval": "PENDING_HUMAN_REPLY",
+  "focusedChecks": {
+    "migration5To6": "PASS_REAL_ISOLATED_DATABASE",
+    "roleUnitTests": 4,
+    "rawObservationPreserved": true
+  },
+  "failedAttempt": {
+    "command": "vitest --config tests/arc-task-ledger/vitest.config.ts",
+    "reason": "CONFIG_FILE_NOT_FOUND",
+    "recovery": "repository actual root Vitest configuration, 4 tests PASS"
+  },
+  "files": [
+    {
+      "sha256": "37d8740b76f0cdf23ea3d49f763856bcd86af168fc60cd45668a91bc986fc3b2",
+      "path": "receipt.json"
+    },
+    {
+      "sha256": "acdd78833be79885a4f3cc446c1cd867c1853e433cc9e40ee199f10889c4a284",
+      "path": "migration.json"
+    },
+    {
+      "sha256": "5cc87655ec042eb0a3053866e7ca8ba59507c18f2d0a3dc268ce8d1a517b8b25",
+      "path": "public-0.json"
+    },
+    {
+      "sha256": "e9e89569630f3596ab727b0fc761c75e5719805cf60f2f7f89454de8a77828dc",
+      "path": "public-1.json"
+    },
+    {
+      "sha256": "e390600b9333f43dd1a95432bce78545e3a4f3041f3811153b76f35516fa5a3f",
+      "path": "public-2.json"
+    },
+    {
+      "sha256": "42574b9cfd5fcac68f4913d96c8bc498d2dfa47a66d950150da6ccb656068c62",
+      "path": "public-3.json"
+    },
+    {
+      "sha256": "bb06b8ca7dbb47e28821dc95a9b3c767044b28b267145fd50119e55e8158d534",
+      "path": "public-5.json"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "baseCommit": "ce8c99a317de5ff5220f305bda6b594f71803abd",
+  "testAuthority": "CURRENT_WORKING_SOURCE_WITH_BELOW_HASHES",
+  "files": [
+    {
+      "path": "infra/northflank/migration-bootstrap.mjs",
+      "sha256": "0d576a35abc3a004c9e87f744cd91490f4856b12bf668e86ab08f2f448c37148"
+    },
+    {
+      "path": "infra/northflank/resource-intents.json",
+      "sha256": "025f23b5677f088b37ba21c3ceb34b6641958ad4c2b45488545c7580d52850f5"
+    },
+    {
+      "path": "scripts/arc-task-ledger-export.mjs",
+      "sha256": "40ddbd7905c895f9bd6b967d79380f07683a4a4b535d7c91262ef78e134092ae"
+    },
+    {
+      "path": ".prettierignore",
+      "sha256": "46579c709cc4feedcf1e51700d7d38c39f14e315b637fcec85b9dc4d9d9c8573"
+    }
+  ]
+}

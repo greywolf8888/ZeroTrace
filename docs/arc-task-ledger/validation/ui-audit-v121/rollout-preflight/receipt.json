@@ -1,0 +1,115 @@
+{
+  "observedAt": "2026-10-06T10:59:58.435Z",
+  "cloudMutations": 0,
+  "publicRequests": 6,
+  "managementCredential": "UNAVAILABLE_IN_CURRENT_PROCESS",
+  "currentBilling": "NOT_VERIFIED",
+  "currentResourceConfiguration": "NOT_VERIFIED",
+  "historicalRollback": {
+    "sourceSha": "5d7deacc440505320e7495b3d55c952ece90a35a",
+    "apiBuildId": "noiseless-plant-6606",
+    "webBuildId": "dramatic-wall-6514",
+    "authority": "LOCAL_HISTORICAL_STATE_NOT_FRESH_MANAGEMENT_READ"
+  },
+  "observations": [
+    {
+      "url": "https://web--atl-web--xtd599t97njk.code.run/api/healthz",
+      "method": "GET",
+      "startedAt": "2026-10-06T10:59:56.129Z",
+      "endedAt": "2026-10-06T10:59:57.085Z",
+      "status": 200,
+      "file": "public-0.json",
+      "sha256": "5cc87655ec042eb0a3053866e7ca8ba59507c18f2d0a3dc268ce8d1a517b8b25",
+      "keys": ["status", "components"]
+    },
+    {
+      "url": "https://web--atl-web--xtd599t97njk.code.run/api/readyz",
+      "method": "GET",
+      "startedAt": "2026-10-06T10:59:57.085Z",
+      "endedAt": "2026-10-06T10:59:57.327Z",
+      "status": 200,
+      "file": "public-1.json",
+      "sha256": "e9e89569630f3596ab727b0fc761c75e5719805cf60f2f7f89454de8a77828dc",
+      "keys": ["status", "components"]
+    },
+    {
+      "url": "https://web--atl-web--xtd599t97njk.code.run/api/v1/registry",
+      "method": "GET",
+      "startedAt": "2026-10-06T10:59:57.327Z",
+      "endedAt": "2026-10-06T10:59:57.566Z",
+      "status": 200,
+      "file": "public-2.json",
+      "sha256": "e390600b9333f43dd1a95432bce78545e3a4f3041f3811153b76f35516fa5a3f",
+      "keys": ["chainId", "adapter", "navigation", "ruleVersion"]
+    },
+    {
+      "url": "https://web--atl-web--xtd599t97njk.code.run/api/v1/coverage",
+      "method": "GET",
+      "startedAt": "2026-10-06T10:59:57.566Z",
+      "endedAt": "2026-10-06T10:59:57.801Z",
+      "status": 200,
+      "file": "public-3.json",
+      "sha256": "42574b9cfd5fcac68f4913d96c8bc498d2dfa47a66d950150da6ccb656068c62",
+      "keys": [
+        "network",
+        "adapter",
+        "lastSuccessfulSync",
+        "stateHead",
+        "historyHead",
+        "historyRange",
+        "coverage",
+        "gaps",
+        "datasource",
+        "ruleVersion",
+        "sourceSet",
+        "freshness",
+        "lastAttempt",
+        "formalMode"
+      ]
+    },
+    {
+      "url": "https://web--atl-web--xtd599t97njk.code.run/api/v1/jobs?limit=1",
+      "method": "GET",
+      "startedAt": "2026-10-06T10:59:57.801Z",
+      "endedAt": "2026-10-06T10:59:58.033Z",
+      "status": 200,
+      "file": "public-4.json",
+      "sha256": "65dff3f23e1e150d7c1faea0a3303312ff8afb5d35d64f3c7c2ae9f559b4f101",
+      "keys": [
+        "snapshotRunId",
+        "snapshot",
+        "items",
+        "nextCursor",
+        "coverage",
+        "historyRange",
+        "datasource",
+        "freshness"
+      ]
+    },
+    {
+      "url": "https://web--atl-web--xtd599t97njk.code.run/api/v1/jobs/5042/0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d/18",
+      "method": "GET",
+      "startedAt": "2026-10-06T10:59:58.033Z",
+      "endedAt": "2026-10-06T10:59:58.433Z",
+      "status": 200,
+      "file": "public-5.json",
+      "sha256": "bb06b8ca7dbb47e28821dc95a9b3c767044b28b267145fd50119e55e8158d534",
+      "keys": [
+        "gas",
+        "job",
+        "trace",
+        "evidence",
+        "rawState",
+        "timeline",
+        "ruleVersion",
+        "settlementLegs",
+        "pendingAccounts",
+        "nextTimelineCursor",
+        "result",
+        "evidenceRequest",
+        "snapshotRunId",
+        "datasource"
+      ]
+    }
+  ]
+}
