@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-06T14:55:01.788911+00:00",
+  "name": "Arc_Task_Ledger_UI_v130_Cloud_20261006.zip",
+  "bytes": 13020606,
+  "sha256": "041296671ebb83a89110997765b4b02e80f4764343489ee7a5a15212bda6170b",
+  "documentationSourceCommit": "59328cb0e3bef7d82f4f847380d449fe565429e5",
+  "testedSourceCommit": "60061232b3047596ecfd40db866a7c243f3e8732",
+  "deploymentSha": "8f2d47922847236be7448619a9a21543730d7b07",
+  "manifestFiles": 297,
+  "zipEntries": 298,
+  "crcAndPerFileHashesPassed": true,
+  "testedExecutableAndConfigurationFilesMatched": 127,
+  "credentialsExcluded": true,
+  "olderPackagesPreserved": true,
+  "publicReceiptHashesAlsoMatchedArchive": true
+}
