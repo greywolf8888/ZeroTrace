@@ -1,0 +1,694 @@
+{
+  "at": "2026-10-06T14:52:55.565Z",
+  "first": {
+    "chain": {
+      "state": "fresh",
+      "failureCode": null,
+      "checkedAt": "2026-10-06T14:51:55.826Z",
+      "refreshAfterMs": 30000,
+      "observation": {
+        "snapshot": {
+          "chainId": "5042",
+          "blockNumber": "24577090",
+          "blockHash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+          "observedAt": "2026-10-06T14:51:56.404Z",
+          "finality": "FINALIZED",
+          "sourceSet": ["arc-drpc-public"]
+        },
+        "evidence": [
+          {
+            "id": "ev_efa272480fa12e4ec2a95d20",
+            "evidence": {
+              "id": "ev_efa272480fa12e4ec2a95d20",
+              "ledger": "EVM",
+              "chainId": "5042",
+              "kind": "RAW_RPC_RESPONSE",
+              "source": "arc-drpc-public",
+              "locator": "eth_chainId+eth_getBlockByNumber:finalized",
+              "payloadHash": "c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759",
+              "observedAt": "2026-10-06T14:51:56.404Z",
+              "blockOrSlot": "24577090",
+              "finality": "FINALIZED",
+              "summary": "目标链与固定最终区块。",
+              "rawArtifactRef": "unarchived:sha256:c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759"
+            },
+            "raw": {
+              "chainId": "0x13b2",
+              "finalized": {
+                "hash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+                "parentHash": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                "miner": "0x3f37c5a86f07c06b8888171d0a73a22f4cf35c8c",
+                "stateRoot": "0x0cf287df54a8fcad4b05b12abf1dd8ae5f1ba6d365f028a2519cde0afa85470e",
+                "transactionsRoot": "0xd35d8bb06f5df07856cae93fbd5f3fc407458ee39b88cda13d3ea50376fddf3e",
+                "receiptsRoot": "0xc73b9f1fa2821fc04d5c2c26f0ce843860ebb5c4715d9e3be4ef0986530d2ba7",
+                "logsBloom": "0x80010002004002010000000211000800008000010841000000000000004088000020000080040200000002006000200000400000040020000200000000480400400100000000c0080000000800000400010001800000042002800100000100000800000002000000600002000000080e000000000200004000000010000800400020020000090000000000400000000001080040000000000800002040000000000000000000000000000020000220000000000000800000000400084000000000200402000020000008001000000008002000010000401840000001000020c02080000000000000004000000108200000000004001000000000000007000400",
+                "difficulty": "0x0",
+                "number": "0x1770442",
+                "gasLimit": "0x1c9c380",
+                "gasUsed": "0xac95a",
+                "timestamp": "0x6ac50b0b",
+                "extraData": "0x00000004a817c800",
+                "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "nonce": "0x0000000000000000",
+                "baseFeePerGas": "0x4a817c800",
+                "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                "blobGasUsed": "0x0",
+                "excessBlobGas": "0x0",
+                "parentBeaconBlockRoot": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size": "0xa82",
+                "uncles": [],
+                "transactions": [
+                  "0x744ca4225cf9741bb25b526afb6f68b5b6affd379e5b7df8be84eb3750afddf3",
+                  "0xf21c5e3c24604fceca51a63ec0b713fbcfd64e031f7b4478b3c7d512900aa8d9",
+                  "0xd254d192fbe6f4d0397f367af9911b5b1f18de5be2ba0b4f0f9cfa06ba82babe",
+                  "0x31f66abf7479021d97ef47b6464b7df050639e1c5c70d51d23cc1384884f6b5f",
+                  "0xb203da5221acb410811f9a438af0f4c0556e3e2e831ecabca5037aa54a0c1b14"
+                ],
+                "withdrawals": []
+              },
+              "block": {
+                "hash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+                "parentHash": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                "miner": "0x3f37c5a86f07c06b8888171d0a73a22f4cf35c8c",
+                "stateRoot": "0x0cf287df54a8fcad4b05b12abf1dd8ae5f1ba6d365f028a2519cde0afa85470e",
+                "transactionsRoot": "0xd35d8bb06f5df07856cae93fbd5f3fc407458ee39b88cda13d3ea50376fddf3e",
+                "receiptsRoot": "0xc73b9f1fa2821fc04d5c2c26f0ce843860ebb5c4715d9e3be4ef0986530d2ba7",
+                "logsBloom": "0x80010002004002010000000211000800008000010841000000000000004088000020000080040200000002006000200000400000040020000200000000480400400100000000c0080000000800000400010001800000042002800100000100000800000002000000600002000000080e000000000200004000000010000800400020020000090000000000400000000001080040000000000800002040000000000000000000000000000020000220000000000000800000000400084000000000200402000020000008001000000008002000010000401840000001000020c02080000000000000004000000108200000000004001000000000000007000400",
+                "difficulty": "0x0",
+                "number": "0x1770442",
+                "gasLimit": "0x1c9c380",
+                "gasUsed": "0xac95a",
+                "timestamp": "0x6ac50b0b",
+                "extraData": "0x00000004a817c800",
+                "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "nonce": "0x0000000000000000",
+                "baseFeePerGas": "0x4a817c800",
+                "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                "blobGasUsed": "0x0",
+                "excessBlobGas": "0x0",
+                "parentBeaconBlockRoot": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size": "0xa82",
+                "uncles": [],
+                "transactions": [
+                  "0x744ca4225cf9741bb25b526afb6f68b5b6affd379e5b7df8be84eb3750afddf3",
+                  "0xf21c5e3c24604fceca51a63ec0b713fbcfd64e031f7b4478b3c7d512900aa8d9",
+                  "0xd254d192fbe6f4d0397f367af9911b5b1f18de5be2ba0b4f0f9cfa06ba82babe",
+                  "0x31f66abf7479021d97ef47b6464b7df050639e1c5c70d51d23cc1384884f6b5f",
+                  "0xb203da5221acb410811f9a438af0f4c0556e3e2e831ecabca5037aa54a0c1b14"
+                ],
+                "withdrawals": []
+              }
+            },
+            "payloadHash": "c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759",
+            "snapshot": {
+              "chainId": "5042",
+              "blockNumber": "24577090",
+              "blockHash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+              "observedAt": "2026-10-06T14:51:56.404Z",
+              "finality": "FINALIZED",
+              "sourceSet": ["arc-drpc-public"]
+            }
+          }
+        ],
+        "blockTimestamp": "2026-10-06T14:51:55.000Z"
+      },
+      "lastSuccessfulObservation": null,
+      "durable": false,
+      "formalForensicReady": false,
+      "reason": "单来源实时区块观察，未归档；不替代资金快照。"
+    },
+    "latestStored": {
+      "id": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+      "snapshot": {
+        "chainId": "5042",
+        "finality": "FINALIZED",
+        "blockHash": "0xb277607829c5ff8f4d76cb3b85c4b1ec888d76f11f1975cedfea3a4a4d0f3456",
+        "sourceSet": ["arc-drpc-public"],
+        "observedAt": "2026-10-06T14:50:23.955Z",
+        "blockNumber": "24576907"
+      },
+      "expiresAt": "2026-10-13T14:51:49.226Z"
+    },
+    "ledgerRefresh": "已发布资金快照按原有采集计划更新；实时观察不启动扫描。"
+  },
+  "second": {
+    "chain": {
+      "state": "fresh",
+      "failureCode": null,
+      "checkedAt": "2026-10-06T14:52:27.468Z",
+      "refreshAfterMs": 30000,
+      "observation": {
+        "snapshot": {
+          "chainId": "5042",
+          "blockNumber": "24577153",
+          "blockHash": "0x2823a50a478c41f9ee83c0087cfea3bec57eafa374b5d9cd095ed60ebf5ac5c9",
+          "observedAt": "2026-10-06T14:52:28.174Z",
+          "finality": "FINALIZED",
+          "sourceSet": ["arc-drpc-public"]
+        },
+        "evidence": [
+          {
+            "id": "ev_bbffed2d65aa0f4aa053e4e5",
+            "evidence": {
+              "id": "ev_bbffed2d65aa0f4aa053e4e5",
+              "ledger": "EVM",
+              "chainId": "5042",
+              "kind": "RAW_RPC_RESPONSE",
+              "source": "arc-drpc-public",
+              "locator": "eth_chainId+eth_getBlockByNumber:finalized",
+              "payloadHash": "7434d15a427108e326b2d3fd4d1635bb11758340fe33b1914473ef7c9fa4ee71",
+              "observedAt": "2026-10-06T14:52:28.174Z",
+              "blockOrSlot": "24577153",
+              "finality": "FINALIZED",
+              "summary": "目标链与固定最终区块。",
+              "rawArtifactRef": "unarchived:sha256:7434d15a427108e326b2d3fd4d1635bb11758340fe33b1914473ef7c9fa4ee71"
+            },
+            "raw": {
+              "chainId": "0x13b2",
+              "finalized": {
+                "hash": "0x2823a50a478c41f9ee83c0087cfea3bec57eafa374b5d9cd095ed60ebf5ac5c9",
+                "parentHash": "0xb3bc8e323ba2c17b5c4327f81225eac6562688ae0dffe44744b644ad89ca0bf8",
+                "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                "miner": "0x2756042d816a74117c0bc0bb2caed145ecf88b3f",
+                "stateRoot": "0xb9055ef2ab0b07d9fa2a6d00400b7556e7e3bd9f9577ed17a88286b368ba45ac",
+                "transactionsRoot": "0xde39beb82ca66b76c815af76001557e9749b046610eaadb312d6983ef7d78669",
+                "receiptsRoot": "0xc822d4deafa1e5037b65723807aaa8f6d7ef85aaaaf40964107e7de6bb3e47f9",
+                "logsBloom": "0x00000200100101000000000400000000000000100000000000000004041900000000010000000208000000000000010000000000040010000000000000000000000000080000400000000128000000000100400000000020008000000000000000000000200000002000000000000000020000000000000000000010001000400000000000804004000000000040000000080000080000100002000000000000000000000000000000000020000000000000000000000400000041000000000000000402000000000008001000000000120000000000000000000000000000400800000000000010006480000100000000000004000000000000000002000000",
+                "difficulty": "0x0",
+                "number": "0x1770481",
+                "gasLimit": "0x1c9c380",
+                "gasUsed": "0x83df5",
+                "timestamp": "0x6ac50b2b",
+                "extraData": "0x00000004a817c800",
+                "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "nonce": "0x0000000000000000",
+                "baseFeePerGas": "0x4a817c800",
+                "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                "blobGasUsed": "0x0",
+                "excessBlobGas": "0x0",
+                "parentBeaconBlockRoot": "0xb3bc8e323ba2c17b5c4327f81225eac6562688ae0dffe44744b644ad89ca0bf8",
+                "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size": "0xc08",
+                "uncles": [],
+                "transactions": [
+                  "0x9dae8228668fa24905f8d516dea66cf1331a8d158f04ad69b4ae41758d98e8a1",
+                  "0xdc76039491ad2708a1aa5bc7d01346af24c6b773d80042494a75ac8c17afb1ee",
+                  "0x1bfb5a8478e2bd9677ee42eb1c4f278ed0420c3c08e579d462a0ccd5fa3be630",
+                  "0x6ead3357c9c6b754df94d9980ff70bc95d720dc3e8987172df4cbe404df9ec15",
+                  "0xa0e2b302188166f529e83c6825658bf942353f8b580b3ce17b1231a116eb6e8c"
+                ],
+                "withdrawals": []
+              },
+              "block": {
+                "hash": "0x2823a50a478c41f9ee83c0087cfea3bec57eafa374b5d9cd095ed60ebf5ac5c9",
+                "parentHash": "0xb3bc8e323ba2c17b5c4327f81225eac6562688ae0dffe44744b644ad89ca0bf8",
+                "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                "miner": "0x2756042d816a74117c0bc0bb2caed145ecf88b3f",
+                "stateRoot": "0xb9055ef2ab0b07d9fa2a6d00400b7556e7e3bd9f9577ed17a88286b368ba45ac",
+                "transactionsRoot": "0xde39beb82ca66b76c815af76001557e9749b046610eaadb312d6983ef7d78669",
+                "receiptsRoot": "0xc822d4deafa1e5037b65723807aaa8f6d7ef85aaaaf40964107e7de6bb3e47f9",
+                "logsBloom": "0x00000200100101000000000400000000000000100000000000000004041900000000010000000208000000000000010000000000040010000000000000000000000000080000400000000128000000000100400000000020008000000000000000000000200000002000000000000000020000000000000000000010001000400000000000804004000000000040000000080000080000100002000000000000000000000000000000000020000000000000000000000400000041000000000000000402000000000008001000000000120000000000000000000000000000400800000000000010006480000100000000000004000000000000000002000000",
+                "difficulty": "0x0",
+                "number": "0x1770481",
+                "gasLimit": "0x1c9c380",
+                "gasUsed": "0x83df5",
+                "timestamp": "0x6ac50b2b",
+                "extraData": "0x00000004a817c800",
+                "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "nonce": "0x0000000000000000",
+                "baseFeePerGas": "0x4a817c800",
+                "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                "blobGasUsed": "0x0",
+                "excessBlobGas": "0x0",
+                "parentBeaconBlockRoot": "0xb3bc8e323ba2c17b5c4327f81225eac6562688ae0dffe44744b644ad89ca0bf8",
+                "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "size": "0xc08",
+                "uncles": [],
+                "transactions": [
+                  "0x9dae8228668fa24905f8d516dea66cf1331a8d158f04ad69b4ae41758d98e8a1",
+                  "0xdc76039491ad2708a1aa5bc7d01346af24c6b773d80042494a75ac8c17afb1ee",
+                  "0x1bfb5a8478e2bd9677ee42eb1c4f278ed0420c3c08e579d462a0ccd5fa3be630",
+                  "0x6ead3357c9c6b754df94d9980ff70bc95d720dc3e8987172df4cbe404df9ec15",
+                  "0xa0e2b302188166f529e83c6825658bf942353f8b580b3ce17b1231a116eb6e8c"
+                ],
+                "withdrawals": []
+              }
+            },
+            "payloadHash": "7434d15a427108e326b2d3fd4d1635bb11758340fe33b1914473ef7c9fa4ee71",
+            "snapshot": {
+              "chainId": "5042",
+              "blockNumber": "24577153",
+              "blockHash": "0x2823a50a478c41f9ee83c0087cfea3bec57eafa374b5d9cd095ed60ebf5ac5c9",
+              "observedAt": "2026-10-06T14:52:28.174Z",
+              "finality": "FINALIZED",
+              "sourceSet": ["arc-drpc-public"]
+            }
+          }
+        ],
+        "blockTimestamp": "2026-10-06T14:52:27.000Z"
+      },
+      "lastSuccessfulObservation": null,
+      "durable": false,
+      "formalForensicReady": false,
+      "reason": "单来源实时区块观察，未归档；不替代资金快照。"
+    },
+    "latestStored": {
+      "id": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+      "snapshot": {
+        "chainId": "5042",
+        "finality": "FINALIZED",
+        "blockHash": "0xb277607829c5ff8f4d76cb3b85c4b1ec888d76f11f1975cedfea3a4a4d0f3456",
+        "sourceSet": ["arc-drpc-public"],
+        "observedAt": "2026-10-06T14:50:23.955Z",
+        "blockNumber": "24576907"
+      },
+      "expiresAt": "2026-10-13T14:51:49.226Z"
+    },
+    "ledgerRefresh": "已发布资金快照按原有采集计划更新；实时观察不启动扫描。"
+  },
+  "observations": [
+    {
+      "at": "2026-10-06T14:51:57.068Z",
+      "data": {
+        "chain": {
+          "state": "fresh",
+          "failureCode": null,
+          "checkedAt": "2026-10-06T14:51:55.826Z",
+          "refreshAfterMs": 30000,
+          "observation": {
+            "snapshot": {
+              "chainId": "5042",
+              "blockNumber": "24577090",
+              "blockHash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+              "observedAt": "2026-10-06T14:51:56.404Z",
+              "finality": "FINALIZED",
+              "sourceSet": ["arc-drpc-public"]
+            },
+            "evidence": [
+              {
+                "id": "ev_efa272480fa12e4ec2a95d20",
+                "evidence": {
+                  "id": "ev_efa272480fa12e4ec2a95d20",
+                  "ledger": "EVM",
+                  "chainId": "5042",
+                  "kind": "RAW_RPC_RESPONSE",
+                  "source": "arc-drpc-public",
+                  "locator": "eth_chainId+eth_getBlockByNumber:finalized",
+                  "payloadHash": "c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759",
+                  "observedAt": "2026-10-06T14:51:56.404Z",
+                  "blockOrSlot": "24577090",
+                  "finality": "FINALIZED",
+                  "summary": "目标链与固定最终区块。",
+                  "rawArtifactRef": "unarchived:sha256:c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759"
+                },
+                "raw": {
+                  "chainId": "0x13b2",
+                  "finalized": {
+                    "hash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+                    "parentHash": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                    "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                    "miner": "0x3f37c5a86f07c06b8888171d0a73a22f4cf35c8c",
+                    "stateRoot": "0x0cf287df54a8fcad4b05b12abf1dd8ae5f1ba6d365f028a2519cde0afa85470e",
+                    "transactionsRoot": "0xd35d8bb06f5df07856cae93fbd5f3fc407458ee39b88cda13d3ea50376fddf3e",
+                    "receiptsRoot": "0xc73b9f1fa2821fc04d5c2c26f0ce843860ebb5c4715d9e3be4ef0986530d2ba7",
+                    "logsBloom": "0x80010002004002010000000211000800008000010841000000000000004088000020000080040200000002006000200000400000040020000200000000480400400100000000c0080000000800000400010001800000042002800100000100000800000002000000600002000000080e000000000200004000000010000800400020020000090000000000400000000001080040000000000800002040000000000000000000000000000020000220000000000000800000000400084000000000200402000020000008001000000008002000010000401840000001000020c02080000000000000004000000108200000000004001000000000000007000400",
+                    "difficulty": "0x0",
+                    "number": "0x1770442",
+                    "gasLimit": "0x1c9c380",
+                    "gasUsed": "0xac95a",
+                    "timestamp": "0x6ac50b0b",
+                    "extraData": "0x00000004a817c800",
+                    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    "nonce": "0x0000000000000000",
+                    "baseFeePerGas": "0x4a817c800",
+                    "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                    "blobGasUsed": "0x0",
+                    "excessBlobGas": "0x0",
+                    "parentBeaconBlockRoot": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                    "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "size": "0xa82",
+                    "uncles": [],
+                    "transactions": [
+                      "0x744ca4225cf9741bb25b526afb6f68b5b6affd379e5b7df8be84eb3750afddf3",
+                      "0xf21c5e3c24604fceca51a63ec0b713fbcfd64e031f7b4478b3c7d512900aa8d9",
+                      "0xd254d192fbe6f4d0397f367af9911b5b1f18de5be2ba0b4f0f9cfa06ba82babe",
+                      "0x31f66abf7479021d97ef47b6464b7df050639e1c5c70d51d23cc1384884f6b5f",
+                      "0xb203da5221acb410811f9a438af0f4c0556e3e2e831ecabca5037aa54a0c1b14"
+                    ],
+                    "withdrawals": []
+                  },
+                  "block": {
+                    "hash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+                    "parentHash": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                    "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                    "miner": "0x3f37c5a86f07c06b8888171d0a73a22f4cf35c8c",
+                    "stateRoot": "0x0cf287df54a8fcad4b05b12abf1dd8ae5f1ba6d365f028a2519cde0afa85470e",
+                    "transactionsRoot": "0xd35d8bb06f5df07856cae93fbd5f3fc407458ee39b88cda13d3ea50376fddf3e",
+                    "receiptsRoot": "0xc73b9f1fa2821fc04d5c2c26f0ce843860ebb5c4715d9e3be4ef0986530d2ba7",
+                    "logsBloom": "0x80010002004002010000000211000800008000010841000000000000004088000020000080040200000002006000200000400000040020000200000000480400400100000000c0080000000800000400010001800000042002800100000100000800000002000000600002000000080e000000000200004000000010000800400020020000090000000000400000000001080040000000000800002040000000000000000000000000000020000220000000000000800000000400084000000000200402000020000008001000000008002000010000401840000001000020c02080000000000000004000000108200000000004001000000000000007000400",
+                    "difficulty": "0x0",
+                    "number": "0x1770442",
+                    "gasLimit": "0x1c9c380",
+                    "gasUsed": "0xac95a",
+                    "timestamp": "0x6ac50b0b",
+                    "extraData": "0x00000004a817c800",
+                    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    "nonce": "0x0000000000000000",
+                    "baseFeePerGas": "0x4a817c800",
+                    "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                    "blobGasUsed": "0x0",
+                    "excessBlobGas": "0x0",
+                    "parentBeaconBlockRoot": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                    "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "size": "0xa82",
+                    "uncles": [],
+                    "transactions": [
+                      "0x744ca4225cf9741bb25b526afb6f68b5b6affd379e5b7df8be84eb3750afddf3",
+                      "0xf21c5e3c24604fceca51a63ec0b713fbcfd64e031f7b4478b3c7d512900aa8d9",
+                      "0xd254d192fbe6f4d0397f367af9911b5b1f18de5be2ba0b4f0f9cfa06ba82babe",
+                      "0x31f66abf7479021d97ef47b6464b7df050639e1c5c70d51d23cc1384884f6b5f",
+                      "0xb203da5221acb410811f9a438af0f4c0556e3e2e831ecabca5037aa54a0c1b14"
+                    ],
+                    "withdrawals": []
+                  }
+                },
+                "payloadHash": "c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759",
+                "snapshot": {
+                  "chainId": "5042",
+                  "blockNumber": "24577090",
+                  "blockHash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+                  "observedAt": "2026-10-06T14:51:56.404Z",
+                  "finality": "FINALIZED",
+                  "sourceSet": ["arc-drpc-public"]
+                }
+              }
+            ],
+            "blockTimestamp": "2026-10-06T14:51:55.000Z"
+          },
+          "lastSuccessfulObservation": null,
+          "durable": false,
+          "formalForensicReady": false,
+          "reason": "单来源实时区块观察，未归档；不替代资金快照。"
+        },
+        "latestStored": {
+          "id": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+          "snapshot": {
+            "chainId": "5042",
+            "finality": "FINALIZED",
+            "blockHash": "0xb277607829c5ff8f4d76cb3b85c4b1ec888d76f11f1975cedfea3a4a4d0f3456",
+            "sourceSet": ["arc-drpc-public"],
+            "observedAt": "2026-10-06T14:50:23.955Z",
+            "blockNumber": "24576907"
+          },
+          "expiresAt": "2026-10-13T14:51:49.226Z"
+        },
+        "ledgerRefresh": "已发布资金快照按原有采集计划更新；实时观察不启动扫描。"
+      }
+    },
+    {
+      "at": "2026-10-06T14:52:25.514Z",
+      "data": {
+        "chain": {
+          "state": "fresh",
+          "failureCode": null,
+          "checkedAt": "2026-10-06T14:51:55.826Z",
+          "refreshAfterMs": 30000,
+          "observation": {
+            "snapshot": {
+              "chainId": "5042",
+              "blockNumber": "24577090",
+              "blockHash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+              "observedAt": "2026-10-06T14:51:56.404Z",
+              "finality": "FINALIZED",
+              "sourceSet": ["arc-drpc-public"]
+            },
+            "evidence": [
+              {
+                "id": "ev_efa272480fa12e4ec2a95d20",
+                "evidence": {
+                  "id": "ev_efa272480fa12e4ec2a95d20",
+                  "ledger": "EVM",
+                  "chainId": "5042",
+                  "kind": "RAW_RPC_RESPONSE",
+                  "source": "arc-drpc-public",
+                  "locator": "eth_chainId+eth_getBlockByNumber:finalized",
+                  "payloadHash": "c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759",
+                  "observedAt": "2026-10-06T14:51:56.404Z",
+                  "blockOrSlot": "24577090",
+                  "finality": "FINALIZED",
+                  "summary": "目标链与固定最终区块。",
+                  "rawArtifactRef": "unarchived:sha256:c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759"
+                },
+                "raw": {
+                  "chainId": "0x13b2",
+                  "finalized": {
+                    "hash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+                    "parentHash": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                    "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                    "miner": "0x3f37c5a86f07c06b8888171d0a73a22f4cf35c8c",
+                    "stateRoot": "0x0cf287df54a8fcad4b05b12abf1dd8ae5f1ba6d365f028a2519cde0afa85470e",
+                    "transactionsRoot": "0xd35d8bb06f5df07856cae93fbd5f3fc407458ee39b88cda13d3ea50376fddf3e",
+                    "receiptsRoot": "0xc73b9f1fa2821fc04d5c2c26f0ce843860ebb5c4715d9e3be4ef0986530d2ba7",
+                    "logsBloom": "0x80010002004002010000000211000800008000010841000000000000004088000020000080040200000002006000200000400000040020000200000000480400400100000000c0080000000800000400010001800000042002800100000100000800000002000000600002000000080e000000000200004000000010000800400020020000090000000000400000000001080040000000000800002040000000000000000000000000000020000220000000000000800000000400084000000000200402000020000008001000000008002000010000401840000001000020c02080000000000000004000000108200000000004001000000000000007000400",
+                    "difficulty": "0x0",
+                    "number": "0x1770442",
+                    "gasLimit": "0x1c9c380",
+                    "gasUsed": "0xac95a",
+                    "timestamp": "0x6ac50b0b",
+                    "extraData": "0x00000004a817c800",
+                    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    "nonce": "0x0000000000000000",
+                    "baseFeePerGas": "0x4a817c800",
+                    "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                    "blobGasUsed": "0x0",
+                    "excessBlobGas": "0x0",
+                    "parentBeaconBlockRoot": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                    "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "size": "0xa82",
+                    "uncles": [],
+                    "transactions": [
+                      "0x744ca4225cf9741bb25b526afb6f68b5b6affd379e5b7df8be84eb3750afddf3",
+                      "0xf21c5e3c24604fceca51a63ec0b713fbcfd64e031f7b4478b3c7d512900aa8d9",
+                      "0xd254d192fbe6f4d0397f367af9911b5b1f18de5be2ba0b4f0f9cfa06ba82babe",
+                      "0x31f66abf7479021d97ef47b6464b7df050639e1c5c70d51d23cc1384884f6b5f",
+                      "0xb203da5221acb410811f9a438af0f4c0556e3e2e831ecabca5037aa54a0c1b14"
+                    ],
+                    "withdrawals": []
+                  },
+                  "block": {
+                    "hash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+                    "parentHash": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                    "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                    "miner": "0x3f37c5a86f07c06b8888171d0a73a22f4cf35c8c",
+                    "stateRoot": "0x0cf287df54a8fcad4b05b12abf1dd8ae5f1ba6d365f028a2519cde0afa85470e",
+                    "transactionsRoot": "0xd35d8bb06f5df07856cae93fbd5f3fc407458ee39b88cda13d3ea50376fddf3e",
+                    "receiptsRoot": "0xc73b9f1fa2821fc04d5c2c26f0ce843860ebb5c4715d9e3be4ef0986530d2ba7",
+                    "logsBloom": "0x80010002004002010000000211000800008000010841000000000000004088000020000080040200000002006000200000400000040020000200000000480400400100000000c0080000000800000400010001800000042002800100000100000800000002000000600002000000080e000000000200004000000010000800400020020000090000000000400000000001080040000000000800002040000000000000000000000000000020000220000000000000800000000400084000000000200402000020000008001000000008002000010000401840000001000020c02080000000000000004000000108200000000004001000000000000007000400",
+                    "difficulty": "0x0",
+                    "number": "0x1770442",
+                    "gasLimit": "0x1c9c380",
+                    "gasUsed": "0xac95a",
+                    "timestamp": "0x6ac50b0b",
+                    "extraData": "0x00000004a817c800",
+                    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    "nonce": "0x0000000000000000",
+                    "baseFeePerGas": "0x4a817c800",
+                    "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                    "blobGasUsed": "0x0",
+                    "excessBlobGas": "0x0",
+                    "parentBeaconBlockRoot": "0xa867cba857b41be97d120ece430493de888dbfdf989d4e1ca281ca3b829bbf8f",
+                    "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "size": "0xa82",
+                    "uncles": [],
+                    "transactions": [
+                      "0x744ca4225cf9741bb25b526afb6f68b5b6affd379e5b7df8be84eb3750afddf3",
+                      "0xf21c5e3c24604fceca51a63ec0b713fbcfd64e031f7b4478b3c7d512900aa8d9",
+                      "0xd254d192fbe6f4d0397f367af9911b5b1f18de5be2ba0b4f0f9cfa06ba82babe",
+                      "0x31f66abf7479021d97ef47b6464b7df050639e1c5c70d51d23cc1384884f6b5f",
+                      "0xb203da5221acb410811f9a438af0f4c0556e3e2e831ecabca5037aa54a0c1b14"
+                    ],
+                    "withdrawals": []
+                  }
+                },
+                "payloadHash": "c622161b4bcaf76c366d677ac7609cd52e8c2c59530d65d965aa86f76f7a9759",
+                "snapshot": {
+                  "chainId": "5042",
+                  "blockNumber": "24577090",
+                  "blockHash": "0xd992a8a916a41738eb173b48579d67e43adc16daf6b7fda7e6a3373eec534db6",
+                  "observedAt": "2026-10-06T14:51:56.404Z",
+                  "finality": "FINALIZED",
+                  "sourceSet": ["arc-drpc-public"]
+                }
+              }
+            ],
+            "blockTimestamp": "2026-10-06T14:51:55.000Z"
+          },
+          "lastSuccessfulObservation": null,
+          "durable": false,
+          "formalForensicReady": false,
+          "reason": "单来源实时区块观察，未归档；不替代资金快照。"
+        },
+        "latestStored": {
+          "id": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+          "snapshot": {
+            "chainId": "5042",
+            "finality": "FINALIZED",
+            "blockHash": "0xb277607829c5ff8f4d76cb3b85c4b1ec888d76f11f1975cedfea3a4a4d0f3456",
+            "sourceSet": ["arc-drpc-public"],
+            "observedAt": "2026-10-06T14:50:23.955Z",
+            "blockNumber": "24576907"
+          },
+          "expiresAt": "2026-10-13T14:51:49.226Z"
+        },
+        "ledgerRefresh": "已发布资金快照按原有采集计划更新；实时观察不启动扫描。"
+      }
+    },
+    {
+      "at": "2026-10-06T14:52:55.520Z",
+      "data": {
+        "chain": {
+          "state": "fresh",
+          "failureCode": null,
+          "checkedAt": "2026-10-06T14:52:27.468Z",
+          "refreshAfterMs": 30000,
+          "observation": {
+            "snapshot": {
+              "chainId": "5042",
+              "blockNumber": "24577153",
+              "blockHash": "0x2823a50a478c41f9ee83c0087cfea3bec57eafa374b5d9cd095ed60ebf5ac5c9",
+              "observedAt": "2026-10-06T14:52:28.174Z",
+              "finality": "FINALIZED",
+              "sourceSet": ["arc-drpc-public"]
+            },
+            "evidence": [
+              {
+                "id": "ev_bbffed2d65aa0f4aa053e4e5",
+                "evidence": {
+                  "id": "ev_bbffed2d65aa0f4aa053e4e5",
+                  "ledger": "EVM",
+                  "chainId": "5042",
+                  "kind": "RAW_RPC_RESPONSE",
+                  "source": "arc-drpc-public",
+                  "locator": "eth_chainId+eth_getBlockByNumber:finalized",
+                  "payloadHash": "7434d15a427108e326b2d3fd4d1635bb11758340fe33b1914473ef7c9fa4ee71",
+                  "observedAt": "2026-10-06T14:52:28.174Z",
+                  "blockOrSlot": "24577153",
+                  "finality": "FINALIZED",
+                  "summary": "目标链与固定最终区块。",
+                  "rawArtifactRef": "unarchived:sha256:7434d15a427108e326b2d3fd4d1635bb11758340fe33b1914473ef7c9fa4ee71"
+                },
+                "raw": {
+                  "chainId": "0x13b2",
+                  "finalized": {
+                    "hash": "0x2823a50a478c41f9ee83c0087cfea3bec57eafa374b5d9cd095ed60ebf5ac5c9",
+                    "parentHash": "0xb3bc8e323ba2c17b5c4327f81225eac6562688ae0dffe44744b644ad89ca0bf8",
+                    "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                    "miner": "0x2756042d816a74117c0bc0bb2caed145ecf88b3f",
+                    "stateRoot": "0xb9055ef2ab0b07d9fa2a6d00400b7556e7e3bd9f9577ed17a88286b368ba45ac",
+                    "transactionsRoot": "0xde39beb82ca66b76c815af76001557e9749b046610eaadb312d6983ef7d78669",
+                    "receiptsRoot": "0xc822d4deafa1e5037b65723807aaa8f6d7ef85aaaaf40964107e7de6bb3e47f9",
+                    "logsBloom": "0x00000200100101000000000400000000000000100000000000000004041900000000010000000208000000000000010000000000040010000000000000000000000000080000400000000128000000000100400000000020008000000000000000000000200000002000000000000000020000000000000000000010001000400000000000804004000000000040000000080000080000100002000000000000000000000000000000000020000000000000000000000400000041000000000000000402000000000008001000000000120000000000000000000000000000400800000000000010006480000100000000000004000000000000000002000000",
+                    "difficulty": "0x0",
+                    "number": "0x1770481",
+                    "gasLimit": "0x1c9c380",
+                    "gasUsed": "0x83df5",
+                    "timestamp": "0x6ac50b2b",
+                    "extraData": "0x00000004a817c800",
+                    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    "nonce": "0x0000000000000000",
+                    "baseFeePerGas": "0x4a817c800",
+                    "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                    "blobGasUsed": "0x0",
+                    "excessBlobGas": "0x0",
+                    "parentBeaconBlockRoot": "0xb3bc8e323ba2c17b5c4327f81225eac6562688ae0dffe44744b644ad89ca0bf8",
+                    "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "size": "0xc08",
+                    "uncles": [],
+                    "transactions": [
+                      "0x9dae8228668fa24905f8d516dea66cf1331a8d158f04ad69b4ae41758d98e8a1",
+                      "0xdc76039491ad2708a1aa5bc7d01346af24c6b773d80042494a75ac8c17afb1ee",
+                      "0x1bfb5a8478e2bd9677ee42eb1c4f278ed0420c3c08e579d462a0ccd5fa3be630",
+                      "0x6ead3357c9c6b754df94d9980ff70bc95d720dc3e8987172df4cbe404df9ec15",
+                      "0xa0e2b302188166f529e83c6825658bf942353f8b580b3ce17b1231a116eb6e8c"
+                    ],
+                    "withdrawals": []
+                  },
+                  "block": {
+                    "hash": "0x2823a50a478c41f9ee83c0087cfea3bec57eafa374b5d9cd095ed60ebf5ac5c9",
+                    "parentHash": "0xb3bc8e323ba2c17b5c4327f81225eac6562688ae0dffe44744b644ad89ca0bf8",
+                    "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+                    "miner": "0x2756042d816a74117c0bc0bb2caed145ecf88b3f",
+                    "stateRoot": "0xb9055ef2ab0b07d9fa2a6d00400b7556e7e3bd9f9577ed17a88286b368ba45ac",
+                    "transactionsRoot": "0xde39beb82ca66b76c815af76001557e9749b046610eaadb312d6983ef7d78669",
+                    "receiptsRoot": "0xc822d4deafa1e5037b65723807aaa8f6d7ef85aaaaf40964107e7de6bb3e47f9",
+                    "logsBloom": "0x00000200100101000000000400000000000000100000000000000004041900000000010000000208000000000000010000000000040010000000000000000000000000080000400000000128000000000100400000000020008000000000000000000000200000002000000000000000020000000000000000000010001000400000000000804004000000000040000000080000080000100002000000000000000000000000000000000020000000000000000000000400000041000000000000000402000000000008001000000000120000000000000000000000000000400800000000000010006480000100000000000004000000000000000002000000",
+                    "difficulty": "0x0",
+                    "number": "0x1770481",
+                    "gasLimit": "0x1c9c380",
+                    "gasUsed": "0x83df5",
+                    "timestamp": "0x6ac50b2b",
+                    "extraData": "0x00000004a817c800",
+                    "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                    "nonce": "0x0000000000000000",
+                    "baseFeePerGas": "0x4a817c800",
+                    "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+                    "blobGasUsed": "0x0",
+                    "excessBlobGas": "0x0",
+                    "parentBeaconBlockRoot": "0xb3bc8e323ba2c17b5c4327f81225eac6562688ae0dffe44744b644ad89ca0bf8",
+                    "requestsHash": "0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                    "size": "0xc08",
+                    "uncles": [],
+                    "transactions": [
+                      "0x9dae8228668fa24905f8d516dea66cf1331a8d158f04ad69b4ae41758d98e8a1",
+                      "0xdc76039491ad2708a1aa5bc7d01346af24c6b773d80042494a75ac8c17afb1ee",
+                      "0x1bfb5a8478e2bd9677ee42eb1c4f278ed0420c3c08e579d462a0ccd5fa3be630",
+                      "0x6ead3357c9c6b754df94d9980ff70bc95d720dc3e8987172df4cbe404df9ec15",
+                      "0xa0e2b302188166f529e83c6825658bf942353f8b580b3ce17b1231a116eb6e8c"
+                    ],
+                    "withdrawals": []
+                  }
+                },
+                "payloadHash": "7434d15a427108e326b2d3fd4d1635bb11758340fe33b1914473ef7c9fa4ee71",
+                "snapshot": {
+                  "chainId": "5042",
+                  "blockNumber": "24577153",
+                  "blockHash": "0x2823a50a478c41f9ee83c0087cfea3bec57eafa374b5d9cd095ed60ebf5ac5c9",
+                  "observedAt": "2026-10-06T14:52:28.174Z",
+                  "finality": "FINALIZED",
+                  "sourceSet": ["arc-drpc-public"]
+                }
+              }
+            ],
+            "blockTimestamp": "2026-10-06T14:52:27.000Z"
+          },
+          "lastSuccessfulObservation": null,
+          "durable": false,
+          "formalForensicReady": false,
+          "reason": "单来源实时区块观察，未归档；不替代资金快照。"
+        },
+        "latestStored": {
+          "id": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+          "snapshot": {
+            "chainId": "5042",
+            "finality": "FINALIZED",
+            "blockHash": "0xb277607829c5ff8f4d76cb3b85c4b1ec888d76f11f1975cedfea3a4a4d0f3456",
+            "sourceSet": ["arc-drpc-public"],
+            "observedAt": "2026-10-06T14:50:23.955Z",
+            "blockNumber": "24576907"
+          },
+          "expiresAt": "2026-10-13T14:51:49.226Z"
+        },
+        "ledgerRefresh": "已发布资金快照按原有采集计划更新；实时观察不启动扫描。"
+      }
+    }
+  ],
+  "pinnedUrlUnchanged": true,
+  "noPostOrScan": true,
+  "automaticThirtySecondRefresh": true,
+  "sharedCooldownMayReuseSample": true,
+  "pauseVisible": true
+}

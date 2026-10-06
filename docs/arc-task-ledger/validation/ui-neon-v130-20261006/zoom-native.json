@@ -1,0 +1,62 @@
+[
+  {
+    "width": 709,
+    "dpr": 2,
+    "cssZoom": "1",
+    "overflow": false,
+    "amounts": [
+      {
+        "text": "1.98 USDC",
+        "clipped": false
+      },
+      {
+        "text": "0.02 USDC",
+        "clipped": false
+      },
+      {
+        "text": "未知：暂无法核验",
+        "clipped": false
+      },
+      {
+        "text": "2 USDC",
+        "clipped": false
+      },
+      {
+        "text": "未知：暂无法核验",
+        "clipped": false
+      }
+    ],
+    "physicalWidth": 1440,
+    "pngWidth": 1418
+  },
+  {
+    "width": 629,
+    "dpr": 2,
+    "cssZoom": "1",
+    "overflow": false,
+    "amounts": [
+      {
+        "text": "1.98 USDC",
+        "clipped": false
+      },
+      {
+        "text": "0.02 USDC",
+        "clipped": false
+      },
+      {
+        "text": "未知：暂无法核验",
+        "clipped": false
+      },
+      {
+        "text": "2 USDC",
+        "clipped": false
+      },
+      {
+        "text": "未知：暂无法核验",
+        "clipped": false
+      }
+    ],
+    "physicalWidth": 1280,
+    "pngWidth": 1258
+  }
+]

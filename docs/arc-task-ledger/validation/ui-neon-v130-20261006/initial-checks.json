@@ -1,0 +1,351 @@
+{
+  "records": [
+    {
+      "record": "root-results.json",
+      "steps": [
+        {
+          "command": "node node_modules/vitest/vitest.mjs run packages services apps/api/test/unit scripts/operational-gates.test.ts tests/unit --maxWorkers=2",
+          "start": "2026-10-06T14:05:08.755539+00:00",
+          "end": "2026-10-06T14:08:15.023262+00:00",
+          "exitCode": 0,
+          "summaries": ["Test Files  197 passed (197)", "Tests  1050 passed (1050)"],
+          "logSha256": "4b77a791357eb3bf8502c4a3701235686ef928a26680135667c8bf86459f08a7"
+        },
+        {
+          "command": "npm run test:integration",
+          "start": "2026-10-06T14:08:15.050117+00:00",
+          "end": "2026-10-06T14:08:22.233735+00:00",
+          "exitCode": 0,
+          "summaries": [
+            "Test Files  1 passed | 9 skipped (10)",
+            "Tests  88 passed | 42 skipped (130)"
+          ],
+          "logSha256": "e42075f245feb16920fc7472834b2641d2cd7b4f01696770cd39b735f78fe7d6"
+        },
+        {
+          "command": "npm run test:evals",
+          "start": "2026-10-06T14:08:22.245877+00:00",
+          "end": "2026-10-06T14:08:24.656899+00:00",
+          "exitCode": 0,
+          "summaries": ["Test Files  2 passed (2)", "Tests  2 passed (2)"],
+          "logSha256": "2808c0a50df5af2d379ce5b5ff03615a5dbe32c964b03140d2286f88a75f11a2"
+        },
+        {
+          "command": "npm run test:mcp",
+          "start": "2026-10-06T14:08:24.669260+00:00",
+          "end": "2026-10-06T14:08:26.223141+00:00",
+          "exitCode": 0,
+          "summaries": ["Test Files  1 passed (1)", "Tests  5 passed (5)"],
+          "logSha256": "6cc7688df5eb0f5e3b751a305bcc0974eb7a1de56d608f9aff226e4ed5ce1258"
+        },
+        {
+          "command": "node node_modules/@playwright/test/cli.js test",
+          "start": "2026-10-06T14:08:26.235362+00:00",
+          "end": "2026-10-06T14:09:18.469010+00:00",
+          "exitCode": 0,
+          "summaries": ["49 passed (49.1s)"],
+          "logSha256": "95c66bb777b9364aee436193e22c4938e8bebd08654b2e11a18d711fce830e1a"
+        },
+        {
+          "command": "npm run test:e2e:visual",
+          "start": "2026-10-06T14:09:18.772644+00:00",
+          "end": "2026-10-06T14:09:32.240236+00:00",
+          "exitCode": 0,
+          "summaries": ["7 passed (11.5s)"],
+          "logSha256": "79f2833f414b9cd54a9aba2150ba2d20cb9daafbb8b87448008d6642d98a86f0"
+        },
+        {
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-e2e-windows.ps1",
+          "start": "2026-10-06T14:09:32.265542+00:00",
+          "end": "2026-10-06T14:10:27.142270+00:00",
+          "exitCode": 0,
+          "summaries": ["49 passed (48.5s)"],
+          "logSha256": "140645834a64d50e8b1868c3fdb2bdacb1945fedd8dfeaa9cfff8ae589c6c6a2"
+        },
+        {
+          "command": "npm run test:visual-golden",
+          "start": "2026-10-06T14:10:27.151606+00:00",
+          "end": "2026-10-06T14:10:28.781503+00:00",
+          "exitCode": 1,
+          "summaries": [],
+          "logSha256": "f80d8821b8f40a2ee01761f860ea2f05327ea040000a513239e68738b3cd928a"
+        }
+      ]
+    },
+    {
+      "record": "rust-results.json",
+      "steps": [
+        {
+          "command": "cargo fmt --check",
+          "start": "2026-10-06T13:58:15.510319+00:00",
+          "end": "2026-10-06T13:58:17.594170+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "command": "cargo clippy --workspace -j 2 -- -D warnings",
+          "start": "2026-10-06T13:58:17.873327+00:00",
+          "end": "2026-10-06T14:00:19.178220+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "fb1cb766738ee756281d13e5d8ea97a990e3141c9184f837e9ca30ac29aa04f2"
+        },
+        {
+          "command": "cargo test --workspace -j 2",
+          "start": "2026-10-06T14:00:19.574718+00:00",
+          "end": "2026-10-06T14:08:05.034621+00:00",
+          "exitCode": 0,
+          "summaries": [
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+            "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+          ],
+          "logSha256": "43b7ee3947a11bf86403010b5b8febe6e240954e749ed7a9e0742a9d1fa6b715"
+        }
+      ]
+    },
+    {
+      "record": "static-results.json",
+      "steps": [
+        {
+          "command": "npm run format:check",
+          "start": "2026-10-06T13:58:15.295976+00:00",
+          "end": "2026-10-06T13:59:31.006770+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0"
+        },
+        {
+          "command": "npm run lint",
+          "start": "2026-10-06T13:59:31.155733+00:00",
+          "end": "2026-10-06T14:01:50.431040+00:00",
+          "exitCode": 1,
+          "summaries": [],
+          "logSha256": "48c119efa85319392d5da16372f0d7b979ddc40f911d3692d5709f75c1c2421a"
+        },
+        {
+          "command": "npm run typecheck",
+          "start": "2026-10-06T14:01:50.675159+00:00",
+          "end": "2026-10-06T14:04:18.561733+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8"
+        },
+        {
+          "command": "npm run build",
+          "start": "2026-10-06T14:04:18.831422+00:00",
+          "end": "2026-10-06T14:04:43.151724+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "4014d3a60ce65b82c0313e48ad37dceee9f41fddc36b2877d62cd5b2d9eb4484"
+        },
+        {
+          "command": "npm run arc:build",
+          "start": "2026-10-06T14:04:43.228283+00:00",
+          "end": "2026-10-06T14:04:47.469376+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "fd3f4080e0cf130fd4606e4a78440f54ffc2d32bc75edaf91738b7f542d2d5bb"
+        },
+        {
+          "command": "npm run license:check",
+          "start": "2026-10-06T14:04:47.624294+00:00",
+          "end": "2026-10-06T14:06:29.662577+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e"
+        },
+        {
+          "command": "npm run architecture:check",
+          "start": "2026-10-06T14:06:29.757388+00:00",
+          "end": "2026-10-06T14:07:34.215362+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "6b9cd9a759795787be49b3fce425cbabe9e09034c1af6db8f7599ed29ef4cf3a"
+        },
+        {
+          "command": "npm run ui:chinese:check",
+          "start": "2026-10-06T14:07:34.267148+00:00",
+          "end": "2026-10-06T14:07:35.928122+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "7724d8bd970dc1787592b4a9c489f12f6eeade48266262c8f0e45bffde6fd5f2"
+        },
+        {
+          "command": "npm run schema:drift:check",
+          "start": "2026-10-06T14:07:35.969890+00:00",
+          "end": "2026-10-06T14:07:37.729097+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "825e922aedf976dec50a43ad54e8765a2159fe16dd2218733c74926c0841ae97"
+        }
+      ]
+    },
+    {
+      "record": "finalstatic-results.json",
+      "steps": [
+        {
+          "command": "npm run format:check",
+          "start": "2026-10-06T14:09:14.774034+00:00",
+          "end": "2026-10-06T14:09:52.564145+00:00",
+          "exitCode": 1,
+          "summaries": [],
+          "logSha256": "0fdf52fa54b9e594789e5fb4048c1b761488791e0666db065b6c5a3dedfd9b5a"
+        },
+        {
+          "command": "npm run lint",
+          "start": "2026-10-06T14:09:52.669472+00:00",
+          "end": "2026-10-06T14:10:13.715483+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6"
+        },
+        {
+          "command": "npm run arc:build",
+          "start": "2026-10-06T14:10:13.805668+00:00",
+          "end": "2026-10-06T14:10:17.661437+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "bc968738dd1ec9f4451a6a3bde0e0eeab02bb8f4674bf492e845a8d23358995b"
+        },
+        {
+          "command": "npm run arc:test:unit",
+          "start": "2026-10-06T14:10:17.736130+00:00",
+          "end": "2026-10-06T14:10:21.891267+00:00",
+          "exitCode": 0,
+          "summaries": ["Test Files  14 passed (14)", "Tests  96 passed (96)"],
+          "logSha256": "4ac90a29403745a5ba01bb203608f0b565fab48d9dd2c6948e74ebf92fff4c11"
+        }
+      ]
+    },
+    {
+      "record": "formatfinal-results.json",
+      "steps": [
+        {
+          "command": "npm run format:check",
+          "start": "2026-10-06T14:12:28.573575+00:00",
+          "end": "2026-10-06T14:12:40.623405+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0"
+        },
+        {
+          "command": "npm run arc:build",
+          "start": "2026-10-06T14:12:40.686022+00:00",
+          "end": "2026-10-06T14:12:43.608807+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "2a0363a1e61fcce9b381caaf5f153632b3ae96d57ca442a68cadd023a42a98c9"
+        }
+      ]
+    },
+    {
+      "record": "shippingarc-results.json",
+      "steps": [
+        {
+          "command": "npm run arc:test:e2e",
+          "start": "2026-10-06T14:18:54.786525+00:00",
+          "end": "2026-10-06T14:20:02.042383+00:00",
+          "exitCode": 0,
+          "summaries": [
+            "9 passed (17.7s)",
+            "9 passed (19.5s)",
+            "5 passed (13.9s)",
+            "5 passed (12.3s)"
+          ],
+          "logSha256": "1a2d491a196c06a4272f23326139d5cf29d9cdabe3e6ab296ea6ea22986b0253"
+        },
+        {
+          "command": "node node_modules/@playwright/test/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/dashboard.spec.ts --project arc-desktop",
+          "start": "2026-10-06T14:20:02.108591+00:00",
+          "end": "2026-10-06T14:20:09.310980+00:00",
+          "exitCode": 0,
+          "summaries": ["2 passed (5.8s)"],
+          "logSha256": "766f54afdbbbc67c9ddb99780b89e6783c76bce9fd02a6ac3142c96a618ed836"
+        },
+        {
+          "command": "node node_modules/@playwright/test/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/dashboard.spec.ts --project arc-mobile",
+          "start": "2026-10-06T14:20:09.323219+00:00",
+          "end": "2026-10-06T14:20:16.411542+00:00",
+          "exitCode": 0,
+          "summaries": ["2 passed (5.8s)"],
+          "logSha256": "0ced8f26707564b76d1e72b1dc17e21d2379b8a2dee15125952a04255178d8de"
+        },
+        {
+          "command": "npm run format:check",
+          "start": "2026-10-06T14:20:16.423465+00:00",
+          "end": "2026-10-06T14:20:29.468373+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0"
+        }
+      ]
+    },
+    {
+      "record": "independent-results.json",
+      "steps": [
+        {
+          "command": "npm run arc:build",
+          "start": "2026-10-06T14:23:15.655341+00:00",
+          "end": "2026-10-06T14:23:29.559700+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "e8b5568e5bc0646f24682e7e997e5a7093efe397756736d9300171a83a77d801"
+        },
+        {
+          "command": "npm run arc:test:unit",
+          "start": "2026-10-06T14:23:29.621354+00:00",
+          "end": "2026-10-06T14:23:38.681611+00:00",
+          "exitCode": 0,
+          "summaries": ["Test Files  14 passed (14)", "Tests  96 passed (96)"],
+          "logSha256": "12475810e21c5b730c4eba5f660d53789900b1ff38c93d6966f50ba1af1f7ddd"
+        },
+        {
+          "command": "npm run arc:test:integration",
+          "start": "2026-10-06T14:23:38.721753+00:00",
+          "end": "2026-10-06T14:23:46.515272+00:00",
+          "exitCode": 0,
+          "summaries": ["Test Files  1 passed (1)", "Tests  35 passed (35)"],
+          "logSha256": "812e6149acec9cb93a043ce5552fad76da216831de571a87127a1c71355addfc"
+        },
+        {
+          "command": "npm run lint",
+          "start": "2026-10-06T14:23:46.527424+00:00",
+          "end": "2026-10-06T14:24:07.024172+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "98873c6ceffac64eb7d34f31d1723cc1c10da24d11253b9a55faceb2228fda6a"
+        },
+        {
+          "command": "npm run license:check",
+          "start": "2026-10-06T14:24:07.044102+00:00",
+          "end": "2026-10-06T14:24:11.358834+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "b43a3c4d7f81173b00b68ef3dd5bf9eb62d70db09da43ded5db09fce71a28ce8"
+        },
+        {
+          "command": "npm audit --json",
+          "start": "2026-10-06T14:24:11.431209+00:00",
+          "end": "2026-10-06T14:24:13.499147+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "71bb55dc3bb3b98fc73d60e98d7711e69fa498e998239863bdd9c4b5c8b8eca1"
+        }
+      ]
+    }
+  ],
+  "note": "本轮阶段记录对应持续修改的工作副本；shippingarc 与 independent 对应冻结的3d9a5fe候选，失败及跳过保留。最终候选检查见final-checks.json。",
+  "featureCommit": "9b3da2db5ee9106c3b9a7f39c796825d90f29c46",
+  "frozenExportSourceCommit": "3d9a5fe4b3faf6559733e8c74ab8cb4f59d9b4a2"
+}

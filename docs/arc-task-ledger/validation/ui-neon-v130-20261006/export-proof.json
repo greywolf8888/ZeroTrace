@@ -1,0 +1,16 @@
+{
+  "sourceCommit": "60061232b3047596ecfd40db866a7c243f3e8732",
+  "deploymentSha": "8f2d47922847236be7448619a9a21543730d7b07",
+  "manifestFiles": 273,
+  "codeFilesMatched": 96,
+  "credentialPathsExcluded": true,
+  "deploymentCodeMatchesTestedSource": true,
+  "independentAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "at": "2026-10-06T14:52:32.800Z",
+  "site": "https://web--atl-web--xtd599t97njk.code.run",
+  "assets": [
+    {
+      "path": "/assets/index-y5k1ZtXl.js",
+      "bytes": 242785,
+      "sha256": "66237d94fabc424b893b1a651b034d0a118da87c70c2ca2ec365e13b05a4a12b",
+      "matchesIndependentBuild": true
+    },
+    {
+      "path": "/assets/index-DXpkOEiY.css",
+      "bytes": 22221,
+      "sha256": "b4bd1f7ed87a8067b67541e5e67b69a6a85865a92d3d110d36d664891ec6ecee",
+      "matchesIndependentBuild": true
+    }
+  ],
+  "task18": {
+    "snapshotRunId": "run_31d0b702348917f7416b0110b8ae4e64",
+    "records": [
+      {
+        "key": "result",
+        "sha256": "736c85204e5961a85839116e34c4b76afd51b458993f5cd8423e42a95392e516",
+        "deepEqual": true
+      },
+      {
+        "key": "job",
+        "sha256": "3ac6da4fb4d83c87479e6cce3cbffe811e9839a044b535b4e32cbe08d57dcc67",
+        "deepEqual": true
+      },
+      {
+        "key": "evidence",
+        "sha256": "4da0e6e1b21a67af04cdd0069c402421f19f11f94d21ef4c11eebf2291ce70da",
+        "deepEqual": true
+      }
+    ],
+    "preserved": true
+  }
+}

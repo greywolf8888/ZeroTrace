@@ -1,0 +1,134 @@
+{
+  "at": "2026-10-06T14:53:52.864493+00:00",
+  "sourceCommit": "60061232b3047596ecfd40db866a7c243f3e8732",
+  "deploymentSha": "8f2d47922847236be7448619a9a21543730d7b07",
+  "interfaceVersion": "atl-ui-v1.3.0",
+  "financialRuleVersion": "atl-v1.2.1",
+  "schemaMigration": 6,
+  "records": [
+    {
+      "record": "independent-r2-results.json",
+      "steps": [
+        {
+          "command": "npm run arc:build",
+          "start": "2026-10-06T14:46:40.818295+00:00",
+          "end": "2026-10-06T14:46:56.857582+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "28ffc2155720d73b1cc76933c7d09a2c2153020915434602eae7f9bc5f3ada60"
+        },
+        {
+          "command": "npm run arc:test:unit",
+          "start": "2026-10-06T14:46:56.901238+00:00",
+          "end": "2026-10-06T14:47:06.564689+00:00",
+          "exitCode": 0,
+          "summaries": ["Test Files  14 passed (14)", "Tests  96 passed (96)"],
+          "logSha256": "75c71a7f1950c501dd9c3317aac228b6301f47dbd9dd8ffea65b232cced05b25"
+        },
+        {
+          "command": "npm run arc:test:integration",
+          "start": "2026-10-06T14:47:06.585888+00:00",
+          "end": "2026-10-06T14:47:14.890256+00:00",
+          "exitCode": 0,
+          "summaries": ["Test Files  1 passed (1)", "Tests  35 passed (35)"],
+          "logSha256": "ecdae93faf835cce8b308311dc90e0a620137051295d3194eafceb04618bf9da"
+        },
+        {
+          "command": "npm run lint",
+          "start": "2026-10-06T14:47:14.902208+00:00",
+          "end": "2026-10-06T14:47:35.211021+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "98873c6ceffac64eb7d34f31d1723cc1c10da24d11253b9a55faceb2228fda6a"
+        },
+        {
+          "command": "npm run license:check",
+          "start": "2026-10-06T14:47:35.222947+00:00",
+          "end": "2026-10-06T14:47:39.245324+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "b43a3c4d7f81173b00b68ef3dd5bf9eb62d70db09da43ded5db09fce71a28ce8"
+        },
+        {
+          "command": "npm audit --json",
+          "start": "2026-10-06T14:47:39.257578+00:00",
+          "end": "2026-10-06T14:47:41.267270+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "71bb55dc3bb3b98fc73d60e98d7711e69fa498e998239863bdd9c4b5c8b8eca1"
+        }
+      ]
+    },
+    {
+      "record": "shipping-r2-results.json",
+      "steps": [
+        {
+          "command": "npm run arc:test:e2e",
+          "start": "2026-10-06T14:47:39.702884+00:00",
+          "end": "2026-10-06T14:48:46.000592+00:00",
+          "exitCode": 0,
+          "summaries": [
+            "9 passed (19.3s)",
+            "9 passed (19.3s)",
+            "5 passed (13.5s)",
+            "5 passed (10.7s)"
+          ],
+          "logSha256": "82b1a17ae11acf9ac7dc5486a918d5178f32cf6a26182a8bc5e4632457a22c75"
+        },
+        {
+          "command": "node node_modules/@playwright/test/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/dashboard.spec.ts --project arc-desktop",
+          "start": "2026-10-06T14:48:46.059507+00:00",
+          "end": "2026-10-06T14:48:52.840849+00:00",
+          "exitCode": 0,
+          "summaries": ["2 passed (5.5s)"],
+          "logSha256": "3dd061dd84c84be10315b1990c2ca5cf3e932049ea452b7b2656f6f9d78f1757"
+        },
+        {
+          "command": "node node_modules/@playwright/test/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/dashboard.spec.ts --project arc-mobile",
+          "start": "2026-10-06T14:48:52.853018+00:00",
+          "end": "2026-10-06T14:48:59.230069+00:00",
+          "exitCode": 0,
+          "summaries": ["2 passed (5.2s)"],
+          "logSha256": "0f8d335357de1157ea1a8f7ff45ce8a71ea3d68dd7ea6b3f6207e65bb9f38897"
+        },
+        {
+          "command": "npm run format:check",
+          "start": "2026-10-06T14:48:59.241967+00:00",
+          "end": "2026-10-06T14:49:11.617804+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0"
+        },
+        {
+          "command": "npm run typecheck",
+          "start": "2026-10-06T14:49:11.630243+00:00",
+          "end": "2026-10-06T14:49:26.740489+00:00",
+          "exitCode": 0,
+          "summaries": [],
+          "logSha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8"
+        }
+      ]
+    }
+  ],
+  "scopeSummary": {
+    "arcUnitPassed": 96,
+    "arcPostgresIntegrationPassed": 35,
+    "arcBrowserPassed": 32,
+    "rootUnitPassed": 1050,
+    "rootIntegrationPassed": 88,
+    "externalIntegrationSkipped": 42,
+    "rootBrowserPassed": 49,
+    "windowsBrowserEntryPassed": 49,
+    "visualBrowserPassed": 7,
+    "rustWorkspacePassed": 52,
+    "legacyVisualFingerprint": "FAIL: 视觉基线源码指纹已过期。",
+    "realHumanApproval": false
+  },
+  "diagnostics": [
+    "初次同实例并发套件触发现有查询限额，最终分批执行，生产限额未修改。",
+    "首屏越界经实际尺寸核验后修复，桌面手机与浏览器真正200%缩放通过。",
+    "初次单次轮询复用共享缓存；最终等待真实轮询观察推进，不要求每次请求产生新采集。",
+    "首个候选临时原始观察继承pg引用；最终修正为unarchived引用，原持久证据未改写。",
+    "格式与type-only导入初次失败已修复并复验；旧视觉指纹失败保留。"
+  ]
+}

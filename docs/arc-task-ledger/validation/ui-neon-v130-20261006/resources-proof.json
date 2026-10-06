@@ -1,0 +1,86 @@
+{
+  "at": "2026-10-06T14:52:07.918Z",
+  "sourceSha": "8f2d47922847236be7448619a9a21543730d7b07",
+  "resources": [
+    {
+      "id": "atl-api",
+      "status": "COMPLETED",
+      "sha": "8f2d47922847236be7448619a9a21543730d7b07",
+      "plan": "nf-compute-10",
+      "environmentUnchanged": true,
+      "portsUnchanged": true
+    },
+    {
+      "id": "atl-web",
+      "status": "COMPLETED",
+      "sha": "8f2d47922847236be7448619a9a21543730d7b07",
+      "plan": "nf-compute-10",
+      "environmentUnchanged": true,
+      "portsUnchanged": true
+    },
+    {
+      "id": "atl-migrate",
+      "suspended": true,
+      "settings": {
+        "cron": {
+          "schedule": "*/10 * * * *",
+          "concurrencyPolicy": "Forbid"
+        },
+        "backoffLimit": 0,
+        "runOnSourceChange": "never",
+        "activeDeadlineSeconds": 240
+      },
+      "sha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+      "plan": "nf-compute-10",
+      "unchanged": true
+    },
+    {
+      "id": "atl-sync",
+      "suspended": false,
+      "settings": {
+        "cron": {
+          "schedule": "*/10 * * * *",
+          "concurrencyPolicy": "Forbid"
+        },
+        "backoffLimit": 0,
+        "runOnSourceChange": "never",
+        "activeDeadlineSeconds": 240
+      },
+      "sha": "d29ee691c7ee3a6ea70f4b0a0b8a8df571aa8c26",
+      "plan": "nf-compute-10",
+      "unchanged": true
+    },
+    {
+      "id": "atl-postgres",
+      "specificationUnchanged": true,
+      "databaseRestarted": false
+    }
+  ],
+  "oldCursorSnapshot": "run_30031000d808764f708d1210e936c857",
+  "oldCursorAccepted": true,
+  "billingWindow": {
+    "start": 1791211926,
+    "end": 1791298326,
+    "usage": [
+      {
+        "currency": "usd",
+        "total": 0
+      }
+    ]
+  },
+  "health": {
+    "status": "UP",
+    "components": {
+      "readOnly": true,
+      "version": "atl-v1.2.1",
+      "interfaceVersion": "atl-ui-v1.3.0"
+    }
+  },
+  "ready": {
+    "status": "UP",
+    "components": {
+      "database": "UP",
+      "mainnet": "独立查询覆盖接口核验"
+    }
+  }
+}

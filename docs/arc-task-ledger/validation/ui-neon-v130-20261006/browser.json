@@ -1,0 +1,41 @@
+{
+  "at": "2026-10-06T14:52:18.142Z",
+  "pinned": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+  "records": [
+    {
+      "width": 1440,
+      "runId": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+      "taskSnapshot": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+      "background": "rgb(5, 7, 4)",
+      "flowAnimation": "shimmer",
+      "ringAnimation": "orbit",
+      "overflow": false,
+      "pageErrors": [],
+      "evidenceIds": ["ev_c6df2cf6e2f217dd445f48c1"]
+    },
+    {
+      "width": 1280,
+      "runId": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+      "taskSnapshot": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+      "background": "rgb(5, 7, 4)",
+      "flowAnimation": "shimmer",
+      "ringAnimation": "orbit",
+      "overflow": false,
+      "pageErrors": [],
+      "evidenceIds": ["ev_c6df2cf6e2f217dd445f48c1"]
+    },
+    {
+      "width": 390,
+      "runId": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+      "taskSnapshot": "run_5962ab0ac2edd358a9e5e0cfda8f03bc",
+      "background": "rgb(5, 7, 4)",
+      "flowAnimation": "shimmer",
+      "ringAnimation": "orbit",
+      "overflow": false,
+      "pageErrors": [],
+      "evidenceIds": ["ev_c6df2cf6e2f217dd445f48c1"]
+    }
+  ],
+  "reportConsumerAndFreshContext": true,
+  "realHumanApproval": false
+}
