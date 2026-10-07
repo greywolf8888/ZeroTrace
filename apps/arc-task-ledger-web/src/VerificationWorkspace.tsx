@@ -8,6 +8,7 @@ import { VerificationFlow } from './VerificationFlow.js';
 import { VerifierTaskChooser, type VerifierTaskReference } from './VerifierTaskChooser.js';
 import { VerificationReport, type Verification } from './VerificationReport.js';
 import { useLanguage } from './i18n.js';
+import { verifierLabel } from './verifier-labels.js';
 import {
   decimalUsdcToAtomic18,
   displayUsdc,
@@ -23,7 +24,7 @@ export function VerificationWorkspace({
   reportId?: string | undefined;
   navigate: (url: string) => void;
 }) {
-  const { language: lang, t, localize, date } = useLanguage();
+  const { language: lang, t, date } = useLanguage();
   const [editing, setEditing] = useState(!reportId);
   const [loadingReport, setLoadingReport] = useState(!!reportId);
   const [operation, setOperation] = useState('');
@@ -57,43 +58,7 @@ export function VerificationWorkspace({
   }>();
   const [shareLink, setShareLink] = useState(''),
     [replay, setReplay] = useState('');
-  const labels: Record<string, string> = {
-    MATCHED: '匹配',
-    MISMATCHED: '不匹配',
-    INCONCLUSIVE: '未知',
-    UNSUPPORTED: '暂不支持',
-    PASS: '通过',
-    FAIL: '不符合',
-    UNKNOWN: '未知',
-    NOT_APPLICABLE: '不适用',
-    CHAIN: '网络',
-    ACQUISITION: '链数据读取',
-    TX_SUCCESS: '交易成功状态',
-    TRANSACTION_SUCCESS: '交易成功状态',
-    SELECTION: '选定资金转移',
-    PAYMENT_MOVEMENT: '可作为付款的资金转移',
-    PAYEE: '收款人',
-    PAYER: '资金付款人',
-    MOVEMENT_PAYER: '资金付款人',
-    AMOUNT: '金额',
-    NOT_BEFORE: '最早时间',
-    DEADLINE: '截止时间',
-    TRANSFER: '转移',
-    MINT: '增发',
-    BURN: '销毁',
-    ZERO: '零值事件',
-    SELF: '自转移',
-    NATIVE: '原生接口',
-    ERC20_MIRRORED: 'ERC-20镜像接口',
-    AMBIGUOUS: '接口关系不明确',
-    matched: '镜像一致',
-    absent: '未观察到镜像',
-    ambiguous: '镜像匹配不唯一',
-    native_only: '仅原生接口',
-    missing: '镜像缺失',
-    conflict: '镜像冲突',
-  };
-  const explain = (code: string) => (labels[code] ? localize(labels[code]) : code);
+  const explain = (code: string) => verifierLabel(code, lang);
   const [transaction, setTransaction] = useState(() => {
       const tx = new URLSearchParams(location.search).get('transaction');
       return tx && /^0x[0-9a-f]{64}$/i.test(tx) ? tx : '';

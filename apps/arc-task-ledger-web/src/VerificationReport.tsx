@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useLanguage } from './i18n.js';
+import { verifierLabel } from './verifier-labels.js';
 import {
   displayUsdc,
   type SettlementCheck,
@@ -41,18 +42,11 @@ export function VerificationReport({
   preview?: boolean;
   actions?: ReactNode;
 }) {
-  const { t, localize, date } = useLanguage();
+  const { language, t, localize, date } = useLanguage();
   const [showChecks, setShowChecks] = useState(preview);
   const { report, observation } = data;
   const outcome = report.evaluation?.outcome ?? 'INCONCLUSIVE';
-  const outcomeText =
-    outcome === 'MATCHED'
-      ? t('匹配', 'Matched')
-      : outcome === 'MISMATCHED'
-        ? t('不匹配', 'Mismatched')
-        : outcome === 'UNSUPPORTED'
-          ? t('暂不支持', 'Unsupported')
-          : t('未知', 'Inconclusive');
+  const outcomeText = verifierLabel(outcome, language);
   const expectation = report.expectation;
   const account = report.evaluation?.account;
   const amountCheck = report.evaluation?.checks.find((c) => c.code === 'AMOUNT');

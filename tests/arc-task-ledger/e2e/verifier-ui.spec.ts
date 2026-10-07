@@ -93,9 +93,27 @@ test('读取、精确金额核对、不可覆盖报告、草稿提示、证据�
   await page.emulateMedia({ media: 'print' });
   await expect(page.locator('.verification-check').first()).toBeVisible();
   await page.emulateMedia({ media: 'screen' });
+  await page.getByRole('button', { name: 'Compare conditions', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Condition outcome: Mismatched' })).toBeVisible();
+  await page.reload();
+  await page.getByRole('link', { name: 'Verify', exact: true }).click();
+  await page.reload();
+  const saved = page.locator('.session-history');
+  await saved.locator('summary').click();
+  await expect(saved.getByRole('link', { name: /^Matched ·/ }).first()).toBeVisible();
+  await expect(saved.getByRole('link', { name: /^Mismatched ·/ }).first()).toBeVisible();
+  expect(await saved.innerText()).not.toMatch(/[\u3400-\u9fff]/u);
+  await page.getByRole('button', { name: '中文', exact: true }).click();
+  await expect(saved.getByRole('link', { name: /^匹配 ·/ }).first()).toBeVisible();
+  await expect(saved.getByRole('link', { name: /^不匹配 ·/ }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(saved.getByRole('link', { name: /^Matched ·/ }).first()).toBeVisible();
+  expect(await saved.innerText()).not.toMatch(/[\u3400-\u9fff]/u);
   await page.screenshot({
     path:
-      '.agent-state/arc-task-ledger/ui-repair-20261007/' + test.info().project.name + '-draft.png',
+      '.agent-state/arc-task-ledger/ui-language-hotfix-20261007/' +
+      test.info().project.name +
+      '-history.png',
     fullPage: true,
   });
 });

@@ -6,6 +6,10 @@ import {
 } from '../../../apps/arc-task-ledger-web/src/i18n.js';
 import { checkValue } from '../../../apps/arc-task-ledger-web/src/VerificationReport.js';
 import type { SettlementCheck } from '../../../packages/arc-task-ledger/src/verifier-core.js';
+import {
+  verifierLabel,
+  verifierLabels,
+} from '../../../apps/arc-task-ledger-web/src/verifier-labels.js';
 afterEach(() => vi.unstubAllGlobals());
 describe('界面语言边界与准确金额展示', () => {
   it('无偏好、无效偏好及存储不可用时均默认英文，只有明确中文偏好使用中文', () => {
@@ -42,5 +46,17 @@ describe('界面语言边界与准确金额展示', () => {
     );
     expect(checkValue(c, '0')).toBe('0 USDC');
     expect(checkValue(c, null)).toBe('Not specified');
+  });
+  it('报告结论、检查、资金类型与镜像状态直接按语言显示，未知代码保持原样', () => {
+    expect(verifierLabel('MATCHED', 'en')).toBe('Matched');
+    expect(verifierLabel('MISMATCHED', 'en')).toBe('Mismatched');
+    expect(verifierLabel('INCONCLUSIVE', 'en')).toBe('Inconclusive');
+    expect(verifierLabel('UNSUPPORTED', 'en')).toBe('Unsupported');
+    for (const code of Object.keys(verifierLabels)) {
+      expect(verifierLabel(code, 'en')).not.toMatch(/[\u3400-\u9fff]/u);
+      expect(verifierLabel(code, 'zh')).toMatch(/[\u3400-\u9fff]/u);
+    }
+    expect(verifierLabel('future-protocol-code', 'en')).toBe('future-protocol-code');
+    expect(verifierLabel('future-protocol-code', 'zh')).toBe('future-protocol-code');
   });
 });
