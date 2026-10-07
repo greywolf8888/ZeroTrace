@@ -2,3 +2,4 @@
 *.png binary
 docs/architecture/ZEROTRACE_MASTER_PROMPT.md -text -whitespace
 docs/arc-task-ledger/settlement-verifier/evidence/** -text -whitespace
+docs/arc-task-ledger/validation/ui-repair-20261007/** -text -whitespace
