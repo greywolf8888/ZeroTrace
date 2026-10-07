@@ -1,0 +1,166 @@
+{
+  "sourceBase": "b727e64f7e0d171fcfb33069f55216b82e2af702",
+  "sourceFiles": [
+    {
+      "path": "apps/arc-task-ledger-web/src/verifier-labels.ts",
+      "sha256": "d1b6831854c332d23e0b67bcb34a4a9f2fe9398abcaeb27af4215df78c88dcef"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/VerificationWorkspace.tsx",
+      "sha256": "25d4dda3c46d29e86f81a31c140ea44f869dba2952da534d75a3eea03a99de70"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/VerificationReport.tsx",
+      "sha256": "37b7ae74dd716e1de097e1c357683584af53f7507cd75802b806738088b6c6df"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/app.ts",
+      "sha256": "ca72ba94d8237a065a586365b555335c06388dfb975746090dc7227d1e460822"
+    },
+    {
+      "path": "tests/arc-task-ledger/unit/ui-language.test.ts",
+      "sha256": "503c49074613d88e9cc002ce1804386ffab4f19dbb18b23b5d0ecf71ce1484ef"
+    },
+    {
+      "path": "tests/arc-task-ledger/e2e/verifier-ui.spec.ts",
+      "sha256": "f94023b0f8a48a71bb995ffabb98f79f968483430461d0c0ac103f057510bd62"
+    }
+  ],
+  "checks": [
+    {
+      "name": "format",
+      "command": "node node_modules/prettier/bin/prettier.cjs --check .",
+      "at": "2026-10-07T12:20:34.417Z",
+      "finished": "2026-10-07T12:20:46.044Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/format.log",
+      "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "at": "2026-10-07T12:20:46.046Z",
+      "finished": "2026-10-07T12:21:00.380Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/lint.log",
+      "sha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6"
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "at": "2026-10-07T12:21:00.385Z",
+      "finished": "2026-10-07T12:21:06.891Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/typecheck.log",
+      "sha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8"
+    },
+    {
+      "name": "arc-unit",
+      "command": "npm run arc:test:unit",
+      "at": "2026-10-07T12:21:06.898Z",
+      "finished": "2026-10-07T12:21:09.974Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/arc-unit.log",
+      "sha256": "c5b07cd373e66686479f864bcb0a04422c8afe40f6a927ac90b41facd0bf132f"
+    },
+    {
+      "name": "arc-integration",
+      "command": "npm run arc:test:integration",
+      "at": "2026-10-07T12:21:09.980Z",
+      "finished": "2026-10-07T12:21:18.105Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/arc-integration.log",
+      "sha256": "c21ae2d182135aa54b884ee17f85be8fdcfefda8a0eea234a8bfad1acc63cbc8"
+    },
+    {
+      "name": "arc-build",
+      "command": "npm run arc:build",
+      "at": "2026-10-07T12:21:18.110Z",
+      "finished": "2026-10-07T12:21:19.270Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/arc-build.log",
+      "sha256": "96f522c730e5923a32eadcc3e89a8873845f8682d5f573a080d890323e55be99"
+    },
+    {
+      "name": "arc-browser",
+      "command": "npm run arc:test:e2e",
+      "at": "2026-10-07T12:21:19.275Z",
+      "finished": "2026-10-07T12:22:51.371Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/arc-browser.log",
+      "sha256": "e480961e22c41bbb5b0d11646219e33a2127220b9a57dae62a767175ba0e0acd"
+    },
+    {
+      "name": "root-unit",
+      "command": "npm run test:unit",
+      "at": "2026-10-07T12:22:51.377Z",
+      "finished": "2026-10-07T12:23:12.932Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/root-unit.log",
+      "sha256": "6e44836707b693e95b3dda3a4fa2403ffaf402126bf7adc1353f160947873815"
+    },
+    {
+      "name": "root-integration",
+      "command": "npm run test:integration",
+      "at": "2026-10-07T12:23:12.938Z",
+      "finished": "2026-10-07T12:23:20.096Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/root-integration.log",
+      "sha256": "171e252239b0db3c459b75d32f321b326c06ac9d1e000ad4dac2ce09f3c85095"
+    },
+    {
+      "name": "root-evals",
+      "command": "npm run test:evals",
+      "at": "2026-10-07T12:23:20.101Z",
+      "finished": "2026-10-07T12:23:22.175Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/root-evals.log",
+      "sha256": "4c55c5402f0086ad773f441d2f85e66df010e2dafae7cb7d5cd8d5c9b90ee77e"
+    },
+    {
+      "name": "root-mcp",
+      "command": "npm run test:mcp",
+      "at": "2026-10-07T12:23:22.181Z",
+      "finished": "2026-10-07T12:23:23.123Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/root-mcp.log",
+      "sha256": "c8a3af77930e78ce2035b241e4b663cafdcccf02b4e247a3bf92cfa3e3d3e959"
+    },
+    {
+      "name": "root-build",
+      "command": "npm run build",
+      "at": "2026-10-07T12:23:23.130Z",
+      "finished": "2026-10-07T12:23:27.709Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/root-build.log",
+      "sha256": "5cf78ed5019dd134a7eed6ab99933ba508911e19d8974519fd9d475543cf098e"
+    },
+    {
+      "name": "license",
+      "command": "npm run license:check",
+      "at": "2026-10-07T12:23:27.715Z",
+      "finished": "2026-10-07T12:23:32.424Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/license.log",
+      "sha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e"
+    },
+    {
+      "name": "rust",
+      "command": "cargo test --workspace -j 2",
+      "at": "2026-10-07T12:23:32.431Z",
+      "finished": "2026-10-07T12:23:39.597Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/rust.log",
+      "sha256": "e6973d85c650e94e68d95a21618f39497a32622c51d307fcff5858ffc58a282a"
+    },
+    {
+      "name": "root-browser",
+      "command": "node node_modules/playwright/cli.js test",
+      "at": "2026-10-07T12:23:39.605Z",
+      "finished": "2026-10-07T12:24:12.660Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/root-browser.log",
+      "sha256": "2d01c2b3c6e8e4a4e5d9107f09d61815ff449971fcdbc8aff6299ef2b70b87b5"
+    }
+  ]
+}

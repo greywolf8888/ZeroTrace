@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-07T12:33:05.109Z",
+  "url": "https://web--atl-web--xtd599t97njk.code.run/",
+  "englishHistory": "Saved session reports (latest 20 versions)\n\nOnly reports owned by the original browser session are listed.\n\nMismatched · 0xfd8897f9b5… · 7 Oct 2026, 11:46:07 am UTC\n\nMismatched · 0xfd8897f9b5… · 7 Oct 2026, 11:37:37 am UTC\n\nMatched · 0xfd8897f9b5… · 7 Oct 2026, 11:35:17 am UTC\n\nObservation report · 0xfd8897f9b5… · 7 Oct 2026, 11:33:27 am UTC",
+  "chineseHistory": "当前会话已保存报告（最近20版本）\n\n仅列出原浏览器会话拥有的报告。\n\n不匹配 · 0xfd8897f9b5… · 2026年10月7日 11:46:07 UTC\n\n不匹配 · 0xfd8897f9b5… · 2026年10月7日 11:37:37 UTC\n\n匹配 · 0xfd8897f9b5… · 2026年10月7日 11:35:17 UTC\n\n观察报告 · 0xfd8897f9b5… · 2026年10月7日 11:33:27 UTC",
+  "finalEnglishHistory": "Saved session reports (latest 20 versions)\n\nOnly reports owned by the original browser session are listed.\n\nMismatched · 0xfd8897f9b5… · 7 Oct 2026, 11:46:07 am UTC\n\nMismatched · 0xfd8897f9b5… · 7 Oct 2026, 11:37:37 am UTC\n\nMatched · 0xfd8897f9b5… · 7 Oct 2026, 11:35:17 am UTC\n\nObservation report · 0xfd8897f9b5… · 7 Oct 2026, 11:33:27 am UTC",
+  "dom": {
+    "lang": "en",
+    "links": [
+      {
+        "href": "/?report=zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3",
+        "text": "Mismatched · 0xfd8897f9b5… · 7 Oct 2026, 11:46:07 am UTC"
+      },
+      {
+        "href": "/?report=zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3",
+        "text": "Mismatched · 0xfd8897f9b5… · 7 Oct 2026, 11:37:37 am UTC"
+      },
+      {
+        "href": "/?report=zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42",
+        "text": "Matched · 0xfd8897f9b5… · 7 Oct 2026, 11:35:17 am UTC"
+      },
+      {
+        "href": "/?report=zasv_ebe9d0279f88fe766a50999121a3e9b7c4bfcc230b05ed0810a13d4718b96401",
+        "text": "Observation report · 0xfd8897f9b5… · 7 Oct 2026, 11:33:27 am UTC"
+      }
+    ],
+    "scripts": [
+      "/assets/index-B8jCqCru.js"
+    ]
+  },
+  "scope": "Original browser session and existing real-chain reports. No report creation, publication, or chain requery. Chinese preference survived reload and English preference was restored."
+}

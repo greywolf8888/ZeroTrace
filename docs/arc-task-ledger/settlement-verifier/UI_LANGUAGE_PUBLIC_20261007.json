@@ -1,0 +1,359 @@
+{
+  "at": "2026-10-07T12:34:44.033Z",
+  "interfaceVersion": "atl-ui-v1.4.2",
+  "sourceCommit": "8865e785fb799960db416ea0c0bd49176797b588",
+  "deploymentCommit": "45c552368fbd3b8b18ef17cf49ac6b00d15f7f1e",
+  "deploymentParent": "a9d5adfa1c5991a396663d13913018595479cc60",
+  "url": "https://web--atl-web--xtd599t97njk.code.run",
+  "implementation": "FIXED_SAVED_REPORT_AND_SEMANTIC_LABEL_LOCALIZATION",
+  "localValidation": {
+    "state": "PASS_WITH_EXTERNAL_SKIPS",
+    "receipt": "UI_LANGUAGE_VALIDATION_20261007.json",
+    "counts": {
+      "arcUnit": 118,
+      "arcIntegration": 43,
+      "arcBrowser": 40,
+      "rootUnit": 1043,
+      "rootIntegration": 88,
+      "rootIntegrationSkipped": 42,
+      "rootEvals": 2,
+      "rootMcp": 5,
+      "rootBrowser": 49,
+      "rust": 52,
+      "independentArcUnit": 118
+    }
+  },
+  "mainnetReadValidation": {
+    "state": "NO_NEW_CHAIN_QUERY_NEEDED_FOR_LANGUAGE_FIX",
+    "scope": "Previously saved real-mainnet reports were read without modification. A true existing mainnet bundle was independently recomputed from current standalone sources; offline authenticity remains NOT_VERIFIED_OFFLINE."
+  },
+  "publicDeployment": {
+    "state": "PASS",
+    "cloudReceipt": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/cloud-after.json",
+    "assets": [
+      {
+        "asset": "/assets/index-B8jCqCru.js",
+        "sha256": "c5736c8606884822d255e5b97e6105267902279691425d1b7aa09aa1f7602614"
+      },
+      {
+        "asset": "/assets/index-CfXz5GmV.css",
+        "sha256": "b334df3eadc5bfc2387ce3fa2c113b21aa37916a920f85265c86fa6f941a53ef"
+      }
+    ],
+    "resources": [
+      {
+        "id": "atl-api",
+        "sha": "45c552368fbd3b8b18ef17cf49ac6b00d15f7f1e",
+        "plan": "nf-compute-10",
+        "status": {
+          "build": {
+            "status": "SUCCESS",
+            "lastTransitionTime": "2026-10-07T12:29:13.774Z"
+          },
+          "deployment": {
+            "status": "COMPLETED",
+            "reason": "DEPLOYING",
+            "lastTransitionTime": "2026-10-07T12:30:30.189Z"
+          }
+        },
+        "instances": 1
+      },
+      {
+        "id": "atl-web",
+        "sha": "45c552368fbd3b8b18ef17cf49ac6b00d15f7f1e",
+        "plan": "nf-compute-10",
+        "status": {
+          "build": {
+            "status": "SUCCESS",
+            "lastTransitionTime": "2026-10-07T12:29:09.634Z"
+          },
+          "deployment": {
+            "status": "COMPLETED",
+            "reason": "DEPLOYING",
+            "lastTransitionTime": "2026-10-07T12:31:52.421Z"
+          }
+        },
+        "instances": 1
+      },
+      {
+        "id": "atl-migrate",
+        "sha": "45c552368fbd3b8b18ef17cf49ac6b00d15f7f1e",
+        "plan": "nf-compute-10",
+        "suspended": true
+      },
+      {
+        "id": "atl-sync",
+        "sha": "45c552368fbd3b8b18ef17cf49ac6b00d15f7f1e",
+        "plan": "nf-compute-10",
+        "suspended": false
+      },
+      {
+        "id": "atl-postgres",
+        "status": "running"
+      }
+    ],
+    "oldReportsUnchanged": true,
+    "task18Unchanged": true,
+    "oldCursorStillValid": true,
+    "usageAt": "2026-10-07T12:32:18.174Z",
+    "usage": [
+      {
+        "currency": "usd",
+        "total": 0
+      }
+    ]
+  },
+  "browserValidation": {
+    "state": "PASS",
+    "receipt": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/browser.json",
+    "actualScript": ["/assets/index-B8jCqCru.js"],
+    "languageSwitchAndRefresh": true,
+    "englishHistoryContainsNoChinese": true,
+    "originalSessionReportsRetained": [
+      "/?report=zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3",
+      "/?report=zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3",
+      "/?report=zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42",
+      "/?report=zasv_ebe9d0279f88fe766a50999121a3e9b7c4bfcc230b05ed0810a13d4718b96401"
+    ],
+    "screenshots": [
+      "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/public-before-en.png",
+      "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/public-after-en.png",
+      "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/public-after-zh.png",
+      "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/public-final-en.png"
+    ]
+  },
+  "standalone": {
+    "sourceFiles": 495,
+    "byteHashesVerified": true,
+    "productionAuditVulnerabilities": 0,
+    "existingMainnetBundleReplay": "PASS_INDEPENDENT_PROCESS"
+  },
+  "boundaries": {
+    "schemaMigration": 7,
+    "chainReadOnly": true,
+    "databaseMigrationDispatched": false,
+    "newPaidResources": false,
+    "ui27to30": "REMAIN_AS_DOCUMENTED",
+    "grantApplication": "NOT_SUBMITTED"
+  },
+  "operations": {
+    "build-atl-api": {
+      "at": "2026-10-07T12:28:35.258Z",
+      "state": "ACKNOWLEDGED"
+    },
+    "build-atl-web": {
+      "at": "2026-10-07T12:28:38.626Z",
+      "state": "ACKNOWLEDGED"
+    },
+    "env-atl-api": {
+      "at": "2026-10-07T12:29:46.169Z",
+      "state": "ACKNOWLEDGED"
+    },
+    "deploy-atl-api": {
+      "at": "2026-10-07T12:29:47.655Z",
+      "state": "ACKNOWLEDGED"
+    },
+    "env-atl-migrate": {
+      "at": "2026-10-07T12:29:51.348Z",
+      "state": "ACKNOWLEDGED"
+    },
+    "pin-atl-migrate": {
+      "at": "2026-10-07T12:29:52.268Z",
+      "state": "ACKNOWLEDGED"
+    },
+    "env-atl-sync": {
+      "at": "2026-10-07T12:29:56.061Z",
+      "state": "ACKNOWLEDGED"
+    },
+    "pin-atl-sync": {
+      "at": "2026-10-07T12:29:57.192Z",
+      "state": "ACKNOWLEDGED"
+    },
+    "deploy-atl-web": {
+      "at": "2026-10-07T12:31:24.721Z",
+      "state": "ACKNOWLEDGED"
+    }
+  },
+  "evidence": [
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/arc-browser.log",
+      "sha256": "e480961e22c41bbb5b0d11646219e33a2127220b9a57dae62a767175ba0e0acd",
+      "bytes": 13662
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/arc-build.log",
+      "sha256": "96f522c730e5923a32eadcc3e89a8873845f8682d5f573a080d890323e55be99",
+      "bytes": 541
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/arc-desktop-history.png",
+      "sha256": "af3cd458119bb58f390350de8e9a330583aff84988333eb36b213eb67777227d",
+      "bytes": 261214
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/arc-integration.log",
+      "sha256": "c21ae2d182135aa54b884ee17f85be8fdcfefda8a0eea234a8bfad1acc63cbc8",
+      "bytes": 357
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/arc-mobile-history.png",
+      "sha256": "2e95ef3b9134c76d68f93a50c199a4e58ef4437d3ed52a1d4bb2491e10c201f9",
+      "bytes": 801603
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/arc-unit.log",
+      "sha256": "c5b07cd373e66686479f864bcb0a04422c8afe40f6a927ac90b41facd0bf132f",
+      "bytes": 326
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/browser.json",
+      "sha256": "32e334de371244abbff656b50cef762d069862d44235ccbd63753c58eca8c8b6",
+      "bytes": 2354
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/checks.json",
+      "sha256": "dd8b57fd5ec5bb9da8c4c171b1fc5dcccc42c20561acf6aaff86621222524032",
+      "bytes": 6485
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/cloud-after.json",
+      "sha256": "3ef4efcd576c3160a3aaab41cd8aa6076a4d7d30b89918dd16a4e68c41fcc58c",
+      "bytes": 4811
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/cloud-before.json",
+      "sha256": "4f4f95455d0e29885f0daba10a443f88e909b781b660198dc4a0df930790ca9e",
+      "bytes": 7907
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-audit.log",
+      "sha256": "71bb55dc3bb3b98fc73d60e98d7711e69fa498e998239863bdd9c4b5c8b8eca1",
+      "bytes": 366
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-build.log",
+      "sha256": "3f855236bf5b6a9918e5806aea0942e408655c9cba73462c5211eaeb3bc28dfe",
+      "bytes": 555
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-checks.json",
+      "sha256": "92a395e21dee399e409f71d0104c4263cb4edecc98179ec7826ac7652bcee018",
+      "bytes": 2764
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-client-types.log",
+      "sha256": "5c681c685b68667b4963456c53c81c661edf5382632c611194541cc5ea43d905",
+      "bytes": 100
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-install.log",
+      "sha256": "522c0c437b973ae403fab24505434b12f99d2cfb35c28dc0a07b4b880f730c88",
+      "bytes": 427
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-license.log",
+      "sha256": "34e73e00fd684e07610d0cb85d0a986bcd3cb54c54b37fd79869e78e5cf13b98",
+      "bytes": 245
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-lint.log",
+      "sha256": "a29d554c6708d6fb6d77b341f4bd59659b07fcee9e9a6b35ba01f20fc0222baa",
+      "bytes": 67
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-real-bundle-replay.log",
+      "sha256": "1d1b420bcae1e11f5e63b4c91804d9f0670aa25ba0bc2a13196433a585d47ed8",
+      "bytes": 495
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/export-unit.log",
+      "sha256": "0b7677caa8664157509da563e32aaca4c1059ea32c12a87f194104959a97c14b",
+      "bytes": 402
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/format.log",
+      "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20",
+      "bytes": 66
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/license.log",
+      "sha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e",
+      "bytes": 231
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/lint-failed-unused-import.log",
+      "sha256": "f83586a018af020dd87408e26e2477e12d44daf8aff3d80f2ea572bbd207e6a2",
+      "bytes": 305
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/lint.log",
+      "sha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+      "bytes": 53
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/mutations.jsonl",
+      "sha256": "6cb17b944893d53678c763cf29ef8d212d7c7a6eebd60f1c958966b8250ab545",
+      "bytes": 2465
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/public-after-en.png",
+      "sha256": "1ec7003d043fac31bc83c10a75e163dddda4224e5eef23443f107cde9c16b7d3",
+      "bytes": 106759
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/public-after-zh.png",
+      "sha256": "b9efc895a3249150bd730cabf9c00c0be72cc680d03553695d79a77d5d25eb83",
+      "bytes": 92152
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/public-before-en.png",
+      "sha256": "2b8cdf4d755551519c62774b04c9c31e379eae81f24dc9708fc6f922a843f2bf",
+      "bytes": 86460
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/public-final-en.png",
+      "sha256": "1ec7003d043fac31bc83c10a75e163dddda4224e5eef23443f107cde9c16b7d3",
+      "bytes": 106759
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/root-browser.log",
+      "sha256": "2d01c2b3c6e8e4a4e5d9107f09d61815ff449971fcdbc8aff6299ef2b70b87b5",
+      "bytes": 8902
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/root-build.log",
+      "sha256": "5cf78ed5019dd134a7eed6ab99933ba508911e19d8974519fd9d475543cf098e",
+      "bytes": 1515
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/root-evals.log",
+      "sha256": "4c55c5402f0086ad773f441d2f85e66df010e2dafae7cb7d5cd8d5c9b90ee77e",
+      "bytes": 294
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/root-integration.log",
+      "sha256": "171e252239b0db3c459b75d32f321b326c06ac9d1e000ad4dac2ce09f3c85095",
+      "bytes": 343
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/root-mcp.log",
+      "sha256": "c8a3af77930e78ce2035b241e4b663cafdcccf02b4e247a3bf92cfa3e3d3e959",
+      "bytes": 313
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/root-unit.log",
+      "sha256": "6e44836707b693e95b3dda3a4fa2403ffaf402126bf7adc1353f160947873815",
+      "bytes": 386
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/rust.log",
+      "sha256": "e6973d85c650e94e68d95a21618f39497a32622c51d307fcff5858ffc58a282a",
+      "bytes": 8291
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/language-hotfix/typecheck.log",
+      "sha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+      "bytes": 174
+    }
+  ]
+}

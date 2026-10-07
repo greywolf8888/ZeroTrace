@@ -1,0 +1,10 @@
+
+> zerotrace@0.1.0 lint
+> eslint . --max-warnings=0
+
+
+C:\Users\GreyWolf\.codex\worktrees\arc-v121-export\ZeroTrace\apps\arc-task-ledger-web\src\VerificationWorkspace.tsx
+  27:30  error  'localize' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 1 problem (1 error, 0 warnings)
+

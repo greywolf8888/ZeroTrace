@@ -1,0 +1,4 @@
+
+> arc-task-ledger-release@1.3.0 arc:client:typecheck
+> tsc -p tsconfig.arc-examples.json --noEmit
+

@@ -1,0 +1,69 @@
+{
+  "sourceCommit": "8865e785fb799960db416ea0c0bd49176797b588",
+  "cwd": "C:/Users/GreyWolf/.codex/worktrees/arc-v121-export/ZeroTrace/dist-public/arc-usdc-verifier-2.0.0-ui1.4.2-language-20261007",
+  "checks": [
+    {
+      "name": "install",
+      "command": "npm ci --ignore-scripts --no-audit --no-fund",
+      "at": "2026-10-07T12:25:52.845Z",
+      "finished": "2026-10-07T12:26:13.247Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/export-install.log",
+      "sha256": "522c0c437b973ae403fab24505434b12f99d2cfb35c28dc0a07b4b880f730c88"
+    },
+    {
+      "name": "build",
+      "command": "npm run arc:build",
+      "at": "2026-10-07T12:26:13.252Z",
+      "finished": "2026-10-07T12:26:29.160Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/export-build.log",
+      "sha256": "3f855236bf5b6a9918e5806aea0942e408655c9cba73462c5211eaeb3bc28dfe"
+    },
+    {
+      "name": "unit",
+      "command": "npm run arc:test:unit",
+      "at": "2026-10-07T12:26:29.166Z",
+      "finished": "2026-10-07T12:26:35.221Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/export-unit.log",
+      "sha256": "0b7677caa8664157509da563e32aaca4c1059ea32c12a87f194104959a97c14b"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "at": "2026-10-07T12:26:35.226Z",
+      "finished": "2026-10-07T12:26:55.796Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/export-lint.log",
+      "sha256": "a29d554c6708d6fb6d77b341f4bd59659b07fcee9e9a6b35ba01f20fc0222baa"
+    },
+    {
+      "name": "client-types",
+      "command": "npm run arc:client:typecheck",
+      "at": "2026-10-07T12:26:55.801Z",
+      "finished": "2026-10-07T12:26:57.221Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/export-client-types.log",
+      "sha256": "5c681c685b68667b4963456c53c81c661edf5382632c611194541cc5ea43d905"
+    },
+    {
+      "name": "license",
+      "command": "npm run license:check",
+      "at": "2026-10-07T12:26:57.227Z",
+      "finished": "2026-10-07T12:27:00.315Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/export-license.log",
+      "sha256": "34e73e00fd684e07610d0cb85d0a986bcd3cb54c54b37fd79869e78e5cf13b98"
+    },
+    {
+      "name": "audit",
+      "command": "npm audit --omit=dev --json",
+      "at": "2026-10-07T12:27:00.320Z",
+      "finished": "2026-10-07T12:27:01.621Z",
+      "exitCode": 0,
+      "log": ".agent-state/arc-task-ledger/ui-language-hotfix-20261007/export-audit.log",
+      "sha256": "71bb55dc3bb3b98fc73d60e98d7711e69fa498e998239863bdd9c4b5c8b8eca1"
+    }
+  ]
+}

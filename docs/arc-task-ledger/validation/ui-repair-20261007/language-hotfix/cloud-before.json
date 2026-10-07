@@ -1,0 +1,207 @@
+{
+  "at": "2026-10-07T12:21:11.604Z",
+  "state": "LIVE_DEPLOYMENT_CONFIRMED",
+  "action": "GET_ONLY_ALREADY_DEPLOYED",
+  "url": "https://web--atl-web--xtd599t97njk.code.run",
+  "sourceCommit": "bf0a91e86ffbe5c5686c04cfbd07192717859e98",
+  "developmentHead": "b727e64f7e0d171fcfb33069f55216b82e2af702",
+  "deploymentCommit": "a9d5adfa1c5991a396663d13913018595479cc60",
+  "documentationOnlyChanges": [
+    ".prettierignore",
+    "PROGRESS.md",
+    "docs/arc-task-ledger/settlement-verifier/CURRENT_RELEASE.md",
+    "docs/arc-task-ledger/settlement-verifier/UI_DEPLOYMENT_20261007.md",
+    "docs/arc-task-ledger/settlement-verifier/UI_PACKAGE_20261007.json",
+    "docs/arc-task-ledger/settlement-verifier/UI_PUBLIC_VALIDATION_20261007.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/cloud-baseline.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/cloud-final.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/cloud-predeploy.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/independent-mainnet-consumption.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/new-mainnet-choice.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/new-mainnet-matched-bundle.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/new-mainnet-mismatched-bundle.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/new-mainnet-requery-bundle.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-audit.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-build.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-install.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-license.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-lint.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-types.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-real-mainnet-replay.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-after.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-assets-final.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-before.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-evidence-mobile-en.png",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-home-en.png",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-observation-en.png",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-offline-replay-en.png",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-task-report-en.png",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-task-report-mobile-en.png",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-task-report-zh.png",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/public-final.json",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/reconcile-first.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/reconcile-idempotent.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/reconcile-mismatch.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/reject-tamper.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/replay-new-match.log",
+    "docs/arc-task-ledger/validation/ui-repair-20261007/replay-new-mismatch.log",
+    "docs/testing/FINAL_ACCEPTANCE.md"
+  ],
+  "health": {
+    "status": "UP",
+    "components": {
+      "readOnly": true,
+      "version": "atl-v1.2.1",
+      "interfaceVersion": "atl-ui-v1.4.1",
+      "verifierInterfaceVersion": "zasv-interface-v1",
+      "verifierRuleVersion": "zasv-rules-v1.0.0",
+      "schemaMigration": 7,
+      "releaseVersion": "2.0.0",
+      "sourceCommit": "a9d5adfa1c5991a396663d13913018595479cc60"
+    }
+  },
+  "resources": [
+    {
+      "id": "atl-api",
+      "sha": "a9d5adfa1c5991a396663d13913018595479cc60",
+      "plan": "nf-compute-10",
+      "status": {
+        "build": {
+          "status": "SUCCESS",
+          "lastTransitionTime": "2026-10-07T11:42:21.888Z"
+        },
+        "deployment": {
+          "status": "COMPLETED",
+          "reason": "DEPLOYING",
+          "lastTransitionTime": "2026-10-07T11:43:49.271Z"
+        }
+      },
+      "instances": 1
+    },
+    {
+      "id": "atl-web",
+      "sha": "a9d5adfa1c5991a396663d13913018595479cc60",
+      "plan": "nf-compute-10",
+      "status": {
+        "build": {
+          "status": "SUCCESS",
+          "lastTransitionTime": "2026-10-07T11:42:18.190Z"
+        },
+        "deployment": {
+          "status": "COMPLETED",
+          "reason": "DEPLOYING",
+          "lastTransitionTime": "2026-10-07T11:45:03.204Z"
+        }
+      },
+      "instances": 1
+    },
+    {
+      "id": "atl-migrate",
+      "sha": "a9d5adfa1c5991a396663d13913018595479cc60",
+      "plan": "nf-compute-10",
+      "suspended": true
+    },
+    {
+      "id": "atl-sync",
+      "sha": "a9d5adfa1c5991a396663d13913018595479cc60",
+      "plan": "nf-compute-10",
+      "suspended": false
+    },
+    {
+      "id": "atl-postgres",
+      "status": "running"
+    }
+  ],
+  "assets": [
+    {
+      "asset": "/assets/index-DKt4VrgW.js",
+      "sha256": "badfb1625e614293ffcfac7232fdc8ad48627474bacd7ca61bb25eee27815225"
+    },
+    {
+      "asset": "/assets/index-CfXz5GmV.css",
+      "sha256": "b334df3eadc5bfc2387ce3fa2c113b21aa37916a920f85265c86fa6f941a53ef"
+    }
+  ],
+  "reports": [
+    {
+      "id": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+      "bundleHash": "8f2e7979f0b618bc7703ba5ec0617429c663430c2f4b076ec8b99377e76f9ac5",
+      "sha256": "92b44023e36916724e3d71d6d693fc984efaed2ef6d6c5413364e81a621a44b3"
+    },
+    {
+      "id": "zasv_0036ede4021eec0190fa5fae5d68fd2c4908a29a77f40e60554b365226ed177f",
+      "bundleHash": "6d21dd2ed6c7487f984fb39fe693c2dea0c740bd9c751045c05300f161922e20",
+      "sha256": "713c2578f7fffe034a1da9d7048f869ea9b9d32efb20ea2081f785f3eb203672"
+    }
+  ],
+  "task": {
+    "path": "/v1/jobs/5042/0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d/18?snapshotRunId=run_31d0b702348917f7416b0110b8ae4e64",
+    "resultHash": "736c85204e5961a85839116e34c4b76afd51b458993f5cd8423e42a95392e516",
+    "evidenceHash": "4da0e6e1b21a67af04cdd0069c402421f19f11f94d21ef4c11eebf2291ce70da",
+    "snapshotHash": "b24089a196ed7de1f623657e03e18a2d04b8d57269eb89c8e8b5ca410a61e61f"
+  },
+  "oldCursorStillValid": true,
+  "usage": [
+    {
+      "currency": "usd",
+      "total": 0
+    }
+  ],
+  "scope": "Fresh deployment and protected data verification; no new chain query, migration, restart or paid resource. Earlier browser/mainnet tests are separately dated prior evidence.",
+  "requests": [
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/addons",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/services",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/services/atl-web",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/services/atl-api",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-migrate",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/jobs/atl-sync",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/projects/arctrace/addons/atl-postgres",
+      "attempt": 0,
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "endpoint": "/v1/billing/usage",
+      "attempt": 0,
+      "status": 200
+    }
+  ]
+}
