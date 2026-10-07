@@ -1,0 +1,47 @@
+
+> zerotrace@0.1.0 build
+> npm run build:packages && npm run build -w @zerotrace/api && npm run build -w @zerotrace/web && npm run build -w @zerotrace/ingest-worker && npm run build -w @zerotrace/semantic-worker && npm run build -w @zerotrace/simulation-worker && npm run build -w @zerotrace/llm-worker
+
+
+> zerotrace@0.1.0 build:packages
+> tsc -b tsconfig.packages.json
+
+
+> @zerotrace/api@0.1.0 build
+> tsc -b
+
+
+> @zerotrace/web@0.1.0 build
+> tsc -b && vite build
+
+vite v8.2.1 building client environment for production...
+[2Ktransforming...✓ 62 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                          0.70 kB │ gzip:   0.41 kB
+dist/assets/index-B8KbpMNK.css          50.99 kB │ gzip:  10.29 kB
+dist/assets/cytoscape.esm-bV0GINLo.js  434.82 kB │ gzip: 137.81 kB │ map: 1,708.90 kB
+dist/assets/index-BUD85gOw.js          522.37 kB │ gzip: 134.49 kB │ map: 1,696.01 kB
+
+✓ built in 459ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+> @zerotrace/ingest-worker@0.1.0 build
+> tsc -b
+
+
+> @zerotrace/semantic-worker@0.1.0 build
+> tsc -b
+
+
+> @zerotrace/simulation-worker@0.1.0 build
+> tsc -b
+
+
+> @zerotrace/llm-worker@0.1.0 build
+> tsc -b
+

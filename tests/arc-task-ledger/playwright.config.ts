@@ -23,6 +23,7 @@ export default defineConfig({
       url: 'http://127.0.0.1:8088/readyz',
       reuseExistingServer: false,
       timeout: 60000,
+      env: { ARC_PUBLIC_ORIGIN: 'http://127.0.0.1:5178' },
     },
     {
       cwd,

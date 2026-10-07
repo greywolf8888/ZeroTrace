@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 arc:test:integration
+> vitest run tests/arc-task-ledger/integration --no-file-parallelism
+
+
+ RUN  v4.1.11 C:/Users/GreyWolf/.codex/worktrees/arc-v121-export/ZeroTrace
+
+
+ Test Files  2 passed (2)
+      Tests  43 passed (43)
+   Start at  19:22:17
+   Duration  7.29s (transform 474ms, setup 0ms, import 2.27s, tests 4.75s, environment 0ms)
+

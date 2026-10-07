@@ -11,6 +11,7 @@ import { accountPending } from '../../../packages/arc-task-ledger/src/settlement
 import { known } from '../../../packages/arc-task-ledger/src/types.js';
 import { DEPLOYMENT } from '../../../packages/arc-task-ledger/src/config.js';
 import { createLedgerApp } from '../../../apps/arc-task-ledger-api/src/app.js';
+import { verifierObservation } from '../fixtures/verifier-observation.js';
 import {
   run,
   snapshot,
@@ -27,6 +28,9 @@ if (!url || new URL(url).pathname !== '/arc_task_ledger_test')
   throw new Error('浏览器测试必须使用隔离测试数据库。');
 const store = new LedgerStore(url);
 await store.migrate();
+await store.pool.query(
+  'TRUNCATE arc_task_ledger_v1.zasv_publications,arc_task_ledger_v1.zasv_ownership,arc_task_ledger_v1.zasv_bundles,arc_task_ledger_v1.zasv_reports,arc_task_ledger_v1.zasv_requests',
+);
 await store.pool.query(
   'TRUNCATE arc_task_ledger_v1.evidence_requests,arc_task_ledger_v1.receipts,arc_task_ledger_v1.jobs,arc_task_ledger_v1.runs,arc_task_ledger_v1.observations,arc_task_ledger_v1.segments,arc_task_ledger_v1.checkpoints,arc_task_ledger_v1.sync_attempts',
 );
@@ -180,7 +184,13 @@ parked.job.cashState = 'PARKED';
 const conflict = fixture.jobs.find((d) => d.job.jobId === '108')!;
 conflict.job.cashState = 'CONFLICT';
 await store.publish(fixture, []);
-const app = await createLedgerApp(store, 'browser-test-only-cursor-32-bytes-secret', store);
+const app = await createLedgerApp(
+  store,
+  'browser-test-only-cursor-32-bytes-secret',
+  store,
+  undefined,
+  async () => verifierObservation(),
+);
 app.addHook('onSend', async (_req, reply, payload) => {
   reply.header('x-atl-test-fixture', 'synthetic-not-mainnet');
   return payload;

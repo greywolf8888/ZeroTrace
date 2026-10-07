@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { parseInput, type Registry, type Detail, value, money } from './model.js';
+import { parseInput, type Registry, type Detail, value, money, label } from './model.js';
+import { useLanguage } from './i18n.js';
 export interface VerifierTaskReference {
   jobId: string;
   snapshotRunId: string;
@@ -15,6 +16,7 @@ export function VerifierTaskChooser({
   lang: 'zh' | 'en';
   onChoose: (task: VerifierTaskReference, transaction: string) => void;
 }) {
+  const { localize } = useLanguage();
   const [input, setInput] = useState(''),
     [detail, setDetail] = useState<Detail>(),
     [busy, setBusy] = useState(false),
@@ -30,6 +32,7 @@ export function VerifierTaskChooser({
     e.preventDefault();
     setBusy(true);
     setError('');
+    setDetail(undefined);
     try {
       const registry = await get<Registry>('/v1/registry');
       const parsed = parseInput(input, registry);
@@ -99,7 +102,8 @@ export function VerifierTaskChooser({
       {detail && (
         <>
           <p className="address">
-            {t('固定快照', 'Fixed snapshot')}: {detail.snapshotRunId}
+            {t('任务', 'Task')} #{detail.job.jobId} · {t('固定快照', 'Fixed snapshot')}:{' '}
+            {detail.snapshotRunId}
           </p>
           {detail.result.flows.map((f) => {
             const leg = detail.settlementLegs.find(
@@ -108,9 +112,9 @@ export function VerifierTaskChooser({
             return (
               <article key={f.id}>
                 <p>
-                  {f.kind} · {t('预期金额', 'Expected amount')}:{' '}
-                  {leg ? money(leg.expectedAmount) : t('未知', 'Unknown')} ·{' '}
-                  {t('观察金额', 'Observed amount')}: {money(f.amount)}
+                  {localize(label(f.kind))} · {t('预期金额', 'Expected amount')}:{' '}
+                  {leg ? localize(money(leg.expectedAmount)) : t('未知', 'Unknown')} ·{' '}
+                  {t('观察金额', 'Observed amount')}: {localize(money(f.amount))}
                 </p>
                 <p className="address">
                   {f.from} → {f.to}

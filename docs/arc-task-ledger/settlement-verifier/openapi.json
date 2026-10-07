@@ -647,7 +647,7 @@
     "/v1/reports/{id}": {
       "get": {
         "summary": "固定私有或明确公开报告 / fixed report",
-        "description": "Reads existing state only; no RPC work.",
+        "description": "Reads existing state only; no RPC work. 响应额外返回 canManage:boolean 和 visibility:PUBLIC|PRIVATE，按实际授权原件判断；访问元数据不进入固定报告哈希。",
         "parameters": [
           {
             "in": "path",
@@ -1634,6 +1634,162 @@
             }
           }
         ]
+      }
+    },
+    "/v1/reports": {
+      "get": {
+        "summary": "当前会话的最近20个报告原件版本",
+        "description": "需要有效所属会话；GET 不开始链查询。公开可读不扩大所有权；未登录返回401。",
+        "responses": {
+          "200": {
+            "description": "Result; HTTP 200 does not imply MATCHED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["reports", "scope", "limit", "startsChainWork"],
+                  "properties": {
+                    "reports": {
+                      "type": "array",
+                      "maxItems": 20,
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "report_id",
+                          "bundle_hash",
+                          "transaction_hash",
+                          "outcome",
+                          "created_at",
+                          "public"
+                        ],
+                        "properties": {
+                          "report_id": {
+                            "type": "string"
+                          },
+                          "bundle_hash": {
+                            "type": "string"
+                          },
+                          "transaction_hash": {
+                            "type": "string"
+                          },
+                          "outcome": {
+                            "type": ["string", "null"]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "public": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    },
+                    "scope": {
+                      "const": "CURRENT_SESSION"
+                    },
+                    "limit": {
+                      "const": 20
+                    },
+                    "startsChainWork": {
+                      "const": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "明确输入、身份、版本、配额或来源错误；不能当成付款成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },

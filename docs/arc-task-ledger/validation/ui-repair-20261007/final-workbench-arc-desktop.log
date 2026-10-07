@@ -1,0 +1,16 @@
+[WebServer] (node:22644) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:35816) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 1 worker
+
+(node:45872) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:9:1 › 资金边→精确检查器→原始支持记录；键盘和手机视图联动 (696ms)
+  ok 2 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:33:1 › R1/R2/R3 服务器→详情→报告→consumer同快照金额及限定范围 (2.2s)
+  ok 3 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:50:1 › 补证无法定位明确反馈；重新查询队列不会扫描或暗换快照 (583ms)
+  ok 4 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:60:1 › 固定快照任务导航和角色切换沿用同一服务器金额 (579ms)
+  ok 5 [arc-desktop] › tests\arc-task-ledger\e2e\workbench.spec.ts:78:1 › 1440、1280与手机实际截图；状态、长地址与200%缩放不裁切 (3.5s)
+
+  5 passed (10.8s)

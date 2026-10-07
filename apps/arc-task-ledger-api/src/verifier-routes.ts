@@ -279,7 +279,15 @@ export async function registerVerifierRoutes(
       startsChainWork: false,
     };
   });
-  app.get('/v1/reports/:id', async (r) => document(await read.get(reportId(r), sessions.owner(r))));
+  app.get('/v1/reports', async (r) => read.list(sessions.owner(r, true)!));
+  app.get('/v1/reports/:id', async (r) => {
+    const owner = sessions.owner(r);
+    const bundle = await read.get(reportId(r), owner);
+    return {
+      ...document(bundle),
+      ...(await read.access(bundle.report.reportId, bundle.bundleHash, owner)),
+    };
+  });
   app.get('/v1/reports/:id/bundle', async (r, reply) => {
     const bundle = await read.get(reportId(r), sessions.owner(r));
     return reply

@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => localStorage.setItem('arc-ui-language', 'zh'));
+});
 const adapter = '0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d';
 test('首页加载期间保护输入，初始化完成后任务查询不被覆盖', async ({ page }) => {
   let release!: () => void;
@@ -9,7 +12,7 @@ test('首页加载期间保护输入，初始化完成后任务查询不被覆�
     await gate;
     await route.continue();
   });
-  await page.goto('/');
+  await page.goto('/?view=tasks');
   await expect(page.getByLabel('任务编号、任务链接或地址')).toBeDisabled();
   release();
   await page.getByLabel('任务编号、任务链接或地址').fill('19');
@@ -22,7 +25,7 @@ test('UX01/03/06/07 输入任务→真实HTTP金额→固定快照新上下文�
   browser,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.goto('/');
+  await page.goto('/?view=tasks');
   await page.getByLabel('任务编号、任务链接或地址').fill('19');
   await page.getByRole('button', { name: '查询', exact: true }).click();
   await expect(page).toHaveURL(/tasks\/5042\/.*\/19\?snapshotRunId=/);
@@ -43,6 +46,7 @@ test('UX01/03/06/07 输入任务→真实HTTP金额→固定快照新上下文�
   await page.getByRole('button', { name: '复制固定快照链接' }).click();
   await expect(page.getByText('固定快照任务链接已复制', { exact: true })).toBeVisible();
   const fresh = await browser.newContext();
+  await fresh.addInitScript(() => localStorage.setItem('arc-ui-language', 'zh'));
   const other = await fresh.newPage();
   await other.goto(url);
   await expect(other.getByRole('region', { name: '结算结果' })).toContainText('0.99 USDC');
@@ -66,7 +70,7 @@ test('UX01/03/06/07 输入任务→真实HTTP金额→固定快照新上下文�
   await fresh.close();
 });
 test('UX02/06 角色、状态筛选及前页刷新保留固定快照', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?view=tasks');
   await page.getByRole('button', { name: '下一页', exact: true }).click();
   await expect(page.getByRole('button', { name: '任务 #112', exact: true })).toBeVisible();
   const run = new URL(page.url()).searchParams.get('snapshotRunId');
@@ -84,7 +88,7 @@ test('UX02/06 角色、状态筛选及前页刷新保留固定快照', async ({ 
   await expect(page.getByText('查询地址的角色：工作者').first()).toBeVisible();
 });
 test('UX04/05 具体旧义务清偿和新奖励待领取；未知不转零、过期不暗换', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?view=tasks');
   await page.getByRole('button', { name: '任务 #107', exact: true }).click();
   const pending = page
     .locator('section')
@@ -105,7 +109,7 @@ test('UX08/09/11 真实消费者、刷新含义、非法链接及手机操作', 
   await expect(page.getByRole('region', { name: '结算结果' })).toContainText('0.99 USDC');
   await expect(page.getByText('独立消费者：真实 HTTP，同一结算结果模型')).toBeVisible();
   await expect(page.getByRole('button', { name: '重新加载已采集结果' })).toBeVisible();
-  await page.goto('/');
+  await page.goto('/?view=tasks');
   await page.getByLabel('任务编号、任务链接或地址').fill('https://evil.test/bounty/19');
   await page.getByRole('button', { name: '查询', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('输入不受支持');

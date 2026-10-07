@@ -24,3 +24,4 @@ docs/arc-task-ledger/validation/ui-audit-v121/rollout-preflight/public-*.json
 # 外部任务输入保持原始摘要；核验原件与运行产物不得由格式器重写。
 zerotrace_codex_rebuild/
 docs/arc-task-ledger/settlement-verifier/evidence/
+docs/arc-task-ledger/settlement-verifier/VALIDATION.json

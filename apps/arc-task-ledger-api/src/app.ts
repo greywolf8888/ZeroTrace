@@ -138,7 +138,7 @@ export async function createLedgerApp(
     components: {
       readOnly: true,
       version: RULE_VERSION,
-      interfaceVersion: 'atl-ui-v1.3.0',
+      interfaceVersion: 'atl-ui-v1.4.0',
       verifierInterfaceVersion: 'zasv-interface-v1',
       verifierRuleVersion: 'zasv-rules-v1.0.0',
       schemaMigration: 7,
@@ -151,7 +151,7 @@ export async function createLedgerApp(
     adapter: DEPLOYMENT.adapter,
     navigation: NAVIGATION,
     ruleVersion: RULE_VERSION,
-    interfaceVersion: 'atl-ui-v1.3.0',
+    interfaceVersion: 'atl-ui-v1.4.0',
   }));
   app.get('/readyz', async (_request, reply) => {
     const ready = await store.ready();

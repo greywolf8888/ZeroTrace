@@ -1,0 +1,490 @@
+{
+  "scope": "Arc UI only; evidence-bound delivery",
+  "createdAt": "2026-10-07T11:22:48.913Z",
+  "sourceBase": "8b7df3d1fc93debb556f0ec1ff822cf6f3b1837d",
+  "interfaceVersion": "atl-ui-v1.4.0",
+  "implementation": "IMPLEMENTED_WITH_LISTED_FOLLOWUPS",
+  "localValidation": "PASS_WITH_EXTERNAL_SKIPS",
+  "mainnetReadValidation": "PUBLIC_FIXED_REPORTS_BEFORE_UPDATE; fresh chain UI to verify after deployment",
+  "publicDeployment": "NOT_YET_UPDATED",
+  "sourceFiles": [
+    {
+      "sha256": "51580b51d888b04929bb7d6b19e7bf51dd964fcf20a3ba9a5b2776db9d5be5f6",
+      "path": ".prettierignore"
+    },
+    {
+      "sha256": "867493fd535180757a71de8b90c8723871849e0139e464a823233775460790dc",
+      "path": "apps/arc-task-ledger-api/src/app.ts"
+    },
+    {
+      "sha256": "2442b30a93087ae9b5594972a0634e1edf579a364a4646e7c9964bd8cd445809",
+      "path": "apps/arc-task-ledger-api/src/verifier-routes.ts"
+    },
+    {
+      "sha256": "2111efba4b22710dca317d59508ff083bfccb96433216f932da72ec497291abd",
+      "path": "apps/arc-task-ledger-api/src/verifier-storage.ts"
+    },
+    {
+      "sha256": "34416acc27b51b344255d9d17500ac21c88f7ff57df0a0049ceb09bed60feb69",
+      "path": "apps/arc-task-ledger-web/index.html"
+    },
+    {
+      "sha256": "7bb2321e4534e2da31dd222358f820b8b5517900120518b092c48f46b697c68d",
+      "path": "apps/arc-task-ledger-web/src/Dashboard.tsx"
+    },
+    {
+      "sha256": "9ae29b66d8698d31fbb066e4e2bd331124d9b94c91eb70bf8d24b076ba95a502",
+      "path": "apps/arc-task-ledger-web/src/i18n.tsx"
+    },
+    {
+      "sha256": "ff0bd3c1bc0eb1131a4b08fdbe3dc698efe9d21686619847092aa21d57529e23",
+      "path": "apps/arc-task-ledger-web/src/locale-catalog.ts"
+    },
+    {
+      "sha256": "f2c92760675944b262ca982b0cb44ec77efd8595f5491070a6f5d84c1160e30d",
+      "path": "apps/arc-task-ledger-web/src/main.tsx"
+    },
+    {
+      "sha256": "1d7b8ee940966faa02836968da5822710a3709eaf7b8ee2a81af74277c10851b",
+      "path": "apps/arc-task-ledger-web/src/SettlementCard.tsx"
+    },
+    {
+      "sha256": "328126af81bbe75009b0187402b227e1e2138764dc7707f4e75aaea43f4173a1",
+      "path": "apps/arc-task-ledger-web/src/SettlementWorkbench.tsx"
+    },
+    {
+      "sha256": "ae683727e9323449e63e7a64651cbcaf645d386f54c332f2e8f4cbb2740d94a0",
+      "path": "apps/arc-task-ledger-web/src/VerificationReport.tsx"
+    },
+    {
+      "sha256": "e672bf417bdf94c40f4e52f1f1907b450ff296c19979fb40eaec79db6c96b961",
+      "path": "apps/arc-task-ledger-web/src/VerificationWorkspace.tsx"
+    },
+    {
+      "sha256": "48ae00670ffccea5d022d46048cd28c110c6d6cd598f88150ecc3b61760b0ef6",
+      "path": "apps/arc-task-ledger-web/src/verifier.css"
+    },
+    {
+      "sha256": "f97dedc755f9cc01f743d52e54375641a040b0106d72b8961848b01cb8c81b8a",
+      "path": "apps/arc-task-ledger-web/src/VerifierTaskChooser.tsx"
+    },
+    {
+      "sha256": "2da7f4394889abebac61b82597ca67f11e5d0cda1b3912533cf9f460ecb0818f",
+      "path": "apps/arc-task-ledger-web/vite.config.ts"
+    },
+    {
+      "sha256": "dc6f651986f6ddac52edf2f9822e3e18f4c09da0ec7c0b64030c452334514011",
+      "path": "package.json"
+    },
+    {
+      "sha256": "bd78323119234de8930cf0805fdc613d44eb9e6490ba4411d43b11d2f20992cd",
+      "path": "tests/arc-task-ledger/e2e/dashboard.spec.ts"
+    },
+    {
+      "sha256": "e7b55ebf4733b25a38f08fb4718e4edd9e245e4570ec8ffb7bf99c4b0b7a5562",
+      "path": "tests/arc-task-ledger/e2e/ledger.spec.ts"
+    },
+    {
+      "sha256": "cd1424f785777dd9b1e20f8f42e59c4cc4000d4a2de41709d6b95d198c68e484",
+      "path": "tests/arc-task-ledger/e2e/product.spec.ts"
+    },
+    {
+      "sha256": "8f88e5fe004f003a61cf2f1721666d299ec3b31902729d59b1ae41d0d80bc8f4",
+      "path": "tests/arc-task-ledger/e2e/server.ts"
+    },
+    {
+      "sha256": "a1c62af43739455ecb75d0d150d4ee7ab218a3e06655143a9104641f1c9d630b",
+      "path": "tests/arc-task-ledger/e2e/verifier-ui.spec.ts"
+    },
+    {
+      "sha256": "14a4969d38cbfd070e297c2cfc884d44b290091099304e02f7a3f2430b80c543",
+      "path": "tests/arc-task-ledger/e2e/workbench.spec.ts"
+    },
+    {
+      "sha256": "c41bb853a9af57604c8e642e141add6cb7ee06025047e15a2a777ab3442d682c",
+      "path": "tests/arc-task-ledger/integration/verifier-database.test.ts"
+    },
+    {
+      "sha256": "fc718c3a18a0ee20ddd561124da7a38d45cd48d680129fd5f6f220854dd8f6c6",
+      "path": "tests/arc-task-ledger/playwright.config.ts"
+    },
+    {
+      "sha256": "96bf77ff964f515b642bd4c6bdb3bce8e0e54cc51173a185517ed134024e85ae",
+      "path": "tests/arc-task-ledger/unit/ui-language.test.ts"
+    }
+  ],
+  "checks": [
+    {
+      "name": "format",
+      "command": "npm run format:check",
+      "at": "2026-10-07T10:56:28.853Z",
+      "finished": "2026-10-07T10:56:42.673Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-format.log",
+      "sha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": [],
+      "mtime": "2026-10-07T10:56:42.605Z"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "at": "2026-10-07T10:56:42.681Z",
+      "finished": "2026-10-07T10:56:58.110Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-lint.log",
+      "sha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": [],
+      "mtime": "2026-10-07T10:56:42.966Z"
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "at": "2026-10-07T10:56:58.116Z",
+      "finished": "2026-10-07T10:57:04.399Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-typecheck.log",
+      "sha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": [],
+      "mtime": "2026-10-07T10:56:58.515Z"
+    },
+    {
+      "name": "unit",
+      "command": "npm run test:unit",
+      "at": "2026-10-07T10:57:04.405Z",
+      "finished": "2026-10-07T10:57:26.205Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-unit.log",
+      "sha256": "77c2510704154e60def210114c4793293a90661e50c6c8948d7565ab7fb72a28",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": ["195 passed (195)", "Tests  1043 passed (1043)"],
+      "mtime": "2026-10-07T10:57:26.058Z"
+    },
+    {
+      "name": "integration",
+      "command": "npm run test:integration",
+      "at": "2026-10-07T10:57:26.211Z",
+      "finished": "2026-10-07T10:57:34.704Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-integration.log",
+      "sha256": "b14f84e3ad95a4f9ef82379fbff6f364724208d6e50744436b62fc8ad3a4dc0d",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": ["Tests  88 passed | 42 skipped (130)"],
+      "mtime": "2026-10-07T10:57:34.591Z"
+    },
+    {
+      "name": "evals",
+      "command": "npm run test:evals",
+      "at": "2026-10-07T10:57:34.711Z",
+      "finished": "2026-10-07T10:57:37.026Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-evals.log",
+      "sha256": "d79cdc9e13afd84e82a15c187670b77b455b3655f4322a8ea1b951e05cfcd51d",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": ["2 passed (2)", "Tests  2 passed (2)"],
+      "mtime": "2026-10-07T10:57:36.969Z"
+    },
+    {
+      "name": "mcp",
+      "command": "npm run test:mcp",
+      "at": "2026-10-07T10:57:37.032Z",
+      "finished": "2026-10-07T10:57:38.080Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-mcp.log",
+      "sha256": "a3eb5a311b857a57ca22d1c66cb8a9476992d6908aca10731e5e374367f8b71c",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": ["1 passed (1)", "Tests  5 passed (5)"],
+      "mtime": "2026-10-07T10:57:38.033Z"
+    },
+    {
+      "name": "build",
+      "command": "npm run build",
+      "at": "2026-10-07T10:57:38.086Z",
+      "finished": "2026-10-07T10:57:42.942Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-build.log",
+      "sha256": "62428717052964e94cc8c4f6d40d70f5fa26f61869ad2a4ccc223c84e951db30",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": [],
+      "mtime": "2026-10-07T10:57:42.745Z"
+    },
+    {
+      "name": "license",
+      "command": "npm run license:check",
+      "at": "2026-10-07T10:57:42.948Z",
+      "finished": "2026-10-07T10:57:48.884Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-license.log",
+      "sha256": "081efcfcbadf99ff71542da8968f0bcd87242ee4467086113f9482297b062b0e",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": [],
+      "mtime": "2026-10-07T10:57:48.833Z"
+    },
+    {
+      "name": "browser",
+      "command": "node node_modules/playwright/cli.js test",
+      "at": "2026-10-07T11:00:24.882Z",
+      "finished": "2026-10-07T11:00:54.918Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/root-browser.log",
+      "sha256": "6b6902da41c7f26c70611c66c8477b6a0a8180e080710644d48f2aa9fae9f386",
+      "sourcePatchSha256": "4e71fb6de4425d6abd2cc64471266d789f4afe0457124e32b80e68f98e912956",
+      "summary": ["49 passed (29.5s)"],
+      "mtime": "2026-10-07T11:00:54.868Z"
+    },
+    {
+      "name": "format",
+      "command": "npm run format:check",
+      "at": "2026-10-07T11:21:44.863Z",
+      "finished": "2026-10-07T11:21:56.131Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/release-format.log",
+      "sha256": "5749a20cab587bccfff04bd6d858847b99661d654c984af8ca3fe1323006a3e0",
+      "sourcePatchSha256": "a53c92932187f0781931332b73e7908c11bc4930a498753ca36374be09e0e108",
+      "summary": [],
+      "mtime": "2026-10-07T11:21:56.075Z"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "at": "2026-10-07T11:21:56.132Z",
+      "finished": "2026-10-07T11:22:08.991Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/release-lint.log",
+      "sha256": "567192b3812b3ccffd0e1b97073ecf993ec156a9d4e65fa18ebdeff6e1a351d6",
+      "sourcePatchSha256": "a53c92932187f0781931332b73e7908c11bc4930a498753ca36374be09e0e108",
+      "summary": [],
+      "mtime": "2026-10-07T11:21:56.362Z"
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "at": "2026-10-07T11:22:08.993Z",
+      "finished": "2026-10-07T11:22:14.164Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/release-typecheck.log",
+      "sha256": "81bbde540bba49506e1b2ca9eb750213547cfaa847bbb495bf86de17c48715a8",
+      "sourcePatchSha256": "a53c92932187f0781931332b73e7908c11bc4930a498753ca36374be09e0e108",
+      "summary": [],
+      "mtime": "2026-10-07T11:22:09.234Z"
+    },
+    {
+      "name": "arc-unit",
+      "command": "npm run arc:test:unit",
+      "at": "2026-10-07T11:22:14.165Z",
+      "finished": "2026-10-07T11:22:16.998Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/release-arc-unit.log",
+      "sha256": "0e4905d0ea2cc4ef9867a5b6db2766aea312ab675d84c9eb4db1be86f3986430",
+      "sourcePatchSha256": "a53c92932187f0781931332b73e7908c11bc4930a498753ca36374be09e0e108",
+      "summary": ["19 passed (19)", "Tests  117 passed (117)"],
+      "mtime": "2026-10-07T11:22:16.932Z"
+    },
+    {
+      "name": "arc-integration",
+      "command": "npm run arc:test:integration",
+      "at": "2026-10-07T11:22:17.003Z",
+      "finished": "2026-10-07T11:22:24.947Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/release-arc-integration.log",
+      "sha256": "abfbfb881b8a57d4c918fc5148de7b51f777156b2ec5d2d754f922151513f4eb",
+      "sourcePatchSha256": "a53c92932187f0781931332b73e7908c11bc4930a498753ca36374be09e0e108",
+      "summary": ["2 passed (2)", "Tests  43 passed (43)"],
+      "mtime": "2026-10-07T11:22:24.892Z"
+    },
+    {
+      "name": "arc-build",
+      "command": "npm run arc:build",
+      "at": "2026-10-07T11:22:24.952Z",
+      "finished": "2026-10-07T11:22:26.063Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/release-arc-build.log",
+      "sha256": "09edbf1586126702656d93a96d54f59dec202f5c7788c0330f93003006450011",
+      "sourcePatchSha256": "a53c92932187f0781931332b73e7908c11bc4930a498753ca36374be09e0e108",
+      "summary": [],
+      "mtime": "2026-10-07T11:22:26.013Z"
+    },
+    {
+      "name": "ledger-arc-desktop",
+      "command": "node node_modules/playwright/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/ledger.spec.ts --project arc-desktop --max-failures=1",
+      "at": "2026-10-07T11:18:37.246Z",
+      "finished": "2026-10-07T11:18:45.943Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/final-ledger-arc-desktop.log",
+      "sha256": "8d18ecf47f77eed377fa225e6c211a10953db1264c373eab91007e9aa1bea544",
+      "sourcePatchSha256": "fb39abcf4e48b502cdcfff70b1e812af4f77447f1a5d00a83b9d01e634297bbe",
+      "summary": ["4 passed (8.2s)"],
+      "mtime": "2026-10-07T11:18:45.893Z"
+    },
+    {
+      "name": "ledger-arc-mobile",
+      "command": "node node_modules/playwright/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/ledger.spec.ts --project arc-mobile --max-failures=1",
+      "at": "2026-10-07T11:18:45.949Z",
+      "finished": "2026-10-07T11:18:55.426Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/final-ledger-arc-mobile.log",
+      "sha256": "a0d7fcdb9940bfc9e12099c3b7c9af9ef7bb4d10da1a9f48dcb05fdc230b309b",
+      "sourcePatchSha256": "fb39abcf4e48b502cdcfff70b1e812af4f77447f1a5d00a83b9d01e634297bbe",
+      "summary": ["4 passed (9.0s)"],
+      "mtime": "2026-10-07T11:18:55.401Z"
+    },
+    {
+      "name": "product-arc-desktop",
+      "command": "node node_modules/playwright/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/product.spec.ts --project arc-desktop --max-failures=1",
+      "at": "2026-10-07T11:18:55.431Z",
+      "finished": "2026-10-07T11:19:04.816Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/final-product-arc-desktop.log",
+      "sha256": "5c6fb05d6cd3d37c67609813787b84fbfe5fa550271f51393a87dee59ddd151f",
+      "sourcePatchSha256": "fb39abcf4e48b502cdcfff70b1e812af4f77447f1a5d00a83b9d01e634297bbe",
+      "summary": ["5 passed (8.9s)"],
+      "mtime": "2026-10-07T11:19:04.791Z"
+    },
+    {
+      "name": "product-arc-mobile",
+      "command": "node node_modules/playwright/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/product.spec.ts --project arc-mobile --max-failures=1",
+      "at": "2026-10-07T11:19:04.821Z",
+      "finished": "2026-10-07T11:19:14.433Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/final-product-arc-mobile.log",
+      "sha256": "27ed51464ef768abb727bd956c8c6b5590e66b768099bf23ca771d0aa83e07b8",
+      "sourcePatchSha256": "fb39abcf4e48b502cdcfff70b1e812af4f77447f1a5d00a83b9d01e634297bbe",
+      "summary": ["5 passed (9.2s)"],
+      "mtime": "2026-10-07T11:19:14.407Z"
+    },
+    {
+      "name": "workbench-arc-desktop",
+      "command": "node node_modules/playwright/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts --project arc-desktop --max-failures=1",
+      "at": "2026-10-07T11:19:14.439Z",
+      "finished": "2026-10-07T11:19:25.702Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/final-workbench-arc-desktop.log",
+      "sha256": "07c1db5cf72675733bea50469ef1b719a0bdab81c5c805a0032d5ffe5949293c",
+      "sourcePatchSha256": "fb39abcf4e48b502cdcfff70b1e812af4f77447f1a5d00a83b9d01e634297bbe",
+      "summary": ["5 passed (10.8s)"],
+      "mtime": "2026-10-07T11:19:25.675Z"
+    },
+    {
+      "name": "workbench-arc-mobile",
+      "command": "node node_modules/playwright/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/workbench.spec.ts --project arc-mobile --max-failures=1",
+      "at": "2026-10-07T11:19:25.710Z",
+      "finished": "2026-10-07T11:19:35.535Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/final-workbench-arc-mobile.log",
+      "sha256": "716e11505e92867ce3c8f8d2b4a940c31be599bdfc6db691ea409cf651a62f0e",
+      "sourcePatchSha256": "fb39abcf4e48b502cdcfff70b1e812af4f77447f1a5d00a83b9d01e634297bbe",
+      "summary": ["5 passed (9.4s)"],
+      "mtime": "2026-10-07T11:19:35.510Z"
+    },
+    {
+      "name": "dashboard-arc-desktop",
+      "command": "node node_modules/playwright/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/dashboard.spec.ts --project arc-desktop --max-failures=1",
+      "at": "2026-10-07T11:19:35.540Z",
+      "finished": "2026-10-07T11:19:40.527Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/final-dashboard-arc-desktop.log",
+      "sha256": "d8f03f2f73a270741b02541c12de7593167336959bbef796d863e76e89930f61",
+      "sourcePatchSha256": "fb39abcf4e48b502cdcfff70b1e812af4f77447f1a5d00a83b9d01e634297bbe",
+      "summary": ["2 passed (4.5s)"],
+      "mtime": "2026-10-07T11:19:40.494Z"
+    },
+    {
+      "name": "dashboard-arc-mobile",
+      "command": "node node_modules/playwright/cli.js test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/dashboard.spec.ts --project arc-mobile --max-failures=1",
+      "at": "2026-10-07T11:19:40.532Z",
+      "finished": "2026-10-07T11:19:45.599Z",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/final-dashboard-arc-mobile.log",
+      "sha256": "5e24bb870fa70240f778e1de8f5d24fffdf4363e14e479536ee72aec81aad785",
+      "sourcePatchSha256": "fb39abcf4e48b502cdcfff70b1e812af4f77447f1a5d00a83b9d01e634297bbe",
+      "summary": ["2 passed (4.6s)"],
+      "mtime": "2026-10-07T11:19:45.570Z"
+    },
+    {
+      "name": "rust-final",
+      "command": "cargo test --workspace -j 2",
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/rust-final.log",
+      "exitCode": 0,
+      "sha256": "cabda8d242535d64a3a98ea3a6d489292f42a169aab29b672720fe5f30f9e819",
+      "summary": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "mtime": "2026-10-07T11:08:02.779Z"
+    },
+    {
+      "name": "verifier-ui-desktop-final",
+      "command": "playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/verifier-ui.spec.ts --project arc-desktop",
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/new-ui-desktop-release.log",
+      "exitCode": 0,
+      "sha256": "8145fbed91693c54618ffdfa387e9a976d87119be525228962b46e355e8766f0",
+      "summary": ["4 passed (9.5s)"],
+      "mtime": "2026-10-07T11:21:13.588Z"
+    },
+    {
+      "name": "verifier-ui-mobile-final",
+      "command": "playwright test --config tests/arc-task-ledger/playwright.config.ts tests/arc-task-ledger/e2e/verifier-ui.spec.ts --project arc-mobile",
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/new-ui-mobile-release.log",
+      "exitCode": 0,
+      "sha256": "a16fc3e90b2c6f405b9604411fc77ce6b2afb4af047f190aa61059cf07bc8819",
+      "summary": ["4 passed (10.1s)"],
+      "mtime": "2026-10-07T11:21:24.139Z"
+    }
+  ],
+  "counts": {
+    "arcUnit": 117,
+    "arcIntegration": 43,
+    "arcBrowser": 40,
+    "rootUnit": 1043,
+    "rootIntegration": 88,
+    "rootExternalSkipped": 42,
+    "rootBrowser": 49,
+    "rust": 52
+  },
+  "equivalence": "Root code/dependencies unchanged between current-run root checks and final Arc-only changes. Legacy 32 browser checks preceded the final same-report access refresh; affected verifier flow was rerun in all 8 desktop/mobile new checks. Final formatting/lint/type/Arc unit/integration/build cover final executable source.",
+  "diagnostics": [
+    "F-drive cold I/O and PostgreSQL recovery; preserved existing data",
+    "Missing desktop sidecar: prepared only isolated candidate and reran Rust",
+    "Concentrated browser requests hit existing quota: split isolated server per spec",
+    "Publication visibility stale when report ID unchanged: fixed and reran new browser cases"
+  ],
+  "remaining": [
+    "UI27 unified address shortening/copy",
+    "UI28 scenario titles from fixed report fields",
+    "UI29 frame-level reference animation audit",
+    "UI30 full online requery version diff",
+    "42 external root integration skips",
+    "Formal comprehensive forensics and independent-source verification",
+    "No human approval or grant submission"
+  ],
+  "submissionReadiness": "UI delivery only; not all product/terminal gates",
+  "grantApplication": "NOT_SUBMITTED"
+}

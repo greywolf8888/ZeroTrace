@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 test:evals
+> vitest run evals
+
+
+ RUN  v4.1.11 C:/Users/GreyWolf/.codex/worktrees/arc-v121-export/ZeroTrace
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  18:57:35
+   Duration  1.53s (transform 858ms, setup 0ms, import 2.33s, tests 29ms, environment 0ms)
+

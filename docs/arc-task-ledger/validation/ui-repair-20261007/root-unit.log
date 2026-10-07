@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 test:unit
+> vitest run packages services apps/api/test/unit scripts/operational-gates.test.ts tests/unit
+
+
+ RUN  v4.1.11 C:/Users/GreyWolf/.codex/worktrees/arc-v121-export/ZeroTrace
+
+
+ Test Files  195 passed (195)
+      Tests  1043 passed (1043)
+   Start at  18:57:05
+   Duration  20.95s (transform 37.50s, setup 0ms, import 328.15s, tests 43.51s, environment 34ms)
+

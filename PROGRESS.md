@@ -2555,3 +2555,7 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 限定Arc开发、真实主网只读闭环、独立构建和既有云端更新已完成。源码6b2454f666befe3179dc6093800f36eea6df3976，部署60284c4667e4d6215d0aac5c6f1c92041fa85972，迁移7；旧#18/游标/原件保持。114 Arc单元、42真实PG、28 Arc浏览器、独立构建/lint/类型/license/生产audit0通过。根1050单元、88集成(42外部SKIP)、49浏览器、Windows49及Rust工作区通过；旧视觉指纹FAIL、最终格式检查通过，原输入/原件排除以保留摘要，不宣称全平台/完整取证通过。没有链上写入、数据库重建或新增付费资源，申请未提交。详见[本轮交付](docs/arc-task-ledger/settlement-verifier/HANDOFF.md)和VALIDATION.json。
 
 独立包Arc_USDC_Verifier_2.0.0_Cloud_20261007.zip已交付：14973922字节/415条目，SHA256 12a0236ae7e3871951425a30764f7898acc4d86f212c2a961683a187487f89c0；112执行/配置文件与独立测试候选一致，CRC及逐项摘要通过。包收据外置，不改云端部署。
+
+## 2026-10-07 Arc 界面修复 atl-ui-v1.4.0
+
+英文默认与全局持久语言、报告/草稿边界、权限、可发现性、精确金额、手机与打印依据已落实。复用既有数据与标准能力，UI27—UI30仍有明确增量事项；不声明30项全部关闭。本轮当前检查与独立源码、部署收据统一见 docs/arc-task-ledger/settlement-verifier/UI_DELIVERY_20261007.md；旧 VALIDATION.json 和部署记录保留。本轮不改其它业务域，F盘既有数据库/原件/用户桌面改动保留。外部跳过项与正式完整取证仍未通过。

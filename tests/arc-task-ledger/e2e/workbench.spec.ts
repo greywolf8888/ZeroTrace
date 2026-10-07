@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => localStorage.setItem('arc-ui-language', 'zh'));
+});
 const adapter = '0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d';
 const path = (id: string, report = false) =>
   `/tasks/5042/${adapter}/${id}${report ? '/report' : ''}?snapshotRunId=browser_test_only`;

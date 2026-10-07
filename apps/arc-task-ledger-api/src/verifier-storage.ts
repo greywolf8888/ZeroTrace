@@ -173,6 +173,26 @@ export function verifierRepository(store: LedgerStore) {
       if (!r.rows[0]) throw new LedgerError('REPORT_NOT_FOUND', '报告不存在或未授权。', 404);
       return r.rows[0].document;
     },
+    async access(reportId: string, bundleHash: string, owner: string | null) {
+      const r = await store.pool.query(
+        `SELECT
+          EXISTS(SELECT 1 FROM arc_task_ledger_v1.zasv_ownership WHERE report_id=$1 AND bundle_hash=$2 AND owner_hash=$3) AS owned,
+          EXISTS(SELECT 1 FROM arc_task_ledger_v1.zasv_publications WHERE report_id=$1 AND bundle_hash=$2) AS public`,
+        [reportId, bundleHash, owner],
+      );
+      return { canManage: !!r.rows[0].owned, visibility: r.rows[0].public ? 'PUBLIC' : 'PRIVATE' };
+    },
+    async list(owner: string) {
+      const r = await store.pool.query(
+        `SELECT b.report_id,b.bundle_hash,b.created_at,b.document->'report'->>'transactionHash' AS transaction_hash,
+          b.document->'report'->'evaluation'->>'outcome' AS outcome,
+          EXISTS(SELECT 1 FROM arc_task_ledger_v1.zasv_publications p WHERE p.report_id=b.report_id AND p.bundle_hash=b.bundle_hash) AS public
+        FROM arc_task_ledger_v1.zasv_bundles b JOIN arc_task_ledger_v1.zasv_ownership o USING(report_id,bundle_hash)
+        WHERE o.owner_hash=$1 ORDER BY b.created_at DESC,b.report_id,b.bundle_hash LIMIT 20`,
+        [owner],
+      );
+      return { reports: r.rows, scope: 'CURRENT_SESSION', limit: 20, startsChainWork: false };
+    },
     async owned(reportId: string, owner: string): Promise<ReportBundle> {
       const r = await store.pool.query(
         `SELECT b.document FROM arc_task_ledger_v1.zasv_bundles b JOIN arc_task_ledger_v1.zasv_ownership o USING(report_id,bundle_hash)

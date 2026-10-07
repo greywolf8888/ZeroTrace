@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => localStorage.setItem('arc-ui-language', 'zh'));
+});
 test('声明窗口、连续水位和缺口显示，不冒充部署全历史', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?view=tasks');
   await page.getByText('高级：连续历史范围与覆盖缺口', { exact: true }).click();
   const range = page.getByRole('region', { name: '连续历史范围' });
   await expect(range).toContainText('21153191–21153193');
@@ -16,7 +19,7 @@ test('正向资金展示：奖励、待领取、争议胜诉、零分配与原�
     ['105', '裁定工作者胜'],
     ['106', '外部退款已协调'],
   ]) {
-    await page.goto('/');
+    await page.goto('/?view=tasks');
     await expect(page.getByText('本地测试样例，不是主网证据。')).toBeVisible();
     await page.getByRole('button', { name: `任务 #${id}`, exact: true }).click();
     await expect(page.getByText(state).first()).toBeVisible();
@@ -45,7 +48,7 @@ test('正向资金展示：奖励、待领取、争议胜诉、零分配与原�
   }
 });
 test('列表、详情、原始证据与导出闭环', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?view=tasks');
   await expect(
     page.getByRole('heading', { name: 'Arc USDC 结算核验器', exact: true }),
   ).toBeVisible();
@@ -69,7 +72,7 @@ test('列表、详情、原始证据与导出闭环', async ({ page }) => {
   });
 });
 test('固定快照分页、筛选、错误与覆盖', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?view=tasks');
   await expect(page.getByRole('button', { name: '任务 #8', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '下一页', exact: true }).click();
   await expect(page.getByRole('button', { name: '任务 #112', exact: true })).toBeVisible();

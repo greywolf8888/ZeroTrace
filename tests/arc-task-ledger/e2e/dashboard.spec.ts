@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(() => localStorage.setItem('arc-ui-language', 'zh'));
+});
 
 test('事实总览与实时状态分离、固定快照保持、键盘可回放且无横向溢出', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?view=tasks');
+  await page.getByText('链状态与已保存任务概览', { exact: true }).click();
+  await page.getByText('已采集任务快照统计（可选）', { exact: true }).click();
   const dashboard = page.getByLabel('固定快照事实总览');
   await expect(dashboard).toContainText('任务约定报酬');
   await expect(dashboard).toContainText('任务数量口径');
@@ -46,7 +51,8 @@ test('实时来源失败保留旧值说明，新快照须主动选择，不替�
       },
     }),
   );
-  await page.goto('/');
+  await page.goto('/?view=tasks');
+  await page.getByText('链状态与已保存任务概览', { exact: true }).click();
   await expect(page.getByLabel('实时链状态')).toContainText('300');
   await expect(page.getByRole('button', { name: '查看最新快照', exact: true })).toBeVisible();
   const before = page.url();

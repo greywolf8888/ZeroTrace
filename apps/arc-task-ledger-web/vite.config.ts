@@ -5,6 +5,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
+        changeOrigin: true,
         target: process.env.ARC_API_PROXY ?? 'http://127.0.0.1:8087',
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

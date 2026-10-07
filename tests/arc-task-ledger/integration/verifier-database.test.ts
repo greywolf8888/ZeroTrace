@@ -23,6 +23,76 @@ afterAll(() => store.close());
 const sdk = { 'x-arc-client': 'zasv-sdk-v1' };
 const secret = 'test-only-settlement-session-secret-32-bytes';
 describe('真实持久核验权限与原子性', () => {
+  it('会话报告列表和管理元数据只暴露当前所有者；公开访问不授予管理权也不查链', async () => {
+    const observe = vi.fn(async () => verifierObservation());
+    const app = await createLedgerApp(store, secret, store, undefined, observe);
+    try {
+      const owner = (
+        await app.inject({ method: 'POST', url: '/v1/sessions', headers: sdk })
+      ).json();
+      const stranger = (
+        await app.inject({ method: 'POST', url: '/v1/sessions', headers: sdk })
+      ).json();
+      const headers = {
+        ...sdk,
+        authorization: 'Bearer ' + owner.sessionToken,
+        'x-zasv-csrf': owner.csrfToken,
+        'idempotency-key': 'ui-history-owner-001',
+      };
+      const other = { ...sdk, authorization: 'Bearer ' + stranger.sessionToken };
+      const saved = (
+        await app.inject({
+          method: 'POST',
+          url: '/v1/verifications',
+          headers,
+          payload: { transaction: TX, expectation: verifierCondition() },
+        })
+      ).json();
+      const path = '/v1/reports/' + saved.report.reportId;
+      expect((await app.inject({ url: path, headers })).json()).toMatchObject({
+        canManage: true,
+        visibility: 'PRIVATE',
+      });
+      expect((await app.inject({ url: '/v1/reports', headers })).json()).toMatchObject({
+        scope: 'CURRENT_SESSION',
+        startsChainWork: false,
+        reports: [{ report_id: saved.report.reportId, public: false }],
+      });
+      expect((await app.inject({ url: '/v1/reports', headers: other })).json().reports).toEqual([]);
+      expect((await app.inject('/v1/reports')).statusCode).toBe(401);
+      expect((await app.inject({ url: path, headers: other })).statusCode).toBe(404);
+      const preview = (
+        await app.inject({
+          method: 'POST',
+          url: path + '/share-preview',
+          headers: { ...headers, 'idempotency-key': 'ui-history-preview-001' },
+          payload: {},
+        })
+      ).json();
+      const published = await app.inject({
+        method: 'POST',
+        url: path + '/publish',
+        headers: { ...headers, 'idempotency-key': 'ui-history-publish-001' },
+        payload: {
+          confirmReportId: preview.report.reportId,
+          confirmBundleHash: preview.bundleHash,
+        },
+      });
+      expect(published.statusCode).toBe(200);
+      const publicPath = '/v1/reports/' + preview.report.reportId;
+      expect((await app.inject({ url: publicPath, headers: other })).json()).toMatchObject({
+        canManage: false,
+        visibility: 'PUBLIC',
+      });
+      expect((await app.inject({ url: publicPath, headers })).json()).toMatchObject({
+        canManage: true,
+        visibility: 'PUBLIC',
+      });
+      expect(observe).toHaveBeenCalledTimes(1);
+    } finally {
+      await app.close();
+    }
+  });
   it('接近容量的两个请求不能突破1000报告硬限额，失败保存保持原子性', async () => {
     await store.pool.query(
       "INSERT INTO arc_task_ledger_v1.zasv_reports(report_id,document) SELECT 'test_only_capacity_'||n,'{\"testOnly\":true}'::jsonb FROM generate_series(1,999) n",

@@ -1,0 +1,15 @@
+[WebServer] (node:4796) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:24032) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:17544) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [arc-mobile] › tests\arc-task-ledger\e2e\ledger.spec.ts:5:1 › 声明窗口、连续水位和缺口显示，不冒充部署全历史 (607ms)
+  ok 2 [arc-mobile] › tests\arc-task-ledger\e2e\ledger.spec.ts:15:1 › 正向资金展示：奖励、待领取、争议胜诉、零分配与原始回执 (2.0s)
+  ok 3 [arc-mobile] › tests\arc-task-ledger\e2e\ledger.spec.ts:50:1 › 列表、详情、原始证据与导出闭环 (1.4s)
+  ok 4 [arc-mobile] › tests\arc-task-ledger\e2e\ledger.spec.ts:74:1 › 固定快照分页、筛选、错误与覆盖 (1.7s)
+
+  4 passed (9.0s)

@@ -18,6 +18,10 @@ task 为 `{jobId,snapshotRunId,legId}`，只能引用原持久任务投影。任
 
 ## 固定报告与复核
 
+`GET /v1/reports` 需要有效原会话，仅列出该会话拥有的最近20个原件版本，返回 `reports`、`scope=CURRENT_SESSION`、`limit=20`、`startsChainWork=false`。每项含 report_id、bundle_hash、transaction_hash、outcome、created_at、public；未登录返回401，不返回其他所有者记录。
+
+`GET /v1/reports/:id` 另返回 `canManage` 与 `visibility=PUBLIC|PRIVATE`，按已授权的具体原件版本判断，不扩大写权限。这些字段是访问元数据，不属于不可覆盖报告及其摘要。公开可读不等于拥有管理权限。
+
 `GET /v1/reports/:id`、`GET /v1/reports/:id/bundle` 只读取持久数据。报告默认仅所属会话可见；已明确公开的固定原件版本可匿名读。未授权和不存在均返回404。GET 不查询链、不自动换金额、不依赖旧列表快照TTL。报告内容及已有原件不能覆盖；后续采集作为附件追加。
 
 `POST /v1/reports/:id/recheck` 仅报告所属会话可以执行，重新查询链并按原冻结条件核对。返回 previousReportId、factsChanged；相同事实与条件可以得到相同 reportId，但新原件的 bundleHash 可不同。旧报告及公开原件附件仍保留。
