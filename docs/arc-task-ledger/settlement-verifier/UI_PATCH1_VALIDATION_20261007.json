@@ -1,0 +1,85 @@
+{
+  "at": "2026-10-07T11:38:30.553Z",
+  "sourceBase": "a97ae95b4c712ff2b7fc0ad86c8222c0a996d390",
+  "interfaceVersion": "atl-ui-v1.4.1",
+  "reason": "A saved observation without expectations must not display a changed frozen-condition warning. Existing frozen reports still display the warning on editing.",
+  "sourceFiles": [
+    {
+      "path": "apps/arc-task-ledger-web/src/VerificationWorkspace.tsx",
+      "sha256": "83b94a6c7dc49f32eceb28ddba1d653bf624d6bbe80b589527fff9d5c581490d"
+    },
+    {
+      "path": "apps/arc-task-ledger-api/src/app.ts",
+      "sha256": "9694c01f45ab078a324bdeef04581374ed46cee47538843c07cded98f87df712"
+    },
+    {
+      "path": "tests/arc-task-ledger/e2e/verifier-ui.spec.ts",
+      "sha256": "5f3a98da87d0e0c09fccc9777219edf09cf71ea982407b3cdcf1d31953e2f316"
+    }
+  ],
+  "checks": [
+    {
+      "name": "format",
+      "command": "prettier --check modified files",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-format.log",
+      "sha256": "f20510a9da4717c51c4cffee6d0dd88d6c9a723d0a83711d01216f5b48961283",
+      "mtime": "2026-10-07T11:36:55.547Z"
+    },
+    {
+      "name": "lint",
+      "command": "eslint modified files --max-warnings=0",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mtime": "2026-10-07T11:36:55.573Z"
+    },
+    {
+      "name": "unit",
+      "command": "npm run arc:test:unit",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-unit.log",
+      "sha256": "8bbc05dc8e7b653adcd9f09381fe94428fe6ab59983eef7a590c0eab0463d336",
+      "mtime": "2026-10-07T11:37:00.524Z"
+    },
+    {
+      "name": "integration",
+      "command": "npm run arc:test:integration",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-integration.log",
+      "sha256": "e103105b788878b623e1fc2da49d45525c451d442069c5347bd834122ab81c4d",
+      "mtime": "2026-10-07T11:37:08.564Z"
+    },
+    {
+      "name": "build",
+      "command": "npm run arc:build",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-build.log",
+      "sha256": "ea19ef5936db284d0241604fa851b381bf2fc16ab36e46572fc320854a5741b5",
+      "mtime": "2026-10-07T11:37:13.318Z"
+    },
+    {
+      "name": "browser-desktop",
+      "command": "playwright test verifier-ui.spec.ts --project arc-desktop",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-browser-desktop.log",
+      "sha256": "9434f4bc1a2dcd6b9aa903eeeb65997dd499eacc2ee7c687208a9815f2938ff7",
+      "mtime": "2026-10-07T11:35:49.121Z"
+    },
+    {
+      "name": "browser-mobile",
+      "command": "playwright test verifier-ui.spec.ts --project arc-mobile",
+      "exitCode": 0,
+      "log": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-browser-mobile.log",
+      "sha256": "ebf38ca41c1557044405beb0b5ca13471f2d6eb0f1a72a48b904d8f524c56311",
+      "mtime": "2026-10-07T11:35:59.644Z"
+    }
+  ],
+  "counts": {
+    "arcUnit": 117,
+    "arcIntegration": 43,
+    "browser": 8
+  },
+  "earlierValidation": "UI_VALIDATION_20261007.json",
+  "scope": "Only this display guard, regression assertion, and declared interface version changed; money semantics, schema and dependencies unchanged. Final deployment receipt records actual release."
+}

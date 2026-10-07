@@ -1,0 +1,15 @@
+[WebServer] (node:2168) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:47804) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:39476) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [arc-desktop] › tests\arc-task-ledger\e2e\verifier-ui.spec.ts:3:1 › 任务条件读取失败清除旧资金段，字段错误可定位且不会发起核验 (938ms)
+  ok 2 [arc-desktop] › tests\arc-task-ledger\e2e\verifier-ui.spec.ts:38:1 › 默认英文、全局切换与跨页面刷新持久化 (924ms)
+  ok 3 [arc-desktop] › tests\arc-task-ledger\e2e\verifier-ui.spec.ts:54:1 › 读取、精确金额核对、不可覆盖报告、草稿提示、证据对话框及打印 (1.9s)
+  ok 4 [arc-desktop] › tests\arc-task-ledger\e2e\verifier-ui.spec.ts:102:1 › 公开报告权限：阅览者可导出，不能在线重查或公开分享 (1.4s)
+
+  4 passed (9.4s)

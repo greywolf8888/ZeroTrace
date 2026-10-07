@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 arc:test:unit
+> vitest run tests/arc-task-ledger/unit
+
+
+ RUN  v4.1.11 C:/Users/GreyWolf/.codex/worktrees/arc-v121-export/ZeroTrace
+
+
+ Test Files  19 passed (19)
+      Tests  117 passed (117)
+   Start at  19:36:58
+   Duration  2.41s (transform 5.60s, setup 0ms, import 22.52s, tests 511ms, environment 2ms)
+

@@ -19,6 +19,8 @@ test('任务条件读取失败清除旧资金段，字段错误可定位且不�
   await page.getByLabel('Transaction hash or official explorer link').fill(TX);
   await page.getByRole('button', { name: 'Read transaction', exact: true }).click();
   await expect(page).toHaveURL(/report=zasv_/);
+  await expect(page.getByText('No conditions supplied', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Draft changed' })).toHaveCount(0);
   await page.getByLabel('Expected payee', { exact: true }).fill('bad');
   await expect(page.getByLabel('Expected payee', { exact: true })).toHaveAttribute(
     'aria-invalid',

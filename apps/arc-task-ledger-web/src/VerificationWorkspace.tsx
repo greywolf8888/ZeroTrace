@@ -329,11 +329,10 @@ export function VerificationWorkspace({
         !decimalInvalid(max) &&
         BigInt(decimalUsdcToAtomic18(max)) < BigInt(decimalUsdcToAtomic18(amount))));
   let dirty = false;
-  if (result && editing) {
+  if (result && editing && result.report.expectation) {
     const e = result.report.expectation;
     try {
       dirty =
-        !e ||
         result.report.transactionHash !== parseTransactionInput(transaction.trim()) ||
         e.expectedPayee !== payee.toLowerCase() ||
         (e.expectedMovementPayer ?? '') !== payer.toLowerCase() ||
