@@ -1,0 +1,512 @@
+{
+  "at": "2026-10-07T11:53:56.785Z",
+  "url": "https://web--atl-web--xtd599t97njk.code.run",
+  "sourceCommit": "bf0a91e86ffbe5c5686c04cfbd07192717859e98",
+  "deploymentCommit": "a9d5adfa1c5991a396663d13913018595479cc60",
+  "interfaceVersion": "atl-ui-v1.4.1",
+  "implementation": "IMPLEMENTED_WITH_FOUR_DOCUMENTED_UI_INCREMENTS",
+  "localValidation": {
+    "state": "PASS_WITH_EXTERNAL_SKIPS",
+    "arcUnit": 117,
+    "arcIntegration": 43,
+    "arcBrowser": 40,
+    "patchBrowserRerun": 8,
+    "rootUnit": 1043,
+    "rootIntegration": 88,
+    "rootSkipped": 42,
+    "rootBrowser": 49,
+    "rust": 52,
+    "earlierReceipt": "UI_VALIDATION_20261007.json",
+    "patchReceipt": "UI_PATCH1_VALIDATION_20261007.json",
+    "productionAuditVulnerabilities": 0
+  },
+  "mainnetReadValidation": {
+    "state": "PASS_SINGLE_SOURCE_READ_ONLY",
+    "discovery": {
+      "at": "2026-10-07T11:31:53.395Z",
+      "method": "eth_getBlockByNumber(finalized,true)",
+      "source": "arc-drpc-public",
+      "chainId": "5042",
+      "blockNumber": "24723718",
+      "blockHash": "0x192a5c5eea3558074aab9b9923bf230c150d6c406876a89815351a20afd8df28",
+      "sourceDeclaredFinality": "finalized",
+      "transactionHash": "0xfd8897f9b56de4e400f3eb3ef68585e702095203cbf038386cf81e57f2413817",
+      "from": "0x6790d16b2eb8cf64fc53f0c0c0927723eb1a3243",
+      "to": "0x43d894e229a008c72e96872739719b9cfda941d5",
+      "valueAtomic18": "113850000000000000000",
+      "scope": "single public RPC; discovery does not establish execution, receipt or settlement"
+    },
+    "matched": {
+      "reportId": "zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42",
+      "bundleHash": "95275af51cf5accb2995672942d45c475752ac2734161fec1d102c2fc76ce594"
+    },
+    "mismatched": {
+      "reportId": "zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3",
+      "bundleHash": "c22124fbb9caaf80770aa99fe1a203460d74b4656cae1faacdb2027638691577"
+    },
+    "requery": {
+      "reportId": "zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3",
+      "bundleHash": "c28267af5c5c00c89cfdc9405f233dd9358d44cca430cc75423f3dd40269fca6",
+      "factsUnchanged": true,
+      "source": {
+        "alias": "arc-drpc-public",
+        "agreement": "SINGLE_SOURCE",
+        "observedAt": "2026-10-07T11:46:07.025Z",
+        "authenticity": "RPC_SOURCE_REPORTED",
+        "independence": "NOT_VERIFIED"
+      }
+    },
+    "scope": "Matching and mismatch browser creation occurred on first UI release; final patch changes only observation warning and declared interface, with unchanged money engine. Final deployment requery and browser local replay executed on actual final release. Finality/authenticity remain one RPC declaration, not independent forensic confirmation."
+  },
+  "publicDeployment": {
+    "state": "PASS",
+    "resourceCount": 5,
+    "resources": [
+      {
+        "id": "atl-api",
+        "sha": "a9d5adfa1c5991a396663d13913018595479cc60",
+        "plan": "nf-compute-10",
+        "status": {
+          "build": {
+            "status": "SUCCESS",
+            "lastTransitionTime": "2026-10-07T11:42:21.888Z"
+          },
+          "deployment": {
+            "status": "COMPLETED",
+            "reason": "DEPLOYING",
+            "lastTransitionTime": "2026-10-07T11:43:49.271Z"
+          }
+        }
+      },
+      {
+        "id": "atl-web",
+        "sha": "a9d5adfa1c5991a396663d13913018595479cc60",
+        "plan": "nf-compute-10",
+        "status": {
+          "build": {
+            "status": "SUCCESS",
+            "lastTransitionTime": "2026-10-07T11:42:18.190Z"
+          },
+          "deployment": {
+            "status": "COMPLETED",
+            "reason": "DEPLOYING",
+            "lastTransitionTime": "2026-10-07T11:45:03.204Z"
+          }
+        }
+      },
+      {
+        "id": "atl-migrate",
+        "sha": "a9d5adfa1c5991a396663d13913018595479cc60",
+        "plan": "nf-compute-10",
+        "suspended": true
+      },
+      {
+        "id": "atl-sync",
+        "sha": "a9d5adfa1c5991a396663d13913018595479cc60",
+        "plan": "nf-compute-10",
+        "suspended": false
+      },
+      {
+        "id": "atl-postgres",
+        "status": "running"
+      }
+    ],
+    "usage": [
+      {
+        "currency": "usd",
+        "total": 0
+      }
+    ],
+    "assets": [
+      {
+        "asset": "/assets/index-DKt4VrgW.js",
+        "sha256": "badfb1625e614293ffcfac7232fdc8ad48627474bacd7ca61bb25eee27815225"
+      },
+      {
+        "asset": "/assets/index-CfXz5GmV.css",
+        "sha256": "b334df3eadc5bfc2387ce3fa2c113b21aa37916a920f85265c86fa6f941a53ef"
+      }
+    ],
+    "unchangedOldReports": [
+      {
+        "id": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+        "bundleHash": "8f2e7979f0b618bc7703ba5ec0617429c663430c2f4b076ec8b99377e76f9ac5",
+        "sha256": "92b44023e36916724e3d71d6d693fc984efaed2ef6d6c5413364e81a621a44b3"
+      },
+      {
+        "id": "zasv_0036ede4021eec0190fa5fae5d68fd2c4908a29a77f40e60554b365226ed177f",
+        "bundleHash": "6d21dd2ed6c7487f984fb39fe693c2dea0c740bd9c751045c05300f161922e20",
+        "sha256": "713c2578f7fffe034a1da9d7048f869ea9b9d32efb20ea2081f785f3eb203672"
+      }
+    ],
+    "task18": {
+      "path": "/v1/jobs/5042/0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d/18?snapshotRunId=run_31d0b702348917f7416b0110b8ae4e64",
+      "resultHash": "736c85204e5961a85839116e34c4b76afd51b458993f5cd8423e42a95392e516",
+      "evidenceHash": "4da0e6e1b21a67af04cdd0069c402421f19f11f94d21ef4c11eebf2291ce70da",
+      "snapshotHash": "b24089a196ed7de1f623657e03e18a2d04b8d57269eb89c8e8b5ca410a61e61f"
+    },
+    "oldCursor": {
+      "oldCursorStillValid": true,
+      "pageHash": "c55a2896a4577ff7a2e0a82293530f6525aa62d41fc2d97443931c3e9d7d79a6"
+    },
+    "mutationsScope": "existing API/web deployments and existing job image pins only; no migrate run, credential/size change or resource creation"
+  },
+  "productLoops": {
+    "genericTransaction": "new read -> matched 113.85 USDC -> edit draft -> mismatched 1 USDC -> export -> browser/independent replay -> final live requery; private reports remain private",
+    "registeredTask": "existing task18 fixed results/evidence/cursor unchanged; actual public 2 USDC mirrored report shows REGISTERED_TASK provenance and excludes management for viewer",
+    "independentConsumption": "six separate processes: original recomputation, mismatch, first local allocation, idempotent retry, mismatch NO_ALLOCATION, tampering rejection; isolated self-test namespace only"
+  },
+  "browserOperations": {
+    "defaultEnglishObserved": true,
+    "globalSwitchAndReloadPersisted": true,
+    "observationFalseDraftWarnings": 0,
+    "publicViewerRequeryButtons": 0,
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 375,
+      "overflow": false
+    },
+    "mirrorEvidenceAccessible": true,
+    "localeScope": "Product labels only; original identifiers/raw evidence retained. Browser date popover follows browser locale."
+  },
+  "submissionReadiness": "UI_DELIVERY_WITH_LISTED_FOLLOWUPS; not all historical/terminal gates",
+  "grantApplication": "NOT_SUBMITTED",
+  "remaining": [
+    "UI27 unified address shortening/copy",
+    "UI28 scenario titles from fixed report fields",
+    "UI29 frame-level reference animation audit",
+    "UI30 full online requery version diff",
+    "42 external root integration skips",
+    "Formal comprehensive forensics and independent-source verification",
+    "No human approval or grant submission"
+  ],
+  "executableSourceFiles": [
+    {
+      "path": "apps/arc-task-ledger-api/src/app.ts",
+      "sha256": "9694c01f45ab078a324bdeef04581374ed46cee47538843c07cded98f87df712"
+    },
+    {
+      "sha256": "2442b30a93087ae9b5594972a0634e1edf579a364a4646e7c9964bd8cd445809",
+      "path": "apps/arc-task-ledger-api/src/verifier-routes.ts"
+    },
+    {
+      "sha256": "2111efba4b22710dca317d59508ff083bfccb96433216f932da72ec497291abd",
+      "path": "apps/arc-task-ledger-api/src/verifier-storage.ts"
+    },
+    {
+      "sha256": "34416acc27b51b344255d9d17500ac21c88f7ff57df0a0049ceb09bed60feb69",
+      "path": "apps/arc-task-ledger-web/index.html"
+    },
+    {
+      "sha256": "7bb2321e4534e2da31dd222358f820b8b5517900120518b092c48f46b697c68d",
+      "path": "apps/arc-task-ledger-web/src/Dashboard.tsx"
+    },
+    {
+      "sha256": "9ae29b66d8698d31fbb066e4e2bd331124d9b94c91eb70bf8d24b076ba95a502",
+      "path": "apps/arc-task-ledger-web/src/i18n.tsx"
+    },
+    {
+      "sha256": "ff0bd3c1bc0eb1131a4b08fdbe3dc698efe9d21686619847092aa21d57529e23",
+      "path": "apps/arc-task-ledger-web/src/locale-catalog.ts"
+    },
+    {
+      "sha256": "f2c92760675944b262ca982b0cb44ec77efd8595f5491070a6f5d84c1160e30d",
+      "path": "apps/arc-task-ledger-web/src/main.tsx"
+    },
+    {
+      "sha256": "1d7b8ee940966faa02836968da5822710a3709eaf7b8ee2a81af74277c10851b",
+      "path": "apps/arc-task-ledger-web/src/SettlementCard.tsx"
+    },
+    {
+      "sha256": "328126af81bbe75009b0187402b227e1e2138764dc7707f4e75aaea43f4173a1",
+      "path": "apps/arc-task-ledger-web/src/SettlementWorkbench.tsx"
+    },
+    {
+      "sha256": "ae683727e9323449e63e7a64651cbcaf645d386f54c332f2e8f4cbb2740d94a0",
+      "path": "apps/arc-task-ledger-web/src/VerificationReport.tsx"
+    },
+    {
+      "path": "apps/arc-task-ledger-web/src/VerificationWorkspace.tsx",
+      "sha256": "83b94a6c7dc49f32eceb28ddba1d653bf624d6bbe80b589527fff9d5c581490d"
+    },
+    {
+      "sha256": "48ae00670ffccea5d022d46048cd28c110c6d6cd598f88150ecc3b61760b0ef6",
+      "path": "apps/arc-task-ledger-web/src/verifier.css"
+    },
+    {
+      "sha256": "f97dedc755f9cc01f743d52e54375641a040b0106d72b8961848b01cb8c81b8a",
+      "path": "apps/arc-task-ledger-web/src/VerifierTaskChooser.tsx"
+    },
+    {
+      "sha256": "2da7f4394889abebac61b82597ca67f11e5d0cda1b3912533cf9f460ecb0818f",
+      "path": "apps/arc-task-ledger-web/vite.config.ts"
+    },
+    {
+      "sha256": "dc6f651986f6ddac52edf2f9822e3e18f4c09da0ec7c0b64030c452334514011",
+      "path": "package.json"
+    },
+    {
+      "sha256": "bd78323119234de8930cf0805fdc613d44eb9e6490ba4411d43b11d2f20992cd",
+      "path": "tests/arc-task-ledger/e2e/dashboard.spec.ts"
+    },
+    {
+      "sha256": "e7b55ebf4733b25a38f08fb4718e4edd9e245e4570ec8ffb7bf99c4b0b7a5562",
+      "path": "tests/arc-task-ledger/e2e/ledger.spec.ts"
+    },
+    {
+      "sha256": "cd1424f785777dd9b1e20f8f42e59c4cc4000d4a2de41709d6b95d198c68e484",
+      "path": "tests/arc-task-ledger/e2e/product.spec.ts"
+    },
+    {
+      "sha256": "8f88e5fe004f003a61cf2f1721666d299ec3b31902729d59b1ae41d0d80bc8f4",
+      "path": "tests/arc-task-ledger/e2e/server.ts"
+    },
+    {
+      "path": "tests/arc-task-ledger/e2e/verifier-ui.spec.ts",
+      "sha256": "5f3a98da87d0e0c09fccc9777219edf09cf71ea982407b3cdcf1d31953e2f316"
+    },
+    {
+      "sha256": "14a4969d38cbfd070e297c2cfc884d44b290091099304e02f7a3f2430b80c543",
+      "path": "tests/arc-task-ledger/e2e/workbench.spec.ts"
+    },
+    {
+      "sha256": "c41bb853a9af57604c8e642e141add6cb7ee06025047e15a2a777ab3442d682c",
+      "path": "tests/arc-task-ledger/integration/verifier-database.test.ts"
+    },
+    {
+      "sha256": "fc718c3a18a0ee20ddd561124da7a38d45cd48d680129fd5f6f220854dd8f6c6",
+      "path": "tests/arc-task-ledger/playwright.config.ts"
+    },
+    {
+      "sha256": "96bf77ff964f515b642bd4c6bdb3bce8e0e54cc51173a185517ed134024e85ae",
+      "path": "tests/arc-task-ledger/unit/ui-language.test.ts"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-before.json",
+      "sha256": "cd203736211a2f86182881e044e6975ccb50ddc9ea23de30432babc4c2ce99b5",
+      "bytes": 1777,
+      "at": "2026-10-07T11:14:16.386Z",
+      "stage": "ACTUAL_RECORDED_STAGE"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-after.json",
+      "sha256": "a336e67439b707a60dc211853115cfd51cd00f4b71b0b18e20cc8853ce813bc6",
+      "bytes": 1547,
+      "at": "2026-10-07T11:32:38.219Z",
+      "stage": "ACTUAL_RECORDED_STAGE"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-final.json",
+      "sha256": "c0fc5152ac68754e3de089c1b909058d7ff083171533254eb9db7eaf4ede0c69",
+      "bytes": 1547,
+      "at": "2026-10-07T11:44:42.652Z",
+      "stage": "ACTUAL_RECORDED_STAGE"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-assets-final.json",
+      "sha256": "5cbe8d029c07285d9a9d9ed492a99d4d83d0e1e7443edbdf643645578f867d0a",
+      "bytes": 371,
+      "at": "2026-10-07T11:45:38.763Z",
+      "stage": "ACTUAL_RECORDED_STAGE"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/cloud-baseline.json",
+      "sha256": "d90bbae2658a26f8ffedcd2bfd659c1e3a77d8d84204120da65aa2d5df18cc20",
+      "bytes": 1459,
+      "at": "2026-10-07T10:24:21.984Z",
+      "stage": "ACTUAL_RECORDED_STAGE"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/cloud-predeploy.json",
+      "sha256": "b0121a0c3ae17b6851a34dc225f725685c38923c52aca2ec98f7097283140ea6",
+      "bytes": 1459,
+      "at": "2026-10-07T11:29:16.642Z",
+      "stage": "ACTUAL_RECORDED_STAGE"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/cloud-final.json",
+      "sha256": "dd9ed3a8580ed5f3f0225df311322777383211180892410eeb3f3b483753dc74",
+      "bytes": 1459,
+      "at": "2026-10-07T11:46:47.402Z",
+      "stage": "ACTUAL_RECORDED_STAGE"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/new-mainnet-choice.json",
+      "sha256": "bd443b41d3b0ba693e71763ccff1b3d81c10112b8e2d7db81149f36655420703",
+      "bytes": 637,
+      "at": "2026-10-07T11:31:53.396Z",
+      "stage": "ACTUAL_RECORDED_STAGE"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/new-mainnet-matched-bundle.json",
+      "sha256": "afc7df067dcb408a355b6a68d575c38d04c4970cbdf932a26b3b70e25f2a5aa3",
+      "bytes": 21340,
+      "at": "2026-10-07T11:36:40.974Z",
+      "stage": "FIRST_UI_RELEASE_0f6650533f99a829a2c1d1e45a4eab082db00040"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/new-mainnet-mismatched-bundle.json",
+      "sha256": "8ae6e023a464478eb7c620cbc75f556dbe6d66499b98b84750a02bc37b2184cc",
+      "bytes": 21058,
+      "at": "2026-10-07T11:40:25.055Z",
+      "stage": "FIRST_UI_RELEASE_0f6650533f99a829a2c1d1e45a4eab082db00040"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/new-mainnet-requery-bundle.json",
+      "sha256": "eebc910d8c0456eba7d022352c2d72756886cb7b9addaadbdbc6e1baf562c512",
+      "bytes": 20920,
+      "at": "2026-10-07T11:49:19.386Z",
+      "stage": "a9d5adfa1c5991a396663d13913018595479cc60"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-home-en.png",
+      "sha256": "6c6c60f3fdb2345b9c782813f0f71b036f854b71fc2f24a77406f88196339138",
+      "bytes": 83800,
+      "at": "2026-10-07T11:51:11.835Z",
+      "stage": "a9d5adfa1c5991a396663d13913018595479cc60"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-task-report-en.png",
+      "sha256": "73ba387eddd4ba1a5e7166ddcefbaceaa29e86194e163ed3d1eb3d7ac5ed27d8",
+      "bytes": 173075,
+      "at": "2026-10-07T11:50:09.940Z",
+      "stage": "a9d5adfa1c5991a396663d13913018595479cc60"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-task-report-zh.png",
+      "sha256": "9eb402f9ce91ba59fad5c6db03c8671814992cbbb343f8ac28b35a63108da28f",
+      "bytes": 137887,
+      "at": "2026-10-07T11:50:11.238Z",
+      "stage": "a9d5adfa1c5991a396663d13913018595479cc60"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-task-report-mobile-en.png",
+      "sha256": "4c564f7431fabd318ece15e3f312eb40691ee97186c28eb2e08c7a8a6dd31d89",
+      "bytes": 151669,
+      "at": "2026-10-07T11:50:18.755Z",
+      "stage": "a9d5adfa1c5991a396663d13913018595479cc60"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-evidence-mobile-en.png",
+      "sha256": "ed0cdd34c717c79d8a740f1503890f94ad0b50b11a6c3da74ec2c38de07bf905",
+      "bytes": 157893,
+      "at": "2026-10-07T11:50:52.483Z",
+      "stage": "a9d5adfa1c5991a396663d13913018595479cc60"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-offline-replay-en.png",
+      "sha256": "0dda8c67d9815de9bb72833f9febb0ae7e2e7c9d9e55b68c1f4a865205d6fb0c",
+      "bytes": 204667,
+      "at": "2026-10-07T11:46:03.813Z",
+      "stage": "a9d5adfa1c5991a396663d13913018595479cc60"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/public-final-observation-en.png",
+      "sha256": "820f8affcdfed0269e1af466f88675969006cf0207dcb7b47c121279ef400de2",
+      "bytes": 320940,
+      "at": "2026-10-07T11:49:31.337Z",
+      "stage": "a9d5adfa1c5991a396663d13913018595479cc60"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-install.log",
+      "sha256": "17eff11d0d10999146b50a0edc525902e79a0a7265daeea2ea0da73fda03affc",
+      "bytes": 431,
+      "at": "2026-10-07T11:40:05.702Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-build.log",
+      "sha256": "3d4b5da4c95669638095e59f5bce88a52e6a51fc41ec3da98d7b49385f84ac40",
+      "bytes": 573,
+      "at": "2026-10-07T11:40:19.793Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-lint.log",
+      "sha256": "db85e22912bd7605f782dc2bd3ca9a08ba0c3c90073cb5e4197aa1d2485bd2a1",
+      "bytes": 71,
+      "at": "2026-10-07T11:40:20.216Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-types.log",
+      "sha256": "e832214b4eea9be8510fe2698048f7fadc9fba9b515258777b15897b71f28847",
+      "bytes": 104,
+      "at": "2026-10-07T11:40:38.802Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-license.log",
+      "sha256": "289f8c0cfc8306612a7e5916a9bf2f432159fdd8e8b47f0da1ee2be7b9933808",
+      "bytes": 250,
+      "at": "2026-10-07T11:46:41.987Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-export-audit.log",
+      "sha256": "4b02d4a3c23d969c46bd2041360f80bfcb1fe760d9db864009acdd710f9de601",
+      "bytes": 25,
+      "at": "2026-10-07T11:46:43.226Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/patch1-real-mainnet-replay.log",
+      "sha256": "7a1736625fab6c647dbb12cb7f21bb88e707b5f2f6a6549aa1b5c9b4af8e64f1",
+      "bytes": 492,
+      "at": "2026-10-07T11:40:44.474Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/independent-mainnet-consumption.json",
+      "sha256": "d45ca81afc24eafd704ae8cba5133b733450b597379d6a894b9d01b387ad6669",
+      "bytes": 7096,
+      "at": "2026-10-07T11:41:32.985Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/replay-new-match.log",
+      "sha256": "e83d9ee97936a26a0b784b9690d7007b64f07cb74a0f8624d7846318020c7313",
+      "bytes": 301,
+      "at": "2026-10-07T11:41:28.731Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/replay-new-mismatch.log",
+      "sha256": "9e36867b558d65ebb8a894cb38737fcfff0284b794ed12c0732d6d0a13ca03b4",
+      "bytes": 301,
+      "at": "2026-10-07T11:41:29.570Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/reconcile-first.log",
+      "sha256": "48d3359c73f98c21b663499111cd10843ddcfda7ce4f77dc49f5d19082e1dd88",
+      "bytes": 1334,
+      "at": "2026-10-07T11:41:30.471Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/reconcile-idempotent.log",
+      "sha256": "bbea33f76a645d58f19c5efc00abf010f8bec52759a262ce52101196577e9e46",
+      "bytes": 1342,
+      "at": "2026-10-07T11:41:31.314Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/reconcile-mismatch.log",
+      "sha256": "42974822bba282308b4f8945e63bf9ac6fca4ca1e52c04bc7d90be33f8ca77ad",
+      "bytes": 669,
+      "at": "2026-10-07T11:41:32.144Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    },
+    {
+      "path": "docs/arc-task-ledger/validation/ui-repair-20261007/reject-tamper.log",
+      "sha256": "2e203167c1a1dae7c33d4ecf49080b9302e62e5d5ef6bc85c51b24822b398f8a",
+      "bytes": 58,
+      "at": "2026-10-07T11:41:32.979Z",
+      "stage": "INDEPENDENT_EXPORT_FROM_bf0a91e86ffbe5c5686c04cfbd07192717859e98"
+    }
+  ]
+}

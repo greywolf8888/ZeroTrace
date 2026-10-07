@@ -1,0 +1,61 @@
+{
+  "at": "2026-10-07T10:24:21.822Z",
+  "mode": "GET_ONLY",
+  "rows": [
+    {
+      "id": "atl-api",
+      "sha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+      "plan": "nf-compute-10",
+      "status": {
+        "build": {
+          "status": "SUCCESS",
+          "lastTransitionTime": "2026-10-06T20:17:55.620Z"
+        },
+        "deployment": {
+          "status": "COMPLETED",
+          "reason": "DEPLOYING",
+          "lastTransitionTime": "2026-10-06T20:20:44.134Z"
+        }
+      }
+    },
+    {
+      "id": "atl-web",
+      "sha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+      "plan": "nf-compute-10",
+      "status": {
+        "build": {
+          "status": "SUCCESS",
+          "lastTransitionTime": "2026-10-06T20:17:51.202Z"
+        },
+        "deployment": {
+          "status": "COMPLETED",
+          "reason": "DEPLOYING",
+          "lastTransitionTime": "2026-10-06T20:21:59.127Z"
+        }
+      }
+    },
+    {
+      "id": "atl-migrate",
+      "sha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+      "plan": "nf-compute-10",
+      "suspended": true
+    },
+    {
+      "id": "atl-sync",
+      "sha": "60284c4667e4d6215d0aac5c6f1c92041fa85972",
+      "plan": "nf-compute-10",
+      "suspended": false
+    },
+    {
+      "id": "atl-postgres",
+      "status": "running"
+    }
+  ],
+  "usage": [
+    {
+      "currency": "usd",
+      "total": 0
+    }
+  ],
+  "scope": "existing resources only; no size, plan, credential or database change"
+}

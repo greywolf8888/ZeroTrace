@@ -25,3 +25,5 @@ docs/arc-task-ledger/validation/ui-audit-v121/rollout-preflight/public-*.json
 zerotrace_codex_rebuild/
 docs/arc-task-ledger/settlement-verifier/evidence/
 docs/arc-task-ledger/settlement-verifier/VALIDATION.json
+docs/arc-task-ledger/validation/ui-repair-20261007/*.json
+

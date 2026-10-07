@@ -1,0 +1,39 @@
+{
+  "at": "2026-10-07T11:44:40.282Z",
+  "mode": "final",
+  "health": {
+    "status": "UP",
+    "components": {
+      "readOnly": true,
+      "version": "atl-v1.2.1",
+      "interfaceVersion": "atl-ui-v1.4.1",
+      "verifierInterfaceVersion": "zasv-interface-v1",
+      "verifierRuleVersion": "zasv-rules-v1.0.0",
+      "schemaMigration": 7,
+      "releaseVersion": "2.0.0",
+      "sourceCommit": "a9d5adfa1c5991a396663d13913018595479cc60"
+    }
+  },
+  "reports": [
+    {
+      "id": "zasv_4e98a1e6aa85fde1870dd8002e68bef25e7f0528de83d08db5978f01c88fe148",
+      "bundleHash": "8f2e7979f0b618bc7703ba5ec0617429c663430c2f4b076ec8b99377e76f9ac5",
+      "sha256": "92b44023e36916724e3d71d6d693fc984efaed2ef6d6c5413364e81a621a44b3"
+    },
+    {
+      "id": "zasv_0036ede4021eec0190fa5fae5d68fd2c4908a29a77f40e60554b365226ed177f",
+      "bundleHash": "6d21dd2ed6c7487f984fb39fe693c2dea0c740bd9c751045c05300f161922e20",
+      "sha256": "713c2578f7fffe034a1da9d7048f869ea9b9d32efb20ea2081f785f3eb203672"
+    }
+  ],
+  "task": {
+    "path": "/v1/jobs/5042/0x73c617e808ed5c7ca41413dfc6ee940ddcbb0b8d/18?snapshotRunId=run_31d0b702348917f7416b0110b8ae4e64",
+    "resultHash": "736c85204e5961a85839116e34c4b76afd51b458993f5cd8423e42a95392e516",
+    "evidenceHash": "4da0e6e1b21a67af04cdd0069c402421f19f11f94d21ef4c11eebf2291ce70da",
+    "snapshotHash": "b24089a196ed7de1f623657e03e18a2d04b8d57269eb89c8e8b5ca410a61e61f"
+  },
+  "cursor": {
+    "oldCursorStillValid": true,
+    "pageHash": "c55a2896a4577ff7a2e0a82293530f6525aa62d41fc2d97443931c3e9d7d79a6"
+  }
+}

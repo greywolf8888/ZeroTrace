@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-07T12:00:46.897218+00:00",
+  "path": "F:\\ZeroTrace\\dist-public\\Arc_USDC_Verifier_UI_1_4_1_Cloud_20261007_r2.zip",
+  "bytes": 16175493,
+  "sha256": "d48f6176cad76acb387d62b01e909c4d879012ffb5ddd48008b8194ec8eb34cd",
+  "entries": 495,
+  "sourceCommit": "bf0a91e86ffbe5c5686c04cfbd07192717859e98",
+  "deploymentCommit": "a9d5adfa1c5991a396663d13913018595479cc60",
+  "crcVerified": true,
+  "eachEntrySha256Verified": true,
+  "sourcesUnchanged": true,
+  "scope": "Tested standalone sources plus explicit final delivery evidence; no credentials, database or installed dependencies"
+}

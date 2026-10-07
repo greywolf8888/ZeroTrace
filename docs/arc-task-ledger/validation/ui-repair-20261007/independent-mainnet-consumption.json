@@ -1,0 +1,67 @@
+{
+  "at": "2026-10-07T11:41:32.983Z",
+  "scope": "isolated self-test accounting namespace, not a business order or fund movement",
+  "matchedBundleSha256": "afc7df067dcb408a355b6a68d575c38d04c4970cbdf932a26b3b70e25f2a5aa3",
+  "results": [
+    {
+      "name": "replay-new-match",
+      "command": "node --import tsx examples/arc-task-ledger/replay-bundle.ts F:/ZeroTrace/.agent-state/arc-task-ledger/ui-repair-20261007/new-mainnet-matched-bundle.json",
+      "pid": 27356,
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "stdout": "{\"integrity\":\"PASS\",\"recomputation\":\"PASS\",\"reportId\":\"zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42\",\"factsHash\":\"f625dbf35e931a85b3a1c024c23a810b2cf6b7ed0677f1fd8b726a0d65d7be5e\",\"mainnetAuthenticity\":\"NOT_VERIFIED_OFFLINE\",\"sourceTrust\":\"DECLARED_SOURCE_NOT_AUTHENTICATED\"}",
+      "log": "replay-new-match.log",
+      "sha256": "e83d9ee97936a26a0b784b9690d7007b64f07cb74a0f8624d7846318020c7313"
+    },
+    {
+      "name": "replay-new-mismatch",
+      "command": "node --import tsx examples/arc-task-ledger/replay-bundle.ts F:/ZeroTrace/.agent-state/arc-task-ledger/ui-repair-20261007/new-mainnet-mismatched-bundle.json",
+      "pid": 44856,
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "stdout": "{\"integrity\":\"PASS\",\"recomputation\":\"PASS\",\"reportId\":\"zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3\",\"factsHash\":\"f625dbf35e931a85b3a1c024c23a810b2cf6b7ed0677f1fd8b726a0d65d7be5e\",\"mainnetAuthenticity\":\"NOT_VERIFIED_OFFLINE\",\"sourceTrust\":\"DECLARED_SOURCE_NOT_AUTHENTICATED\"}",
+      "log": "replay-new-mismatch.log",
+      "sha256": "9e36867b558d65ebb8a894cb38737fcfff0284b794ed12c0732d6d0a13ca03b4"
+    },
+    {
+      "name": "reconcile-first",
+      "command": "node --import tsx examples/arc-task-ledger/reconcile.ts F:/ZeroTrace/.agent-state/arc-task-ledger/ui-repair-20261007/new-mainnet-matched-bundle.json C:\\Users\\GreyWolf\\.codex\\worktrees\\arc-v121-export\\ZeroTrace\\.agent-state\\arc-task-ledger\\ui-repair-20261007/self-test-reconcile.sqlite ui_repair_self_test observed_receipt_11385",
+      "pid": 45608,
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "stdout": "{\"state\":\"ALLOCATED_LOCALLY\",\"inserted\":1,\"reportId\":\"zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42\",\"scope\":\"THIS_ACCOUNTING_NAMESPACE_ONLY\",\"evidence\":{\"reportId\":\"zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42\",\"bundleHash\":\"95275af51cf5accb2995672942d45c475752ac2734161fec1d102c2fc76ce594\",\"factsHash\":\"f625dbf35e931a85b3a1c024c23a810b2cf6b7ed0677f1fd8b726a0d65d7be5e\",\"transactionUrl\":\"https://explorer.arc.io/tx/0xfd8897f9b56de4e400f3eb3ef68585e702095203cbf038386cf81e57f2413817\"},\"accountingRows\":[{\"namespace\":\"ui_repair_self_test\",\"businessReference\":\"observed_receipt_11385\",\"movementId\":\"5042:0xfd8897f9b56de4e400f3eb3ef68585e702095203cbf038386cf81e57f2413817:1\",\"amountAtomic18\":\"113850000000000000000\",\"reportId\":\"zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42\",\"bundleHash\":\"95275af51cf5accb2995672942d45c475752ac2734161fec1d102c2fc76ce594\",\"factsHash\":\"f625dbf35e931a85b3a1c024c23a810b2cf6b7ed0677f1fd8b726a0d65d7be5e\",\"transactionUrl\":\"https://explorer.arc.io/tx/0xfd8897f9b56de4e400f3eb3ef68585e702095203cbf038386cf81e57f2413817\"}],\"mainnetAuthenticity\":\"NOT_VERIFIED_OFFLINE\"}",
+      "log": "reconcile-first.log",
+      "sha256": "48d3359c73f98c21b663499111cd10843ddcfda7ce4f77dc49f5d19082e1dd88"
+    },
+    {
+      "name": "reconcile-idempotent",
+      "command": "node --import tsx examples/arc-task-ledger/reconcile.ts F:/ZeroTrace/.agent-state/arc-task-ledger/ui-repair-20261007/new-mainnet-matched-bundle.json C:\\Users\\GreyWolf\\.codex\\worktrees\\arc-v121-export\\ZeroTrace\\.agent-state\\arc-task-ledger\\ui-repair-20261007/self-test-reconcile.sqlite ui_repair_self_test observed_receipt_11385",
+      "pid": 560,
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "stdout": "{\"state\":\"IDEMPOTENT_LOCAL_ALLOCATION\",\"inserted\":0,\"reportId\":\"zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42\",\"scope\":\"THIS_ACCOUNTING_NAMESPACE_ONLY\",\"evidence\":{\"reportId\":\"zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42\",\"bundleHash\":\"95275af51cf5accb2995672942d45c475752ac2734161fec1d102c2fc76ce594\",\"factsHash\":\"f625dbf35e931a85b3a1c024c23a810b2cf6b7ed0677f1fd8b726a0d65d7be5e\",\"transactionUrl\":\"https://explorer.arc.io/tx/0xfd8897f9b56de4e400f3eb3ef68585e702095203cbf038386cf81e57f2413817\"},\"accountingRows\":[{\"namespace\":\"ui_repair_self_test\",\"businessReference\":\"observed_receipt_11385\",\"movementId\":\"5042:0xfd8897f9b56de4e400f3eb3ef68585e702095203cbf038386cf81e57f2413817:1\",\"amountAtomic18\":\"113850000000000000000\",\"reportId\":\"zasv_1485e567bf4915101f132e0c16852f744bb1e721a890ea5ea6b170fe9e20ed42\",\"bundleHash\":\"95275af51cf5accb2995672942d45c475752ac2734161fec1d102c2fc76ce594\",\"factsHash\":\"f625dbf35e931a85b3a1c024c23a810b2cf6b7ed0677f1fd8b726a0d65d7be5e\",\"transactionUrl\":\"https://explorer.arc.io/tx/0xfd8897f9b56de4e400f3eb3ef68585e702095203cbf038386cf81e57f2413817\"}],\"mainnetAuthenticity\":\"NOT_VERIFIED_OFFLINE\"}",
+      "log": "reconcile-idempotent.log",
+      "sha256": "bbea33f76a645d58f19c5efc00abf010f8bec52759a262ce52101196577e9e46"
+    },
+    {
+      "name": "reconcile-mismatch",
+      "command": "node --import tsx examples/arc-task-ledger/reconcile.ts F:/ZeroTrace/.agent-state/arc-task-ledger/ui-repair-20261007/new-mainnet-mismatched-bundle.json C:\\Users\\GreyWolf\\.codex\\worktrees\\arc-v121-export\\ZeroTrace\\.agent-state\\arc-task-ledger\\ui-repair-20261007/self-test-reconcile.sqlite ui_repair_self_test mismatch_self_test",
+      "pid": 34860,
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "stdout": "{\"state\":\"NO_ALLOCATION\",\"outcome\":\"MISMATCHED\",\"reportId\":\"zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3\",\"evidence\":{\"reportId\":\"zasv_a4c739ec0638cf8319427c09aec94bd8f873b1ddefff0db056346795c9bc11c3\",\"bundleHash\":\"c22124fbb9caaf80770aa99fe1a203460d74b4656cae1faacdb2027638691577\",\"factsHash\":\"f625dbf35e931a85b3a1c024c23a810b2cf6b7ed0677f1fd8b726a0d65d7be5e\",\"transactionUrl\":\"https://explorer.arc.io/tx/0xfd8897f9b56de4e400f3eb3ef68585e702095203cbf038386cf81e57f2413817\"}}",
+      "log": "reconcile-mismatch.log",
+      "sha256": "42974822bba282308b4f8945e63bf9ac6fca4ca1e52c04bc7d90be33f8ca77ad"
+    },
+    {
+      "name": "reject-tamper",
+      "command": "node --import tsx examples/arc-task-ledger/replay-bundle.ts C:\\Users\\GreyWolf\\.codex\\worktrees\\arc-v121-export\\ZeroTrace\\.agent-state\\arc-task-ledger\\ui-repair-20261007/new-mainnet-tampered-copy.json",
+      "pid": 46344,
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "stdout": "",
+      "log": "reject-tamper.log",
+      "sha256": "2e203167c1a1dae7c33d4ecf49080b9302e62e5d5ef6bc85c51b24822b398f8a"
+    }
+  ]
+}

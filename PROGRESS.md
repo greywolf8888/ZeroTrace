@@ -2559,3 +2559,5 @@ The registered FFT/Flap error budgets and automatic discrepancy rules are in
 ## 2026-10-07 Arc 界面修复 atl-ui-v1.4.0
 
 英文默认与全局持久语言、报告/草稿边界、权限、可发现性、精确金额、手机与打印依据已落实。复用既有数据与标准能力，UI27—UI30仍有明确增量事项；不声明30项全部关闭。本轮当前检查与独立源码、部署收据统一见 docs/arc-task-ledger/settlement-verifier/UI_DELIVERY_20261007.md；旧 VALIDATION.json 和部署记录保留。本轮不改其它业务域，F盘既有数据库/原件/用户桌面改动保留。外部跳过项与正式完整取证仍未通过。
+
+本批最终界面 `atl-ui-v1.4.1` 已更新既有云端，源码bf0a91e、实际部署a9d5adf，API/网页/作业镜像一致、网页资产等同独立构建、旧公开包/#18/游标保持。实际新113.85 USDC原生交易、金额1反例、最终在线重查、浏览器复算、六进程独立对账/幂等/篡改检查已执行。详细分项、版本边界、0 USD查询时点与剩余UI增量见 docs/arc-task-ledger/settlement-verifier/UI_DEPLOYMENT_20261007.md。单来源声明不等于完整取证；申请未提交。
