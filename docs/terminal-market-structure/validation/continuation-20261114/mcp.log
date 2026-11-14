@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 test:mcp
+> vitest run scripts/readonly-mcp.test.ts
+
+
+ RUN  v4.1.10 C:/Users/GreyWolf/.codex/worktrees/zerotrace-handoff/ZeroTrace
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  19:26:48
+   Duration  293ms (transform 38ms, setup 0ms, import 76ms, tests 20ms, environment 0ms)
+

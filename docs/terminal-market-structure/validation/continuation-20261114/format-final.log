@@ -1,0 +1,14 @@
+
+> zerotrace@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+[warn] docs/terminal-market-structure/validation/continuation-20261114/audit-initial.json
+[warn] docs/terminal-market-structure/validation/continuation-20261114/audit-production.json
+[warn] docs/terminal-market-structure/validation/continuation-20261114/audit-updated.json
+[warn] docs/terminal-market-structure/validation/continuation-20261114/browser.json
+[warn] docs/terminal-market-structure/validation/continuation-20261114/desktop-sidecar.json
+[warn] docs/terminal-market-structure/validation/continuation-20261114/local-checks.json
+[warn] docs/terminal-market-structure/validation/continuation-20261114/production-dependencies.json
+[warn] docs/terminal-market-structure/validation/continuation-20261114/rust-format.json
+[warn] Code style issues found in 8 files. Run Prettier with --write to fix.

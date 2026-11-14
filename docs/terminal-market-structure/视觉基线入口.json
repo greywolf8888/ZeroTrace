@@ -1,0 +1,6 @@
+{
+  "schemaVersion": "zerotrace-visual-baseline-index-v1",
+  "manifest": "视觉基线_20261114.json",
+  "previousManifest": "视觉基线.json",
+  "note": "依赖更新后的新候选；旧清单和截图保留，仍验证源码指纹、祖先、截图字节和实际浏览器对照。"
+}

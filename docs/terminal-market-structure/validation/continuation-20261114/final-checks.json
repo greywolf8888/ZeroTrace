@@ -1,0 +1,8 @@
+{
+  "name": "format-final",
+  "command": "npm run format:check",
+  "startedAt": "2026-11-14T14:38:34.0721334Z",
+  "finishedAt": "2026-11-14T14:38:51.6718174Z",
+  "exitCode": 1,
+  "logSha256": "ED7BD06D882C5D4D40F05FE6D069E7F77AD51F10048A71A29F121E60572AC3D2"
+}

@@ -1,0 +1,58 @@
+{
+  "source": "ad38f0b42171af521b6d7a008e286f4126cc8870",
+  "actualScreenshots": [
+    {
+      "path": "docs/terminal-market-structure/validation/continuation-20261114/visual-current-r4/workbench-dark-scale125-physical1920x1080.png",
+      "bytes": 198464,
+      "sha256": "C0E3F03ABF09E1EC34366018CC7D2C256EAD1B41E0E3FD609818F5BA09E1C2CA",
+      "referenceSha256": "C0E3F03ABF09E1EC34366018CC7D2C256EAD1B41E0E3FD609818F5BA09E1C2CA",
+      "exactBytesMatch": true
+    },
+    {
+      "path": "docs/terminal-market-structure/validation/continuation-20261114/visual-current-r4/workbench-light-scale150-physical1920x1080.png",
+      "bytes": 218431,
+      "sha256": "32F69DB95A90871452876AB2DE56F03045708B565137A74081FDEE8B58CF0294",
+      "referenceSha256": "32F69DB95A90871452876AB2DE56F03045708B565137A74081FDEE8B58CF0294",
+      "exactBytesMatch": true
+    },
+    {
+      "path": "docs/terminal-market-structure/validation/continuation-20261114/visual-current-r4/workbench-dark-1920x1080.png",
+      "bytes": 155854,
+      "sha256": "96952267531A2553BDD83FFEFB03BE1D59EE779086A560C27AEF3C9806B5853B",
+      "referenceSha256": "96952267531A2553BDD83FFEFB03BE1D59EE779086A560C27AEF3C9806B5853B",
+      "exactBytesMatch": true
+    },
+    {
+      "path": "docs/terminal-market-structure/validation/continuation-20261114/visual-current-r4/provider-table-dark-long.png",
+      "bytes": 593816,
+      "sha256": "1EA2385A73E7B4FF5FF4500E9EFAE0F159B6BC9FAF47D9F4CEC5E23C7A06F994",
+      "referenceSha256": "1EA2385A73E7B4FF5FF4500E9EFAE0F159B6BC9FAF47D9F4CEC5E23C7A06F994",
+      "exactBytesMatch": true
+    },
+    {
+      "path": "docs/terminal-market-structure/validation/continuation-20261114/visual-current-r4/provider-down-light-1366x768.png",
+      "bytes": 141647,
+      "sha256": "4CB2F805658B7A4F1923866C6980CD002B4FCE3A9BEACB5607C21B5570E73D0C",
+      "referenceSha256": "4CB2F805658B7A4F1923866C6980CD002B4FCE3A9BEACB5607C21B5570E73D0C",
+      "exactBytesMatch": true
+    },
+    {
+      "path": "docs/terminal-market-structure/validation/continuation-20261114/visual-current-r4/workbench-light-1366x768.png",
+      "bytes": 139409,
+      "sha256": "F8A4525015C7A920F4A7CC5C69AC4BEE930C6401F43D67958B701B95107C5AAB",
+      "referenceSha256": "F8A4525015C7A920F4A7CC5C69AC4BEE930C6401F43D67958B701B95107C5AAB",
+      "exactBytesMatch": true
+    },
+    {
+      "path": "docs/terminal-market-structure/validation/continuation-20261114/visual-current-r4/workbench-dark-narrow-390x844.png",
+      "bytes": 65566,
+      "sha256": "7DA47A213652DB469B1C9E64EA55A193888E399A9370F532DD7B715A72D8DE69",
+      "referenceSha256": "7DA47A213652DB469B1C9E64EA55A193888E399A9370F532DD7B715A72D8DE69",
+      "exactBytesMatch": true
+    }
+  ],
+  "browserLogSha256": "28CF414E572CD282FCFFA887218B472FBB59AA8A9D5612BE884B758DE1FC9C4A",
+  "browserChecksPassed": 7,
+  "broadBrowserSource": "b998080d23382ab2cc72a19f47404378fe7b8988",
+  "broadBrowserChecksPassed": 49
+}

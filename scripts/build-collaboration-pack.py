@@ -21,6 +21,9 @@ FILES = (
     "docs/collaboration/CONSOLIDATION_RECEIPT_20261114.json",
     "docs/research/THIRD_PARTY_DEPENDENCIES.md", "infra/minio/Dockerfile", "infra/minio/README.zh-CN.md",
     "tests/unit/test_repository_collaboration.py", "scripts/build-collaboration-pack.py",
+    "docs/terminal-market-structure/视觉基线_20261114.json", "docs/terminal-market-structure/视觉基线入口.json",
+    "docs/terminal-market-structure/validation/continuation-20261114/SUMMARY.json",
+    "docs/terminal-market-structure/validation/continuation-20261114/visual-capture-r4.json",
 )
 
 

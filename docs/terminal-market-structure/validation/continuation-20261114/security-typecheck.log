@@ -1,0 +1,8 @@
+
+> zerotrace@0.1.0 typecheck
+> tsc -b --pretty false && tsc -p tsconfig.evals.json --noEmit --pretty false && tsc -p tsconfig.operational-gates.json --noEmit --pretty false
+
+packages/storage/src/raw-artifacts.ts(148,3): error TS2322: Type 'S3ObjectClient' is not assignable to type 'ObjectStoreClient'.
+  The types returned by 'putObject(...)' are incompatible between these types.
+    Type 'Promise<unknown>' is not assignable to type 'Promise<{ etag: string; versionId?: string | null; }>'.
+      Type 'unknown' is not assignable to type '{ etag: string; versionId?: string | null; }'.

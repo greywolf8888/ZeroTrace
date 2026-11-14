@@ -1,0 +1,1786 @@
+﻿2026-11-14T15:22:25.9922468Z Current runner version: '2.338.2'
+2026-11-14T15:22:25.9941447Z ##[group]Runner Image Provisioner
+2026-11-14T15:22:25.9942148Z Hosted Compute Agent
+2026-11-14T15:22:25.9942559Z Version: 20261103.629
+2026-11-14T15:22:25.9943006Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-14T15:22:25.9943599Z Build Date: 2026-11-03T17:26:59Z
+2026-11-14T15:22:25.9944071Z Worker ID: {4ed69449-8d55-4b20-905a-b619cc0a3207}
+2026-11-14T15:22:25.9944610Z Region: us-west-2
+2026-11-14T15:22:25.9945002Z Cloud: AWS
+2026-11-14T15:22:25.9945375Z ##[endgroup]
+2026-11-14T15:22:25.9946276Z ##[group]Operating System
+2026-11-14T15:22:25.9946705Z Ubuntu
+2026-11-14T15:22:25.9947088Z 26.04.1
+2026-11-14T15:22:25.9947441Z LTS
+2026-11-14T15:22:25.9948056Z ##[endgroup]
+2026-11-14T15:22:25.9948500Z ##[group]Runner Image
+2026-11-14T15:22:25.9948951Z Image: ubuntu-26.04
+2026-11-14T15:22:25.9949346Z Version: 20261111.82.6
+2026-11-14T15:22:25.9950236Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.82/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-14T15:22:25.9951471Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.82
+2026-11-14T15:22:25.9952175Z ##[endgroup]
+2026-11-14T15:22:25.9952946Z ##[group]GITHUB_TOKEN Permissions
+2026-11-14T15:22:25.9954597Z Contents: read
+2026-11-14T15:22:25.9955024Z Metadata: read
+2026-11-14T15:22:25.9955408Z ##[endgroup]
+2026-11-14T15:22:25.9956888Z Secret source: Actions
+2026-11-14T15:22:25.9957554Z Cache mode: write
+2026-11-14T15:22:25.9958266Z Prepare workflow directory
+2026-11-14T15:22:26.0229606Z Prepare all required actions
+2026-11-14T15:22:26.0267037Z Getting action download info
+2026-11-14T15:22:26.3668246Z Download action repository 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-11-14T15:22:27.6522196Z Download action repository 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020' (SHA:820762786026740c76f36085b0efc47a31fe5020)
+2026-11-14T15:22:27.7339229Z Download action repository 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' (SHA:043fb46d1a93c77aae656e7c1c64a875d1fc6a0a)
+2026-11-14T15:22:27.8914511Z Complete job name: Quality and contracts
+2026-11-14T15:22:27.9588052Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+2026-11-14T15:22:27.9589049Z with:
+2026-11-14T15:22:27.9589489Z   repository: greywolf8888/ZeroTrace
+2026-11-14T15:22:27.9593045Z   token: ***
+2026-11-14T15:22:27.9593470Z   ssh-strict: true
+2026-11-14T15:22:27.9593902Z   ssh-user: git
+2026-11-14T15:22:27.9594319Z   persist-credentials: true
+2026-11-14T15:22:27.9594783Z   clean: true
+2026-11-14T15:22:27.9595225Z   sparse-checkout-cone-mode: true
+2026-11-14T15:22:27.9595696Z   fetch-depth: 1
+2026-11-14T15:22:27.9596151Z   fetch-tags: false
+2026-11-14T15:22:27.9596586Z   show-progress: true
+2026-11-14T15:22:27.9597001Z   lfs: false
+2026-11-14T15:22:27.9597414Z   submodules: false
+2026-11-14T15:22:27.9598007Z   set-safe-directory: true
+2026-11-14T15:22:27.9598506Z   allow-unsafe-pr-checkout: false
+2026-11-14T15:22:27.9599210Z env:
+2026-11-14T15:22:27.9599631Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:22:27.9600122Z   POSTGRES_PORT: 55432
+2026-11-14T15:22:27.9600655Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:22:27.9601115Z   MINIO_PORT: 59000
+2026-11-14T15:22:27.9601596Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:22:27.9602092Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:22:27.9602763Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:22:27.9603330Z ##[endgroup]
+2026-11-14T15:22:31.2480752Z Syncing repository: greywolf8888/ZeroTrace
+2026-11-14T15:22:31.2482214Z ##[group]Getting Git version info
+2026-11-14T15:22:31.2482936Z Working directory is '/home/runner/work/ZeroTrace/ZeroTrace'
+2026-11-14T15:22:31.2483984Z [command]/usr/bin/git version
+2026-11-14T15:22:31.2484524Z git version 2.56.1
+2026-11-14T15:22:31.2485798Z ##[endgroup]
+2026-11-14T15:22:31.2490354Z Temporarily overriding HOME='/home/runner/work/_temp/59b824f0-7f89-41a2-b8c6-3f669735d3f6' before making global git config changes
+2026-11-14T15:22:31.2491779Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T15:22:31.2492524Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ZeroTrace/ZeroTrace
+2026-11-14T15:22:31.2977416Z Deleting the contents of '/home/runner/work/ZeroTrace/ZeroTrace'
+2026-11-14T15:22:31.2979121Z ##[group]Determining repository object format
+2026-11-14T15:22:31.2980275Z ##[endgroup]
+2026-11-14T15:22:31.2981209Z ##[group]Initializing the repository
+2026-11-14T15:22:31.2983959Z [command]/usr/bin/git init /home/runner/work/ZeroTrace/ZeroTrace
+2026-11-14T15:22:31.3150557Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-14T15:22:31.3151681Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-14T15:22:31.3152449Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-14T15:22:31.3152986Z hint: call:
+2026-11-14T15:22:31.3153494Z hint:
+2026-11-14T15:22:31.3154001Z hint: 	git config --global init.defaultBranch <name>
+2026-11-14T15:22:31.3154492Z hint:
+2026-11-14T15:22:31.3155292Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-14T15:22:31.3155981Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-14T15:22:31.3156548Z hint:
+2026-11-14T15:22:31.3156958Z hint: 	git branch -m <name>
+2026-11-14T15:22:31.3157403Z hint:
+2026-11-14T15:22:31.3158127Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-14T15:22:31.3177427Z Initialized empty Git repository in /home/runner/work/ZeroTrace/ZeroTrace/.git/
+2026-11-14T15:22:31.3186172Z [command]/usr/bin/git remote add origin https://github.com/greywolf8888/ZeroTrace
+2026-11-14T15:22:31.3260325Z ##[endgroup]
+2026-11-14T15:22:31.3261044Z ##[group]Disabling automatic garbage collection
+2026-11-14T15:22:31.3261875Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-14T15:22:31.3284947Z ##[endgroup]
+2026-11-14T15:22:31.3285613Z ##[group]Setting up auth
+2026-11-14T15:22:31.3288975Z Removing SSH command configuration
+2026-11-14T15:22:31.3293337Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T15:22:31.3311983Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T15:22:31.6310344Z Removing HTTP extra header
+2026-11-14T15:22:31.6315242Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T15:22:31.6343386Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T15:22:31.6517623Z Removing includeIf entries pointing to credentials config files
+2026-11-14T15:22:31.6522528Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T15:22:31.6544857Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T15:22:31.6720693Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-14T15:22:31.6748765Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/ZeroTrace/ZeroTrace/.git.path /home/runner/work/_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config
+2026-11-14T15:22:31.6769931Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/ZeroTrace/ZeroTrace/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config
+2026-11-14T15:22:31.6796267Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config
+2026-11-14T15:22:31.6816613Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config
+2026-11-14T15:22:31.6834482Z ##[endgroup]
+2026-11-14T15:22:31.6834969Z ##[group]Fetching the repository
+2026-11-14T15:22:31.6840237Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +58f8143ce1aa9515cbf34d90733af69754a88627:refs/remotes/pull/26/merge
+2026-11-14T15:22:32.4343179Z From https://github.com/greywolf8888/ZeroTrace
+2026-11-14T15:22:32.4343837Z  * [new ref]         58f8143ce1aa9515cbf34d90733af69754a88627 -> pull/26/merge
+2026-11-14T15:22:32.4347369Z ##[endgroup]
+2026-11-14T15:22:32.4348100Z ##[group]Determining the checkout info
+2026-11-14T15:22:32.4348683Z ##[endgroup]
+2026-11-14T15:22:32.4353223Z [command]/usr/bin/git sparse-checkout disable
+2026-11-14T15:22:32.4413158Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-14T15:22:32.4436905Z ##[group]Checking out the ref
+2026-11-14T15:22:32.4440490Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/26/merge
+2026-11-14T15:22:32.5203748Z Note: switching to 'refs/remotes/pull/26/merge'.
+2026-11-14T15:22:32.5204297Z 
+2026-11-14T15:22:32.5204512Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-14T15:22:32.5204945Z changes and commit them, and you can discard any commits you make in this
+2026-11-14T15:22:32.5205367Z state without impacting any branches by switching back to a branch.
+2026-11-14T15:22:32.5205579Z 
+2026-11-14T15:22:32.5205795Z If you want to create a new branch to retain commits you create, you may
+2026-11-14T15:22:32.5206214Z do so (now or later) by using -c with the switch command. Example:
+2026-11-14T15:22:32.5206458Z 
+2026-11-14T15:22:32.5206561Z   git switch -c <new-branch-name>
+2026-11-14T15:22:32.5206783Z 
+2026-11-14T15:22:32.5206927Z Or undo this operation with:
+2026-11-14T15:22:32.5207094Z 
+2026-11-14T15:22:32.5207228Z   git switch -
+2026-11-14T15:22:32.5207356Z 
+2026-11-14T15:22:32.5207936Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-14T15:22:32.5208190Z 
+2026-11-14T15:22:32.5208535Z HEAD is now at 58f8143 Merge b998080d23382ab2cc72a19f47404378fe7b8988 into a931eec96890dc3072f285f10f965251039943b4
+2026-11-14T15:22:32.5220491Z ##[endgroup]
+2026-11-14T15:22:32.5275418Z [command]/usr/bin/git log -1 --format=%H
+2026-11-14T15:22:32.5295296Z 58f8143ce1aa9515cbf34d90733af69754a88627
+2026-11-14T15:22:32.5503103Z ##[group]Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+2026-11-14T15:22:32.5503461Z with:
+2026-11-14T15:22:32.5503700Z   node-version-file: .nvmrc
+2026-11-14T15:22:32.5504147Z   cache: npm
+2026-11-14T15:22:32.5504431Z   check-latest: false
+2026-11-14T15:22:32.5506483Z   token: ***
+2026-11-14T15:22:32.5506703Z   package-manager-cache: true
+2026-11-14T15:22:32.5506953Z env:
+2026-11-14T15:22:32.5507179Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:22:32.5507410Z   POSTGRES_PORT: 55432
+2026-11-14T15:22:32.5507860Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:22:32.5508097Z   MINIO_PORT: 59000
+2026-11-14T15:22:32.5508319Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:22:32.5508572Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:22:32.5508882Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:22:32.5509204Z ##[endgroup]
+2026-11-14T15:22:32.6444724Z Node version file is not JSON file
+2026-11-14T15:22:32.6445171Z Resolved .nvmrc as 24.11.1
+2026-11-14T15:22:32.6462156Z Attempting to download 24.11.1...
+2026-11-14T15:22:33.3060205Z Acquiring 24.11.1 - x64 from https://github.com/actions/node-versions/releases/download/24.11.1-19282993875/node-24.11.1-linux-x64.tar.gz
+2026-11-14T15:22:33.9208945Z Extracting ...
+2026-11-14T15:22:33.9350989Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/176572be-2064-420e-9006-1a1c3f59ef65 -f /home/runner/work/_temp/bbd03fc2-6ae7-40a5-ae4b-ef95cef31994
+2026-11-14T15:22:34.5406047Z Adding to the cache ...
+2026-11-14T15:22:35.5246445Z ##[group]Environment details
+2026-11-14T15:22:35.7950432Z node: v24.11.1
+2026-11-14T15:22:35.7950786Z npm: 11.6.2
+2026-11-14T15:22:35.7951107Z yarn: 1.22.22
+2026-11-14T15:22:35.7951595Z ##[endgroup]
+2026-11-14T15:22:35.7962085Z [command]/opt/hostedtoolcache/node/24.11.1/x64/bin/npm config get cache
+2026-11-14T15:22:35.8629954Z /home/runner/.npm
+2026-11-14T15:22:36.1143558Z npm cache is not found
+2026-11-14T15:22:36.1263745Z ##[group]Run npm ci
+2026-11-14T15:22:36.1264057Z [36;1mnpm ci[0m
+2026-11-14T15:22:36.1288789Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:22:36.1289114Z env:
+2026-11-14T15:22:36.1289390Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:22:36.1289649Z   POSTGRES_PORT: 55432
+2026-11-14T15:22:36.1289901Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:22:36.1290134Z   MINIO_PORT: 59000
+2026-11-14T15:22:36.1290344Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:22:36.1290646Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:22:36.1290991Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:22:36.1291300Z ##[endgroup]
+2026-11-14T15:22:37.6818628Z npm warn deprecated read-package-json@6.0.4: This package is no longer supported. Please use @npmcli/package-json instead.
+2026-11-14T15:22:37.7625513Z npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+2026-11-14T15:22:40.2831729Z npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-11-14T15:22:40.3053756Z npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-11-14T15:23:16.5748822Z 
+2026-11-14T15:23:16.5750103Z added 734 packages, and audited 783 packages in 40s
+2026-11-14T15:23:16.5751610Z 
+2026-11-14T15:23:16.5752520Z 145 packages are looking for funding
+2026-11-14T15:23:16.5753164Z   run `npm fund` for details
+2026-11-14T15:23:16.6938096Z 
+2026-11-14T15:23:16.6939123Z 12 moderate severity vulnerabilities
+2026-11-14T15:23:16.6939809Z 
+2026-11-14T15:23:16.6940107Z To address issues that do not require attention, run:
+2026-11-14T15:23:16.6940519Z   npm audit fix
+2026-11-14T15:23:16.6940769Z 
+2026-11-14T15:23:16.6940988Z To address all issues (including breaking changes), run:
+2026-11-14T15:23:16.6941392Z   npm audit fix --force
+2026-11-14T15:23:16.6941554Z 
+2026-11-14T15:23:16.6941735Z Run `npm audit` for details.
+2026-11-14T15:23:16.7395374Z ##[group]Run docker compose config --quiet
+2026-11-14T15:23:16.7395714Z [36;1mdocker compose config --quiet[0m
+2026-11-14T15:23:16.7414370Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:23:16.7414764Z env:
+2026-11-14T15:23:16.7415036Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:23:16.7415432Z   POSTGRES_PORT: 55432
+2026-11-14T15:23:16.7415704Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:23:16.7415943Z   MINIO_PORT: 59000
+2026-11-14T15:23:16.7416164Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:23:16.7416423Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:23:16.7416746Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:23:16.7417052Z ##[endgroup]
+2026-11-14T15:23:19.1979996Z ##[group]Run npm run format:check
+2026-11-14T15:23:19.1980326Z [36;1mnpm run format:check[0m
+2026-11-14T15:23:19.1998399Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:23:19.1998676Z env:
+2026-11-14T15:23:19.1998990Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:23:19.1999255Z   POSTGRES_PORT: 55432
+2026-11-14T15:23:19.1999497Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:23:19.1999764Z   MINIO_PORT: 59000
+2026-11-14T15:23:19.2000123Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:23:19.2000389Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:23:19.2000706Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:23:19.2001003Z ##[endgroup]
+2026-11-14T15:23:19.2692920Z 
+2026-11-14T15:23:19.2693861Z > zerotrace@0.1.0 format:check
+2026-11-14T15:23:19.2694286Z > prettier --check .
+2026-11-14T15:23:19.2694446Z 
+2026-11-14T15:23:19.3357586Z Checking formatting...
+2026-11-14T15:23:30.2987974Z All matched files use Prettier code style!
+2026-11-14T15:23:30.3279874Z ##[group]Run npm run lint
+2026-11-14T15:23:30.3280189Z [36;1mnpm run lint[0m
+2026-11-14T15:23:30.3298607Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:23:30.3298891Z env:
+2026-11-14T15:23:30.3299141Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:23:30.3299407Z   POSTGRES_PORT: 55432
+2026-11-14T15:23:30.3299658Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:23:30.3299928Z   MINIO_PORT: 59000
+2026-11-14T15:23:30.3300160Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:23:30.3300429Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:23:30.3300750Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:23:30.3301067Z ##[endgroup]
+2026-11-14T15:23:30.3969344Z 
+2026-11-14T15:23:30.3970017Z > zerotrace@0.1.0 lint
+2026-11-14T15:23:30.3970536Z > eslint . --max-warnings=0
+2026-11-14T15:23:30.3970703Z 
+2026-11-14T15:23:42.6638959Z ##[group]Run npm run typecheck
+2026-11-14T15:23:42.6639350Z [36;1mnpm run typecheck[0m
+2026-11-14T15:23:42.6664751Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:23:42.6665227Z env:
+2026-11-14T15:23:42.6665552Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:23:42.6665933Z   POSTGRES_PORT: 55432
+2026-11-14T15:23:42.6666282Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:23:42.6666611Z   MINIO_PORT: 59000
+2026-11-14T15:23:42.6666902Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:23:42.6667325Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:23:42.6668049Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:23:42.6668515Z ##[endgroup]
+2026-11-14T15:23:42.7355740Z 
+2026-11-14T15:23:42.7356486Z > zerotrace@0.1.0 typecheck
+2026-11-14T15:23:42.7357289Z > tsc -b --pretty false && tsc -p tsconfig.evals.json --noEmit --pretty false && tsc -p tsconfig.operational-gates.json --noEmit --pretty false
+2026-11-14T15:23:42.7357820Z 
+2026-11-14T15:24:06.9762876Z ##[group]Run docker compose -p zerotrace-ci up -d --build postgres clickhouse minio
+2026-11-14T15:24:06.9763400Z [36;1mdocker compose -p zerotrace-ci up -d --build postgres clickhouse minio[0m
+2026-11-14T15:24:06.9763965Z [36;1mtimeout 90 bash -c 'until docker compose -p zerotrace-ci exec -T postgres pg_isready -U zerotrace -d zerotrace; do sleep 2; done'[0m
+2026-11-14T15:24:06.9764618Z [36;1mtimeout 90 bash -c 'until curl -fsS http://127.0.0.1:58123/ping | grep -q Ok; do sleep 2; done'[0m
+2026-11-14T15:24:06.9765152Z [36;1mtimeout 90 bash -c 'until curl -fsS http://127.0.0.1:59000/minio/health/live >/dev/null; do sleep 2; done'[0m
+2026-11-14T15:24:06.9784650Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:24:06.9784950Z env:
+2026-11-14T15:24:06.9785185Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:24:06.9785449Z   POSTGRES_PORT: 55432
+2026-11-14T15:24:06.9785687Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:24:06.9785933Z   MINIO_PORT: 59000
+2026-11-14T15:24:06.9786270Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:24:06.9786497Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:24:06.9786830Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:24:06.9787177Z ##[endgroup]
+2026-11-14T15:24:09.7534067Z  Image zerotrace-postgres:17.10 Building 
+2026-11-14T15:24:09.7534816Z  Image zerotrace-ci-minio Building 
+2026-11-14T15:24:09.7535478Z  Image zerotrace-clickhouse:26.7.3.19 Building 
+2026-11-14T15:24:09.8190217Z #1 [internal] load local bake definitions
+2026-11-14T15:24:09.9233110Z #1 reading from stdin 1.55kB done
+2026-11-14T15:24:09.9233816Z #1 DONE 0.0s
+2026-11-14T15:24:09.9233976Z 
+2026-11-14T15:24:09.9234303Z #2 [postgres internal] load build definition from Dockerfile
+2026-11-14T15:24:09.9235112Z #2 transferring dockerfile: 30B
+2026-11-14T15:24:10.0806581Z #2 transferring dockerfile: 3.65kB done
+2026-11-14T15:24:10.0807191Z #2 DONE 0.0s
+2026-11-14T15:24:10.0807393Z 
+2026-11-14T15:24:10.0807893Z #3 [minio internal] load build definition from Dockerfile
+2026-11-14T15:24:10.0808514Z #3 transferring dockerfile: 1.61kB done
+2026-11-14T15:24:10.0808840Z #3 DONE 0.0s
+2026-11-14T15:24:10.0809047Z 
+2026-11-14T15:24:10.0809470Z #4 [clickhouse internal] load metadata for docker.io/clickhouse/clickhouse-server:26.7.3.19-alpine
+2026-11-14T15:24:10.2964864Z #4 ...
+2026-11-14T15:24:10.2965312Z 
+2026-11-14T15:24:10.2965739Z #5 [auth] clickhouse/clickhouse-server:pull token for registry-1.docker.io
+2026-11-14T15:24:10.2966124Z #5 DONE 0.0s
+2026-11-14T15:24:10.2966236Z 
+2026-11-14T15:24:10.2966461Z #6 [auth] library/postgres:pull token for registry-1.docker.io
+2026-11-14T15:24:10.2966776Z #6 DONE 0.0s
+2026-11-14T15:24:10.2966907Z 
+2026-11-14T15:24:10.2967082Z #7 [auth] library/debian:pull token for registry-1.docker.io
+2026-11-14T15:24:10.2968135Z #7 DONE 0.0s
+2026-11-14T15:24:10.2968244Z 
+2026-11-14T15:24:10.2968457Z #8 [auth] library/golang:pull token for registry-1.docker.io
+2026-11-14T15:24:10.2968746Z #8 DONE 0.0s
+2026-11-14T15:24:10.4467108Z 
+2026-11-14T15:24:10.4468900Z #9 [minio internal] load metadata for docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+2026-11-14T15:24:10.6664824Z #9 DONE 0.7s
+2026-11-14T15:24:10.6665038Z 
+2026-11-14T15:24:10.6665541Z #10 [minio internal] load metadata for docker.io/library/golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea
+2026-11-14T15:24:10.7729981Z #10 DONE 0.8s
+2026-11-14T15:24:10.7730441Z 
+2026-11-14T15:24:10.7734384Z #11 [minio internal] load .dockerignore
+2026-11-14T15:24:10.7736266Z #11 transferring context: 2B done
+2026-11-14T15:24:10.7736841Z #11 DONE 0.0s
+2026-11-14T15:24:10.7736989Z 
+2026-11-14T15:24:10.7737918Z #12 [minio stage-1 1/5] FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+2026-11-14T15:24:10.7739404Z #12 resolve docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc done
+2026-11-14T15:24:10.8934717Z #12 ...
+2026-11-14T15:24:10.8935798Z 
+2026-11-14T15:24:10.8936632Z #4 [clickhouse internal] load metadata for docker.io/clickhouse/clickhouse-server:26.7.3.19-alpine
+2026-11-14T15:24:10.8937845Z #4 DONE 0.8s
+2026-11-14T15:24:10.8938170Z 
+2026-11-14T15:24:10.8938483Z #13 [postgres internal] load .dockerignore
+2026-11-14T15:24:10.8939073Z #13 transferring context: 153B done
+2026-11-14T15:24:10.8940374Z #13 DONE 0.0s
+2026-11-14T15:24:10.8940685Z 
+2026-11-14T15:24:10.8941111Z #14 [postgres internal] load metadata for docker.io/library/postgres:17.10-alpine
+2026-11-14T15:24:10.8941682Z #14 DONE 0.9s
+2026-11-14T15:24:10.8941883Z 
+2026-11-14T15:24:10.8942225Z #15 [clickhouse internal] load build context
+2026-11-14T15:24:10.8943310Z #15 transferring context: 6.67kB 0.0s done
+2026-11-14T15:24:10.8943718Z #15 DONE 0.0s
+2026-11-14T15:24:10.8943883Z 
+2026-11-14T15:24:10.8944301Z #16 [postgres internal] load build context
+2026-11-14T15:24:10.8944676Z #16 transferring context: 307.62kB 0.0s done
+2026-11-14T15:24:10.8944971Z #16 DONE 0.0s
+2026-11-14T15:24:10.8945157Z 
+2026-11-14T15:24:10.8945592Z #12 [minio stage-1 1/5] FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+2026-11-14T15:24:11.0226481Z #12 sha256:dd051e1b8c92ff101fa3071ab97ea4924885942f15644e01c3dc095764e863e3 28.25MB / 28.25MB 0.2s done
+2026-11-14T15:24:11.1742737Z #12 extracting sha256:dd051e1b8c92ff101fa3071ab97ea4924885942f15644e01c3dc095764e863e3
+2026-11-14T15:24:11.9847323Z #12 extracting sha256:dd051e1b8c92ff101fa3071ab97ea4924885942f15644e01c3dc095764e863e3 0.9s done
+2026-11-14T15:24:11.9848058Z #12 DONE 1.1s
+2026-11-14T15:24:11.9848202Z 
+2026-11-14T15:24:11.9848790Z #17 [minio build 1/3] FROM docker.io/library/golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea
+2026-11-14T15:24:11.9851742Z #17 resolve docker.io/library/golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea done
+2026-11-14T15:24:11.9852839Z #17 sha256:99e3c19f61afa276fee63762bb48a810aed9ce1cee10e36d673d620a43d80996 126B / 126B 0.1s done
+2026-11-14T15:24:11.9853874Z #17 sha256:83d129a974dd319fef9f5f496bf3a04194c14ba0fbf95635c2d5577185dd0b2f 71.22MB / 71.22MB 0.5s done
+2026-11-14T15:24:11.9854855Z #17 sha256:ee2355d89db5dc60ead259abab71498d78f1f160c7d667f78cb5a53df85b027f 92.63MB / 92.63MB 0.8s done
+2026-11-14T15:24:11.9855724Z #17 sha256:d6c30932f8d3f5798b438cce12cdf6cebb1717b52f51e22ff010b4d86667031d 64.43MB / 64.43MB 0.5s done
+2026-11-14T15:24:11.9856648Z #17 sha256:338554e9113fa6731ba588cb8f45e85b3e3fe7ada531ee7d7b0bc9291d616727 23.87MB / 23.87MB 0.3s done
+2026-11-14T15:24:11.9857552Z #17 sha256:69245854ad5855991d16224f6abf55855d2d73922785206adea9c5c5988434a0 48.53MB / 48.53MB 0.3s done
+2026-11-14T15:24:11.9858659Z #17 extracting sha256:69245854ad5855991d16224f6abf55855d2d73922785206adea9c5c5988434a0
+2026-11-14T15:24:13.0459140Z #17 extracting sha256:69245854ad5855991d16224f6abf55855d2d73922785206adea9c5c5988434a0 1.4s done
+2026-11-14T15:24:13.0460508Z #17 extracting sha256:338554e9113fa6731ba588cb8f45e85b3e3fe7ada531ee7d7b0bc9291d616727
+2026-11-14T15:24:13.5189907Z #17 extracting sha256:338554e9113fa6731ba588cb8f45e85b3e3fe7ada531ee7d7b0bc9291d616727 0.5s done
+2026-11-14T15:24:13.5191121Z #17 extracting sha256:d6c30932f8d3f5798b438cce12cdf6cebb1717b52f51e22ff010b4d86667031d
+2026-11-14T15:24:15.2431441Z #17 extracting sha256:d6c30932f8d3f5798b438cce12cdf6cebb1717b52f51e22ff010b4d86667031d 1.7s done
+2026-11-14T15:24:15.2432330Z #17 extracting sha256:ee2355d89db5dc60ead259abab71498d78f1f160c7d667f78cb5a53df85b027f
+2026-11-14T15:24:15.4684392Z #17 ...
+2026-11-14T15:24:15.4691915Z 
+2026-11-14T15:24:15.4693590Z #18 [postgres postgres 1/2] FROM docker.io/library/postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+2026-11-14T15:24:15.4698121Z #18 resolve docker.io/library/postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193 0.0s done
+2026-11-14T15:24:15.4700177Z #18 sha256:e5d94dfa43d98d14ce57df1e1153c844a9821060617a406a9e12d6244c52cca0 6.11kB / 6.11kB 0.1s done
+2026-11-14T15:24:15.4702197Z #18 sha256:7bd7d677a4b5884c740053d49236614c981f2539973c1871952c630330d08d13 183B / 183B 0.2s done
+2026-11-14T15:24:15.4704428Z #18 sha256:4635b503f9b250a73c2aa3422617c92e2abd15a2afad5897b1a40f47a68f4645 171B / 171B 0.1s done
+2026-11-14T15:24:15.4705993Z #18 sha256:5635b2c7f90fc2678bba09ea4dda939c3532f90752e59f619715f53bc339a4b7 128B / 128B 0.1s done
+2026-11-14T15:24:15.4707891Z #18 sha256:b1aad2d5f3997590e1111b4ad0cf683b22c3c80d36c0a38c8b7b7fc0ac629ae4 9.95kB / 9.95kB 0.1s done
+2026-11-14T15:24:15.4711343Z #18 sha256:9cf33c25d5751340c4709b95ae640acc6810a14a4ad82d65713207e33cb1e351 116B / 116B 0.1s done
+2026-11-14T15:24:15.4714339Z #18 sha256:ae8ed6ddf5d2ec285fe34a85144b20a3a954fdc5c9c44ce112ae843e856bea75 112.38MB / 112.38MB 1.0s done
+2026-11-14T15:24:15.4718075Z #18 sha256:34a3e2652f22e7633720754b8553895b8159c317755567e6999bfaf2970d94f1 900.25kB / 900.25kB 0.1s done
+2026-11-14T15:24:15.4720813Z #18 sha256:603858638485a3e221e5708c98c63b116f767078c8625df74b4eb8282c25985e 970B / 970B 0.1s done
+2026-11-14T15:24:15.4721981Z #18 extracting sha256:603858638485a3e221e5708c98c63b116f767078c8625df74b4eb8282c25985e done
+2026-11-14T15:24:15.4723426Z #18 extracting sha256:34a3e2652f22e7633720754b8553895b8159c317755567e6999bfaf2970d94f1 0.0s done
+2026-11-14T15:24:15.4725002Z #18 extracting sha256:9cf33c25d5751340c4709b95ae640acc6810a14a4ad82d65713207e33cb1e351 done
+2026-11-14T15:24:15.4726354Z #18 extracting sha256:ae8ed6ddf5d2ec285fe34a85144b20a3a954fdc5c9c44ce112ae843e856bea75 2.3s done
+2026-11-14T15:24:15.4728322Z #18 extracting sha256:b1aad2d5f3997590e1111b4ad0cf683b22c3c80d36c0a38c8b7b7fc0ac629ae4 done
+2026-11-14T15:24:15.4729520Z #18 extracting sha256:5635b2c7f90fc2678bba09ea4dda939c3532f90752e59f619715f53bc339a4b7 done
+2026-11-14T15:24:15.4731389Z #18 extracting sha256:4635b503f9b250a73c2aa3422617c92e2abd15a2afad5897b1a40f47a68f4645 done
+2026-11-14T15:24:15.4732362Z #18 extracting sha256:e5d94dfa43d98d14ce57df1e1153c844a9821060617a406a9e12d6244c52cca0 done
+2026-11-14T15:24:15.4734065Z #18 extracting sha256:7bd7d677a4b5884c740053d49236614c981f2539973c1871952c630330d08d13 done
+2026-11-14T15:24:15.4734721Z #18 DONE 4.6s
+2026-11-14T15:24:15.6175355Z 
+2026-11-14T15:24:15.6179419Z #19 [minio stage-1 2/5] RUN apt-get update     && apt-get install --yes --no-install-recommends ca-certificates curl     && rm -rf /var/lib/apt/lists/*
+2026-11-14T15:24:15.6180770Z #19 0.244 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+2026-11-14T15:24:15.6182000Z #19 0.270 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+2026-11-14T15:24:15.6183245Z #19 0.282 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [34.8 kB]
+2026-11-14T15:24:15.6184243Z #19 0.323 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8790 kB]
+2026-11-14T15:24:15.6185234Z #19 0.406 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+2026-11-14T15:24:15.6186315Z #19 0.422 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [370 kB]
+2026-11-14T15:24:15.6187081Z #19 1.273 Fetched 9409 kB in 1s (8998 kB/s)
+2026-11-14T15:24:15.6187540Z #19 1.273 Reading package lists...
+2026-11-14T15:24:15.6188912Z #19 1.784 Reading package lists...
+2026-11-14T15:24:15.6189528Z #19 2.289 Building dependency tree...
+2026-11-14T15:24:15.6190040Z #19 2.406 Reading state information...
+2026-11-14T15:24:15.6190777Z #19 2.531 The following additional packages will be installed:
+2026-11-14T15:24:15.6191666Z #19 2.531   libbrotli1 libcurl4 libgssapi-krb5-2 libk5crypto3 libkeyutils1 libkrb5-3
+2026-11-14T15:24:15.6192597Z #19 2.531   libkrb5support0 libldap-2.5-0 libnghttp2-14 libpsl5 librtmp1 libsasl2-2
+2026-11-14T15:24:15.6193426Z #19 2.531   libsasl2-modules-db libssh2-1 libssl3 openssl
+2026-11-14T15:24:15.6194028Z #19 2.532 Suggested packages:
+2026-11-14T15:24:15.6194580Z #19 2.532   krb5-doc krb5-user
+2026-11-14T15:24:15.6195291Z #19 2.532 Recommended packages:
+2026-11-14T15:24:15.6195927Z #19 2.532   krb5-locales libldap-common publicsuffix libsasl2-modules
+2026-11-14T15:24:15.6196691Z #19 2.622 The following NEW packages will be installed:
+2026-11-14T15:24:15.6197473Z #19 2.623   ca-certificates curl libbrotli1 libcurl4 libgssapi-krb5-2 libk5crypto3
+2026-11-14T15:24:15.6198809Z #19 2.623   libkeyutils1 libkrb5-3 libkrb5support0 libldap-2.5-0 libnghttp2-14 libpsl5
+2026-11-14T15:24:15.6199674Z #19 2.623   librtmp1 libsasl2-2 libsasl2-modules-db libssh2-1 libssl3 openssl
+2026-11-14T15:24:15.6200489Z #19 2.654 0 upgraded, 18 newly installed, 0 to remove and 0 not upgraded.
+2026-11-14T15:24:15.6201187Z #19 2.654 Need to get 5846 kB of archives.
+2026-11-14T15:24:15.6201921Z #19 2.654 After this operation, 14.8 MB of additional disk space will be used.
+2026-11-14T15:24:15.6203011Z #19 2.654 Get:1 http://deb.debian.org/debian-security bookworm-security/main amd64 libssl3 amd64 3.0.22-1~deb12u2 [2040 kB]
+2026-11-14T15:24:15.6204222Z #19 2.704 Get:2 http://deb.debian.org/debian-security bookworm-security/main amd64 openssl amd64 3.0.22-1~deb12u2 [1442 kB]
+2026-11-14T15:24:15.6205406Z #19 2.709 Get:3 http://deb.debian.org/debian-security bookworm-security/main amd64 ca-certificates all 20250419~deb12u2 [161 kB]
+2026-11-14T15:24:15.6206739Z #19 2.709 Get:4 http://deb.debian.org/debian-security bookworm-security/main amd64 libbrotli1 amd64 1.0.9-2+deb12u1 [275 kB]
+2026-11-14T15:24:15.6208191Z #19 2.709 Get:5 http://deb.debian.org/debian bookworm/main amd64 libkrb5support0 amd64 1.20.1-2+deb12u5 [33.2 kB]
+2026-11-14T15:24:15.6209315Z #19 2.709 Get:6 http://deb.debian.org/debian bookworm/main amd64 libk5crypto3 amd64 1.20.1-2+deb12u5 [79.7 kB]
+2026-11-14T15:24:15.6210536Z #19 2.710 Get:7 http://deb.debian.org/debian bookworm/main amd64 libkeyutils1 amd64 1.6.3-2 [8808 B]
+2026-11-14T15:24:15.6211612Z #19 2.711 Get:8 http://deb.debian.org/debian bookworm/main amd64 libkrb5-3 amd64 1.20.1-2+deb12u5 [332 kB]
+2026-11-14T15:24:15.6212726Z #19 2.712 Get:9 http://deb.debian.org/debian bookworm/main amd64 libgssapi-krb5-2 amd64 1.20.1-2+deb12u5 [135 kB]
+2026-11-14T15:24:15.6213972Z #19 2.713 Get:10 http://deb.debian.org/debian-security bookworm-security/main amd64 libsasl2-modules-db amd64 2.1.28+dfsg-10+deb12u1 [20.5 kB]
+2026-11-14T15:24:15.6215435Z #19 2.713 Get:11 http://deb.debian.org/debian-security bookworm-security/main amd64 libsasl2-2 amd64 2.1.28+dfsg-10+deb12u1 [59.9 kB]
+2026-11-14T15:24:15.6216771Z #19 2.717 Get:12 http://deb.debian.org/debian bookworm/main amd64 libldap-2.5-0 amd64 2.5.13+dfsg-5 [183 kB]
+2026-11-14T15:24:15.6218844Z #19 2.719 Get:13 http://deb.debian.org/debian bookworm/main amd64 libnghttp2-14 amd64 1.52.0-1+deb12u3 [72.4 kB]
+2026-11-14T15:24:15.6221255Z #19 2.719 Get:14 http://deb.debian.org/debian bookworm/main amd64 libpsl5 amd64 0.21.2-1 [58.7 kB]
+2026-11-14T15:24:15.6222625Z #19 2.719 Get:15 http://deb.debian.org/debian bookworm/main amd64 librtmp1 amd64 2.4+20151223.gitfa8646d.1-2+b2 [60.8 kB]
+2026-11-14T15:24:15.6229013Z #19 2.719 Get:16 http://deb.debian.org/debian-security bookworm-security/main amd64 libssh2-1 amd64 1.10.0-3+deb12u1 [176 kB]
+2026-11-14T15:24:15.6230173Z #19 2.723 Get:17 http://deb.debian.org/debian bookworm/main amd64 libcurl4 amd64 7.88.1-10+deb12u15 [392 kB]
+2026-11-14T15:24:15.6231456Z #19 2.725 Get:18 http://deb.debian.org/debian bookworm/main amd64 curl amd64 7.88.1-10+deb12u15 [316 kB]
+2026-11-14T15:24:15.6232474Z #19 2.814 debconf: delaying package configuration, since apt-utils is not installed
+2026-11-14T15:24:15.6233176Z #19 2.835 Fetched 5846 kB in 0s (60.1 MB/s)
+2026-11-14T15:24:15.6234026Z #19 2.850 Selecting previously unselected package libssl3:amd64.
+2026-11-14T15:24:15.6234579Z #19 2.850 (Reading database ... 
+2026-11-14T15:24:15.6235147Z (Reading database ... 5%
+2026-11-14T15:24:15.6235605Z (Reading database ... 10%
+2026-11-14T15:24:15.6236074Z (Reading database ... 15%
+2026-11-14T15:24:15.6236523Z (Reading database ... 20%
+2026-11-14T15:24:15.6236956Z (Reading database ... 25%
+2026-11-14T15:24:15.6238185Z (Reading database ... 30%
+2026-11-14T15:24:15.6239737Z (Reading database ... 35%
+2026-11-14T15:24:15.6240207Z (Reading database ... 40%
+2026-11-14T15:24:15.6240645Z (Reading database ... 45%
+2026-11-14T15:24:15.6241112Z (Reading database ... 50%
+2026-11-14T15:24:15.6241585Z (Reading database ... 55%
+2026-11-14T15:24:15.6242145Z (Reading database ... 60%
+2026-11-14T15:24:15.6243366Z (Reading database ... 65%
+2026-11-14T15:24:15.6243796Z (Reading database ... 70%
+2026-11-14T15:24:15.6244264Z (Reading database ... 75%
+2026-11-14T15:24:15.6244837Z (Reading database ... 80%
+2026-11-14T15:24:15.6245513Z (Reading database ... 85%
+2026-11-14T15:24:15.6246834Z (Reading database ... 90%
+2026-11-14T15:24:15.6247325Z (Reading database ... 95%
+2026-11-14T15:24:15.6248178Z (Reading database ... 100%
+2026-11-14T15:24:15.6248955Z (Reading database ... 6096 files and directories currently installed.)
+2026-11-14T15:24:15.6250509Z #19 2.855 Preparing to unpack .../00-libssl3_3.0.22-1~deb12u2_amd64.deb ...
+2026-11-14T15:24:15.6251205Z #19 2.857 Unpacking libssl3:amd64 (3.0.22-1~deb12u2) ...
+2026-11-14T15:24:15.6251825Z #19 2.997 Selecting previously unselected package openssl.
+2026-11-14T15:24:15.6252585Z #19 2.999 Preparing to unpack .../01-openssl_3.0.22-1~deb12u2_amd64.deb ...
+2026-11-14T15:24:15.6253264Z #19 3.000 Unpacking openssl (3.0.22-1~deb12u2) ...
+2026-11-14T15:24:15.6253890Z #19 3.102 Selecting previously unselected package ca-certificates.
+2026-11-14T15:24:15.6254671Z #19 3.103 Preparing to unpack .../02-ca-certificates_20250419~deb12u2_all.deb ...
+2026-11-14T15:24:15.6255383Z #19 3.104 Unpacking ca-certificates (20250419~deb12u2) ...
+2026-11-14T15:24:15.6256094Z #19 3.137 Selecting previously unselected package libbrotli1:amd64.
+2026-11-14T15:24:15.6256997Z #19 3.138 Preparing to unpack .../03-libbrotli1_1.0.9-2+deb12u1_amd64.deb ...
+2026-11-14T15:24:15.6257899Z #19 3.139 Unpacking libbrotli1:amd64 (1.0.9-2+deb12u1) ...
+2026-11-14T15:24:15.6258618Z #19 3.172 Selecting previously unselected package libkrb5support0:amd64.
+2026-11-14T15:24:15.6259410Z #19 3.173 Preparing to unpack .../04-libkrb5support0_1.20.1-2+deb12u5_amd64.deb ...
+2026-11-14T15:24:15.6260513Z #19 3.174 Unpacking libkrb5support0:amd64 (1.20.1-2+deb12u5) ...
+2026-11-14T15:24:15.6261220Z #19 3.189 Selecting previously unselected package libk5crypto3:amd64.
+2026-11-14T15:24:15.6261945Z #19 3.191 Preparing to unpack .../05-libk5crypto3_1.20.1-2+deb12u5_amd64.deb ...
+2026-11-14T15:24:15.6262696Z #19 3.192 Unpacking libk5crypto3:amd64 (1.20.1-2+deb12u5) ...
+2026-11-14T15:24:15.6263364Z #19 3.212 Selecting previously unselected package libkeyutils1:amd64.
+2026-11-14T15:24:15.6264058Z #19 3.213 Preparing to unpack .../06-libkeyutils1_1.6.3-2_amd64.deb ...
+2026-11-14T15:24:15.6264679Z #19 3.214 Unpacking libkeyutils1:amd64 (1.6.3-2) ...
+2026-11-14T15:24:15.6265433Z #19 3.227 Selecting previously unselected package libkrb5-3:amd64.
+2026-11-14T15:24:15.6266188Z #19 3.229 Preparing to unpack .../07-libkrb5-3_1.20.1-2+deb12u5_amd64.deb ...
+2026-11-14T15:24:15.6266868Z #19 3.230 Unpacking libkrb5-3:amd64 (1.20.1-2+deb12u5) ...
+2026-11-14T15:24:15.6267590Z #19 3.273 Selecting previously unselected package libgssapi-krb5-2:amd64.
+2026-11-14T15:24:15.6268788Z #19 3.273 Preparing to unpack .../08-libgssapi-krb5-2_1.20.1-2+deb12u5_amd64.deb ...
+2026-11-14T15:24:15.6270419Z #19 3.274 Unpacking libgssapi-krb5-2:amd64 (1.20.1-2+deb12u5) ...
+2026-11-14T15:24:15.6271431Z #19 3.295 Selecting previously unselected package libsasl2-modules-db:amd64.
+2026-11-14T15:24:15.6272746Z #19 3.297 Preparing to unpack .../09-libsasl2-modules-db_2.1.28+dfsg-10+deb12u1_amd64.deb ...
+2026-11-14T15:24:15.6274653Z #19 3.297 Unpacking libsasl2-modules-db:amd64 (2.1.28+dfsg-10+deb12u1) ...
+2026-11-14T15:24:15.6275413Z #19 3.309 Selecting previously unselected package libsasl2-2:amd64.
+2026-11-14T15:24:15.6276483Z #19 3.310 Preparing to unpack .../10-libsasl2-2_2.1.28+dfsg-10+deb12u1_amd64.deb ...
+2026-11-14T15:24:15.6278389Z #19 3.311 Unpacking libsasl2-2:amd64 (2.1.28+dfsg-10+deb12u1) ...
+2026-11-14T15:24:15.6279242Z #19 3.326 Selecting previously unselected package libldap-2.5-0:amd64.
+2026-11-14T15:24:15.6280390Z #19 3.328 Preparing to unpack .../11-libldap-2.5-0_2.5.13+dfsg-5_amd64.deb ...
+2026-11-14T15:24:15.6282090Z #19 3.329 Unpacking libldap-2.5-0:amd64 (2.5.13+dfsg-5) ...
+2026-11-14T15:24:15.6282836Z #19 3.354 Selecting previously unselected package libnghttp2-14:amd64.
+2026-11-14T15:24:15.6283785Z #19 3.355 Preparing to unpack .../12-libnghttp2-14_1.52.0-1+deb12u3_amd64.deb ...
+2026-11-14T15:24:15.6288783Z #19 3.356 Unpacking libnghttp2-14:amd64 (1.52.0-1+deb12u3) ...
+2026-11-14T15:24:15.6290618Z #19 3.373 Selecting previously unselected package libpsl5:amd64.
+2026-11-14T15:24:15.6294669Z #19 3.374 Preparing to unpack .../13-libpsl5_0.21.2-1_amd64.deb ...
+2026-11-14T15:24:15.6295303Z #19 3.375 Unpacking libpsl5:amd64 (0.21.2-1) ...
+2026-11-14T15:24:15.6295950Z #19 3.394 Selecting previously unselected package librtmp1:amd64.
+2026-11-14T15:24:15.6296714Z #19 3.395 Preparing to unpack .../14-librtmp1_2.4+20151223.gitfa8646d.1-2+b2_amd64.deb ...
+2026-11-14T15:24:15.6297481Z #19 3.396 Unpacking librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2+b2) ...
+2026-11-14T15:24:15.6298381Z #19 3.411 Selecting previously unselected package libssh2-1:amd64.
+2026-11-14T15:24:15.6301777Z #19 3.413 Preparing to unpack .../15-libssh2-1_1.10.0-3+deb12u1_amd64.deb ...
+2026-11-14T15:24:15.6302685Z #19 3.413 Unpacking libssh2-1:amd64 (1.10.0-3+deb12u1) ...
+2026-11-14T15:24:15.6303346Z #19 3.441 Selecting previously unselected package libcurl4:amd64.
+2026-11-14T15:24:15.6304143Z #19 3.443 Preparing to unpack .../16-libcurl4_7.88.1-10+deb12u15_amd64.deb ...
+2026-11-14T15:24:15.6304768Z #19 3.447 Unpacking libcurl4:amd64 (7.88.1-10+deb12u15) ...
+2026-11-14T15:24:15.6306363Z #19 3.498 Selecting previously unselected package curl.
+2026-11-14T15:24:15.6307001Z #19 3.500 Preparing to unpack .../17-curl_7.88.1-10+deb12u15_amd64.deb ...
+2026-11-14T15:24:15.6308316Z #19 3.501 Unpacking curl (7.88.1-10+deb12u15) ...
+2026-11-14T15:24:15.6309939Z #19 3.551 Setting up libkeyutils1:amd64 (1.6.3-2) ...
+2026-11-14T15:24:15.6310690Z #19 3.555 Setting up libpsl5:amd64 (0.21.2-1) ...
+2026-11-14T15:24:15.6311356Z #19 3.561 Setting up libbrotli1:amd64 (1.0.9-2+deb12u1) ...
+2026-11-14T15:24:15.6312121Z #19 3.566 Setting up libssl3:amd64 (3.0.22-1~deb12u2) ...
+2026-11-14T15:24:15.6313242Z #19 3.568 Setting up libnghttp2-14:amd64 (1.52.0-1+deb12u3) ...
+2026-11-14T15:24:15.6314122Z #19 3.571 Setting up libkrb5support0:amd64 (1.20.1-2+deb12u5) ...
+2026-11-14T15:24:15.6315627Z #19 3.573 Setting up libsasl2-modules-db:amd64 (2.1.28+dfsg-10+deb12u1) ...
+2026-11-14T15:24:15.6316371Z #19 3.581 Setting up librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2+b2) ...
+2026-11-14T15:24:15.6317064Z #19 3.584 Setting up libk5crypto3:amd64 (1.20.1-2+deb12u5) ...
+2026-11-14T15:24:15.6318781Z #19 3.588 Setting up libsasl2-2:amd64 (2.1.28+dfsg-10+deb12u1) ...
+2026-11-14T15:24:15.6319430Z #19 3.596 Setting up libssh2-1:amd64 (1.10.0-3+deb12u1) ...
+2026-11-14T15:24:15.6320011Z #19 3.601 Setting up libkrb5-3:amd64 (1.20.1-2+deb12u5) ...
+2026-11-14T15:24:15.6320814Z #19 3.604 Setting up openssl (3.0.22-1~deb12u2) ...
+2026-11-14T15:24:15.6321974Z #19 3.614 Setting up libldap-2.5-0:amd64 (2.5.13+dfsg-5) ...
+2026-11-14T15:24:15.6322694Z #19 3.630 Setting up ca-certificates (20250419~deb12u2) ...
+2026-11-14T15:24:15.6323508Z #19 3.700 debconf: unable to initialize frontend: Dialog
+2026-11-14T15:24:15.6324514Z #19 3.700 debconf: (TERM is not set, so the dialog frontend is not usable.)
+2026-11-14T15:24:15.6326101Z #19 3.700 debconf: falling back to frontend: Readline
+2026-11-14T15:24:15.7690099Z #19 3.700 debconf: unable to initialize frontend: Readline
+2026-11-14T15:24:15.7693061Z #19 3.700 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.36.0 /usr/local/share/perl/5.36.0 /usr/lib/x86_64-linux-gnu/perl5/5.36 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.36 /usr/share/perl/5.36 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+2026-11-14T15:24:15.7695954Z #19 3.700 debconf: falling back to frontend: Teletype
+2026-11-14T15:24:15.9876640Z #19 4.070 Updating certificates in /etc/ssl/certs...
+2026-11-14T15:24:16.5484509Z #19 4.631 148 added, 0 removed; done.
+2026-11-14T15:24:16.9645272Z #19 5.047 Setting up libgssapi-krb5-2:amd64 (1.20.1-2+deb12u5) ...
+2026-11-14T15:24:17.2671635Z #19 5.350 Setting up libcurl4:amd64 (7.88.1-10+deb12u15) ...
+2026-11-14T15:24:17.4216817Z #19 ...
+2026-11-14T15:24:17.4217180Z 
+2026-11-14T15:24:17.4218128Z #20 [clickhouse clickhouse 1/2] FROM docker.io/clickhouse/clickhouse-server:26.7.3.19-alpine@sha256:80a5d78b746f7b70631908b3aff2249002e174c3f0520342d7c1f1abc0cd6751
+2026-11-14T15:24:17.4219440Z #20 resolve docker.io/clickhouse/clickhouse-server:26.7.3.19-alpine@sha256:80a5d78b746f7b70631908b3aff2249002e174c3f0520342d7c1f1abc0cd6751 0.0s done
+2026-11-14T15:24:17.4220441Z #20 sha256:6178f0bb87d0e2dc94ed9b3b21be1cf5b2b7c8c8cc515b3a278b1f0c7b95e3fc 30.08kB / 30.08kB 0.1s done
+2026-11-14T15:24:17.4221483Z #20 sha256:ec6516cafacb3c9126a824616b4c92a57d1a2b75695c8c250466e7958c7ea713 230.19MB / 230.19MB 1.3s done
+2026-11-14T15:24:17.4222317Z #20 sha256:b17bff9a6187466cf14d496b4076eabc050a92a04921bd4cccbcbf125b6c6e20 983B / 983B 0.2s done
+2026-11-14T15:24:17.4222938Z #20 sha256:66476c7500115b780505cf97631b8e4876b0d2706f3f5cc853e9b53bbcbf8664 3.64kB / 3.64kB 0.1s done
+2026-11-14T15:24:17.4223584Z #20 sha256:eacc6fa9274d2cd698700ada81e3d193ec03f7fbb0d8b8db05d54ea813cff37e 150B / 150B 0.1s done
+2026-11-14T15:24:17.4224253Z #20 sha256:97fd50f3a0365cd4ab7b622bf25fc72a98a993314bbfaa09e6008d9c68d1beee 346B / 346B 0.1s done
+2026-11-14T15:24:17.4225033Z #20 sha256:100729a95643457098521cd53834b981c783c00f24ed4cd8950f5434e0ab2517 1.65MB / 1.65MB 0.1s done
+2026-11-14T15:24:17.4225912Z #20 sha256:1ed5c2cb01a212ccb9fcaeb53ee6b4f8267158ac053e3f7fb3414e6ac04b0ee3 384B / 384B 0.1s done
+2026-11-14T15:24:17.4226650Z #20 sha256:55afa1ecc21d2bb5e5045f32dafee56272ffd89860bac26f6c32123439af26a4 3.85MB / 3.85MB 0.1s done
+2026-11-14T15:24:17.4227328Z #20 extracting sha256:55afa1ecc21d2bb5e5045f32dafee56272ffd89860bac26f6c32123439af26a4 0.2s done
+2026-11-14T15:24:17.4228072Z #20 extracting sha256:100729a95643457098521cd53834b981c783c00f24ed4cd8950f5434e0ab2517 0.0s done
+2026-11-14T15:24:17.4228726Z #20 extracting sha256:1ed5c2cb01a212ccb9fcaeb53ee6b4f8267158ac053e3f7fb3414e6ac04b0ee3 0.0s done
+2026-11-14T15:24:17.4229360Z #20 extracting sha256:97fd50f3a0365cd4ab7b622bf25fc72a98a993314bbfaa09e6008d9c68d1beee done
+2026-11-14T15:24:17.4230033Z #20 extracting sha256:66476c7500115b780505cf97631b8e4876b0d2706f3f5cc853e9b53bbcbf8664 done
+2026-11-14T15:24:17.4230793Z #20 extracting sha256:eacc6fa9274d2cd698700ada81e3d193ec03f7fbb0d8b8db05d54ea813cff37e 0.0s done
+2026-11-14T15:24:17.4231570Z #20 extracting sha256:b17bff9a6187466cf14d496b4076eabc050a92a04921bd4cccbcbf125b6c6e20 done
+2026-11-14T15:24:17.4232209Z #20 extracting sha256:ec6516cafacb3c9126a824616b4c92a57d1a2b75695c8c250466e7958c7ea713 4.3s done
+2026-11-14T15:24:17.4232923Z #20 extracting sha256:6178f0bb87d0e2dc94ed9b3b21be1cf5b2b7c8c8cc515b3a278b1f0c7b95e3fc 0.3s done
+2026-11-14T15:24:17.4233372Z #20 DONE 6.5s
+2026-11-14T15:24:17.4233505Z 
+2026-11-14T15:24:17.4233997Z #17 [minio build 1/3] FROM docker.io/library/golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea
+2026-11-14T15:24:17.4234878Z #17 extracting sha256:ee2355d89db5dc60ead259abab71498d78f1f160c7d667f78cb5a53df85b027f 1.8s done
+2026-11-14T15:24:17.4235430Z #17 extracting sha256:83d129a974dd319fef9f5f496bf3a04194c14ba0fbf95635c2d5577185dd0b2f
+2026-11-14T15:24:19.1549401Z #17 extracting sha256:83d129a974dd319fef9f5f496bf3a04194c14ba0fbf95635c2d5577185dd0b2f 2.2s done
+2026-11-14T15:24:19.1550094Z #17 DONE 8.4s
+2026-11-14T15:24:19.1550244Z 
+2026-11-14T15:24:19.1551078Z #19 [minio stage-1 2/5] RUN apt-get update     && apt-get install --yes --no-install-recommends ca-certificates curl     && rm -rf /var/lib/apt/lists/*
+2026-11-14T15:24:19.1551680Z #19 5.623 Setting up curl (7.88.1-10+deb12u15) ...
+2026-11-14T15:24:19.1552099Z #19 5.781 Processing triggers for libc-bin (2.36-9+deb12u14) ...
+2026-11-14T15:24:19.1552521Z #19 5.853 Processing triggers for ca-certificates (20250419~deb12u2) ...
+2026-11-14T15:24:19.1552918Z #19 5.883 Updating certificates in /etc/ssl/certs...
+2026-11-14T15:24:19.1553289Z #19 6.253 0 added, 0 removed; done.
+2026-11-14T15:24:19.1553627Z #19 6.253 Running hooks in /etc/ca-certificates/update.d...
+2026-11-14T15:24:19.1553945Z #19 6.253 done.
+2026-11-14T15:24:19.3963876Z #19 ...
+2026-11-14T15:24:19.3964110Z 
+2026-11-14T15:24:19.3964635Z #17 [minio build 1/3] FROM docker.io/library/golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea
+2026-11-14T15:24:19.3965335Z #17 extracting sha256:99e3c19f61afa276fee63762bb48a810aed9ce1cee10e36d673d620a43d80996 0.1s done
+2026-11-14T15:24:19.3965962Z #17 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0.0s done
+2026-11-14T15:24:19.3966403Z #17 DONE 8.5s
+2026-11-14T15:24:19.5465733Z 
+2026-11-14T15:24:19.5466854Z #21 [minio build 2/3] WORKDIR /build
+2026-11-14T15:24:24.1892921Z #21 ...
+2026-11-14T15:24:24.1893563Z 
+2026-11-14T15:24:24.1894808Z #22 [postgres postgres 2/2] COPY infra/postgres/init/*.sql /docker-entrypoint-initdb.d/
+2026-11-14T15:24:24.1895414Z #22 DONE 8.8s
+2026-11-14T15:24:24.2939436Z 
+2026-11-14T15:24:24.2940755Z #19 [minio stage-1 2/5] RUN apt-get update     && apt-get install --yes --no-install-recommends ca-certificates curl     && rm -rf /var/lib/apt/lists/*
+2026-11-14T15:24:24.2941587Z #19 DONE 12.3s
+2026-11-14T15:24:24.2944068Z 
+2026-11-14T15:24:24.2945345Z #23 [clickhouse clickhouse 2/2] COPY infra/clickhouse/init/*.sql /docker-entrypoint-initdb.d/
+2026-11-14T15:24:24.2945984Z #23 DONE 6.9s
+2026-11-14T15:24:24.2946261Z 
+2026-11-14T15:24:24.2946666Z #21 [minio build 2/3] WORKDIR /build
+2026-11-14T15:24:24.2947143Z #21 DONE 4.9s
+2026-11-14T15:24:24.2947347Z 
+2026-11-14T15:24:24.2947887Z #24 [clickhouse] exporting to image
+2026-11-14T15:24:24.2948388Z #24 exporting layers 0.0s done
+2026-11-14T15:24:24.2949017Z #24 exporting manifest sha256:3c7e38bc4acde8d026c328c9da965fa5d7168243f78674227c382e2d3262101c done
+2026-11-14T15:24:24.2949861Z #24 exporting config sha256:fc6b4f2cf21ffe261100db71a308f7f44065afb3432357b8712d22fb645f9ba8 done
+2026-11-14T15:24:24.2950911Z #24 exporting attestation manifest sha256:ceead4ef5722fcc9f0ae008be9f17b4cbfa350113d40576d48005406e6ba4e11 done
+2026-11-14T15:24:24.2972229Z #24 exporting manifest list sha256:2835abc7a6006fc8830b8ae627b63b59017e87600e54b503b8a41bf95f73886b done
+2026-11-14T15:24:24.2974053Z #24 naming to docker.io/library/zerotrace-clickhouse:26.7.3.19 done
+2026-11-14T15:24:24.2974789Z #24 unpacking to docker.io/library/zerotrace-clickhouse:26.7.3.19 0.0s done
+2026-11-14T15:24:24.2975374Z #24 DONE 0.1s
+2026-11-14T15:24:24.2975570Z 
+2026-11-14T15:24:24.2975749Z #25 [postgres] exporting to image
+2026-11-14T15:24:24.2976335Z #25 exporting layers 0.0s done
+2026-11-14T15:24:24.2976976Z #25 exporting manifest sha256:c088f3c5bad3970179e4817ba73f5d495567aee4bff901eb6fff8bdc49c4fd01 done
+2026-11-14T15:24:24.2979090Z #25 exporting config sha256:46af06e0762113a4c1467d5aa74e673674cab74702a12ac98c143501e591b374 done
+2026-11-14T15:24:24.2980137Z #25 exporting attestation manifest sha256:37d920f3aad9da5db7ef783fb21632299112a5627c3493f4af7e01abb56a8fbe done
+2026-11-14T15:24:24.2981179Z #25 exporting manifest list sha256:eb633b1902c1f168793058486baecdc549dae1c4d2836eebabb1f1acf15aab01 done
+2026-11-14T15:24:24.2982031Z #25 naming to docker.io/library/zerotrace-postgres:17.10 done
+2026-11-14T15:24:24.2982544Z #25 unpacking to docker.io/library/zerotrace-postgres:17.10 0.0s done
+2026-11-14T15:24:24.5227092Z #25 DONE 0.1s
+2026-11-14T15:24:24.5227844Z 
+2026-11-14T15:24:24.5228417Z #26 [clickhouse] resolving provenance for metadata file
+2026-11-14T15:24:24.5228829Z #26 DONE 0.0s
+2026-11-14T15:24:24.5228939Z 
+2026-11-14T15:24:24.5229570Z #27 [postgres] resolving provenance for metadata file
+2026-11-14T15:24:24.5229892Z #27 DONE 0.0s
+2026-11-14T15:24:24.5230073Z 
+2026-11-14T15:24:24.5231258Z #28 [minio build 3/3] RUN go install -trimpath github.com/minio/minio@9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a     && mkdir -p /out     && cp /go/bin/minio /out/minio     && cp /go/pkg/mod/github.com/minio/minio@*/LICENSE /out/LICENSE     && go version -m /out/minio > /out/build-info.txt
+2026-11-14T15:24:24.5232736Z #28 0.183 go: downloading github.com/minio/minio v0.0.0-20251015172955-9e49d5e7a648
+2026-11-14T15:24:25.1567268Z #28 0.967 go: downloading cloud.google.com/go/storage v1.52.0
+2026-11-14T15:24:25.2575699Z #28 0.974 go: downloading github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.0
+2026-11-14T15:24:25.2576631Z #28 0.975 go: downloading github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.9.0
+2026-11-14T15:24:25.2577128Z #28 1.050 go: downloading github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.1
+2026-11-14T15:24:25.2578329Z #28 1.068 go: downloading github.com/cespare/xxhash/v2 v2.3.0
+2026-11-14T15:24:25.3618666Z #28 1.072 go: downloading cloud.google.com/go v0.120.1
+2026-11-14T15:24:25.3619388Z #28 1.107 go: downloading github.com/cheggaaa/pb v1.0.29
+2026-11-14T15:24:25.3619823Z #28 1.110 go: downloading github.com/coreos/go-oidc/v3 v3.14.1
+2026-11-14T15:24:25.3620228Z #28 1.110 go: downloading github.com/coreos/go-systemd/v22 v22.5.0
+2026-11-14T15:24:25.3620663Z #28 1.142 go: downloading github.com/cosnicolaou/pbzip2 v1.0.5
+2026-11-14T15:24:25.3621173Z #28 1.163 go: downloading github.com/dchest/siphash v1.2.3
+2026-11-14T15:24:25.3621593Z #28 1.172 go: downloading github.com/dustin/go-humanize v1.0.1
+2026-11-14T15:24:25.4649630Z #28 1.182 go: downloading github.com/fatih/color v1.18.0
+2026-11-14T15:24:25.4650580Z #28 1.205 go: downloading github.com/felixge/fgprof v0.9.5
+2026-11-14T15:24:25.4651442Z #28 1.219 go: downloading github.com/go-openapi/loads v0.22.0
+2026-11-14T15:24:25.4652031Z #28 1.225 go: downloading github.com/golang-jwt/jwt/v4 v4.5.2
+2026-11-14T15:24:25.4652645Z #28 1.247 go: downloading github.com/google/uuid v1.6.0
+2026-11-14T15:24:25.4653227Z #28 1.266 go: downloading github.com/inconshreveable/mousetrap v1.1.0
+2026-11-14T15:24:25.4653778Z #28 1.266 go: downloading github.com/json-iterator/go v1.1.12
+2026-11-14T15:24:25.4654192Z #28 1.276 go: downloading github.com/klauspost/compress v1.18.0
+2026-11-14T15:24:26.1241163Z #28 1.935 go: downloading github.com/klauspost/filepathx v1.1.1
+2026-11-14T15:24:26.1241719Z #28 1.935 go: downloading github.com/klauspost/reedsolomon v1.12.4
+2026-11-14T15:24:26.3437975Z #28 1.935 go: downloading github.com/klauspost/pgzip v1.2.6
+2026-11-14T15:24:26.3438508Z #28 1.935 go: downloading github.com/klauspost/readahead v1.4.0
+2026-11-14T15:24:26.3438932Z #28 1.969 go: downloading github.com/lithammer/shortuuid/v4 v4.2.0
+2026-11-14T15:24:26.3439338Z #28 1.973 go: downloading github.com/miekg/dns v1.1.65
+2026-11-14T15:24:26.3439680Z #28 1.987 go: downloading github.com/minio/cli v1.24.2
+2026-11-14T15:24:26.3440136Z #28 2.004 go: downloading github.com/minio/console v1.7.7-0.20250905210349-2017f33b26e1
+2026-11-14T15:24:26.7309712Z #28 2.542 go: downloading github.com/minio/dnscache v0.1.1
+2026-11-14T15:24:26.7310448Z #28 2.542 go: downloading github.com/minio/dperf v0.6.3
+2026-11-14T15:24:26.7310940Z #28 2.542 go: downloading github.com/minio/kms-go/kes v0.3.1
+2026-11-14T15:24:26.8342373Z #28 2.542 go: downloading github.com/minio/highwayhash v1.0.3
+2026-11-14T15:24:26.8342912Z #28 2.581 go: downloading github.com/minio/madmin-go/v3 v3.0.109
+2026-11-14T15:24:26.8343312Z #28 2.645 go: downloading github.com/minio/minio-go/v7 v7.0.91
+2026-11-14T15:24:26.9582638Z #28 2.703 go: downloading github.com/minio/mux v1.9.2
+2026-11-14T15:24:26.9583206Z #28 2.704 go: downloading github.com/minio/pkg/v3 v3.1.3
+2026-11-14T15:24:26.9583786Z #28 2.769 go: downloading github.com/minio/selfupdate v0.6.0
+2026-11-14T15:24:26.9584238Z #28 2.769 go: downloading github.com/minio/zipindex v0.4.0
+2026-11-14T15:24:26.9584789Z #28 2.769 go: downloading github.com/minio/xxml v0.0.3
+2026-11-14T15:24:26.9585172Z #28 2.769 go: downloading github.com/minio/sio v0.4.1
+2026-11-14T15:24:27.0837300Z #28 2.809 go: downloading github.com/mitchellh/go-homedir v1.1.0
+2026-11-14T15:24:27.0838164Z #28 2.810 go: downloading github.com/philhofer/fwd v1.2.0
+2026-11-14T15:24:27.0838580Z #28 2.811 go: downloading github.com/pierrec/lz4/v4 v4.1.22
+2026-11-14T15:24:27.0838948Z #28 2.861 go: downloading github.com/pkg/errors v0.9.1
+2026-11-14T15:24:27.0839312Z #28 2.862 go: downloading github.com/pkg/sftp v1.13.9
+2026-11-14T15:24:27.0839693Z #28 2.867 go: downloading github.com/pkg/xattr v0.4.10
+2026-11-14T15:24:27.0840086Z #28 2.895 go: downloading github.com/prometheus/client_golang v1.22.0
+2026-11-14T15:24:27.1888669Z #28 2.961 go: downloading github.com/prometheus/client_model v0.6.2
+2026-11-14T15:24:27.1889280Z #28 2.961 go: downloading github.com/prometheus/procfs v0.16.1
+2026-11-14T15:24:27.1889714Z #28 2.962 go: downloading github.com/prometheus/common v0.63.0
+2026-11-14T15:24:27.1890160Z #28 2.999 go: downloading github.com/puzpuzpuz/xsync/v3 v3.5.1
+2026-11-14T15:24:27.3648185Z #28 3.055 go: downloading github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
+2026-11-14T15:24:27.3651075Z #28 3.057 go: downloading github.com/rs/cors v1.11.1
+2026-11-14T15:24:27.3651523Z #28 3.069 go: downloading github.com/secure-io/sio-go v0.3.1
+2026-11-14T15:24:27.3652011Z #28 3.098 go: downloading github.com/shirou/gopsutil/v3 v3.24.5
+2026-11-14T15:24:27.3652431Z #28 3.175 go: downloading github.com/tinylib/msgp v1.4.0
+2026-11-14T15:24:27.4693607Z #28 3.176 go: downloading github.com/valyala/bytebufferpool v1.0.0
+2026-11-14T15:24:27.4694261Z #28 3.176 go: downloading github.com/zeebo/xxh3 v1.0.2
+2026-11-14T15:24:27.4694859Z #28 3.221 go: downloading go.etcd.io/etcd/api/v3 v3.5.21
+2026-11-14T15:24:27.4695417Z #28 3.232 go: downloading go.etcd.io/etcd/client/v3 v3.5.21
+2026-11-14T15:24:27.4695896Z #28 3.234 go: downloading go.uber.org/atomic v1.11.0
+2026-11-14T15:24:27.4696329Z #28 3.270 go: downloading goftp.io/server/v2 v2.0.1
+2026-11-14T15:24:27.4696795Z #28 3.280 go: downloading golang.org/x/crypto v0.37.0
+2026-11-14T15:24:27.5811167Z #28 3.319 go: downloading golang.org/x/oauth2 v0.29.0
+2026-11-14T15:24:27.5811607Z #28 3.392 go: downloading golang.org/x/sync v0.13.0
+2026-11-14T15:24:27.7707283Z #28 3.397 go: downloading golang.org/x/sys v0.32.0
+2026-11-14T15:24:27.7708583Z #28 3.398 go: downloading golang.org/x/term v0.31.0
+2026-11-14T15:24:27.7709272Z #28 3.431 go: downloading google.golang.org/api v0.230.0
+2026-11-14T15:24:28.1357772Z #28 3.946 go: downloading gopkg.in/yaml.v2 v2.4.0
+2026-11-14T15:24:28.2852812Z #28 3.990 go: downloading gopkg.in/yaml.v3 v3.0.1
+2026-11-14T15:24:28.2853609Z #28 4.096 go: downloading github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.1
+2026-11-14T15:24:28.4110879Z #28 4.140 go: downloading github.com/AzureAD/microsoft-authentication-library-for-go v1.4.2
+2026-11-14T15:24:28.4111724Z #28 4.188 go: downloading cloud.google.com/go/compute/metadata v0.6.0
+2026-11-14T15:24:28.4112591Z #28 4.222 go: downloading cloud.google.com/go/iam v1.5.2
+2026-11-14T15:24:28.5472348Z #28 4.284 go: downloading github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.51.0
+2026-11-14T15:24:28.5473145Z #28 4.319 go: downloading github.com/googleapis/gax-go/v2 v2.14.1
+2026-11-14T15:24:28.5473600Z #28 4.358 go: downloading go.opentelemetry.io/contrib/detectors/gcp v1.35.0
+2026-11-14T15:24:28.7083313Z #28 4.399 go: downloading go.opentelemetry.io/otel v1.35.0
+2026-11-14T15:24:28.7084036Z #28 4.519 go: downloading go.opentelemetry.io/otel/sdk/metric v1.35.0
+2026-11-14T15:24:28.9363800Z #28 4.547 go: downloading go.opentelemetry.io/otel/sdk v1.35.0
+2026-11-14T15:24:28.9364554Z #28 4.597 go: downloading go.opentelemetry.io/otel/trace v1.35.0
+2026-11-14T15:24:29.6574445Z #28 5.468 go: downloading google.golang.org/genproto v0.0.0-20250422160041-2d3770c4ea7f
+2026-11-14T15:24:29.8078311Z #28 5.468 go: downloading google.golang.org/grpc v1.72.0
+2026-11-14T15:24:29.8905789Z #28 5.701 go: downloading google.golang.org/protobuf v1.36.6
+2026-11-14T15:24:30.0949397Z #28 5.906 go: downloading github.com/go-jose/go-jose/v4 v4.1.0
+2026-11-14T15:24:30.2161329Z #28 5.906 go: downloading github.com/mattn/go-runewidth v0.0.16
+2026-11-14T15:24:30.2162040Z #28 5.943 go: downloading github.com/mattn/go-colorable v0.1.14
+2026-11-14T15:24:30.2162868Z #28 5.956 go: downloading github.com/mattn/go-isatty v0.0.20
+2026-11-14T15:24:30.2163564Z #28 5.965 go: downloading github.com/google/pprof v0.0.0-20250422154841-e1f9c1950416
+2026-11-14T15:24:30.2164278Z #28 5.965 go: downloading github.com/go-openapi/analysis v0.23.0
+2026-11-14T15:24:30.2164906Z #28 5.978 go: downloading github.com/go-openapi/spec v0.21.0
+2026-11-14T15:24:30.2165505Z #28 5.993 go: downloading github.com/go-openapi/swag v0.23.1
+2026-11-14T15:24:30.2166223Z #28 6.027 go: downloading github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+2026-11-14T15:24:30.3243388Z #28 6.037 go: downloading github.com/modern-go/reflect2 v1.0.2
+2026-11-14T15:24:30.3244090Z #28 6.050 go: downloading github.com/klauspost/cpuid/v2 v2.2.10
+2026-11-14T15:24:30.3244857Z #28 6.067 go: downloading golang.org/x/net v0.39.0
+2026-11-14T15:24:30.3245474Z #28 6.097 go: downloading github.com/go-openapi/errors v0.22.1
+2026-11-14T15:24:30.3246120Z #28 6.135 go: downloading github.com/go-openapi/runtime v0.28.0
+2026-11-14T15:24:30.4404891Z #28 6.209 go: downloading github.com/jessevdk/go-flags v1.6.1
+2026-11-14T15:24:30.4405433Z #28 6.209 go: downloading github.com/minio/mc v0.0.0-20250313080218-cf909e1063a9
+2026-11-14T15:24:30.4406115Z #28 6.234 go: downloading github.com/minio/websocket v1.6.0
+2026-11-14T15:24:30.4406699Z #28 6.251 go: downloading github.com/unrolled/secure v1.17.0
+2026-11-14T15:24:30.5660055Z #28 6.274 go: downloading github.com/go-openapi/strfmt v0.23.0
+2026-11-14T15:24:30.5660513Z #28 6.286 go: downloading github.com/ncw/directio v1.0.5
+2026-11-14T15:24:30.5660871Z #28 6.302 go: downloading aead.dev/mem v0.2.0
+2026-11-14T15:24:30.5661289Z #28 6.308 go: downloading github.com/prometheus/prom2json v1.4.2
+2026-11-14T15:24:30.5661701Z #28 6.308 go: downloading github.com/safchain/ethtool v0.5.10
+2026-11-14T15:24:30.5662086Z #28 6.322 go: downloading github.com/goccy/go-json v0.10.5
+2026-11-14T15:24:30.5662461Z #28 6.339 go: downloading github.com/minio/crc64nvme v1.0.1
+2026-11-14T15:24:30.5662813Z #28 6.342 go: downloading github.com/minio/md5-simd v1.1.2
+2026-11-14T15:24:30.5663200Z #28 6.347 go: downloading github.com/rs/xid v1.6.0
+2026-11-14T15:24:30.5663566Z #28 6.377 go: downloading github.com/go-ini/ini v1.67.0
+2026-11-14T15:24:30.6671219Z #28 6.379 go: downloading golang.org/x/time v0.11.0
+2026-11-14T15:24:30.6671720Z #28 6.382 go: downloading github.com/beevik/ntp v1.4.3
+2026-11-14T15:24:30.6672092Z #28 6.382 go: downloading github.com/go-ldap/ldap/v3 v3.4.11
+2026-11-14T15:24:30.6672512Z #28 6.415 go: downloading go.uber.org/zap v1.27.0
+2026-11-14T15:24:30.6672924Z #28 6.416 go: downloading github.com/rabbitmq/amqp091-go v1.10.0
+2026-11-14T15:24:30.6673321Z #28 6.419 go: downloading github.com/gobwas/ws v1.4.0
+2026-11-14T15:24:30.6673736Z #28 6.421 go: downloading github.com/IBM/sarama v1.45.1
+2026-11-14T15:24:30.6674132Z #28 6.471 go: downloading github.com/eclipse/paho.mqtt.golang v1.5.0
+2026-11-14T15:24:30.6674616Z #28 6.478 go: downloading github.com/buger/jsonparser v1.1.1
+2026-11-14T15:24:30.7683798Z #28 6.498 go: downloading github.com/elastic/go-elasticsearch/v7 v7.17.10
+2026-11-14T15:24:30.7684460Z #28 6.498 go: downloading aead.dev/mtls v0.2.1
+2026-11-14T15:24:30.7685030Z #28 6.521 go: downloading github.com/go-sql-driver/mysql v1.9.2
+2026-11-14T15:24:30.7685552Z #28 6.526 go: downloading github.com/minio/kms-go/kms v0.5.1-0.20250225090116-4e64ce8d0f35
+2026-11-14T15:24:30.7686021Z #28 6.539 go: downloading github.com/gomodule/redigo v1.9.2
+2026-11-14T15:24:30.7686443Z #28 6.562 go: downloading github.com/lib/pq v1.10.9
+2026-11-14T15:24:30.7687028Z #28 6.569 go: downloading github.com/nats-io/nats.go v1.41.2
+2026-11-14T15:24:30.7687418Z #28 6.579 go: downloading github.com/nats-io/stan.go v0.10.4
+2026-11-14T15:24:30.8960479Z #28 6.605 go: downloading github.com/nsqio/go-nsq v1.1.0
+2026-11-14T15:24:30.8961460Z #28 6.612 go: downloading github.com/xdg/scram v1.0.5
+2026-11-14T15:24:30.8962548Z #28 6.617 go: downloading github.com/minio/simdjson-go v0.4.5
+2026-11-14T15:24:30.8963158Z #28 6.666 go: downloading github.com/rjeczalik/notify v0.9.3
+2026-11-14T15:24:30.8963834Z #28 6.668 go: downloading github.com/fatih/structs v1.1.0
+2026-11-14T15:24:30.8964619Z #28 6.668 go: downloading github.com/lestrrat-go/jwx/v2 v2.1.4
+2026-11-14T15:24:30.8965196Z #28 6.706 go: downloading aead.dev/minisign v0.3.0
+2026-11-14T15:24:31.0114232Z #28 6.729 go: downloading github.com/kr/fs v0.1.0
+2026-11-14T15:24:31.0114828Z #28 6.730 go: downloading github.com/beorn7/perks v1.0.1
+2026-11-14T15:24:31.0115781Z #28 6.730 go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+2026-11-14T15:24:31.0116512Z #28 6.741 go: downloading github.com/tklauser/go-sysconf v0.3.15
+2026-11-14T15:24:31.0117088Z #28 6.772 go: downloading github.com/gogo/protobuf v1.3.2
+2026-11-14T15:24:31.0118027Z #28 6.773 go: downloading github.com/golang/protobuf v1.5.4
+2026-11-14T15:24:31.0118643Z #28 6.773 go: downloading go.etcd.io/etcd/client/pkg/v3 v3.5.21
+2026-11-14T15:24:31.0119240Z #28 6.822 go: downloading github.com/kylelemons/godebug v1.1.0
+2026-11-14T15:24:31.0119944Z #28 6.822 go: downloading github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
+2026-11-14T15:24:31.1128052Z #28 6.823 go: downloading google.golang.org/genproto/googleapis/api v0.0.0-20250422160041-2d3770c4ea7f
+2026-11-14T15:24:31.1129099Z #28 6.861 go: downloading google.golang.org/genproto/googleapis/rpc v0.0.0-20250422160041-2d3770c4ea7f
+2026-11-14T15:24:31.1130004Z #28 6.862 go: downloading cloud.google.com/go/monitoring v1.24.2
+2026-11-14T15:24:31.1130924Z #28 6.891 go: downloading github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.51.0
+2026-11-14T15:24:31.1131787Z #28 6.922 go: downloading github.com/go-logr/logr v1.4.2
+2026-11-14T15:24:31.1133110Z #28 6.922 go: downloading github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0
+2026-11-14T15:24:31.1133892Z #28 6.924 go: downloading go.opentelemetry.io/otel/metric v1.35.0
+2026-11-14T15:24:31.2329671Z #28 6.951 go: downloading cloud.google.com/go/auth v0.16.0
+2026-11-14T15:24:31.2330179Z #28 6.973 go: downloading cloud.google.com/go/auth/oauth2adapt v0.2.8
+2026-11-14T15:24:31.2330917Z #28 7.004 go: downloading go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0
+2026-11-14T15:24:31.2331382Z #28 7.005 go: downloading github.com/rivo/uniseg v0.4.7
+2026-11-14T15:24:31.2331808Z #28 7.006 go: downloading github.com/go-openapi/jsonpointer v0.21.1
+2026-11-14T15:24:31.2332228Z #28 7.007 go: downloading github.com/mailru/easyjson v0.9.0
+2026-11-14T15:24:31.2332639Z #28 7.044 go: downloading github.com/go-openapi/jsonreference v0.21.0
+2026-11-14T15:24:31.3643633Z #28 7.051 go: downloading github.com/docker/go-units v0.5.0
+2026-11-14T15:24:31.3644133Z #28 7.051 go: downloading github.com/go-openapi/validate v0.24.0
+2026-11-14T15:24:31.3644838Z #28 7.064 go: downloading github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
+2026-11-14T15:24:31.3645320Z #28 7.070 go: downloading github.com/mitchellh/mapstructure v1.5.0
+2026-11-14T15:24:31.3645724Z #28 7.085 go: downloading github.com/oklog/ulid v1.3.1
+2026-11-14T15:24:31.3646113Z #28 7.142 go: downloading go.mongodb.org/mongo-driver v1.17.3
+2026-11-14T15:24:31.3646498Z #28 7.175 go: downloading github.com/charmbracelet/bubbles v0.20.0
+2026-11-14T15:24:31.4993234Z #28 7.230 go: downloading github.com/charmbracelet/bubbletea v1.3.4
+2026-11-14T15:24:31.4993840Z #28 7.267 go: downloading github.com/charmbracelet/lipgloss v1.0.0
+2026-11-14T15:24:31.4994295Z #28 7.310 go: downloading github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+2026-11-14T15:24:31.6309571Z #28 7.343 go: downloading github.com/jedib0t/go-pretty/v6 v6.6.7
+2026-11-14T15:24:31.6310108Z #28 7.403 go: downloading github.com/mattn/go-ieproxy v0.0.12
+2026-11-14T15:24:31.6310737Z #28 7.442 go: downloading github.com/minio/colorjson v1.0.8
+2026-11-14T15:24:31.7490167Z #28 7.460 go: downloading github.com/minio/filepath v1.0.0
+2026-11-14T15:24:31.7490757Z #28 7.460 go: downloading github.com/muesli/reflow v0.3.0
+2026-11-14T15:24:31.7491284Z #28 7.477 go: downloading github.com/muesli/termenv v0.16.0
+2026-11-14T15:24:31.7491767Z #28 7.496 go: downloading github.com/olekukonko/tablewriter v0.0.5
+2026-11-14T15:24:31.7492189Z #28 7.499 go: downloading github.com/posener/complete v1.2.3
+2026-11-14T15:24:31.7492568Z #28 7.522 go: downloading github.com/tidwall/gjson v1.18.0
+2026-11-14T15:24:31.7492980Z #28 7.534 go: downloading github.com/vbauerster/mpb/v8 v8.9.3
+2026-11-14T15:24:31.7493361Z #28 7.537 go: downloading golang.org/x/text v0.24.0
+2026-11-14T15:24:31.7493842Z #28 7.560 go: downloading github.com/matttproud/golang_protobuf_extensions v1.0.4
+2026-11-14T15:24:31.8789101Z #28 7.574 go: downloading github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358
+2026-11-14T15:24:31.8790233Z #28 7.574 go: downloading github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667
+2026-11-14T15:24:31.8791691Z #28 7.596 go: downloading github.com/gobwas/httphead v0.1.0
+2026-11-14T15:24:31.8793285Z #28 7.609 go: downloading github.com/gobwas/pool v0.2.1
+2026-11-14T15:24:31.8794082Z #28 7.645 go: downloading go.uber.org/multierr v1.11.0
+2026-11-14T15:24:31.8795005Z #28 7.646 go: downloading github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+2026-11-14T15:24:31.8795839Z #28 7.646 go: downloading github.com/eapache/go-resiliency v1.7.0
+2026-11-14T15:24:31.8798554Z #28 7.690 go: downloading github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3
+2026-11-14T15:24:32.0027931Z #28 7.690 go: downloading github.com/eapache/queue v1.1.0
+2026-11-14T15:24:32.0029015Z #28 7.691 go: downloading github.com/hashicorp/go-multierror v1.1.1
+2026-11-14T15:24:32.0029980Z #28 7.722 go: downloading github.com/jcmturner/gofork v1.7.6
+2026-11-14T15:24:32.0030715Z #28 7.731 go: downloading github.com/jcmturner/gokrb5/v8 v8.4.4
+2026-11-14T15:24:32.0031417Z #28 7.813 go: downloading github.com/gorilla/websocket v1.5.3
+2026-11-14T15:24:32.0032014Z #28 7.813 go: downloading filippo.io/edwards25519 v1.1.0
+2026-11-14T15:24:32.1045226Z #28 7.816 go: downloading github.com/nats-io/nuid v1.0.1
+2026-11-14T15:24:32.1045913Z #28 7.849 go: downloading github.com/minio/csvparser v1.0.0
+2026-11-14T15:24:32.1046819Z #28 7.859 go: downloading github.com/fraugster/parquet-go v0.12.0
+2026-11-14T15:24:32.1047425Z #28 7.886 go: downloading github.com/alecthomas/participle v0.7.1
+2026-11-14T15:24:32.1048256Z #28 7.915 go: downloading github.com/nats-io/nkeys v0.4.11
+2026-11-14T15:24:32.2082978Z #28 7.936 go: downloading github.com/golang/snappy v1.0.0
+2026-11-14T15:24:32.2083658Z #28 7.936 go: downloading github.com/xdg/stringprep v1.0.3
+2026-11-14T15:24:32.2084106Z #28 7.952 go: downloading github.com/lestrrat-go/option v1.0.1
+2026-11-14T15:24:32.2084507Z #28 7.976 go: downloading github.com/lestrrat-go/blackmagic v1.0.2
+2026-11-14T15:24:32.2084902Z #28 7.976 go: downloading github.com/lestrrat-go/httprc v1.0.6
+2026-11-14T15:24:32.2085325Z #28 7.987 go: downloading github.com/lestrrat-go/iter v1.0.2
+2026-11-14T15:24:32.2085720Z #28 8.015 go: downloading github.com/coreos/go-semver v0.3.1
+2026-11-14T15:24:32.2086087Z #28 8.019 go: downloading github.com/tklauser/numcpus v0.10.0
+2026-11-14T15:24:32.3163538Z #28 8.025 go: downloading github.com/golang-jwt/jwt/v5 v5.2.2
+2026-11-14T15:24:32.3164181Z #28 8.025 go: downloading go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0
+2026-11-14T15:24:32.3164771Z #28 8.048 go: downloading github.com/go-logr/stdr v1.2.2
+2026-11-14T15:24:32.3165173Z #28 8.051 go: downloading go.opentelemetry.io/auto/sdk v1.1.0
+2026-11-14T15:24:32.3165576Z #28 8.057 go: downloading github.com/google/s2a-go v0.1.9
+2026-11-14T15:24:32.3166199Z #28 8.087 go: downloading github.com/googleapis/enterprise-certificate-proxy v0.3.6
+2026-11-14T15:24:32.3166701Z #28 8.088 go: downloading github.com/envoyproxy/go-control-plane/envoy v1.32.4
+2026-11-14T15:24:32.3167139Z #28 8.127 go: downloading github.com/felixge/httpsnoop v1.0.4
+2026-11-14T15:24:32.4345384Z #28 8.166 go: downloading github.com/josharian/intern v1.0.0
+2026-11-14T15:24:32.4345898Z #28 8.203 go: downloading github.com/charmbracelet/x/ansi v0.8.0
+2026-11-14T15:24:32.4346503Z #28 8.245 go: downloading github.com/charmbracelet/x/term v0.2.1
+2026-11-14T15:24:32.5423655Z #28 8.279 go: downloading github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6
+2026-11-14T15:24:32.5424539Z #28 8.315 go: downloading github.com/muesli/cancelreader v0.2.2
+2026-11-14T15:24:32.5425441Z #28 8.353 go: downloading github.com/juju/ratelimit v1.0.2
+2026-11-14T15:24:32.6647934Z #28 8.389 go: downloading github.com/aymanbagabas/go-osc52/v2 v2.0.1
+2026-11-14T15:24:32.6649067Z #28 8.424 go: downloading github.com/lucasb-eyer/go-colorful v1.2.0
+2026-11-14T15:24:32.6651101Z #28 8.435 go: downloading github.com/tidwall/match v1.1.1
+2026-11-14T15:24:32.6652029Z #28 8.435 go: downloading github.com/tidwall/pretty v1.2.1
+2026-11-14T15:24:32.6652933Z #28 8.435 go: downloading github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
+2026-11-14T15:24:32.6653497Z #28 8.475 go: downloading github.com/prometheus/prometheus v0.303.0
+2026-11-14T15:24:32.7991894Z #28 8.476 go: downloading github.com/VividCortex/ewma v1.2.0
+2026-11-14T15:24:32.7992564Z #28 8.476 go: downloading github.com/hashicorp/errwrap v1.1.0
+2026-11-14T15:24:32.7992954Z #28 8.489 go: downloading github.com/hashicorp/go-uuid v1.0.3
+2026-11-14T15:24:32.7993539Z #28 8.512 go: downloading github.com/jcmturner/dnsutils/v2 v2.0.0
+2026-11-14T15:24:32.7994000Z #28 8.513 go: downloading github.com/apache/thrift v0.21.0
+2026-11-14T15:24:32.7994396Z #28 8.528 go: downloading github.com/lestrrat-go/httpcc v1.0.1
+2026-11-14T15:24:32.7994841Z #28 8.549 go: downloading github.com/spiffe/go-spiffe/v2 v2.5.0
+2026-11-14T15:24:32.7995276Z #28 8.563 go: downloading github.com/cncf/xds/go v0.0.0-20250326154945-ae57f3c0d45f
+2026-11-14T15:24:32.7995898Z #28 8.609 go: downloading github.com/envoyproxy/protoc-gen-validate v1.2.1
+2026-11-14T15:24:33.0315348Z #28 8.610 go: downloading github.com/jcmturner/rpc/v2 v2.0.3
+2026-11-14T15:24:33.0315788Z #28 8.653 go: downloading github.com/zeebo/errs v1.4.0
+2026-11-14T15:24:33.0316337Z #28 8.670 go: downloading cel.dev/expr v0.23.1
+2026-11-14T15:24:33.0316733Z #28 8.692 go: downloading github.com/jcmturner/aescts/v2 v2.0.0
+2026-11-14T15:25:47.1325739Z #28 DONE 82.9s
+2026-11-14T15:25:47.3798364Z 
+2026-11-14T15:25:47.3799229Z #29 [minio stage-1 3/5] COPY --from=build /out/minio /usr/local/bin/minio
+2026-11-14T15:25:47.7971852Z #29 DONE 0.6s
+2026-11-14T15:25:47.9618470Z 
+2026-11-14T15:25:47.9619677Z #30 [minio stage-1 4/5] COPY --from=build /out/LICENSE /usr/share/doc/minio/LICENSE
+2026-11-14T15:25:47.9620133Z #30 DONE 0.0s
+2026-11-14T15:25:47.9620466Z 
+2026-11-14T15:25:47.9620864Z #31 [minio stage-1 5/5] COPY --from=build /out/build-info.txt /usr/share/doc/minio/build-info.txt
+2026-11-14T15:25:47.9621295Z #31 DONE 0.0s
+2026-11-14T15:25:47.9621430Z 
+2026-11-14T15:25:47.9621571Z #32 [minio] exporting to image
+2026-11-14T15:25:47.9621857Z #32 exporting layers
+2026-11-14T15:25:51.5650580Z #32 exporting layers 3.8s done
+2026-11-14T15:25:51.7271340Z #32 exporting manifest sha256:a5676914ccaf63633cef7019f4d43754f589407250fa72b7ae19b2d9203b1006 done
+2026-11-14T15:25:51.7272546Z #32 exporting config sha256:108db4ef80193d1edc0ebe2d2239c94b32cc18d089e696b681c449b2214d3566 done
+2026-11-14T15:25:51.7273430Z #32 exporting attestation manifest sha256:de5fda7a6b2348cc49fa6b25929fad75125beb9e78a39561ba9d6dc79ee685cf done
+2026-11-14T15:25:51.7274384Z #32 exporting manifest list sha256:96335b8a563736a1db29914cb99ae7debe40e64eb7bc1451328045faef58493c done
+2026-11-14T15:25:51.7275235Z #32 naming to docker.io/library/zerotrace-ci-minio:latest done
+2026-11-14T15:25:51.7275844Z #32 unpacking to docker.io/library/zerotrace-ci-minio:latest
+2026-11-14T15:25:52.1105195Z #32 unpacking to docker.io/library/zerotrace-ci-minio:latest 0.5s done
+2026-11-14T15:25:52.1513783Z #32 DONE 4.3s
+2026-11-14T15:25:52.1514286Z 
+2026-11-14T15:25:52.1514545Z #33 [minio] resolving provenance for metadata file
+2026-11-14T15:25:52.1514924Z #33 DONE 0.0s
+2026-11-14T15:25:52.1515897Z  Image zerotrace-ci-minio Built 
+2026-11-14T15:25:52.1516208Z  Image zerotrace-postgres:17.10 Built 
+2026-11-14T15:25:52.1516572Z  Image zerotrace-clickhouse:26.7.3.19 Built 
+2026-11-14T15:25:52.1543996Z  Network zerotrace-ci_zerotrace Creating 
+2026-11-14T15:25:52.1744692Z  Network zerotrace-ci_zerotrace Created 
+2026-11-14T15:25:52.1748773Z  Volume zerotrace-ci_minio-data Creating 
+2026-11-14T15:25:52.1756840Z  Volume zerotrace-ci_minio-data Created 
+2026-11-14T15:25:52.1759973Z  Volume zerotrace-ci_postgres-data Creating 
+2026-11-14T15:25:52.1772515Z  Volume zerotrace-ci_postgres-data Created 
+2026-11-14T15:25:52.1774534Z  Volume zerotrace-ci_clickhouse-data Creating 
+2026-11-14T15:25:52.1781516Z  Volume zerotrace-ci_clickhouse-data Created 
+2026-11-14T15:25:52.1791159Z  Container zerotrace-ci-minio-1 Creating 
+2026-11-14T15:25:52.1791594Z  Container zerotrace-ci-postgres-1 Creating 
+2026-11-14T15:25:52.1791946Z  Container zerotrace-ci-clickhouse-1 Creating 
+2026-11-14T15:25:52.2593203Z  Container zerotrace-ci-postgres-1 Created 
+2026-11-14T15:25:52.2593778Z  Container zerotrace-ci-clickhouse-1 Created 
+2026-11-14T15:25:52.2594870Z  Container zerotrace-ci-minio-1 Created 
+2026-11-14T15:25:52.2732591Z  Container zerotrace-ci-minio-1 Starting 
+2026-11-14T15:25:52.2733231Z  Container zerotrace-ci-postgres-1 Starting 
+2026-11-14T15:25:52.2733962Z  Container zerotrace-ci-clickhouse-1 Starting 
+2026-11-14T15:25:52.8872986Z  Container zerotrace-ci-postgres-1 Started 
+2026-11-14T15:25:52.9121055Z  Container zerotrace-ci-minio-1 Started 
+2026-11-14T15:25:52.9305165Z  Container zerotrace-ci-clickhouse-1 Started 
+2026-11-14T15:25:53.0473372Z /var/run/postgresql:5432 - no response
+2026-11-14T15:25:55.1350916Z /var/run/postgresql:5432 - accepting connections
+2026-11-14T15:25:55.1511213Z curl: (56) Recv failure: Connection reset by peer
+2026-11-14T15:25:57.2112841Z ##[group]Run npm run test:coverage
+2026-11-14T15:25:57.2113211Z [36;1mnpm run test:coverage[0m
+2026-11-14T15:25:57.2131576Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:25:57.2131859Z env:
+2026-11-14T15:25:57.2132081Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:25:57.2132359Z   POSTGRES_PORT: 55432
+2026-11-14T15:25:57.2132608Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:25:57.2132848Z   MINIO_PORT: 59000
+2026-11-14T15:25:57.2133080Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:25:57.2133355Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:25:57.2133679Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:25:57.2134710Z   TEST_POSTGRES_URL: ***127.0.0.1:55432/zerotrace
+2026-11-14T15:25:57.2135013Z   TEST_CLICKHOUSE_URL: http://127.0.0.1:58123
+2026-11-14T15:25:57.2135326Z   TEST_OBJECT_STORE_ENDPOINT: http://127.0.0.1:59000
+2026-11-14T15:25:57.2135635Z   TEST_OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:25:57.2136067Z   TEST_OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:25:57.2136382Z ##[endgroup]
+2026-11-14T15:25:57.2821458Z 
+2026-11-14T15:25:57.2822388Z > zerotrace@0.1.0 test:coverage
+2026-11-14T15:25:57.2823070Z > vitest run --coverage packages services apps/api/test tests/integration --no-file-parallelism
+2026-11-14T15:25:57.2823499Z 
+2026-11-14T15:25:57.5559053Z 
+2026-11-14T15:25:57.5562952Z [1m[30m[46m RUN [49m[39m[22m [36mv4.1.12 [39m[90m/home/runner/work/ZeroTrace/ZeroTrace[39m
+2026-11-14T15:25:57.5563729Z       [2mCoverage enabled with [22m[33mv8[39m
+2026-11-14T15:25:57.5564169Z 
+2026-11-14T15:26:01.8559279Z  [32m✓[39m tests/integration/api.test.ts [2m([22m[2m88 tests[22m[2m)[22m[33m 1958[2mms[22m[39m
+2026-11-14T15:26:04.0200136Z  [32m✓[39m tests/integration/postgres.test.ts [2m([22m[2m26 tests[22m[2m)[22m[33m 1357[2mms[22m[39m
+2026-11-14T15:26:04.3940265Z  [32m✓[39m packages/chain-adapters/src/adapters.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+2026-11-14T15:26:04.8250449Z  [32m✓[39m packages/chain-adapters/src/sqd.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 133[2mms[22m[39m
+2026-11-14T15:26:06.0519737Z  [32m✓[39m apps/api/test/unit/social-observation-routes.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 256[2mms[22m[39m
+2026-11-14T15:26:06.7608997Z  [32m✓[39m packages/platform-adapters/src/index.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 119[2mms[22m[39m
+2026-11-14T15:26:07.3933374Z  [32m✓[39m packages/platform-adapters/src/flap-events.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+2026-11-14T15:26:07.9229186Z  [32m✓[39m packages/ingestion/src/index.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-11-14T15:26:08.4658062Z  [32m✓[39m packages/ingestion/src/token-history.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+2026-11-14T15:26:08.7981599Z  [32m✓[39m packages/storage/src/capture-schedules.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-11-14T15:26:08.9700938Z  [32m✓[39m packages/provider-plane/src/index.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-14T15:26:10.1415803Z  [32m✓[39m packages/chain-adapters/src/transport.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 904[2mms[22m[39m
+2026-11-14T15:26:10.7451007Z  [32m✓[39m packages/platform-adapters/src/flap-lifetime.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+2026-11-14T15:26:11.0678176Z  [32m✓[39m packages/storage/src/paper-simulation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-11-14T15:26:11.2369052Z  [32m✓[39m packages/metric-registry/src/index.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-11-14T15:26:11.5502032Z  [32m✓[39m packages/schemas/src/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-11-14T15:26:12.6922902Z  [32m✓[39m apps/api/test/unit/paper-simulation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+2026-11-14T15:26:13.3553120Z  [32m✓[39m tests/integration/capture-schedules-postgres.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 151[2mms[22m[39m
+2026-11-14T15:26:13.7300902Z  [32m✓[39m packages/storage-plane/src/index.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+2026-11-14T15:26:15.0689172Z  [32m✓[39m apps/api/test/unit/market-structure.test.ts [2m([22m[2m13 tests[22m[2m)[22m[33m 392[2mms[22m[39m
+2026-11-14T15:26:15.4777165Z  [32m✓[39m packages/platform-adapters/src/solana-transaction-semantics.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+2026-11-14T15:26:15.8011973Z  [32m✓[39m packages/storage/src/social-observations.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-14T15:26:16.4336275Z  [32m✓[39m tests/integration/flap-lifetime-heads-postgres.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 200[2mms[22m[39m
+2026-11-14T15:26:16.8985547Z  [32m✓[39m packages/platform-adapters/src/claim-evm.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-14T15:26:17.2285329Z  [32m✓[39m packages/token-market-capture/src/index.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-14T15:26:17.5380098Z  [32m✓[39m packages/claim-audit/src/index.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-14T15:26:17.9840447Z  [32m✓[39m packages/platform-adapters/src/evm-control-rights.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+2026-11-14T15:26:18.3594590Z  [32m✓[39m packages/funding-settlement-engine/src/token-history-provider.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+2026-11-14T15:26:18.6665856Z  [32m✓[39m packages/capture-scheduler/src/index.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-11-14T15:26:19.4820905Z  [32m✓[39m services/semantic-worker/src/token-history-backfill-handler.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+2026-11-14T15:26:19.8055386Z  [32m✓[39m packages/platform-adapters/src/solana-raydium-launchlab.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-11-14T15:26:20.7972721Z  [32m✓[39m tests/integration/ingestion-storage.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 497[2mms[22m[39m
+2026-11-14T15:26:21.3772297Z  [32m✓[39m packages/platform-adapters/src/flap-history-projection.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-14T15:26:21.7064431Z  [32m✓[39m packages/storage/src/label-intelligence-reports.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-11-14T15:26:22.0030655Z  [32m✓[39m packages/entity-engine/src/evaluation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-11-14T15:26:22.3596010Z  [32m✓[39m packages/storage/src/entity-investigation-graph-timelines.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+2026-11-14T15:26:22.6901346Z  [32m✓[39m packages/storage/src/flap-lifetime-heads.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-11-14T15:26:23.0079989Z  [32m✓[39m packages/action-semantics/src/raw-ledger.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-11-14T15:26:23.4441792Z  [32m✓[39m packages/storage/src/clickhouse.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 122[2mms[22m[39m
+2026-11-14T15:26:24.0363753Z  [32m✓[39m packages/platform-adapters/src/claim-evm-burn-promotion.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-11-14T15:26:24.5943289Z  [32m✓[39m apps/api/test/unit/solana-dealer.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-11-14T15:26:25.1514071Z  [32m✓[39m tests/integration/social-observations-postgres.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 87[2mms[22m[39m
+2026-11-14T15:26:25.4879815Z  [32m✓[39m packages/entity-engine/src/investigation-graph-timeline.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+2026-11-14T15:26:26.0693537Z  [32m✓[39m packages/platform-adapters/src/claim-evm-supply-continuity.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-11-14T15:26:26.8284101Z  [32m✓[39m services/semantic-worker/src/token-history-candidate-expansion.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-11-14T15:26:27.5892385Z  [32m✓[39m apps/api/test/unit/bitcoin-forensic-graph.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+2026-11-14T15:26:27.9538555Z  [32m✓[39m services/semantic-worker/src/lifetime-rollback.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+2026-11-14T15:26:28.2957209Z  [32m✓[39m packages/action-semantics/src/index.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-14T15:26:29.4436162Z  [32m✓[39m apps/api/test/unit/system-routes.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+2026-11-14T15:26:29.8160012Z  [32m✓[39m packages/campaign-engine/src/solana-provider-reconstruction.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+2026-11-14T15:26:30.1797442Z  [32m✓[39m packages/campaign-engine/src/provider-reconstruction.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+2026-11-14T15:26:30.4770018Z  [32m✓[39m packages/storage/src/durable-jobs.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:26:30.7863694Z  [32m✓[39m packages/storage/src/intelligence-search.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-14T15:26:30.9506422Z  [32m✓[39m packages/provider-plane/src/external-content.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-11-14T15:26:31.8527425Z  [32m✓[39m apps/api/test/unit/error-handler.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 104[2mms[22m[39m
+2026-11-14T15:26:32.3393574Z  [32m✓[39m packages/storage/src/index.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-14T15:26:32.6521717Z  [32m✓[39m packages/platform-adapters/src/solana-launchpad.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-11-14T15:26:32.9757573Z  [32m✓[39m packages/data-quality/src/index.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+2026-11-14T15:26:33.9422089Z  [32m✓[39m tests/integration/claim-verification-reports-postgres.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 236[2mms[22m[39m
+2026-11-14T15:26:34.2835190Z  [32m✓[39m packages/funding-settlement-engine/src/index.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+2026-11-14T15:26:34.7134255Z  [32m✓[39m packages/platform-adapters/src/solana-control-rights.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-11-14T15:26:35.0479461Z  [32m✓[39m packages/storage/src/ingestion-checkpoints.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:26:35.3945193Z  [32m✓[39m packages/storage/src/funding-settlement-reports.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-11-14T15:26:35.5862472Z  [32m✓[39m apps/api/test/unit/config.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-11-14T15:26:35.9201035Z  [32m✓[39m packages/storage/src/entity-investigation-graphs.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+2026-11-14T15:26:37.0598410Z  [32m✓[39m apps/api/test/unit/fail-closed-routes.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 187[2mms[22m[39m
+2026-11-14T15:26:37.4318022Z  [32m✓[39m packages/storage/src/control-campaign-reports.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+2026-11-14T15:26:38.0592202Z  [32m✓[39m services/semantic-worker/src/claim-action-capture-handler.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+2026-11-14T15:26:38.4221320Z  [32m✓[39m packages/storage/src/age-investigation-graph.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-11-14T15:26:38.7482101Z  [32m✓[39m packages/storage/src/solana-transaction-reports.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-11-14T15:26:39.0836523Z  [32m✓[39m packages/llm-gateway/src/v11-analysis.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-11-14T15:26:39.3920449Z  [32m✓[39m packages/storage/src/semantic-checkpoints.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-14T15:26:39.7186198Z  [32m✓[39m packages/storage/src/entity-relationship-timelines.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-11-14T15:26:40.0500102Z  [32m✓[39m packages/storage/src/entity-relationship-reports.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-11-14T15:26:41.2495199Z  [32m✓[39m apps/api/test/unit/platform-security.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 243[2mms[22m[39m
+2026-11-14T15:26:41.5900277Z  [32m✓[39m packages/claim-audit/src/declaration.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+2026-11-14T15:26:41.9247804Z  [32m✓[39m packages/entity-engine/src/investigation-graph.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+2026-11-14T15:26:42.3060031Z  [32m✓[39m packages/storage/src/claim-verification-reports.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+2026-11-14T15:26:42.6280142Z  [32m✓[39m packages/storage/src/flap-pension-entry-reports.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+2026-11-14T15:26:42.9688021Z  [32m✓[39m packages/claim-audit/src/review.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+2026-11-14T15:26:43.2933482Z  [32m✓[39m packages/storage/src/claim-reports.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-11-14T15:26:43.6030505Z  [32m✓[39m packages/claim-audit/src/burn.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-11-14T15:26:44.2425361Z  [32m✓[39m tests/integration/claim-rule-review-reports-postgres.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 190[2mms[22m[39m
+2026-11-14T15:26:44.5635627Z  [32m✓[39m packages/storage/src/control-surface-reports.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+2026-11-14T15:26:44.8712548Z  [32m✓[39m services/semantic-worker/src/lifetime-head-cycle.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-11-14T15:26:45.1498394Z  [32m✓[39m packages/evidence/src/index.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-14T15:26:45.5962705Z  [32m✓[39m packages/platform-adapters/src/claim-evm-burn.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-14T15:26:45.8930377Z  [32m✓[39m packages/data-quality/src/discrepancy.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-14T15:26:46.4681122Z  [32m✓[39m apps/api/test/unit/provider-plane-runtime.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+2026-11-14T15:26:46.7785535Z  [32m✓[39m packages/storage/src/token-history-discovery-reports.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-11-14T15:26:47.0903400Z  [32m✓[39m packages/platform-adapters/src/bitcoin-transaction-entity.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-11-14T15:26:47.4090376Z  [32m✓[39m services/semantic-worker/src/lifetime-continuity.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-11-14T15:26:47.7213409Z  [32m✓[39m packages/platform-adapters/src/launchpad-registry.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-14T15:26:48.4267169Z  [32m✓[39m services/semantic-worker/src/lifetime-worker.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:26:48.9349532Z  [32m✓[39m services/semantic-worker/src/action-capture-handler.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-14T15:26:49.2094274Z  [32m✓[39m packages/rv/src/index.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-14T15:26:49.5560501Z  [32m✓[39m packages/claim-audit/src/verification.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 61[2mms[22m[39m
+2026-11-14T15:26:49.9844900Z  [32m✓[39m packages/platform-adapters/src/claim-evm-observation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-14T15:26:50.3040819Z  [32m✓[39m packages/storage/src/solana-dealer-campaign-reports.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-11-14T15:26:50.5884277Z  [32m✓[39m packages/asset-ledger/src/paper-simulation.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-14T15:26:50.9005809Z  [32m✓[39m packages/forensic-evidence/src/case-bundle.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-11-14T15:26:51.7136497Z  [32m✓[39m apps/api/test/unit/runtime.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-14T15:26:52.0500051Z  [32m✓[39m packages/campaign-engine/src/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-11-14T15:26:52.3830007Z  [32m✓[39m packages/storage/src/solana-control-surface-reports.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-11-14T15:26:52.6949464Z  [32m✓[39m packages/storage/src/flap-history.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:26:52.9811476Z  [32m✓[39m packages/claim-audit/src/flow.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-14T15:26:53.4322062Z  [32m✓[39m packages/platform-adapters/src/claim-evm-burn-discovery.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-11-14T15:26:54.1712772Z  [32m✓[39m services/semantic-worker/src/lifetime-head-worker.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-14T15:26:54.4891408Z  [32m✓[39m packages/storage/src/data-quality.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-14T15:26:54.7885324Z  [32m✓[39m packages/storage/src/forensic-campaign-alerts.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-14T15:26:55.1227341Z  [32m✓[39m packages/storage/src/action-semantics-reports.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-11-14T15:26:55.4077776Z  [32m✓[39m packages/asset-ledger/src/hardening.regression.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:26:55.7325773Z  [32m✓[39m packages/platform-adapters/src/solana-raydium-launchlab-pool-state.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-14T15:26:56.5051949Z  [32m✓[39m services/semantic-worker/src/token-history-backfill-worker.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-14T15:26:56.8542840Z  [32m✓[39m packages/platform-adapters/src/bitcoin-control-rights.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-14T15:26:57.1299893Z  [32m✓[39m packages/claim-audit/src/pension-candidate.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-11-14T15:26:57.4093390Z  [32m✓[39m packages/asset-ledger/src/paper-review.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-14T15:26:57.7258123Z  [32m✓[39m packages/identity-intelligence/src/index.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-11-14T15:26:57.9162506Z  [32m✓[39m apps/api/test/unit/social-source-settings.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-14T15:26:58.3396435Z  [32m✓[39m packages/platform-adapters/src/claim-evm-pension-discovery.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-11-14T15:26:58.6492515Z  [32m✓[39m packages/entity-engine/src/timeline.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-11-14T15:26:59.1718531Z  [32m✓[39m tests/integration/paper-notification-delivery-postgres.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 72[2mms[22m[39m
+2026-11-14T15:26:59.5077100Z  [32m✓[39m apps/api/test/unit/forensic-jobs.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-14T15:26:59.9990984Z  [32m✓[39m packages/storage/src/raw-artifacts.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 117[2mms[22m[39m
+2026-11-14T15:27:00.1300823Z  [32m✓[39m packages/ingestion/src/profiles.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-14T15:27:00.4272316Z  [32m✓[39m packages/storage/src/pension-candidate-reports.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-14T15:27:01.1296947Z  [32m✓[39m services/semantic-worker/src/history-worker.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-14T15:27:01.2607831Z  [32m✓[39m packages/capture-scheduler/src/observation-checkpoint.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-14T15:27:01.5905059Z  [32m✓[39m packages/platform-adapters/src/bitcoin-forensic-graph.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-11-14T15:27:01.9507024Z  [32m✓[39m packages/storage/src/claim-rule-review-reports.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+2026-11-14T15:27:02.2633091Z  [32m✓[39m packages/label-engine/src/index.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-11-14T15:27:02.5466113Z  [32m✓[39m packages/entity-engine/src/index.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:27:02.8243592Z  [32m✓[39m packages/campaign-intelligence/src/historical-research.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:03.5189796Z  [32m✓[39m services/semantic-worker/src/worker.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:03.8067168Z  [32m✓[39m packages/schemas/src/supply-continuity.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-14T15:27:04.0958823Z  [32m✓[39m packages/platform-auth/src/oidc.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 145[2mms[22m[39m
+2026-11-14T15:27:04.4199679Z  [32m✓[39m packages/forensic-pipeline/src/index.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-11-14T15:27:04.7230190Z  [32m✓[39m packages/candidate-discovery/src/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-11-14T15:27:05.0623674Z  [32m✓[39m packages/storage/src/claim-declaration-reports.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-11-14T15:27:05.7628989Z  [32m✓[39m services/semantic-worker/src/burn-promotion-worker.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:06.8962030Z  [32m✓[39m apps/api/test/unit/storage-quota.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 177[2mms[22m[39m
+2026-11-14T15:27:07.2103424Z  [32m✓[39m packages/identity-intelligence/src/hardening.regression.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-14T15:27:07.9195220Z  [32m✓[39m services/semantic-worker/src/supply-continuity-worker.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-14T15:27:08.2256795Z  [32m✓[39m packages/market-reality-engine/src/hardening.regression.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-11-14T15:27:08.3858283Z  [32m✓[39m packages/storage/src/data-procurement.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-14T15:27:08.6782750Z  [32m✓[39m packages/market-reality-engine/src/index.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-14T15:27:08.9671033Z  [32m✓[39m packages/supply-reality-engine/src/index.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-14T15:27:09.2055762Z  [32m✓[39m packages/identifiers/src/index.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-14T15:27:09.6996735Z  [32m✓[39m services/ingest-worker/src/config.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:09.9788618Z  [32m✓[39m packages/storage/src/s3-client.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+2026-11-14T15:27:10.2840237Z  [32m✓[39m packages/behavior-engine/src/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-11-14T15:27:10.5870110Z  [32m✓[39m packages/storage/src/forensic-reports.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-14T15:27:10.8610132Z  [32m✓[39m apps/api/test/unit/paper-portfolio-settings.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-11-14T15:27:11.1709970Z  [32m✓[39m packages/campaign-intelligence/src/hardening.regression.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-14T15:27:11.4481656Z  [32m✓[39m packages/capital-intelligence/src/hardening.regression.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:12.0107363Z  [32m✓[39m services/semantic-worker/src/token-history-backfill-config.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-14T15:27:12.6055354Z  [32m✓[39m tests/integration/claim-declaration-reports-postgres.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 111[2mms[22m[39m
+2026-11-14T15:27:12.9399966Z  [32m✓[39m packages/campaign-intelligence/src/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-14T15:27:13.3425331Z  [32m✓[39m packages/platform-adapters/src/sourcify.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:27:13.6294048Z  [32m✓[39m packages/workflow-core/src/index.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-14T15:27:13.9638387Z  [32m✓[39m services/semantic-worker/src/claim-action-schedule.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+2026-11-14T15:27:14.0907961Z  [32m✓[39m packages/label-engine/src/observation-policy.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-14T15:27:14.2076320Z  [32m✓[39m packages/source-registry/src/index.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-14T15:27:14.3298423Z  [32m✓[39m packages/chain-adapters/src/security.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:27:14.6129251Z  [32m✓[39m packages/cluster-position-engine/src/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-11-14T15:27:14.9042901Z  [32m✓[39m packages/storage/src/bitcoin-forensic-graph-reports.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-14T15:27:15.1905332Z  [32m✓[39m packages/evidence/src/forensic.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-11-14T15:27:15.4722161Z  [32m✓[39m packages/token-flow-engine/src/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-14T15:27:15.7663152Z  [32m✓[39m packages/casework/src/index.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-11-14T15:27:16.5075440Z  [32m✓[39m services/semantic-worker/src/claim-action-capture-worker.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-11-14T15:27:16.7931422Z  [32m✓[39m packages/data-quality/src/source-independence.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:17.3526857Z  [32m✓[39m services/semantic-worker/src/lifetime-config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-14T15:27:17.6564247Z  [32m✓[39m packages/platform-auth/src/index.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-14T15:27:18.2136453Z  [32m✓[39m services/semantic-worker/src/claim-action-capture-config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:18.4988078Z  [32m✓[39m packages/capital-intelligence/src/index.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:18.6326269Z  [32m✓[39m packages/workflow-core/src/social-query.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:18.8268704Z  [32m✓[39m packages/query-security/src/index.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-11-14T15:27:19.3031579Z  [32m✓[39m services/semantic-worker/src/action-capture-worker.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-11-14T15:27:20.1880617Z  [32m✓[39m apps/api/test/unit/query-lab.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 79[2mms[22m[39m
+2026-11-14T15:27:20.3292636Z  [32m✓[39m apps/api/test/unit/workspace-env.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-14T15:27:20.5988781Z  [32m✓[39m packages/asset-ledger/src/index.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-14T15:27:21.1830667Z  [32m✓[39m services/semantic-worker/src/action-schedule.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-11-14T15:27:21.7505974Z  [32m✓[39m services/semantic-worker/src/config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:22.3135892Z  [32m✓[39m services/semantic-worker/src/history-config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:22.7208623Z  [32m✓[39m packages/platform-adapters/src/erc20-metadata.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-11-14T15:27:22.8414911Z  [32m✓[39m packages/provider-scheduler/src/index.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:23.3944323Z  [32m✓[39m services/semantic-worker/src/burn-promotion-config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:23.6997279Z  [32m✓[39m packages/forensic-evidence/src/index.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-11-14T15:27:24.2606588Z  [32m✓[39m services/semantic-worker/src/supply-continuity-config.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:24.5401440Z  [32m✓[39m packages/chain-adapters/src/registry.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-11-14T15:27:24.8318880Z  [32m✓[39m packages/llm-gateway/src/index.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-11-14T15:27:25.0711281Z  [32m✓[39m apps/api/test/unit/metrics-lab.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+2026-11-14T15:27:25.1888860Z  [32m✓[39m packages/provider-plane/src/data-procurement.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:25.7346270Z  [32m✓[39m services/semantic-worker/src/lifetime-head-config.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-11-14T15:27:25.8820780Z  [32m✓[39m services/ingest-worker/src/errors.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+2026-11-14T15:27:25.9994290Z  [32m✓[39m packages/market-reality-engine/src/v9-repairs.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:26.1200350Z  [32m✓[39m services/semantic-worker/src/workspace-env.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:26.2420718Z  [32m✓[39m services/ingest-worker/src/workspace-env.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:26.7816482Z  [32m✓[39m services/semantic-worker/src/action-capture-config.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-11-14T15:27:26.9081347Z  [32m✓[39m packages/local-index/src/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:27.0240914Z  [32m✓[39m packages/chain-adapters/src/errors.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:27.1366568Z  [32m✓[39m packages/llm-gateway/src/v9-permissions.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:27.2511016Z  [32m✓[39m services/semantic-worker/src/errors.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-11-14T15:27:27.3654987Z  [32m✓[39m packages/terminal-pipeline/src/index.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+2026-11-14T15:27:29.9992798Z 
+2026-11-14T15:27:29.9996964Z [2m Test Files [22m [1m[32m204 passed[39m[22m[90m (204)[39m
+2026-11-14T15:27:30.0004560Z [2m      Tests [22m [1m[32m1166 passed[39m[22m[90m (1166)[39m
+2026-11-14T15:27:30.0005171Z [2m   Start at [22m 15:25:57
+2026-11-14T15:27:30.0008891Z [2m   Duration [22m 92.42s[2m (transform 2.90s, setup 0ms, import 51.32s, tests 12.71s, environment 13ms)[22m
+2026-11-14T15:27:30.0009356Z 
+2026-11-14T15:27:30.0055156Z [34m % [39m[2mCoverage report from [22m[33mv8[39m
+2026-11-14T15:27:30.0306627Z -------------------|---------|----------|---------|---------|-------------------
+2026-11-14T15:27:30.0307384Z File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+2026-11-14T15:27:30.0308405Z -------------------|---------|----------|---------|---------|-------------------
+2026-11-14T15:27:30.0320198Z All files          |   83.28 |    76.19 |   91.79 |   85.08 |                   
+2026-11-14T15:27:30.0320695Z  apps/api/src      |    85.3 |    77.35 |   89.25 |   86.09 |                   
+2026-11-14T15:27:30.0321239Z   app.ts           |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0321710Z   ...nsic-graph.ts |   91.66 |       62 |    92.3 |    92.4 | ...59-166,172,181 
+2026-11-14T15:27:30.0322236Z   ...ition-root.ts |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0324385Z   config.ts        |   98.48 |    92.68 |     100 |   98.36 | 310               
+2026-11-14T15:27:30.0324778Z   ...e-app-impl.ts |     100 |       75 |     100 |     100 | 46-48,87,117-142  
+2026-11-14T15:27:30.0326042Z   ...sic-worker.ts |       0 |        0 |       0 |       0 | 5-41              
+2026-11-14T15:27:30.0326408Z   ...ry-bitcoin.ts |    90.9 |    86.99 |     100 |    90.8 | ...08,420,431,443 
+2026-11-14T15:27:30.0326773Z   ...-query-evm.ts |   71.42 |    83.33 |      75 |   71.42 | 30-78,138,148     
+2026-11-14T15:27:30.0327122Z   ...ery-shared.ts |   89.65 |    79.41 |     100 |   89.28 | 69,78,89          
+2026-11-14T15:27:30.0327465Z   ...ery-solana.ts |   84.48 |    58.53 |   78.57 |   84.48 | ...99-225,254,261 
+2026-11-14T15:27:30.0328135Z   ledger-query.ts  |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0328592Z   ...o-settings.ts |   96.96 |     92.3 |     100 |   96.55 | 132               
+2026-11-14T15:27:30.0328930Z   ...on-schemas.ts |   95.83 |     87.5 |     100 |   95.83 | 203               
+2026-11-14T15:27:30.0329323Z   ...ider-slots.ts |     100 |     87.5 |     100 |     100 | 49-75,252         
+2026-11-14T15:27:30.0329775Z   ...ime-stores.ts |      92 |    69.56 |     100 |   95.74 | 47,231            
+2026-11-14T15:27:30.0330175Z   runtime.ts       |   73.63 |    68.42 |   57.69 |   74.76 | ...67-492,526-539 
+2026-11-14T15:27:30.0330600Z   ...e-settings.ts |   75.92 |    67.56 |     100 |   75.51 | ...43,274-276,282 
+2026-11-14T15:27:30.0331039Z   solana-dealer.ts |   84.27 |    71.31 |   92.85 |    86.8 | ...53-467,498,513 
+2026-11-14T15:27:30.0331442Z   ...plane-bind.ts |     100 |     88.7 |     100 |     100 | 39,65-76          
+2026-11-14T15:27:30.0331840Z   ...re-runtime.ts |   78.94 |    70.37 |   71.42 |   81.13 | ...46-157,218-227 
+2026-11-14T15:27:30.0332248Z   workspace-env.ts |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0333545Z  apps/api/src/http |   80.04 |    67.46 |    86.2 |   80.97 |                   
+2026-11-14T15:27:30.0333963Z   context.ts       |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0334398Z   error-handler.ts |   76.47 |    70.58 |     100 |   76.47 | ...07-208,213-214 
+2026-11-14T15:27:30.0334812Z   health.ts        |   83.92 |    55.35 |     100 |    84.9 | ...49-251,290-296 
+2026-11-14T15:27:30.0335467Z   helpers.ts       |   64.63 |    70.58 |   72.97 |   66.21 | ...19,294-310,338 
+2026-11-14T15:27:30.0335867Z   ...-schemas-a.ts |   89.91 |    70.58 |   91.66 |   90.67 | ...19,521,530,562 
+2026-11-14T15:27:30.0336281Z   ...-schemas-b.ts |   85.71 |     61.9 |     100 |   85.71 | ...35,270,352,359 
+2026-11-14T15:27:30.0336676Z   ...st-schemas.ts |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0337086Z  ...pi/src/plugins |   80.95 |    68.11 |   91.74 |   81.29 |                   
+2026-11-14T15:27:30.0337498Z   ...n-handlers.ts |   89.89 |    74.24 |   94.11 |    91.2 | ...96,324,351,376 
+2026-11-14T15:27:30.0338062Z   ...bservation.ts |   87.38 |    77.65 |     100 |   87.38 | ...86,392,405,478 
+2026-11-14T15:27:30.0338488Z   ...rol-rights.ts |   68.75 |     67.6 |   85.71 |   68.75 | ...83,208,217,260 
+2026-11-14T15:27:30.0338894Z   ...ies-graphs.ts |   85.07 |    63.91 |     100 |   83.87 | ...10,426,498,539 
+2026-11-14T15:27:30.0339298Z   ...ationships.ts |   88.34 |    74.54 |     100 |   87.62 | ...88,304,386,429 
+2026-11-14T15:27:30.0339701Z   ...e-launches.ts |      95 |     82.4 |     100 |      95 | ...18,374,387,407 
+2026-11-14T15:27:30.0340102Z   forensics.ts     |    62.9 |    46.15 |   66.66 |   60.71 | ...09-310,339-340 
+2026-11-14T15:27:30.0340516Z   ...-campaigns.ts |   69.92 |    41.66 |      90 |   68.59 | ...47-349,361-379 
+2026-11-14T15:27:30.0340932Z   ...-structure.ts |   67.85 |     43.2 |      72 |    67.4 | ...03-509,551-558 
+2026-11-14T15:27:30.0341340Z   metrics-lab.ts   |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0341752Z   ...simulation.ts |    86.2 |    58.97 |   94.73 |   86.04 | ...79,300-305,324 
+2026-11-14T15:27:30.0342157Z   ...m-security.ts |   85.24 |    85.98 |     100 |   86.53 | 168-187           
+2026-11-14T15:27:30.0342559Z   query-lab.ts     |   92.85 |       50 |     100 |     100 | 102               
+2026-11-14T15:27:30.0342950Z   ...-deletions.ts |   96.42 |    94.87 |     100 |   96.42 | 38                
+2026-11-14T15:27:30.0343364Z   ...servations.ts |   93.98 |    88.98 |   94.11 |   96.87 | 121,132,507-508   
+2026-11-14T15:27:30.0343769Z   ...-contracts.ts |   80.95 |    82.85 |     100 |   93.33 | 19                
+2026-11-14T15:27:30.0344161Z   ...ch-sources.ts |   94.28 |    74.07 |     100 |   94.11 | 134,154           
+2026-11-14T15:27:30.0344559Z   rv-flap.ts       |    89.1 |    72.72 |     100 |   88.88 | ...95,357,404,437 
+2026-11-14T15:27:30.0344960Z   ...ios-claims.ts |   83.33 |    57.89 |     100 |    83.2 | ...35-553,575-588 
+2026-11-14T15:27:30.0345373Z   search-labels.ts |   91.37 |    83.52 |   93.75 |   91.96 | ...87,322,442,455 
+2026-11-14T15:27:30.0345797Z   ...na-bitcoin.ts |   64.63 |    61.73 |   70.58 |   65.21 | ...05,525,541,563 
+2026-11-14T15:27:30.0346195Z   storage-quota.ts |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0346597Z   system.ts        |   96.96 |    58.04 |   92.85 |   96.15 | 408               
+2026-11-14T15:27:30.0346991Z   token-analyze.ts |   51.94 |     40.4 |    87.5 |   55.71 | ...99-203,223-227 
+2026-11-14T15:27:30.0347396Z  ...pi/src/workers |   74.02 |    67.79 |   71.42 |   77.14 |                   
+2026-11-14T15:27:30.0348041Z   forensic-jobs.ts |   74.02 |    67.79 |   71.42 |   77.14 | ...51,157-158,169 
+2026-11-14T15:27:30.0348473Z  ...-semantics/src |   82.88 |     68.4 |   98.97 |   84.18 |                   
+2026-11-14T15:27:30.0348893Z   index.ts         |   86.98 |    74.04 |   97.77 |   88.18 | ...37,338,407,461 
+2026-11-14T15:27:30.0349349Z   raw-ledger.ts    |   81.12 |    66.15 |     100 |    82.5 | ...52-757,766,779 
+2026-11-14T15:27:30.0349681Z  ...set-ledger/src |   81.51 |    73.02 |    93.5 |   87.17 |                   
+2026-11-14T15:27:30.0349990Z   index.ts         |   76.41 |    80.59 |     100 |   78.12 | ...67,372,383,389 
+2026-11-14T15:27:30.0350391Z   paper-review.ts  |   84.94 |    68.83 |     100 |   91.56 | ...78-181,241,259 
+2026-11-14T15:27:30.0350993Z   ...simulation.ts |   82.31 |    69.23 |   85.71 |   89.25 | ...57,680-689,742 
+2026-11-14T15:27:30.0351431Z  ...ior-engine/src |   88.99 |       75 |      96 |   91.08 |                   
+2026-11-14T15:27:30.0351817Z   index.ts         |   88.99 |       75 |      96 |   91.08 | ...01,317,452-465 
+2026-11-14T15:27:30.0352232Z  ...ign-engine/src |   79.06 |    66.25 |    83.5 |   82.29 |                   
+2026-11-14T15:27:30.0352664Z   index.ts         |   70.66 |    67.83 |   94.59 |   73.28 | ...50-451,456,492 
+2026-11-14T15:27:30.0353073Z   ...nstruction.ts |   70.78 |    60.59 |   66.66 |   74.36 | ...77-883,936-939 
+2026-11-14T15:27:30.0353495Z   ...nstruction.ts |   90.29 |    70.66 |   94.11 |   93.45 | ...2,832,839,1013 
+2026-11-14T15:27:30.0353905Z  ...telligence/src |      90 |    74.16 |     100 |      95 |                   
+2026-11-14T15:27:30.0354324Z   ...l-research.ts |   88.78 |    79.82 |     100 |      91 | ...57-159,318,324 
+2026-11-14T15:27:30.0354716Z   index.ts         |   91.05 |    67.36 |     100 |      99 | 137               
+2026-11-14T15:27:30.0355119Z  ...-discovery/src |      90 |    84.72 |     100 |   97.18 |                   
+2026-11-14T15:27:30.0355769Z   index.ts         |      90 |    84.72 |     100 |   97.18 | 56,99             
+2026-11-14T15:27:30.0356096Z  ...telligence/src |   90.42 |    70.58 |   94.73 |   92.68 |                   
+2026-11-14T15:27:30.0356413Z   index.ts         |   90.42 |    70.58 |   94.73 |   92.68 | ...83,148,252-253 
+2026-11-14T15:27:30.0356794Z  ...-scheduler/src |   91.05 |    88.32 |   85.71 |   93.69 |                   
+2026-11-14T15:27:30.0357204Z   index.ts         |   88.54 |     81.6 |   81.25 |   91.95 | ...54-155,295,328 
+2026-11-14T15:27:30.0357582Z   ...checkpoint.ts |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0358140Z  ...s/casework/src |      90 |       50 |    92.3 |   88.88 |                   
+2026-11-14T15:27:30.0358532Z   index.ts         |      90 |       50 |    92.3 |   88.88 | 122-124           
+2026-11-14T15:27:30.0358937Z  ...n-adapters/src |   83.98 |    77.95 |   91.66 |   84.88 |                   
+2026-11-14T15:27:30.0359337Z   bitcoin.ts       |   85.71 |    73.88 |    97.5 |   85.36 | ...47,556,629,637 
+2026-11-14T15:27:30.0359727Z   errors.ts        |     100 |    92.85 |     100 |     100 | 43                
+2026-11-14T15:27:30.0360092Z   evm.ts           |   84.87 |    75.58 |   91.07 |   87.62 | ...94,701,765-771 
+2026-11-14T15:27:30.0360477Z   registry.ts      |    92.1 |       80 |     100 |    90.9 | 53,56,63          
+2026-11-14T15:27:30.0360898Z   security.ts      |   93.75 |    88.75 |     100 |   93.02 | 28,120,131        
+2026-11-14T15:27:30.0361279Z   solana.ts        |   84.01 |    76.62 |   96.87 |   84.76 | ...00,712,760,971 
+2026-11-14T15:27:30.0361660Z   sqd.ts           |   81.57 |    77.08 |      91 |   82.19 | ...1995,2023-2024 
+2026-11-14T15:27:30.0362037Z   transport.ts     |   85.03 |    81.69 |   83.52 |   86.88 | ...1027,1060-1061 
+2026-11-14T15:27:30.0362456Z  ...laim-audit/src |   87.81 |     81.7 |   93.83 |   90.31 |                   
+2026-11-14T15:27:30.0362862Z   burn.ts          |   87.67 |    83.01 |     100 |   89.85 | ...03,109,121,138 
+2026-11-14T15:27:30.0363300Z   declaration.ts   |   94.18 |    84.45 |     100 |   96.22 | ...84,359,516,543 
+2026-11-14T15:27:30.0363606Z   flow.ts          |   86.88 |     79.8 |   97.14 |   89.28 | ...64-165,184,208 
+2026-11-14T15:27:30.0363937Z   index.ts         |   84.69 |    77.58 |   92.72 |   88.37 | ...39,761,769-774 
+2026-11-14T15:27:30.0364585Z   ...-candidate.ts |   94.87 |     92.3 |    90.9 |   97.22 | 110,232           
+2026-11-14T15:27:30.0364983Z   review.ts        |    87.9 |    84.09 |     100 |   89.83 | ...75,416,420,424 
+2026-11-14T15:27:30.0365408Z   verification.ts  |      75 |    83.33 |   53.33 |      75 | ...98,235-238,268 
+2026-11-14T15:27:30.0365880Z  ...ion-engine/src |   80.41 |    63.75 |    90.9 |    86.2 |                   
+2026-11-14T15:27:30.0366340Z   index.ts         |   80.41 |    63.75 |    90.9 |    86.2 | ...00,212,287-297 
+2026-11-14T15:27:30.0366866Z  ...ta-quality/src |   87.78 |    82.47 |   98.85 |   89.18 |                   
+2026-11-14T15:27:30.0367347Z   discrepancy.ts   |   89.42 |     89.8 |     100 |      91 | ...46,289,322,332 
+2026-11-14T15:27:30.0367986Z   index.ts         |   86.04 |    75.39 |   98.33 |   87.19 | ...74-475,616,623 
+2026-11-14T15:27:30.0368439Z   ...dependence.ts |   93.93 |     91.3 |     100 |   96.66 | 69                
+2026-11-14T15:27:30.0368872Z  ...ity-engine/src |   91.68 |    78.02 |   99.39 |   93.37 |                   
+2026-11-14T15:27:30.0369282Z   evaluation.ts    |   90.64 |    85.71 |   97.29 |   91.85 | ...71,378,381,473 
+2026-11-14T15:27:30.0369668Z   index.ts         |   94.36 |    82.25 |     100 |   98.41 | 210               
+2026-11-14T15:27:30.0370069Z   ...h-timeline.ts |   89.31 |    65.48 |     100 |   91.74 | ...99-215,223,254 
+2026-11-14T15:27:30.0370752Z   ...tion-graph.ts |   92.43 |    80.41 |     100 |   93.78 | ...85,329,417,420 
+2026-11-14T15:27:30.0371201Z   timeline.ts      |   94.11 |       76 |     100 |   93.33 | 79,82,106         
+2026-11-14T15:27:30.0371597Z  ...s/evidence/src |   88.57 |    85.36 |    90.9 |   90.62 |                   
+2026-11-14T15:27:30.0372001Z   canonical.ts     |    92.3 |       90 |     100 |     100 | 5                 
+2026-11-14T15:27:30.0372388Z   forensic.ts      |   75.75 |    57.14 |      80 |   80.64 | 20,70,147-153     
+2026-11-14T15:27:30.0372780Z   hash.ts          |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0373149Z   index.ts         |   94.82 |    91.37 |     100 |   94.44 | 129,140,149       
+2026-11-14T15:27:30.0373542Z  ...c-evidence/src |   76.88 |    66.44 |      80 |   78.68 |                   
+2026-11-14T15:27:30.0373977Z   index.ts         |   76.88 |    66.44 |      80 |   78.68 | ...53,659,665,668 
+2026-11-14T15:27:30.0374414Z  ...c-pipeline/src |   97.26 |    80.88 |     100 |   97.18 |                   
+2026-11-14T15:27:30.0374835Z   capability.ts    |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0375296Z   index.ts         |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0375891Z   materialize.ts   |   96.66 |    78.33 |     100 |   96.55 | 78,224            
+2026-11-14T15:27:30.0376307Z   origin-job.ts    |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0376709Z  ...ent-engine/src |   88.13 |    78.14 |   98.85 |   92.14 |                   
+2026-11-14T15:27:30.0377111Z   index.ts         |   87.69 |    78.54 |     100 |   91.35 | ...38,882-887,905 
+2026-11-14T15:27:30.0377552Z   ...y-provider.ts |   90.24 |    76.62 |   91.66 |   95.89 | 114,181,205       
+2026-11-14T15:27:30.0378229Z  ...dentifiers/src |     100 |    95.06 |     100 |     100 |                   
+2026-11-14T15:27:30.0378697Z   index.ts         |     100 |    95.06 |     100 |     100 | 73-74,94,158      
+2026-11-14T15:27:30.0379149Z  ...telligence/src |    87.5 |    81.44 |      75 |   90.24 |                   
+2026-11-14T15:27:30.0379566Z   index.ts         |    87.5 |    81.44 |      75 |   90.24 | ...54,179,298-300 
+2026-11-14T15:27:30.0379964Z  .../ingestion/src |   83.38 |    76.04 |   88.76 |   84.69 |                   
+2026-11-14T15:27:30.0380363Z   index.ts         |   94.17 |    89.47 |      96 |    95.4 | ...73,585,623,955 
+2026-11-14T15:27:30.0380756Z   profiles.ts      |   96.77 |    95.45 |     100 |   96.55 | 195               
+2026-11-14T15:27:30.0381169Z   token-history.ts |    76.9 |     68.5 |   85.48 |   78.19 | ...1490,1527-1537 
+2026-11-14T15:27:30.0381788Z  ...bel-engine/src |   95.86 |    86.25 |   97.82 |   95.14 |                   
+2026-11-14T15:27:30.0382181Z   index.ts         |   94.94 |    80.35 |   97.43 |   94.31 | ...03,241,245,249 
+2026-11-14T15:27:30.0382576Z   ...ion-policy.ts |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0382984Z  ...lm-gateway/src |   74.18 |    69.01 |   89.65 |    83.4 |                   
+2026-11-14T15:27:30.0383449Z   config.ts        |   75.92 |    69.84 |   85.71 |   78.43 | ...,89,94,110,136 
+2026-11-14T15:27:30.0383838Z   index.ts         |   88.37 |    81.81 |    92.3 |    87.8 | 61-65,84,88,91    
+2026-11-14T15:27:30.0384233Z   ...compatible.ts |   71.83 |    67.68 |     100 |   85.59 | ...97-198,214,241 
+2026-11-14T15:27:30.0384643Z   permissions.ts   |   63.88 |    65.71 |   66.66 |      76 | 20-21,24-26,42    
+2026-11-14T15:27:30.0385085Z  ...ocal-index/src |   87.71 |     72.5 |    90.9 |   91.83 |                   
+2026-11-14T15:27:30.0385491Z   index.ts         |   87.71 |     72.5 |    90.9 |   91.83 | 123-127           
+2026-11-14T15:27:30.0385882Z  ...ity-engine/src |   82.99 |       61 |    90.9 |   88.42 |                   
+2026-11-14T15:27:30.0386275Z   index.ts         |   82.52 |    61.11 |   90.47 |   86.98 | ...76,310,424-439 
+2026-11-14T15:27:30.0386648Z   math.ts          |   84.09 |    60.52 |    92.3 |   91.78 | 17-18,58-59,77-79 
+2026-11-14T15:27:30.0387055Z  ...c-registry/src |   97.31 |    92.62 |     100 |   98.31 |                   
+2026-11-14T15:27:30.0387445Z   index.ts         |   97.31 |    92.62 |     100 |   98.31 | 237,249,684,708   
+2026-11-14T15:27:30.0388023Z  ...m-adapters/src |   81.75 |    74.58 |   94.06 |   83.41 |                   
+2026-11-14T15:27:30.0388444Z   ...rol-rights.ts |   83.12 |    76.24 |     100 |   86.33 | ...48,355,440,464 
+2026-11-14T15:27:30.0388851Z   ...nsic-graph.ts |   86.78 |       70 |     100 |   89.03 | ...10-521,548,586 
+2026-11-14T15:27:30.0389261Z   ...ion-entity.ts |   94.11 |    92.43 |      96 |   94.44 | 21,50-51,129,140  
+2026-11-14T15:27:30.0389678Z   ...-discovery.ts |    87.5 |     82.6 |     100 |   86.95 | ...37,152,181,221 
+2026-11-14T15:27:30.0390097Z   ...-promotion.ts |   80.26 |    73.63 |     100 |   82.32 | ...60,663-670,683 
+2026-11-14T15:27:30.0390512Z   ...m-evm-burn.ts |   87.71 |    81.81 |     100 |   90.74 | ...05,109,113,291 
+2026-11-14T15:27:30.0391009Z   ...bservation.ts |   85.93 |     84.9 |     100 |    87.3 | ...44,153,192,239 
+2026-11-14T15:27:30.0391421Z   ...-discovery.ts |   86.79 |    83.33 |   88.88 |   88.23 | ...,82,85,166,221 
+2026-11-14T15:27:30.0391813Z   ...continuity.ts |   81.96 |    76.98 |   96.55 |   84.34 | ...,999,1009,1024 
+2026-11-14T15:27:30.0392204Z   claim-evm.ts     |   85.71 |    81.67 |     100 |   87.38 | ...44,753,756,770 
+2026-11-14T15:27:30.0392633Z   ...0-metadata.ts |   82.35 |    66.66 |     100 |    87.5 | 31,50             
+2026-11-14T15:27:30.0393056Z   ...rol-rights.ts |    87.1 |    73.94 |   97.95 |   87.89 | ...1160,1168,1181 
+2026-11-14T15:27:30.0393469Z   flap-events.ts   |   88.29 |    81.05 |   93.61 |   89.63 | ...58,765,772,777 
+2026-11-14T15:27:30.0393833Z   ...projection.ts |   77.43 |    75.61 |   97.22 |   77.06 | ...36,779,808,862 
+2026-11-14T15:27:30.0394160Z   flap-history.ts  |   83.97 |    68.31 |   94.73 |      86 | ...18,427,469,488 
+2026-11-14T15:27:30.0394478Z   ...-extension.ts |   66.32 |    68.69 |      90 |   69.56 | ...86,389,425-432 
+2026-11-14T15:27:30.0394814Z   flap-lifetime.ts |   80.62 |    81.43 |     100 |   84.87 | ...24,481-482,495 
+2026-11-14T15:27:30.0395183Z   ...nciliation.ts |   88.88 |    76.19 |     100 |   92.39 | ...40,384,457,473 
+2026-11-14T15:27:30.0395497Z   flap-market.ts   |   82.71 |       68 |   94.82 |   83.56 | ...1178,1200-1212 
+2026-11-14T15:27:30.0395801Z   flap-origin.ts   |   81.27 |    76.67 |   97.77 |      81 | ...66,888,921,930 
+2026-11-14T15:27:30.0396110Z   ...sion-entry.ts |   89.06 |     72.5 |     100 |   91.66 | 37,69,102,147,153 
+2026-11-14T15:27:30.0396496Z   flap.ts          |   82.01 |     78.1 |   96.66 |   82.51 | ...1009,1032-1033 
+2026-11-14T15:27:30.0396791Z   index.ts         |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0397098Z   ...provenance.ts |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0397411Z   ...d-registry.ts |   98.11 |    93.47 |     100 |     100 | 211,232,252       
+2026-11-14T15:27:30.0397982Z   ...asset-flow.ts |   75.98 |    69.11 |   76.92 |   76.85 | ...18,431-433,455 
+2026-11-14T15:27:30.0398393Z   ...rol-rights.ts |    58.6 |    62.12 |   80.85 |   60.75 | ...1,974-975,1032 
+2026-11-14T15:27:30.0398807Z   ...-launchpad.ts |      77 |    68.22 |   78.94 |   82.78 | ...61,596,639-640 
+2026-11-14T15:27:30.0399228Z   ...pool-state.ts |   88.09 |    76.25 |     100 |      90 | 58,80,103,119     
+2026-11-14T15:27:30.0399620Z   ...-launchlab.ts |   85.86 |    62.74 |   85.71 |   87.73 | ...79,820,826,900 
+2026-11-14T15:27:30.0400010Z   ...-semantics.ts |   97.14 |    84.74 |     100 |   97.05 | 138,155           
+2026-11-14T15:27:30.0400400Z   sourcify.ts      |   80.68 |    73.84 |     100 |   80.95 | ...77,183,200,204 
+2026-11-14T15:27:30.0400785Z  ...tform-auth/src |      85 |       80 |     100 |   88.04 |                   
+2026-11-14T15:27:30.0401166Z   index.ts         |   79.16 |     75.6 |     100 |      85 | 26,38,73          
+2026-11-14T15:27:30.0401536Z   oidc.ts          |   86.84 |    82.14 |     100 |   88.88 | ...56,187,191,220 
+2026-11-14T15:27:30.0401920Z  ...ider-plane/src |   83.15 |    78.84 |   95.34 |    87.9 |                   
+2026-11-14T15:27:30.0402309Z   catalog.ts       |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0402692Z   ...rocurement.ts |   69.79 |    72.28 |     100 |   78.03 | ...64-269,274-276 
+2026-11-14T15:27:30.0403083Z   ...al-content.ts |   83.01 |    85.48 |     100 |    87.5 | ...04,111,143,182 
+2026-11-14T15:27:30.0403599Z   gateway.ts       |   86.13 |    66.08 |   91.66 |    87.5 | ...63-285,296,340 
+2026-11-14T15:27:30.0403975Z   index.ts         |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0404337Z   plan.ts          |   97.56 |    97.36 |     100 |   97.29 | 32                
+2026-11-14T15:27:30.0404717Z   probe-class.ts   |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0405109Z   probe.ts         |     100 |    86.66 |     100 |     100 | 72,84,96          
+2026-11-14T15:27:30.0405480Z   registry.ts      |   94.44 |       90 |   91.66 |    93.1 | 40,60             
+2026-11-14T15:27:30.0405853Z   secrets.ts       |   91.89 |    85.71 |   83.33 |   96.77 | 17                
+2026-11-14T15:27:30.0406258Z   select.ts        |   92.72 |    90.19 |     100 |     100 | 16,42,81-82       
+2026-11-14T15:27:30.0406619Z   shadow.ts        |   95.23 |     92.3 |     100 |   93.75 | 17                
+2026-11-14T15:27:30.0406996Z   social-source.ts |   75.87 |    75.44 |   92.85 |   84.02 | ...74,487-488,505 
+2026-11-14T15:27:30.0407376Z   types.ts         |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0407889Z  ...-scheduler/src |   91.45 |    85.18 |     100 |   91.58 |                   
+2026-11-14T15:27:30.0408281Z   index.ts         |   91.45 |    85.18 |     100 |   91.58 | ...44,249,253,256 
+2026-11-14T15:27:30.0408672Z  ...y-security/src |   84.94 |    83.33 |   88.88 |   85.05 |                   
+2026-11-14T15:27:30.0409055Z   index.ts         |   84.94 |    83.33 |   88.88 |   85.05 | ...24,230,246,255 
+2026-11-14T15:27:30.0409437Z  packages/rv/src   |   97.63 |    88.63 |     100 |   99.13 |                   
+2026-11-14T15:27:30.0409856Z   index.ts         |   97.63 |    88.63 |     100 |   99.13 | 131               
+2026-11-14T15:27:30.0410236Z  ...es/schemas/src |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0410606Z   index.ts         |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0411048Z  .../src/contracts |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0411437Z   legacy-index.ts  |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0411837Z  ...ntracts/legacy |   86.02 |    83.11 |   98.08 |   85.67 |                   
+2026-11-14T15:27:30.0412232Z   part-01.ts       |   97.46 |    79.31 |     100 |   97.36 | 401,412           
+2026-11-14T15:27:30.0412664Z   part-02.ts       |   88.37 |    81.25 |     100 |    87.8 | ...77,506,524,537 
+2026-11-14T15:27:30.0413032Z   part-03.ts       |   75.67 |    77.33 |     100 |   75.67 | ...95-400,432,448 
+2026-11-14T15:27:30.0413401Z   part-04.ts       |   77.77 |    76.92 |     100 |   75.86 | ...75,482,492,541 
+2026-11-14T15:27:30.0413781Z   part-05.ts       |   90.32 |     88.4 |     100 |   89.65 | ...45,295,339,514 
+2026-11-14T15:27:30.0414151Z   part-06.ts       |   92.59 |    84.29 |   91.66 |    92.1 | ...51,323,342,394 
+2026-11-14T15:27:30.0414452Z   part-07.ts       |   89.47 |     84.9 |     100 |   89.06 | ...70,250,424,486 
+2026-11-14T15:27:30.0414748Z   part-08.ts       |    87.3 |    75.79 |   96.66 |   87.82 | ...70-275,381,469 
+2026-11-14T15:27:30.0415090Z   part-09.ts       |   89.58 |    73.68 |     100 |   89.36 | ...23,330,342,352 
+2026-11-14T15:27:30.0415461Z   part-10.ts       |   81.72 |    77.77 |   95.23 |   80.68 | ...41,554,566-574 
+2026-11-14T15:27:30.0415827Z   part-11.ts       |   81.01 |    80.72 |     100 |   80.51 | ...10,317,339,346 
+2026-11-14T15:27:30.0416191Z   part-12.ts       |   92.75 |    92.64 |     100 |   93.84 | 64,76,507,532     
+2026-11-14T15:27:30.0416584Z   part-13.ts       |   77.92 |    81.15 |     100 |   77.02 | ...15,475,503-516 
+2026-11-14T15:27:30.0416947Z   part-14.ts       |   92.75 |    94.11 |   94.44 |    92.3 | ...97,294,503,517 
+2026-11-14T15:27:30.0417315Z   part-15.ts       |   81.61 |     84.3 |     100 |   82.17 | ...27,547,554,567 
+2026-11-14T15:27:30.0417810Z   part-16.ts       |   90.38 |    91.04 |   95.45 |    90.9 | ...78,489-494,529 
+2026-11-14T15:27:30.0418162Z   part-17.ts       |   78.49 |    77.01 |     100 |   77.01 | ...98,505,512,519 
+2026-11-14T15:27:30.0418524Z   part-18.ts       |   89.47 |    90.24 |     100 |   88.23 | 57,73,81,171      
+2026-11-14T15:27:30.0418919Z  ...rket-structure |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0419319Z   ai-analysis.ts   |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0419708Z   analyze.ts       |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0420081Z   campaign.ts      |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0420458Z   capital.ts       |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0420848Z   casework.ts      |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0421219Z   exit.ts          |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0421518Z   foundation.ts    |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0421852Z   identity.ts      |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0422216Z   index.ts         |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0422588Z   supply.ts        |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0422995Z  ...e-registry/src |      90 |    79.45 |   93.33 |   90.38 |                   
+2026-11-14T15:27:30.0423407Z   index.ts         |      90 |    79.45 |   93.33 |   90.38 | 114-118,158       
+2026-11-14T15:27:30.0423857Z  ...rage-plane/src |   94.68 |     85.5 |   96.32 |   96.83 |                   
+2026-11-14T15:27:30.0424292Z   artifacts.ts     |   95.29 |    83.33 |   95.45 |   97.36 | 72,176            
+2026-11-14T15:27:30.0424710Z   cache.ts         |   94.44 |    70.58 |     100 |     100 | 40-58             
+2026-11-14T15:27:30.0425242Z   compose.ts       |   85.24 |    78.26 |     100 |   86.44 | 130-137           
+2026-11-14T15:27:30.0425573Z   corpus.ts        |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0425874Z   coverage.ts      |     100 |       80 |     100 |     100 | 31                
+2026-11-14T15:27:30.0426234Z   facts.ts         |   93.93 |    76.92 |    93.1 |    97.7 | 190-194           
+2026-11-14T15:27:30.0426602Z   forecast.ts      |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0427063Z   index.ts         |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0427429Z   jobs.ts          |   94.73 |       95 |     100 |     100 | 53                
+2026-11-14T15:27:30.0427997Z   metadata.ts      |   96.87 |       80 |     100 |     100 | 50-52             
+2026-11-14T15:27:30.0428385Z   parquet.ts       |   87.87 |       50 |   81.81 |   93.33 | 57,81             
+2026-11-14T15:27:30.0428767Z   profile.ts       |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0429140Z   quota.ts         |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0429522Z   trace-policy.ts  |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0429904Z   ttl.ts           |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0430261Z   types.ts         |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0430718Z  ...es/storage/src |   82.13 |     79.2 |   92.42 |   84.03 |                   
+2026-11-14T15:27:30.0431121Z   ...cs-reports.ts |   79.83 |    76.31 |   96.66 |   80.86 | ...86,410-411,448 
+2026-11-14T15:27:30.0431563Z   ...tion-graph.ts |   89.83 |     80.3 |   95.45 |   90.43 | ...46,281,357,372 
+2026-11-14T15:27:30.0431955Z   ...ph-reports.ts |   81.63 |    75.86 |   95.65 |   85.55 | ...55,259-260,275 
+2026-11-14T15:27:30.0432352Z   ...-schedules.ts |   90.53 |    81.31 |   97.29 |   92.37 | ...2,908,919,1072 
+2026-11-14T15:27:30.0432746Z   ...on-reports.ts |    81.6 |    78.48 |   95.23 |   83.13 | ...62,386,411,421 
+2026-11-14T15:27:30.0433148Z   claim-reports.ts |   83.06 |    80.73 |   96.29 |   83.76 | ...04,418,448-449 
+2026-11-14T15:27:30.0433550Z   ...ew-reports.ts |   82.95 |    80.55 |   95.65 |   83.13 | ...59,377,402,412 
+2026-11-14T15:27:30.0433939Z   ...on-reports.ts |   66.66 |    58.42 |    87.5 |   68.36 | ...69-391,409,424 
+2026-11-14T15:27:30.0434334Z   clickhouse.ts    |   78.42 |    71.64 |   96.87 |   80.45 | ...92,704,713,724 
+2026-11-14T15:27:30.0434730Z   ...gn-reports.ts |   79.16 |    75.26 |   96.15 |   83.01 | ...03-304,393-394 
+2026-11-14T15:27:30.0435142Z   ...ce-reports.ts |   83.33 |    80.48 |   95.65 |   84.37 | ...52,376-377,404 
+2026-11-14T15:27:30.0435538Z   ...rocurement.ts |   71.71 |    67.27 |   83.33 |   73.11 | ...01,317,327-338 
+2026-11-14T15:27:30.0435949Z   data-quality.ts  |   85.41 |    75.92 |      95 |   86.81 | ...67,310,364,374 
+2026-11-14T15:27:30.0436359Z   durable-jobs.ts  |   98.14 |    91.66 |   94.11 |     100 | 44,70,198-222     
+2026-11-14T15:27:30.0436755Z   ...-timelines.ts |   87.25 |    85.71 |   96.15 |   89.36 | ...54,202,211,314 
+2026-11-14T15:27:30.0437192Z   ...ion-graphs.ts |   84.76 |     80.2 |    93.1 |   87.36 | ...62,209,216,314 
+2026-11-14T15:27:30.0437565Z   ...ip-reports.ts |      85 |    84.34 |   92.59 |   88.07 | ...49,256,290,361 
+2026-11-14T15:27:30.0438051Z   ...-timelines.ts |   85.85 |    84.26 |    92.3 |   89.01 | ...59,204,211,313 
+2026-11-14T15:27:30.0438445Z   flap-history.ts  |   82.88 |       85 |   95.65 |    83.8 | ...21,400,424,448 
+2026-11-14T15:27:30.0438842Z   ...time-heads.ts |   80.19 |     77.2 |   97.43 |   81.31 | ...78,795-796,825 
+2026-11-14T15:27:30.0439227Z   ...ry-reports.ts |   85.26 |    82.71 |    91.3 |   88.23 | ...61,199,206,293 
+2026-11-14T15:27:30.0439572Z   ...ign-alerts.ts |   77.31 |    70.37 |   76.19 |   79.34 | ...54-260,310-311 
+2026-11-14T15:27:30.0439959Z   ...ic-reports.ts |    93.1 |    78.94 |      90 |   96.42 | 102               
+2026-11-14T15:27:30.0440354Z   ...nt-reports.ts |      84 |    78.66 |   94.73 |   87.09 | ...29,297,321-322 
+2026-11-14T15:27:30.0440666Z   index.ts         |   89.54 |    88.51 |   96.66 |   89.58 | ...47,455,627,633 
+2026-11-14T15:27:30.0440972Z   ...heckpoints.ts |      92 |    88.23 |   95.65 |    93.1 | ...43,157,484,492 
+2026-11-14T15:27:30.0441283Z   ...nce-search.ts |   85.12 |    85.61 |   96.29 |   85.96 | ...45,351,355,501 
+2026-11-14T15:27:30.0441632Z   ...ce-reports.ts |    85.1 |    79.68 |    90.9 |    89.6 | ...15,358,422,500 
+2026-11-14T15:27:30.0441950Z   ...simulation.ts |   76.59 |    78.81 |   83.01 |   79.27 | ...1067,1106,1116 
+2026-11-14T15:27:30.0442268Z   ...te-reports.ts |   83.15 |    80.76 |   95.65 |   84.88 | ...21-322,349,359 
+2026-11-14T15:27:30.0442595Z   raw-artifacts.ts |   85.81 |    76.78 |     100 |   88.05 | ...79,397,464-465 
+2026-11-14T15:27:30.0442918Z   s3-client.ts     |   88.46 |    80.64 |   88.88 |   95.65 | 132               
+2026-11-14T15:27:30.0443232Z   ...heckpoints.ts |   85.78 |    78.26 |   96.96 |   85.95 | ...48,561,590,684 
+2026-11-14T15:27:30.0443553Z   ...servations.ts |   76.42 |    74.71 |     100 |   78.35 | ...1236-1242,1282 
+2026-11-14T15:27:30.0443870Z   ...ce-reports.ts |   81.91 |    80.51 |   95.23 |   82.95 | ...35-336,363,373 
+2026-11-14T15:27:30.0444182Z   ...gn-reports.ts |   83.33 |    79.31 |   96.15 |    87.5 | ...77,281-282,352 
+2026-11-14T15:27:30.0444497Z   ...on-reports.ts |    83.5 |    80.51 |   95.65 |   84.61 | ...22-323,351,361 
+2026-11-14T15:27:30.0444810Z   ...e-adapters.ts |   10.41 |    18.18 |   11.11 |   11.36 | 22-63,89-157      
+2026-11-14T15:27:30.0445130Z   ...ry-reports.ts |   87.01 |    79.24 |   93.75 |   88.73 | ...67,171,211,218 
+2026-11-14T15:27:30.0445449Z  ...ity-engine/src |    97.5 |     92.3 |     100 |   97.36 |                   
+2026-11-14T15:27:30.0445758Z   index.ts         |    97.5 |     92.3 |     100 |   97.36 | 41                
+2026-11-14T15:27:30.0446075Z  ...l-pipeline/src |     100 |    83.33 |     100 |     100 |                   
+2026-11-14T15:27:30.0446395Z   index.ts         |     100 |    83.33 |     100 |     100 | 29                
+2026-11-14T15:27:30.0446710Z  ...low-engine/src |   90.22 |    80.43 |   88.46 |    92.3 |                   
+2026-11-14T15:27:30.0447019Z   index.ts         |   90.22 |    80.43 |   88.46 |    92.3 | ...03,215,304,322 
+2026-11-14T15:27:30.0447323Z  ...et-capture/src |   79.73 |    67.04 |   87.87 |   84.03 |                   
+2026-11-14T15:27:30.0447760Z   campaign.ts      |     100 |       75 |     100 |     100 | 14-26             
+2026-11-14T15:27:30.0448096Z   capital.ts       |   92.85 |      100 |     100 |   92.85 | 57                
+2026-11-14T15:27:30.0448449Z   capture.ts       |   67.53 |    67.53 |    87.5 |   73.52 | ...98-209,238-249 
+2026-11-14T15:27:30.0448756Z   features.ts      |   77.14 |    67.64 |     100 |   78.12 | ...60-61,71-72,75 
+2026-11-14T15:27:30.0449063Z   history.ts       |   79.34 |    60.63 |   82.35 |      85 | ...76,104,172-188 
+2026-11-14T15:27:30.0449360Z   index.ts         |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0449690Z   origin.ts        |   85.48 |    71.83 |     100 |   86.44 | ...36,158,222-233 
+2026-11-14T15:27:30.0450004Z   rpc.ts           |   79.31 |       68 |    90.9 |   85.71 | 8-9,22            
+2026-11-14T15:27:30.0450299Z   trace.ts         |   83.33 |    71.79 |      80 |    92.3 | 11-15,100         
+2026-11-14T15:27:30.0450598Z   types.ts         |   66.66 |        0 |       0 |   66.66 | 123               
+2026-11-14T15:27:30.0450917Z  ...kflow-core/src |     100 |    97.26 |     100 |     100 |                   
+2026-11-14T15:27:30.0451245Z   index.ts         |     100 |    95.12 |     100 |     100 | 90-91             
+2026-11-14T15:27:30.0451555Z   social-query.ts  |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0451875Z  ...est-worker/src |   87.37 |    80.62 |     100 |   89.65 |                   
+2026-11-14T15:27:30.0452286Z   config.ts        |   83.11 |    78.07 |     100 |   86.15 | ...05-107,148,151 
+2026-11-14T15:27:30.0452647Z   errors.ts        |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0453065Z   workspace-env.ts |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0453490Z  ...llm-worker/src |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0453935Z   cli.ts           |       0 |        0 |       0 |       0 | 17-161            
+2026-11-14T15:27:30.0454249Z  ...tic-worker/src |   74.49 |    70.39 |    71.7 |   76.28 |                   
+2026-11-14T15:27:30.0454569Z   ...ure-config.ts |   86.36 |    82.75 |     100 |   90.47 | 23,40             
+2026-11-14T15:27:30.0454916Z   ...re-handler.ts |   80.26 |    60.52 |     100 |   80.28 | ...84,192,231,244 
+2026-11-14T15:27:30.0455281Z   ...ure-worker.ts |      50 |    62.96 |    37.5 |   53.84 | ...03-106,140-148 
+2026-11-14T15:27:30.0455614Z   ...n-schedule.ts |   92.68 |    85.71 |     100 |   94.11 | 35,64             
+2026-11-14T15:27:30.0455933Z   ...ion-config.ts |   85.41 |    73.52 |     100 |    92.5 | 65,95,111         
+2026-11-14T15:27:30.0456482Z   ...ion-worker.ts |   53.33 |    66.66 |   33.33 |      50 | 49-104            
+2026-11-14T15:27:30.0456800Z   ...ure-config.ts |     100 |    91.66 |     100 |     100 | 34,66             
+2026-11-14T15:27:30.0457113Z   ...re-handler.ts |   76.47 |    57.14 |    87.5 |      80 | ...84,305,316,394 
+2026-11-14T15:27:30.0457436Z   ...ure-worker.ts |   51.02 |    60.86 |   41.17 |   57.14 | ...,79-82,171-179 
+2026-11-14T15:27:30.0457903Z   ...n-schedule.ts |   84.21 |    58.33 |     100 |   88.88 | 40,53             
+2026-11-14T15:27:30.0458214Z   config.ts        |   89.02 |    82.92 |     100 |   92.95 | 43,81,107,117,120 
+2026-11-14T15:27:30.0458510Z   errors.ts        |     100 |     92.3 |     100 |     100 | 14                
+2026-11-14T15:27:30.0458819Z   ...ory-config.ts |   87.03 |       75 |     100 |   93.18 | 72,101,118        
+2026-11-14T15:27:30.0459134Z   ...ory-worker.ts |   52.94 |       70 |   42.85 |      50 | 54-71,84-121      
+2026-11-14T15:27:30.0459442Z   ...ime-config.ts |   96.36 |       92 |     100 |   95.55 | 78,111            
+2026-11-14T15:27:30.0459751Z   ...continuity.ts |   87.93 |    82.35 |   93.75 |   89.28 | ...20,137,201,212 
+2026-11-14T15:27:30.0460062Z   ...ead-config.ts |   96.15 |       64 |     100 |   95.65 | 24                
+2026-11-14T15:27:30.0460382Z   ...head-cycle.ts |   89.79 |    89.79 |     100 |   89.79 | ...43,206,209,232 
+2026-11-14T15:27:30.0460689Z   ...ead-worker.ts |   49.33 |    76.66 |      24 |   47.82 | ...47,279-287,313 
+2026-11-14T15:27:30.0460998Z   ...e-rollback.ts |   89.77 |    86.36 |   96.15 |      90 | ...19,230,245,282 
+2026-11-14T15:27:30.0461311Z   ...ime-worker.ts |   45.45 |       50 |      40 |   43.75 | 62-79,94,118-179  
+2026-11-14T15:27:30.0461696Z   ...ity-config.ts |   86.95 |       75 |     100 |    92.1 | 57,84,90          
+2026-11-14T15:27:30.0462034Z   ...ity-worker.ts |   47.05 |    66.66 |   28.57 |   43.75 | 53-111            
+2026-11-14T15:27:30.0462348Z   ...ill-config.ts |   89.83 |    82.14 |     100 |   94.44 | 48,57,65          
+2026-11-14T15:27:30.0462658Z   ...ll-handler.ts |   59.88 |    54.35 |    62.5 |   61.74 | ...1410-1436,1442 
+2026-11-14T15:27:30.0462971Z   ...ill-worker.ts |      78 |    73.52 |   73.33 |   83.72 | 184-192           
+2026-11-14T15:27:30.0463280Z   worker.ts        |   68.96 |       65 |   69.23 |   70.37 | ...27,140-172,203 
+2026-11-14T15:27:30.0463587Z   workspace-env.ts |     100 |      100 |     100 |     100 |                   
+2026-11-14T15:27:30.0463905Z  ...ion-worker/src |       0 |        0 |       0 |       0 |                   
+2026-11-14T15:27:30.0464198Z   cli.ts           |       0 |        0 |       0 |       0 | 7-38              
+2026-11-14T15:27:30.0464529Z -------------------|---------|----------|---------|---------|-------------------
+2026-11-14T15:27:30.1242672Z ##[group]Run npm run build
+2026-11-14T15:27:30.1242916Z [36;1mnpm run build[0m
+2026-11-14T15:27:30.1262958Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:27:30.1263163Z env:
+2026-11-14T15:27:30.1263334Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:27:30.1263532Z   POSTGRES_PORT: 55432
+2026-11-14T15:27:30.1263706Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:27:30.1263888Z   MINIO_PORT: 59000
+2026-11-14T15:27:30.1264061Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:27:30.1264251Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:27:30.1264495Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:27:30.1264734Z ##[endgroup]
+2026-11-14T15:27:30.1960641Z 
+2026-11-14T15:27:30.1961184Z > zerotrace@0.1.0 build
+2026-11-14T15:27:30.1962247Z > npm run build:packages && npm run build -w @zerotrace/api && npm run build -w @zerotrace/web && npm run build -w @zerotrace/ingest-worker && npm run build -w @zerotrace/semantic-worker && npm run build -w @zerotrace/simulation-worker && npm run build -w @zerotrace/llm-worker
+2026-11-14T15:27:30.1962888Z 
+2026-11-14T15:27:30.2659022Z 
+2026-11-14T15:27:30.2659609Z > zerotrace@0.1.0 build:packages
+2026-11-14T15:27:30.2659943Z > tsc -b tsconfig.packages.json
+2026-11-14T15:27:30.2660069Z 
+2026-11-14T15:27:30.5121600Z 
+2026-11-14T15:27:30.5122105Z > @zerotrace/api@0.1.0 build
+2026-11-14T15:27:30.5122378Z > tsc -b
+2026-11-14T15:27:30.5122471Z 
+2026-11-14T15:27:30.7545008Z 
+2026-11-14T15:27:30.7545500Z > @zerotrace/web@0.1.0 build
+2026-11-14T15:27:30.7545923Z > tsc -b && vite build
+2026-11-14T15:27:30.7546092Z 
+2026-11-14T15:27:30.9767619Z [36mvite v8.3.8 [32mbuilding client environment for production...[36m[39m
+2026-11-14T15:27:30.9887290Z transforming...
+2026-11-14T15:27:31.0943327Z ✓ 62 modules transformed.
+2026-11-14T15:27:31.1459475Z rendering chunks...
+2026-11-14T15:27:31.4019077Z computing gzip size...
+2026-11-14T15:27:31.4071304Z dist/index.html                          0.70 kB │ gzip:   0.41 kB
+2026-11-14T15:27:31.4071999Z dist/assets/index-B8KbpMNK.css          50.99 kB │ gzip:  10.29 kB
+2026-11-14T15:27:31.4072645Z dist/assets/cytoscape.esm-DrtYDTsH.js  434.46 kB │ gzip: 137.69 kB │ map: 1,831.40 kB
+2026-11-14T15:27:31.4073392Z dist/assets/index-BKG7Kpdo.js          522.67 kB │ gzip: 134.65 kB │ map: 1,826.66 kB
+2026-11-14T15:27:31.4073716Z 
+2026-11-14T15:27:31.4077776Z [33m[plugin builtin:vite-reporter] 
+2026-11-14T15:27:31.4078279Z (!) Some chunks are larger than 500 kB after minification. Consider:
+2026-11-14T15:27:31.4078732Z - Using dynamic import() to code-split the application
+2026-11-14T15:27:31.4079460Z - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+2026-11-14T15:27:31.4080354Z - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+2026-11-14T15:27:31.4081159Z [32m✓ built in 430ms[39m
+2026-11-14T15:27:31.5183408Z 
+2026-11-14T15:27:31.5184599Z > @zerotrace/ingest-worker@0.1.0 build
+2026-11-14T15:27:31.5185042Z > tsc -b
+2026-11-14T15:27:31.5185173Z 
+2026-11-14T15:27:31.7232326Z 
+2026-11-14T15:27:31.7233212Z > @zerotrace/semantic-worker@0.1.0 build
+2026-11-14T15:27:31.7233511Z > tsc -b
+2026-11-14T15:27:31.7233600Z 
+2026-11-14T15:27:31.9389209Z 
+2026-11-14T15:27:31.9389704Z > @zerotrace/simulation-worker@0.1.0 build
+2026-11-14T15:27:31.9389997Z > tsc -b
+2026-11-14T15:27:31.9390079Z 
+2026-11-14T15:27:32.1254317Z 
+2026-11-14T15:27:32.1255040Z > @zerotrace/llm-worker@0.1.0 build
+2026-11-14T15:27:32.1255445Z > tsc -b
+2026-11-14T15:27:32.1255567Z 
+2026-11-14T15:27:32.2279186Z ##[group]Run npm run license:check
+2026-11-14T15:27:32.2279463Z [36;1mnpm run license:check[0m
+2026-11-14T15:27:32.2299903Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:27:32.2300114Z env:
+2026-11-14T15:27:32.2300285Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:27:32.2300481Z   POSTGRES_PORT: 55432
+2026-11-14T15:27:32.2300653Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:27:32.2300830Z   MINIO_PORT: 59000
+2026-11-14T15:27:32.2300992Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:27:32.2301331Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:27:32.2301578Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:27:32.2301817Z ##[endgroup]
+2026-11-14T15:27:32.2994315Z 
+2026-11-14T15:27:32.2994711Z > zerotrace@0.1.0 license:check
+2026-11-14T15:27:32.2995498Z > license-checker-rseidelsohn --production --excludePrivatePackages --onlyAllow 'Apache-2.0;Apache-2.0 WITH LLVM-exception;BSD-2-Clause;BSD-3-Clause;CC0-1.0;ISC;MIT;0BSD;BlueOak-1.0.0;Python-2.0'
+2026-11-14T15:27:32.2996151Z 
+2026-11-14T15:27:32.9637221Z 
+2026-11-14T15:27:32.9915006Z ##[group]Run npm run audit
+2026-11-14T15:27:32.9915319Z [36;1mnpm run audit[0m
+2026-11-14T15:27:32.9943236Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:27:32.9943528Z env:
+2026-11-14T15:27:32.9943763Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:27:32.9944043Z   POSTGRES_PORT: 55432
+2026-11-14T15:27:32.9944288Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:27:32.9944553Z   MINIO_PORT: 59000
+2026-11-14T15:27:32.9944796Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:27:32.9945127Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:27:32.9945490Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:27:32.9945839Z ##[endgroup]
+2026-11-14T15:27:33.0652777Z 
+2026-11-14T15:27:33.0653293Z > zerotrace@0.1.0 audit
+2026-11-14T15:27:33.0653659Z > npm audit --audit-level=high
+2026-11-14T15:27:33.0653825Z 
+2026-11-14T15:27:35.8979159Z # npm audit report
+2026-11-14T15:27:35.8979405Z 
+2026-11-14T15:27:35.8979530Z glob  9.0.0 - 14.0.1
+2026-11-14T15:27:35.8979902Z Severity: moderate
+2026-11-14T15:27:35.8980670Z Glob: AbortSignal cancellation bypass allows post-timeout filesystem traversal - https://github.com/advisories/GHSA-3g3m-2fjr-6pw4
+2026-11-14T15:27:35.8981390Z Depends on vulnerable versions of minimatch
+2026-11-14T15:27:35.8981715Z fix available via `npm audit fix`
+2026-11-14T15:27:35.8982013Z node_modules/cacache/node_modules/glob
+2026-11-14T15:27:35.8982361Z node_modules/read-package-json/node_modules/glob
+2026-11-14T15:27:35.8982687Z   cacache  17.0.5 - 21.0.1
+2026-11-14T15:27:35.8982943Z   Depends on vulnerable versions of glob
+2026-11-14T15:27:35.8983177Z   node_modules/cacache
+2026-11-14T15:27:35.8983438Z     make-fetch-happen  13.0.0 - 15.0.6
+2026-11-14T15:27:35.8983770Z     Depends on vulnerable versions of cacache
+2026-11-14T15:27:35.8984121Z     node_modules/make-fetch-happen
+2026-11-14T15:27:35.8984425Z       node-gyp  10.0.0 - 12.2.0
+2026-11-14T15:27:35.8984767Z       Depends on vulnerable versions of make-fetch-happen
+2026-11-14T15:27:35.8985115Z       node_modules/node-gyp
+2026-11-14T15:27:35.8985423Z   read-package-json  >=6.0.1
+2026-11-14T15:27:35.8985760Z   Depends on vulnerable versions of glob
+2026-11-14T15:27:35.8986077Z   node_modules/read-package-json
+2026-11-14T15:27:35.8986269Z 
+2026-11-14T15:27:35.8986393Z minimatch  7.0.0 - 11.0.0
+2026-11-14T15:27:35.8986652Z Severity: moderate
+2026-11-14T15:27:35.8987242Z minimatch has potential denial of service via globparts amplification - https://github.com/advisories/GHSA-g3hv-75wg-m249
+2026-11-14T15:27:35.8988221Z fix available via `npm audit fix --force`
+2026-11-14T15:27:35.8988611Z Will install typescript-eslint@8.36.0, which is a breaking change
+2026-11-14T15:27:35.8988979Z node_modules/cacache/node_modules/minimatch
+2026-11-14T15:27:35.8989242Z node_modules/minimatch
+2026-11-14T15:27:35.8989545Z node_modules/read-package-json/node_modules/minimatch
+2026-11-14T15:27:35.8990040Z   @typescript-eslint/typescript-estree  6.16.0 - 8.72.2
+2026-11-14T15:27:35.8990460Z   Depends on vulnerable versions of minimatch
+2026-11-14T15:27:35.8990919Z   node_modules/@typescript-eslint/typescript-estree
+2026-11-14T15:27:35.8991258Z     @typescript-eslint/parser  6.16.0 - 8.72.2
+2026-11-14T15:27:35.8991632Z     Depends on vulnerable versions of @typescript-eslint/typescript-estree
+2026-11-14T15:27:35.8992011Z     node_modules/@typescript-eslint/parser
+2026-11-14T15:27:35.8992281Z       typescript-eslint  <=8.72.2
+2026-11-14T15:27:35.8992635Z       Depends on vulnerable versions of @typescript-eslint/eslint-plugin
+2026-11-14T15:27:35.8993452Z       Depends on vulnerable versions of @typescript-eslint/parser
+2026-11-14T15:27:35.8993885Z       Depends on vulnerable versions of @typescript-eslint/typescript-estree
+2026-11-14T15:27:35.8994346Z       Depends on vulnerable versions of @typescript-eslint/utils
+2026-11-14T15:27:35.8994709Z       node_modules/typescript-eslint
+2026-11-14T15:27:35.8994985Z     @typescript-eslint/type-utils  6.16.0 - 8.72.2
+2026-11-14T15:27:35.8995466Z     Depends on vulnerable versions of @typescript-eslint/typescript-estree
+2026-11-14T15:27:35.8995937Z     Depends on vulnerable versions of @typescript-eslint/utils
+2026-11-14T15:27:35.8996306Z     node_modules/@typescript-eslint/type-utils
+2026-11-14T15:27:35.8996641Z       @typescript-eslint/eslint-plugin  6.16.0 - 8.72.2
+2026-11-14T15:27:35.8997044Z       Depends on vulnerable versions of @typescript-eslint/type-utils
+2026-11-14T15:27:35.8997470Z       Depends on vulnerable versions of @typescript-eslint/utils
+2026-11-14T15:27:35.8997985Z       node_modules/@typescript-eslint/eslint-plugin
+2026-11-14T15:27:35.8998325Z     @typescript-eslint/utils  6.16.0 - 8.72.2
+2026-11-14T15:27:35.8998742Z     Depends on vulnerable versions of @typescript-eslint/typescript-estree
+2026-11-14T15:27:35.8999169Z     node_modules/@typescript-eslint/utils
+2026-11-14T15:27:35.8999371Z 
+2026-11-14T15:27:35.8999535Z 12 moderate severity vulnerabilities
+2026-11-14T15:27:35.8999713Z 
+2026-11-14T15:27:35.8999907Z To address issues that do not require attention, run:
+2026-11-14T15:27:35.9000231Z   npm audit fix
+2026-11-14T15:27:35.9000372Z 
+2026-11-14T15:27:35.9000579Z To address all issues (including breaking changes), run:
+2026-11-14T15:27:35.9000909Z   npm audit fix --force
+2026-11-14T15:27:35.9286183Z ##[group]Run mkdir -p reports
+2026-11-14T15:27:35.9286443Z [36;1mmkdir -p reports[0m
+2026-11-14T15:27:35.9286625Z [36;1mnpm run sbom[0m
+2026-11-14T15:27:35.9305522Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:27:35.9305747Z env:
+2026-11-14T15:27:35.9305921Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:27:35.9306118Z   POSTGRES_PORT: 55432
+2026-11-14T15:27:35.9306292Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:27:35.9306469Z   MINIO_PORT: 59000
+2026-11-14T15:27:35.9306640Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:27:35.9306826Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:27:35.9307069Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:27:35.9307303Z ##[endgroup]
+2026-11-14T15:27:36.0027540Z 
+2026-11-14T15:27:36.0028470Z > zerotrace@0.1.0 sbom
+2026-11-14T15:27:36.0028909Z > cyclonedx-npm --output-file reports/sbom.cdx.json --output-format JSON
+2026-11-14T15:27:36.0029147Z 
+2026-11-14T15:27:38.8341881Z ##[group]Run docker compose -p zerotrace-ci down --volumes
+2026-11-14T15:27:38.8342217Z [36;1mdocker compose -p zerotrace-ci down --volumes[0m
+2026-11-14T15:27:38.8361480Z shell: /usr/bin/bash -e {0}
+2026-11-14T15:27:38.8361686Z env:
+2026-11-14T15:27:38.8361852Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:27:38.8362061Z   POSTGRES_PORT: 55432
+2026-11-14T15:27:38.8362234Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:27:38.8362411Z   MINIO_PORT: 59000
+2026-11-14T15:27:38.8362576Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:27:38.8362760Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:27:38.8363004Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:27:38.8363232Z ##[endgroup]
+2026-11-14T15:27:38.8923989Z  Container zerotrace-ci-minio-1 Stopping 
+2026-11-14T15:27:38.8924416Z  Container zerotrace-ci-clickhouse-1 Stopping 
+2026-11-14T15:27:38.8924763Z  Container zerotrace-ci-postgres-1 Stopping 
+2026-11-14T15:27:39.0369662Z  Container zerotrace-ci-minio-1 Stopped 
+2026-11-14T15:27:39.0383097Z  Container zerotrace-ci-minio-1 Removing 
+2026-11-14T15:27:39.0493816Z  Container zerotrace-ci-postgres-1 Stopped 
+2026-11-14T15:27:39.0494356Z  Container zerotrace-ci-postgres-1 Removing 
+2026-11-14T15:27:39.0514713Z  Container zerotrace-ci-minio-1 Removed 
+2026-11-14T15:27:39.0542637Z  Container zerotrace-ci-postgres-1 Removed 
+2026-11-14T15:27:41.2314557Z  Container zerotrace-ci-clickhouse-1 Stopped 
+2026-11-14T15:27:41.2315210Z  Container zerotrace-ci-clickhouse-1 Removing 
+2026-11-14T15:27:41.2366482Z  Container zerotrace-ci-clickhouse-1 Removed 
+2026-11-14T15:27:41.2373711Z  Volume zerotrace-ci_postgres-data Removing 
+2026-11-14T15:27:41.2374634Z  Volume zerotrace-ci_minio-data Removing 
+2026-11-14T15:27:41.2375297Z  Network zerotrace-ci_zerotrace Removing 
+2026-11-14T15:27:41.2375904Z  Volume zerotrace-ci_clickhouse-data Removing 
+2026-11-14T15:27:41.2565038Z  Volume zerotrace-ci_postgres-data Removed 
+2026-11-14T15:27:41.2734578Z  Volume zerotrace-ci_clickhouse-data Removed 
+2026-11-14T15:27:41.2739951Z  Volume zerotrace-ci_minio-data Removed 
+2026-11-14T15:27:41.3047573Z  Network zerotrace-ci_zerotrace Removed 
+2026-11-14T15:27:41.3141642Z ##[group]Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+2026-11-14T15:27:41.3142098Z with:
+2026-11-14T15:27:41.3142336Z   name: quality-evidence
+2026-11-14T15:27:41.3142589Z   if-no-files-found: warn
+2026-11-14T15:27:41.3142871Z   path: coverage/
+reports/sbom.cdx.json
+
+2026-11-14T15:27:41.3143184Z   retention-days: 14
+2026-11-14T15:27:41.3143431Z   compression-level: 6
+2026-11-14T15:27:41.3143657Z   overwrite: false
+2026-11-14T15:27:41.3143888Z   include-hidden-files: false
+2026-11-14T15:27:41.3144137Z   archive: true
+2026-11-14T15:27:41.3144349Z env:
+2026-11-14T15:27:41.3144573Z   POSTGRES_PASSWORD: zerotrace-ci
+2026-11-14T15:27:41.3144857Z   POSTGRES_PORT: 55432
+2026-11-14T15:27:41.3145078Z   CLICKHOUSE_HTTP_PORT: 58123
+2026-11-14T15:27:41.3145322Z   MINIO_PORT: 59000
+2026-11-14T15:27:41.3145544Z   MINIO_CONSOLE_PORT: 59001
+2026-11-14T15:27:41.3145775Z   OBJECT_STORE_ACCESS_KEY: zerotrace-ci
+2026-11-14T15:27:41.3146211Z   OBJECT_STORE_SECRET_KEY: zerotrace-ci-secret-change-me
+2026-11-14T15:27:41.3146541Z ##[endgroup]
+2026-11-14T15:27:41.4282066Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-14T15:27:41.4283271Z The least common ancestor is /home/runner/work/ZeroTrace/ZeroTrace. This will be the root directory of the artifact
+2026-11-14T15:27:41.4283951Z With the provided path, there will be 2 files uploaded
+2026-11-14T15:27:41.4284502Z Artifact name is valid!
+2026-11-14T15:27:41.4298917Z Root directory input is valid!
+2026-11-14T15:27:42.0360040Z Uploading artifact: quality-evidence.zip
+2026-11-14T15:27:42.0386445Z Beginning upload of artifact content to blob storage
+2026-11-14T15:27:42.5681789Z Uploaded bytes 97744
+2026-11-14T15:27:42.6586273Z Finished uploading artifact content to blob storage!
+2026-11-14T15:27:42.6587590Z SHA256 digest of uploaded artifact is d317e131b225318b8cbc4c11c32ef336fab6c22770d12e77aabd20a0486e2346
+2026-11-14T15:27:42.6588535Z Finalizing artifact upload
+2026-11-14T15:27:43.2464878Z Artifact quality-evidence successfully finalized. Artifact ID 14119757409
+2026-11-14T15:27:43.2465454Z Artifact quality-evidence has been successfully uploaded! Final size is 97744 bytes. Artifact ID is 14119757409
+2026-11-14T15:27:43.2468130Z Artifact download URL: https://github.com/greywolf8888/ZeroTrace/actions/runs/43609827423/artifacts/14119757409
+2026-11-14T15:27:43.2615872Z Post job cleanup.
+2026-11-14T15:27:43.3645011Z [command]/usr/bin/tar --posix -cf cache.tzst --exclude cache.tzst -P -C /home/runner/work/ZeroTrace/ZeroTrace --files-from manifest.txt --use-compress-program zstdmt
+2026-11-14T15:27:43.9113515Z Failed to save: Unable to reserve cache with key node-cache-Linux-x64-npm-612ba2b1892f2e92868407364d1ef12ef7479540e055400c29a5affadcbff626, another job may be creating this cache.
+2026-11-14T15:27:43.9312043Z Post job cleanup.
+2026-11-14T15:27:43.9976170Z [command]/usr/bin/git version
+2026-11-14T15:27:44.0010541Z git version 2.56.1
+2026-11-14T15:27:44.0034315Z Temporarily overriding HOME='/home/runner/work/_temp/62bc9e2b-5ee5-44f5-946f-8c15ea91e864' before making global git config changes
+2026-11-14T15:27:44.0035280Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-14T15:27:44.0038337Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/ZeroTrace/ZeroTrace
+2026-11-14T15:27:44.0064966Z Removing SSH command configuration
+2026-11-14T15:27:44.0069871Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-14T15:27:44.0097199Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-14T15:27:44.0300235Z Removing HTTP extra header
+2026-11-14T15:27:44.0305152Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-14T15:27:44.0332310Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-14T15:27:44.0637156Z Removing includeIf entries pointing to credentials config files
+2026-11-14T15:27:44.0648509Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-14T15:27:44.0670036Z includeif.gitdir:/home/runner/work/ZeroTrace/ZeroTrace/.git.path
+2026-11-14T15:27:44.0670496Z includeif.gitdir:/home/runner/work/ZeroTrace/ZeroTrace/.git/worktrees/*.path
+2026-11-14T15:27:44.0670976Z includeif.gitdir:/github/workspace/.git.path
+2026-11-14T15:27:44.0671284Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-14T15:27:44.0678401Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/ZeroTrace/ZeroTrace/.git.path
+2026-11-14T15:27:44.0699186Z /home/runner/work/_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config
+2026-11-14T15:27:44.0718656Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/ZeroTrace/ZeroTrace/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-a8402f5b\-a724\-4c06\-875f\-bcc21301458e\.config
+2026-11-14T15:27:44.0740974Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/ZeroTrace/ZeroTrace/.git/worktrees/*.path
+2026-11-14T15:27:44.0758571Z /home/runner/work/_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config
+2026-11-14T15:27:44.0765860Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/ZeroTrace/ZeroTrace/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-a8402f5b\-a724\-4c06\-875f\-bcc21301458e\.config
+2026-11-14T15:27:44.0789476Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-14T15:27:44.0807052Z /github/runner_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config
+2026-11-14T15:27:44.0811934Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-a8402f5b\-a724\-4c06\-875f\-bcc21301458e\.config
+2026-11-14T15:27:44.0835413Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-14T15:27:44.0853893Z /github/runner_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config
+2026-11-14T15:27:44.0858023Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-a8402f5b\-a724\-4c06\-875f\-bcc21301458e\.config
+2026-11-14T15:27:44.0882453Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-14T15:27:44.1068979Z Removing credentials config '/home/runner/work/_temp/git-credentials-a8402f5b-a724-4c06-875f-bcc21301458e.config'
+2026-11-14T15:27:44.1191036Z Cleaning up orphan processes

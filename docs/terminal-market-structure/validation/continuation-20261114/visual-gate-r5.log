@@ -1,0 +1,53 @@
+
+> zerotrace@0.1.0 test:visual-golden
+> tsx scripts/visual-golden-check.ts
+
+{
+  "status": "PASS",
+  "sourceFingerprint": "a264a2b7ac8b6bad766c99c57f56661750a43bcaf43dffd9040f861bba485e2b",
+  "caseCount": 7,
+  "cases": [
+    {
+      "id": "provider-down-light-1366x768",
+      "width": 1366,
+      "height": 768,
+      "sha256": "4cb2f805658b7a4f1923866c6980cd002b4fce3a9beacb5607c21b5570e73d0c"
+    },
+    {
+      "id": "provider-table-dark-long",
+      "width": 1676,
+      "height": 4685,
+      "sha256": "1ea2385a73e7b4ff5ff4500e9efae0f159b6bc9faf47d9f4cec5e23c7a06f994"
+    },
+    {
+      "id": "workbench-dark-1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "96952267531a2553bdd83ffefb03be1d59ee779086a560c27aef3c9806b5853b"
+    },
+    {
+      "id": "workbench-dark-narrow-390x844",
+      "width": 390,
+      "height": 844,
+      "sha256": "7da47a213652db469b1c9e64ea55a193888e399a9370f532dd7b715a72d8de69"
+    },
+    {
+      "id": "workbench-dark-scale125-physical1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "c0e3f03abf09e1ec34366018cc7d2c256ead1b41e0e3fd609818f5ba09e1c2ca"
+    },
+    {
+      "id": "workbench-light-1366x768",
+      "width": 1366,
+      "height": 768,
+      "sha256": "f8a4525015c7a920f4a7cc5c69ac4bee930c6401f43d67958b701b95107c5aab"
+    },
+    {
+      "id": "workbench-light-scale150-physical1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "sha256": "32f69db95a90871452876ab2de56f03045708b565137a74081fdee8b58cf0294"
+    }
+  ]
+}

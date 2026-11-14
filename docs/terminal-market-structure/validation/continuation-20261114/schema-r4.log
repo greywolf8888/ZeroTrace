@@ -1,0 +1,9 @@
+
+> zerotrace@0.1.0 schema:drift:check
+> tsx scripts/schema-drift-check.ts
+
+{
+  "schema_drift": 0,
+  "v2_routes_checked": 7,
+  "openapi_paths": 137
+}

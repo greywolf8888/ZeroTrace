@@ -172,7 +172,7 @@ if (process.argv.includes('--candidate')) {
 if (errors.length > 0) {
   process.stdout.write(`${JSON.stringify({ status: 'FAIL', errors }, null, 2)}\n`);
   process.exitCode = 1;
-} else {
+} else if (!process.argv.includes('--candidate')) {
   process.stdout.write(
     `${JSON.stringify(
       {

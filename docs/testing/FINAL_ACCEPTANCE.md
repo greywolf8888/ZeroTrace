@@ -1221,3 +1221,13 @@ archive-scale backfill, and independent-provider reconciliation remain required.
 ### 2026-11-14 历史分支清理与远端 CI 补充
 
 两个旧活动引用经固定 SHA 与主线/活动支线双重祖先检查后删除，清理任务 43584290543 成功，一次性工作流已移除。远端仅剩 main 和 Arc 活动支线。源码1552b4c的 Rust、Chromium E2E、CodeQL 和容器构建通过；质量任务因主线交接表格格式失败，其后步骤跳过。本轮修正格式，后续完整 CI 仍按实际新 SHA 核对，不提升真实链或全产品门禁。成员邀请待对方账号及有效管理会话。详见 docs/collaboration/CONSOLIDATION_RECEIPT_20261114.json。
+
+## 2026-11-14 续接验收与协作邀请
+
+已核对实际 main `a931eec` 与 Arc 活动支线；向用户指定的 `wangranorz` 发出本仓库 Write 邀请 `343629239`，回读仍待接受，实际 Read。main 已应用既有保护模板并确认禁止强推、删除；未授予其他仓库或账户管理权限。
+
+修复旧 MinIO 镜像不可下载的阻塞，从官方安全版固定提交构建独立 AGPL 服务。现有 S3 传输改用明确 endpoint/凭据的 AWS 官方 SDK，保留原存储权威、版本化、原件摘要和写后回读。直接与间接依赖安全更新后，生产 npm 审计 0，完整开发依赖仍有 12 项中危；高危门槛检查通过，不宣称全库零漏洞。
+
+功能源码 `b998080`：本地格式/lint/类型/构建/许可证通过；1047 单元、88 本地集成（42 外部跳过）、7 评测/MCP、52 Rust workspace 与 49 Windows 桌面/手机/视觉通过。对应 CI `43609827423` 的质量任务实际启动隔离 PostgreSQL、ClickHouse、MinIO，1166 项覆盖测试全部通过，行覆盖 85.08%、分支 76.19%；Rust、生产容器、CodeQL 通过。旧视觉祖先检查失败原样保留，依赖更新后新增日期清单和入口，`ad38f0b` 的七种视觉状态重新通过，七张实际截图与旧参考逐字节相同，未覆盖旧清单/PNG。候选生成器的双 JSON 输出也已修正，现可直接解析并校验。
+
+完整运行收据与中断/失败保留见 [续接证据摘要](../terminal-market-structure/validation/continuation-20261114/SUMMARY.json)。原目录六项桌面文件与原保护摘要全部一致。原始收据不由格式器改写，生产源码格式覆盖保留。签名清洁机、外部身份/租户/WORM、真实链 named gate、50 Token 人工复核和其他终端门禁仍未完成；本轮无链上写入、付费采购、xapid 请求、生产迁移或部署。代码在 [草稿 PR #26](https://github.com/greywolf8888/ZeroTrace/pull/26) 审阅，未合并，不提升全产品验收。

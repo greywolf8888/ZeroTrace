@@ -1,0 +1,48 @@
+npm error code ERESOLVE
+npm error ERESOLVE could not resolve
+npm error
+npm error While resolving: @vitejs/plugin-react@6.0.5
+npm error Found: vite@8.2.1
+npm error node_modules/vite
+npm error   peerOptional vite@"^6.0.0 || ^7.0.0 || ^8.0.0" from @vitest/mocker@4.1.10
+npm error   node_modules/@vitest/mocker
+npm error     @vitest/mocker@"4.1.10" from vitest@4.1.10
+npm error     node_modules/vitest
+npm error       dev vitest@"4.1.10" from the root project
+npm error       1 more (@vitest/coverage-v8)
+npm error   peer vite@"^8.0.0" from @vitejs/plugin-react@6.0.5
+npm error   apps/web/node_modules/@vitejs/plugin-react
+npm error     dev @vitejs/plugin-react@"6.0.5" from @zerotrace/web@0.1.0
+npm error     apps/web
+npm error       @zerotrace/web@0.1.0
+npm error       node_modules/@zerotrace/web
+npm error         workspace apps\web from the root project
+npm error   2 more (vitest, @zerotrace/web)
+npm error
+npm error Could not resolve dependency:
+npm error peer vite@"^8.0.0" from @vitejs/plugin-react@6.0.5
+npm error apps/web/node_modules/@vitejs/plugin-react
+npm error   dev @vitejs/plugin-react@"6.0.5" from @zerotrace/web@0.1.0
+npm error   apps/web
+npm error     @zerotrace/web@0.1.0
+npm error     node_modules/@zerotrace/web
+npm error       workspace apps\web from the root project
+npm error
+npm error Conflicting peer dependency: vite@8.3.8
+npm error node_modules/vite
+npm error   peer vite@"^8.0.0" from @vitejs/plugin-react@6.0.5
+npm error   apps/web/node_modules/@vitejs/plugin-react
+npm error     dev @vitejs/plugin-react@"6.0.5" from @zerotrace/web@0.1.0
+npm error     apps/web
+npm error       @zerotrace/web@0.1.0
+npm error       node_modules/@zerotrace/web
+npm error         workspace apps\web from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error C:\Users\GreyWolf\AppData\Local\npm-cache\_logs\2026-11-14T11_29_54_919Z-eresolve-report.txt
+npm error A complete log of this run can be found in: C:\Users\GreyWolf\AppData\Local\npm-cache\_logs\2026-11-14T11_29_54_919Z-debug-0.log

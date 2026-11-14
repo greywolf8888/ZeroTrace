@@ -1,0 +1,432 @@
+   Compiling memchr v2.8.3
+   Compiling cfg-if v1.0.4
+   Compiling itoa v1.0.18
+   Compiling serde_core v1.0.229
+   Compiling thiserror v2.0.20
+   Compiling zmij v1.0.23
+   Compiling windows-link v0.2.1
+   Compiling zerofrom v0.1.8
+   Compiling smallvec v1.15.2
+   Compiling serde v1.0.229
+   Compiling serde_json v1.0.151
+   Compiling typenum v1.20.1
+   Compiling siphasher v1.0.3
+   Compiling generic-array v0.14.7
+   Compiling litemap v0.8.3
+   Compiling writeable v0.6.4
+   Compiling phf_shared v0.13.1
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling utf8_iter v1.0.4
+   Compiling digest v0.10.7
+   Compiling phf_generator v0.13.1
+   Compiling cpufeatures v0.2.17
+   Compiling sha2 v0.10.9
+   Compiling icu_properties_data v2.3.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling yoke v0.8.3
+   Compiling zerovec v0.11.8
+   Compiling phf_macros v0.13.1
+   Compiling hex v0.4.3
+   Compiling getrandom v0.4.3
+   Compiling winnow v1.0.4
+   Compiling time-core v0.1.9
+   Compiling num-conv v0.2.2
+   Compiling toml_parser v1.1.3+spec-1.1.0
+   Compiling zerotrace-types v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-types)
+   Compiling tinystr v0.8.4
+   Compiling phf_codegen v0.13.1
+   Compiling toml_writer v1.1.2+spec-1.1.0
+   Compiling powerfmt v0.2.0
+   Compiling log v0.4.33
+   Compiling scopeguard v1.2.0
+   Compiling lock_api v0.4.14
+   Compiling icu_locale_core v2.3.0
+   Compiling parking_lot_core v0.9.12
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling byteorder v1.5.0
+   Compiling icu_provider v2.3.0
+   Compiling icu_collections v2.3.0
+   Compiling parking_lot v0.12.5
+   Compiling typeid v1.0.3
+   Compiling aho-corasick v1.1.5
+   Compiling unic-char-range v0.9.0
+   Compiling regex-syntax v0.8.11
+   Compiling fnv v1.0.7
+   Compiling unic-common v0.9.0
+   Compiling unic-ucd-version v0.9.0
+   Compiling regex-automata v0.4.18
+   Compiling unic-char-property v0.9.0
+   Compiling phf v0.13.1
+   Compiling string_cache_codegen v0.6.1
+   Compiling hashbrown v0.17.1
+   Compiling dunce v1.0.5
+   Compiling bytes v1.12.1
+   Compiling equivalent v1.0.2
+   Compiling alloc-no-stdlib v2.0.4
+   Compiling alloc-stdlib v0.2.4
+   Compiling indexmap v2.14.0
+   Compiling regex v1.13.1
+   Compiling thiserror v1.0.69
+   Compiling web_atoms v0.2.6
+   Compiling unic-ucd-ident v0.9.0
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling serde_spanned v1.1.1
+   Compiling windows-sys v0.61.2
+   Compiling quick-xml v0.41.0
+   Compiling stable_deref_trait v1.2.1
+   Compiling base64 v0.22.1
+   Compiling idna_adapter v1.2.2
+   Compiling brotli-decompressor v5.0.3
+   Compiling http v1.5.0
+   Compiling string_cache v0.9.0
+   Compiling ctor v0.8.0
+   Compiling form_urlencoded v1.2.2
+   Compiling brotli v8.0.4
+   Compiling idna v1.1.0
+   Compiling anyhow v1.0.104
+   Compiling selectors v0.36.1
+   Compiling uuid v1.24.1
+   Compiling toml_datetime v1.1.1+spec-1.1.0
+   Compiling windows-link v0.1.3
+   Compiling glob v0.3.4
+   Compiling cssparser v0.36.0
+   Compiling toml v1.1.4+spec-1.1.0
+   Compiling markup5ever v0.38.0
+   Compiling url v2.5.8
+   Compiling winapi-util v0.1.11
+   Compiling time v0.3.55
+   Compiling same-file v1.0.6
+   Compiling html5ever v0.38.0
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling cfb v0.7.3
+   Compiling jsonptr v0.6.3
+   Compiling erased-serde v0.4.10
+   Compiling dom_query v0.27.0
+   Compiling schemars v0.8.22
+   Compiling serde-untagged v0.1.9
+   Compiling cargo_metadata v0.19.2
+   Compiling json-patch v3.0.1
+   Compiling infer v0.19.0
+   Compiling windows-targets v0.52.6
+   Compiling plist v1.10.0
+   Compiling walkdir v2.5.0
+   Compiling libc v0.2.189
+   Compiling urlpattern v0.3.0
+   Compiling windows-strings v0.4.2
+   Compiling windows-result v0.3.4
+   Compiling serde_with v3.22.0
+   Compiling windows-core v0.61.2
+   Compiling tauri-utils v2.9.3
+   Compiling option-ext v0.2.0
+   Compiling vswhom-sys v0.1.3
+   Compiling windows-sys v0.59.0
+   Compiling windows-threading v0.1.0
+   Compiling windows-future v0.2.1
+   Compiling winreg v0.55.0
+   Compiling vswhom v0.1.0
+   Compiling windows-numerics v0.2.0
+   Compiling windows-collections v0.2.0
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling embed-resource v3.0.11
+   Compiling windows v0.61.3
+   Compiling dirs-sys v0.5.0
+   Compiling heck v0.5.0
+   Compiling dirs v6.0.0
+   Compiling tauri-winres v0.3.6
+   Compiling cargo_toml v0.22.3
+   Compiling time-macros v0.2.32
+   Compiling deranged v0.5.8
+   Compiling once_cell v1.21.4
+   Compiling percent-encoding v2.3.2
+   Compiling tauri-build v2.6.3
+   Compiling windows-version v0.1.7
+   Compiling webview2-com-sys v0.38.2
+   Compiling raw-window-handle v0.6.2
+   Compiling crc32fast v1.5.0
+   Compiling dpi v0.1.2
+   Compiling flate2 v1.1.9
+   Compiling crossbeam-utils v0.8.22
+   Compiling tauri v2.11.5
+   Compiling bitflags v2.13.1
+   Compiling unicode-segmentation v1.13.3
+   Compiling pin-project-lite v0.2.17
+   Compiling png v0.17.16
+   Compiling webview2-com v0.38.2
+   Compiling crossbeam-channel v0.5.16
+   Compiling cookie v0.18.2
+   Compiling getrandom v0.3.4
+   Compiling tracing-core v0.1.36
+   Compiling tauri-plugin v2.6.3
+   Compiling zerotrace-protocol-sdk v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-protocol-sdk)
+   Compiling semver v1.0.28
+   Compiling tracing v0.1.44
+   Compiling ico v0.5.0
+   Compiling tauri-codegen v2.6.3
+   Compiling softbuffer v0.4.8
+   Compiling wry v0.55.1
+   Compiling windows_x86_64_msvc v0.53.1
+   Compiling tao v0.35.3
+   Compiling tauri-runtime v2.11.3
+   Compiling keyboard-types v0.7.0
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.2
+   Compiling zerotrace-replay v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-replay)
+   Compiling serialize-to-javascript v0.1.2
+   Compiling tokio v1.53.1
+   Compiling window-vibrancy v0.6.0
+   Compiling muda v0.19.3
+   Compiling tauri-runtime-wry v2.11.4
+   Compiling windows-targets v0.53.5
+   Compiling tauri-macros v2.6.3
+   Compiling zerocopy v0.8.56
+   Compiling zerotrace-evm-executor v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-evm-executor)
+   Compiling zerotrace-provider-scheduler v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-provider-scheduler)
+   Compiling zerotrace-graph v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-graph)
+   Compiling mime v0.3.17
+   Compiling ppv-lite86 v0.2.21
+   Compiling windows-sys v0.60.2
+   Compiling tauri-plugin-notification v2.3.3
+   Compiling tauri-plugin-shell v2.3.5
+   Compiling rand_core v0.9.5
+   Compiling rand_chacha v0.9.0
+   Compiling zerotrace-desktop-core v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-desktop-core)
+   Compiling tauri-winrt-notification v0.7.3
+   Compiling notify-rust v4.18.0
+   Compiling rand v0.9.5
+   Compiling shared_child v1.1.1
+   Compiling zerotrace-entity v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-entity)
+   Compiling zerotrace-query-planner v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-query-planner)
+   Compiling zerotrace-route-optimizer v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-route-optimizer)
+   Compiling zerotrace-desktop v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\desktop\src-tauri)
+   Compiling os_pipe v1.2.3
+   Compiling open v5.4.1
+   Compiling zerotrace-ledger v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-ledger)
+   Compiling zerotrace-capital v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-capital)
+   Compiling zerotrace-campaign v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-campaign)
+   Compiling encoding_rs v0.8.35
+   Compiling tauri-plugin-single-instance v2.4.3
+   Compiling zerotrace-compute v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-compute)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 43s
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_campaign-5672105fe5466258.exe)
+
+running 5 tests
+test tests::partition_covers_without_overlap ... ok
+test tests::pelt_finds_mean_shift ... ok
+test tests::pelt_matches_the_standard_multi_change_reference ... ok
+test tests::tactic_requires_two_families ... ok
+test tests::bocpd_returns_normalized_run_length_rows_and_resets_on_a_shift ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_capital-8e6875d754149821.exe)
+
+running 2 tests
+test tests::max_flow_respects_capacity ... ok
+test tests::fifo_inherits_cost_and_rejects_shortage ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\zerotrace_compute-481a1dfdc5d35281.exe)
+
+running 1 test
+test tests::hash_op_is_deterministic ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\zerotrace_desktop-15534262e97ead11.exe)
+
+running 4 tests
+test tests::accepts_bounded_chinese_notification_text ... ok
+test tests::rejects_empty_oversized_and_control_text ... ok
+test tests::installed_layout_uses_resource_config_and_app_data ... ok
+test tests::portable_layout_requires_a_read_only_marker_and_adjacent_config ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_desktop_core-3797224fb2a78d81.exe)
+
+running 10 tests
+test launcher::tests::attach_when_both_ports_live_spawn_when_both_down ... ok
+test launcher::tests::endpoint_url_omits_trailing_slash_on_root ... ok
+test launcher::tests::parses_workspace_pointer_with_utf8_bom ... ok
+test launcher::tests::rejects_writable_dev_link ... ok
+test tests::encrypted_case_fails_closed_without_key ... ok
+test tests::identical_payloads_have_hash_parity ... ok
+test launcher::tests::extra_json_fields_do_not_invalidate_dev_link ... ok
+test launcher::tests::env_root_wins_and_fails_closed_when_invalid ... ok
+test launcher::tests::walks_from_bin_dir_and_pointer ... ok
+test launcher::tests::spawn_plan_requires_node_modules ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_entity-41b713b26f804b06.exe)
+
+running 3 tests
+test tests::calibrated_conjunction_can_confirm_hidden ... ok
+test tests::early_alone_is_not_hidden_affiliate ... ok
+test tests::service_hub_is_not_retail ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_evm_executor-62366580ba590c97.exe)
+
+running 5 tests
+test tests::constant_product_matches_integer_identity ... ok
+test tests::virtual_reserve_v3_is_never_exact ... ok
+test tests::isolated_sum_is_illegal ... ok
+test tests::exact_vm_fails_closed_without_fork ... ok
+test tests::exact_vm_requires_the_full_evidence_triplet ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_graph-9309443bb407f0a1.exe)
+
+running 4 tests
+test tests::conflicting_constraints_fail_closed ... ok
+test tests::cannot_link_blocks_score_merge ... ok
+test tests::cannot_link_blocks_a_transitive_component_merge ... ok
+test tests::indirect_must_link_cannot_link_conflict_fails_closed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_ledger-0829a46afe76c868.exe)
+
+running 1 test
+test tests::conserves_and_keeps_unknown_remainder ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_protocol_sdk-7b4b95f2c52cd49f.exe)
+
+running 1 test
+test tests::unknown_without_path_is_unsupported ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_provider_scheduler-d9cdaeb543cb059f.exe)
+
+running 4 tests
+test tests::aimd_multiplies_down_on_throttle ... ok
+test tests::low_cost_aimd_never_exceeds_one ... ok
+test tests::two_urls_same_group_are_not_independent ... ok
+test tests::coalesces_identical_historical_reads ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_query_planner-27682b4a74a646e2.exe)
+
+running 6 tests
+test tests::lifetime_history_is_local_when_coverage_complete ... ok
+test tests::local_index_avoids_genesis_rpc ... ok
+test tests::corpus_discovery_uses_bulk_dataset_not_public_logs ... ok
+test tests::admission_requires_two_independence_groups ... ok
+test tests::unindexed_range_is_a_gap_not_an_empty_result ... ok
+test tests::vectorized_filter_keeps_matching_rows ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_replay-ad4be0e6622445f7.exe)
+
+running 1 test
+test tests::matching_hashes_pass ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_route_optimizer-6c303e6b3e4f5082.exe)
+
+running 2 tests
+test tests::one_constant_product_venue_is_exact_but_multi_venue_is_not ... ok
+test tests::shared_state_consumes_reserves ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\zerotrace_types-048094131cd6399d.exe)
+
+running 3 tests
+test tests::unknown_is_not_numeric_zero ... ok
+test tests::content_id_uses_first_24_hex ... ok
+test tests::canonical_json_sorts_object_keys ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_campaign
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_capital
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_desktop_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_entity
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_evm_executor
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_graph
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_ledger
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_protocol_sdk
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_provider_scheduler
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_query_planner
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_replay
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_route_optimizer
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests zerotrace_types
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

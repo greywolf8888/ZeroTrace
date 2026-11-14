@@ -1,0 +1,9 @@
+
+ RUN  v4.1.12 C:/Users/GreyWolf/.codex/worktrees/zerotrace-handoff/ZeroTrace
+
+
+ Test Files  3 passed (3)
+      Tests  7 passed (7)
+   Start at  23:27:02
+   Duration  2.10s (transform 1.08s, setup 0ms, import 3.16s, tests 85ms, environment 1ms)
+
