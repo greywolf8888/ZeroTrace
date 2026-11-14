@@ -1,0 +1,8 @@
+{
+  "classification": "ACTIVITY_TASK",
+  "isZeroTraceMainProject": false,
+  "primaryBranch": "main",
+  "activityBranch": "agent/arc-task-ledger-v1",
+  "sourceSnapshot": "0bf0c339eeeefa76eff53b67ac33ddeee4ac764c",
+  "formalForensicReady": false
+}

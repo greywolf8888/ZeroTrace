@@ -31,7 +31,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(initialLanguage);
   useEffect(() => {
     document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
-    document.title = language === 'en' ? 'Arc USDC Settlement Verifier' : 'Arc USDC 结算核验器';
+    document.title =
+      language === 'en'
+        ? 'BundleMark | Arc Transaction Report Verifier'
+        : 'BundleMark | Arc 交易报告核验器';
     try {
       localStorage.setItem(LANGUAGE_KEY, language);
     } catch {

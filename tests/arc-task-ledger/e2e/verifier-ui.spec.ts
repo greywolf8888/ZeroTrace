@@ -37,10 +37,20 @@ test('任务条件读取失败清除旧资金段，字段错误可定位且不�
 });
 test('默认英文、全局切换与跨页面刷新持久化', async ({ page }) => {
   await page.goto('/');
+  await expect(page).toHaveTitle('BundleMark | Arc Transaction Report Verifier');
+  await expect(page.getByRole('heading', { name: 'BundleMark', exact: true })).toBeVisible();
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+    'href',
+    '/brand/bundlemark-icon.png',
+  );
+  await expect
+    .poll(() => page.locator('img.mark').evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBe(1254);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('heading', { name: 'Verify an Arc USDC settlement' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Task list', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: '中文', exact: true }).click();
+  await expect(page).toHaveTitle('BundleMark | Arc 交易报告核验器');
   await page.getByRole('link', { name: '任务列表', exact: true }).click();
   await expect(page.getByRole('button', { name: '任务 #8', exact: true })).toBeVisible();
   await page.reload();

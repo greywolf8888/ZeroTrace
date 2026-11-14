@@ -280,10 +280,15 @@ function App() {
             navigate('/');
           }}
         >
-          <span className="mark">◈</span>
+          <img className="mark" src="/brand/bundlemark-icon.png" alt="" width="48" height="48" />
           <div>
-            <h1>{localize('Arc USDC 结算核验器')}</h1>
-            <p>{localize('交易核验 · 固定报告 · ArcBounty 任务')}</p>
+            <h1>BundleMark</h1>
+            <p>
+              {t(
+                'Arc 交易报告核验器 · USDC 只读核验',
+                'Arc transaction report verifier · Read-only USDC',
+              )}
+            </p>
           </div>
         </a>
         <span className="network">{localize('Arc 主网 · 5042 · 只读')}</span>
@@ -1220,7 +1225,7 @@ function App() {
             registry && (
               <nav>
                 <a href={registry.navigation.sourceRepository} target="_blank" rel="noreferrer">
-                  {localize('部署分支公开源码')}
+                  {t('项目源码与使用说明', 'Source code and documentation')}
                 </a>
                 <a
                   href="/consumer"
