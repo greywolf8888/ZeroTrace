@@ -1,0 +1,1342 @@
+{
+  "version": "0.1.0",
+  "name": "zerotrace",
+  "problems": [
+    "extraneous: @emnapi/wasi-threads@2.2.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\@emnapi\\wasi-threads",
+    "extraneous: @npmcli/agent@3.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\@npmcli\\agent",
+    "extraneous: agent-base@7.1.4 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\agent-base",
+    "extraneous: bindings@1.5.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\bindings",
+    "extraneous: cacache@19.0.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\cacache",
+    "extraneous: env-paths@2.2.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\env-paths",
+    "extraneous: err-code@2.0.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\err-code",
+    "extraneous: exponential-backoff@3.1.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\exponential-backoff",
+    "extraneous: extend@3.0.2 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\extend",
+    "extraneous: file-uri-to-path@1.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\file-uri-to-path",
+    "extraneous: fs-minipass@3.0.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\fs-minipass",
+    "extraneous: http-cache-semantics@4.2.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\http-cache-semantics",
+    "extraneous: http-proxy-agent@7.0.2 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\http-proxy-agent",
+    "extraneous: https-proxy-agent@7.0.6 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\https-proxy-agent",
+    "extraneous: make-fetch-happen@14.0.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\make-fetch-happen",
+    "extraneous: minipass-collect@2.0.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-collect",
+    "extraneous: minipass-fetch@4.0.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-fetch",
+    "extraneous: minipass-flush@1.0.7 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-flush",
+    "extraneous: minipass-pipeline@1.2.4 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-pipeline",
+    "extraneous: minipass-sized@1.0.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-sized",
+    "extraneous: nan@2.22.2 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\nan",
+    "extraneous: negotiator@1.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\negotiator",
+    "extraneous: node-gyp@11.5.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\node-gyp",
+    "extraneous: p-map@7.0.6 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\p-map",
+    "extraneous: promise-retry@2.0.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\promise-retry",
+    "extraneous: retry@0.12.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\retry",
+    "extraneous: schemes@1.4.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\schemes",
+    "extraneous: smart-buffer@4.2.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\smart-buffer",
+    "extraneous: smtp-address-parser@1.1.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\smtp-address-parser",
+    "extraneous: socks-proxy-agent@8.0.5 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\socks-proxy-agent",
+    "extraneous: socks@2.8.9 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\socks",
+    "extraneous: ssri@12.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\ssri",
+    "extraneous: unique-filename@4.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\unique-filename",
+    "extraneous: unique-slug@5.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\unique-slug"
+  ],
+  "dependencies": {
+    "@emnapi/wasi-threads": {
+      "version": "2.2.0",
+      "resolved": "https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-2.2.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: @emnapi/wasi-threads@2.2.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\@emnapi\\wasi-threads"
+      ]
+    },
+    "@npmcli/agent": {
+      "version": "3.0.0",
+      "resolved": "https://registry.npmjs.org/@npmcli/agent/-/agent-3.0.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: @npmcli/agent@3.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\@npmcli\\agent"
+      ]
+    },
+    "@zerotrace/action-semantics": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/action-semantics",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/api": {
+      "version": "0.1.0",
+      "resolved": "file:../../apps/api",
+      "overridden": false,
+      "dependencies": {
+        "@fastify/cors": {
+          "version": "11.3.0",
+          "resolved": "https://registry.npmjs.org/@fastify/cors/-/cors-11.3.0.tgz",
+          "overridden": false
+        },
+        "@fastify/rate-limit": {
+          "version": "11.2.0",
+          "resolved": "https://registry.npmjs.org/@fastify/rate-limit/-/rate-limit-11.2.0.tgz",
+          "overridden": false
+        },
+        "@fastify/swagger-ui": {
+          "version": "6.1.1",
+          "resolved": "https://registry.npmjs.org/@fastify/swagger-ui/-/swagger-ui-6.1.1.tgz",
+          "overridden": false
+        },
+        "@fastify/swagger": {
+          "version": "9.8.1",
+          "resolved": "https://registry.npmjs.org/@fastify/swagger/-/swagger-9.8.1.tgz",
+          "overridden": false
+        },
+        "@zerotrace/asset-ledger": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/campaign-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/campaign-intelligence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/capital-intelligence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/capture-scheduler": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/casework": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/chain-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/claim-audit": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/data-quality": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/entity-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/forensic-evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/forensic-pipeline": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/identifiers": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/identity-intelligence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/ingestion": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/label-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/llm-gateway": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/local-index": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/market-reality-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/metric-registry": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/platform-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/platform-auth": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/provider-plane": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/query-security": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/rv": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/source-registry": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/storage-plane": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/storage": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/supply-reality-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/terminal-pipeline": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/token-market-capture": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/workflow-core": {
+          "version": "0.1.0"
+        },
+        "dotenv": {
+          "version": "17.4.2",
+          "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-17.4.2.tgz",
+          "overridden": false
+        },
+        "fastify": {
+          "version": "5.12.8",
+          "resolved": "https://registry.npmjs.org/fastify/-/fastify-5.12.8.tgz",
+          "overridden": false
+        },
+        "prom-client": {
+          "version": "15.1.3",
+          "resolved": "https://registry.npmjs.org/prom-client/-/prom-client-15.1.3.tgz",
+          "overridden": false
+        },
+        "zod": {
+          "version": "4.6.7",
+          "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "@zerotrace/asset-ledger": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/asset-ledger",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/behavior-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/behavior-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/cluster-position-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/token-flow-engine": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/campaign-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/campaign-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/behavior-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/candidate-discovery": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/cluster-position-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/forensic-evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/funding-settlement-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/token-flow-engine": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/campaign-intelligence": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/campaign-intelligence",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/behavior-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/campaign-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/candidate-discovery": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/candidate-discovery",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/token-flow-engine": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/capital-intelligence": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/capital-intelligence",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/asset-ledger": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/funding-settlement-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/capture-scheduler": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/capture-scheduler",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/casework": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/casework",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/forensic-evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/chain-adapters": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/chain-adapters",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "bs58": {
+          "version": "6.0.0",
+          "resolved": "https://registry.npmjs.org/bs58/-/bs58-6.0.0.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "@zerotrace/claim-audit": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/claim-audit",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/cluster-position-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/cluster-position-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/token-flow-engine": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/data-quality": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/data-quality",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/desktop": {
+      "version": "0.1.0",
+      "resolved": "file:../../apps/desktop",
+      "overridden": false
+    },
+    "@zerotrace/entity-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/entity-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/evidence": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/evidence",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/forensic-evidence": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/forensic-evidence",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/forensic-pipeline": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/forensic-pipeline",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/casework": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/identity-intelligence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/supply-reality-engine": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/funding-settlement-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/funding-settlement-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/chain-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/identifiers": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/identifiers",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "bitcoin-address-validation": {
+          "version": "3.0.0",
+          "resolved": "https://registry.npmjs.org/bitcoin-address-validation/-/bitcoin-address-validation-3.0.0.tgz",
+          "overridden": false
+        },
+        "bs58": {
+          "version": "6.0.0"
+        },
+        "viem": {
+          "version": "2.55.11",
+          "resolved": "https://registry.npmjs.org/viem/-/viem-2.55.11.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "@zerotrace/identity-intelligence": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/identity-intelligence",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/entity-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/ingest-worker": {
+      "version": "0.1.0",
+      "resolved": "file:../../services/ingest-worker",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/campaign-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/chain-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/funding-settlement-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/ingestion": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/storage": {
+          "version": "0.1.0"
+        },
+        "dotenv": {
+          "version": "17.4.2"
+        }
+      }
+    },
+    "@zerotrace/ingestion": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/ingestion",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/action-semantics": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/chain-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/storage": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/label-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/label-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/llm-gateway": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/llm-gateway",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/chain-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/provider-plane": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/llm-worker": {
+      "version": "0.1.0",
+      "resolved": "file:../../services/llm-worker",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/llm-gateway": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/workflow-core": {
+          "version": "0.1.0"
+        },
+        "dotenv": {
+          "version": "17.4.2"
+        }
+      }
+    },
+    "@zerotrace/local-index": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/local-index",
+      "overridden": false
+    },
+    "@zerotrace/market-reality-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/market-reality-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/rv": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/metric-registry": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/metric-registry",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/platform-adapters": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/platform-adapters",
+      "overridden": false,
+      "dependencies": {
+        "@solana-program/loader-v3": {
+          "version": "0.5.0",
+          "resolved": "https://registry.npmjs.org/@solana-program/loader-v3/-/loader-v3-0.5.0.tgz",
+          "overridden": false
+        },
+        "@solana-program/system": {
+          "version": "0.13.0",
+          "resolved": "https://registry.npmjs.org/@solana-program/system/-/system-0.13.0.tgz",
+          "overridden": false
+        },
+        "@solana-program/token-2022": {
+          "version": "0.14.1",
+          "resolved": "https://registry.npmjs.org/@solana-program/token-2022/-/token-2022-0.14.1.tgz",
+          "overridden": false
+        },
+        "@solana-program/token": {
+          "version": "0.15.0",
+          "resolved": "https://registry.npmjs.org/@solana-program/token/-/token-0.15.0.tgz",
+          "overridden": false
+        },
+        "@zerotrace/chain-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/claim-audit": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/data-quality": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/rv": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "bitcoinjs-lib": {
+          "version": "7.0.5",
+          "resolved": "https://registry.npmjs.org/bitcoinjs-lib/-/bitcoinjs-lib-7.0.5.tgz",
+          "overridden": false
+        },
+        "bs58": {
+          "version": "6.0.0"
+        },
+        "viem": {
+          "version": "2.55.11"
+        }
+      }
+    },
+    "@zerotrace/platform-auth": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/platform-auth",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "jose": {
+          "version": "6.2.10",
+          "resolved": "https://registry.npmjs.org/jose/-/jose-6.2.10.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "@zerotrace/provider-plane": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/provider-plane",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/provider-scheduler": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/source-registry": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/provider-scheduler": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/provider-scheduler",
+      "overridden": false
+    },
+    "@zerotrace/query-security": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/query-security",
+      "overridden": false,
+      "dependencies": {
+        "pgsql-ast-parser": {
+          "version": "12.0.2",
+          "resolved": "https://registry.npmjs.org/pgsql-ast-parser/-/pgsql-ast-parser-12.0.2.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "@zerotrace/rv": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/rv",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/schemas": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/schemas",
+      "overridden": false,
+      "dependencies": {
+        "zod": {
+          "version": "4.6.7"
+        }
+      }
+    },
+    "@zerotrace/semantic-worker": {
+      "version": "0.1.0",
+      "resolved": "file:../../services/semantic-worker",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/action-semantics": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/campaign-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/capture-scheduler": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/chain-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/claim-audit": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/data-quality": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/funding-settlement-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/ingestion": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/platform-adapters": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/storage": {
+          "version": "0.1.0"
+        },
+        "dotenv": {
+          "version": "17.4.2"
+        },
+        "viem": {
+          "version": "2.55.11"
+        }
+      }
+    },
+    "@zerotrace/simulation-worker": {
+      "version": "0.1.0",
+      "resolved": "file:../../services/simulation-worker",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/market-reality-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/workflow-core": {
+          "version": "0.1.0"
+        },
+        "dotenv": {
+          "version": "17.4.2"
+        }
+      }
+    },
+    "@zerotrace/source-registry": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/source-registry",
+      "overridden": false
+    },
+    "@zerotrace/storage-plane": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/storage-plane",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/local-index": {
+          "version": "0.1.0"
+        },
+        "hyparquet-writer": {
+          "version": "0.16.6",
+          "resolved": "https://registry.npmjs.org/hyparquet-writer/-/hyparquet-writer-0.16.6.tgz",
+          "overridden": false
+        },
+        "hyparquet": {
+          "version": "1.29.0",
+          "resolved": "https://registry.npmjs.org/hyparquet/-/hyparquet-1.29.0.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "@zerotrace/storage": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/storage",
+      "overridden": false,
+      "dependencies": {
+        "@aws-sdk/client-s3": {
+          "version": "3.1169.0",
+          "resolved": "https://registry.npmjs.org/@aws-sdk/client-s3/-/client-s3-3.1169.0.tgz",
+          "overridden": false
+        },
+        "@clickhouse/client": {
+          "version": "1.23.1",
+          "resolved": "https://registry.npmjs.org/@clickhouse/client/-/client-1.23.1.tgz",
+          "overridden": false
+        },
+        "@smithy/node-http-handler": {
+          "version": "4.14.2",
+          "resolved": "https://registry.npmjs.org/@smithy/node-http-handler/-/node-http-handler-4.14.2.tgz",
+          "overridden": false
+        },
+        "@zerotrace/action-semantics": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/asset-ledger": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/capture-scheduler": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/claim-audit": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/data-quality": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/funding-settlement-engine": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/provider-plane": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/storage-plane": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/workflow-core": {
+          "version": "0.1.0"
+        },
+        "pg": {
+          "version": "8.23.0",
+          "resolved": "https://registry.npmjs.org/pg/-/pg-8.23.0.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "@zerotrace/supply-reality-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/supply-reality-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/asset-ledger": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/terminal-pipeline": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/terminal-pipeline",
+      "overridden": false
+    },
+    "@zerotrace/token-flow-engine": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/token-flow-engine",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/token-market-capture": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/token-market-capture",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/campaign-intelligence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/capital-intelligence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/identity-intelligence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/local-index": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/source-registry": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/terminal-pipeline": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "@zerotrace/web": {
+      "version": "0.1.0",
+      "resolved": "file:../../apps/web",
+      "overridden": false,
+      "dependencies": {
+        "@tauri-apps/api": {
+          "version": "2.11.1",
+          "resolved": "https://registry.npmjs.org/@tauri-apps/api/-/api-2.11.1.tgz",
+          "overridden": false
+        },
+        "cytoscape": {
+          "version": "3.34.0",
+          "resolved": "https://registry.npmjs.org/cytoscape/-/cytoscape-3.34.0.tgz",
+          "overridden": false
+        },
+        "react-dom": {
+          "version": "19.2.8",
+          "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.8.tgz",
+          "overridden": false
+        },
+        "react": {
+          "version": "19.2.8",
+          "resolved": "https://registry.npmjs.org/react/-/react-19.2.8.tgz",
+          "overridden": false
+        }
+      }
+    },
+    "@zerotrace/workflow-core": {
+      "version": "0.1.0",
+      "resolved": "file:../../packages/workflow-core",
+      "overridden": false,
+      "dependencies": {
+        "@zerotrace/evidence": {
+          "version": "0.1.0"
+        },
+        "@zerotrace/schemas": {
+          "version": "0.1.0"
+        }
+      }
+    },
+    "agent-base": {
+      "version": "7.1.4",
+      "resolved": "https://registry.npmjs.org/agent-base/-/agent-base-7.1.4.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: agent-base@7.1.4 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\agent-base"
+      ]
+    },
+    "bindings": {
+      "version": "1.5.0",
+      "resolved": "https://registry.npmjs.org/bindings/-/bindings-1.5.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: bindings@1.5.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\bindings"
+      ]
+    },
+    "cacache": {
+      "version": "19.0.1",
+      "resolved": "https://registry.npmjs.org/cacache/-/cacache-19.0.1.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: cacache@19.0.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\cacache"
+      ]
+    },
+    "env-paths": {
+      "version": "2.2.1",
+      "resolved": "https://registry.npmjs.org/env-paths/-/env-paths-2.2.1.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: env-paths@2.2.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\env-paths"
+      ]
+    },
+    "err-code": {
+      "version": "2.0.3",
+      "resolved": "https://registry.npmjs.org/err-code/-/err-code-2.0.3.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: err-code@2.0.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\err-code"
+      ]
+    },
+    "exponential-backoff": {
+      "version": "3.1.3",
+      "resolved": "https://registry.npmjs.org/exponential-backoff/-/exponential-backoff-3.1.3.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: exponential-backoff@3.1.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\exponential-backoff"
+      ]
+    },
+    "extend": {
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/extend/-/extend-3.0.2.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: extend@3.0.2 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\extend"
+      ]
+    },
+    "file-uri-to-path": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/file-uri-to-path/-/file-uri-to-path-1.0.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: file-uri-to-path@1.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\file-uri-to-path"
+      ]
+    },
+    "fs-minipass": {
+      "version": "3.0.3",
+      "resolved": "https://registry.npmjs.org/fs-minipass/-/fs-minipass-3.0.3.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: fs-minipass@3.0.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\fs-minipass"
+      ]
+    },
+    "http-cache-semantics": {
+      "version": "4.2.0",
+      "resolved": "https://registry.npmjs.org/http-cache-semantics/-/http-cache-semantics-4.2.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: http-cache-semantics@4.2.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\http-cache-semantics"
+      ]
+    },
+    "http-proxy-agent": {
+      "version": "7.0.2",
+      "resolved": "https://registry.npmjs.org/http-proxy-agent/-/http-proxy-agent-7.0.2.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: http-proxy-agent@7.0.2 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\http-proxy-agent"
+      ]
+    },
+    "https-proxy-agent": {
+      "version": "7.0.6",
+      "resolved": "https://registry.npmjs.org/https-proxy-agent/-/https-proxy-agent-7.0.6.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: https-proxy-agent@7.0.6 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\https-proxy-agent"
+      ]
+    },
+    "make-fetch-happen": {
+      "version": "14.0.3",
+      "resolved": "https://registry.npmjs.org/make-fetch-happen/-/make-fetch-happen-14.0.3.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: make-fetch-happen@14.0.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\make-fetch-happen"
+      ]
+    },
+    "minipass-collect": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/minipass-collect/-/minipass-collect-2.0.1.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: minipass-collect@2.0.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-collect"
+      ]
+    },
+    "minipass-fetch": {
+      "version": "4.0.1",
+      "resolved": "https://registry.npmjs.org/minipass-fetch/-/minipass-fetch-4.0.1.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: minipass-fetch@4.0.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-fetch"
+      ]
+    },
+    "minipass-flush": {
+      "version": "1.0.7",
+      "resolved": "https://registry.npmjs.org/minipass-flush/-/minipass-flush-1.0.7.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: minipass-flush@1.0.7 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-flush"
+      ]
+    },
+    "minipass-pipeline": {
+      "version": "1.2.4",
+      "resolved": "https://registry.npmjs.org/minipass-pipeline/-/minipass-pipeline-1.2.4.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: minipass-pipeline@1.2.4 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-pipeline"
+      ]
+    },
+    "minipass-sized": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/minipass-sized/-/minipass-sized-1.0.3.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: minipass-sized@1.0.3 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\minipass-sized"
+      ]
+    },
+    "nan": {
+      "version": "2.22.2",
+      "resolved": "https://registry.npmjs.org/nan/-/nan-2.22.2.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: nan@2.22.2 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\nan"
+      ]
+    },
+    "negotiator": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/negotiator/-/negotiator-1.0.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: negotiator@1.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\negotiator"
+      ]
+    },
+    "node-gyp": {
+      "version": "11.5.0",
+      "resolved": "https://registry.npmjs.org/node-gyp/-/node-gyp-11.5.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: node-gyp@11.5.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\node-gyp"
+      ]
+    },
+    "p-map": {
+      "version": "7.0.6",
+      "resolved": "https://registry.npmjs.org/p-map/-/p-map-7.0.6.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: p-map@7.0.6 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\p-map"
+      ]
+    },
+    "promise-retry": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/promise-retry/-/promise-retry-2.0.1.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: promise-retry@2.0.1 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\promise-retry"
+      ]
+    },
+    "retry": {
+      "version": "0.12.0",
+      "resolved": "https://registry.npmjs.org/retry/-/retry-0.12.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: retry@0.12.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\retry"
+      ]
+    },
+    "schemes": {
+      "version": "1.4.0",
+      "resolved": "https://registry.npmjs.org/schemes/-/schemes-1.4.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: schemes@1.4.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\schemes"
+      ]
+    },
+    "smart-buffer": {
+      "version": "4.2.0",
+      "resolved": "https://registry.npmjs.org/smart-buffer/-/smart-buffer-4.2.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: smart-buffer@4.2.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\smart-buffer"
+      ]
+    },
+    "smtp-address-parser": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/smtp-address-parser/-/smtp-address-parser-1.1.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: smtp-address-parser@1.1.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\smtp-address-parser"
+      ]
+    },
+    "socks-proxy-agent": {
+      "version": "8.0.5",
+      "resolved": "https://registry.npmjs.org/socks-proxy-agent/-/socks-proxy-agent-8.0.5.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: socks-proxy-agent@8.0.5 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\socks-proxy-agent"
+      ]
+    },
+    "socks": {
+      "version": "2.8.9",
+      "resolved": "https://registry.npmjs.org/socks/-/socks-2.8.9.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: socks@2.8.9 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\socks"
+      ]
+    },
+    "ssri": {
+      "version": "12.0.0",
+      "resolved": "https://registry.npmjs.org/ssri/-/ssri-12.0.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: ssri@12.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\ssri"
+      ]
+    },
+    "unique-filename": {
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/unique-filename/-/unique-filename-4.0.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: unique-filename@4.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\unique-filename"
+      ]
+    },
+    "unique-slug": {
+      "version": "5.0.0",
+      "resolved": "https://registry.npmjs.org/unique-slug/-/unique-slug-5.0.0.tgz",
+      "overridden": false,
+      "extraneous": true,
+      "problems": [
+        "extraneous: unique-slug@5.0.0 C:\\Users\\GreyWolf\\.codex\\worktrees\\zerotrace-handoff\\ZeroTrace\\node_modules\\unique-slug"
+      ]
+    }
+  }
+}

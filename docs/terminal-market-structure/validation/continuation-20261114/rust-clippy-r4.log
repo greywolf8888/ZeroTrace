@@ -1,0 +1,18 @@
+   Compiling zerotrace-desktop v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\desktop\src-tauri)
+    Checking os_pipe v1.2.3
+warning: corrupt incremental compilation artifact found at `\\?\C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\target\debug\incremental\build_script_build-2ozdhfw0fnegz\s-ho5o3nxjkq-0wxjo1x-working\dep-graph.bin`. This file will automatically be ignored and deleted. If you see this message repeatedly or can provoke it without manually manipulating the compiler's artifacts, please file an issue. The incremental compilation system relies on hardlinks and filesystem locks behaving correctly, and may not deal well with OS crashes, so whatever information you can provide about your filesystem or other state may be very relevant
+
+    Checking zerotrace-graph v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-graph)
+    Checking encoding_rs v0.8.35
+    Checking tauri-plugin-shell v2.3.5
+warning: `zerotrace-desktop` (build script) generated 1 warning
+    Checking zerotrace-entity v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-entity)
+    Checking zerotrace-query-planner v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-query-planner)
+    Checking tauri-plugin-notification v2.3.3
+    Checking zerotrace-route-optimizer v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-route-optimizer)
+    Checking tauri-plugin-single-instance v2.4.3
+    Checking zerotrace-ledger v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-ledger)
+    Checking zerotrace-capital v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-capital)
+    Checking zerotrace-campaign v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-campaign)
+    Checking zerotrace-compute v0.1.0 (C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\crates\zerotrace-compute)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.57s

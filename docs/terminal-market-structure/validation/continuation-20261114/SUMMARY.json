@@ -1,0 +1,329 @@
+{
+  "schemaVersion": "zerotrace-continuation-summary-v1",
+  "recordedAt": "2026-11-14T15:31:52.150424+00:00",
+  "mainBaseline": "a931eec96890dc3072f285f10f965251039943b4",
+  "functionalSource": "b998080d23382ab2cc72a19f47404378fe7b8988",
+  "visualCaptureSource": "ad38f0b42171af521b6d7a008e286f4126cc8870",
+  "local": {
+    "format": "PASS",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "unitPassed": 1047,
+    "integrationPassed": 88,
+    "integrationSkipped": 42,
+    "evalAndMcpPassed": 7,
+    "build": "PASS",
+    "license": "PASS",
+    "auditThreshold": "PASS_HIGH",
+    "productionNpmVulnerabilities": 0,
+    "developmentModerateVulnerabilities": 12,
+    "rustPassed": 52,
+    "rustFormat": "PASS",
+    "rustClippy": "PASS",
+    "windowsBrowserPassed": 49,
+    "visualRecheckPassed": 7,
+    "currentVisualExactByteMatches": 7,
+    "architecture": "PASS",
+    "chinese": "PASS",
+    "schema": "PASS"
+  },
+  "remoteFunctionalCandidate": {
+    "source": "b998080d23382ab2cc72a19f47404378fe7b8988",
+    "ciRun": 43609827423,
+    "quality": "PASS",
+    "rust": "PASS",
+    "containers": "PASS",
+    "codeql": "PASS",
+    "browser": "FAIL_OLD_VISUAL_BASELINE",
+    "qualitySummary": [
+      " Test Files  204 passed (204)",
+      "      Tests  1166 passed (1166)",
+      "All files          |   83.28 |    76.19 |   91.79 |   85.08 |                   "
+    ]
+  },
+  "invitation": {
+    "username": "wangranorz",
+    "id": 343629239,
+    "scope": "greywolf8888/ZeroTrace",
+    "requestedPermission": "write",
+    "statusAtLastRead": "PENDING_ACCEPTANCE",
+    "effectivePermissionAtLastRead": "read"
+  },
+  "mainProtection": {
+    "applied": true,
+    "forcePushesAllowed": false,
+    "deletionsAllowed": false,
+    "requiredReviewsAdded": false,
+    "requiredChecksAdded": false
+  },
+  "originalDesktopFiles": [
+    {
+      "path": "apps/desktop/README.md",
+      "expectedSha256": "c437fee8fdb8f402b949cdc23174da5376e0168f050a9130bf62ff96c871452c",
+      "actualSha256": "c437fee8fdb8f402b949cdc23174da5376e0168f050a9130bf62ff96c871452c",
+      "matches": true
+    },
+    {
+      "path": "apps/desktop/portable/README_zh-CN.txt",
+      "expectedSha256": "496add4cc89b04a8b9e1a2f78ff5b0c87c15ad18a55741cd48d7074fa01030e5",
+      "actualSha256": "496add4cc89b04a8b9e1a2f78ff5b0c87c15ad18a55741cd48d7074fa01030e5",
+      "matches": true
+    },
+    {
+      "path": "apps/desktop/src-tauri/src/main.rs",
+      "expectedSha256": "14ecbdbb0c5ed69944430cdbf0d16b1de1046e078f07f593b9ed9914d868537a",
+      "actualSha256": "14ecbdbb0c5ed69944430cdbf0d16b1de1046e078f07f593b9ed9914d868537a",
+      "matches": true
+    },
+    {
+      "path": "scripts/build-portable-desktop.ps1",
+      "expectedSha256": "5927b7a6cc2fed815ba888efd5425560dc9c6b74f28bd5383bde42ccc4fd9ec7",
+      "actualSha256": "5927b7a6cc2fed815ba888efd5425560dc9c6b74f28bd5383bde42ccc4fd9ec7",
+      "matches": true
+    },
+    {
+      "path": "scripts/desktop-launch-smoke.ps1",
+      "expectedSha256": "c0cd73766c573700bd107d2a9a65cba24e346ab42132cf49335109cd8bc5fc50",
+      "actualSha256": "c0cd73766c573700bd107d2a9a65cba24e346ab42132cf49335109cd8bc5fc50",
+      "matches": true
+    },
+    {
+      "path": "scripts/portable-desktop-smoke.ps1",
+      "expectedSha256": "28861d1585ff5f169b04ec0ee0b0b8a097188640fe19f9f7f7904727b4051c97",
+      "actualSha256": "28861d1585ff5f169b04ec0ee0b0b8a097188640fe19f9f7f7904727b4051c97",
+      "matches": true
+    }
+  ],
+  "interruptedAttempts": [
+    "stores.log",
+    "stores-r2.log",
+    "rust-clippy.log",
+    "rust-clippy-r2.log",
+    "lint-r2.log"
+  ],
+  "preservation": "中断日志无最终退出码，不计通过；格式失败、候选双 JSON 和六图不完整尝试保留。新截图、清单和有效收据分别新增，未覆盖旧证据。",
+  "fullProductGates": "NOT_PROMOTED",
+  "merge": "NOT_PERFORMED",
+  "otherRepositoryMutations": false,
+  "productionDeployment": false,
+  "paidDataProcurement": false,
+  "xapidRequests": 0,
+  "chainWrites": 0,
+  "logs": [
+    {
+      "path": "architecture-r4.log",
+      "bytes": 405,
+      "sha256": "951333d79e556fff9551ff6602d9fb43d8e95fa22a4de73a5885d1c14b207080"
+    },
+    {
+      "path": "audit-r3.log",
+      "bytes": 2812,
+      "sha256": "b509d1a6161add88c5efd013678e27b48c23deb2dcd1827d2e8bb6836f6d985a"
+    },
+    {
+      "path": "audit-transitive-fix-r2.log",
+      "bytes": 3127,
+      "sha256": "13a1cdd803e570bb16dcea207a67b0b46b9c3b9e83bcdbe83712094e7e321a97"
+    },
+    {
+      "path": "audit-transitive-fix.log",
+      "bytes": 2280,
+      "sha256": "73fc4afac690263715cc667d682928c35644306f1e271c66a1d8b25a55ef3636"
+    },
+    {
+      "path": "audit.log",
+      "bytes": 21890,
+      "sha256": "a6a3e5696f5d3937c24770cdc031d4dce8d2eed74f11e80da43e2fc468607533"
+    },
+    {
+      "path": "browser-r3.log",
+      "bytes": 8553,
+      "sha256": "63b7c10a1a33c818e3a49cbfcca32ad57c780138fa96abb610edfe39873c6553"
+    },
+    {
+      "path": "browser.log",
+      "bytes": 8961,
+      "sha256": "f5c6d39eed05b1882199ef4323e68139cc3fa50bec14c442fc40500ca23876b2"
+    },
+    {
+      "path": "build-r3.log",
+      "bytes": 1559,
+      "sha256": "9e482801ebea3b703c8d9e61616fa043e5d36e9baf174be8b629608ff24648d5"
+    },
+    {
+      "path": "build.log",
+      "bytes": 1561,
+      "sha256": "1eb3256b63d5aa77478e8960bcd78818068c72ac5c0d868ccb2b317e1d029b49"
+    },
+    {
+      "path": "chinese-r4.log",
+      "bytes": 201,
+      "sha256": "158ce402fcf2b7d9782736bcaec9baa84f9e2e3d188d2bb5bfc4f2b15854f3bc"
+    },
+    {
+      "path": "ci-quality-b998080.log",
+      "bytes": 174004,
+      "sha256": "635a3a338701bb231b2c9a514fe86e34ac75eca2a8413d3af373e7f55ab487f0"
+    },
+    {
+      "path": "dependency-update.log",
+      "bytes": 476,
+      "sha256": "31bd6e989c27cce42dcaff43f501a5b54483be94069b5079591186e18583f251"
+    },
+    {
+      "path": "desktop-sidecar.log",
+      "bytes": 173,
+      "sha256": "945740062a60c774a6efd3547ef843381e53c9e560f8734a9b161ce409e6f7b0"
+    },
+    {
+      "path": "eval-mcp-r4.log",
+      "bytes": 255,
+      "sha256": "8e3e8a55f4cfa661a6bc62936942d466279bd1317dd29ced57b987095755823d"
+    },
+    {
+      "path": "evals.log",
+      "bytes": 309,
+      "sha256": "21ad7bb31965e5473990f6b322c6ee2b06ffee11a620c5199e7225a875941cd1"
+    },
+    {
+      "path": "format-final.log",
+      "bytes": 894,
+      "sha256": "ed7bd06d882c5d4d40f05fe6d069e7f77ad51f10048a71a29f121e60572ac3d2"
+    },
+    {
+      "path": "format-r2.log",
+      "bytes": 126,
+      "sha256": "5ffc501ff8bacc9a0401aa1966dcda506af7db0632e11dd2565befdcdc65dc88"
+    },
+    {
+      "path": "format.log",
+      "bytes": 126,
+      "sha256": "5ffc501ff8bacc9a0401aa1966dcda506af7db0632e11dd2565befdcdc65dc88"
+    },
+    {
+      "path": "integration-r3.log",
+      "bytes": 360,
+      "sha256": "ff7d190ce2ccbcb2a4c965c931efe20efefbc503abfbb591ae397c3631d06cee"
+    },
+    {
+      "path": "license-r3.log",
+      "bytes": 236,
+      "sha256": "d80b3a5671dd5768a340ea683c2ccf096f897d9b5136fd26d34e77dcaf16d8de"
+    },
+    {
+      "path": "license.log",
+      "bytes": 236,
+      "sha256": "d80b3a5671dd5768a340ea683c2ccf096f897d9b5136fd26d34e77dcaf16d8de"
+    },
+    {
+      "path": "lint-r2.log",
+      "bytes": 57,
+      "sha256": "b1c0dadef8c6be69c7271b68ea611711ff936a2c32511fa3f8d413505970c8c8"
+    },
+    {
+      "path": "lint-r3.log",
+      "bytes": 57,
+      "sha256": "b1c0dadef8c6be69c7271b68ea611711ff936a2c32511fa3f8d413505970c8c8"
+    },
+    {
+      "path": "lint.log",
+      "bytes": 57,
+      "sha256": "b1c0dadef8c6be69c7271b68ea611711ff936a2c32511fa3f8d413505970c8c8"
+    },
+    {
+      "path": "mcp.log",
+      "bytes": 328,
+      "sha256": "433890bb0bc5588102f6b9f40fa908c4f4430ebc5587b28cb32ab7514c69a677"
+    },
+    {
+      "path": "rust-clippy-r2.log",
+      "bytes": 1661,
+      "sha256": "48dd7ccff87e986444e77411653b31cabb2d39cadce64e143814e2c892a00e4d"
+    },
+    {
+      "path": "rust-clippy-r4.log",
+      "bytes": 2170,
+      "sha256": "e7bb5925ed1bee82fa97613c9a6d268f05d3b69fb0ac2e6a0f10ca3dbc875838"
+    },
+    {
+      "path": "rust-clippy.log",
+      "bytes": 7486,
+      "sha256": "1ff9c452d3d02526967841b6e77ef338f926e2c4ba71a304e019f9ca21f9fcab"
+    },
+    {
+      "path": "rust-format.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "rust-tests-r3.log",
+      "bytes": 16838,
+      "sha256": "ee58aba6d2cf9b03b17e03b91ded767cf91d6155058940b2030f449e011a00d2"
+    },
+    {
+      "path": "schema-r4.log",
+      "bytes": 158,
+      "sha256": "503b5b1ca6c3c2f355bb57568f249f86235472497673ebca4a312537ec1bfbd4"
+    },
+    {
+      "path": "security-focused.log",
+      "bytes": 264,
+      "sha256": "5e22d409afdca73063091d6f322e27752249457d1c5ec2b31784422fb94b5138"
+    },
+    {
+      "path": "security-typecheck-r2.log",
+      "bytes": 178,
+      "sha256": "65f1e349022558009e23e430c9b981b66177a86adfb82dac4bb1da7f4bd247fa"
+    },
+    {
+      "path": "security-typecheck.log",
+      "bytes": 596,
+      "sha256": "b5208f5a317eeecd1fd41927bcaba3bf5711b506ef79231f52833d209057cb67"
+    },
+    {
+      "path": "sidecar-r3.log",
+      "bytes": 912,
+      "sha256": "e982d4e456f5ec65e2dd457cdf92132e053836346d367fd5460f2c46a8ccb522"
+    },
+    {
+      "path": "stores-r2.log",
+      "bytes": 36475,
+      "sha256": "a075ae4ac579a822f23b156c7d5746c3916ec2a0b073d749a4ce4da0f4830e35"
+    },
+    {
+      "path": "stores.log",
+      "bytes": 51974,
+      "sha256": "54267955b320b6d8262356ac4a4a4bc9e893654c82c4ca5116ab7f441c608feb"
+    },
+    {
+      "path": "typecheck.log",
+      "bytes": 178,
+      "sha256": "65f1e349022558009e23e430c9b981b66177a86adfb82dac4bb1da7f4bd247fa"
+    },
+    {
+      "path": "unit-r3.log",
+      "bytes": 401,
+      "sha256": "0a99ea0471fc044d6f6b5eebe1d6c3ee803035496a1346aec9c0ae18021bae92"
+    },
+    {
+      "path": "unit.log",
+      "bytes": 401,
+      "sha256": "93d3a12aebb76706915989c11fe708a8d56c36ba975b806cab3acc04a25b98df"
+    },
+    {
+      "path": "visual-gate-r4.log",
+      "bytes": 625,
+      "sha256": "360ae716c3e9415fc285dce59addc26a37eb184890047e4ad93a6cac2637314f"
+    },
+    {
+      "path": "visual-gate-r5.log",
+      "bytes": 1571,
+      "sha256": "1f7532f7577d6b6a7fd4f8d303ff4b00b40468ead74ffeb28b7796c90ebdc422"
+    },
+    {
+      "path": "visual-r4.log",
+      "bytes": 1692,
+      "sha256": "28cf414e572cd282fcffa887218b472fbb59aa8a9d5612be884b758de1fc9c4a"
+    }
+  ]
+}

@@ -1,7 +1,6 @@
-import { Client as MinioClient } from 'minio';
-import { Agent as HttpAgent } from 'node:http';
-import { Agent as HttpsAgent } from 'node:https';
 import type { Readable } from 'node:stream';
+
+import { S3ObjectClient } from './s3-client.js';
 
 import { canonicalJson, hashPayload } from '@zerotrace/evidence';
 import { RawArtifactEnvelopeSchema, type RawArtifactEnvelope } from '@zerotrace/schemas';
@@ -146,28 +145,22 @@ function createMinioClient(options: RawArtifactStoreOptions): ObjectStoreClient 
       'Object-store credentials must be configured outside the endpoint URL.',
     );
   }
-  const defaultPort = endpoint.protocol === 'https:' ? 443 : 80;
-  const transportAgent =
-    endpoint.protocol === 'https:'
-      ? new HttpsAgent({ keepAlive: true })
-      : new HttpAgent({ keepAlive: true });
-  const client = new MinioClient({
-    endPoint: endpoint.hostname,
-    port: endpoint.port === '' ? defaultPort : Number(endpoint.port),
-    useSSL: endpoint.protocol === 'https:',
+  return new S3ObjectClient({
+    endpoint: endpoint.origin,
     accessKey: options.accessKey,
     secretKey: options.secretKey,
     region: options.region ?? 'us-east-1',
-    pathStyle: true,
-    transportAgent,
   });
-  return Object.assign(client, { close: () => transportAgent.destroy() });
 }
 
 function errorCode(error: unknown): string | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
   const record = error as Record<string, unknown>;
-  return typeof record.code === 'string' ? record.code : undefined;
+  return typeof record.code === 'string'
+    ? record.code
+    : typeof record.name === 'string'
+      ? record.name
+      : undefined;
 }
 
 function isMissingObject(error: unknown): boolean {

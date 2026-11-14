@@ -1,0 +1,16 @@
+
+> zerotrace@0.1.0 architecture:check
+> tsx scripts/architecture-check.ts
+
+{
+  "package_dependency_cycles": 0,
+  "apps_web_App_tsx_lines": 2,
+  "apps_web_AppShell_tsx_lines": 287,
+  "apps_api_app_ts_lines": 11,
+  "create_app_impl_lines": 148,
+  "schemas_root_index_lines": 3,
+  "handwritten_web_api_contracts": 0,
+  "generated_client_marked": true,
+  "packages": 48,
+  "checkedFrom": ""
+}

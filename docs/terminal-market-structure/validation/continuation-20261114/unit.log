@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 test:unit
+> vitest run packages services apps/api/test/unit scripts/operational-gates.test.ts tests/unit
+
+
+ RUN  v4.1.10 C:/Users/GreyWolf/.codex/worktrees/zerotrace-handoff/ZeroTrace
+
+
+ Test Files  195 passed (195)
+      Tests  1043 passed (1043)
+   Start at  19:26:24
+   Duration  20.13s (transform 43.21s, setup 0ms, import 308.09s, tests 22.31s, environment 34ms)
+

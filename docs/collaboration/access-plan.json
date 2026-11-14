@@ -4,13 +4,16 @@
   "repositoryVisibility": "public",
   "role": "write",
   "apiPermission": "push",
-  "recipient": null,
-  "invitationStatus": "WAITING_FOR_USERNAME_AND_ADMIN_SESSION",
+  "recipient": "wangranorz",
+  "invitationId": 343629239,
+  "invitationStatus": "PENDING_ACCEPTANCE",
+  "effectivePermissionAtVerification": "read",
+  "executionReceipt": "EXECUTION_20261114.json",
   "scope": "仅本仓库代码协作",
   "otherRepositoryPermissionChanges": false,
   "accountCredentialsShared": false,
   "adminRightsGranted": false,
-  "protectionChangeStatus": "NOT_APPLIED",
+  "protectionChangeStatus": "APPLIED_AND_READ_BACK",
   "branchDeletionStatus": "COMPLETED_GUARDED_WORKFLOW",
-  "note": "个人仓库协作者权限为仓库级；本配置不是已发送邀请或权限已生效的证明。"
+  "note": "个人仓库协作者权限为仓库级；邀请已发送，待本人接受。实际写权限是否生效须重新回读，不能从配置文件推定。"
 }

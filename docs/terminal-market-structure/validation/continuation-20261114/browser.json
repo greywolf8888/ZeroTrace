@@ -1,0 +1,8 @@
+{
+  "name": "桌面手机与视觉浏览器",
+  "command": "playwright test --project=chromium-desktop --project=chromium-mobile --project=chromium-visual",
+  "startedAt": "2026-11-14T11:28:17.6980398Z",
+  "finishedAt": "2026-11-14T11:28:53.6263801Z",
+  "exitCode": 0,
+  "logSha256": "F5C6D39EED05B1882199EF4323E68139CC3FA50BEC14C442FC40500CA23876B2"
+}

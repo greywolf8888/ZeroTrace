@@ -1,0 +1,30 @@
+[
+  {
+    "name": "eval-mcp-r4",
+    "startedAt": "2026-11-14T15:27:00.6135572Z",
+    "finishedAt": "2026-11-14T15:27:04.8891334Z",
+    "exitCode": 0,
+    "logSha256": "8E3E8A55F4CFA661A6BC62936942D466279BD1317DD29CED57B987095755823D"
+  },
+  {
+    "name": "architecture-r4",
+    "startedAt": "2026-11-14T15:27:04.9611783Z",
+    "finishedAt": "2026-11-14T15:27:11.6341540Z",
+    "exitCode": 0,
+    "logSha256": "951333D79E556FFF9551FF6602D9FB43D8E95FA22A4DE73A5885D1C14B207080"
+  },
+  {
+    "name": "chinese-r4",
+    "startedAt": "2026-11-14T15:27:11.6452653Z",
+    "finishedAt": "2026-11-14T15:27:12.4328817Z",
+    "exitCode": 0,
+    "logSha256": "158CE402FCF2B7D9782736BCAEC9BAA84F9E2E3D188D2BB5BFC4F2B15854F3BC"
+  },
+  {
+    "name": "schema-r4",
+    "startedAt": "2026-11-14T15:27:12.4413845Z",
+    "finishedAt": "2026-11-14T15:27:13.1823563Z",
+    "exitCode": 0,
+    "logSha256": "503B5B1CA6C3C2F355BB57568F249F86235472497673EBCA4A312537EC1BFBD4"
+  }
+]

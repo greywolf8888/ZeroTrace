@@ -22,7 +22,7 @@
     "@zerotrace/evidence": "*",
     "@zerotrace/rv": "*",
     "@zerotrace/schemas": "*",
-    "bitcoinjs-lib": "7.0.1",
+    "bitcoinjs-lib": "7.0.5",
     "bs58": "^6.0.0",
     "viem": "2.55.11"
   }

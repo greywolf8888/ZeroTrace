@@ -1,0 +1,8 @@
+{
+  "name": "format-r2",
+  "command": "npm run format:check",
+  "startedAt": "2026-11-14T14:40:22.1391697Z",
+  "finishedAt": "2026-11-14T14:40:42.9076429Z",
+  "exitCode": 0,
+  "logSha256": "5FFC501FF8BACC9A0401AA1966DCDA506AF7DB0632E11DD2565BEFDCDC65DC88"
+}

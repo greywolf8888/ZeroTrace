@@ -13,6 +13,8 @@ output/playwright/
 reports/*.json
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc
 *.log
 target/
 apps/desktop/bin/*.exe
@@ -26,3 +28,6 @@ data/provider-plane/
 data/storage-plane/
 ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包/
 ZeroTrace_终局盘面分析_全量开发与实盘验收提示词包.zip
+
+# 本地未发布的协作包候选保留，不混入交付。
+output/pack-candidates/

@@ -26,7 +26,15 @@ interface VisualGoldenManifest {
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const snapshotDirectory = join(root, 'tests', 'e2e', 'visual-golden');
-const manifestPath = join(root, 'docs', 'terminal-market-structure', '视觉基线.json');
+const manifestDirectory = join(root, 'docs', 'terminal-market-structure');
+const indexPath = join(manifestDirectory, '视觉基线入口.json');
+const manifestName = existsSync(indexPath)
+  ? (JSON.parse(readFileSync(indexPath, 'utf8')) as { manifest: string }).manifest
+  : '视觉基线.json';
+if (!/^视觉基线(?:_\d{8})?\.json$/u.test(manifestName)) {
+  throw new Error('视觉基线入口只能引用本目录的命名清单。');
+}
+const manifestPath = join(manifestDirectory, manifestName);
 const expectedIds = [
   'provider-down-light-1366x768',
   'provider-table-dark-long',
@@ -164,7 +172,7 @@ if (process.argv.includes('--candidate')) {
 if (errors.length > 0) {
   process.stdout.write(`${JSON.stringify({ status: 'FAIL', errors }, null, 2)}\n`);
   process.exitCode = 1;
-} else {
+} else if (!process.argv.includes('--candidate')) {
   process.stdout.write(
     `${JSON.stringify(
       {

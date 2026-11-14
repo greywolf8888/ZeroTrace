@@ -1,0 +1,9 @@
+
+> zerotrace@0.1.0 ui:chinese:check
+> tsx scripts/ui-chinese-check.ts
+
+{
+  "forbidden_user_facing_terms": 0,
+  "production_language_files": 14,
+  "diagnostic_navigation_default": "disabled"
+}

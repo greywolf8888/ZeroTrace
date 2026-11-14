@@ -1,0 +1,11 @@
+> pkg@6.22.0
+> Warning Cannot stat, ENOENT
+  C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\package.json
+  The file was required from 'C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\api\dist\desktop-server.mjs'
+> Warning Cannot stat, ENOENT
+  C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\api\static
+  The file was required from 'C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\api\dist\desktop-server.mjs'
+> Warning Cannot stat, ENOENT
+  C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\api\dist\static\logo.svg
+  The file was required from 'C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\api\dist\desktop-server.mjs'
+Desktop API sidecar：C:\Users\GreyWolf\.codex\worktrees\zerotrace-handoff\ZeroTrace\apps\desktop\src-tauri\binaries\zerotrace-api-x86_64-pc-windows-msvc.exe

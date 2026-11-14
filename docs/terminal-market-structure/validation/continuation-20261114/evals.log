@@ -1,0 +1,13 @@
+
+> zerotrace@0.1.0 test:evals
+> vitest run evals
+
+
+ RUN  v4.1.10 C:/Users/GreyWolf/.codex/worktrees/zerotrace-handoff/ZeroTrace
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed (2)
+   Start at  19:26:45
+   Duration  1.45s (transform 765ms, setup 0ms, import 2.19s, tests 32ms, environment 0ms)
+
