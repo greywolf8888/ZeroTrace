@@ -10,10 +10,7 @@
     "conclusion": "success",
     "workflowRemoved": true
   },
-  "remainingBranches": [
-    "main",
-    "agent/arc-task-ledger-v1"
-  ],
+  "remainingBranches": ["main", "agent/arc-task-ledger-v1"],
   "sourceProjection": {
     "mainFilesRetained": true,
     "arcOriginalFilesRetained": true,

@@ -23,10 +23,7 @@
   "hiddenBranches": false,
   "note": "旧引用已删除；提交通过主线和活动支线的父关系保留。分支备注不提供可见性隔离。",
   "activityMergeCommit": "335f2601919ea14be46728b1fae6c77e935810d2",
-  "remainingBranches": [
-    "main",
-    "agent/arc-task-ledger-v1"
-  ],
+  "remainingBranches": ["main", "agent/arc-task-ledger-v1"],
   "cleanupRun": {
     "id": 43584290543,
     "url": "https://github.com/greywolf8888/ZeroTrace/actions/runs/43584290543",
