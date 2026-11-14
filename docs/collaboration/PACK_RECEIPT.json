@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "zerotrace-pack-receipt-v3",
+  "recordedAt": "2026-11-14T10:24:26.610Z",
+  "package": "ZeroTrace_Collaboration_Pack_20261114.zip",
+  "bytes": 753830,
+  "entries": 26,
+  "gitBlobSha": "d4c71908e8bf03daece0cb7f9721663f4de02b5f",
+  "sourceSnapshot": "2ff20453e861fd3ddf17b4677be2bb8ff5d6f25f",
+  "activityCurrent": "4fd4fb172b19f3c896c73fd37e405bd4eae64529",
+  "mainBranch": "main",
+  "activityBranch": "agent/arc-task-ledger-v1",
+  "cleanup": {
+    "runId": 43584290543,
+    "conclusion": "success",
+    "legacyReferencesDeleted": 2,
+    "workflowRemoved": true,
+    "historyPreserved": true
+  },
+  "sourceProjection": {
+    "originalMainFiles": 985,
+    "originalMainFilesRetained": true,
+    "arcOriginalSourceFilesRetained": true,
+    "arcImplementationAbsentFromMain": true,
+    "mainDependencyLockUnchanged": true
+  },
+  "checks": {
+    "zipStructure": "PASS",
+    "payloadBytesAndCrc32": "PASS",
+    "gitBlobUploadDigest": "PASS",
+    "sourceSnapshotDigests": "PASS"
+  },
+  "ciEvidenceSource": "1552b4c0050f0b217da538c4f2f00f7f53fd93c5",
+  "fullProductGates": "NOT_PROMOTED",
+  "invitation": "NOT_SENT_USERNAME_AND_ADMIN_SESSION_REQUIRED",
+  "mainProtection": "NOT_MODIFIED",
+  "otherRepositoryMutations": false,
+  "ownerCredentialsIncluded": false,
+  "note": "此收据在 ZIP 外；最终提交相对资料快照只新增 ZIP 与收据。旧包在旧 Git 提交中保留，后续 CI 结果按实际 SHA 核对。"
+}
