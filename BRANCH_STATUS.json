@@ -1,0 +1,8 @@
+{
+  "classification": "ACTIVITY_TASK_HISTORY",
+  "isZeroTraceMainProject": false,
+  "canonicalMain": "main",
+  "canonicalActivity": "agent/arc-task-ledger-v1",
+  "originalCommit": "0bf0c339eeeefa76eff53b67ac33ddeee4ac764c",
+  "deletionStatus": "PENDING_ADMIN_ACCESS"
+}
