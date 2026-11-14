@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "zerotrace-consolidation-validation-v1",
+  "recordedAt": "2026-11-14T10:05:29.388Z",
+  "scope": "GitHub 主线整理、活动分类与协作准备，不提升生产门禁",
+  "originalMain": "821848f22a87e0a6e563f1367a8f6ff1b95c74fe",
+  "activityCommit": "335f2601919ea14be46728b1fae6c77e935810d2",
+  "focusedChecks": {
+    "canonicalCases": 12,
+    "canonicalEquivalent": true,
+    "undefinedRejects": true,
+    "defaultDnsLookupRetained": true,
+    "privateAddressRejectionRetained": true,
+    "runtimeStatus": "NO_EXECUTION_ENVIRONMENT",
+    "notRun": [
+      "npm ci",
+      "format/lint/typecheck",
+      "unit/integration/build/license",
+      "Rust workspace",
+      "browser E2E",
+      "current chain/provider gates"
+    ]
+  },
+  "localEnvironment": "UNAVAILABLE",
+  "fullRegression": "NOT_RUN",
+  "mainProtection": "NOT_MODIFIED",
+  "invite": "WAITING_FOR_USERNAME_AND_ADMIN_SESSION",
+  "legacyBranchDeletion": "NOT_EXECUTED",
+  "productionDeployment": "NOT_PERFORMED",
+  "otherRepositories": "NOT_MODIFIED",
+  "sourceTextIntegrity": [
+    {
+      "path": "README.md",
+      "expected": "53b034865370c6e30c0b70dd5cd8dfb6b75b5615",
+      "actual": "53b034865370c6e30c0b70dd5cd8dfb6b75b5615",
+      "matching": true
+    },
+    {
+      "path": "AGENTS.md",
+      "expected": "c95c0456b182b0cd23a603ef1291a52f65606b50",
+      "actual": "c95c0456b182b0cd23a603ef1291a52f65606b50",
+      "matching": true
+    },
+    {
+      "path": "PROGRESS.md",
+      "expected": "690452d8e2f2555e9f1d285351167e67b9b9b65b",
+      "actual": "690452d8e2f2555e9f1d285351167e67b9b9b65b",
+      "matching": true
+    },
+    {
+      "path": "docs/architecture/ARCHITECTURE.md",
+      "expected": "5155019da067778d8e2e05163b54c4f3d3e3fa90",
+      "actual": "5155019da067778d8e2e05163b54c4f3d3e3fa90",
+      "matching": true
+    },
+    {
+      "path": "docs/architecture/ZEROTRACE_MASTER_PROMPT.md",
+      "expected": "4eb7113601212291448d1d4e2c77bda7f8acaea3",
+      "actual": "4eb7113601212291448d1d4e2c77bda7f8acaea3",
+      "matching": true
+    },
+    {
+      "path": "docs/DEVELOPMENT.md",
+      "expected": "629d5893ad4db8b4b4cbc91b8746da8cbde45714",
+      "actual": "629d5893ad4db8b4b4cbc91b8746da8cbde45714",
+      "matching": true
+    },
+    {
+      "path": "docs/testing/FINAL_ACCEPTANCE.md",
+      "expected": "86fe7602de20162611ec6327fb1ddd0e01746ea8",
+      "actual": "86fe7602de20162611ec6327fb1ddd0e01746ea8",
+      "matching": true
+    }
+  ],
+  "documentLinkCheck": {
+    "missing": []
+  }
+}

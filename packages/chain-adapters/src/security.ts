@@ -7,6 +7,7 @@ export interface ProviderUrlPolicy {
   allowedHosts: readonly string[];
   allowPrivateNetworks: boolean;
   allowHttpForPrivateNetworks?: boolean;
+  resolveHostname?: (hostname: string) => Promise<Array<{ address: string; family: number }>>;
 }
 
 function matchesAllowedHost(hostname: string, allowed: string): boolean {
@@ -112,7 +113,9 @@ export async function assertProviderUrlSafe(
   if (policy.allowPrivateNetworks || isIP(url.hostname) !== 0) return url;
   let addresses: Array<{ address: string; family: number }>;
   try {
-    addresses = await lookup(url.hostname, { all: true, verbatim: true });
+    addresses = policy.resolveHostname
+      ? await policy.resolveHostname(url.hostname)
+      : await lookup(url.hostname, { all: true, verbatim: true });
   } catch (error) {
     throw new ProviderError('HTTP_ERROR', 'Provider hostname could not be resolved.', {
       retryable: true,

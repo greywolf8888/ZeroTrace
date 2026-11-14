@@ -2461,3 +2461,9 @@ The record is updated only after commands complete. Detailed commands and accept
 [Testing](docs/testing/TESTING.md) and [Final acceptance](docs/testing/FINAL_ACCEPTANCE.md).
 The registered FFT/Flap error budgets and automatic discrepancy rules are in
 [Flap/FFT reference acceptance case](docs/testing/FLAP_FFT_ACCEPTANCE.md).
+
+## 2026-11-14 唯一主线与活动支线整理
+
+按用户本轮要求，ZeroTrace 唯一主线为 main；Arc/BundleMark 归类活动任务并保留全部源码与来源历史。主线只合入可复用共享文件和协作交接，活动应用与活动专用依赖留在支线。两条旧品牌/部署分支已经增加分类备注，尚未删除，不伪称隐藏。
+
+本轮原环境断开，全量 npm/Rust/E2E/真实链矩阵不可执行；仅完成独立 canonicalJson 12 输入等价检查与来源/树结构核对，不提升原能力门禁。当前成员未指定、管理通道不可用，邀请、保护变更和旧分支删除未执行。详见主线交接及 docs/collaboration/VALIDATION_20261114.json。本轮未修改其他仓库、私有凭据、生产数据库或云端服务。

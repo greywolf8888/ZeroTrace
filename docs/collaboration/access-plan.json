@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "zerotrace-repository-collaboration-v1",
+  "repository": "greywolf8888/ZeroTrace",
+  "repositoryVisibility": "public",
+  "role": "write",
+  "apiPermission": "push",
+  "recipient": null,
+  "invitationStatus": "WAITING_FOR_USERNAME_AND_ADMIN_SESSION",
+  "scope": "仅本仓库代码协作",
+  "otherRepositoryPermissionChanges": false,
+  "accountCredentialsShared": false,
+  "adminRightsGranted": false,
+  "protectionChangeStatus": "NOT_APPLIED",
+  "branchDeletionStatus": "NOT_EXECUTED",
+  "note": "个人仓库协作者权限为仓库级；本配置不是已发送邀请或权限已生效的证明。"
+}

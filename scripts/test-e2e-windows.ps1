@@ -84,7 +84,7 @@ try {
   if (-not (Test-ZeroTraceEndpoint -Uri 'http://127.0.0.1:18081/health/live' -ExpectedContent 'zerotrace-api')) {
     $apiProcess = Start-Process `
       -FilePath $nodeExecutable `
-      -ArgumentList 'apps/api/dist/src/server.js' `
+      -ArgumentList 'tests/e2e/isolated-api.mjs' `
       -WorkingDirectory $projectRoot `
       -WindowStyle Hidden `
       -PassThru

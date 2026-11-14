@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "zerotrace-main-and-activity-v1",
+  "primaryBranch": "main",
+  "activityBranch": "agent/arc-task-ledger-v1",
+  "activityClassification": "ACTIVITY_TASK",
+  "activityCommit": "335f2601919ea14be46728b1fae6c77e935810d2",
+  "activityOriginalSource": "0bf0c339eeeefa76eff53b67ac33ddeee4ac764c",
+  "historicalBranches": [
+    {
+      "name": "codex/bundlemark-brand-20261008",
+      "currentMarkerCommit": "35694306761be39624caebece9653643649ec66d",
+      "sourceCommit": "0bf0c339eeeefa76eff53b67ac33ddeee4ac764c",
+      "status": "HISTORICAL_ACTIVITY_MARKED_NOT_DELETED"
+    },
+    {
+      "name": "deploy/arc-task-ledger-northflank",
+      "currentMarkerCommit": "3d3cdd24c4b0992db32250bc5249b265e0192fdf",
+      "sourceCommit": "56218638e8edf6a3494cee22671b301f3a36ee79",
+      "status": "HISTORICAL_ACTIVITY_MARKED_NOT_DELETED"
+    }
+  ],
+  "deleteStatus": "BLOCKED_ADMIN_CHANNEL",
+  "hiddenBranches": false,
+  "note": "两个历史引用仍在；删除前必须再核对 HEAD 和祖先关系。标注不提供分支可见性隔离。"
+}
