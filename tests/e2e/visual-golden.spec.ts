@@ -212,6 +212,12 @@ async function screenshotPage(
       caret: 'hide',
       scale: 'device',
     });
+    await state.page.screenshot({
+      path: test.info().outputPath(`${name}.png`),
+      animations: 'disabled',
+      caret: 'hide',
+      scale: 'device',
+    });
   } finally {
     await state.close();
   }

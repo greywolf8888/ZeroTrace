@@ -9,6 +9,19 @@ Inventory date: **2026-08-31**
 HTTP 边界访问。源码、许可证、构建与分发边界见
 [独立构建说明](../../infra/minio/README.zh-CN.md)。本项不改变下列旧批次依赖清单日期。
 
+本轮安全修复同时将 S3 传输客户端替换为 AWS 官方 Apache-2.0 SDK
+`@aws-sdk/client-s3@3.1169.0` 与 `@smithy/node-http-handler@4.14.2`，来源为
+[aws/aws-sdk-js-v3](https://github.com/aws/aws-sdk-js-v3) 和
+[smithy-lang/smithy-typescript](https://github.com/smithy-lang/smithy-typescript)。仅作未修改的库依赖，
+不启用 AWS 云服务或默认凭据链；固定已有 endpoint、独立存储凭据和路径式 S3 访问，沿用原桶、原件与存储权威。
+原 `minio` npm 客户端及其不可安全直接升级的旧解析依赖移除，MinIO 服务仍独立保留。
+
+当前新增锁定版本为 Fastify `5.12.8`、Zod `4.6.7`、bitcoinjs-lib `7.0.5`、Vite `8.3.8`、
+Vitest/coverage `4.1.12`、concurrently `10.0.7` 和 ESLint `10.15.0`。
+许可证工具回到接口兼容的 `license-checker-rseidelsohn@4.4.2`，去掉存在问题的 npm 管理依赖树；
+没有使用 `--force`、降低审计等级或排除生产依赖。下表继续作为旧批次记录，当前版本以包清单和锁文件为准。
+本轮生产 npm 审计为 0；完整开发依赖树仍有中危项，不能写成全库零漏洞。
+
 The current-state Snapshot, request-provenance, anchor reconciliation, 2026-08-11 BSC
 operator-attestation/market-reconciliation, EIP-1898 all-block supply continuity, and EVM
 ERC-1167/ERC-173/ERC-1967/Safe control-surface and Sourcify V2 exact-source work use clean HTTP

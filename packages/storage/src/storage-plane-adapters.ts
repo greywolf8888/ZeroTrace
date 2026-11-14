@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
-import { Client as MinioClient } from 'minio';
+
+import { S3ObjectClient } from './s3-client.js';
 
 import type {
   ArtifactRecord,
@@ -64,7 +65,7 @@ export class PostgresMetadataStore implements MetadataStore {
 }
 
 export class ObjectStoreArtifactStore implements ArtifactStore {
-  readonly #client: MinioClient;
+  readonly #client: S3ObjectClient;
   readonly #bucket: string;
   readonly #prefix: string;
 
@@ -75,11 +76,8 @@ export class ObjectStoreArtifactStore implements ArtifactStore {
     bucket: string;
     prefix?: string;
   }) {
-    const url = new URL(input.endpoint);
-    this.#client = new MinioClient({
-      endPoint: url.hostname,
-      port: url.port === '' ? (url.protocol === 'https:' ? 443 : 80) : Number(url.port),
-      useSSL: url.protocol === 'https:',
+    this.#client = new S3ObjectClient({
+      endpoint: input.endpoint,
       accessKey: input.accessKey,
       secretKey: input.secretKey,
     });
