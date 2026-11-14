@@ -99,7 +99,7 @@ def main():
         "invitationStateAtSnapshot": access["invitationStatus"],
         "fullProductGates": "NOT_PROMOTED",
     }
-    receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(receipt, ensure_ascii=False))
 
 

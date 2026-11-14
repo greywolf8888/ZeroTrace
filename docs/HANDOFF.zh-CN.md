@@ -90,4 +90,4 @@ Arc 的 UI27–UI30 是活动遗留：长地址复制与短显、真实报告场
 
 ## 当前续接交付
 
-更新包：[协作与核心文档 R4](collaboration/ZeroTrace_Collaboration_Pack_R4_20261114.zip)，按固定 Git 提交生成，原包保持。执行状态、有效检查与未完成边界见[续接交付](terminal-market-structure/续接交付_20261114.md)及[当前收据](terminal-market-structure/validation/continuation-20261114/SUMMARY.json)。源码修复在草稿 PR #26，尚未并入 main；协作者从主线开始开发，核对该 PR 后再采用相应候选，不把活动支线当项目主线。
+更新包：[协作与核心文档 R5](collaboration/ZeroTrace_Collaboration_Pack_R5_20261114.zip)，按固定 Git 提交生成，原包保持。执行状态、有效检查与未完成边界见[续接交付](terminal-market-structure/续接交付_20261114.md)及[当前收据](terminal-market-structure/validation/continuation-20261114/SUMMARY.json)。源码修复在草稿 PR #26，尚未并入 main；协作者从主线开始开发，核对该 PR 后再采用相应候选，不把活动支线当项目主线。

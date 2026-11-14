@@ -1,3 +1,6 @@
 * text=auto eol=lf
 *.png binary
 docs/architecture/ZEROTRACE_MASTER_PROMPT.md -text -whitespace
+
+# 保留本轮原始收据的 CRLF 和字节摘要。
+docs/terminal-market-structure/validation/continuation-20261114/** -text -whitespace
