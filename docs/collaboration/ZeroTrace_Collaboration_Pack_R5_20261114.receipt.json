@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "zerotrace-collaboration-pack-receipt-v4",
+  "sourceSnapshot": "75cdc08fb03f6ddc6ce38befcc953a41d02b91f7",
+  "package": "ZeroTrace_Collaboration_Pack_R5_20261114.zip",
+  "bytes": 323590,
+  "sha256": "c8a2792d4a73a63a05307e07a33fb035cf4a437e1877b40b700cc213e85508b5",
+  "entries": 39,
+  "manifestSha256": "8932a2a21596d2da91997b52c1c826e17069fe92b8493de06cc8566174960a23",
+  "checks": {
+    "crc32": "PASS",
+    "allEntryBytes": "PASS",
+    "unicodePaths": "PASS",
+    "fixedGitObjects": "PASS",
+    "privateWorkspaceFilesRead": false
+  },
+  "invitationStateAtSnapshot": "PENDING_ACCEPTANCE",
+  "fullProductGates": "NOT_PROMOTED"
+}
