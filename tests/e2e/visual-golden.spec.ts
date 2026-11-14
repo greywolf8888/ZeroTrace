@@ -301,6 +301,12 @@ test('captures the long provider and storage state without clipping the evidence
       'provider-table-dark-long.png',
       { animations: 'disabled', caret: 'hide', scale: 'css' },
     );
+    await state.page.locator('.main-content').screenshot({
+      path: test.info().outputPath('provider-table-dark-long.png'),
+      animations: 'disabled',
+      caret: 'hide',
+      scale: 'css',
+    });
   } finally {
     await state.close();
   }
