@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "zerotrace-pack-receipt-v1",
+  "recordedAt": "2026-11-14T10:09:37.487Z",
+  "package": "ZeroTrace_Collaboration_Pack_20261114.zip",
+  "bytes": 742540,
+  "entries": 25,
+  "gitBlobSha": "fc39f0f1bbe95209558772e65d427e4931381628",
+  "sourceSnapshot": "6e27f5be40991772326d5d2c6c70a0057b0d5c7b",
+  "activityCommit": "335f2601919ea14be46728b1fae6c77e935810d2",
+  "archiveCheck": "STORE ZIP headers/directory/UTF-8 names/payload bytes/CRC32 verified",
+  "uploadIntegrity": "computed Git Blob SHA equals server blob SHA",
+  "projection": {
+    "originalMainFiles": 985,
+    "resultFiles": 995,
+    "removed": [],
+    "unexpectedRuntimeChanges": [],
+    "arcImplementationFilesInMain": [],
+    "dependenciesUnchanged": true
+  },
+  "secretFilesIncluded": false,
+  "accountCredentialsIncluded": false,
+  "otherRepositorySourcesIncluded": false,
+  "invitation": "NOT_SENT_WAITING_FOR_USERNAME_AND_ADMIN_SESSION",
+  "historicalBranches": "MARKED_ACTIVITY_NOT_DELETED",
+  "scope": "协作配置和核心项目文档；完整源码使用 sourceSnapshot 的 GitHub archive。",
+  "note": "本收据位于 ZIP 外部；最终主线相对 sourceSnapshot 仅追加 ZIP 和本收据，不改变资料所描述源码。"
+}
