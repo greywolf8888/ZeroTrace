@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "zerotrace-collaboration-execution-v1",
+  "recordedAt": "2026-11-14T11:19:39.2766319Z",
+  "repository": "greywolf8888/ZeroTrace",
+  "recipient": "wangranorz",
+  "recipientId": 199617626,
+  "invitationId": 343629239,
+  "invitationCreatedAt": "2026-11-14T11:17:16Z",
+  "requestedPermission": "push",
+  "invitationPermission": "write",
+  "invitationState": "PENDING_ACCEPTANCE",
+  "effectivePermission": "read",
+  "mainProtection": {
+    "allowForcePushes": false,
+    "allowDeletions": false,
+    "enforceAdmins": false,
+    "requiredStatusChecks": null
+  },
+  "otherRepositoryMutations": false,
+  "credentialsShared": false,
+  "productionDeployment": false,
+  "scope": "仅 ZeroTrace 仓库协作；邀请待接受与权限已生效分开记录"
+}

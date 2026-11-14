@@ -13,6 +13,8 @@ output/playwright/
 reports/*.json
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc
 *.log
 target/
 apps/desktop/bin/*.exe

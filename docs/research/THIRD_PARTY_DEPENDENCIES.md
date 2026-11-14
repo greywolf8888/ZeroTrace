@@ -2,6 +2,13 @@
 
 Inventory date: **2026-08-31**
 
+2026-11-14 对象存储补充：MinIO 服务采用官方安全发布
+`RELEASE.2025-10-15T17-29-55Z`，完整提交
+`9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a`，由独立镜像从官方源码构建。
+该服务为 AGPL-3.0-only；不修改上游、不复制或链接到 Apache-2.0 核心，仍通过既有 S3
+HTTP 边界访问。源码、许可证、构建与分发边界见
+[独立构建说明](../../infra/minio/README.zh-CN.md)。本项不改变下列旧批次依赖清单日期。
+
 The current-state Snapshot, request-provenance, anchor reconciliation, 2026-08-11 BSC
 operator-attestation/market-reconciliation, EIP-1898 all-block supply continuity, and EVM
 ERC-1167/ERC-173/ERC-1967/Safe control-surface and Sourcify V2 exact-source work use clean HTTP

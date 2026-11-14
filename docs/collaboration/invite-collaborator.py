@@ -8,7 +8,18 @@ REPO = "greywolf8888/ZeroTrace"
 OWNER = "greywolf8888"
 
 def api(method, path, body=None):
-    if path != "user" and not path.startswith(("repos/" + REPO, "users/")):
+    repository_path = "repos/" + REPO
+    repository_read = method == "GET" and path == repository_path
+    identity_read = method == "GET" and (
+        path == "user" or re.fullmatch(r"users/[A-Za-z0-9-]+", path)
+    )
+    collaborator_write = method == "PUT" and re.fullmatch(
+        re.escape(repository_path) + r"/collaborators/[A-Za-z0-9-]+", path
+    ) and body == {"permission": "push"}
+    permission_read = method == "GET" and re.fullmatch(
+        re.escape(repository_path) + r"/collaborators/[A-Za-z0-9-]+/permission", path
+    )
+    if not (repository_read or identity_read or collaborator_write or permission_read):
         raise RuntimeError("拒绝访问目标仓库以外的管理接口")
     command = ["gh", "api", "--method", method, path]
     data = None
@@ -46,8 +57,10 @@ def main():
         return
     result = api("PUT", "repos/" + REPO + "/collaborators/" + username, {"permission": "push"})
     if result and result.get("id"):
-        if result.get("repo", {}).get("full_name", "").casefold() != REPO.casefold():
-            raise RuntimeError("邀请返回的仓库不匹配，需人工复核")
+        if (result.get("repository", {}).get("full_name", "").casefold() != REPO.casefold()
+                or result.get("invitee", {}).get("login", "").casefold() != username.casefold()
+                or result.get("permissions") != "write"):
+            raise RuntimeError("邀请已请求，但返回的仓库、对象或权限不匹配，需复核实际邀请")
         print(json.dumps({"state": "PENDING_ACCEPTANCE", "invitationId": result["id"],
                           "repository": REPO, "recipient": username}, ensure_ascii=False))
     else:

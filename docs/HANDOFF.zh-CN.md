@@ -58,7 +58,7 @@ Arc 的 UI27–UI30 是活动遗留：长地址复制与短显、真实报告场
 
 ## 本次验证范围
 
-本机环境断开后，改用 GitHub CI 检查已发布源码 1552b4c0050f0b217da538c4f2f00f7f53fd93c5：Rust 格式/Clippy/workspace、Chromium E2E、CodeQL 和生产容器构建通过。质量任务停在本文档表格格式，后续 lint、类型、覆盖和审计步骤被跳过，不能记为全量通过。本次修正文档格式后，后续结果仍须按实际 SHA 读取。没有运行新的真实链矩阵。
+最新核对源码为 `a931eec96890dc3072f285f10f965251039943b4`。该提交的 CI `43585138358` 中，格式、lint、类型已通过，质量任务在拉取旧 MinIO 镜像时失败，覆盖、集成和审计等后续步骤没有运行；Rust、Chromium E2E、CodeQL 和生产容器构建分别通过。这些结果属于该 SHA。本轮从该主线继续修复隔离对象存储构建，使用官方固定源码，不以旧结果替代新候选验收。没有运行新的真实链矩阵。
 
 在可用的独立 JavaScript 环境中，旧/新 canonicalJson 的 12 个输入等价检查通过，undefined 拒绝保留；源文本确认默认 DNS 读取和私网拒绝分支仍在。这是小范围序列化与结构核对，不是项目全量回归。初次静态核对保留于 VALIDATION_20261114.json；当前分支清理与远端 CI 证据见[本轮收口记录](collaboration/CONSOLIDATION_RECEIPT_20261114.json)。
 
@@ -76,9 +76,11 @@ Arc 的 UI27–UI30 是活动遗留：长地址复制与短显、真实报告场
 
 协作范围仅 greywolf8888/ZeroTrace，使用仓库级 Write；不授予其他仓库写权限，不共享所有者账号、Token、SSH 私钥、会话或云端管理凭据。
 
-当前尚未提供邀请对象，且管理通道不可用，邀请未发送。主分支保护未修改；两个旧活动分支已安全清理。具体步骤、固定配置和所有者专用邀请脚本见[协作说明](collaboration/README.zh-CN.md)。
+2026-11-14 19:17:16（Asia/Singapore）已向 `wangranorz` 发出仅限 ZeroTrace 的 Write 邀请。回读时仍待接受，实际权限为 Read；没有授予账户管理或其他仓库权限。main 已应用原保护模板，回读确认禁止强推和删除。具体状态及所有者专用邀请脚本见[协作说明](collaboration/README.zh-CN.md)与[执行收据](collaboration/EXECUTION_20261114.json)。
 
 [下载协作与核心文档包](collaboration/ZeroTrace_Collaboration_Pack_20261114.zip)。包只包含项目文档、配置模板和交接来源清单；源码从 main 获取，不包含私有配置或个人会话。包绑定实际资料快照提交，最终主线之后仅追加包与收据，详见 PACK_RECEIPT.json。
+
+以上原包是分支整理时的固定快照，内含“尚未邀请”的历史状态。本轮更新包和检查以[续接记录](terminal-market-structure/续接交付_20261114.md)为准，原包与原收据不改写。临时开发分支只承载当前修复，不能作为第二条长期主线；命名真实链与终端门禁没有自动关闭。
 
 ## 下一位执行者
 
