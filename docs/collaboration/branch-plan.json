@@ -3,23 +3,34 @@
   "primaryBranch": "main",
   "activityBranch": "agent/arc-task-ledger-v1",
   "activityClassification": "ACTIVITY_TASK",
-  "activityCommit": "335f2601919ea14be46728b1fae6c77e935810d2",
+  "activityCommit": "4fd4fb172b19f3c896c73fd37e405bd4eae64529",
   "activityOriginalSource": "0bf0c339eeeefa76eff53b67ac33ddeee4ac764c",
   "historicalBranches": [
     {
       "name": "codex/bundlemark-brand-20261008",
-      "currentMarkerCommit": "35694306761be39624caebece9653643649ec66d",
+      "lastMarkerCommit": "35694306761be39624caebece9653643649ec66d",
       "sourceCommit": "0bf0c339eeeefa76eff53b67ac33ddeee4ac764c",
-      "status": "HISTORICAL_ACTIVITY_MARKED_NOT_DELETED"
+      "status": "DELETED_AFTER_DUAL_ANCESTRY_CHECK"
     },
     {
       "name": "deploy/arc-task-ledger-northflank",
-      "currentMarkerCommit": "3d3cdd24c4b0992db32250bc5249b265e0192fdf",
+      "lastMarkerCommit": "3d3cdd24c4b0992db32250bc5249b265e0192fdf",
       "sourceCommit": "56218638e8edf6a3494cee22671b301f3a36ee79",
-      "status": "HISTORICAL_ACTIVITY_MARKED_NOT_DELETED"
+      "status": "DELETED_AFTER_DUAL_ANCESTRY_CHECK"
     }
   ],
-  "deleteStatus": "BLOCKED_ADMIN_CHANNEL",
+  "deleteStatus": "COMPLETED",
   "hiddenBranches": false,
-  "note": "两个历史引用仍在；删除前必须再核对 HEAD 和祖先关系。标注不提供分支可见性隔离。"
+  "note": "旧引用已删除；提交通过主线和活动支线的父关系保留。分支备注不提供可见性隔离。",
+  "activityMergeCommit": "335f2601919ea14be46728b1fae6c77e935810d2",
+  "remainingBranches": [
+    "main",
+    "agent/arc-task-ledger-v1"
+  ],
+  "cleanupRun": {
+    "id": 43584290543,
+    "url": "https://github.com/greywolf8888/ZeroTrace/actions/runs/43584290543",
+    "conclusion": "success",
+    "workflowRemoved": true
+  }
 }

@@ -1,0 +1,306 @@
+{
+  "schemaVersion": "zerotrace-consolidation-receipt-v1",
+  "recordedAt": "2026-11-14T10:17:45.141Z",
+  "codeValidatedAt": "1552b4c0050f0b217da538c4f2f00f7f53fd93c5",
+  "activityCurrent": "4fd4fb172b19f3c896c73fd37e405bd4eae64529",
+  "activityMergedSource": "335f2601919ea14be46728b1fae6c77e935810d2",
+  "cleanupRun": {
+    "id": 43584290543,
+    "url": "https://github.com/greywolf8888/ZeroTrace/actions/runs/43584290543",
+    "conclusion": "success",
+    "workflowRemoved": true
+  },
+  "remainingBranches": [
+    "main",
+    "agent/arc-task-ledger-v1"
+  ],
+  "sourceProjection": {
+    "mainFilesRetained": true,
+    "arcOriginalFilesRetained": true,
+    "arcOriginalFilesUnchangedExceptReadme": true,
+    "unexpectedArcChanges": [],
+    "mainArcImplementationFiles": [],
+    "packageOnPublishedMain": true,
+    "packageBytes": 742540
+  },
+  "ciRuns": [
+    {
+      "id": 43583940118,
+      "name": "CodeQL",
+      "conclusion": "success"
+    },
+    {
+      "id": 43583940143,
+      "name": "CI",
+      "conclusion": "failure",
+      "jobs": [
+        {
+          "id": 132414329257,
+          "name": "Rust compute plane",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success"
+            },
+            {
+              "name": "Checkout",
+              "conclusion": "success"
+            },
+            {
+              "name": "Install Tauri Linux build dependencies",
+              "conclusion": "success"
+            },
+            {
+              "name": "Provide non-packaged inputs for Cargo-only checks",
+              "conclusion": "success"
+            },
+            {
+              "name": "Install pinned Rust toolchain",
+              "conclusion": "success"
+            },
+            {
+              "name": "Format",
+              "conclusion": "success"
+            },
+            {
+              "name": "Clippy",
+              "conclusion": "success"
+            },
+            {
+              "name": "Test",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Checkout",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 132414329476,
+          "name": "Quality and contracts",
+          "status": "completed",
+          "conclusion": "failure",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success"
+            },
+            {
+              "name": "Checkout",
+              "conclusion": "success"
+            },
+            {
+              "name": "Set up Node",
+              "conclusion": "success"
+            },
+            {
+              "name": "Install locked dependencies",
+              "conclusion": "success"
+            },
+            {
+              "name": "Validate Compose model",
+              "conclusion": "success"
+            },
+            {
+              "name": "Check formatting",
+              "conclusion": "failure"
+            },
+            {
+              "name": "Lint",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Typecheck",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Start disposable durable stores",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Unit and integration coverage",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Production build",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Check production licenses",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Audit dependency graph",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Generate CycloneDX SBOM",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Stop disposable durable stores",
+              "conclusion": "success"
+            },
+            {
+              "name": "Upload verification artifacts",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Set up Node",
+              "conclusion": "skipped"
+            },
+            {
+              "name": "Post Checkout",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 132414329499,
+          "name": "Production container targets",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success"
+            },
+            {
+              "name": "Checkout",
+              "conclusion": "success"
+            },
+            {
+              "name": "Set up Buildx",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build API image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build web image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build ingestion worker image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build semantic worker image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build PostgreSQL initialization image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build ClickHouse initialization image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Build ClickHouse initialization image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Build PostgreSQL initialization image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Build semantic worker image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Build ingestion worker image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Build web image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Build API image",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Set up Buildx",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Checkout",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 132414329542,
+          "name": "Chromium E2E",
+          "status": "completed",
+          "conclusion": "success",
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success"
+            },
+            {
+              "name": "Checkout",
+              "conclusion": "success"
+            },
+            {
+              "name": "Set up Node",
+              "conclusion": "success"
+            },
+            {
+              "name": "Install locked dependencies",
+              "conclusion": "success"
+            },
+            {
+              "name": "Install Chromium",
+              "conclusion": "success"
+            },
+            {
+              "name": "Build and test UI",
+              "conclusion": "success"
+            },
+            {
+              "name": "Upload Playwright evidence",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Set up Node",
+              "conclusion": "success"
+            },
+            {
+              "name": "Post Checkout",
+              "conclusion": "success"
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "qualityFailure": "Only docs/HANDOFF.zh-CN.md formatting failed; subsequent quality steps were skipped; format fix follows this receipt.",
+  "fullProductGates": "NOT_PROMOTED",
+  "newRealChainValidation": "NOT_RUN",
+  "localEnvironment": "UNAVAILABLE",
+  "invitation": "WAITING_FOR_USERNAME_AND_ADMIN_SESSION",
+  "otherRepositoryMutations": false
+}

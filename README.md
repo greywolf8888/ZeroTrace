@@ -1,6 +1,6 @@
 > **唯一主线：main。** Arc 已归类为[活动任务支线](docs/activities/ARC.md)，不是 ZeroTrace 主项目。先读[主线交接](docs/HANDOFF.zh-CN.md)与[协作配置](docs/collaboration/README.zh-CN.md)。
 >
-> [下载协作与核心文档包](docs/collaboration/ZeroTrace_Collaboration_Pack_20261114.zip)。两个历史活动分支目前只做了备注，尚未删除；仓库成员邀请待明确对象及管理会话。
+> [下载协作与核心文档包](docs/collaboration/ZeroTrace_Collaboration_Pack_20261114.zip)。两个历史活动分支已在核对双重历史保留后删除，现在只保留 main 与 Arc 活动支线；仓库成员邀请待明确对象及管理会话。
 
 <div align="center">
   <img src="apps/web/public/zerotrace-company-icon.png" width="220" alt="ZeroTrace company icon" />

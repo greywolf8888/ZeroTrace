@@ -11,6 +11,6 @@
   "accountCredentialsShared": false,
   "adminRightsGranted": false,
   "protectionChangeStatus": "NOT_APPLIED",
-  "branchDeletionStatus": "NOT_EXECUTED",
+  "branchDeletionStatus": "COMPLETED_GUARDED_WORKFLOW",
   "note": "个人仓库协作者权限为仓库级；本配置不是已发送邀请或权限已生效的证明。"
 }
