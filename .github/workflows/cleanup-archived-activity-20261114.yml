@@ -1,0 +1,86 @@
+name: 清理已归档活动分支
+
+on:
+  push:
+    branches: [agent/arc-task-ledger-v1]
+    paths: [.github/workflows/cleanup-archived-activity-20261114.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.repository == 'greywolf8888/ZeroTrace' && github.ref == 'refs/heads/agent/arc-task-ledger-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: 验证双重历史保留后清理两个固定引用
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_MAIN: 1552b4c0050f0b217da538c4f2f00f7f53fd93c5
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          root = "/repos/greywolf8888/ZeroTrace"
+          expected = {
+              "codex/bundlemark-brand-20261008": "35694306761be39624caebece9653643649ec66d",
+              "deploy/arc-task-ledger-northflank": "3d3cdd24c4b0992db32250bc5249b265e0192fdf",
+          }
+
+          def api(method, path, missing=False):
+              if not path.startswith(root + "/"):
+                  raise RuntimeError("拒绝操作其他仓库")
+              request = urllib.request.Request(
+                  "https://api.github.com" + path,
+                  headers={
+                      "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+                  method=method,
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=20) as response:
+                      body = response.read()
+                      return json.loads(body) if body else {}
+              except urllib.error.HTTPError as error:
+                  if missing and error.code == 404:
+                      return None
+                  raise RuntimeError(method + " " + path + " HTTP " + str(error.code)) from None
+
+          def ref(name, missing=False):
+              return api("GET", root + "/git/ref/heads/" + name, missing)
+
+          main = ref("main")["object"]["sha"]
+          activity = ref("agent/arc-task-ledger-v1")["object"]["sha"]
+          if main != os.environ["EXPECTED_MAIN"] or activity != os.environ["GITHUB_SHA"]:
+              raise RuntimeError("活动或主线已被推进，拒绝删除")
+          for name, old_sha in expected.items():
+              current = ref(name, True)
+              if current is None:
+                  continue
+              if current["object"]["sha"] != old_sha:
+                  raise RuntimeError("旧分支有新工作，拒绝删除：" + name)
+              for target in (main, activity):
+                  comparison = api("GET", root + "/compare/" + old_sha + "..." + target)
+                  if comparison["status"] not in ("ahead", "identical") or comparison["behind_by"] != 0:
+                      raise RuntimeError("历史未双重保留：" + name)
+          results = []
+          for name, old_sha in expected.items():
+              current = ref(name, True)
+              if current is None:
+                  results.append({"branch": name, "status": "ALREADY_ABSENT"})
+                  continue
+              if current["object"]["sha"] != old_sha:
+                  raise RuntimeError("删除前 SHA 改变，拒绝操作：" + name)
+              api("DELETE", root + "/git/refs/heads/" + name)
+              if ref(name, True) is not None:
+                  raise RuntimeError("删除后引用仍在：" + name)
+              results.append({"branch": name, "source": old_sha, "status": "DELETED"})
+          print(json.dumps({"repository": "greywolf8888/ZeroTrace", "main": main, "activity": activity,
+                            "deletedOnly": results}, ensure_ascii=False))
+          PY
